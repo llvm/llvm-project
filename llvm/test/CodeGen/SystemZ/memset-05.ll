@@ -3,7 +3,7 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
-define void @fun0(i8* %Addr, i64 %Len) {
+define void @fun0(ptr %Addr, i64 %Len) {
 ; CHECK-LABEL: fun0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    aghi %r3, -1
@@ -18,11 +18,11 @@ define void @fun0(i8* %Addr, i64 %Len) {
 ; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    exrl %r3, .Ltmp0
 ; CHECK-NEXT:    br %r14
-  tail call void @llvm.memset.p0i8.i64(i8* %Addr, i8 0, i64 %Len, i1 false)
+  tail call void @llvm.memset.p0.i64(ptr %Addr, i8 0, i64 %Len, i1 false)
   ret void
 }
 
-define void @fun1(i8* %Addr, i32 %Len) {
+define void @fun1(ptr %Addr, i32 %Len) {
 ; CHECK-LABEL: fun1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    llgfr %r1, %r3
@@ -38,12 +38,12 @@ define void @fun1(i8* %Addr, i32 %Len) {
 ; CHECK-NEXT:  .LBB1_3:
 ; CHECK-NEXT:    exrl %r1, .Ltmp0
 ; CHECK-NEXT:    br %r14
-  tail call void @llvm.memset.p0i8.i32(i8* %Addr, i8 0, i32 %Len, i1 false)
+  tail call void @llvm.memset.p0.i32(ptr %Addr, i8 0, i32 %Len, i1 false)
   ret void
 }
 
 ; Test that identical target instructions get reused.
-define void @fun2(i8* %Addr, i32 %Len) {
+define void @fun2(ptr %Addr, i32 %Len) {
 ; CHECK-LABEL: fun2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    llgfr %r1, %r3
@@ -83,9 +83,9 @@ define void @fun2(i8* %Addr, i32 %Len) {
 ; CHECK-NEXT:  .LBB2_11:
 ; CHECK-NEXT:    exrl %r1, .Ltmp0
 ; CHECK-NEXT:    br %r14
-  tail call void @llvm.memset.p0i8.i32(i8* %Addr, i8 0, i32 %Len, i1 false)
-  tail call void @llvm.memset.p0i8.i32(i8* %Addr, i8 0, i32 %Len, i1 false)
-  tail call void @llvm.memset.p0i8.i32(i8* %Addr, i8 0, i32 %Len, i1 false)
+  tail call void @llvm.memset.p0.i32(ptr %Addr, i8 0, i32 %Len, i1 false)
+  tail call void @llvm.memset.p0.i32(ptr %Addr, i8 0, i32 %Len, i1 false)
+  tail call void @llvm.memset.p0.i32(ptr %Addr, i8 0, i32 %Len, i1 false)
   ret void
 }
 
@@ -106,7 +106,7 @@ define void @fun3(i64 %Len) {
 ; CHECK-NEXT:  .LBB3_3:
 ; CHECK-NEXT:    exrl %r2, .Ltmp2
 ; CHECK-NEXT:    br %r14
-  call void @llvm.memset.p0i8.i64(i8* null, i8 0, i64 %Len, i1 false)
+  call void @llvm.memset.p0.i64(ptr null, i8 0, i64 %Len, i1 false)
   ret void
 }
 
@@ -123,20 +123,20 @@ define void @fun4() {
 ; CHECK-NEXT:    xc 803(221,%r1), 803(%r1)
 ; CHECK-NEXT:    mvghi 0(%r1), 989
 ; CHECK-NEXT:    br %r14
-  call void @llvm.memset.p0i8.i64(
-     i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @Data, i64 0, i64 35),
+  call void @llvm.memset.p0.i64(
+     ptr getelementptr inbounds ([1024 x i8], ptr @Data, i64 0, i64 35),
      i8 0,
-     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 0) to i64), i64 1),
-              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 0, i64 35) to i64), i64 1)),
+     i64 sub (i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 0) to i64), i64 1),
+              i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 0, i64 35) to i64), i64 1)),
      i1 false)
-  %i11 = getelementptr i8, i8* null,
-     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 0) to i64), i64 1),
-              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 0, i64 35) to i64), i64 1))
-  store i8* %i11, i8** undef, align 8
+  %i11 = getelementptr i8, ptr null,
+     i64 sub (i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 0) to i64), i64 1),
+              i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 0, i64 35) to i64), i64 1))
+  store ptr %i11, ptr undef, align 8
   ret void
 }
 
@@ -146,20 +146,20 @@ define void @fun5() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mvghi 0(%r1), 0
 ; CHECK-NEXT:    br %r14
-  call void @llvm.memset.p0i8.i64(
-     i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @Data, i64 0, i64 35),
+  call void @llvm.memset.p0.i64(
+     ptr getelementptr inbounds ([1024 x i8], ptr @Data, i64 0, i64 35),
      i8 0,
-     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1),
-              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1)),
+     i64 sub (i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 35) to i64), i64 1),
+              i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 35) to i64), i64 1)),
      i1 false)
-  %i11 = getelementptr i8, i8* null,
-     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1),
-              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1))
-  store i8* %i11, i8** undef, align 8
+  %i11 = getelementptr i8, ptr null,
+     i64 sub (i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 35) to i64), i64 1),
+              i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 35) to i64), i64 1))
+  store ptr %i11, ptr undef, align 8
   ret void
 }
 
@@ -171,20 +171,20 @@ define void @fun6() {
 ; CHECK-NEXT:    xc 35(1,%r1), 35(%r1)
 ; CHECK-NEXT:    mvghi 0(%r1), 1
 ; CHECK-NEXT:    br %r14
-  call void @llvm.memset.p0i8.i64(
-     i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @Data, i64 0, i64 35),
+  call void @llvm.memset.p0.i64(
+     ptr getelementptr inbounds ([1024 x i8], ptr @Data, i64 0, i64 35),
      i8 0,
-     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 36) to i64), i64 1),
-              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1)),
+     i64 sub (i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 36) to i64), i64 1),
+              i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 35) to i64), i64 1)),
      i1 false)
-  %i11 = getelementptr i8, i8* null,
-     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 36) to i64), i64 1),
-              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1))
-  store i8* %i11, i8** undef, align 8
+  %i11 = getelementptr i8, ptr null,
+     i64 sub (i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 36) to i64), i64 1),
+              i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 35) to i64), i64 1))
+  store ptr %i11, ptr undef, align 8
   ret void
 }
 
@@ -196,20 +196,20 @@ define void @fun7() {
 ; CHECK-NEXT:    xc 35(256,%r1), 35(%r1)
 ; CHECK-NEXT:    mvghi 0(%r1), 256
 ; CHECK-NEXT:    br %r14
-  call void @llvm.memset.p0i8.i64(
-     i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @Data, i64 0, i64 35),
+  call void @llvm.memset.p0.i64(
+     ptr getelementptr inbounds ([1024 x i8], ptr @Data, i64 0, i64 35),
      i8 0,
-     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 291) to i64), i64 1),
-              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1)),
+     i64 sub (i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 291) to i64), i64 1),
+              i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 35) to i64), i64 1)),
      i1 false)
-  %i11 = getelementptr i8, i8* null,
-     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 291) to i64), i64 1),
-              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1))
-  store i8* %i11, i8** undef, align 8
+  %i11 = getelementptr i8, ptr null,
+     i64 sub (i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 291) to i64), i64 1),
+              i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 35) to i64), i64 1))
+  store ptr %i11, ptr undef, align 8
   ret void
 }
 
@@ -222,20 +222,20 @@ define void @fun8() {
 ; CHECK-NEXT:    xc 291(1,%r1), 291(%r1)
 ; CHECK-NEXT:    mvghi 0(%r1), 257
 ; CHECK-NEXT:    br %r14
-  call void @llvm.memset.p0i8.i64(
-     i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @Data, i64 0, i64 35),
+  call void @llvm.memset.p0.i64(
+     ptr getelementptr inbounds ([1024 x i8], ptr @Data, i64 0, i64 35),
      i8 0,
-     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 292) to i64), i64 1),
-              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1)),
+     i64 sub (i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 292) to i64), i64 1),
+              i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 35) to i64), i64 1)),
      i1 false)
-  %i11 = getelementptr i8, i8* null,
-     i64 sub (i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 292) to i64), i64 1),
-              i64 add (i64 ptrtoint (i8* getelementptr inbounds ([1024 x i8],
-                                     [1024 x i8]* @Data, i64 1, i64 35) to i64), i64 1))
-  store i8* %i11, i8** undef, align 8
+  %i11 = getelementptr i8, ptr null,
+     i64 sub (i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 292) to i64), i64 1),
+              i64 add (i64 ptrtoint (ptr getelementptr inbounds ([1024 x i8],
+                                     ptr @Data, i64 1, i64 35) to i64), i64 1))
+  store ptr %i11, ptr undef, align 8
   ret void
 }
 
@@ -246,5 +246,5 @@ define void @fun8() {
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    xc 0(1,%r3), 0(%r3)
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg)
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)

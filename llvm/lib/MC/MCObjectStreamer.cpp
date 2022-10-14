@@ -912,7 +912,6 @@ void MCObjectStreamer::emitAddrsig() {
 }
 
 void MCObjectStreamer::emitAddrsigSym(const MCSymbol *Sym) {
-  getAssembler().registerSymbol(*Sym);
   getAssembler().getWriter().addAddrsigSymbol(Sym);
 }
 

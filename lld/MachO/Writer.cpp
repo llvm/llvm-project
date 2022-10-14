@@ -704,7 +704,7 @@ void Writer::scanRelocations() {
     }
   }
 
-  in.unwindInfo->prepareRelocations();
+  in.unwindInfo->prepare();
 }
 
 static void addNonWeakDefinition(const Defined *defined) {

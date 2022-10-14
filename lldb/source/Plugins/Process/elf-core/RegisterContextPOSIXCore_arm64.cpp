@@ -147,7 +147,7 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
       // SVE is disabled take legacy route for FPU register access
       offset -= GetGPRSize();
       if (offset < m_fpr_data.GetByteSize()) {
-        value.SetFromMemoryData(reg_info, m_fpr_data.GetDataStart() + offset,
+        value.SetFromMemoryData(*reg_info, m_fpr_data.GetDataStart() + offset,
                                 reg_info->byte_size, lldb::eByteOrderLittle,
                                 error);
         return error.Success();
@@ -180,7 +180,7 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
 
       assert(sve_reg_num != LLDB_INVALID_REGNUM);
       assert(offset < m_sve_data.GetByteSize());
-      value.SetFromMemoryData(reg_info, GetSVEBuffer(offset),
+      value.SetFromMemoryData(*reg_info, GetSVEBuffer(offset),
                               reg_info->byte_size, lldb::eByteOrderLittle,
                               error);
     }
@@ -204,13 +204,13 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
         assert(offset < m_sve_data.GetByteSize());
         src = GetSVEBuffer(offset);
       }
-      value.SetFromMemoryData(reg_info, src, byte_size, lldb::eByteOrderLittle,
+      value.SetFromMemoryData(*reg_info, src, byte_size, lldb::eByteOrderLittle,
                               error);
     } break;
     case SVEState::Full:
       offset = CalculateSVEOffset(reg_info);
       assert(offset < m_sve_data.GetByteSize());
-      value.SetFromMemoryData(reg_info, GetSVEBuffer(offset),
+      value.SetFromMemoryData(*reg_info, GetSVEBuffer(offset),
                               reg_info->byte_size, lldb::eByteOrderLittle,
                               error);
       break;
@@ -221,7 +221,7 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
   } else if (IsPAuth(reg)) {
     offset = reg_info->byte_offset - m_register_info_up->GetPAuthOffset();
     assert(offset < m_pac_data.GetByteSize());
-    value.SetFromMemoryData(reg_info, m_pac_data.GetDataStart() + offset,
+    value.SetFromMemoryData(*reg_info, m_pac_data.GetDataStart() + offset,
                             reg_info->byte_size, lldb::eByteOrderLittle, error);
   } else
     return false;

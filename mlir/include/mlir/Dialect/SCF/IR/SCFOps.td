@@ -37,7 +37,7 @@ class SCF_Op<string mnemonic, list<Trait> traits = []> :
 def ConditionOp : SCF_Op<"condition", [
   HasParent<"WhileOp">,
   DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
-  NoSideEffect,
+  Pure,
   Terminator
 ]> {
   let summary = "loop continuation condition";
@@ -121,7 +121,7 @@ def ForOp : SCF_Op<"for",
         "getSingleUpperBound"]>,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
        SingleBlockImplicitTerminator<"scf::YieldOp">,
-       RecursiveSideEffects]> {
+       RecursiveMemoryEffects]> {
   let summary = "for operation";
   let description = [{
     The "scf.for" operation represents a loop taking 3 SSA value as operands
@@ -345,7 +345,7 @@ def ForOp : SCF_Op<"for",
 def ForeachThreadOp : SCF_Op<"foreach_thread", [
        AttrSizedOperandSegments,
        SingleBlockImplicitTerminator<"scf::PerformConcurrentlyOp">,
-       RecursiveSideEffects,
+       RecursiveMemoryEffects,
        AutomaticAllocationScope,
       ]> {
   let summary = "evaluate a block multiple times in parallel";
@@ -434,6 +434,8 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     ```
 
     Example with thread_dim_mapping attribute:
+    
+    ```mlir
     //
     // Sequential context.
     //
@@ -451,8 +453,11 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     // Implicit synchronization point.
     // Sequential context.
     //
+    ```
 
     Example with privatized tensors:
+    
+    ```mlir
     %t0 = ...
     %t1 = ...
     %r = scf.foreach_thread ... shared_outs(%o = t0) -> tensor<?xf32> {
@@ -464,6 +469,7 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
       "some_use"(%t0)
       "some_use"(%t1)
     }
+    ```
   }];
   let arguments = (ins Variadic<Index>:$num_threads,
                        Variadic<AnyRankedTensor>:$outputs,
@@ -545,7 +551,7 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
 //===----------------------------------------------------------------------===//
 
 def PerformConcurrentlyOp : SCF_Op<"foreach_thread.perform_concurrently", [
-       NoSideEffect,
+       Pure,
        Terminator,
        DeclareOpInterfaceMethods<ParallelCombiningOpInterface>,
        HasParent<"ForeachThreadOp">,
@@ -589,7 +595,7 @@ def IfOp : SCF_Op<"if",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface,
                                  ["getNumRegionInvocations",
                                   "getRegionInvocationBounds"]>,
-       SingleBlockImplicitTerminator<"scf::YieldOp">, RecursiveSideEffects,
+       SingleBlockImplicitTerminator<"scf::YieldOp">, RecursiveMemoryEffects,
        NoRegionArguments]> {
   let summary = "if-then-else operation";
   let description = [{
@@ -687,7 +693,7 @@ def ParallelOp : SCF_Op<"parallel",
     [AutomaticAllocationScope,
      AttrSizedOperandSegments,
      DeclareOpInterfaceMethods<LoopLikeOpInterface>,
-     RecursiveSideEffects,
+     RecursiveMemoryEffects,
      SingleBlockImplicitTerminator<"scf::YieldOp">]> {
   let summary = "parallel for operation";
   let description = [{
@@ -826,7 +832,7 @@ def ReduceOp : SCF_Op<"reduce", [HasParent<"ParallelOp">]> {
 //===----------------------------------------------------------------------===//
 
 def ReduceReturnOp :
-    SCF_Op<"reduce.return", [HasParent<"ReduceOp">, NoSideEffect,
+    SCF_Op<"reduce.return", [HasParent<"ReduceOp">, Pure,
                               Terminator]> {
   let summary = "terminator for reduce operation";
   let description = [{
@@ -850,7 +856,7 @@ def ReduceReturnOp :
 
 def WhileOp : SCF_Op<"while",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-     RecursiveSideEffects]> {
+     RecursiveMemoryEffects]> {
   let summary = "a generic 'while' loop";
   let description = [{
     This operation represents a generic "while"/"do-while" loop that keeps
@@ -986,7 +992,7 @@ def WhileOp : SCF_Op<"while",
 // YieldOp
 //===----------------------------------------------------------------------===//
 
-def YieldOp : SCF_Op<"yield", [NoSideEffect, ReturnLike, Terminator,
+def YieldOp : SCF_Op<"yield", [Pure, ReturnLike, Terminator,
                                ParentOneOf<["ExecuteRegionOp, ForOp",
                                             "IfOp, ParallelOp, WhileOp"]>]> {
   let summary = "loop yield and termination operation";

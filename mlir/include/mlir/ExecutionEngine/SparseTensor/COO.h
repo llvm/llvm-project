@@ -80,12 +80,30 @@ using ElementConsumer =
 /// an intermediate representation; e.g., for reading sparse tensors
 /// from external formats into memory, or for certain conversions between
 /// different `SparseTensorStorage` formats.
+///
+/// This class provides all the typedefs required by the "Container"
+/// concept (<https://en.cppreference.com/w/cpp/named_req/Container>);
+/// however, beware that it cannot fully implement that concept since
+/// it cannot have a default ctor (because the `dimSizes` field is const).
+/// Thus these typedefs are provided for familiarity reasons, rather
+/// than as a proper implementation of the concept.
 template <typename V>
 class SparseTensorCOO final {
 public:
+  using value_type = const Element<V>;
+  using reference = value_type &;
+  using const_reference = reference;
+  // The types associated with `std::vector` differ significantly between
+  // C++11/17 vs C++20; so we explicitly defer to whatever `std::vector`
+  // says the types should be.
+  using vector_type = std::vector<Element<V>>;
+  using iterator = typename vector_type::const_iterator;
+  using const_iterator = iterator;
+  using difference_type = typename vector_type::difference_type;
+  using size_type = typename vector_type::size_type;
+
   SparseTensorCOO(const std::vector<uint64_t> &dimSizes, uint64_t capacity)
-      : dimSizes(dimSizes), isSorted(true), iteratorLocked(false),
-        iteratorPos(0) {
+      : dimSizes(dimSizes), isSorted(true) {
     if (capacity) {
       elements.reserve(capacity);
       indices.reserve(capacity * getRank());
@@ -129,12 +147,12 @@ public:
   /// Resolving such conflicts is left up to clients of the iterator
   /// interface.
   ///
+  /// This method invalidates all iterators.
+  ///
   /// Asserts:
-  /// * is not in iterator mode
   /// * the `ind` is valid for `rank`
   /// * the elements of `ind` are valid for `dimSizes`.
   void add(const std::vector<uint64_t> &ind, V val) {
-    assert(!iteratorLocked && "Attempt to add() after startIterator()");
     const uint64_t *base = indices.data();
     uint64_t size = indices.size();
     uint64_t rank = getRank();
@@ -161,35 +179,18 @@ public:
     elements.push_back(addedElem);
   }
 
+  const_iterator begin() const { return elements.cbegin(); }
+  const_iterator end() const { return elements.cend(); }
+
   /// Sorts elements lexicographically by index.  If an index is mapped to
   /// multiple values, then the relative order of those values is unspecified.
   ///
-  /// Asserts: is not in iterator mode.
+  /// This method invalidates all iterators.
   void sort() {
-    assert(!iteratorLocked && "Attempt to sort() after startIterator()");
     if (isSorted)
       return;
     std::sort(elements.begin(), elements.end(), getElementLT());
     isSorted = true;
-  }
-
-  /// Switches into iterator mode.  If already in iterator mode, then
-  /// resets the position to the first element.
-  void startIterator() {
-    iteratorLocked = true;
-    iteratorPos = 0;
-  }
-
-  /// Gets the next element.  If there are no remaining elements, then
-  /// returns nullptr and switches out of iterator mode.
-  ///
-  /// Asserts: is in iterator mode.
-  const Element<V> *getNext() {
-    assert(iteratorLocked && "Attempt to getNext() before startIterator()");
-    if (iteratorPos < elements.size())
-      return &(elements[iteratorPos++]);
-    iteratorLocked = false;
-    return nullptr;
   }
 
 private:
@@ -197,8 +198,6 @@ private:
   std::vector<Element<V>> elements;     // all COO elements
   std::vector<uint64_t> indices;        // shared index pool
   bool isSorted;
-  bool iteratorLocked;
-  unsigned iteratorPos;
 };
 
 } // namespace sparse_tensor

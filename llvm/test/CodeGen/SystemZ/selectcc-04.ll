@@ -16,8 +16,8 @@ define dso_local void @fun() {
 entry:
   %tmp = add nuw nsw i16 0, 238
   %tmp4 = sub nsw i16 %tmp, 0
-  store i64 4, i64* getelementptr inbounds (<{ i64, i8, i8, i8, i8, i8, i8 }>, <{ i64, i8, i8, i8, i8, i8, i8 }>* @g_277, i64 0, i32 0), align 8
-  %tmp5 = load i64, i64* getelementptr inbounds ([7 x i64], [7 x i64]* @g_1531, i64 0, i64 5), align 8
+  store i64 4, ptr getelementptr inbounds (<{ i64, i8, i8, i8, i8, i8, i8 }>, ptr @g_277, i64 0, i32 0), align 8
+  %tmp5 = load i64, ptr getelementptr inbounds ([7 x i64], ptr @g_1531, i64 0, i64 5), align 8
   %tmp6 = trunc i64 %tmp5 to i32
   %tmp7 = trunc i64 %tmp5 to i16
   %tmp8 = shl i32 %tmp6, 24
@@ -33,6 +33,6 @@ entry:
   %tmp18 = icmp sge i32 %tmp17, undef
   %tmp19 = zext i1 %tmp18 to i32
   %tmp20 = or i32 %tmp15, %tmp19
-  store i32 %tmp20, i32* @g_62.6, align 4
+  store i32 %tmp20, ptr @g_62.6, align 4
   unreachable
 }

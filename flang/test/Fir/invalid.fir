@@ -20,7 +20,7 @@
 func.func @bad_rebox_1(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
   %c10 = arith.constant 10 : index
   %0 = fir.shape %c10 : (index) -> !fir.shape<1>
-  // expected-error@+1{{op operand #0 must be The type of a Fortran descriptor, but got '!fir.ref<!fir.array<?x?xf32>>'}}
+  // expected-error@+1{{op operand #0 must be box or class, but got '!fir.ref<!fir.array<?x?xf32>>'}}
   %1 = fir.rebox %arg0(%0) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
   return
 }
@@ -30,7 +30,7 @@ func.func @bad_rebox_1(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
 func.func @bad_rebox_2(%arg0: !fir.box<!fir.array<?x?xf32>>) {
   %c10 = arith.constant 10 : index
   %0 = fir.shape %c10 : (index) -> !fir.shape<1>
-  // expected-error@+1{{op result #0 must be The type of a Fortran descriptor, but got '!fir.ref<!fir.array<?xf32>>'}}
+  // expected-error@+1{{op result #0 must be box or class, but got '!fir.ref<!fir.array<?xf32>>'}}
   %1 = fir.rebox %arg0(%0) : (!fir.box<!fir.array<?x?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
   return
 }
@@ -341,6 +341,36 @@ func.func @fun(%0 : !fir.ref<i32>) {
   %1 = fir.slice %c_100, %c_100, %c_100 : (index, index, index) -> !fir.slice<1>
   // expected-error@+1 {{'fir.embox' op slice must not be provided for a scalar}}
   %2 = fir.embox %0[%1] : (!fir.ref<i32>, !fir.slice<1>) -> !fir.box<i32>
+}
+
+// -----
+
+func.func @embox_tdesc(%arg0: !fir.class<!fir.array<10x!fir.type<derived{a:i32,b:i32}>>>) {
+  %0 = fir.alloca i32
+  %c1_i32 = arith.constant 1 : i32
+  %1 = fir.convert %c1_i32 : (i32) -> index
+  %c10_i32 = arith.constant 10 : i32
+  %2 = fir.convert %c10_i32 : (i32) -> index
+  %c1 = arith.constant 1 : index
+  %3 = fir.convert %1 : (index) -> i32
+  %4:2 = fir.do_loop %arg2 = %1 to %2 step %c1 iter_args(%arg3 = %3) -> (index, i32) {
+    fir.store %arg3 to %0 : !fir.ref<i32>
+    %9 = fir.load %0 : !fir.ref<i32>
+    %10 = fir.convert %9 : (i32) -> i64
+    %c1_i64 = arith.constant 1 : i64
+    %11 = arith.subi %10, %c1_i64 : i64
+    %12 = fir.coordinate_of %arg0, %11 : (!fir.class<!fir.array<10x!fir.type<derived{a:i32,b:i32}>>>, i64) -> !fir.ref<!fir.type<derived{a:i32,b:i32}>>
+    %tdesc = fir.box_tdesc %arg0 : (!fir.class<!fir.array<10x!fir.type<derived{a:i32,b:i32}>>>) -> (!fir.tdesc<!fir.type<derived{a:i32,b:i32}>>)
+    // expected-error@+1 {{'fir.embox' op tdesc must be used with fir.class result type}}
+    %13 = fir.embox %12 tdesc %tdesc : (!fir.ref<!fir.type<derived{a:i32,b:i32}>>, !fir.tdesc<!fir.type<derived{a:i32,b:i32}>>) -> !fir.box<!fir.type<derived{a:i32,b:i32}>>
+    %14 = arith.addi %arg2, %c1 : index
+    %15 = fir.convert %c1 : (index) -> i32
+    %16 = fir.load %0 : !fir.ref<i32>
+    %17 = arith.addi %16, %15 : i32
+    fir.result %14, %17 : index, i32
+  }
+  fir.store %4#1 to %0 : !fir.ref<i32>
+  return
 }
 
 // -----

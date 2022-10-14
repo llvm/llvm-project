@@ -659,14 +659,10 @@ struct PadOpTilingPattern : public OpRewritePattern<tensor::PadOp> {
 
   LogicalResult matchAndRewrite(tensor::PadOp op,
                                 PatternRewriter &rewriter) const override {
-    if (op->hasAttr(LinalgTransforms::kLinalgTransformMarker))
-      return failure();
     tensor::PadOp newPadOp;
     LoopNest loopNest;
     if (failed(tilePadOp(rewriter, op, newPadOp, loopNest, options)))
       return failure();
-    newPadOp->setAttr(LinalgTransforms::kLinalgTransformMarker,
-                      rewriter.getUnitAttr());
     // Replace all uses of the original tensor::PadOp.
     rewriter.replaceOp(op, loopNest.getResults()[0]);
     return success();

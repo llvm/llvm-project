@@ -25,7 +25,7 @@ void test(
   {
     std::basic_string<CharT> str;
     OutIt out_it{str};
-    std::basic_format_context<OutIt, CharT> context = test_format_context_create(out_it, args);
+    std::basic_format_context context = test_format_context_create(out_it, args);
     context.out() = CharT('a');
     context.out() = CharT('b');
     context.out() = CharT('c');

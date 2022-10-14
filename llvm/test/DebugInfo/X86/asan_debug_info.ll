@@ -32,22 +32,22 @@
 
 target triple = "x86_64-apple-macosx10.10.0"
 
-declare void @escape(i8**)
+declare void @escape(ptr)
 
 ; Function Attrs: sanitize_address
-define i8* @foo(i1 %cond) #0 !dbg !6 {
+define ptr @foo(i1 %cond) #0 !dbg !6 {
 entry:
-  %a1 = alloca i8*, !dbg !12
-  call void @escape(i8** %a1), !dbg !13
+  %a1 = alloca ptr, !dbg !12
+  call void @escape(ptr %a1), !dbg !13
   br i1 %cond, label %l1, label %l2, !dbg !14
 
 l1:                                               ; preds = %entry
-  ret i8* null, !dbg !15
+  ret ptr null, !dbg !15
 
 l2:                                               ; preds = %entry
-  call void @llvm.dbg.declare(metadata i8** %a1, metadata !11, metadata !DIExpression()), !dbg !16
-  %p = load i8*, i8** %a1, !dbg !16
-  ret i8* %p, !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %a1, metadata !11, metadata !DIExpression()), !dbg !16
+  %p = load ptr, ptr %a1, !dbg !16
+  ret ptr %p, !dbg !17
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)

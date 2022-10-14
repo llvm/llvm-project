@@ -7987,6 +7987,7 @@ class sve_int_brkn<bit S, string asm>
 
   let Constraints = "$Pdm = $_Pdm";
   let Defs = !if(S, [NZCV], []);
+  let ElementSize = ElementSizeB;
 }
 
 multiclass sve_int_brkn<bits<1> opc, string asm, SDPatternOperator op> {

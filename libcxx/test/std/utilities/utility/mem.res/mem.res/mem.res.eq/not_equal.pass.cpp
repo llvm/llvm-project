@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
+// test_memory_resource requires RTTI for dynamic_cast
+// UNSUPPORTED: no-rtti
+
 // <memory_resource>
 
 // bool operator!=(memory_resource const &, memory_resource const &) noexcept;

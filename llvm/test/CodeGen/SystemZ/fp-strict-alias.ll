@@ -14,7 +14,7 @@ declare void @bar()
 
 ; We can move any FP operation across a (normal) store.
 
-define void @f1(float %f1, float %f2, float *%ptr1, float *%ptr2) {
+define void @f1(float %f1, float %f2, ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: f1:
 ; CHECK: sqebr
 ; CHECK: ste
@@ -25,13 +25,13 @@ define void @f1(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   %sqrt1 = call float @llvm.sqrt.f32(float %f1)
   %sqrt2 = call float @llvm.sqrt.f32(float %f2)
 
-  store float %sqrt1, float *%ptr1
-  store float %sqrt2, float *%ptr2
+  store float %sqrt1, ptr %ptr1
+  store float %sqrt2, ptr %ptr2
 
   ret void
 }
 
-define void @f2(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
+define void @f2(float %f1, float %f2, ptr %ptr1, ptr %ptr2) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK: sqebr
 ; CHECK: ste
@@ -48,13 +48,13 @@ define void @f2(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
                         metadata !"round.dynamic",
                         metadata !"fpexcept.ignore") #0
 
-  store float %sqrt1, float *%ptr1
-  store float %sqrt2, float *%ptr2
+  store float %sqrt1, ptr %ptr1
+  store float %sqrt2, ptr %ptr2
 
   ret void
 }
 
-define void @f3(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
+define void @f3(float %f1, float %f2, ptr %ptr1, ptr %ptr2) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK: sqebr
 ; CHECK: ste
@@ -71,13 +71,13 @@ define void @f3(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
                         metadata !"round.dynamic",
                         metadata !"fpexcept.maytrap") #0
 
-  store float %sqrt1, float *%ptr1
-  store float %sqrt2, float *%ptr2
+  store float %sqrt1, ptr %ptr1
+  store float %sqrt2, ptr %ptr2
 
   ret void
 }
 
-define void @f4(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
+define void @f4(float %f1, float %f2, ptr %ptr1, ptr %ptr2) #0 {
 ; CHECK-LABEL: f4:
 ; CHECK: sqebr
 ; CHECK: ste
@@ -94,8 +94,8 @@ define void @f4(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
 
-  store float %sqrt1, float *%ptr1
-  store float %sqrt2, float *%ptr2
+  store float %sqrt1, ptr %ptr1
+  store float %sqrt2, ptr %ptr2
 
   ret void
 }
@@ -105,7 +105,7 @@ define void @f4(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
 ; operation even across a volatile store, but not a fpexcept.maytrap
 ; or fpexcept.strict operation.
 
-define void @f5(float %f1, float %f2, float *%ptr1, float *%ptr2) {
+define void @f5(float %f1, float %f2, ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: f5:
 ; CHECK: sqebr
 ; CHECK: ste
@@ -116,13 +116,13 @@ define void @f5(float %f1, float %f2, float *%ptr1, float *%ptr2) {
   %sqrt1 = call float @llvm.sqrt.f32(float %f1)
   %sqrt2 = call float @llvm.sqrt.f32(float %f2)
 
-  store volatile float %sqrt1, float *%ptr1
-  store volatile float %sqrt2, float *%ptr2
+  store volatile float %sqrt1, ptr %ptr1
+  store volatile float %sqrt2, ptr %ptr2
 
   ret void
 }
 
-define void @f6(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
+define void @f6(float %f1, float %f2, ptr %ptr1, ptr %ptr2) #0 {
 ; CHECK-LABEL: f6:
 ; CHECK: sqebr
 ; CHECK: ste
@@ -139,13 +139,13 @@ define void @f6(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
                         metadata !"round.dynamic",
                         metadata !"fpexcept.ignore") #0
 
-  store volatile float %sqrt1, float *%ptr1
-  store volatile float %sqrt2, float *%ptr2
+  store volatile float %sqrt1, ptr %ptr1
+  store volatile float %sqrt2, ptr %ptr2
 
   ret void
 }
 
-define void @f7(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
+define void @f7(float %f1, float %f2, ptr %ptr1, ptr %ptr2) #0 {
 ; CHECK-LABEL: f7:
 ; CHECK: sqebr
 ; CHECK: sqebr
@@ -162,13 +162,13 @@ define void @f7(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
                         metadata !"round.dynamic",
                         metadata !"fpexcept.maytrap") #0
 
-  store volatile float %sqrt1, float *%ptr1
-  store volatile float %sqrt2, float *%ptr2
+  store volatile float %sqrt1, ptr %ptr1
+  store volatile float %sqrt2, ptr %ptr2
 
   ret void
 }
 
-define void @f8(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
+define void @f8(float %f1, float %f2, ptr %ptr1, ptr %ptr2) #0 {
 ; CHECK-LABEL: f8:
 ; CHECK: sqebr
 ; CHECK: sqebr
@@ -185,8 +185,8 @@ define void @f8(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
 
-  store volatile float %sqrt1, float *%ptr1
-  store volatile float %sqrt2, float *%ptr2
+  store volatile float %sqrt1, ptr %ptr1
+  store volatile float %sqrt2, ptr %ptr2
 
   ret void
 }
@@ -194,7 +194,7 @@ define void @f8(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
 
 ; No variant of FP operations can be scheduled across a SPFC.
 
-define void @f9(float %f1, float %f2, float *%ptr1, float *%ptr2) {
+define void @f9(float %f1, float %f2, ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: f9:
 ; CHECK: sqebr
 ; CHECK: sqebr
@@ -207,13 +207,13 @@ define void @f9(float %f1, float %f2, float *%ptr1, float *%ptr2) {
 
   call void @llvm.s390.sfpc(i32 0)
 
-  store float %sqrt1, float *%ptr1
-  store float %sqrt2, float *%ptr2
+  store float %sqrt1, ptr %ptr1
+  store float %sqrt2, ptr %ptr2
 
   ret void
 }
 
-define void @f10(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
+define void @f10(float %f1, float %f2, ptr %ptr1, ptr %ptr2) #0 {
 ; CHECK-LABEL: f10:
 ; CHECK: sqebr
 ; CHECK: sqebr
@@ -232,13 +232,13 @@ define void @f10(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
 
   call void @llvm.s390.sfpc(i32 0) #0
 
-  store float %sqrt1, float *%ptr1
-  store float %sqrt2, float *%ptr2
+  store float %sqrt1, ptr %ptr1
+  store float %sqrt2, ptr %ptr2
 
   ret void
 }
 
-define void @f11(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
+define void @f11(float %f1, float %f2, ptr %ptr1, ptr %ptr2) #0 {
 ; CHECK-LABEL: f11:
 ; CHECK: sqebr
 ; CHECK: sqebr
@@ -257,13 +257,13 @@ define void @f11(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
 
   call void @llvm.s390.sfpc(i32 0) #0
 
-  store float %sqrt1, float *%ptr1
-  store float %sqrt2, float *%ptr2
+  store float %sqrt1, ptr %ptr1
+  store float %sqrt2, ptr %ptr2
 
   ret void
 }
 
-define void @f12(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
+define void @f12(float %f1, float %f2, ptr %ptr1, ptr %ptr2) #0 {
 ; CHECK-LABEL: f12:
 ; CHECK: sqebr
 ; CHECK: sqebr
@@ -282,8 +282,8 @@ define void @f12(float %f1, float %f2, float *%ptr1, float *%ptr2) #0 {
 
   call void @llvm.s390.sfpc(i32 0) #0
 
-  store float %sqrt1, float *%ptr1
-  store float %sqrt2, float *%ptr2
+  store float %sqrt1, ptr %ptr1
+  store float %sqrt2, ptr %ptr2
 
   ret void
 }
@@ -344,7 +344,7 @@ define void @f16(float %f1) #0 {
 ; Verify that constrained intrinsics and memory operations get their
 ; chains linked up properly.
 
-define void @f17(float %in, float* %out) #0 {
+define void @f17(float %in, ptr %out) #0 {
 ; CHECK-LABEL: f17:
 ; CHECK: sqebr
 ; CHECK: ste
@@ -353,12 +353,12 @@ define void @f17(float %in, float* %out) #0 {
                         float %in,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.ignore") #0
-  store float %sqrt, float* %out, align 4
+  store float %sqrt, ptr %out, align 4
   tail call void @bar() #0
   ret void
 }
 
-define void @f18(float %in, float* %out) #0 {
+define void @f18(float %in, ptr %out) #0 {
 ; CHECK-LABEL: f18:
 ; CHECK: sqebr
 ; CHECK: ste
@@ -367,12 +367,12 @@ define void @f18(float %in, float* %out) #0 {
                         float %in,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.ignore") #0
-  store float %sqrt, float* %out, align 4
+  store float %sqrt, ptr %out, align 4
   tail call void @bar() #0
   ret void
 }
 
-define void @f19(float %in, float* %out) #0 {
+define void @f19(float %in, ptr %out) #0 {
 ; CHECK-LABEL: f19:
 ; CHECK: sqebr
 ; CHECK: ste
@@ -381,12 +381,12 @@ define void @f19(float %in, float* %out) #0 {
                         float %in,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.maytrap") #0
-  store float %sqrt, float* %out, align 4
+  store float %sqrt, ptr %out, align 4
   tail call void @bar() #0
   ret void
 }
 
-define void @f20(float %in, float* %out) #0 {
+define void @f20(float %in, ptr %out) #0 {
 ; CHECK-LABEL: f20:
 ; CHECK: sqebr
 ; CHECK: ste
@@ -395,7 +395,7 @@ define void @f20(float %in, float* %out) #0 {
                         float %in,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  store float %sqrt, float* %out, align 4
+  store float %sqrt, ptr %out, align 4
   tail call void @bar() #0
   ret void
 }

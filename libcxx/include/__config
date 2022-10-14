@@ -1080,10 +1080,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_ENABLE_CXX20_REMOVED_TYPE_TRAITS
 #  endif // _LIBCPP_ENABLE_CXX20_REMOVED_FEATURES
 
-#  if !defined(__cpp_impl_coroutine) || __cpp_impl_coroutine < 201902L
-#    define _LIBCPP_HAS_NO_CXX20_COROUTINES
-#  endif
-
 #  define _LIBCPP_PUSH_MACROS _Pragma("push_macro(\"min\")") _Pragma("push_macro(\"max\")")
 #  define _LIBCPP_POP_MACROS _Pragma("pop_macro(\"min\")") _Pragma("pop_macro(\"max\")")
 
@@ -1199,13 +1195,15 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    endif
 #  endif
 
-// There are a handful of standard library types that are intended to support CTAD but don't need any
-// explicit deduction guides to do so. This macro is used to mark them as such, which suppresses the
-// '-Wctad-maybe-unsupported' compiler warning when CTAD is used in user code with these classes.
+// There are a handful of public standard library types that are intended to
+// support CTAD but don't need any explicit deduction guides to do so. This
+// macro is used to mark them as such, which suppresses the
+// '-Wctad-maybe-unsupported' compiler warning when CTAD is used in user code
+// with these classes.
 #if _LIBCPP_STD_VER >= 17
-#  define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName)                                                                  \
-    template <class _Tag = void>                                                                                       \
-    _ClassName(typename _Tag::__allow_ctad) -> _ClassName<_Tag>
+#    define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName)                                                                \
+      template <class ..._Tag>                                                                                         \
+      _ClassName(typename _Tag::__allow_ctad...) -> _ClassName<_Tag...>
 #else
 #  define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
 #endif

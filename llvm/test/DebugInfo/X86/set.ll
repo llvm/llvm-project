@@ -8,16 +8,16 @@ source_filename = "../src/Main.m3"
 target datalayout = "e-m:e-p:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
 
-%M_Const_struct = type { [7 x i8], [1 x i8], [4 x i8], [4 x i8], i8* (i64)*, i8*, void ()*, i8*, [8 x i8], [14 x i8], [2 x i8] }
-%M_Main_struct = type { i8*, [32 x i8], i8*, [24 x i8], i8*, [8 x i8], i8* (i64)*, i64, [8 x i8], i8* ()*, i8*, [8 x i8], i8* ()*, [8 x i8] }
+%M_Const_struct = type { [7 x i8], [1 x i8], [4 x i8], [4 x i8], ptr, ptr, ptr, ptr, [8 x i8], [14 x i8], [2 x i8] }
+%M_Main_struct = type { ptr, [32 x i8], ptr, [24 x i8], ptr, [8 x i8], ptr, i64, [8 x i8], ptr, ptr, [8 x i8], ptr, [8 x i8] }
 
-@M_Const = internal constant %M_Const_struct { [7 x i8] c"Main_M3", [1 x i8] zeroinitializer, [4 x i8] c"Test", [4 x i8] zeroinitializer, i8* (i64)* @Main_M3, i8* getelementptr inbounds (%M_Const_struct, %M_Const_struct* @M_Const, i32 0, i32 0, i32 0), void ()* @Main__Test, i8* getelementptr inbounds (i8, i8* getelementptr inbounds (%M_Const_struct, %M_Const_struct* @M_Const, i32 0, i32 0, i32 0), i64 8), [8 x i8] zeroinitializer, [14 x i8] c"../src/Main.m3", [2 x i8] zeroinitializer }, align 8
-@M_Main = internal global %M_Main_struct { i8* getelementptr inbounds (i8, i8* getelementptr inbounds (%M_Const_struct, %M_Const_struct* @M_Const, i32 0, i32 0, i32 0), i64 56), [32 x i8] zeroinitializer, i8* getelementptr inbounds (i8, i8* getelementptr inbounds (%M_Const_struct, %M_Const_struct* @M_Const, i32 0, i32 0, i32 0), i64 16), [24 x i8] zeroinitializer, i8* getelementptr inbounds (i8, i8* bitcast (%M_Main_struct* @M_Main to i8*), i64 104), [8 x i8] zeroinitializer, i8* (i64)* @Main_M3, i64 3, [8 x i8] zeroinitializer, i8* ()* @Main_I3, i8* getelementptr inbounds (i8, i8* bitcast (%M_Main_struct* @M_Main to i8*), i64 128), [8 x i8] zeroinitializer, i8* ()* @RTHooks_I3, [8 x i8] zeroinitializer }, align 8
+@M_Const = internal constant %M_Const_struct { [7 x i8] c"Main_M3", [1 x i8] zeroinitializer, [4 x i8] c"Test", [4 x i8] zeroinitializer, ptr @Main_M3, ptr @M_Const, ptr @Main__Test, ptr getelementptr inbounds (i8, ptr @M_Const, i64 8), [8 x i8] zeroinitializer, [14 x i8] c"../src/Main.m3", [2 x i8] zeroinitializer }, align 8
+@M_Main = internal global %M_Main_struct { ptr getelementptr inbounds (i8, ptr @M_Const, i64 56), [32 x i8] zeroinitializer, ptr getelementptr inbounds (i8, ptr @M_Const, i64 16), [24 x i8] zeroinitializer, ptr getelementptr inbounds (i8, ptr @M_Main, i64 104), [8 x i8] zeroinitializer, ptr @Main_M3, i64 3, [8 x i8] zeroinitializer, ptr @Main_I3, ptr getelementptr inbounds (i8, ptr @M_Main, i64 128), [8 x i8] zeroinitializer, ptr @RTHooks_I3, [8 x i8] zeroinitializer }, align 8
 @m3_jmpbuf_size = external global i64, align 8
 
-declare i8* @Main_I3()
+declare ptr @Main_I3()
 
-declare i8* @RTHooks_I3()
+declare ptr @RTHooks_I3()
 
 ; Function Attrs: uwtable
 define void @Main__Test() #0 !dbg !5 {
@@ -27,28 +27,28 @@ entry:
   br label %second, !dbg !21
 
 second:                                           ; preds = %entry
-  call void @llvm.dbg.declare(metadata i64* %as, metadata !22, metadata !DIExpression()), !dbg !25
-  call void @llvm.dbg.declare(metadata i64* %bs, metadata !26, metadata !DIExpression()), !dbg !25
-  store i64 36028797018972298, i64* %as, align 8, !dbg !28
-  store i64 197, i64* %bs, align 8, !dbg !29
+  call void @llvm.dbg.declare(metadata ptr %as, metadata !22, metadata !DIExpression()), !dbg !25
+  call void @llvm.dbg.declare(metadata ptr %bs, metadata !26, metadata !DIExpression()), !dbg !25
+  store i64 36028797018972298, ptr %as, align 8, !dbg !28
+  store i64 197, ptr %bs, align 8, !dbg !29
   ret void, !dbg !21
 }
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-declare i8* @alloca()
+declare ptr @alloca()
 
 ; Function Attrs: uwtable
-define i8* @Main_M3(i64 %mode) #0 !dbg !30 {
+define ptr @Main_M3(i64 %mode) #0 !dbg !30 {
 entry:
   %mode1 = alloca i64, align 8
-  store i64 %mode, i64* %mode1, align 8
+  store i64 %mode, ptr %mode1, align 8
   br label %second, !dbg !36
 
 second:                                           ; preds = %entry
-  call void @llvm.dbg.declare(metadata i64* %mode1, metadata !37, metadata !DIExpression()), !dbg !38
-  %v.3 = load i64, i64* %mode1, align 8, !dbg !38
+  call void @llvm.dbg.declare(metadata ptr %mode1, metadata !37, metadata !DIExpression()), !dbg !38
+  %v.3 = load i64, ptr %mode1, align 8, !dbg !38
   %icmp = icmp eq i64 %v.3, 0, !dbg !38
   br i1 %icmp, label %if_1, label %else_1, !dbg !38
 
@@ -57,7 +57,7 @@ else_1:                                           ; preds = %second
   br label %if_1, !dbg !36
 
 if_1:                                             ; preds = %else_1, %second
-  ret i8* bitcast (%M_Main_struct* @M_Main to i8*), !dbg !36
+  ret ptr @M_Main, !dbg !36
 }
 
 attributes #0 = { uwtable "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

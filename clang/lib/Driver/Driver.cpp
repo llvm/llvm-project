@@ -3154,12 +3154,16 @@ class OffloadingActionBuilder final {
         std::string FileName = IA->getInputArg().getAsString(Args);
         // Check if the type of the file is the same as the action. Do not
         // unbundle it if it is not. Do not unbundle .so files, for example,
-        // which are not object files.
+        // which are not object files. Files with extension ".lib" is classified
+        // as TY_Object but they are actually archives, therefore should not be
+        // unbundled here as objects. They will be handled at other places.
+        const StringRef LibFileExt = ".lib";
         if (IA->getType() == types::TY_Object &&
             (!llvm::sys::path::has_extension(FileName) ||
              types::lookupTypeForExtension(
                  llvm::sys::path::extension(FileName).drop_front()) !=
-                 types::TY_Object))
+                 types::TY_Object ||
+             llvm::sys::path::extension(FileName) == LibFileExt))
           return ABRT_Inactive;
 
         for (auto Arch : GpuArchList) {
@@ -4388,13 +4392,16 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
   handleArguments(C, Args, Inputs, Actions);
 
-  // Builder to be used to build offloading actions.
-  OffloadingActionBuilder OffloadBuilder(C, Args, Inputs);
-
   bool UseNewOffloadingDriver =
       false && (C.isOffloadingHostKind(Action::OFK_OpenMP) ||
       Args.hasFlag(options::OPT_offload_new_driver,
                    options::OPT_no_offload_new_driver, false));
+
+  // Builder to be used to build offloading actions.
+  std::unique_ptr<OffloadingActionBuilder> OffloadBuilder =
+      !UseNewOffloadingDriver
+          ? std::make_unique<OffloadingActionBuilder>(C, Args, Inputs)
+          : nullptr;
 
   // Construct the actions to perform.
   HeaderModulePrecompileJobAction *HeaderModuleAction = nullptr;
@@ -4418,7 +4425,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     // Use the current host action in any of the offloading actions, if
     // required.
     if (!UseNewOffloadingDriver)
-      if (OffloadBuilder.addHostDependenceToDeviceActions(Current, InputArg))
+      if (OffloadBuilder->addHostDependenceToDeviceActions(Current, InputArg))
         break;
 
     for (phases::ID Phase : PL) {
@@ -4429,7 +4436,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
       // Add any offload action the host action depends on.
       if (!UseNewOffloadingDriver)
-        Current = OffloadBuilder.addDeviceDependencesToHostAction(
+        Current = OffloadBuilder->addDeviceDependencesToHostAction(
             Current, InputArg, Phase, PL.back(), FullPL);
       if (!Current)
         break;
@@ -4492,7 +4499,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       // Use the current host action in any of the offloading actions, if
       // required.
       if (!UseNewOffloadingDriver)
-        if (OffloadBuilder.addHostDependenceToDeviceActions(Current, InputArg))
+        if (OffloadBuilder->addHostDependenceToDeviceActions(Current, InputArg))
           break;
 
       // Try to build the offloading actions and add the result as a dependency
@@ -4510,7 +4517,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
     // Add any top level actions generated for offloading.
     if (!UseNewOffloadingDriver)
-      OffloadBuilder.appendTopLevelActions(Actions, Current, InputArg);
+      OffloadBuilder->appendTopLevelActions(Actions, Current, InputArg);
     else if (Current)
       Current->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
                                         /*BoundArch=*/nullptr);
@@ -4522,13 +4529,12 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     Arg *FinalPhaseArg;
     if (getFinalPhase(Args, &FinalPhaseArg) == phases::Link)
       if (!UseNewOffloadingDriver)
-        if (!UseNewOffloadingDriver)
-          OffloadBuilder.appendDeviceLinkActions(Actions);
+        OffloadBuilder->appendDeviceLinkActions(Actions);
   }
 
   if (!LinkerInputs.empty()) {
     if (!UseNewOffloadingDriver)
-      if (Action *Wrapper = OffloadBuilder.makeHostLinkAction())
+      if (Action *Wrapper = OffloadBuilder->makeHostLinkAction())
         LinkerInputs.push_back(Wrapper);
     Action *LA;
     // Check if this Linker Job should emit a static library.
@@ -4543,7 +4549,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       LA = C.MakeAction<LinkJobAction>(LinkerInputs, types::TY_Image);
     }
     if (!UseNewOffloadingDriver)
-      LA = OffloadBuilder.processHostLinkAction(LA);
+      LA = OffloadBuilder->processHostLinkAction(LA);
     Actions.push_back(LA);
   }
 
@@ -4711,15 +4717,27 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
       Arg = ExtractedArg.get();
     }
 
+    // Add or remove the seen architectures in order of appearance. If an
+    // invalid architecture is given we simply exit.
     if (Arg->getOption().matches(options::OPT_offload_arch_EQ)) {
-      for (StringRef Arch : llvm::split(Arg->getValue(), ","))
-        Archs.insert(getCanonicalArchString(C, Args, Arch, TC->getTriple()));
+      for (StringRef Arch : llvm::split(Arg->getValue(), ",")) {
+        StringRef ArchStr =
+            getCanonicalArchString(C, Args, Arch, TC->getTriple());
+        if (ArchStr.empty())
+          return Archs;
+        Archs.insert(ArchStr);
+      }
     } else if (Arg->getOption().matches(options::OPT_no_offload_arch_EQ)) {
       for (StringRef Arch : llvm::split(Arg->getValue(), ",")) {
-        if (Arch == StringRef("all"))
+        if (Arch == "all") {
           Archs.clear();
-        else
-          Archs.erase(getCanonicalArchString(C, Args, Arch, TC->getTriple()));
+        } else {
+          StringRef ArchStr =
+              getCanonicalArchString(C, Args, Arch, TC->getTriple());
+          if (ArchStr.empty())
+            return Archs;
+          Archs.erase(ArchStr);
+        }
       }
     }
   }

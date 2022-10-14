@@ -49,7 +49,7 @@ def OpenMP_PointerLikeType : TypeAlias<OpenMP_PointerLikeTypeInterface,
 def ParallelOp : OpenMP_Op<"parallel", [
                  AutomaticAllocationScope, AttrSizedOperandSegments,
                  DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>,
-                 RecursiveSideEffects, ReductionClauseInterface]> {
+                 RecursiveMemoryEffects, ReductionClauseInterface]> {
   let summary = "parallel construct";
   let description = [{
     The parallel construct includes a region of code which is to be executed
@@ -113,7 +113,7 @@ def ParallelOp : OpenMP_Op<"parallel", [
   let hasVerifier = 1;
 }
 
-def TerminatorOp : OpenMP_Op<"terminator", [Terminator, NoSideEffect]> {
+def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
   let summary = "terminator for OpenMP regions";
   let description = [{
     A terminator operation for regions that appear in the body of OpenMP
@@ -249,7 +249,7 @@ def SingleOp : OpenMP_Op<"single", [AttrSizedOperandSegments]> {
 
 def WsLoopOp : OpenMP_Op<"wsloop", [AttrSizedOperandSegments,
                          AllTypesMatch<["lowerBound", "upperBound", "step"]>,
-                         RecursiveSideEffects, ReductionClauseInterface]> {
+                         RecursiveMemoryEffects, ReductionClauseInterface]> {
   let summary = "worksharing-loop construct";
   let description = [{
     The worksharing-loop construct specifies that the iterations of the loop(s)
@@ -435,7 +435,7 @@ def SimdLoopOp : OpenMP_Op<"simdloop", [AttrSizedOperandSegments,
 
 
 def YieldOp : OpenMP_Op<"yield",
-    [NoSideEffect, ReturnLike, Terminator,
+    [Pure, ReturnLike, Terminator,
      ParentOneOf<["WsLoopOp", "ReductionDeclareOp",
      "AtomicUpdateOp", "SimdLoopOp"]>]> {
   let summary = "loop yield and termination operation";
@@ -543,7 +543,7 @@ def TaskOp : OpenMP_Op<"task", [AttrSizedOperandSegments,
 }
 
 def TaskLoopOp : OpenMP_Op<"taskloop", [AttrSizedOperandSegments,
-                           AutomaticAllocationScope, RecursiveSideEffects,
+                           AutomaticAllocationScope, RecursiveMemoryEffects,
                            AllTypesMatch<["lowerBound", "upperBound", "step"]>,
                            ReductionClauseInterface]> {
   let summary = "taskloop construct";
@@ -1097,7 +1097,7 @@ def AtomicWriteOp : OpenMP_Op<"atomic.write"> {
 
 def AtomicUpdateOp : OpenMP_Op<"atomic.update",
                                [SingleBlockImplicitTerminator<"YieldOp">,
-                                RecursiveSideEffects]> {
+                                RecursiveMemoryEffects]> {
 
   let summary = "performs an atomic update";
 

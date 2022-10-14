@@ -310,7 +310,8 @@ public:
   /// a memory reference type.
   /// Array entities are boxed with a shape and possibly a shift. Character
   /// entities are boxed with a LEN parameter.
-  mlir::Value createBox(mlir::Location loc, const fir::ExtendedValue &exv);
+  mlir::Value createBox(mlir::Location loc, const fir::ExtendedValue &exv,
+                        bool isPolymorphic = false);
 
   /// Create constant i1 with value 1. if \p b is true or 0. otherwise
   mlir::Value createBool(mlir::Location loc, bool b) {

@@ -216,7 +216,7 @@ def MFMAOutTypes : AnyTypeOf<[F64,
 def AMDGPU_MFMAOp :
     AMDGPU_Op<"mfma", [AllTypesMatch<["sourceA", "sourceB"]>,
                         AllTypesMatch<["destC", "destD"]>,
-                        NoSideEffect]>,
+                        Pure]>,
     Arguments<(ins
                    I32Attr:$m,
                    I32Attr:$n,

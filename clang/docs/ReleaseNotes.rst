@@ -307,6 +307,13 @@ Improvements to Clang's diagnostics
   function definition without a prototype which is preceded by a static
   declaration of the function with a prototype. Fixes
   `Issue 58181 <https://github.com/llvm/llvm-project/issues/58181>`_.
+- Copy-elided initialization of lock scopes is now handled differently in
+  ``-Wthread-safety-analysis``: annotations on the move constructor are no
+  longer taken into account, in favor of annotations on the function returning
+  the lock scope by value. This could result in new warnings if code depended
+  on the previous undocumented behavior. As a side effect of this change,
+  constructor calls outside of initializer expressions are no longer ignored,
+  which can result in new warnings (or make existing warnings disappear).
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -338,6 +345,10 @@ Non-comprehensive list of changes in this release
   is the target triple and `driver` first tries the canonical name
   for the driver (respecting ``--driver-mode=``), and then the name found
   in the executable.
+- If the environment variable ``SOURCE_DATE_EPOCH`` is set, it specifies a UNIX
+  timestamp to be used in replacement of the current date and time in
+  the ``__DATE__``, ``__TIME__``, and ``__TIMESTAMP__`` macros. See
+  `<https://reproducible-builds.org/docs/source-date-epoch/>`_.
 
 New Compiler Flags
 ------------------
@@ -512,6 +523,12 @@ OpenCL C Language Changes in Clang
 
 ABI Changes in Clang
 --------------------
+
+- GCC doesn't pack non-POD members in packed structs unless the packed
+  attribute is also specified on the member. Clang historically did perform
+  such packing. Clang now matches the gcc behavior (except on Darwin and PS4).
+  You can switch back to the old ABI behavior with the flag:
+  ``-fclang-abi-compat=15.0``.
 
 OpenMP Support in Clang
 -----------------------

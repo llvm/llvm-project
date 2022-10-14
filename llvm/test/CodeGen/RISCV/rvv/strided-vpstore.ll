@@ -621,51 +621,47 @@ declare void @llvm.experimental.vp.strided.store.nxv3f32.p0f32.i32(<vscale x 3 x
 define void @strided_store_nxv16f64(<vscale x 16 x double> %v, double* %ptr, i32 signext %stride, <vscale x 16 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-RV32-LABEL: strided_store_nxv16f64:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    mv a4, a2
-; CHECK-RV32-NEXT:    bltu a2, a3, .LBB34_2
+; CHECK-RV32-NEXT:    csrr a4, vlenb
+; CHECK-RV32-NEXT:    mv a3, a2
+; CHECK-RV32-NEXT:    bltu a2, a4, .LBB34_2
 ; CHECK-RV32-NEXT:  # %bb.1:
-; CHECK-RV32-NEXT:    mv a4, a3
+; CHECK-RV32-NEXT:    mv a3, a4
 ; CHECK-RV32-NEXT:  .LBB34_2:
-; CHECK-RV32-NEXT:    li a5, 0
-; CHECK-RV32-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
+; CHECK-RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vsse64.v v8, (a0), a1, v0.t
-; CHECK-RV32-NEXT:    srli a6, a3, 3
-; CHECK-RV32-NEXT:    vsetvli a7, zero, e8, mf4, ta, ma
-; CHECK-RV32-NEXT:    sub a3, a2, a3
-; CHECK-RV32-NEXT:    vslidedown.vx v0, v0, a6
-; CHECK-RV32-NEXT:    bltu a2, a3, .LBB34_4
-; CHECK-RV32-NEXT:  # %bb.3:
-; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:  .LBB34_4:
-; CHECK-RV32-NEXT:    mul a2, a4, a1
-; CHECK-RV32-NEXT:    add a0, a0, a2
-; CHECK-RV32-NEXT:    vsetvli zero, a5, e64, m8, ta, ma
+; CHECK-RV32-NEXT:    sub a5, a2, a4
+; CHECK-RV32-NEXT:    sltu a2, a2, a5
+; CHECK-RV32-NEXT:    addi a2, a2, -1
+; CHECK-RV32-NEXT:    and a2, a2, a5
+; CHECK-RV32-NEXT:    srli a4, a4, 3
+; CHECK-RV32-NEXT:    vsetvli a5, zero, e8, mf4, ta, ma
+; CHECK-RV32-NEXT:    vslidedown.vx v0, v0, a4
+; CHECK-RV32-NEXT:    mul a3, a3, a1
+; CHECK-RV32-NEXT:    add a0, a0, a3
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vsse64.v v16, (a0), a1, v0.t
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: strided_store_nxv16f64:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    mv a4, a2
-; CHECK-RV64-NEXT:    bltu a2, a3, .LBB34_2
+; CHECK-RV64-NEXT:    csrr a4, vlenb
+; CHECK-RV64-NEXT:    mv a3, a2
+; CHECK-RV64-NEXT:    bltu a2, a4, .LBB34_2
 ; CHECK-RV64-NEXT:  # %bb.1:
-; CHECK-RV64-NEXT:    mv a4, a3
+; CHECK-RV64-NEXT:    mv a3, a4
 ; CHECK-RV64-NEXT:  .LBB34_2:
-; CHECK-RV64-NEXT:    li a5, 0
-; CHECK-RV64-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
+; CHECK-RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vsse64.v v8, (a0), a1, v0.t
-; CHECK-RV64-NEXT:    srli a6, a3, 3
-; CHECK-RV64-NEXT:    vsetvli a7, zero, e8, mf4, ta, ma
-; CHECK-RV64-NEXT:    sub a3, a2, a3
-; CHECK-RV64-NEXT:    vslidedown.vx v0, v0, a6
-; CHECK-RV64-NEXT:    bltu a2, a3, .LBB34_4
-; CHECK-RV64-NEXT:  # %bb.3:
-; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:  .LBB34_4:
-; CHECK-RV64-NEXT:    mul a2, a4, a1
-; CHECK-RV64-NEXT:    add a0, a0, a2
-; CHECK-RV64-NEXT:    vsetvli zero, a5, e64, m8, ta, ma
+; CHECK-RV64-NEXT:    sub a5, a2, a4
+; CHECK-RV64-NEXT:    sltu a2, a2, a5
+; CHECK-RV64-NEXT:    addi a2, a2, -1
+; CHECK-RV64-NEXT:    and a2, a2, a5
+; CHECK-RV64-NEXT:    srli a4, a4, 3
+; CHECK-RV64-NEXT:    vsetvli a5, zero, e8, mf4, ta, ma
+; CHECK-RV64-NEXT:    vslidedown.vx v0, v0, a4
+; CHECK-RV64-NEXT:    mul a3, a3, a1
+; CHECK-RV64-NEXT:    add a0, a0, a3
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vsse64.v v16, (a0), a1, v0.t
 ; CHECK-RV64-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.nxv16f64.p0f64.i32(<vscale x 16 x double> %v, double* %ptr, i32 %stride, <vscale x 16 x i1> %mask, i32 %evl)
@@ -681,17 +677,15 @@ define void @strided_store_nxv16f64_allones_mask(<vscale x 16 x double> %v, doub
 ; CHECK-RV32-NEXT:  # %bb.1:
 ; CHECK-RV32-NEXT:    mv a3, a4
 ; CHECK-RV32-NEXT:  .LBB35_2:
-; CHECK-RV32-NEXT:    li a5, 0
 ; CHECK-RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
-; CHECK-RV32-NEXT:    sub a4, a2, a4
 ; CHECK-RV32-NEXT:    vsse64.v v8, (a0), a1
-; CHECK-RV32-NEXT:    bltu a2, a4, .LBB35_4
-; CHECK-RV32-NEXT:  # %bb.3:
-; CHECK-RV32-NEXT:    mv a5, a4
-; CHECK-RV32-NEXT:  .LBB35_4:
-; CHECK-RV32-NEXT:    mul a2, a3, a1
-; CHECK-RV32-NEXT:    add a0, a0, a2
-; CHECK-RV32-NEXT:    vsetvli zero, a5, e64, m8, ta, ma
+; CHECK-RV32-NEXT:    sub a4, a2, a4
+; CHECK-RV32-NEXT:    sltu a2, a2, a4
+; CHECK-RV32-NEXT:    addi a2, a2, -1
+; CHECK-RV32-NEXT:    and a2, a2, a4
+; CHECK-RV32-NEXT:    mul a3, a3, a1
+; CHECK-RV32-NEXT:    add a0, a0, a3
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vsse64.v v16, (a0), a1
 ; CHECK-RV32-NEXT:    ret
 ;
@@ -703,17 +697,15 @@ define void @strided_store_nxv16f64_allones_mask(<vscale x 16 x double> %v, doub
 ; CHECK-RV64-NEXT:  # %bb.1:
 ; CHECK-RV64-NEXT:    mv a3, a4
 ; CHECK-RV64-NEXT:  .LBB35_2:
-; CHECK-RV64-NEXT:    li a5, 0
 ; CHECK-RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
-; CHECK-RV64-NEXT:    sub a4, a2, a4
 ; CHECK-RV64-NEXT:    vsse64.v v8, (a0), a1
-; CHECK-RV64-NEXT:    bltu a2, a4, .LBB35_4
-; CHECK-RV64-NEXT:  # %bb.3:
-; CHECK-RV64-NEXT:    mv a5, a4
-; CHECK-RV64-NEXT:  .LBB35_4:
-; CHECK-RV64-NEXT:    mul a2, a3, a1
-; CHECK-RV64-NEXT:    add a0, a0, a2
-; CHECK-RV64-NEXT:    vsetvli zero, a5, e64, m8, ta, ma
+; CHECK-RV64-NEXT:    sub a4, a2, a4
+; CHECK-RV64-NEXT:    sltu a2, a2, a4
+; CHECK-RV64-NEXT:    addi a2, a2, -1
+; CHECK-RV64-NEXT:    and a2, a2, a4
+; CHECK-RV64-NEXT:    mul a3, a3, a1
+; CHECK-RV64-NEXT:    add a0, a0, a3
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vsse64.v v16, (a0), a1
 ; CHECK-RV64-NEXT:    ret
   %one = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
@@ -728,55 +720,51 @@ declare void @llvm.experimental.vp.strided.store.nxv16f64.p0f64.i32(<vscale x 16
 define void @strided_store_nxv17f64(<vscale x 17 x double> %v, double* %ptr, i32 signext %stride, <vscale x 17 x i1> %mask, i32 zeroext %evl) {
 ; CHECK-RV32-LABEL: strided_store_nxv17f64:
 ; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    csrr a4, vlenb
+; CHECK-RV32-NEXT:    slli a6, a4, 1
+; CHECK-RV32-NEXT:    vmv1r.v v24, v0
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    bltu a3, a6, .LBB36_2
+; CHECK-RV32-NEXT:  # %bb.1:
+; CHECK-RV32-NEXT:    mv a5, a6
+; CHECK-RV32-NEXT:  .LBB36_2:
+; CHECK-RV32-NEXT:    mv a7, a5
+; CHECK-RV32-NEXT:    bltu a5, a4, .LBB36_4
+; CHECK-RV32-NEXT:  # %bb.3:
+; CHECK-RV32-NEXT:    mv a7, a4
+; CHECK-RV32-NEXT:  .LBB36_4:
 ; CHECK-RV32-NEXT:    addi sp, sp, -16
 ; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-RV32-NEXT:    csrr a4, vlenb
-; CHECK-RV32-NEXT:    slli a4, a4, 3
-; CHECK-RV32-NEXT:    sub sp, sp, a4
-; CHECK-RV32-NEXT:    csrr a4, vlenb
-; CHECK-RV32-NEXT:    slli a7, a4, 1
-; CHECK-RV32-NEXT:    vmv1r.v v24, v0
-; CHECK-RV32-NEXT:    addi a5, sp, 16
-; CHECK-RV32-NEXT:    vs8r.v v16, (a5) # Unknown-size Folded Spill
-; CHECK-RV32-NEXT:    mv a6, a3
-; CHECK-RV32-NEXT:    bltu a3, a7, .LBB36_2
-; CHECK-RV32-NEXT:  # %bb.1:
-; CHECK-RV32-NEXT:    mv a6, a7
-; CHECK-RV32-NEXT:  .LBB36_2:
-; CHECK-RV32-NEXT:    mv a5, a6
-; CHECK-RV32-NEXT:    bltu a6, a4, .LBB36_4
-; CHECK-RV32-NEXT:  # %bb.3:
-; CHECK-RV32-NEXT:    mv a5, a4
-; CHECK-RV32-NEXT:  .LBB36_4:
-; CHECK-RV32-NEXT:    li t0, 0
-; CHECK-RV32-NEXT:    vl8re64.v v16, (a0)
-; CHECK-RV32-NEXT:    vsetvli zero, a5, e64, m8, ta, ma
+; CHECK-RV32-NEXT:    csrr t0, vlenb
+; CHECK-RV32-NEXT:    slli t0, t0, 3
+; CHECK-RV32-NEXT:    sub sp, sp, t0
+; CHECK-RV32-NEXT:    vl8re64.v v0, (a0)
+; CHECK-RV32-NEXT:    addi a0, sp, 16
+; CHECK-RV32-NEXT:    vs8r.v v0, (a0) # Unknown-size Folded Spill
+; CHECK-RV32-NEXT:    vsetvli zero, a7, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vmv1r.v v0, v24
 ; CHECK-RV32-NEXT:    vsse64.v v8, (a1), a2, v0.t
-; CHECK-RV32-NEXT:    sub a7, a3, a7
-; CHECK-RV32-NEXT:    srli a0, a4, 2
-; CHECK-RV32-NEXT:    bltu a3, a7, .LBB36_6
-; CHECK-RV32-NEXT:  # %bb.5:
-; CHECK-RV32-NEXT:    mv t0, a7
-; CHECK-RV32-NEXT:  .LBB36_6:
-; CHECK-RV32-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
-; CHECK-RV32-NEXT:    vslidedown.vx v0, v24, a0
-; CHECK-RV32-NEXT:    bltu t0, a4, .LBB36_8
-; CHECK-RV32-NEXT:  # %bb.7:
-; CHECK-RV32-NEXT:    mv t0, a4
-; CHECK-RV32-NEXT:  .LBB36_8:
-; CHECK-RV32-NEXT:    li a0, 0
-; CHECK-RV32-NEXT:    mul a3, a6, a2
-; CHECK-RV32-NEXT:    add a7, a1, a3
-; CHECK-RV32-NEXT:    vsetvli zero, t0, e64, m8, ta, ma
-; CHECK-RV32-NEXT:    sub a3, a6, a4
+; CHECK-RV32-NEXT:    sub a0, a5, a4
+; CHECK-RV32-NEXT:    sltu t0, a5, a0
+; CHECK-RV32-NEXT:    addi t0, t0, -1
+; CHECK-RV32-NEXT:    and a0, t0, a0
+; CHECK-RV32-NEXT:    srli t0, a4, 3
+; CHECK-RV32-NEXT:    vsetvli t1, zero, e8, mf4, ta, ma
+; CHECK-RV32-NEXT:    vslidedown.vx v0, v24, t0
+; CHECK-RV32-NEXT:    mul a7, a7, a2
+; CHECK-RV32-NEXT:    add a7, a1, a7
+; CHECK-RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-RV32-NEXT:    sub a0, a3, a6
+; CHECK-RV32-NEXT:    sltu a3, a3, a0
+; CHECK-RV32-NEXT:    addi a3, a3, -1
+; CHECK-RV32-NEXT:    and a0, a3, a0
 ; CHECK-RV32-NEXT:    vsse64.v v16, (a7), a2, v0.t
-; CHECK-RV32-NEXT:    bltu a6, a3, .LBB36_10
-; CHECK-RV32-NEXT:  # %bb.9:
-; CHECK-RV32-NEXT:    mv a0, a3
-; CHECK-RV32-NEXT:  .LBB36_10:
-; CHECK-RV32-NEXT:    srli a3, a4, 3
-; CHECK-RV32-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
+; CHECK-RV32-NEXT:    bltu a0, a4, .LBB36_6
+; CHECK-RV32-NEXT:  # %bb.5:
+; CHECK-RV32-NEXT:    mv a0, a4
+; CHECK-RV32-NEXT:  .LBB36_6:
+; CHECK-RV32-NEXT:    srli a3, a4, 2
+; CHECK-RV32-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
 ; CHECK-RV32-NEXT:    vslidedown.vx v0, v24, a3
 ; CHECK-RV32-NEXT:    mul a3, a5, a2
 ; CHECK-RV32-NEXT:    add a1, a1, a3
@@ -792,55 +780,51 @@ define void @strided_store_nxv17f64(<vscale x 17 x double> %v, double* %ptr, i32
 ;
 ; CHECK-RV64-LABEL: strided_store_nxv17f64:
 ; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    csrr a4, vlenb
+; CHECK-RV64-NEXT:    slli a6, a4, 1
+; CHECK-RV64-NEXT:    vmv1r.v v24, v0
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    bltu a3, a6, .LBB36_2
+; CHECK-RV64-NEXT:  # %bb.1:
+; CHECK-RV64-NEXT:    mv a5, a6
+; CHECK-RV64-NEXT:  .LBB36_2:
+; CHECK-RV64-NEXT:    mv a7, a5
+; CHECK-RV64-NEXT:    bltu a5, a4, .LBB36_4
+; CHECK-RV64-NEXT:  # %bb.3:
+; CHECK-RV64-NEXT:    mv a7, a4
+; CHECK-RV64-NEXT:  .LBB36_4:
 ; CHECK-RV64-NEXT:    addi sp, sp, -16
 ; CHECK-RV64-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-RV64-NEXT:    csrr a4, vlenb
-; CHECK-RV64-NEXT:    slli a4, a4, 3
-; CHECK-RV64-NEXT:    sub sp, sp, a4
-; CHECK-RV64-NEXT:    csrr a4, vlenb
-; CHECK-RV64-NEXT:    slli a7, a4, 1
-; CHECK-RV64-NEXT:    vmv1r.v v24, v0
-; CHECK-RV64-NEXT:    addi a5, sp, 16
-; CHECK-RV64-NEXT:    vs8r.v v16, (a5) # Unknown-size Folded Spill
-; CHECK-RV64-NEXT:    mv a6, a3
-; CHECK-RV64-NEXT:    bltu a3, a7, .LBB36_2
-; CHECK-RV64-NEXT:  # %bb.1:
-; CHECK-RV64-NEXT:    mv a6, a7
-; CHECK-RV64-NEXT:  .LBB36_2:
-; CHECK-RV64-NEXT:    mv a5, a6
-; CHECK-RV64-NEXT:    bltu a6, a4, .LBB36_4
-; CHECK-RV64-NEXT:  # %bb.3:
-; CHECK-RV64-NEXT:    mv a5, a4
-; CHECK-RV64-NEXT:  .LBB36_4:
-; CHECK-RV64-NEXT:    li t0, 0
-; CHECK-RV64-NEXT:    vl8re64.v v16, (a0)
-; CHECK-RV64-NEXT:    vsetvli zero, a5, e64, m8, ta, ma
+; CHECK-RV64-NEXT:    csrr t0, vlenb
+; CHECK-RV64-NEXT:    slli t0, t0, 3
+; CHECK-RV64-NEXT:    sub sp, sp, t0
+; CHECK-RV64-NEXT:    vl8re64.v v0, (a0)
+; CHECK-RV64-NEXT:    addi a0, sp, 16
+; CHECK-RV64-NEXT:    vs8r.v v0, (a0) # Unknown-size Folded Spill
+; CHECK-RV64-NEXT:    vsetvli zero, a7, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vmv1r.v v0, v24
 ; CHECK-RV64-NEXT:    vsse64.v v8, (a1), a2, v0.t
-; CHECK-RV64-NEXT:    sub a7, a3, a7
-; CHECK-RV64-NEXT:    srli a0, a4, 2
-; CHECK-RV64-NEXT:    bltu a3, a7, .LBB36_6
-; CHECK-RV64-NEXT:  # %bb.5:
-; CHECK-RV64-NEXT:    mv t0, a7
-; CHECK-RV64-NEXT:  .LBB36_6:
-; CHECK-RV64-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
-; CHECK-RV64-NEXT:    vslidedown.vx v0, v24, a0
-; CHECK-RV64-NEXT:    bltu t0, a4, .LBB36_8
-; CHECK-RV64-NEXT:  # %bb.7:
-; CHECK-RV64-NEXT:    mv t0, a4
-; CHECK-RV64-NEXT:  .LBB36_8:
-; CHECK-RV64-NEXT:    li a0, 0
-; CHECK-RV64-NEXT:    mul a3, a6, a2
-; CHECK-RV64-NEXT:    add a7, a1, a3
-; CHECK-RV64-NEXT:    vsetvli zero, t0, e64, m8, ta, ma
-; CHECK-RV64-NEXT:    sub a3, a6, a4
+; CHECK-RV64-NEXT:    sub a0, a5, a4
+; CHECK-RV64-NEXT:    sltu t0, a5, a0
+; CHECK-RV64-NEXT:    addi t0, t0, -1
+; CHECK-RV64-NEXT:    and a0, t0, a0
+; CHECK-RV64-NEXT:    srli t0, a4, 3
+; CHECK-RV64-NEXT:    vsetvli t1, zero, e8, mf4, ta, ma
+; CHECK-RV64-NEXT:    vslidedown.vx v0, v24, t0
+; CHECK-RV64-NEXT:    mul a7, a7, a2
+; CHECK-RV64-NEXT:    add a7, a1, a7
+; CHECK-RV64-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-RV64-NEXT:    sub a0, a3, a6
+; CHECK-RV64-NEXT:    sltu a3, a3, a0
+; CHECK-RV64-NEXT:    addi a3, a3, -1
+; CHECK-RV64-NEXT:    and a0, a3, a0
 ; CHECK-RV64-NEXT:    vsse64.v v16, (a7), a2, v0.t
-; CHECK-RV64-NEXT:    bltu a6, a3, .LBB36_10
-; CHECK-RV64-NEXT:  # %bb.9:
-; CHECK-RV64-NEXT:    mv a0, a3
-; CHECK-RV64-NEXT:  .LBB36_10:
-; CHECK-RV64-NEXT:    srli a3, a4, 3
-; CHECK-RV64-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
+; CHECK-RV64-NEXT:    bltu a0, a4, .LBB36_6
+; CHECK-RV64-NEXT:  # %bb.5:
+; CHECK-RV64-NEXT:    mv a0, a4
+; CHECK-RV64-NEXT:  .LBB36_6:
+; CHECK-RV64-NEXT:    srli a3, a4, 2
+; CHECK-RV64-NEXT:    vsetvli a4, zero, e8, mf2, ta, ma
 ; CHECK-RV64-NEXT:    vslidedown.vx v0, v24, a3
 ; CHECK-RV64-NEXT:    mul a3, a5, a2
 ; CHECK-RV64-NEXT:    add a1, a1, a3

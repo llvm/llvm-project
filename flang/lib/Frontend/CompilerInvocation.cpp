@@ -180,6 +180,17 @@ static void setUpFrontendBasedOnAction(FrontendOptions &opts) {
     opts.needProvenanceRangeToCharBlockMappings = true;
 }
 
+/// Parse the argument specified for the -fconvert=<value> option
+static std::optional<const char *> parseConvertArg(const char *s) {
+  return llvm::StringSwitch<std::optional<const char *>>(s)
+      .Case("unknown", "UNKNOWN")
+      .Case("native", "NATIVE")
+      .Case("little-endian", "LITTLE_ENDIAN")
+      .Case("big-endian", "BIG_ENDIAN")
+      .Case("swap", "SWAP")
+      .Default(std::nullopt);
+}
+
 static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                               clang::DiagnosticsEngine &diags) {
   unsigned numErrorsBefore = diags.getNumErrors();
@@ -397,6 +408,17 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     } else {
       opts.fixedFormColumns = columns;
     }
+  }
+
+  // Set conversion based on -fconvert=<value>
+  if (const auto *arg =
+          args.getLastArg(clang::driver::options::OPT_fconvert_EQ)) {
+    const char *argValue = arg->getValue();
+    if (auto convert = parseConvertArg(argValue))
+      opts.envDefaults.push_back({"FORT_CONVERT", *convert});
+    else
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << arg->getAsString(args) << argValue;
   }
 
   // -f{no-}implicit-none

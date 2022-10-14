@@ -160,10 +160,13 @@ def : Pat<(fcanonicalize FPR32:$fj), (FMAX_S $fj, $fj)>;
 class PatFPSetcc<CondCode cc, LAInst CmpInst, RegisterClass RegTy>
     : Pat<(any_fsetcc RegTy:$fj, RegTy:$fk, cc),
           (MOVCF2GR (CmpInst RegTy:$fj, RegTy:$fk))>;
-// SETOGT/SETOGE/SETUGT/SETUGE will expand into SETOLT/SETOLE/SETULT/SETULE.
+// SETOGT/SETOGE/SETUGT/SETUGE/SETGE/SETNE/SETGT will expand into
+// SETOLT/SETOLE/SETULT/SETULE/SETLE/SETEQ/SETLT.
 def : PatFPSetcc<SETOEQ, FCMP_CEQ_S,  FPR32>;
+def : PatFPSetcc<SETEQ,  FCMP_CEQ_S,  FPR32>;
 def : PatFPSetcc<SETOLT, FCMP_CLT_S,  FPR32>;
 def : PatFPSetcc<SETOLE, FCMP_CLE_S,  FPR32>;
+def : PatFPSetcc<SETLE,  FCMP_CLE_S,  FPR32>;
 def : PatFPSetcc<SETONE, FCMP_CNE_S,  FPR32>;
 def : PatFPSetcc<SETO,   FCMP_COR_S,  FPR32>;
 def : PatFPSetcc<SETUEQ, FCMP_CUEQ_S, FPR32>;

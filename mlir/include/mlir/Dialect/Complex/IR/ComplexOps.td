@@ -21,7 +21,7 @@ class Complex_Op<string mnemonic, list<Trait> traits = []>
 // floating-point element type. These operations take two operands and return
 // one result, all of which must be complex numbers of the same type.
 class ComplexArithmeticOp<string mnemonic, list<Trait> traits = []> :
-    Complex_Op<mnemonic, traits # [NoSideEffect, SameOperandsAndResultType,
+    Complex_Op<mnemonic, traits # [Pure, SameOperandsAndResultType,
     Elementwise]> {
   let arguments = (ins Complex<AnyFloat>:$lhs, Complex<AnyFloat>:$rhs);
   let results = (outs Complex<AnyFloat>:$result);
@@ -32,7 +32,7 @@ class ComplexArithmeticOp<string mnemonic, list<Trait> traits = []> :
 // floating-point element type. These operations take one operand and return
 // one result; the operand must be a complex number.
 class ComplexUnaryOp<string mnemonic, list<Trait> traits = []> :
-    Complex_Op<mnemonic, traits # [NoSideEffect, Elementwise]> {
+    Complex_Op<mnemonic, traits # [Pure, Elementwise]> {
   let arguments = (ins Complex<AnyFloat>:$complex);
   let assemblyFormat = "$complex attr-dict `:` type($complex)";
 }
@@ -100,7 +100,7 @@ def Atan2Op : ComplexArithmeticOp<"atan2"> {
 //===----------------------------------------------------------------------===//
 
 def ConstantOp : Complex_Op<"constant", [
-    ConstantLike, NoSideEffect,
+    ConstantLike, Pure,
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>
   ]> {
   let summary = "complex number constant operation";
@@ -154,7 +154,7 @@ def CosOp : ComplexUnaryOp<"cos", [SameOperandsAndResultType]> {
 //===----------------------------------------------------------------------===//
 
 def CreateOp : Complex_Op<"create",
-    [NoSideEffect,
+    [Pure,
      AllTypesMatch<["real", "imaginary"]>,
      TypesMatchWith<"complex element type matches real operand type",
                     "complex", "real",
@@ -203,7 +203,7 @@ def DivOp : ComplexArithmeticOp<"div"> {
 //===----------------------------------------------------------------------===//
 
 def EqualOp : Complex_Op<"eq",
-    [NoSideEffect, AllTypesMatch<["lhs", "rhs"]>, Elementwise]> {
+    [Pure, AllTypesMatch<["lhs", "rhs"]>, Elementwise]> {
   let summary = "computes whether two complex values are equal";
   let description = [{
     The `eq` op takes two complex numbers and returns whether they are equal.
@@ -378,7 +378,7 @@ def NegOp : ComplexUnaryOp<"neg", [SameOperandsAndResultType]> {
 //===----------------------------------------------------------------------===//
 
 def NotEqualOp : Complex_Op<"neq",
-    [NoSideEffect, AllTypesMatch<["lhs", "rhs"]>, Elementwise]> {
+    [Pure, AllTypesMatch<["lhs", "rhs"]>, Elementwise]> {
   let summary = "computes whether two complex values are not equal";
   let description = [{
     The `neq` op takes two complex numbers and returns whether they are not

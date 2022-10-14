@@ -13,14 +13,14 @@ target triple = "s390x-ibm-linux"
 ; Function Attrs: nounwind
 define void @main() #0 {
 bb:
-  %tmp = load i48, i48* bitcast ({ i8, i8, i8, i8, i8, i8 }* @g_399 to i48*), align 8, !noalias !1
+  %tmp = load i48, ptr @g_399, align 8, !noalias !1
   %tmp1 = ashr i48 %tmp, 17
   %tmp2 = trunc i48 %tmp1 to i32
   %tmp3 = sext i32 %tmp2 to i64
   br label %bb4
 
 bb4:                                              ; preds = %bb4, %bb
-  %tmp5 = load i64, i64* undef, align 8, !tbaa !4, !noalias !1
+  %tmp5 = load i64, ptr undef, align 8, !tbaa !4, !noalias !1
   %tmp6 = urem i64 -923186811629238421, %tmp3
   %tmp7 = or i64 %tmp6, %tmp5
   %tmp8 = trunc i64 %tmp7 to i32
@@ -29,7 +29,7 @@ bb4:                                              ; preds = %bb4, %bb
   %tmp11 = xor i32 %tmp10, -1592309976
   %tmp12 = or i32 0, %tmp11
   %tmp13 = or i32 %tmp12, 3
-  store i32 %tmp13, i32* @g_439, align 4, !tbaa !8, !noalias !1
+  store i32 %tmp13, ptr @g_439, align 4, !tbaa !8, !noalias !1
   br label %bb4
 }
 

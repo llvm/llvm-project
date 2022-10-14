@@ -24,12 +24,12 @@ source_filename = "fortsubrange.ll"
 
 define void @MAIN_() !dbg !5 {
 L.entry:
-  %.Z0640_333 = alloca i32*, align 8
+  %.Z0640_333 = alloca ptr, align 8
   %"arr$sd1_349" = alloca [16 x i64], align 8
-  call void @llvm.dbg.declare(metadata i32** %.Z0640_333, metadata !8, metadata !DIExpression(DW_OP_deref)), !dbg !17
-  call void @llvm.dbg.declare(metadata [16 x i64]* %"arr$sd1_349", metadata !13, metadata !DIExpression(DW_OP_plus_uconst, 80)), !dbg !17
-  call void @llvm.dbg.value(metadata [16 x i64]* %"arr$sd1_349", metadata !16, metadata !DIExpression(DW_OP_plus_uconst, 112, DW_OP_deref, DW_OP_constu, 4, DW_OP_mul)), !dbg !17
-  call void @llvm.dbg.declare(metadata [16 x i64]* %"arr$sd1_349", metadata !15, metadata !DIExpression(DW_OP_plus_uconst, 120)), !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %.Z0640_333, metadata !8, metadata !DIExpression(DW_OP_deref)), !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %"arr$sd1_349", metadata !13, metadata !DIExpression(DW_OP_plus_uconst, 80)), !dbg !17
+  call void @llvm.dbg.value(metadata ptr %"arr$sd1_349", metadata !16, metadata !DIExpression(DW_OP_plus_uconst, 112, DW_OP_deref, DW_OP_constu, 4, DW_OP_mul)), !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %"arr$sd1_349", metadata !15, metadata !DIExpression(DW_OP_plus_uconst, 120)), !dbg !17
   ret void, !dbg !18
 }
 

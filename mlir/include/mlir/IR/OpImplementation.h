@@ -215,7 +215,7 @@ public:
 protected:
   /// Initialize the printer with no internal implementation. In this case, all
   /// virtual methods of this class must be overriden.
-  AsmPrinter() {}
+  AsmPrinter() = default;
 
 private:
   AsmPrinter(const AsmPrinter &) = delete;

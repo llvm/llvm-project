@@ -37,33 +37,28 @@ void LoongArchTargetELFStreamer::finish() {
   MCAssembler &MCA = getStreamer().getAssembler();
   LoongArchABI::ABI ABI = getTargetABI();
 
-  // FIXME:
-  // There are several PRs [1][2][3] that may affect the e_flags.
-  // After they got closed or merged, we should update the implementation here
-  // accordingly.
+  // Figure out the e_flags.
   //
-  // [1] https://github.com/loongson/LoongArch-Documentation/pull/33
-  // [2] https://github.com/loongson/LoongArch-Documentation/pull/47
-  // [2] https://github.com/loongson/LoongArch-Documentation/pull/61
+  // Bitness is already represented with the EI_CLASS byte in the current spec,
+  // so here we only record the base ABI modifier. Also set the object file ABI
+  // version to v1, as upstream LLVM cannot handle the previous stack-machine-
+  // based relocs from day one.
+  //
+  // Refer to LoongArch ELF psABI v2.01 for details.
   unsigned EFlags = MCA.getELFHeaderEFlags();
+  EFlags |= ELF::EF_LOONGARCH_OBJABI_V1;
   switch (ABI) {
   case LoongArchABI::ABI_ILP32S:
-    EFlags |= ELF::EF_LOONGARCH_BASE_ABI_ILP32S;
+  case LoongArchABI::ABI_LP64S:
+    EFlags |= ELF::EF_LOONGARCH_ABI_SOFT_FLOAT;
     break;
   case LoongArchABI::ABI_ILP32F:
-    EFlags |= ELF::EF_LOONGARCH_BASE_ABI_ILP32F;
+  case LoongArchABI::ABI_LP64F:
+    EFlags |= ELF::EF_LOONGARCH_ABI_SINGLE_FLOAT;
     break;
   case LoongArchABI::ABI_ILP32D:
-    EFlags |= ELF::EF_LOONGARCH_BASE_ABI_ILP32D;
-    break;
-  case LoongArchABI::ABI_LP64S:
-    EFlags |= ELF::EF_LOONGARCH_BASE_ABI_LP64S;
-    break;
-  case LoongArchABI::ABI_LP64F:
-    EFlags |= ELF::EF_LOONGARCH_BASE_ABI_LP64F;
-    break;
   case LoongArchABI::ABI_LP64D:
-    EFlags |= ELF::EF_LOONGARCH_BASE_ABI_LP64D;
+    EFlags |= ELF::EF_LOONGARCH_ABI_DOUBLE_FLOAT;
     break;
   case LoongArchABI::ABI_Unknown:
     llvm_unreachable("Improperly initialized target ABI");

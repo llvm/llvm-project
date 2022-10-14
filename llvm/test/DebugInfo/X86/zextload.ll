@@ -22,16 +22,16 @@
 ; code generator will attempt to fuse the two instructions into a zextload.
 
 ; CHECK-LABEL: @test
-; CHECK:   [[LOADVAL:%[0-9]+]] = load i32, i32* %ptr, align 4, !dbg [[DEBUGLOC:![0-9]+]]
+; CHECK:   [[LOADVAL:%[0-9]+]] = load i32, ptr %ptr, align 4, !dbg [[DEBUGLOC:![0-9]+]]
 ; CHECK-NEXT:                    zext i32 [[LOADVAL]] to i64
 ; CHECK:   [[DEBUGLOC]] = !DILocation(line: 3
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define i64 @test(i32* %ptr, i32 %cond) !dbg !5 {
+define i64 @test(ptr %ptr, i32 %cond) !dbg !5 {
 entry:
-  %0 = load i32, i32* %ptr, align 4, !dbg !7
+  %0 = load i32, ptr %ptr, align 4, !dbg !7
   switch i32 %cond, label %sw.epilog [
     i32 3, label %sw.bb
     i32 4, label %sw.bb1

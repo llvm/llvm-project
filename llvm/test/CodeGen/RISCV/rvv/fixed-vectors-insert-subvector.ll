@@ -256,7 +256,7 @@ define void @insert_v8i32_undef_v2i32_6(<8 x i32>* %vp, <2 x i32>* %svp) {
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; LMULMAX2-NEXT:    vle32.v v8, (a1)
-; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, tu, ma
+; LMULMAX2-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; LMULMAX2-NEXT:    vslideup.vi v10, v8, 6
 ; LMULMAX2-NEXT:    vse32.v v10, (a0)
 ; LMULMAX2-NEXT:    ret
@@ -265,7 +265,7 @@ define void @insert_v8i32_undef_v2i32_6(<8 x i32>* %vp, <2 x i32>* %svp) {
 ; LMULMAX1:       # %bb.0:
 ; LMULMAX1-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; LMULMAX1-NEXT:    vle32.v v8, (a1)
-; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, tu, ma
+; LMULMAX1-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1-NEXT:    vslideup.vi v9, v8, 2
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vse32.v v9, (a0)
@@ -544,7 +544,7 @@ define void @insert_v2i64_nxv16i64_lo2(<2 x i64>* %psv, <vscale x 16 x i64>* %ou
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 4, e64, m8, tu, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m8, ta, ma
 ; CHECK-NEXT:    vslideup.vi v16, v8, 2
 ; CHECK-NEXT:    vs8r.v v16, (a1)
 ; CHECK-NEXT:    ret

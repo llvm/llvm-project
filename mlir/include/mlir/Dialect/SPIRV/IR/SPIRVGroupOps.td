@@ -18,7 +18,7 @@
 // -----
 
 def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
-                              [NoSideEffect,
+                              [Pure,
                                AllTypesMatch<["value", "result"]>]> {
   let summary = [{
     Broadcast the Value of the invocation identified by the local id LocalId

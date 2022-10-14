@@ -45,7 +45,7 @@ class IntegerSet {
 public:
   using ImplType = detail::IntegerSetStorage;
 
-  constexpr IntegerSet() {}
+  constexpr IntegerSet() = default;
   explicit IntegerSet(ImplType *set) : set(set) {}
 
   static IntegerSet get(unsigned dimCount, unsigned symbolCount,

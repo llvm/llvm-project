@@ -819,3 +819,34 @@ func.func private @dispatch(%arg0: !fir.class<!fir.type<dispatch_derived1{a:i32,
   // CHECK: fir.dispatch "proc3"(%[[CLASS]] : !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) (%[[INTARG]], %[[CLASS]] : i32, !fir.class<!fir.type<dispatch_derived1{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
   return
 }
+
+
+// CHECK-LABEL: func.func @embox_tdesc
+func.func @embox_tdesc(%arg0: !fir.class<!fir.array<10x!fir.type<derived_poly{a:i32,b:i32}>>>) {
+  %0 = fir.alloca i32
+  %c1_i32 = arith.constant 1 : i32
+  %1 = fir.convert %c1_i32 : (i32) -> index
+  %c10_i32 = arith.constant 10 : i32
+  %2 = fir.convert %c10_i32 : (i32) -> index
+  %c1 = arith.constant 1 : index
+  %3 = fir.convert %1 : (index) -> i32
+  %4:2 = fir.do_loop %arg2 = %1 to %2 step %c1 iter_args(%arg3 = %3) -> (index, i32) {
+    fir.store %arg3 to %0 : !fir.ref<i32>
+    %9 = fir.load %0 : !fir.ref<i32>
+    %10 = fir.convert %9 : (i32) -> i64
+    %c1_i64 = arith.constant 1 : i64
+    %11 = arith.subi %10, %c1_i64 : i64
+    %12 = fir.coordinate_of %arg0, %11 : (!fir.class<!fir.array<10x!fir.type<derived_poly{a:i32,b:i32}>>>, i64) -> !fir.ref<!fir.type<derived_poly{a:i32,b:i32}>>
+    %tdesc = fir.box_tdesc %arg0 : (!fir.class<!fir.array<10x!fir.type<derived_poly{a:i32,b:i32}>>>) -> (!fir.tdesc<!fir.type<derived_poly{a:i32,b:i32}>>)
+    // CHECK: %[[TDESC:.*]] = fir.box_tdesc %{{.*}} : (!fir.class<!fir.array<10x!fir.type<derived_poly{a:i32,b:i32}>>>) -> !fir.tdesc<!fir.type<derived_poly{a:i32,b:i32}>> 
+    %13 = fir.embox %12 tdesc %tdesc : (!fir.ref<!fir.type<derived_poly{a:i32,b:i32}>>, !fir.tdesc<!fir.type<derived_poly{a:i32,b:i32}>>) -> !fir.class<!fir.type<derived_poly{a:i32,b:i32}>>
+    // CHECK: %{{.*}} = fir.embox %{{.*}} tdesc %[[TDESC]] : (!fir.ref<!fir.type<derived_poly{a:i32,b:i32}>>, !fir.tdesc<!fir.type<derived_poly{a:i32,b:i32}>>) -> !fir.class<!fir.type<derived_poly{a:i32,b:i32}>>
+    %14 = arith.addi %arg2, %c1 : index
+    %15 = fir.convert %c1 : (index) -> i32
+    %16 = fir.load %0 : !fir.ref<i32>
+    %17 = arith.addi %16, %15 : i32
+    fir.result %14, %17 : index, i32
+  }
+  fir.store %4#1 to %0 : !fir.ref<i32>
+  return
+}

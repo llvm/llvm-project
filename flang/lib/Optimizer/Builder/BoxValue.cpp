@@ -204,7 +204,7 @@ bool fir::MutableBoxValue::verify() const {
 /// Debug verifier for BoxValue ctor. There is no guarantee this will
 /// always be called.
 bool fir::BoxValue::verify() const {
-  if (!addr.getType().isa<fir::BoxType>())
+  if (!addr.getType().isa<fir::BaseBoxType>())
     return false;
   if (!lbounds.empty() && lbounds.size() != rank())
     return false;

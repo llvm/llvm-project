@@ -21,7 +21,7 @@ class SPIRV_CastOp<string mnemonic, Type resultType, Type operandType,
                    list<Trait> traits = []> :
       SPIRV_Op<mnemonic,
              !listconcat(traits,
-                         [NoSideEffect, SameOperandsAndResultShape])> {
+                         [Pure, SameOperandsAndResultShape])> {
   let arguments = (ins
     SPIRV_ScalarOrVectorOrCoopMatrixOf<operandType>:$operand
   );
@@ -36,7 +36,7 @@ class SPIRV_CastOp<string mnemonic, Type resultType, Type operandType,
 
 // -----
 
-def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [NoSideEffect]> {
+def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [Pure]> {
   let summary = "Bit pattern-preserving type conversion.";
 
   let description = [{
@@ -332,7 +332,7 @@ def SPIRV_UConvertOp : SPIRV_CastOp<"UConvert",
 }
 
 // -----
-def SPIRV_PtrCastToGenericOp : SPIRV_Op<"PtrCastToGeneric", [NoSideEffect]> {
+def SPIRV_PtrCastToGenericOp : SPIRV_Op<"PtrCastToGeneric", [Pure]> {
   let summary = "Convert a pointer’s Storage Class to Generic.";
 
   let description = [{
@@ -375,7 +375,7 @@ def SPIRV_PtrCastToGenericOp : SPIRV_Op<"PtrCastToGeneric", [NoSideEffect]> {
 
 // -----
 
-def SPIRV_GenericCastToPtrOp : SPIRV_Op<"GenericCastToPtr", [NoSideEffect]> {
+def SPIRV_GenericCastToPtrOp : SPIRV_Op<"GenericCastToPtr", [Pure]> {
   let summary = "Convert a pointer’s Storage Class to a non-Generic class.";
 
   let description = [{
@@ -418,7 +418,7 @@ def SPIRV_GenericCastToPtrOp : SPIRV_Op<"GenericCastToPtr", [NoSideEffect]> {
 
 // -----
 
-def SPIRV_GenericCastToPtrExplicitOp : SPIRV_Op<"GenericCastToPtrExplicit", [NoSideEffect]> {
+def SPIRV_GenericCastToPtrExplicitOp : SPIRV_Op<"GenericCastToPtrExplicit", [Pure]> {
   let summary = [{
     Attempts to explicitly convert Pointer to Storage storage-class pointer
     value.

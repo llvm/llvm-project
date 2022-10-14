@@ -42,6 +42,8 @@ Implemented Papers
 - P2445R1 - ``std::forward_like``
 - P2273R3 - Making ``std::unique_ptr`` constexpr
 - P0591R4 - Utility functions to implement uses-allocator construction
+- P2291R3 - Add Constexpr Modifiers to Functions ``to_chars`` and
+  ``from_chars`` for Integral Types in ``<charconv>`` Header
 
 Improvements and New Features
 -----------------------------

@@ -80,7 +80,7 @@ def TestPrintRemarkAtOperandOp
 def TestAddTestExtensionOp
   : Op<Transform_Dialect, "test_add_test_extension",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
-        NoSideEffect]> {
+        NoMemoryEffect]> {
   let arguments = (ins StrAttr:$message);
   let assemblyFormat = "$message attr-dict";
   let cppNamespace = "::mlir::test";
@@ -108,7 +108,7 @@ def TestRemapOperandPayloadToSelfOp
 def TestRemoveTestExtensionOp
   : Op<Transform_Dialect, "test_remove_test_extension",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
-        NoSideEffect]> {
+        NoMemoryEffect]> {
   let assemblyFormat = "attr-dict";
   let cppNamespace = "::mlir::test";
 }
@@ -251,6 +251,15 @@ def TestCopyPayloadOp
       [TransformMappingAlloc, TransformMappingWrite]>:$copy);
   let cppNamespace = "::mlir::test";
   let assemblyFormat = "$handle attr-dict";
+}
+
+def TestReportNumberOfTrackedHandlesNestedUnder
+  : Op<Transform_Dialect, "test_report_number_of_tracked_handles_nested_under",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins PDL_Operation:$target);
+  let assemblyFormat = "$target attr-dict";
+  let cppNamespace = "::mlir::test";
 }
 
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD

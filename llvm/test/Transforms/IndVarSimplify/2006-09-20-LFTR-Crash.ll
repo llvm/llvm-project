@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -disable-output
+; RUN: opt < %s -passes=indvars -disable-output
 ; ModuleID = '2006-09-20-LFTR-Crash.ll'
 	%struct.p7prior_s = type { i32, i32, [200 x float], [200 x [7 x float]], i32, [200 x float], [200 x [20 x float]], i32, [200 x float], [200 x [20 x float]] }
 

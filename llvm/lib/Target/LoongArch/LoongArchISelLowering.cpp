@@ -57,6 +57,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FP_TO_SINT, GRLenVT, Custom);
   setOperationAction(ISD::ROTL, GRLenVT, Expand);
   setOperationAction(ISD::CTPOP, GRLenVT, Expand);
+  setOperationAction(ISD::DEBUGTRAP, MVT::Other, Legal);
+  setOperationAction(ISD::TRAP, MVT::Other, Legal);
 
   setOperationAction({ISD::GlobalAddress, ISD::BlockAddress, ISD::ConstantPool,
                       ISD::JumpTable},
@@ -111,8 +113,9 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
   }
 
-  static const ISD::CondCode FPCCToExpand[] = {ISD::SETOGT, ISD::SETOGE,
-                                               ISD::SETUGT, ISD::SETUGE};
+  static const ISD::CondCode FPCCToExpand[] = {
+      ISD::SETOGT, ISD::SETOGE, ISD::SETUGT, ISD::SETUGE,
+      ISD::SETGE,  ISD::SETNE,  ISD::SETGT};
 
   if (Subtarget.hasBasicF()) {
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
@@ -2004,6 +2007,10 @@ getIntrinsicForMaskedAtomicRMWBinOp(unsigned GRLen,
       return Intrinsic::loongarch_masked_atomicrmw_sub_i64;
     case AtomicRMWInst::Nand:
       return Intrinsic::loongarch_masked_atomicrmw_nand_i64;
+    case AtomicRMWInst::UMax:
+      return Intrinsic::loongarch_masked_atomicrmw_umax_i64;
+    case AtomicRMWInst::UMin:
+      return Intrinsic::loongarch_masked_atomicrmw_umin_i64;
       // TODO: support other AtomicRMWInst.
     }
   }

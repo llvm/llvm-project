@@ -469,6 +469,13 @@ static void readConfigs(opt::InputArgList &args) {
       config->features->push_back(std::string(s));
   }
 
+  if (auto *arg = args.getLastArg(OPT_extra_features)) {
+    config->extraFeatures =
+        llvm::Optional<std::vector<std::string>>(std::vector<std::string>());
+    for (StringRef s : arg->getValues())
+      config->extraFeatures->push_back(std::string(s));
+  }
+
   // Legacy --allow-undefined flag which is equivalent to
   // --unresolve-symbols=ignore + --import-undefined
   if (args.hasArg(OPT_allow_undefined)) {
@@ -725,6 +732,8 @@ static void createOptionalSymbols() {
     WasmSym::dataEnd = symtab->addOptionalDataSymbol("__data_end");
 
   if (!config->isPic) {
+    WasmSym::stackLow = symtab->addOptionalDataSymbol("__stack_low");
+    WasmSym::stackHigh = symtab->addOptionalDataSymbol("__stack_high");
     WasmSym::globalBase = symtab->addOptionalDataSymbol("__global_base");
     WasmSym::heapBase = symtab->addOptionalDataSymbol("__heap_base");
     WasmSym::definedMemoryBase = symtab->addOptionalDataSymbol("__memory_base");

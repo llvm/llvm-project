@@ -59,5 +59,5 @@
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-ARM %s
 //
-// CHECK-ANDROID-ARM: "{{(.*[^.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-ANDROID-ARM: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-ANDROID-ARM: "{{.*}}/Inputs/resource_dir{{/|\\\\}}lib{{/|\\\\}}linux{{/|\\\\}}libclang_rt.profile-arm-android.a"

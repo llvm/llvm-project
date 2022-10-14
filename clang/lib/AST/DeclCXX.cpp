@@ -3091,18 +3091,23 @@ SourceRange UsingDecl::getSourceRange() const {
 void UsingEnumDecl::anchor() {}
 
 UsingEnumDecl *UsingEnumDecl::Create(ASTContext &C, DeclContext *DC,
-                                     SourceLocation UL, SourceLocation EL,
-                                     SourceLocation NL, EnumDecl *Enum) {
-  return new (C, DC) UsingEnumDecl(DC, Enum->getDeclName(), UL, EL, NL, Enum);
+                                     SourceLocation UL,
+                                     SourceLocation EL,
+                                     SourceLocation NL,
+                                     TypeSourceInfo *EnumType) {
+  assert(isa<EnumDecl>(EnumType->getType()->getAsTagDecl()));
+  return new (C, DC)
+      UsingEnumDecl(DC, EnumType->getType()->getAsTagDecl()->getDeclName(), UL, EL, NL, EnumType);
 }
 
 UsingEnumDecl *UsingEnumDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
-  return new (C, ID) UsingEnumDecl(nullptr, DeclarationName(), SourceLocation(),
-                                   SourceLocation(), SourceLocation(), nullptr);
+  return new (C, ID)
+      UsingEnumDecl(nullptr, DeclarationName(), SourceLocation(),
+                    SourceLocation(), SourceLocation(), nullptr);
 }
 
 SourceRange UsingEnumDecl::getSourceRange() const {
-  return SourceRange(EnumLocation, getLocation());
+  return SourceRange(UsingLocation, EnumType->getTypeLoc().getEndLoc());
 }
 
 void UsingPackDecl::anchor() {}

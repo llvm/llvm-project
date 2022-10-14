@@ -25,7 +25,7 @@ class SparseTensor_Op<string mnemonic, list<Trait> traits = []>
 // Sparse Tensor Operations.
 //===----------------------------------------------------------------------===//
 
-def SparseTensor_NewOp : SparseTensor_Op<"new", [NoSideEffect]>,
+def SparseTensor_NewOp : SparseTensor_Op<"new", [Pure]>,
     Arguments<(ins AnyType:$source)>,
     Results<(outs AnySparseTensor:$result)> {
   string summary = "Materializes a new sparse tensor from given source";
@@ -49,7 +49,7 @@ def SparseTensor_NewOp : SparseTensor_Op<"new", [NoSideEffect]>,
 }
 
 def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
-  [NoSideEffect, SameOperandsAndResultElementType]>,
+  [Pure, SameOperandsAndResultElementType]>,
     Arguments<(ins AnyTensor:$source)>,
     Results<(outs AnyTensor:$dest)> {
   string summary = "Converts between different tensor types";
@@ -90,7 +90,7 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
   let hasVerifier = 1;
 }
 
-def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
+def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [Pure]>,
     Arguments<(ins AnySparseTensor:$tensor, IndexAttr:$dimension)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extracts pointers array at given dimension from a tensor";
@@ -114,7 +114,7 @@ def SparseTensor_ToPointersOp : SparseTensor_Op<"pointers", [NoSideEffect]>,
   let hasVerifier = 1;
 }
 
-def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
+def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [Pure]>,
     Arguments<(ins AnySparseTensor:$tensor, IndexAttr:$dimension)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extracts indices array at given dimension from a tensor";
@@ -138,7 +138,7 @@ def SparseTensor_ToIndicesOp : SparseTensor_Op<"indices", [NoSideEffect]>,
   let hasVerifier = 1;
 }
 
-def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
+def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [Pure]>,
     Arguments<(ins AnySparseTensor:$tensor)>,
     Results<(outs AnyStridedMemRefOfRank<1>:$result)> {
   let summary = "Extracts numerical values array from a tensor";
@@ -161,7 +161,7 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [NoSideEffect]>,
   let hasVerifier = 1;
 }
 
-def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", [NoSideEffect]>,
+def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", [Pure]>,
     Arguments<(ins Variadic<AnyRankedTensor>:$inputs, IndexAttr:$dimension)>,
     Results<(outs AnyRankedTensor:$result)> {
 
@@ -467,7 +467,7 @@ def SparseTensor_SortOp : SparseTensor_Op<"sort", [AttrSizedOperandSegments]>,
 // Sparse Tensor Syntax Operations.
 //===----------------------------------------------------------------------===//
 
-def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [NoSideEffect]>,
+def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [Pure]>,
     Arguments<(ins AnyType:$x, AnyType:$y, UnitAttr:$left_identity, UnitAttr:$right_identity)>,
     Results<(outs AnyType:$output)> {
   let summary = "Binary set operation utilized within linalg.generic";
@@ -581,7 +581,7 @@ def SparseTensor_BinaryOp : SparseTensor_Op<"binary", [NoSideEffect]>,
   let hasVerifier = 1;
 }
 
-def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [NoSideEffect]>,
+def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [Pure]>,
     Arguments<(ins AnyType:$x)>,
     Results<(outs AnyType:$output)> {
   let summary = "Unary set operation utilized within linalg.generic";
@@ -659,7 +659,7 @@ def SparseTensor_UnaryOp : SparseTensor_Op<"unary", [NoSideEffect]>,
   let hasVerifier = 1;
 }
 
-def SparseTensor_ReduceOp : SparseTensor_Op<"reduce", [NoSideEffect, SameOperandsAndResultType]>,
+def SparseTensor_ReduceOp : SparseTensor_Op<"reduce", [Pure, SameOperandsAndResultType]>,
     Arguments<(ins AnyType:$x, AnyType:$y, AnyType:$identity)>,
     Results<(outs AnyType:$output)> {
   let summary = "Custom reduction operation utilized within linalg.generic";
@@ -708,7 +708,7 @@ def SparseTensor_ReduceOp : SparseTensor_Op<"reduce", [NoSideEffect, SameOperand
   let hasVerifier = 1;
 }
 
-def SparseTensor_SelectOp : SparseTensor_Op<"select", [NoSideEffect, SameOperandsAndResultType]>,
+def SparseTensor_SelectOp : SparseTensor_Op<"select", [Pure, SameOperandsAndResultType]>,
     Arguments<(ins AnyType:$x)>,
     Results<(outs AnyType:$output)> {
   let summary = "Select operation utilized within linalg.generic";
@@ -768,7 +768,7 @@ def SparseTensor_SelectOp : SparseTensor_Op<"select", [NoSideEffect, SameOperand
   let hasVerifier = 1;
 }
 
-def SparseTensor_YieldOp : SparseTensor_Op<"yield", [NoSideEffect, Terminator]>,
+def SparseTensor_YieldOp : SparseTensor_Op<"yield", [Pure, Terminator]>,
     Arguments<(ins Optional<AnyType>:$result)> {
   let summary = "Yield from sparse_tensor set-like operations";
   let description = [{

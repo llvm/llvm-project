@@ -656,11 +656,16 @@ default-constructed value for the C++ storage type. For example, `Optional<int>`
 will be set to `llvm::None` and `Attribute` will be set to `nullptr`. The
 presence of these parameters is tested by comparing them to their "null" values.
 
-Only optional parameters or directives that only capture optional parameters can
-be used in optional groups. An optional group is a set of elements optionally
-printed based on the presence of an anchor. The group in which the anchor is
-placed is printed if it is present, otherwise the other one is printed. Suppose
-parameter `a` is an `IntegerAttr`.
+An optional group is a set of elements optionally printed based on the presence
+of an anchor. Only optional parameters or directives that only capture optional
+parameters can be used in optional groups. The group in which the anchor is
+placed is printed if it is present, otherwise the other one is printed. If a
+directive that captures more than one optional parameter is used as the anchor,
+the optional group is printed if any of the captured parameters is present. For
+example, a `custom` directive may only be used as an optional group anchor if it
+captures at least one optional parameter.
+
+Suppose parameter `a` is an `IntegerAttr`.
 
 ```
 ( `(` $a^ `)` ) : (`x`)?

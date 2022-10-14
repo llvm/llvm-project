@@ -4,112 +4,112 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 | FileCheck %s
 
 ; Check additions of 1.
-define void @f1(i32 *%ptr) {
+define void @f1(ptr %ptr) {
 ; CHECK-LABEL: f1:
 ; CHECK: asi 0(%r2), 1
 ; CHECK: br %r14
-  %val = load i32, i32 *%ptr
+  %val = load i32, ptr %ptr
   %add = add i32 %val, 127
-  store i32 %add, i32 *%ptr
+  store i32 %add, ptr %ptr
   ret void
 }
 
 ; Check the high end of the constant range.
-define void @f2(i32 *%ptr) {
+define void @f2(ptr %ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: asi 0(%r2), 127
 ; CHECK: br %r14
-  %val = load i32, i32 *%ptr
+  %val = load i32, ptr %ptr
   %add = add i32 %val, 127
-  store i32 %add, i32 *%ptr
+  store i32 %add, ptr %ptr
   ret void
 }
 
 ; Check the next constant up, which must use an addition and a store.
 ; Both L/AHI and LHI/A would be OK.
-define void @f3(i32 *%ptr) {
+define void @f3(ptr %ptr) {
 ; CHECK-LABEL: f3:
 ; CHECK-NOT: asi
 ; CHECK: st %r0, 0(%r2)
 ; CHECK: br %r14
-  %val = load i32, i32 *%ptr
+  %val = load i32, ptr %ptr
   %add = add i32 %val, 128
-  store i32 %add, i32 *%ptr
+  store i32 %add, ptr %ptr
   ret void
 }
 
 ; Check the low end of the constant range.
-define void @f4(i32 *%ptr) {
+define void @f4(ptr %ptr) {
 ; CHECK-LABEL: f4:
 ; CHECK: asi 0(%r2), -128
 ; CHECK: br %r14
-  %val = load i32, i32 *%ptr
+  %val = load i32, ptr %ptr
   %add = add i32 %val, -128
-  store i32 %add, i32 *%ptr
+  store i32 %add, ptr %ptr
   ret void
 }
 
 ; Check the next value down, with the same comment as f3.
-define void @f5(i32 *%ptr) {
+define void @f5(ptr %ptr) {
 ; CHECK-LABEL: f5:
 ; CHECK-NOT: asi
 ; CHECK: st %r0, 0(%r2)
 ; CHECK: br %r14
-  %val = load i32, i32 *%ptr
+  %val = load i32, ptr %ptr
   %add = add i32 %val, -129
-  store i32 %add, i32 *%ptr
+  store i32 %add, ptr %ptr
   ret void
 }
 
 ; Check the high end of the aligned ASI range.
-define void @f6(i32 *%base) {
+define void @f6(ptr %base) {
 ; CHECK-LABEL: f6:
 ; CHECK: asi 524284(%r2), 1
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%base, i64 131071
-  %val = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %base, i64 131071
+  %val = load i32, ptr %ptr
   %add = add i32 %val, 1
-  store i32 %add, i32 *%ptr
+  store i32 %add, ptr %ptr
   ret void
 }
 
 ; Check the next word up, which must use separate address logic.
 ; Other sequences besides this one would be OK.
-define void @f7(i32 *%base) {
+define void @f7(ptr %base) {
 ; CHECK-LABEL: f7:
 ; CHECK: agfi %r2, 524288
 ; CHECK: asi 0(%r2), 1
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%base, i64 131072
-  %val = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %base, i64 131072
+  %val = load i32, ptr %ptr
   %add = add i32 %val, 1
-  store i32 %add, i32 *%ptr
+  store i32 %add, ptr %ptr
   ret void
 }
 
 ; Check the low end of the ASI range.
-define void @f8(i32 *%base) {
+define void @f8(ptr %base) {
 ; CHECK-LABEL: f8:
 ; CHECK: asi -524288(%r2), 1
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%base, i64 -131072
-  %val = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %base, i64 -131072
+  %val = load i32, ptr %ptr
   %add = add i32 %val, 1
-  store i32 %add, i32 *%ptr
+  store i32 %add, ptr %ptr
   ret void
 }
 
 ; Check the next word down, which must use separate address logic.
 ; Other sequences besides this one would be OK.
-define void @f9(i32 *%base) {
+define void @f9(ptr %base) {
 ; CHECK-LABEL: f9:
 ; CHECK: agfi %r2, -524292
 ; CHECK: asi 0(%r2), 1
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%base, i64 -131073
-  %val = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %base, i64 -131073
+  %val = load i32, ptr %ptr
   %add = add i32 %val, 1
-  store i32 %add, i32 *%ptr
+  store i32 %add, ptr %ptr
   ret void
 }
 
@@ -121,35 +121,35 @@ define void @f10(i64 %base, i64 %index) {
 ; CHECK: br %r14
   %add1 = add i64 %base, %index
   %add2 = add i64 %add1, 4
-  %ptr = inttoptr i64 %add2 to i32 *
-  %val = load i32, i32 *%ptr
+  %ptr = inttoptr i64 %add2 to ptr
+  %val = load i32, ptr %ptr
   %add = add i32 %val, 1
-  store i32 %add, i32 *%ptr
+  store i32 %add, ptr %ptr
   ret void
 }
 
 ; Check that adding 127 to a spilled value can use ASI.
-define void @f11(i32 *%ptr, i32 %sel) {
+define void @f11(ptr %ptr, i32 %sel) {
 ; CHECK-LABEL: f11:
 ; CHECK: asi {{[0-9]+}}(%r15), 127
 ; CHECK: br %r14
 entry:
-  %val0 = load volatile i32, i32 *%ptr
-  %val1 = load volatile i32, i32 *%ptr
-  %val2 = load volatile i32, i32 *%ptr
-  %val3 = load volatile i32, i32 *%ptr
-  %val4 = load volatile i32, i32 *%ptr
-  %val5 = load volatile i32, i32 *%ptr
-  %val6 = load volatile i32, i32 *%ptr
-  %val7 = load volatile i32, i32 *%ptr
-  %val8 = load volatile i32, i32 *%ptr
-  %val9 = load volatile i32, i32 *%ptr
-  %val10 = load volatile i32, i32 *%ptr
-  %val11 = load volatile i32, i32 *%ptr
-  %val12 = load volatile i32, i32 *%ptr
-  %val13 = load volatile i32, i32 *%ptr
-  %val14 = load volatile i32, i32 *%ptr
-  %val15 = load volatile i32, i32 *%ptr
+  %val0 = load volatile i32, ptr %ptr
+  %val1 = load volatile i32, ptr %ptr
+  %val2 = load volatile i32, ptr %ptr
+  %val3 = load volatile i32, ptr %ptr
+  %val4 = load volatile i32, ptr %ptr
+  %val5 = load volatile i32, ptr %ptr
+  %val6 = load volatile i32, ptr %ptr
+  %val7 = load volatile i32, ptr %ptr
+  %val8 = load volatile i32, ptr %ptr
+  %val9 = load volatile i32, ptr %ptr
+  %val10 = load volatile i32, ptr %ptr
+  %val11 = load volatile i32, ptr %ptr
+  %val12 = load volatile i32, ptr %ptr
+  %val13 = load volatile i32, ptr %ptr
+  %val14 = load volatile i32, ptr %ptr
+  %val15 = load volatile i32, ptr %ptr
 
   %test = icmp ne i32 %sel, 0
   br i1 %test, label %add, label %store
@@ -191,48 +191,48 @@ store:
   %new14 = phi i32 [ %val14, %entry ], [ %add14, %add ]
   %new15 = phi i32 [ %val15, %entry ], [ %add15, %add ]
 
-  store volatile i32 %new0, i32 *%ptr
-  store volatile i32 %new1, i32 *%ptr
-  store volatile i32 %new2, i32 *%ptr
-  store volatile i32 %new3, i32 *%ptr
-  store volatile i32 %new4, i32 *%ptr
-  store volatile i32 %new5, i32 *%ptr
-  store volatile i32 %new6, i32 *%ptr
-  store volatile i32 %new7, i32 *%ptr
-  store volatile i32 %new8, i32 *%ptr
-  store volatile i32 %new9, i32 *%ptr
-  store volatile i32 %new10, i32 *%ptr
-  store volatile i32 %new11, i32 *%ptr
-  store volatile i32 %new12, i32 *%ptr
-  store volatile i32 %new13, i32 *%ptr
-  store volatile i32 %new14, i32 *%ptr
-  store volatile i32 %new15, i32 *%ptr
+  store volatile i32 %new0, ptr %ptr
+  store volatile i32 %new1, ptr %ptr
+  store volatile i32 %new2, ptr %ptr
+  store volatile i32 %new3, ptr %ptr
+  store volatile i32 %new4, ptr %ptr
+  store volatile i32 %new5, ptr %ptr
+  store volatile i32 %new6, ptr %ptr
+  store volatile i32 %new7, ptr %ptr
+  store volatile i32 %new8, ptr %ptr
+  store volatile i32 %new9, ptr %ptr
+  store volatile i32 %new10, ptr %ptr
+  store volatile i32 %new11, ptr %ptr
+  store volatile i32 %new12, ptr %ptr
+  store volatile i32 %new13, ptr %ptr
+  store volatile i32 %new14, ptr %ptr
+  store volatile i32 %new15, ptr %ptr
 
   ret void
 }
 
 ; Check that adding -128 to a spilled value can use ASI.
-define void @f12(i32 *%ptr, i32 %sel) {
+define void @f12(ptr %ptr, i32 %sel) {
 ; CHECK-LABEL: f12:
 ; CHECK: asi {{[0-9]+}}(%r15), -128
 ; CHECK: br %r14
 entry:
-  %val0 = load volatile i32, i32 *%ptr
-  %val1 = load volatile i32, i32 *%ptr
-  %val2 = load volatile i32, i32 *%ptr
-  %val3 = load volatile i32, i32 *%ptr
-  %val4 = load volatile i32, i32 *%ptr
-  %val5 = load volatile i32, i32 *%ptr
-  %val6 = load volatile i32, i32 *%ptr
-  %val7 = load volatile i32, i32 *%ptr
-  %val8 = load volatile i32, i32 *%ptr
-  %val9 = load volatile i32, i32 *%ptr
-  %val10 = load volatile i32, i32 *%ptr
-  %val11 = load volatile i32, i32 *%ptr
-  %val12 = load volatile i32, i32 *%ptr
-  %val13 = load volatile i32, i32 *%ptr
-  %val14 = load volatile i32, i32 *%ptr
-  %val15 = load volatile i32, i32 *%ptr
+  %val0 = load volatile i32, ptr %ptr
+  %val1 = load volatile i32, ptr %ptr
+  %val2 = load volatile i32, ptr %ptr
+  %val3 = load volatile i32, ptr %ptr
+  %val4 = load volatile i32, ptr %ptr
+  %val5 = load volatile i32, ptr %ptr
+  %val6 = load volatile i32, ptr %ptr
+  %val7 = load volatile i32, ptr %ptr
+  %val8 = load volatile i32, ptr %ptr
+  %val9 = load volatile i32, ptr %ptr
+  %val10 = load volatile i32, ptr %ptr
+  %val11 = load volatile i32, ptr %ptr
+  %val12 = load volatile i32, ptr %ptr
+  %val13 = load volatile i32, ptr %ptr
+  %val14 = load volatile i32, ptr %ptr
+  %val15 = load volatile i32, ptr %ptr
 
   %test = icmp ne i32 %sel, 0
   br i1 %test, label %add, label %store
@@ -274,22 +274,22 @@ store:
   %new14 = phi i32 [ %val14, %entry ], [ %add14, %add ]
   %new15 = phi i32 [ %val15, %entry ], [ %add15, %add ]
 
-  store volatile i32 %new0, i32 *%ptr
-  store volatile i32 %new1, i32 *%ptr
-  store volatile i32 %new2, i32 *%ptr
-  store volatile i32 %new3, i32 *%ptr
-  store volatile i32 %new4, i32 *%ptr
-  store volatile i32 %new5, i32 *%ptr
-  store volatile i32 %new6, i32 *%ptr
-  store volatile i32 %new7, i32 *%ptr
-  store volatile i32 %new8, i32 *%ptr
-  store volatile i32 %new9, i32 *%ptr
-  store volatile i32 %new10, i32 *%ptr
-  store volatile i32 %new11, i32 *%ptr
-  store volatile i32 %new12, i32 *%ptr
-  store volatile i32 %new13, i32 *%ptr
-  store volatile i32 %new14, i32 *%ptr
-  store volatile i32 %new15, i32 *%ptr
+  store volatile i32 %new0, ptr %ptr
+  store volatile i32 %new1, ptr %ptr
+  store volatile i32 %new2, ptr %ptr
+  store volatile i32 %new3, ptr %ptr
+  store volatile i32 %new4, ptr %ptr
+  store volatile i32 %new5, ptr %ptr
+  store volatile i32 %new6, ptr %ptr
+  store volatile i32 %new7, ptr %ptr
+  store volatile i32 %new8, ptr %ptr
+  store volatile i32 %new9, ptr %ptr
+  store volatile i32 %new10, ptr %ptr
+  store volatile i32 %new11, ptr %ptr
+  store volatile i32 %new12, ptr %ptr
+  store volatile i32 %new13, ptr %ptr
+  store volatile i32 %new14, ptr %ptr
+  store volatile i32 %new15, ptr %ptr
 
   ret void
 }

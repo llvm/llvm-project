@@ -21,7 +21,7 @@ include "mlir/IR/OpAsmInterface.td"
 // Base class for Arith dialect ops. Ops in this dialect have no side
 // effects and can be applied element-wise to vectors and tensors.
 class Arith_Op<string mnemonic, list<Trait> traits = []> :
-    Op<Arith_Dialect, mnemonic, traits # [NoSideEffect,
+    Op<Arith_Dialect, mnemonic, traits # [Pure,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
     ElementwiseMappable.traits>;
 
@@ -127,7 +127,7 @@ class Arith_CompareOpOfAnyRank<string mnemonic, list<Trait> traits = []> :
 //===----------------------------------------------------------------------===//
 
 def Arith_ConstantOp : Op<Arith_Dialect, "constant",
-    [ConstantLike, NoSideEffect,
+    [ConstantLike, Pure,
      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
      AllTypesMatch<["value", "result"]>,
      DeclareOpInterfaceMethods<InferIntRangeInterface>]> {

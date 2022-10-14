@@ -29,14 +29,13 @@ target triple = "x86_64-apple-macosx10.9.0"
 %struct.Inner = type { i32, i64 }
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @foo(%struct.Outer* byval(%struct.Outer) align 8 %outer) #0 !dbg !4 {
+define i32 @foo(ptr byval(%struct.Outer) align 8 %outer) #0 !dbg !4 {
 entry:
-  call void @llvm.dbg.declare(metadata %struct.Outer* %outer, metadata !25, metadata !DIExpression()), !dbg !26
-  %i1.sroa.0.0..sroa_idx = getelementptr inbounds %struct.Outer, %struct.Outer* %outer, i64 0, i32 0, i64 1, i32 0, !dbg !27
-  %i1.sroa.0.0.copyload = load i32, i32* %i1.sroa.0.0..sroa_idx, align 8, !dbg !27
+  call void @llvm.dbg.declare(metadata ptr %outer, metadata !25, metadata !DIExpression()), !dbg !26
+  %i1.sroa.0.0..sroa_idx = getelementptr inbounds %struct.Outer, ptr %outer, i64 0, i32 0, i64 1, i32 0, !dbg !27
+  %i1.sroa.0.0.copyload = load i32, ptr %i1.sroa.0.0..sroa_idx, align 8, !dbg !27
   call void @llvm.dbg.value(metadata i32 %i1.sroa.0.0.copyload, metadata !28, metadata !29), !dbg !27
-  %i1.sroa.2.0..sroa_raw_cast = bitcast %struct.Outer* %outer to i8*, !dbg !27
-  %i1.sroa.2.0..sroa_raw_idx = getelementptr inbounds i8, i8* %i1.sroa.2.0..sroa_raw_cast, i64 20, !dbg !27
+  %i1.sroa.2.0..sroa_raw_idx = getelementptr inbounds i8, ptr %outer, i64 20, !dbg !27
   ret i32 %i1.sroa.0.0.copyload, !dbg !32
 }
 
@@ -44,7 +43,7 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) #2
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) #2
 
 ; Function Attrs: nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1

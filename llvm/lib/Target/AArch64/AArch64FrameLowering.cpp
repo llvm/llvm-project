@@ -1409,6 +1409,8 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     if (MFnI.shouldSignWithBKey()) {
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::EMITBKEY))
           .setMIFlag(MachineInstr::FrameSetup);
+      // No SEH opcode for this one; it doesn't materialize into an
+      // instruction on Windows.
       PACI = Subtarget.hasPAuth() ? AArch64::PACIB : AArch64::PACIBSP;
     } else {
       PACI = Subtarget.hasPAuth() ? AArch64::PACIA : AArch64::PACIASP;
@@ -1426,6 +1428,10 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlags(MachineInstr::FrameSetup);
+    } else if (NeedsWinCFI) {
+      HasWinCFI = true;
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PACSignLR))
+          .setMIFlag(MachineInstr::FrameSetup);
     }
   }
   if (EmitCFI && MFnI.isMTETagged()) {
@@ -1603,6 +1609,13 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
       emitFrameOffset(MBB, MBBI, DL, AArch64::FP, AArch64::SP,
                       StackOffset::getFixed(FPOffset), TII,
                       MachineInstr::FrameSetup, false, NeedsWinCFI, &HasWinCFI);
+      if (NeedsWinCFI && HasWinCFI) {
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PrologEnd))
+            .setMIFlag(MachineInstr::FrameSetup);
+        // After setting up the FP, the rest of the prolog doesn't need to be
+        // included in the SEH unwind info.
+        NeedsWinCFI = false;
+      }
     }
     if (EmitCFI) {
       // Define the current CFA rule to use the provided FP.
@@ -1779,31 +1792,23 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
               StackOffset::getFixed((int64_t)MFI.getStackSize() - NumBytes));
     }
     if (NeedsRealignment) {
-      const unsigned NrBitsToZero = Log2(MFI.getMaxAlign());
-      assert(NrBitsToZero > 1);
+      assert(MFI.getMaxAlign() > Align(1));
       assert(scratchSPReg != AArch64::SP);
 
       // SUB X9, SP, NumBytes
       //   -- X9 is temporary register, so shouldn't contain any live data here,
       //   -- free to use. This is already produced by emitFrameOffset above.
       // AND SP, X9, 0b11111...0000
-      // The logical immediates have a non-trivial encoding. The following
-      // formula computes the encoded immediate with all ones but
-      // NrBitsToZero zero bits as least significant bits.
-      uint32_t andMaskEncoded = (1 << 12)                         // = N
-                                | ((64 - NrBitsToZero) << 6)      // immr
-                                | ((64 - NrBitsToZero - 1) << 0); // imms
+      uint64_t AndMask = ~(MFI.getMaxAlign().value() - 1);
 
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::ANDXri), AArch64::SP)
           .addReg(scratchSPReg, RegState::Kill)
-          .addImm(andMaskEncoded);
+          .addImm(AArch64_AM::encodeLogicalImmediate(AndMask, 64));
       AFI->setStackRealigned(true);
-      if (NeedsWinCFI) {
-        HasWinCFI = true;
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_StackAlloc))
-            .addImm(NumBytes & andMaskEncoded)
-            .setMIFlag(MachineInstr::FrameSetup);
-      }
+
+      // No need for SEH instructions here; if we're realigning the stack,
+      // we've set a frame pointer and already finished the SEH prologue.
+      assert(!NeedsWinCFI);
     }
   }
 
@@ -1846,8 +1851,8 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   }
 }
 
-static void InsertReturnAddressAuth(MachineFunction &MF,
-                                    MachineBasicBlock &MBB) {
+static void InsertReturnAddressAuth(MachineFunction &MF, MachineBasicBlock &MBB,
+                                    bool NeedsWinCFI, bool *HasWinCFI) {
   const auto &MFI = *MF.getInfo<AArch64FunctionInfo>();
   if (!MFI.shouldSignReturnAddress())
     return;
@@ -1866,7 +1871,8 @@ static void InsertReturnAddressAuth(MachineFunction &MF,
   // DW_CFA_AARCH64_negate_ra_state can't be emitted.
   if (Subtarget.hasPAuth() &&
       !MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack) &&
-      MBBI != MBB.end() && MBBI->getOpcode() == AArch64::RET_ReallyLR) {
+      MBBI != MBB.end() && MBBI->getOpcode() == AArch64::RET_ReallyLR &&
+      !NeedsWinCFI) {
     BuildMI(MBB, MBBI, DL,
             TII->get(MFI.shouldSignWithBKey() ? AArch64::RETAB : AArch64::RETAA))
         .copyImplicitOps(*MBBI);
@@ -1882,6 +1888,11 @@ static void InsertReturnAddressAuth(MachineFunction &MF,
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
         .setMIFlags(MachineInstr::FrameDestroy);
+    if (NeedsWinCFI) {
+      *HasWinCFI = true;
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PACSignLR))
+          .setMIFlag(MachineInstr::FrameDestroy);
+    }
   }
 }
 
@@ -1914,11 +1925,15 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   auto FinishingTouches = make_scope_exit([&]() {
-    InsertReturnAddressAuth(MF, MBB);
+    InsertReturnAddressAuth(MF, MBB, NeedsWinCFI, &HasWinCFI);
     if (needsShadowCallStackPrologueEpilogue(MF))
       emitShadowCallStackEpilogue(*TII, MF, MBB, MBB.getFirstTerminator(), DL);
     if (EmitCFI)
       emitCalleeSavedGPRRestores(MBB, MBB.getFirstTerminator());
+    if (HasWinCFI)
+      BuildMI(MBB, MBB.getFirstTerminator(), DL,
+              TII->get(AArch64::SEH_EpilogEnd))
+          .setMIFlag(MachineInstr::FrameDestroy);
   });
 
   int64_t NumBytes = IsFunclet ? getWinEHFuncletFrameSize(MF)
@@ -2066,10 +2081,6 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
                     StackOffset::getFixed(NumBytes + (int64_t)AfterCSRPopSize),
                     TII, MachineInstr::FrameDestroy, false, NeedsWinCFI,
                     &HasWinCFI, EmitCFI, StackOffset::getFixed(NumBytes));
-    if (HasWinCFI)
-      BuildMI(MBB, MBB.getFirstTerminator(), DL,
-              TII->get(AArch64::SEH_EpilogEnd))
-          .setMIFlag(MachineInstr::FrameDestroy);
     return;
   }
 
@@ -2162,11 +2173,6 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
     // If we were able to combine the local stack pop with the argument pop,
     // then we're done.
     if (NoCalleeSaveRestore || AfterCSRPopSize == 0) {
-      if (HasWinCFI) {
-        BuildMI(MBB, MBB.getFirstTerminator(), DL,
-                TII->get(AArch64::SEH_EpilogEnd))
-            .setMIFlag(MachineInstr::FrameDestroy);
-      }
       return;
     }
 
@@ -2211,9 +2217,6 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
         false, NeedsWinCFI, &HasWinCFI, EmitCFI,
         StackOffset::getFixed(CombineAfterCSRBump ? PrologueSaveSize : 0));
   }
-  if (HasWinCFI)
-    BuildMI(MBB, MBB.getFirstTerminator(), DL, TII->get(AArch64::SEH_EpilogEnd))
-        .setMIFlag(MachineInstr::FrameDestroy);
 }
 
 /// getFrameIndexReference - Provide a base+offset reference to an FI slot for

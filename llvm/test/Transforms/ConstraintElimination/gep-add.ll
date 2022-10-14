@@ -32,6 +32,35 @@ define i1 @gep_add_1_uge_inbounds(ptr %dst, ptr %lower) {
   ret i1 %res.2
 }
 
+define i1 @gep_add_1_uge_inbounds_scalable_vector(ptr %dst, ptr %lower) {
+; CHECK-LABEL: @gep_add_1_uge_inbounds_scalable_vector(
+; CHECK-NEXT:    [[PRE:%.*]] = icmp uge ptr [[DST:%.*]], [[LOWER:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    [[DST_ADD_3:%.*]] = getelementptr inbounds <vscale x 4 x i8>, ptr [[DST]], i64 3
+; CHECK-NEXT:    [[DST_ADD_1:%.*]] = getelementptr inbounds <vscale x 4 x i8>, ptr [[DST]], i64 1
+; CHECK-NEXT:    [[CMP_ADD_1:%.*]] = icmp uge ptr [[DST_ADD_1]], [[LOWER]]
+; CHECK-NEXT:    [[DST_ADD_2:%.*]] = getelementptr inbounds <vscale x 4 x i8>, ptr [[DST_ADD_1]], i64 1
+; CHECK-NEXT:    [[CMP_ADD_3:%.*]] = icmp uge ptr [[DST_ADD_3]], [[LOWER]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[CMP_ADD_1]], [[CMP_ADD_3]]
+; CHECK-NEXT:    [[DST_ADD_4:%.*]] = getelementptr inbounds <vscale x 4 x i8>, ptr [[DST_ADD_3]], i64 3
+; CHECK-NEXT:    [[CMP_ADD_4:%.*]] = icmp uge ptr [[DST_ADD_4]], [[LOWER]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[CMP_ADD_4]]
+; CHECK-NEXT:    ret i1 [[RES_2]]
+;
+  %pre = icmp uge ptr %dst, %lower
+  call void @llvm.assume(i1 %pre)
+  %dst.add.3 = getelementptr inbounds <vscale x 4 x i8>, ptr %dst, i64 3
+  %dst.add.1 = getelementptr inbounds <vscale x 4 x i8>, ptr %dst, i64 1
+  %cmp.add.1 = icmp uge ptr %dst.add.1, %lower
+  %dst.add.2 = getelementptr inbounds <vscale x 4 x i8>, ptr %dst.add.1, i64 1
+  %cmp.add.3 = icmp uge ptr %dst.add.3, %lower
+  %res.1 = xor i1 %cmp.add.1, %cmp.add.3
+  %dst.add.4 = getelementptr inbounds <vscale x 4 x i8>, ptr %dst.add.3, i64 3
+  %cmp.add.4 = icmp uge ptr %dst.add.4, %lower
+  %res.2 = xor i1 %res.1, %cmp.add.4
+  ret i1 %res.2
+}
+
 define i1 @gep_add_1_uge_only_inner_inbounds(ptr %dst, ptr %lower) {
 ; CHECK-LABEL: @gep_add_1_uge_only_inner_inbounds(
 ; CHECK-NEXT:    [[PRE:%.*]] = icmp uge ptr [[DST:%.*]], [[LOWER:%.*]]

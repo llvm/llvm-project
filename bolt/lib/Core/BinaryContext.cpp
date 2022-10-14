@@ -372,13 +372,11 @@ BinaryContext::getSubBinaryData(BinaryData *BD) {
 std::pair<const MCSymbol *, uint64_t>
 BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
                                 bool IsPCRel) {
-  uint64_t Addend = 0;
-
   if (isAArch64()) {
     // Check if this is an access to a constant island and create bookkeeping
     // to keep track of it and emit it later as part of this function.
     if (MCSymbol *IslandSym = BF.getOrCreateIslandAccess(Address))
-      return std::make_pair(IslandSym, Addend);
+      return std::make_pair(IslandSym, 0);
 
     // Detect custom code written in assembly that refers to arbitrary
     // constant islands from other functions. Write this reference so we
@@ -395,7 +393,7 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
       if (MCSymbol *IslandSym =
               IslandIter->second->getOrCreateProxyIslandAccess(Address, BF)) {
         BF.createIslandDependency(IslandSym, IslandIter->second);
-        return std::make_pair(IslandSym, Addend);
+        return std::make_pair(IslandSym, 0);
       }
     }
   }
@@ -414,7 +412,7 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
         }
         BF.HasInternalLabelReference = true;
         return std::make_pair(
-            BF.addEntryPointAtOffset(Address - BF.getAddress()), Addend);
+            BF.addEntryPointAtOffset(Address - BF.getAddress()), 0);
       }
     } else {
       addInterproceduralReference(&BF, Address);
@@ -429,7 +427,7 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
       const MCSymbol *Symbol =
           getOrCreateJumpTable(BF, Address, JumpTable::JTT_PIC);
 
-      return std::make_pair(Symbol, Addend);
+      return std::make_pair(Symbol, 0);
     }
   }
 
@@ -439,7 +437,7 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
   // TODO: use DWARF info to get size/alignment here?
   MCSymbol *TargetSymbol = getOrCreateGlobalSymbol(Address, "DATAat");
   LLVM_DEBUG(dbgs() << "Created symbol " << TargetSymbol->getName() << '\n');
-  return std::make_pair(TargetSymbol, Addend);
+  return std::make_pair(TargetSymbol, 0);
 }
 
 MemoryContentsType BinaryContext::analyzeMemoryAt(uint64_t Address,
@@ -1934,6 +1932,10 @@ BinarySection &BinaryContext::registerSection(BinarySection *Section) {
     AddressToSection.insert(std::make_pair(Section->getAddress(), Section));
   NameToSection.insert(
       std::make_pair(std::string(Section->getName()), Section));
+  if (Section->hasSectionRef())
+    SectionRefToBinarySection.insert(
+        std::make_pair(Section->getSectionRef(), Section));
+
   LLVM_DEBUG(dbgs() << "BOLT-DEBUG: registering " << *Section << "\n");
   return *Section;
 }
@@ -1943,14 +1945,14 @@ BinarySection &BinaryContext::registerSection(SectionRef Section) {
 }
 
 BinarySection &
-BinaryContext::registerSection(StringRef SectionName,
+BinaryContext::registerSection(const Twine &SectionName,
                                const BinarySection &OriginalSection) {
   return registerSection(
       new BinarySection(*this, SectionName, OriginalSection));
 }
 
 BinarySection &
-BinaryContext::registerOrUpdateSection(StringRef Name, unsigned ELFType,
+BinaryContext::registerOrUpdateSection(const Twine &Name, unsigned ELFType,
                                        unsigned ELFFlags, uint8_t *Data,
                                        uint64_t Size, unsigned Alignment) {
   auto NamedSections = getSectionByName(Name);
@@ -1975,6 +1977,35 @@ BinaryContext::registerOrUpdateSection(StringRef Name, unsigned ELFType,
       new BinarySection(*this, Name, Data, Size, Alignment, ELFType, ELFFlags));
 }
 
+void BinaryContext::deregisterSectionName(const BinarySection &Section) {
+  auto NameRange = NameToSection.equal_range(Section.getName().str());
+  while (NameRange.first != NameRange.second) {
+    if (NameRange.first->second == &Section) {
+      NameToSection.erase(NameRange.first);
+      break;
+    }
+    ++NameRange.first;
+  }
+}
+
+void BinaryContext::deregisterUnusedSections() {
+  ErrorOr<BinarySection &> AbsSection = getUniqueSectionByName("<absolute>");
+  for (auto SI = Sections.begin(); SI != Sections.end();) {
+    BinarySection *Section = *SI;
+    if (Section->hasSectionRef() || Section->getOutputSize() ||
+        (AbsSection && Section == &AbsSection.get())) {
+      ++SI;
+      continue;
+    }
+
+    LLVM_DEBUG(dbgs() << "LLVM-DEBUG: deregistering " << Section->getName()
+                      << '\n';);
+    deregisterSectionName(*Section);
+    SI = Sections.erase(SI);
+    delete Section;
+  }
+}
+
 bool BinaryContext::deregisterSection(BinarySection &Section) {
   BinarySection *SectionPtr = &Section;
   auto Itr = Sections.find(SectionPtr);
@@ -1988,21 +2019,29 @@ bool BinaryContext::deregisterSection(BinarySection &Section) {
       ++Range.first;
     }
 
-    auto NameRange =
-        NameToSection.equal_range(std::string(SectionPtr->getName()));
-    while (NameRange.first != NameRange.second) {
-      if (NameRange.first->second == SectionPtr) {
-        NameToSection.erase(NameRange.first);
-        break;
-      }
-      ++NameRange.first;
-    }
-
+    deregisterSectionName(*SectionPtr);
     Sections.erase(Itr);
     delete SectionPtr;
     return true;
   }
   return false;
+}
+
+void BinaryContext::renameSection(BinarySection &Section,
+                                  const Twine &NewName) {
+  auto Itr = Sections.find(&Section);
+  assert(Itr != Sections.end() && "Section must exist to be renamed.");
+  Sections.erase(Itr);
+
+  deregisterSectionName(Section);
+
+  Section.Name = NewName.str();
+  Section.setOutputName(NewName);
+
+  NameToSection.insert(std::make_pair(NewName.str(), &Section));
+
+  // Reinsert with the new name.
+  Sections.insert(&Section);
 }
 
 void BinaryContext::printSections(raw_ostream &OS) const {

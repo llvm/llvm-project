@@ -328,6 +328,26 @@ DiagnosedSilenceableFailure mlir::transform::TestDialectOpType::checkPayload(
   return DiagnosedSilenceableFailure::success();
 }
 
+void mlir::test::TestReportNumberOfTrackedHandlesNestedUnder::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getTarget(), effects);
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestReportNumberOfTrackedHandlesNestedUnder::apply(
+    transform::TransformResults &results, transform::TransformState &state) {
+  int64_t count = 0;
+  for (Operation *op : state.getPayloadOps(getTarget())) {
+    op->walk([&](Operation *nested) {
+      SmallVector<Value> handles;
+      (void)state.getHandlesForPayloadOp(nested, handles);
+      count += handles.size();
+    });
+  }
+  emitRemark() << count << " handles nested under";
+  return DiagnosedSilenceableFailure::success();
+}
+
 namespace {
 /// Test extension of the Transform dialect. Registers additional ops and
 /// declares PDL as dependent dialect since the additional ops are using PDL

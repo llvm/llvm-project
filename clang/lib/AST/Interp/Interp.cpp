@@ -55,8 +55,7 @@ static bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 static bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
-  S.Current =
-      new InterpFrame(S, const_cast<Function *>(Func), S.Current, PC, {});
+  S.Current = new InterpFrame(S, const_cast<Function *>(Func), PC);
   APValue CallResult;
   // Note that we cannot assert(CallResult.hasValue()) here since
   // Ret() above only sets the APValue if the curent frame doesn't
@@ -66,8 +65,7 @@ static bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
 
 static bool CallVoid(InterpState &S, CodePtr &PC, const Function *Func) {
   APValue VoidResult;
-  S.Current =
-      new InterpFrame(S, const_cast<Function *>(Func), S.Current, PC, {});
+  S.Current = new InterpFrame(S, const_cast<Function *>(Func), PC);
   bool Success = Interpret(S, VoidResult);
   assert(VoidResult.isAbsent());
 

@@ -31,8 +31,21 @@ Expected<Function *> ByteCodeEmitter::compileFunc(const FunctionDecl *F) {
 
   // If the return is not a primitive, a pointer to the storage where the value
   // is initialized in is passed as the first argument.
+  // See 'RVO' elsewhere in the code.
   QualType Ty = F->getReturnType();
+  bool HasRVO = false;
   if (!Ty->isVoidType() && !Ctx.classify(Ty)) {
+    HasRVO = true;
+    ParamTypes.push_back(PT_Ptr);
+    ParamOffset += align(primSize(PT_Ptr));
+  }
+
+  // If the function decl is a member decl, the next parameter is
+  // the 'this' pointer. This parameter is pop()ed from the
+  // InterStack when calling the function.
+  bool HasThisPointer = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(F); MD && MD->isInstance()) {
+    HasThisPointer = true;
     ParamTypes.push_back(PT_Ptr);
     ParamOffset += align(primSize(PT_Ptr));
   }
@@ -55,8 +68,9 @@ Expected<Function *> ByteCodeEmitter::compileFunc(const FunctionDecl *F) {
   }
 
   // Create a handle over the emitted code.
-  Function *Func = P.createFunction(F, ParamOffset, std::move(ParamTypes),
-                                    std::move(ParamDescriptors));
+  Function *Func =
+      P.createFunction(F, ParamOffset, std::move(ParamTypes),
+                       std::move(ParamDescriptors), HasThisPointer, HasRVO);
   // Compile the function body.
   if (!F->isConstexpr() || !visitFunc(F)) {
     // Return a dummy function if compilation failed.

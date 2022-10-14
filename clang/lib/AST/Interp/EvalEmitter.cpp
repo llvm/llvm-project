@@ -105,18 +105,19 @@ template <PrimType OpType> bool EvalEmitter::emitRet(const SourceInfo &Info) {
 template <PrimType OpType>
 bool EvalEmitter::emitCall(const Function *Func, const SourceInfo &Info) {
 
-  S.Current =
-      new InterpFrame(S, const_cast<Function *>(Func), S.Current, {}, {});
+  S.Current = new InterpFrame(S, Func, {});
   // Result of call will be on the stack and needs to be handled by the caller.
   return Interpret(S, Result);
 }
 
 bool EvalEmitter::emitCallVoid(const Function *Func, const SourceInfo &Info) {
   APValue VoidResult;
-  S.Current =
-      new InterpFrame(S, const_cast<Function *>(Func), S.Current, {}, {});
+  InterpFrame *before = S.Current;
+  (void)before;
+  S.Current = new InterpFrame(S, Func, {});
   bool Success = Interpret(S, VoidResult);
   assert(VoidResult.isAbsent());
+  assert(S.Current == before);
   return Success;
 }
 

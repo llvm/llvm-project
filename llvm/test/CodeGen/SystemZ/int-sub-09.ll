@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z196 | FileCheck %s
 
 ; Test the case where both operands are in registers.
-define i64 @f1(i64 %a, i64 %b, i64 %c, i64 %d, i64 *%ptr) {
+define i64 @f1(i64 %a, i64 %b, i64 %c, i64 %d, ptr %ptr) {
 ; CHECK-LABEL: f1:
 ; CHECK: slgrk %r2, %r4, %r5
 ; CHECK: slbgr
@@ -16,7 +16,7 @@ define i64 @f1(i64 %a, i64 %b, i64 %c, i64 %d, i64 *%ptr) {
   %sub = sub i128 %x, %y
   %subv = bitcast i128 %sub to <2 x i64>
   %high = extractelement <2 x i64> %subv, i32 0
-  store i64 %high, i64 *%ptr
+  store i64 %high, ptr %ptr
   %low = extractelement <2 x i64> %subv, i32 1
   ret i64 %low
 }

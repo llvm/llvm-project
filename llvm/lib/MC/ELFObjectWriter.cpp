@@ -786,7 +786,8 @@ void ELFWriter::computeSymbolTable(
 
 void ELFWriter::writeAddrsigSection() {
   for (const MCSymbol *Sym : OWriter.AddrsigSyms)
-    encodeULEB128(Sym->getIndex(), W.OS);
+    if (Sym->getIndex() != 0)
+      encodeULEB128(Sym->getIndex(), W.OS);
 }
 
 MCSectionELF *ELFWriter::createRelocationSection(MCContext &Ctx,

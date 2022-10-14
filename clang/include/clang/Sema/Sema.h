@@ -5221,15 +5221,21 @@ public:
   /// of it.
   void MarkUnusedFileScopedDecl(const DeclaratorDecl *D);
 
+  typedef llvm::function_ref<void(SourceLocation Loc, PartialDiagnostic PD)>
+      DiagReceiverTy;
+
   /// DiagnoseUnusedExprResult - If the statement passed in is an expression
   /// whose result is unused, warn.
   void DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID);
   void DiagnoseUnusedNestedTypedefs(const RecordDecl *D);
+  void DiagnoseUnusedNestedTypedefs(const RecordDecl *D,
+                                    DiagReceiverTy DiagReceiver);
   void DiagnoseUnusedDecl(const NamedDecl *ND);
+  void DiagnoseUnusedDecl(const NamedDecl *ND, DiagReceiverTy DiagReceiver);
 
   /// If VD is set but not otherwise used, diagnose, for a parameter or a
   /// variable.
-  void DiagnoseUnusedButSetDecl(const VarDecl *VD);
+  void DiagnoseUnusedButSetDecl(const VarDecl *VD, DiagReceiverTy DiagReceiver);
 
   /// Emit \p DiagID if statement located on \p StmtLoc has a suspicious null
   /// statement as a \p Body, and it is located on the same line.
@@ -6113,7 +6119,8 @@ public:
   NamedDecl *BuildUsingEnumDeclaration(Scope *S, AccessSpecifier AS,
                                        SourceLocation UsingLoc,
                                        SourceLocation EnumLoc,
-                                       SourceLocation NameLoc, EnumDecl *ED);
+                                       SourceLocation NameLoc,
+                                       TypeSourceInfo *EnumType, EnumDecl *ED);
   NamedDecl *BuildUsingPackDecl(NamedDecl *InstantiatedFrom,
                                 ArrayRef<NamedDecl *> Expansions);
 

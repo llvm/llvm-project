@@ -83,7 +83,7 @@ public:
 
   using AbstractTy = AbstractType;
 
-  constexpr Type() {}
+  constexpr Type() = default;
   /* implicit */ Type(const ImplType *impl)
       : impl(const_cast<ImplType *>(impl)) {}
 

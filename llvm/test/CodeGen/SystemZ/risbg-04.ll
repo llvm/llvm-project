@@ -254,7 +254,7 @@ define i64 @f20(i64 %foo) {
 ; Now try an arithmetic right shift in which the sign bits aren't needed.
 ; Introduce a second use of %shr so that the ashr doesn't decompose to
 ; an lshr.
-define i32 @f21(i32 %foo, i32 *%dest) {
+define i32 @f21(i32 %foo, ptr %dest) {
 ; CHECK-LABEL: f21:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srak %r0, %r2, 28
@@ -262,13 +262,13 @@ define i32 @f21(i32 %foo, i32 *%dest) {
 ; CHECK-NEXT:    st %r0, 0(%r3)
 ; CHECK-NEXT:    br %r14
   %shr = ashr i32 %foo, 28
-  store i32 %shr, i32 *%dest
+  store i32 %shr, ptr %dest
   %and = and i32 %shr, 14
   ret i32 %and
 }
 
 ; ...and again with i64.
-define i64 @f22(i64 %foo, i64 *%dest) {
+define i64 @f22(i64 %foo, ptr %dest) {
 ; CHECK-LABEL: f22:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srag %r0, %r2, 60
@@ -276,7 +276,7 @@ define i64 @f22(i64 %foo, i64 *%dest) {
 ; CHECK-NEXT:    stg %r0, 0(%r3)
 ; CHECK-NEXT:    br %r14
   %shr = ashr i64 %foo, 60
-  store i64 %shr, i64 *%dest
+  store i64 %shr, ptr %dest
   %and = and i64 %shr, 14
   ret i64 %and
 }
@@ -481,7 +481,7 @@ define i64 @f38(i64 %foo) {
 }
 
 ; Try a similar thing in which no shifted sign bits are kept.
-define i64 @f39(i64 %foo, i64 *%dest) {
+define i64 @f39(i64 %foo, ptr %dest) {
 ; CHECK-LABEL: f39:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srag %r0, %r2, 35
@@ -489,14 +489,14 @@ define i64 @f39(i64 %foo, i64 *%dest) {
 ; CHECK-NEXT:    stg %r0, 0(%r3)
 ; CHECK-NEXT:    br %r14
   %ashr = ashr i64 %foo, 35
-  store i64 %ashr, i64 *%dest
+  store i64 %ashr, ptr %dest
   %shl = shl i64 %ashr, 2
   %and = and i64 %shl, 2147483647
   ret i64 %and
 }
 
 ; ...and again with the next highest shift value, where one sign bit is kept.
-define i64 @f40(i64 %foo, i64 *%dest) {
+define i64 @f40(i64 %foo, ptr %dest) {
 ; CHECK-LABEL: f40:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srag %r0, %r2, 36
@@ -504,7 +504,7 @@ define i64 @f40(i64 %foo, i64 *%dest) {
 ; CHECK-NEXT:    stg %r0, 0(%r3)
 ; CHECK-NEXT:    br %r14
   %ashr = ashr i64 %foo, 36
-  store i64 %ashr, i64 *%dest
+  store i64 %ashr, ptr %dest
   %shl = shl i64 %ashr, 2
   %and = and i64 %shl, 2147483647
   ret i64 %and

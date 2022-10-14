@@ -41,7 +41,7 @@ declare void @_Z4exitv()
 ; Function Attrs: noinline nounwind optnone uwtable mustprogress
 define dso_local signext i32 @_Z3foov() !dbg !17 {
 entry:
-  %0 = load i32, i32* @_ZL3var, align 16, !dbg !21
+  %0 = load i32, ptr @_ZL3var, align 16, !dbg !21
   ret i32 %0, !dbg !22
 }
 

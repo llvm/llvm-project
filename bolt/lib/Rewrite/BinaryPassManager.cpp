@@ -31,6 +31,7 @@
 #include "bolt/Passes/TailDuplication.h"
 #include "bolt/Passes/ThreeWayBranch.h"
 #include "bolt/Passes/ValidateInternalCalls.h"
+#include "bolt/Passes/ValidateMemRefs.h"
 #include "bolt/Passes/VeneerElimination.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -317,9 +318,6 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
     Manager.registerPass(
         std::make_unique<VeneerElimination>(PrintVeneerElimination));
 
-  if (opts::Instrument)
-    Manager.registerPass(std::make_unique<Instrumentation>(NeverPrint));
-
   // Here we manage dependencies/order manually, since passes are run in the
   // order they're registered.
 
@@ -330,6 +328,11 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
     Manager.registerPass(std::make_unique<PrintProfileStats>(NeverPrint));
 
   Manager.registerPass(std::make_unique<ValidateInternalCalls>(NeverPrint));
+
+  Manager.registerPass(std::make_unique<ValidateMemRefs>(NeverPrint));
+
+  if (opts::Instrument)
+    Manager.registerPass(std::make_unique<Instrumentation>(NeverPrint));
 
   Manager.registerPass(std::make_unique<ShortenInstructions>(NeverPrint));
 

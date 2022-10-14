@@ -1,7 +1,5 @@
-; RUN: llc < %s -verify-machineinstrs -stop-after=hardware-loops -mcpu=pwr9 \
-; RUN:   -mtriple=powerpc64le-unknown-unknown | FileCheck %s
-; RUN: llc < %s -verify-machineinstrs -stop-after=hardware-loops -mcpu=pwr8 \
-; RUN:   -mtriple=powerpc64le-unknown-unknown | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -mcpu=pwr8 -mtriple=powerpc64le-unknown-unknown | FileCheck %s
 
 @a = internal global fp128 0xL00000000000000000000000000000000, align 16
 @x = internal global [4 x fp128] zeroinitializer, align 16
@@ -27,8 +25,7 @@ for.end:                                          ; preds = %for.body
   ret void
 
 ; CHECK-LABEL: fmul_ctrloop_fp128
-; CHECK-NOT:     call void @llvm.set.loop.iterations.i64(i64 4)
-; CHECK-NOT:     call i1 @llvm.loop.decrement.i64(i64 1)
+; CHECK-NOT: mtctr
 }
 
 define void @fpext_ctrloop_fp128(ptr %a) {
@@ -50,8 +47,7 @@ for.end:
   ret void
 
 ; CHECK-LABEL: fpext_ctrloop_fp128
-; CHECK-NOT: call void @llvm.set.loop.iterations.i64(i64 4)
-; CHECK-NOT: call i1 @llvm.loop.decrement.i64(i64 1)
+; CHECK-NOT: mtctr
 }
 
 define void @fptrunc_ctrloop_fp128(ptr %a) {
@@ -73,8 +69,7 @@ for.end:
   ret void
 
 ; CHECK-LABEL: fptrunc_ctrloop_fp128
-; CHECK-NOT: call void @llvm.set.loop.iterations.i64(i64 4)
-; CHECK-NOT: call i1 @llvm.loop.decrement.i64(i64 1)
+; CHECK-NOT: mtctr
 }
 
 declare void @obfuscate(ptr, ...) local_unnamed_addr #2

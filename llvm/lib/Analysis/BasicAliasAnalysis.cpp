@@ -1303,7 +1303,8 @@ BasicAAResult::aliasSelect(const SelectInst *SI, LocationSize SISize,
   // If the values are Selects with the same condition, we can do a more precise
   // check: just check for aliases between the values on corresponding arms.
   if (const SelectInst *SI2 = dyn_cast<SelectInst>(V2))
-    if (SI->getCondition() == SI2->getCondition()) {
+    if (isValueEqualInPotentialCycles(SI->getCondition(),
+                                      SI2->getCondition())) {
       AliasResult Alias =
           AAQI.AAR.alias(MemoryLocation(SI->getTrueValue(), SISize),
                          MemoryLocation(SI2->getTrueValue(), V2Size), AAQI);

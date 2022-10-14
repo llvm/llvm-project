@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -dse | FileCheck %s
+; RUN: opt -S < %s -passes=dse | FileCheck %s
 
 declare void @llvm.sideeffect()
 

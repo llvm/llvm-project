@@ -79,6 +79,9 @@ set(LIBCXXABI_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
 option(LIBCXXABI_INSTALL_HEADERS "Install the libc++abi headers." ON)
 option(LIBCXXABI_INSTALL_LIBRARY "Install the libc++abi library." ON)
 
+set(LIBCXXABI_SHARED_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the shared libc++abi runtime library.")
+set(LIBCXXABI_STATIC_OUTPUT_NAME "c++abi" CACHE STRING "Output name for the static libc++abi runtime library.")
+
 set(LIBCXXABI_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE PATH "Path to install the libc++abi headers at.")
 
 if(LLVM_LIBRARY_OUTPUT_INTDIR)

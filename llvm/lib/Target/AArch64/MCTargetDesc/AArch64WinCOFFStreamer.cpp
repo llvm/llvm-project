@@ -202,6 +202,8 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinCFIEpilogEnd() {
   WinEH::Instruction Inst =
       WinEH::Instruction(Win64EH::UOP_End, /*Label=*/nullptr, -1, 0);
   CurFrame->EpilogMap[CurrentEpilog].Instructions.push_back(Inst);
+  MCSymbol *Label = S.emitCFILabel();
+  CurFrame->EpilogMap[CurrentEpilog].End = Label;
   CurrentEpilog = nullptr;
 }
 
@@ -219,6 +221,10 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinCFIContext() {
 
 void AArch64TargetWinCOFFStreamer::emitARM64WinCFIClearUnwoundToCall() {
   emitARM64WinUnwindCode(Win64EH::UOP_ClearUnwoundToCall, -1, 0);
+}
+
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFIPACSignLR() {
+  emitARM64WinUnwindCode(Win64EH::UOP_PACSignLR, -1, 0);
 }
 
 MCWinCOFFStreamer *llvm::createAArch64WinCOFFStreamer(

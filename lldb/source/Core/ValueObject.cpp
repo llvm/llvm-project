@@ -273,8 +273,6 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
   return compiler_type;
 }
 
-
-
 DataExtractor &ValueObject::GetDataExtractor() {
   UpdateValueIfNeeded(false);
   return m_data;
@@ -409,8 +407,9 @@ ValueObject::GetChildAtIndexPath(llvm::ArrayRef<size_t> idxs,
   return root;
 }
 
-lldb::ValueObjectSP ValueObject::GetChildAtIndexPath(
-  llvm::ArrayRef<std::pair<size_t, bool>> idxs, size_t *index_of_error) {
+lldb::ValueObjectSP
+ValueObject::GetChildAtIndexPath(llvm::ArrayRef<std::pair<size_t, bool>> idxs,
+                                 size_t *index_of_error) {
   if (idxs.size() == 0)
     return GetSP();
   ValueObjectSP root(GetSP());
@@ -1185,9 +1184,10 @@ bool ValueObject::DumpPrintableRepresentation(
       {
         Status error;
         lldb::WritableDataBufferSP buffer_sp;
-        std::pair<size_t, bool> read_string = ReadPointedString(
-            buffer_sp, error, 0, (custom_format == eFormatVectorOfChar) ||
-                                     (custom_format == eFormatCharArray));
+        std::pair<size_t, bool> read_string =
+            ReadPointedString(buffer_sp, error, 0,
+                              (custom_format == eFormatVectorOfChar) ||
+                                  (custom_format == eFormatCharArray));
         lldb_private::formatters::StringPrinter::
             ReadBufferAndDumpToStreamOptions options(*this);
         options.SetData(DataExtractor(
@@ -1552,8 +1552,7 @@ bool ValueObject::GetDeclaration(Declaration &decl) {
   return false;
 }
 
-void ValueObject::AddSyntheticChild(ConstString key,
-                                    ValueObject *valobj) {
+void ValueObject::AddSyntheticChild(ConstString key, ValueObject *valobj) {
   m_synthetic_children[key] = valobj;
 }
 
@@ -1924,64 +1923,96 @@ void ValueObject::GetExpressionPath(Stream &s,
     return;
   }
 
-  const bool is_deref_of_parent = IsDereferenceOfParent();
+  // Checks whether a value is dereference of a non-reference parent.
+  // This is used to determine whether to print a dereference operation (*).
+  auto is_deref_of_non_reference = [](ValueObject *value) {
+    if (value == nullptr)
+      return false;
+    ValueObject *value_parent = value->GetParent();
+    if (value_parent) {
+      CompilerType parent_compiler_type = value_parent->GetCompilerType();
+      if (parent_compiler_type) {
+        const uint32_t parent_type_info = parent_compiler_type.GetTypeInfo();
+        if (parent_type_info & eTypeIsReference)
+          return false;
+      }
+    }
+    return value->IsDereferenceOfParent();
+  };
 
-  if (is_deref_of_parent &&
+  ValueObject *parent = GetParent();
+
+  if (is_deref_of_non_reference(this) &&
       epformat == eGetExpressionPathFormatDereferencePointers) {
     // this is the original format of GetExpressionPath() producing code like
     // *(a_ptr).memberName, which is entirely fine, until you put this into
     // StackFrame::GetValueForVariableExpressionPath() which prefers to see
-    // a_ptr->memberName. the eHonorPointers mode is meant to produce strings
-    // in this latter format
-    s.PutCString("*(");
+    // a_ptr->memberName. The eHonorPointers mode is meant to produce strings
+    // in this latter format.
+    s.PutChar('*');
+    if (parent)
+      parent->GetExpressionPath(s, epformat);
+    return;
   }
 
-  ValueObject *parent = GetParent();
+  const bool is_deref_of_parent = IsDereferenceOfParent();
+  bool is_parent_deref_of_non_reference = false;
+  bool print_obj_access = false;
+  bool print_ptr_access = false;
 
-  if (parent)
-    parent->GetExpressionPath(s, epformat);
+  if (!IsBaseClass() && !is_deref_of_parent) {
+    ValueObject *non_base_class_parent = GetNonBaseClassParent();
+    if (non_base_class_parent && !non_base_class_parent->GetName().IsEmpty()) {
+      CompilerType non_base_class_parent_compiler_type =
+          non_base_class_parent->GetCompilerType();
+      if (non_base_class_parent_compiler_type) {
+        if (parent && parent->IsDereferenceOfParent() &&
+            epformat == eGetExpressionPathFormatHonorPointers) {
+          print_ptr_access = true;
+        } else {
+          const uint32_t non_base_class_parent_type_info =
+              non_base_class_parent_compiler_type.GetTypeInfo();
 
-  // if we are a deref_of_parent just because we are synthetic array members
-  // made up to allow ptr[%d] syntax to work in variable printing, then add our
-  // name ([%d]) to the expression path
-  if (m_flags.m_is_array_item_for_pointer &&
-      epformat == eGetExpressionPathFormatHonorPointers)
-    s.PutCString(m_name.GetStringRef());
-
-  if (!IsBaseClass()) {
-    if (!is_deref_of_parent) {
-      ValueObject *non_base_class_parent = GetNonBaseClassParent();
-      if (non_base_class_parent &&
-          !non_base_class_parent->GetName().IsEmpty()) {
-        CompilerType non_base_class_parent_compiler_type =
-            non_base_class_parent->GetCompilerType();
-        if (non_base_class_parent_compiler_type) {
-          if (parent && parent->IsDereferenceOfParent() &&
-              epformat == eGetExpressionPathFormatHonorPointers) {
-            s.PutCString("->");
-          } else {
-            const uint32_t non_base_class_parent_type_info =
-                non_base_class_parent_compiler_type.GetTypeInfo();
-
-            if (non_base_class_parent_type_info & eTypeIsPointer) {
-              s.PutCString("->");
-            } else if ((non_base_class_parent_type_info & eTypeHasChildren) &&
-                       !(non_base_class_parent_type_info & eTypeIsArray)) {
-              s.PutChar('.');
-            }
+          if (non_base_class_parent_type_info & eTypeIsPointer) {
+            print_ptr_access = true;
+          } else if ((non_base_class_parent_type_info & eTypeHasChildren) &&
+                     !(non_base_class_parent_type_info & eTypeIsArray)) {
+            print_obj_access = true;
           }
         }
       }
-
-      const char *name = GetName().GetCString();
-      if (name)
-        s.PutCString(name);
+      is_parent_deref_of_non_reference =
+          is_deref_of_non_reference(non_base_class_parent) &&
+          epformat == eGetExpressionPathFormatDereferencePointers;
     }
   }
 
-  if (is_deref_of_parent &&
-      epformat == eGetExpressionPathFormatDereferencePointers) {
-    s.PutChar(')');
+  if (parent) {
+    // The parent should be wrapped in parenthesis when doing a member access.
+    // This prevents forming incorrect expressions such as *(ptr).field,
+    // which dereferences the field instead of the ptr, and constructs the
+    // expression in the format (*(ptr)).field. To create expressions compatible
+    // with StackFrame::GetValueForVariableExpressionPath() and reduce amount of
+    // unnecessary parenthesis, this is done only when the parent has the
+    // dereference syntax *(parent).
+    const bool wrap_parent_in_parens = (print_obj_access || print_ptr_access) &&
+                                       is_parent_deref_of_non_reference;
+    if (wrap_parent_in_parens)
+      s.PutChar('(');
+    parent->GetExpressionPath(s, epformat);
+    if (wrap_parent_in_parens)
+      s.PutChar(')');
+  }
+
+  if (print_obj_access)
+    s.PutChar('.');
+  if (print_ptr_access)
+    s.PutCString("->");
+
+  if (!IsBaseClass() && !is_deref_of_parent) {
+    const char *name = GetName().GetCString();
+    if (name)
+      s.PutCString(name);
   }
 }
 
@@ -3107,8 +3138,6 @@ bool ValueObject::CanProvideValue() {
   CompilerType type = GetCompilerType();
   return (!type.IsValid()) || (0 != (type.GetTypeInfo() & eTypeHasValue));
 }
-
-
 
 ValueObjectSP ValueObject::Persist() {
   if (!UpdateValueIfNeeded())

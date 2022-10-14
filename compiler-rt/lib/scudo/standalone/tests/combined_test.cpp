@@ -506,7 +506,7 @@ struct DeathSizeClassConfig {
   static const scudo::uptr MinSizeLog = 10;
   static const scudo::uptr MidSizeLog = 10;
   static const scudo::uptr MaxSizeLog = 13;
-  static const scudo::u32 MaxNumCachedHint = 4;
+  static const scudo::u16 MaxNumCachedHint = 8;
   static const scudo::uptr MaxBytesCachedLog = 12;
   static const scudo::uptr SizeDelta = 0;
 };
@@ -525,6 +525,7 @@ struct DeathConfig {
   static const scudo::uptr PrimaryCompactPtrScale = 0;
   static const bool PrimaryEnableRandomOffset = true;
   static const scudo::uptr PrimaryMapSizeIncrement = 1UL << 18;
+  static const scudo::uptr PrimaryGroupSizeLog = 18;
 
   typedef scudo::MapAllocatorNoCache SecondaryCache;
   template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U, 1U>;

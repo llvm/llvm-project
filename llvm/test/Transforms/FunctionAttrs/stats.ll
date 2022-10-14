@@ -4,15 +4,15 @@
 
 @g = global i32 20
 
-define i32 @test_only_read_arg(i32* %ptr) {
+define i32 @test_only_read_arg(ptr %ptr) {
 entry:
-  %l = load i32, i32* %ptr
+  %l = load i32, ptr %ptr
   ret i32 %l
 }
 
 define void @test_write_global() {
 entry:
-  store i32 0, i32* @g
+  store i32 0, ptr @g
   ret void
 }
 

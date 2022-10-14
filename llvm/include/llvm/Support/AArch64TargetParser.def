@@ -146,6 +146,7 @@ AARCH64_ARCH_EXT_NAME("flagm",        AArch64::AEK_FLAGM,       "+flagm",       
 AARCH64_ARCH_EXT_NAME("sme",          AArch64::AEK_SME,         "+sme",          "-sme")
 AARCH64_ARCH_EXT_NAME("sme-f64",      AArch64::AEK_SMEF64,      "+sme-f64",      "-sme-f64")
 AARCH64_ARCH_EXT_NAME("sme-i64",      AArch64::AEK_SMEI64,      "+sme-i64",      "-sme-i64")
+AARCH64_ARCH_EXT_NAME("sme2",         AArch64::AEK_SME2,        "+sme2",         "-sme2")
 AARCH64_ARCH_EXT_NAME("hbc",          AArch64::AEK_HBC,         "+hbc",          "-hbc")
 AARCH64_ARCH_EXT_NAME("mops",         AArch64::AEK_MOPS,        "+mops",         "-mops")
 AARCH64_ARCH_EXT_NAME("pmuv3",        AArch64::AEK_PERFMON,     "+perfmon",      "-perfmon")

@@ -14,6 +14,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"

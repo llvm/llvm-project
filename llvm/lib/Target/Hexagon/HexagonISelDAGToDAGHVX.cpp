@@ -1734,7 +1734,13 @@ OpRef HvxSelector::contracting(ShuffleMask SM, OpRef Va, OpRef Vb,
 
   // The following shuffles only work for bytes and halfwords. This requires
   // the strip length to be 1 or 2.
-  if (Strip.second != 1 && Strip.second != 2)
+  // FIXME: Collecting even/odd elements of any power-of-2 length could be
+  // done by taking half of a deal operation. This should be handled in
+  // perfect shuffle generation, but currently that code requires an exact
+  // mask to work. To work with contracting perfect shuffles, it would need
+  // to be able to complete an incomplete mask.
+  // Once that's done, remove the handling of L=4.
+  if (Strip.second != 1 && Strip.second != 2 && /*FIXME*/Strip.second != 4)
     return OpRef::fail();
 
   // The patterns for the shuffles, in terms of the starting offsets of the
@@ -1800,6 +1806,17 @@ OpRef HvxSelector::contracting(ShuffleMask SM, OpRef Va, OpRef Vb,
     assert(Strip.first == 0 || Strip.first == L);
     using namespace Hexagon;
     NodeTemplate Res;
+    // FIXME: remove L=4 case after adding perfect mask completion.
+    if (L == 4) {
+      const SDLoc &dl(Results.InpNode);
+      Results.push(Hexagon::A2_tfrsi, MVT::i32, {getConst32(-L, dl)});
+      OpRef C = OpRef::res(Results.top());
+      MVT JoinTy = MVT::getVectorVT(ResTy.getVectorElementType(),
+                                    2 * ResTy.getVectorNumElements());
+      Results.push(Hexagon::V6_vshuffvdd, JoinTy, {Vb, Va, C});
+      return Strip.first == 0 ? OpRef::lo(OpRef::res(Results.top()))
+                              : OpRef::hi(OpRef::res(Results.top()));
+    }
     Res.Opc = Strip.second == 1 // Number of bytes.
                   ? (Strip.first == 0 ? V6_vpackeb : V6_vpackob)
                   : (Strip.first == 0 ? V6_vpackeh : V6_vpackoh);

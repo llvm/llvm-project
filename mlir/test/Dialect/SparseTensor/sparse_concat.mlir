@@ -58,7 +58,7 @@
 // CHECK:           memref.store %[[TMP_15]], %[[TMP_0]][%[[TMP_13]], %[[TMP_14]]] : memref<5x4xf64>
 // CHECK:           scf.yield
 // CHECK:         }
-// CHECK:         call @delSparseTensorCOOF64(%[[TMP_7]]) : (!llvm.ptr<i8>) -> ()
+// CHECK:         call @delSparseTensorIteratorF64(%[[TMP_7]]) : (!llvm.ptr<i8>) -> ()
 // CHECK:         %[[TMP_11:.*]] = bufferization.to_tensor %[[TMP_0]] : memref<5x4xf64>
 // CHECK:         return %[[TMP_11]] : tensor<5x4xf64>
 // CHECK:       }
@@ -141,7 +141,7 @@ func.func @concat_mix_dense(%arg0: tensor<2x4xf64>, %arg1: tensor<3x4xf64, #Spar
 // CHECK:           %[[TMP_25:.*]] = func.call @addEltF64(%[[TMP_7]], %[[TMP_20]], %[[TMP_10]], %[[TMP_5]]) : (!llvm.ptr<i8>, memref<f64>, memref<?xindex>, memref<?xindex>) -> !llvm.ptr<i8>
 // CHECK:           scf.yield
 // CHECK:         }
-// CHECK:         call @delSparseTensorCOOF64(%[[TMP_17]]) : (!llvm.ptr<i8>) -> ()
+// CHECK:         call @delSparseTensorIteratorF64(%[[TMP_17]]) : (!llvm.ptr<i8>) -> ()
 // CHECK:         %[[TMP_21:.*]] = call @newSparseTensor(%[[TMP_1]], %[[TMP_3]], %[[TMP_5]], %[[TMP_c0_i32]], %[[TMP_c0_i32]], %[[TMP_c1_i32]], %[[TMP_c2_i32]], %[[TMP_7]]) : (memref<?xi8>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr<i8>) -> !llvm.ptr<i8>
 // CHECK:         call @delSparseTensorCOOF64(%[[TMP_7]]) : (!llvm.ptr<i8>) -> ()
 // CHECK:         return %[[TMP_21]] : !llvm.ptr<i8>
@@ -225,7 +225,7 @@ func.func @concat_mix_sparse(%arg0: tensor<2x4xf64>, %arg1: tensor<3x4xf64, #Spa
 // CHECK:           %[[TMP_25:.*]] = func.call @addEltF64(%[[TMP_7]], %[[TMP_20]], %[[TMP_10]], %[[TMP_5]]) : (!llvm.ptr<i8>, memref<f64>, memref<?xindex>, memref<?xindex>) -> !llvm.ptr<i8>
 // CHECK:           scf.yield
 // CHECK:         }
-// CHECK:         call @delSparseTensorCOOF64(%[[TMP_17]]) : (!llvm.ptr<i8>) -> ()
+// CHECK:         call @delSparseTensorIteratorF64(%[[TMP_17]]) : (!llvm.ptr<i8>) -> ()
 // CHECK:         %[[TMP_21:.*]] = call @newSparseTensor(%[[TMP_1]], %[[TMP_3]], %[[TMP_5]], %[[TMP_c0_i32]], %[[TMP_c0_i32]], %[[TMP_c1_i32]], %[[TMP_c2_i32]], %[[TMP_7]]) : (memref<?xi8>, memref<?xindex>, memref<?xindex>, i32, i32, i32, i32, !llvm.ptr<i8>) -> !llvm.ptr<i8>
 // CHECK:         call @delSparseTensorCOOF64(%[[TMP_7]]) : (!llvm.ptr<i8>) -> ()
 // CHECK:         return %[[TMP_21]] : !llvm.ptr<i8>
@@ -287,7 +287,7 @@ func.func @concat_mix_sparse_perm_dim1(%arg0: tensor<4x2xf64>, %arg1: tensor<4x3
 // CHECK:           memref.store %[[TMP_15]], %[[TMP_0]][%[[TMP_12]], %[[TMP_14]]] : memref<4x5xf64>
 // CHECK:           scf.yield
 // CHECK:         }
-// CHECK:         call @delSparseTensorCOOF64(%[[TMP_7]]) : (!llvm.ptr<i8>) -> ()
+// CHECK:         call @delSparseTensorIteratorF64(%[[TMP_7]]) : (!llvm.ptr<i8>) -> ()
 // CHECK:         %[[TMP_11:.*]] = bufferization.to_tensor %[[TMP_0]] : memref<4x5xf64>
 // CHECK:         return %[[TMP_11]] : tensor<4x5xf64>
 // CHECK:       }
@@ -348,7 +348,7 @@ func.func @concat_mix_dense_perm_dim1(%arg0: tensor<4x2xf64>, %arg1: tensor<4x3x
 // CHECK:             memref.store %[[TMP_16]], %[[TMP_0]][%[[TMP_13]], %[[TMP_15]]] : memref<3x5xf64>
 // CHECK:             scf.yield
 // CHECK:           }
-// CHECK:           call @delSparseTensorCOOF64(%[[TMP_8]]) : (!llvm.ptr<i8>) -> ()
+// CHECK:           call @delSparseTensorIteratorF64(%[[TMP_8]]) : (!llvm.ptr<i8>) -> ()
 // CHECK:           %[[TMP_12:.*]] = bufferization.to_tensor %[[TMP_1]] : memref<?x?xf64>
 // CHECK:           return %[[TMP_12]] : tensor<?x?xf64>
 // CHECK:         }

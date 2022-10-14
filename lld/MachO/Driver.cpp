@@ -478,11 +478,15 @@ void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
   unsigned i = 0;
   StringRef arg = argv[i];
   if (arg.consume_front("-l")) {
+    if (config->ignoreAutoLinkOptions.contains(arg))
+      return;
     addLibrary(arg, /*isNeeded=*/false, /*isWeak=*/false,
                /*isReexport=*/false, /*isHidden=*/false, /*isExplicit=*/false,
                LoadType::LCLinkerOption);
   } else if (arg == "-framework") {
     StringRef name = argv[++i];
+    if (config->ignoreAutoLinkOptions.contains(name))
+      return;
     addFramework(name, /*isNeeded=*/false, /*isWeak=*/false,
                  /*isReexport=*/false, /*isExplicit=*/false,
                  LoadType::LCLinkerOption);
@@ -573,7 +577,7 @@ static void replaceCommonSymbols() {
     // FIXME: CommonSymbol should store isReferencedDynamically, noDeadStrip
     // and pass them on here.
     replaceSymbol<Defined>(
-        sym, sym->getName(), common->getFile(), isec, /*value=*/0, /*size=*/0,
+        sym, sym->getName(), common->getFile(), isec, /*value=*/0, common->size,
         /*isWeakDef=*/false, /*isExternal=*/true, common->privateExtern,
         /*includeInSymtab=*/true, /*isThumb=*/false,
         /*isReferencedDynamically=*/false, /*noDeadStrip=*/false);
@@ -1543,6 +1547,8 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       getenv("LD_DYLIB_CPU_SUBTYPES_MUST_MATCH");
   config->objcStubsMode = getObjCStubsMode(args);
   config->ignoreAutoLink = args.hasArg(OPT_ignore_auto_link);
+  for (const Arg *arg : args.filtered(OPT_ignore_auto_link_option))
+    config->ignoreAutoLinkOptions.insert(arg->getValue());
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
     config->aliasedSymbols.push_back(

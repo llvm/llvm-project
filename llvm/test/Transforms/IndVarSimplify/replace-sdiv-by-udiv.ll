@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 
 define void @test0(i32* %a) {
 ; CHECK-LABEL: @test0(

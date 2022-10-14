@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 ; Test WidenIV::GetExtendedOperandRecurrence.
 ; %add, %sub and %mul should be extended to i64 because it is nsw, even though its
 ; sext cannot be hoisted outside the loop.

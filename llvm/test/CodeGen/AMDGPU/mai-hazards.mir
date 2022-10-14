@@ -25,6 +25,64 @@ body:             |
     $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
 ...
 ---
+# GCN-LABEL: name: asm_write_vgpr_accvgpr_write_read
+# GCN:      INLINEASM
+# GCN-NEXT: S_NOP 1
+# GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
+name:            asm_write_vgpr_accvgpr_write_read
+body:             |
+  bb.0:
+
+    INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 1966090 /* regdef:VGPR_32 */, def $vgpr0
+    $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: asm_write_vgpr_accvgpr_write_read_partialnop
+# GCN:      INLINEASM
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
+name:            asm_write_vgpr_accvgpr_write_read_partialnop
+body:             |
+  bb.0:
+
+    INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 1966090 /* regdef:VGPR_32 */, def $vgpr0
+    S_NOP 0
+    $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: asm_write_vgpr_accvgpr_write_read_otherreg
+# GCN:      INLINEASM
+# GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
+name:            asm_write_vgpr_accvgpr_write_read_otherreg
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 1966090 /* regdef:VGPR_32 */, def $vgpr1
+    $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
+...
+
+---
+# GCN-LABEL: name: bundle_write_vgpr_accvgpr_write_read
+# GCN: BUNDLE
+# GCN-NEXT: S_NOP 0
+# GCN-NEXT: V_MOV_B32
+# GCN-NEXT: }
+# GCN-NEXT: S_NOP 1
+# GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
+name:            bundle_write_vgpr_accvgpr_write_read
+body:             |
+  bb.0:
+    $vgpr0 = BUNDLE {
+      S_NOP 0
+      $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+    }
+    $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
+...
+
+---
 
 # GCN-LABEL: name: mfma_write_agpr_mfma_read_same_agpr
 # GCN:      V_MFMA

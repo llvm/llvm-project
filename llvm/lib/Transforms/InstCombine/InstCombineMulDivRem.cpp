@@ -816,6 +816,66 @@ static bool isMultiple(const APInt &C1, const APInt &C2, APInt &Quotient,
   return Remainder.isMinValue();
 }
 
+static Instruction *foldIDivShl(BinaryOperator &I,
+                                InstCombiner::BuilderTy &Builder) {
+  assert((I.getOpcode() == Instruction::SDiv ||
+          I.getOpcode() == Instruction::UDiv) &&
+         "Expected integer divide");
+
+  bool IsSigned = I.getOpcode() == Instruction::SDiv;
+  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+  Type *Ty = I.getType();
+
+  Instruction *Ret = nullptr;
+  Value *X, *Y, *Z;
+
+  // With appropriate no-wrap constraints, remove a common factor in the
+  // dividend and divisor that is disguised as a left-shifted value.
+  if (match(Op1, m_Shl(m_Value(X), m_Value(Z))) &&
+      match(Op0, m_c_Mul(m_Specific(X), m_Value(Y)))) {
+    // Both operands must have the matching no-wrap for this kind of division.
+    auto *Mul = cast<OverflowingBinaryOperator>(Op0);
+    auto *Shl = cast<OverflowingBinaryOperator>(Op1);
+    bool HasNUW = Mul->hasNoUnsignedWrap() && Shl->hasNoUnsignedWrap();
+    bool HasNSW = Mul->hasNoSignedWrap() && Shl->hasNoSignedWrap();
+
+    // (X * Y) u/ (X << Z) --> Y u>> Z
+    if (!IsSigned && HasNUW)
+      Ret = BinaryOperator::CreateLShr(Y, Z);
+
+    // (X * Y) s/ (X << Z) --> Y s/ (1 << Z)
+    if (IsSigned && HasNSW && (Op0->hasOneUse() || Op1->hasOneUse())) {
+      Value *Shl = Builder.CreateShl(ConstantInt::get(Ty, 1), Z);
+      Ret = BinaryOperator::CreateSDiv(Y, Shl);
+    }
+  }
+
+  // With appropriate no-wrap constraints, remove a common factor in the
+  // dividend and divisor that is disguised as a left-shift amount.
+  if (match(Op0, m_Shl(m_Value(X), m_Value(Z))) &&
+      match(Op1, m_Shl(m_Value(Y), m_Specific(Z)))) {
+    auto *Shl0 = cast<OverflowingBinaryOperator>(Op0);
+    auto *Shl1 = cast<OverflowingBinaryOperator>(Op1);
+
+    // For unsigned div, we need 'nuw' on both shifts.
+    // (X << Z) / (Y << Z) --> X / Y
+    if (!IsSigned && Shl0->hasNoUnsignedWrap() && Shl1->hasNoUnsignedWrap())
+      Ret = BinaryOperator::CreateUDiv(X, Y);
+
+    // For signed div, we need 'nsw' on both shifts + 'nuw' on the divisor.
+    // (X << Z) / (Y << Z) --> X / Y
+    if (IsSigned && Shl0->hasNoSignedWrap() && Shl1->hasNoSignedWrap() &&
+        Shl1->hasNoUnsignedWrap())
+      Ret = BinaryOperator::CreateSDiv(X, Y);
+  }
+
+  if (!Ret)
+    return nullptr;
+
+  Ret->setIsExact(I.isExact());
+  return Ret;
+}
+
 /// This function implements the transforms common to both integer division
 /// instructions (udiv and sdiv). It is called by the visitors to those integer
 /// division instructions.
@@ -962,26 +1022,8 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
     }
   }
 
-  // With appropriate no-wrap constraints, remove a common factor in the
-  // dividend and divisor that is disguised as a left-shift.
-  if (match(Op1, m_Shl(m_Value(X), m_Value(Z))) &&
-      match(Op0, m_c_Mul(m_Specific(X), m_Value(Y)))) {
-    // Both operands must have the matching no-wrap for this kind of division.
-    auto *OBO0 = cast<OverflowingBinaryOperator>(Op0);
-    auto *OBO1 = cast<OverflowingBinaryOperator>(Op1);
-    bool HasNUW = OBO0->hasNoUnsignedWrap() && OBO1->hasNoUnsignedWrap();
-    bool HasNSW = OBO0->hasNoSignedWrap() && OBO1->hasNoSignedWrap();
-
-    // (X * Y) u/ (X << Z) --> Y u>> Z
-    if (!IsSigned && HasNUW)
-      return BinaryOperator::CreateLShr(Y, Z);
-
-    // (X * Y) s/ (X << Z) --> Y s/ (1 << Z)
-    if (IsSigned && HasNSW && (Op0->hasOneUse() || Op1->hasOneUse())) {
-      Value *Shl = Builder.CreateShl(ConstantInt::get(Ty, 1), Z);
-      return BinaryOperator::CreateSDiv(Y, Shl);
-    }
-  }
+  if (Instruction *R = foldIDivShl(I, Builder))
+    return R;
 
   // With the appropriate no-wrap constraint, remove a multiply by the divisor
   // after peeking through another divide:

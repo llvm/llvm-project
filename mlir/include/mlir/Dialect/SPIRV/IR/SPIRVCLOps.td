@@ -34,7 +34,7 @@ class SPIRV_CLOp<string mnemonic, int opcode, list<Trait> traits = []> :
 // Base class for OpenCL unary ops.
 class SPIRV_CLUnaryOp<string mnemonic, int opcode, Type resultType,
                       Type operandType, list<Trait> traits = []> :
-  SPIRV_CLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+  SPIRV_CLOp<mnemonic, opcode, !listconcat([Pure], traits)> {
 
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<operandType>:$operand
@@ -59,7 +59,7 @@ class SPIRV_CLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
 // Base class for OpenCL binary ops.
 class SPIRV_CLBinaryOp<string mnemonic, int opcode, Type resultType,
                        Type operandType, list<Trait> traits = []> :
-  SPIRV_CLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+  SPIRV_CLOp<mnemonic, opcode, !listconcat([Pure], traits)> {
 
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<operandType>:$lhs,
@@ -85,7 +85,7 @@ class SPIRV_CLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
 // Base class for OpenCL binary ops.
 class SPIRV_CLTernaryOp<string mnemonic, int opcode, Type resultType,
                       Type operandType, list<Trait> traits = []> :
-  SPIRV_CLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+  SPIRV_CLOp<mnemonic, opcode, !listconcat([Pure], traits)> {
 
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<operandType>:$x,

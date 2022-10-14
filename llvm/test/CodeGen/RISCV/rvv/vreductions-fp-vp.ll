@@ -93,30 +93,27 @@ declare half @llvm.vp.reduce.fadd.nxv64f16(half, <vscale x 64 x half>, <vscale x
 define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_fadd_nxv64f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    srli a1, a2, 1
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    srli a2, a1, 1
+; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v24, v0, a2
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    sub a1, a0, a2
+; CHECK-NEXT:    sltu a3, a0, a1
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    and a1, a3, a1
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    slli a2, a2, 2
 ; CHECK-NEXT:    vfmv.s.f v25, fa0
-; CHECK-NEXT:    mv a3, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB6_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a3, a2
+; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:  .LBB6_2:
-; CHECK-NEXT:    li a4, 0
-; CHECK-NEXT:    vsetvli a5, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v0, a1
-; CHECK-NEXT:    vsetvli zero, a3, e16, m8, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, ma
 ; CHECK-NEXT:    vfredusum.vs v25, v8, v25, v0.t
 ; CHECK-NEXT:    vfmv.f.s ft0, v25
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    sub a1, a0, a2
 ; CHECK-NEXT:    vfmv.s.f v8, ft0
-; CHECK-NEXT:    bltu a0, a1, .LBB6_4
-; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    mv a4, a1
-; CHECK-NEXT:  .LBB6_4:
-; CHECK-NEXT:    vsetvli zero, a4, e16, m8, tu, ma
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, tu, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vfredusum.vs v8, v16, v8, v0.t
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
@@ -128,30 +125,27 @@ define half @vpreduce_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 
 define half @vpreduce_ord_fadd_nxv64f16(half %s, <vscale x 64 x half> %v, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpreduce_ord_fadd_nxv64f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    srli a1, a2, 1
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    srli a2, a1, 1
+; CHECK-NEXT:    vsetvli a3, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v24, v0, a2
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    sub a1, a0, a2
+; CHECK-NEXT:    sltu a3, a0, a1
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    and a1, a3, a1
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    slli a2, a2, 2
 ; CHECK-NEXT:    vfmv.s.f v25, fa0
-; CHECK-NEXT:    mv a3, a0
 ; CHECK-NEXT:    bltu a0, a2, .LBB7_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a3, a2
+; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:  .LBB7_2:
-; CHECK-NEXT:    li a4, 0
-; CHECK-NEXT:    vsetvli a5, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v0, a1
-; CHECK-NEXT:    vsetvli zero, a3, e16, m8, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, ma
 ; CHECK-NEXT:    vfredosum.vs v25, v8, v25, v0.t
 ; CHECK-NEXT:    vfmv.f.s ft0, v25
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
-; CHECK-NEXT:    sub a1, a0, a2
 ; CHECK-NEXT:    vfmv.s.f v8, ft0
-; CHECK-NEXT:    bltu a0, a1, .LBB7_4
-; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    mv a4, a1
-; CHECK-NEXT:  .LBB7_4:
-; CHECK-NEXT:    vsetvli zero, a4, e16, m8, tu, ma
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, tu, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vfredosum.vs v8, v16, v8, v0.t
 ; CHECK-NEXT:    vfmv.f.s fa0, v8

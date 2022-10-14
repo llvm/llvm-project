@@ -69,20 +69,6 @@ std::unique_ptr<OperationPass<func::FuncOp>> createLinalgGeneralizationPass();
 std::unique_ptr<Pass> createLinalgDetensorizePass();
 
 //===----------------------------------------------------------------------===//
-/// Linalg strategy passes.
-//===----------------------------------------------------------------------===//
-/// Create a LinalgStrategyTilePass.
-std::unique_ptr<OperationPass<func::FuncOp>> createLinalgStrategyTilePass(
-    StringRef opName = "",
-    const linalg::LinalgTilingOptions &opt = linalg::LinalgTilingOptions(),
-    const linalg::LinalgTransformationFilter &filter =
-        linalg::LinalgTransformationFilter());
-
-/// Create a LinalgStrategyRemoveMarkersPass.
-std::unique_ptr<OperationPass<func::FuncOp>>
-createLinalgStrategyRemoveMarkersPass();
-
-//===----------------------------------------------------------------------===//
 // Registration
 //===----------------------------------------------------------------------===//
 

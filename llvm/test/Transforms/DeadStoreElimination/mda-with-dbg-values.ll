@@ -1,5 +1,5 @@
-; RUN: opt -S -dse -dse-memoryssa-scanlimit=2 < %s | FileCheck %s
-; RUN: opt -S -strip-debug -dse -dse-memoryssa-scanlimit=2 < %s | FileCheck %s
+; RUN: opt -S -passes=dse -dse-memoryssa-scanlimit=2 < %s | FileCheck %s
+; RUN: opt -S -strip-debug -passes=dse -dse-memoryssa-scanlimit=2 < %s | FileCheck %s
 
 ; Test case to check that DSE gets the same result even if we have a dbg value
 ; between the memcpy.

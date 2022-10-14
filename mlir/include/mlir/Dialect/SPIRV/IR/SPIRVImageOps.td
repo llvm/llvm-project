@@ -19,7 +19,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
-def SPIRV_ImageDrefGatherOp : SPIRV_Op<"ImageDrefGather", [NoSideEffect]> {
+def SPIRV_ImageDrefGatherOp : SPIRV_Op<"ImageDrefGather", [Pure]> {
   let summary = "Gathers the requested depth-comparison from four texels.";
 
   let description = [{
@@ -86,7 +86,7 @@ def SPIRV_ImageDrefGatherOp : SPIRV_Op<"ImageDrefGather", [NoSideEffect]> {
 
 // -----
 
-def SPIRV_ImageQuerySizeOp : SPIRV_Op<"ImageQuerySize", [NoSideEffect]> {
+def SPIRV_ImageQuerySizeOp : SPIRV_Op<"ImageQuerySize", [Pure]> {
   let summary = "Query the dimensions of Image, with no level of detail.";
 
   let description = [{
@@ -144,7 +144,7 @@ def SPIRV_ImageQuerySizeOp : SPIRV_Op<"ImageQuerySize", [NoSideEffect]> {
 // -----
 
 def SPIRV_ImageOp : SPIRV_Op<"Image",
-    [NoSideEffect,
+    [Pure,
      TypesMatchWith<"type of 'result' matches image type of 'sampledimage'",
                     "sampledimage", "result",
                     "$_self.cast<spirv::SampledImageType>().getImageType()">]> {

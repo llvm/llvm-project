@@ -634,14 +634,14 @@ let Predicates = [UseHVX] in {
            (LoVec (V6_valignb HvxVR:$Vt, HvxVR:$Vs, I32:$Rt))>;
 
   def: Pat<(HexagonVASL HVI8:$Vs, I32:$Rt),
-           (V6_vpackeb (V6_vaslh (HiVec (VZxtb HvxVR:$Vs)), I32:$Rt),
-                       (V6_vaslh (LoVec (VZxtb HvxVR:$Vs)), I32:$Rt))>;
+           (V6_vshuffeb (V6_vaslh (HiVec (V6_vzb HvxVR:$Vs)), I32:$Rt),
+                        (V6_vaslh (LoVec (V6_vzb HvxVR:$Vs)), I32:$Rt))>;
   def: Pat<(HexagonVASR HVI8:$Vs, I32:$Rt),
-           (V6_vpackeb (V6_vasrh (HiVec (VSxtb HvxVR:$Vs)), I32:$Rt),
-                       (V6_vasrh (LoVec (VSxtb HvxVR:$Vs)), I32:$Rt))>;
+           (V6_vshuffeb (V6_vasrh (HiVec (V6_vsb HvxVR:$Vs)), I32:$Rt),
+                        (V6_vasrh (LoVec (V6_vsb HvxVR:$Vs)), I32:$Rt))>;
   def: Pat<(HexagonVLSR HVI8:$Vs, I32:$Rt),
-           (V6_vpackeb (V6_vlsrh (HiVec (VZxtb HvxVR:$Vs)), I32:$Rt),
-                       (V6_vlsrh (LoVec (VZxtb HvxVR:$Vs)), I32:$Rt))>;
+           (V6_vshuffeb (V6_vlsrh (HiVec (V6_vzb HvxVR:$Vs)), I32:$Rt),
+                        (V6_vlsrh (LoVec (V6_vzb HvxVR:$Vs)), I32:$Rt))>;
 
   def: Pat<(HexagonVASL HVI16:$Vs, I32:$Rt), (V6_vaslh HvxVR:$Vs, I32:$Rt)>;
   def: Pat<(HexagonVASL HVI32:$Vs, I32:$Rt), (V6_vaslw HvxVR:$Vs, I32:$Rt)>;
@@ -654,6 +654,16 @@ let Predicates = [UseHVX] in {
            (V6_vaslw_acc HvxVR:$Vx, HvxVR:$Vu, I32:$Rt)>;
   def: Pat<(add HVI32:$Vx, (HexagonVASR HVI32:$Vu, I32:$Rt)),
            (V6_vasrw_acc HvxVR:$Vx, HvxVR:$Vu, I32:$Rt)>;
+
+  def: Pat<(shl HVI8:$Vs, HVI8:$Vt),
+           (V6_vshuffeb (V6_vaslhv (HiVec (V6_vzb $Vs)), (HiVec (V6_vzb $Vt))),
+                        (V6_vaslhv (LoVec (V6_vzb $Vs)), (LoVec (V6_vzb $Vt))))>;
+  def: Pat<(sra HVI8:$Vs, HVI8:$Vt),
+           (V6_vshuffeb (V6_vasrhv (HiVec (V6_vsb $Vs)), (HiVec (V6_vzb $Vt))),
+                        (V6_vasrhv (LoVec (V6_vsb $Vs)), (LoVec (V6_vzb $Vt))))>;
+  def: Pat<(srl HVI8:$Vs, HVI8:$Vt),
+           (V6_vshuffeb (V6_vlsrhv (HiVec (V6_vzb $Vs)), (HiVec (V6_vzb $Vt))),
+                        (V6_vlsrhv (LoVec (V6_vzb $Vs)), (LoVec (V6_vzb $Vt))))>;
 
   def: Pat<(shl HVI16:$Vs, HVI16:$Vt), (V6_vaslhv HvxVR:$Vs, HvxVR:$Vt)>;
   def: Pat<(shl HVI32:$Vs, HVI32:$Vt), (V6_vaslwv HvxVR:$Vs, HvxVR:$Vt)>;
@@ -676,8 +686,8 @@ let Predicates = [UseHVX] in {
   }
 
   def: Pat<(VecI8 (ctpop HVI8:$Vs)),
-           (V6_vpackeb (V6_vpopcounth (HiVec (V6_vunpackub HvxVR:$Vs))),
-                       (V6_vpopcounth (LoVec (V6_vunpackub HvxVR:$Vs))))>;
+           (V6_vshuffeb (V6_vpopcounth (HiVec (V6_vzb HvxVR:$Vs))),
+                        (V6_vpopcounth (LoVec (V6_vzb HvxVR:$Vs))))>;
   def: Pat<(VecI16 (ctpop HVI16:$Vs)), (V6_vpopcounth HvxVR:$Vs)>;
   def: Pat<(VecI32 (ctpop HVI32:$Vs)),
            (V6_vaddw (LoVec (V6_vzh (V6_vpopcounth HvxVR:$Vs))),
@@ -685,13 +695,13 @@ let Predicates = [UseHVX] in {
 
   let Predicates = [UseHVX,UseHVXV60] in
   def: Pat<(VecI8 (ctlz HVI8:$Vs)),
-           (V6_vsubb (V6_vpackeb (V6_vcl0h (HiVec (V6_vunpackub HvxVR:$Vs))),
-                                 (V6_vcl0h (LoVec (V6_vunpackub HvxVR:$Vs)))),
+           (V6_vsubb (V6_vshuffeb (V6_vcl0h (HiVec (V6_vzb HvxVR:$Vs))),
+                                  (V6_vcl0h (LoVec (V6_vzb HvxVR:$Vs)))),
                      (V60splatib (i32 0x08)))>;
   let Predicates = [UseHVX,UseHVXV62], AddedComplexity = 10 in
   def: Pat<(VecI8 (ctlz HVI8:$Vs)),
-           (V6_vsubb (V6_vpackeb (V6_vcl0h (HiVec (V6_vunpackub HvxVR:$Vs))),
-                                 (V6_vcl0h (LoVec (V6_vunpackub HvxVR:$Vs)))),
+           (V6_vsubb (V6_vshuffeb (V6_vcl0h (HiVec (V6_vzb HvxVR:$Vs))),
+                                  (V6_vcl0h (LoVec (V6_vzb HvxVR:$Vs)))),
                      (V62splatib (i32 0x08)))>;
 
   def: Pat<(VecI16 (ctlz HVI16:$Vs)), (V6_vcl0h HvxVR:$Vs)>;

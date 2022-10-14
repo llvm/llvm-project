@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -disable-output
+; RUN: opt < %s -passes=indvars -disable-output
 
 define void @_ZN5ArrayISt7complexIdEEC2ERK10dim_vector() personality i32 (...)* @__gxx_personality_v0 {
 entry:

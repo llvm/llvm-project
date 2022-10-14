@@ -98,7 +98,7 @@ class EffectOpInterfaceBase<string name, string baseEffect>
     static bool hasNoEffect(Operation *op) {
       if (auto interface = dyn_cast<}] # name # [{>(op))
         return interface.hasNoEffect();
-      return op->hasTrait<::mlir::OpTrait::HasRecursiveSideEffects>();
+      return op->hasTrait<::mlir::OpTrait::HasRecursiveMemoryEffects>();
     }
 
     /// Collect all of the effect instances that operate on the provided value

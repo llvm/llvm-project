@@ -24,6 +24,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DarwinSDKInfo.h"
+#include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -6819,12 +6820,12 @@ static void handleUuidAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 static void handleHLSLNumThreadsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   using llvm::Triple;
   Triple Target = S.Context.getTargetInfo().getTriple();
+  auto Env = S.Context.getTargetInfo().getTriple().getEnvironment();
   if (!llvm::is_contained({Triple::Compute, Triple::Mesh, Triple::Amplification,
                            Triple::Library},
-                          Target.getEnvironment())) {
+                          Env)) {
     uint32_t Pipeline =
-        (uint32_t)S.Context.getTargetInfo().getTriple().getEnvironment() -
-        (uint32_t)llvm::Triple::Pixel;
+        static_cast<uint32_t>(hlsl::getStageFromEnvironment(Env));
     S.Diag(AL.getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
         << AL << Pipeline << "Compute, Amplification, Mesh or Library";
     return;
@@ -6891,16 +6892,13 @@ HLSLNumThreadsAttr *Sema::mergeHLSLNumThreadsAttr(Decl *D,
 
 static void handleHLSLSVGroupIndexAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   using llvm::Triple;
-  Triple Target = S.Context.getTargetInfo().getTriple();
-  if (Target.getEnvironment() != Triple::Compute &&
-      Target.getEnvironment() != Triple::Library) {
+  auto Env = S.Context.getTargetInfo().getTriple().getEnvironment();
+  if (Env != Triple::Compute && Env != Triple::Library) {
     // FIXME: it is OK for a compute shader entry and pixel shader entry live in
     // same HLSL file. Issue https://github.com/llvm/llvm-project/issues/57880.
-    uint32_t Pipeline =
-        (uint32_t)S.Context.getTargetInfo().getTriple().getEnvironment() -
-        (uint32_t)llvm::Triple::Pixel;
+    ShaderStage Pipeline = hlsl::getStageFromEnvironment(Env);
     S.Diag(AL.getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
-        << AL << Pipeline << "Compute";
+        << AL << (uint32_t)Pipeline << "Compute";
     return;
   }
 

@@ -407,8 +407,8 @@ set(LIBCXX_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE PATH
 set(LIBCXX_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
     "Path where built libc++ runtime libraries should be installed.")
 
-set(LIBCXX_SHARED_OUTPUT_NAME "c++" CACHE STRING
-    "Output name for the shared libc++ runtime library.")
+set(LIBCXX_SHARED_OUTPUT_NAME "c++" CACHE STRING "Output name for the shared libc++ runtime library.")
+set(LIBCXX_STATIC_OUTPUT_NAME "c++" CACHE STRING "Output name for the static libc++ runtime library.")
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})

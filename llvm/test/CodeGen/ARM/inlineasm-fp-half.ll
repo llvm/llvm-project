@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=thumb -mattr=+armv8.2-a,+fp-armv8,+fullfp16,+bf16,-neon %s -o - | FileCheck %s
 
 
-define arm_aapcscc half @f(half %x) nounwind {
-; CHECK-LABEL: f:
+define arm_aapcscc half @f_t(half %x) nounwind {
+; CHECK-LABEL: f_t:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f16 s0, r0
 ; CHECK-NEXT:    @APP
@@ -17,8 +17,22 @@ entry:
   ret half %0
 }
 
-define arm_aapcscc bfloat @h(bfloat %x) nounwind {
-; CHECK-LABEL: h:
+define arm_aapcscc half @f_w(half %x) nounwind {
+; CHECK-LABEL: f_w:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.f16 s0, r0
+; CHECK-NEXT:    @APP
+; CHECK-NEXT:    vsqrt.f16 s0, s0
+; CHECK-NEXT:    @NO_APP
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call half asm "vsqrt.f16 $0, $1", "=w,w"(half %x)
+  ret half %0
+}
+
+define arm_aapcscc bfloat @h_t(bfloat %x) nounwind {
+; CHECK-LABEL: h_t:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.f16 s0, r0
 ; CHECK-NEXT:    @APP
@@ -28,5 +42,19 @@ define arm_aapcscc bfloat @h(bfloat %x) nounwind {
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = tail call bfloat asm "vmov.f32 $0, $1", "=t,t"(bfloat %x)
+  ret bfloat %0
+}
+
+define arm_aapcscc bfloat @h_w(bfloat %x) nounwind {
+; CHECK-LABEL: h_w:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.f16 s0, r0
+; CHECK-NEXT:    @APP
+; CHECK-NEXT:    vmov.f32 s0, s0
+; CHECK-NEXT:    @NO_APP
+; CHECK-NEXT:    vmov.f16 r0, s0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call bfloat asm "vmov.f32 $0, $1", "=w,w"(bfloat %x)
   ret bfloat %0
 }

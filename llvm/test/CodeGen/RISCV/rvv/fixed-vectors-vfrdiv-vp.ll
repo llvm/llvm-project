@@ -9,7 +9,7 @@ declare <2 x half> @llvm.vp.fdiv.v2f16(<2 x half>, <2 x half>, <2 x i1>, i32)
 define <2 x half> @vfrdiv_vf_v2f16(<2 x half> %va, half %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfrdiv_vf_v2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x half> poison, half %b, i32 0
@@ -37,7 +37,7 @@ declare <4 x half> @llvm.vp.fdiv.v4f16(<4 x half>, <4 x half>, <4 x i1>, i32)
 define <4 x half> @vfrdiv_vf_v4f16(<4 x half> %va, half %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfrdiv_vf_v4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x half> poison, half %b, i32 0
@@ -65,7 +65,7 @@ declare <8 x half> @llvm.vp.fdiv.v8f16(<8 x half>, <8 x half>, <8 x i1>, i32)
 define <8 x half> @vfrdiv_vf_v8f16(<8 x half> %va, half %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfrdiv_vf_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x half> poison, half %b, i32 0
@@ -93,7 +93,7 @@ declare <16 x half> @llvm.vp.fdiv.v16f16(<16 x half>, <16 x half>, <16 x i1>, i3
 define <16 x half> @vfrdiv_vf_v16f16(<16 x half> %va, half %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfrdiv_vf_v16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x half> poison, half %b, i32 0
@@ -121,7 +121,7 @@ declare <2 x float> @llvm.vp.fdiv.v2f32(<2 x float>, <2 x float>, <2 x i1>, i32)
 define <2 x float> @vfrdiv_vf_v2f32(<2 x float> %va, float %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfrdiv_vf_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x float> poison, float %b, i32 0
@@ -149,7 +149,7 @@ declare <4 x float> @llvm.vp.fdiv.v4f32(<4 x float>, <4 x float>, <4 x i1>, i32)
 define <4 x float> @vfrdiv_vf_v4f32(<4 x float> %va, float %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfrdiv_vf_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x float> poison, float %b, i32 0
@@ -177,7 +177,7 @@ declare <8 x float> @llvm.vp.fdiv.v8f32(<8 x float>, <8 x float>, <8 x i1>, i32)
 define <8 x float> @vfrdiv_vf_v8f32(<8 x float> %va, float %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfrdiv_vf_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x float> poison, float %b, i32 0
@@ -205,7 +205,7 @@ declare <16 x float> @llvm.vp.fdiv.v16f32(<16 x float>, <16 x float>, <16 x i1>,
 define <16 x float> @vfrdiv_vf_v16f32(<16 x float> %va, float %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfrdiv_vf_v16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x float> poison, float %b, i32 0
@@ -233,7 +233,7 @@ declare <2 x double> @llvm.vp.fdiv.v2f64(<2 x double>, <2 x double>, <2 x i1>, i
 define <2 x double> @vfrdiv_vf_v2f64(<2 x double> %va, double %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfrdiv_vf_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x double> poison, double %b, i32 0
@@ -261,7 +261,7 @@ declare <4 x double> @llvm.vp.fdiv.v4f64(<4 x double>, <4 x double>, <4 x i1>, i
 define <4 x double> @vfrdiv_vf_v4f64(<4 x double> %va, double %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfrdiv_vf_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x double> poison, double %b, i32 0
@@ -289,7 +289,7 @@ declare <8 x double> @llvm.vp.fdiv.v8f64(<8 x double>, <8 x double>, <8 x i1>, i
 define <8 x double> @vfrdiv_vf_v8f64(<8 x double> %va, double %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfrdiv_vf_v8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x double> poison, double %b, i32 0
@@ -317,7 +317,7 @@ declare <16 x double> @llvm.vp.fdiv.v16f64(<16 x double>, <16 x double>, <16 x i
 define <16 x double> @vfrdiv_vf_v16f64(<16 x double> %va, double %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfrdiv_vf_v16f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfrdiv.vf v8, v8, fa0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x double> poison, double %b, i32 0

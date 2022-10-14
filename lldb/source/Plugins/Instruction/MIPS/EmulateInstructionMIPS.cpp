@@ -1259,18 +1259,19 @@ bool EmulateInstructionMIPS::Emulate_SW(llvm::MCInst &insn) {
       return false;
 
     Context context;
-    RegisterValue data_src;
     context.type = eContextPushRegisterOnStack;
     context.SetRegisterToRegisterPlusOffset(*reg_info_src, *reg_info_base, 0);
 
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
     Status error;
 
-    if (!ReadRegister(*reg_info_base, data_src))
+    llvm::Optional<RegisterValue> data_src = ReadRegister(*reg_info_base);
+    if (!data_src)
       return false;
 
-    if (data_src.GetAsMemoryData(*reg_info_src, buffer, reg_info_src->byte_size,
-                                 eByteOrderLittle, error) == 0)
+    if (data_src->GetAsMemoryData(*reg_info_src, buffer,
+                                  reg_info_src->byte_size, eByteOrderLittle,
+                                  error) == 0)
       return false;
 
     if (!WriteMemory(context, address, buffer, reg_info_src->byte_size))
@@ -1518,18 +1519,18 @@ bool EmulateInstructionMIPS::Emulate_SWSP(llvm::MCInst &insn) {
   if (base == dwarf_sp_mips && nonvolatile_reg_p(src)) {
     RegisterInfo reg_info_src = {};
     Context context;
-    RegisterValue data_src;
     context.type = eContextPushRegisterOnStack;
     context.SetRegisterToRegisterPlusOffset(reg_info_src, *reg_info_base, 0);
 
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
     Status error;
 
-    if (!ReadRegister(*reg_info_base, data_src))
+    llvm::Optional<RegisterValue> data_src = ReadRegister(*reg_info_base);
+    if (!data_src)
       return false;
 
-    if (data_src.GetAsMemoryData(reg_info_src, buffer, reg_info_src.byte_size,
-                                 eByteOrderLittle, error) == 0)
+    if (data_src->GetAsMemoryData(reg_info_src, buffer, reg_info_src.byte_size,
+                                  eByteOrderLittle, error) == 0)
       return false;
 
     if (!WriteMemory(context, address, buffer, reg_info_src.byte_size))
@@ -1600,18 +1601,19 @@ bool EmulateInstructionMIPS::Emulate_SWM16_32(llvm::MCInst &insn) {
       return false;
 
     Context context;
-    RegisterValue data_src;
     context.type = eContextPushRegisterOnStack;
     context.SetRegisterToRegisterPlusOffset(*reg_info_src, *reg_info_base, 0);
 
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
     Status error;
 
-    if (!ReadRegister(*reg_info_base, data_src))
+    llvm::Optional<RegisterValue> data_src = ReadRegister(*reg_info_base);
+    if (!data_src)
       return false;
 
-    if (data_src.GetAsMemoryData(*reg_info_src, buffer, reg_info_src->byte_size,
-                                 eByteOrderLittle, error) == 0)
+    if (data_src->GetAsMemoryData(*reg_info_src, buffer,
+                                  reg_info_src->byte_size, eByteOrderLittle,
+                                  error) == 0)
       return false;
 
     if (!WriteMemory(context, base_address, buffer, reg_info_src->byte_size))

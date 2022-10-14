@@ -378,7 +378,7 @@ static bool isGuaranteedAutomaticAllocation(Operation *op) {
 static bool isOpItselfPotentialAutomaticAllocation(Operation *op) {
   // This op itself doesn't create a stack allocation,
   // the inner allocation should be handled separately.
-  if (op->hasTrait<OpTrait::HasRecursiveSideEffects>())
+  if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>())
     return false;
   MemoryEffectOpInterface interface = dyn_cast<MemoryEffectOpInterface>(op);
   if (!interface)
@@ -817,6 +817,20 @@ Optional<int64_t> DimOp::getConstantIndex() {
   if (auto constantOp = getIndex().getDefiningOp<arith::ConstantOp>())
     return constantOp.getValue().cast<IntegerAttr>().getInt();
   return {};
+}
+
+Speculation::Speculatability DimOp::getSpeculatability() {
+  auto constantIndex = getConstantIndex();
+  if (!constantIndex)
+    return Speculation::NotSpeculatable;
+
+  auto rankedSourceType = dyn_cast<MemRefType>(getSource().getType());
+  if (!rankedSourceType)
+    return Speculation::NotSpeculatable;
+
+  // The verifier rejects operations that violate this assertion.
+  assert(constantIndex < rankedSourceType.getRank());
+  return Speculation::Speculatable;
 }
 
 LogicalResult DimOp::verify() {

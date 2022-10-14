@@ -1153,18 +1153,19 @@ bool EmulateInstructionMIPS64::Emulate_SD(llvm::MCInst &insn) {
   /* We look for sp based non-volatile register stores */
   if (nonvolatile_reg_p(src)) {
     Context context;
-    RegisterValue data_src;
     context.type = eContextPushRegisterOnStack;
     context.SetRegisterToRegisterPlusOffset(*reg_info_src, *reg_info_base, 0);
 
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
     Status error;
 
-    if (!ReadRegister(*reg_info_base, data_src))
+    llvm::Optional<RegisterValue> data_src = ReadRegister(*reg_info_base);
+    if (!data_src)
       return false;
 
-    if (data_src.GetAsMemoryData(*reg_info_src, buffer, reg_info_src->byte_size,
-                                 eByteOrderLittle, error) == 0)
+    if (data_src->GetAsMemoryData(*reg_info_src, buffer,
+                                  reg_info_src->byte_size, eByteOrderLittle,
+                                  error) == 0)
       return false;
 
     if (!WriteMemory(context, address, buffer, reg_info_src->byte_size))

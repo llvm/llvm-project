@@ -4,7 +4,7 @@
 ; Test that DAGCombiner gets helped by computeKnownBitsForTargetNode().
 
 ; SystemZISD::REPLICATE
-define i32 @f0(<4 x i32> *%p0) {
+define i32 @f0(ptr %p0) {
 ; CHECK-LABEL: f0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl %v0, 0(%r2), 3
@@ -16,10 +16,10 @@ define i32 @f0(<4 x i32> *%p0) {
 ; CHECK-NEXT:    vlgvf %r2, %v0, 3
 ; CHECK-NEXT:    # kill: def $r2l killed $r2l killed $r2d
 ; CHECK-NEXT:    br %r14
-  %a0 = load <4 x i32>, <4 x i32>* %p0, align 8
+  %a0 = load <4 x i32>, ptr %p0, align 8
   %cmp0 = icmp ne <4 x i32> %a0, zeroinitializer
   %zxt0 = zext <4 x i1> %cmp0 to <4 x i32>
-  store <4 x i32> %zxt0, <4 x i32>* %p0, align 8
+  store <4 x i32> %zxt0, ptr %p0, align 8
   %ext0 = extractelement <4 x i32> %zxt0, i32 3
   br label %exit
 

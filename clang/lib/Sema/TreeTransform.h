@@ -2814,20 +2814,18 @@ public:
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildExtVectorElementExpr(Expr *Base,
-                                               SourceLocation OpLoc,
-                                               SourceLocation AccessorLoc,
-                                               IdentifierInfo &Accessor) {
+  ExprResult RebuildExtVectorElementExpr(Expr *Base, SourceLocation OpLoc,
+                                         bool IsArrow,
+                                         SourceLocation AccessorLoc,
+                                         IdentifierInfo &Accessor) {
 
     CXXScopeSpec SS;
     DeclarationNameInfo NameInfo(&Accessor, AccessorLoc);
-    return getSema().BuildMemberReferenceExpr(Base, Base->getType(),
-                                              OpLoc, /*IsArrow*/ false,
-                                              SS, SourceLocation(),
-                                              /*FirstQualifierInScope*/ nullptr,
-                                              NameInfo,
-                                              /* TemplateArgs */ nullptr,
-                                              /*S*/ nullptr);
+    return getSema().BuildMemberReferenceExpr(
+        Base, Base->getType(), OpLoc, IsArrow, SS, SourceLocation(),
+        /*FirstQualifierInScope*/ nullptr, NameInfo,
+        /* TemplateArgs */ nullptr,
+        /*S*/ nullptr);
   }
 
   /// Build a new initializer list expression.
@@ -11424,9 +11422,9 @@ TreeTransform<Derived>::TransformExtVectorElementExpr(ExtVectorElementExpr *E) {
   // FIXME: Bad source location
   SourceLocation FakeOperatorLoc =
       SemaRef.getLocForEndOfToken(E->getBase()->getEndLoc());
-  return getDerived().RebuildExtVectorElementExpr(Base.get(), FakeOperatorLoc,
-                                                  E->getAccessorLoc(),
-                                                  E->getAccessor());
+  return getDerived().RebuildExtVectorElementExpr(
+      Base.get(), FakeOperatorLoc, E->isArrow(), E->getAccessorLoc(),
+      E->getAccessor());
 }
 
 template<typename Derived>

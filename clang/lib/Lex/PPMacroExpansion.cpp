@@ -1085,8 +1085,15 @@ void Preprocessor::removeCachedMacroExpandedTokensOfLastLexer() {
 /// the identifier tokens inserted.
 static void ComputeDATE_TIME(SourceLocation &DATELoc, SourceLocation &TIMELoc,
                              Preprocessor &PP) {
-  time_t TT = time(nullptr);
-  struct tm *TM = localtime(&TT);
+  time_t TT;
+  std::tm *TM;
+  if (PP.getPreprocessorOpts().SourceDateEpoch) {
+    TT = *PP.getPreprocessorOpts().SourceDateEpoch;
+    TM = std::gmtime(&TT);
+  } else {
+    TT = std::time(nullptr);
+    TM = std::localtime(&TT);
+  }
 
   static const char * const Months[] = {
     "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"
@@ -1095,8 +1102,11 @@ static void ComputeDATE_TIME(SourceLocation &DATELoc, SourceLocation &TIMELoc,
   {
     SmallString<32> TmpBuffer;
     llvm::raw_svector_ostream TmpStream(TmpBuffer);
-    TmpStream << llvm::format("\"%s %2d %4d\"", Months[TM->tm_mon],
-                              TM->tm_mday, TM->tm_year + 1900);
+    if (TM)
+      TmpStream << llvm::format("\"%s %2d %4d\"", Months[TM->tm_mon],
+                                TM->tm_mday, TM->tm_year + 1900);
+    else
+      TmpStream << "??? ?? ????";
     Token TmpTok;
     TmpTok.startToken();
     PP.CreateString(TmpStream.str(), TmpTok);
@@ -1106,8 +1116,11 @@ static void ComputeDATE_TIME(SourceLocation &DATELoc, SourceLocation &TIMELoc,
   {
     SmallString<32> TmpBuffer;
     llvm::raw_svector_ostream TmpStream(TmpBuffer);
-    TmpStream << llvm::format("\"%02d:%02d:%02d\"",
-                              TM->tm_hour, TM->tm_min, TM->tm_sec);
+    if (TM)
+      TmpStream << llvm::format("\"%02d:%02d:%02d\"", TM->tm_hour, TM->tm_min,
+                                TM->tm_sec);
+    else
+      TmpStream << "??:??:??";
     Token TmpTok;
     TmpTok.startToken();
     PP.CreateString(TmpStream.str(), TmpTok);
@@ -1593,22 +1606,24 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     Diag(Tok.getLocation(), diag::warn_pp_date_time);
     // MSVC, ICC, GCC, VisualAge C++ extension.  The generated string should be
     // of the form "Ddd Mmm dd hh::mm::ss yyyy", which is returned by asctime.
-
-    // Get the file that we are lexing out of.  If we're currently lexing from
-    // a macro, dig into the include stack.
-    const FileEntry *CurFile = nullptr;
-    PreprocessorLexer *TheLexer = getCurrentFileLexer();
-
-    if (TheLexer)
-      CurFile = SourceMgr.getFileEntryForID(TheLexer->getFileID());
-
     const char *Result;
-    if (CurFile) {
-      time_t TT = CurFile->getModificationTime();
-      struct tm *TM = localtime(&TT);
+    if (getPreprocessorOpts().SourceDateEpoch) {
+      time_t TT = *getPreprocessorOpts().SourceDateEpoch;
+      std::tm *TM = std::gmtime(&TT);
       Result = asctime(TM);
     } else {
-      Result = "??? ??? ?? ??:??:?? ????\n";
+      // Get the file that we are lexing out of.  If we're currently lexing from
+      // a macro, dig into the include stack.
+      const FileEntry *CurFile = nullptr;
+      if (PreprocessorLexer *TheLexer = getCurrentFileLexer())
+        CurFile = SourceMgr.getFileEntryForID(TheLexer->getFileID());
+      if (CurFile) {
+        time_t TT = CurFile->getModificationTime();
+        struct tm *TM = localtime(&TT);
+        Result = asctime(TM);
+      } else {
+        Result = "??? ??? ?? ??:??:?? ????\n";
+      }
     }
     // Surround the string with " and strip the trailing newline.
     OS << '"' << StringRef(Result).drop_back() << '"';

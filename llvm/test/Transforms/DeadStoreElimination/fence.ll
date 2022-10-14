@@ -1,4 +1,4 @@
-; RUN: opt -S -dse < %s | FileCheck %s
+; RUN: opt -S -passes=dse < %s | FileCheck %s
 
 ; We conservative choose to prevent dead store elimination
 ; across release or stronger fences.  It's not required 

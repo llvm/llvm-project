@@ -1294,7 +1294,7 @@ void ASTDeclWriter::VisitUsingEnumDecl(UsingEnumDecl *D) {
   VisitNamedDecl(D);
   Record.AddSourceLocation(D->getUsingLoc());
   Record.AddSourceLocation(D->getEnumLoc());
-  Record.AddDeclRef(D->getEnumDecl());
+  Record.AddTypeSourceInfo(D->getEnumType());
   Record.AddDeclRef(D->FirstUsingShadow.getPointer());
   Record.AddDeclRef(Context.getInstantiatedFromUsingEnumDecl(D));
   Code = serialization::DECL_USING_ENUM;

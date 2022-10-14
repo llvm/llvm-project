@@ -943,7 +943,7 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   //     renders accesses from other threads undefined.
   //     TODO: This is currently not checked.
   if (mayBeVisibleThroughUnwinding(cpyDest, C, cpyStore)) {
-    LLVM_DEBUG(dbgs() << "Call Slot: Dest may be visible through unwinding");
+    LLVM_DEBUG(dbgs() << "Call Slot: Dest may be visible through unwinding\n");
     return false;
   }
 
@@ -952,8 +952,10 @@ bool MemCpyOptPass::performCallSlotOptzn(Instruction *cpyLoad,
   bool isDestSufficientlyAligned = srcAlign <= cpyAlign;
   // If dest is not aligned enough and we can't increase its alignment then
   // bail out.
-  if (!isDestSufficientlyAligned && !isa<AllocaInst>(cpyDest))
+  if (!isDestSufficientlyAligned && !isa<AllocaInst>(cpyDest)) {
+    LLVM_DEBUG(dbgs() << "Call Slot: Dest not sufficiently aligned\n");
     return false;
+  }
 
   // Check that src is not accessed except via the call and the memcpy.  This
   // guarantees that it holds only undefined values when passed in (so the final

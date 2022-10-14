@@ -16,13 +16,12 @@ entry:
   %y = alloca i64, align 8
   br label %for.cond
 for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i64, i64* %x.addr, align 8
-  %1 = bitcast i64* %y to i8*
-  call void @llvm.dbg.declare(metadata i64* %y, metadata !15, metadata !DIExpression())
+  %0 = load i64, ptr %x.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %y, metadata !15, metadata !DIExpression())
 , !dbg !29
-  %2 = load i64, i64* %x.addr, align 8
-  %add = add i64 %2, -9223372036854775808
-  store i64 %add, i64* %y, align 8
+  %1 = load i64, ptr %x.addr, align 8
+  %add = add i64 %1, -9223372036854775808
+  store i64 %add, ptr %y, align 8
   br label %for.cond
 }
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1

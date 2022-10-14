@@ -5,7 +5,7 @@ set(LLVM_OPTIONAL_SOURCES
   AsyncRuntime.cpp
   CRunnerUtils.cpp
   CudaRuntimeWrappers.cpp
-  SparseTensorUtils.cpp
+  SparseTensorRuntime.cpp
   ExecutionEngine.cpp
   Float16bits.cpp
   RocmRuntimeWrappers.cpp
@@ -132,12 +132,12 @@ add_subdirectory(SparseTensor)
 add_mlir_library(mlir_c_runner_utils
   SHARED
   CRunnerUtils.cpp
-  SparseTensorUtils.cpp
+  SparseTensorRuntime.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
-  mlir_sparse_tensor_utils
+  MLIRSparseTensorRuntime
   )
 set_property(TARGET mlir_c_runner_utils PROPERTY CXX_STANDARD 17)
 target_compile_definitions(mlir_c_runner_utils PRIVATE mlir_c_runner_utils_EXPORTS)

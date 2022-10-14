@@ -142,3 +142,40 @@ subroutine test_char_scalar_deferred_k2(c)
   ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[addr_cast]], %[[len]] : (!fir.ref<!fir.char<2,?>>, index) -> !fir.boxchar<2>
   ! CHECK: fir.call @_QPfoo2(%[[boxchar]]) : (!fir.boxchar<2>) -> ()
 end subroutine
+
+! Check that assumed length character allocatables are reading the length from
+! the descriptor.
+
+! CHECK-LABEL: _QPtest_char_assumed(
+! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>{{.*}}
+subroutine test_char_assumed(a)
+  integer :: n
+  character(len=*), allocatable :: a
+  ! CHECK: %[[argLoad:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+  ! CHECK: %[[argLen:.*]] = fir.box_elesize %[[argLoad]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> index
+
+  n = len(a)
+  ! CHECK: %[[argLenCast:.*]] = fir.convert %[[argLen]] : (index) -> i32
+  ! CHECK: fir.store %[[argLenCast]] to %{{.*}} : !fir.ref<i32>
+end subroutine
+
+! CHECK-LABEL: _QPtest_char_assumed_optional(
+! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>{{.*}}
+subroutine test_char_assumed_optional(a)
+  integer :: n
+  character(len=*), allocatable, optional :: a
+  ! CHECK: %[[argPresent:.*]] = fir.is_present %[[arg0]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> i1
+  ! CHECK: %[[argLen:.*]] = fir.if %[[argPresent]] -> (index) {
+  ! CHECK:   %[[argLoad:.*]] = fir.load %[[arg0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+  ! CHECK:   %[[argEleSz:.*]] = fir.box_elesize %[[argLoad]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> index
+  ! CHECK:   fir.result %[[argEleSz]] : index
+  ! CHECK: } else {
+  ! CHECK:   %[[undef:.*]] = fir.undefined index
+  ! CHECK:   fir.result %[[undef]] : index
+
+  if (present(a)) then
+    n = len(a)
+    ! CHECK:   %[[argLenCast:.*]] = fir.convert %[[argLen]] : (index) -> i32
+    ! CHECK:   fir.store %[[argLenCast]] to %{{.*}} : !fir.ref<i32>
+  endif
+end subroutine

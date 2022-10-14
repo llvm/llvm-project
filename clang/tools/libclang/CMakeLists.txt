@@ -9,10 +9,9 @@
 # TODO: This should probably not be a option going forward but we
 # we should commit to a way to do it. But due to getting this out
 # in LLVM 15.x we opted for a option.
+set(LIBCLANG_SOVERSION_ARG)
 if(NOT CLANG_FORCE_MATCHING_LIBCLANG_SOVERSION)
-  set(LIBCLANG_SOVERSION 13)
-else()
-  set(LIBCLANG_SOVERSION ${CLANG_VERSION_MAJOR})
+  set(LIBCLANG_SOVERSION_ARG SOVERSION 13)
 endif()
 
 # TODO: harmonize usage of LIBCLANG_SOVERSION / LIBCLANG_LIBARY_VERSION
@@ -195,7 +194,7 @@ if(ENABLE_SHARED)
 
     set_target_properties(libclang PROPERTIES
                           VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}
-                          SOVERSION ${LIBCLANG_SOVERSION})
+                          ${LIBCLANG_SOVERSION_ARG})
   endif()
 endif()
 

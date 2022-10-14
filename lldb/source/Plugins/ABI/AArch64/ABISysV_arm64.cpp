@@ -277,7 +277,7 @@ Status ABISysV_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
             if (byte_size <= 16) {
               if (byte_size <= RegisterValue::GetMaxByteSize()) {
                 RegisterValue reg_value;
-                error = reg_value.SetValueFromData(v0_info, data, 0, true);
+                error = reg_value.SetValueFromData(*v0_info, data, 0, true);
                 if (error.Success()) {
                   if (!reg_ctx->WriteRegister(v0_info, reg_value))
                     error.SetErrorString("failed to write register v0");
@@ -304,7 +304,7 @@ Status ABISysV_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         if (v0_info) {
           if (byte_size <= v0_info->byte_size) {
             RegisterValue reg_value;
-            error = reg_value.SetValueFromData(v0_info, data, 0, true);
+            error = reg_value.SetValueFromData(*v0_info, data, 0, true);
             if (error.Success()) {
               if (!reg_ctx->WriteRegister(v0_info, reg_value))
                 error.SetErrorString("failed to write register v0");

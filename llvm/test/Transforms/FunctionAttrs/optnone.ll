@@ -3,21 +3,21 @@
 
 @x = global i32 0
 
-define void @test_opt(i8* %p) {
+define void @test_opt(ptr %p) {
 ; CHECK-LABEL: @test_opt
-; CHECK: (i8* nocapture readnone %p) #0 {
+; CHECK: (ptr nocapture readnone %p) #0 {
   ret void
 }
 
-define void @test_optnone(i8* %p) noinline optnone {
+define void @test_optnone(ptr %p) noinline optnone {
 ; CHECK-LABEL: @test_optnone
-; CHECK: (i8* %p) #1 {
+; CHECK: (ptr %p) #1 {
   ret void
 }
 
-declare i8 @strlen(i8*) noinline optnone
+declare i8 @strlen(ptr) noinline optnone
 ; CHECK-LABEL: @strlen
-; CHECK: (i8*) #1
+; CHECK: (ptr) #1
 
 ; CHECK-LABEL: attributes #0
 ; CHECK: = { mustprogress nofree norecurse nosync nounwind readnone willreturn }

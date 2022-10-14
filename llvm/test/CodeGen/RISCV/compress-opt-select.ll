@@ -42,7 +42,7 @@
 ; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 define i32 @f_small_pos(i32 %in0) minsize {
   %cmp = icmp CMPCOND i32 %in0, 20
-  %toRet = select i1 %cmp, i32 0, i32 42
+  %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
@@ -56,7 +56,7 @@ define i32 @f_small_pos(i32 %in0) minsize {
 ; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 define i32 @f_small_neg(i32 %in0) minsize {
   %cmp = icmp CMPCOND i32 %in0, -20
-  %toRet = select i1 %cmp, i32 0, i32 42
+  %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
@@ -70,7 +70,7 @@ define i32 @f_small_neg(i32 %in0) minsize {
 ; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 define i32 @f_small_edge_pos(i32 %in0) minsize {
   %cmp = icmp CMPCOND i32 %in0, 31
-  %toRet = select i1 %cmp, i32 0, i32 42
+  %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
@@ -84,7 +84,7 @@ define i32 @f_small_edge_pos(i32 %in0) minsize {
 ; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 define i32 @f_small_edge_neg(i32 %in0) minsize {
   %cmp = icmp CMPCOND i32 %in0, -32
-  %toRet = select i1 %cmp, i32 0, i32 42
+  %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
@@ -99,7 +99,7 @@ define i32 @f_small_edge_neg(i32 %in0) minsize {
 ; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 define i32 @f_medium_ledge_pos(i32 %in0) minsize {
   %cmp = icmp CMPCOND i32 %in0, 32
-  %toRet = select i1 %cmp, i32 0, i32 42
+  %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
@@ -114,7 +114,7 @@ define i32 @f_medium_ledge_pos(i32 %in0) minsize {
 ; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 define i32 @f_medium_ledge_neg(i32 %in0) minsize {
   %cmp = icmp CMPCOND i32 %in0, -33
-  %toRet = select i1 %cmp, i32 0, i32 42
+  %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
@@ -129,7 +129,7 @@ define i32 @f_medium_ledge_neg(i32 %in0) minsize {
 ; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 define i32 @f_medium_pos(i32 %in0) minsize {
   %cmp = icmp CMPCOND i32 %in0, 63
-  %toRet = select i1 %cmp, i32 0, i32 42
+  %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
@@ -144,7 +144,7 @@ define i32 @f_medium_pos(i32 %in0) minsize {
 ; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 define i32 @f_medium_neg(i32 %in0) minsize {
   %cmp = icmp CMPCOND i32 %in0, -63
-  %toRet = select i1 %cmp, i32 0, i32 42
+  %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
@@ -159,7 +159,7 @@ define i32 @f_medium_neg(i32 %in0) minsize {
 ; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 define i32 @f_medium_bedge_pos(i32 %in0) minsize {
   %cmp = icmp CMPCOND i32 %in0, 2047
-  %toRet = select i1 %cmp, i32 0, i32 42
+  %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
@@ -174,7 +174,7 @@ define i32 @f_medium_bedge_pos(i32 %in0) minsize {
 ; RV32IFD: RESBRNORMAL [[ANOTHER:.*]], [[REG]], [[PLACE:.*]]
 define i32 @f_medium_bedge_neg(i32 %in0) minsize {
   %cmp = icmp CMPCOND i32 %in0, -2047
-  %toRet = select i1 %cmp, i32 0, i32 42
+  %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
@@ -185,7 +185,7 @@ define i32 @f_medium_bedge_neg(i32 %in0) minsize {
 ; nothing to check.
 define i32 @f_big_ledge_pos(i32 %in0) minsize {
   %cmp = icmp CMPCOND i32 %in0, 2048
-  %toRet = select i1 %cmp, i32 0, i32 42
+  %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }
 
@@ -196,6 +196,6 @@ define i32 @f_big_ledge_pos(i32 %in0) minsize {
 ; nothing to check.
 define i32 @f_big_ledge_neg(i32 %in0) minsize {
   %cmp = icmp CMPCOND i32 %in0, -2048
-  %toRet = select i1 %cmp, i32 0, i32 42
+  %toRet = select i1 %cmp, i32 -99, i32 42
   ret i32 %toRet
 }

@@ -5,12 +5,12 @@
 declare void @llvm.trap()
 
 ; Check LLGFAT with no displacement.
-define i64 @f1(i32 *%ptr) {
+define i64 @f1(ptr %ptr) {
 ; CHECK-LABEL: f1:
 ; CHECK: llgfat %r2, 0(%r2)
 ; CHECK: br %r14
 entry:
-  %val = load i32, i32 *%ptr
+  %val = load i32, ptr %ptr
   %ext = zext i32 %val to i64
   %cmp = icmp eq i64 %ext, 0
   br i1 %cmp, label %if.then, label %if.end
@@ -24,12 +24,12 @@ if.end:                                           ; preds = %entry
 }
 
 ; Check the high end of the LLGFAT range.
-define i64 @f2(i32 *%src) {
+define i64 @f2(ptr %src) {
 ; CHECK-LABEL: f2:
 ; CHECK: llgfat %r2, 524284(%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 131071
-  %val = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 131071
+  %val = load i32, ptr %ptr
   %ext = zext i32 %val to i64
   %cmp = icmp eq i64 %ext, 0
   br i1 %cmp, label %if.then, label %if.end
@@ -44,13 +44,13 @@ if.end:                                           ; preds = %entry
 
 ; Check the next word up, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define i64 @f3(i32 *%src) {
+define i64 @f3(ptr %src) {
 ; CHECK-LABEL: f3:
 ; CHECK: agfi %r2, 524288
 ; CHECK: llgfat %r2, 0(%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 131072
-  %val = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 131072
+  %val = load i32, ptr %ptr
   %ext = zext i32 %val to i64
   %cmp = icmp eq i64 %ext, 0
   br i1 %cmp, label %if.then, label %if.end
@@ -70,8 +70,8 @@ define i64 @f4(i64 %src, i64 %index) {
 ; CHECK: br %r14
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 524287
-  %ptr = inttoptr i64 %add2 to i32 *
-  %val = load i32, i32 *%ptr
+  %ptr = inttoptr i64 %add2 to ptr
+  %val = load i32, ptr %ptr
   %ext = zext i32 %val to i64
   %cmp = icmp eq i64 %ext, 0
   br i1 %cmp, label %if.then, label %if.end
@@ -85,12 +85,12 @@ if.end:                                           ; preds = %entry
 }
 
 ; Check LLGTAT with no displacement.
-define i64 @f5(i32 *%ptr) {
+define i64 @f5(ptr %ptr) {
 ; CHECK-LABEL: f5:
 ; CHECK: llgtat %r2, 0(%r2)
 ; CHECK: br %r14
 entry:
-  %val = load i32, i32 *%ptr
+  %val = load i32, ptr %ptr
   %ext = zext i32 %val to i64
   %and = and i64 %ext, 2147483647
   %cmp = icmp eq i64 %and, 0
@@ -105,12 +105,12 @@ if.end:                                           ; preds = %entry
 }
 
 ; Check the high end of the LLGTAT range.
-define i64 @f6(i32 *%src) {
+define i64 @f6(ptr %src) {
 ; CHECK-LABEL: f6:
 ; CHECK: llgtat %r2, 524284(%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 131071
-  %val = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 131071
+  %val = load i32, ptr %ptr
   %ext = zext i32 %val to i64
   %and = and i64 %ext, 2147483647
   %cmp = icmp eq i64 %and, 0
@@ -126,13 +126,13 @@ if.end:                                           ; preds = %entry
 
 ; Check the next word up, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define i64 @f7(i32 *%src) {
+define i64 @f7(ptr %src) {
 ; CHECK-LABEL: f7:
 ; CHECK: agfi %r2, 524288
 ; CHECK: llgtat %r2, 0(%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 131072
-  %val = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 131072
+  %val = load i32, ptr %ptr
   %ext = zext i32 %val to i64
   %and = and i64 %ext, 2147483647
   %cmp = icmp eq i64 %and, 0
@@ -153,8 +153,8 @@ define i64 @f8(i64 %src, i64 %index) {
 ; CHECK: br %r14
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 524287
-  %ptr = inttoptr i64 %add2 to i32 *
-  %val = load i32, i32 *%ptr
+  %ptr = inttoptr i64 %add2 to ptr
+  %val = load i32, ptr %ptr
   %ext = zext i32 %val to i64
   %and = and i64 %ext, 2147483647
   %cmp = icmp eq i64 %and, 0

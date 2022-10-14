@@ -60,24 +60,24 @@
 define dso_local i32 @_Z3fooi(i32 %0) !dbg !7 !prof !34 !section_prefix !35 {
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
-  store i32 %0, i32* %3, align 4
-  call void @llvm.dbg.declare(metadata i32* %3, metadata !11, metadata !DIExpression()), !dbg !12
-  %4 = load i32, i32* %3, align 4, !dbg !13
+  store i32 %0, ptr %3, align 4
+  call void @llvm.dbg.declare(metadata ptr %3, metadata !11, metadata !DIExpression()), !dbg !12
+  %4 = load i32, ptr %3, align 4, !dbg !13
   %5 = icmp sgt i32 %4, 20, !dbg !15
   br i1 %5, label %6, label %8, !dbg !16, !prof !36
 
 6:                                                ; preds = %1
   %7 = call i32 @bar()
-  store i32 %7, i32* %2, align 4, !dbg !17
+  store i32 %7, ptr %2, align 4, !dbg !17
   br label %10, !dbg !17
 
 8:                                                ; preds = %1
   %9 = call i32 @baz()
-  store i32 %9, i32* %2, align 4, !dbg !18
+  store i32 %9, ptr %2, align 4, !dbg !18
   br label %10, !dbg !18
 
 10:                                                ; preds = %8, %6
-  %11 = load i32, i32* %2, align 4, !dbg !19
+  %11 = load i32, ptr %2, align 4, !dbg !19
   ret i32 %11, !dbg !19
 }
 

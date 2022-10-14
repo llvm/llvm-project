@@ -1149,7 +1149,7 @@ static void instantiateCommon(Fortran::lower::AbstractConverter &converter,
 static bool lowerToBoxValue(const Fortran::semantics::Symbol &sym,
                             mlir::Value dummyArg) {
   // Only dummy arguments coming as fir.box can be tracked in an BoxValue.
-  if (!dummyArg || !dummyArg.getType().isa<fir::BoxType>())
+  if (!dummyArg || !dummyArg.getType().isa<fir::BaseBoxType>())
     return false;
   // Non contiguous arrays must be tracked in an BoxValue.
   if (sym.Rank() > 0 && !sym.attrs().test(Fortran::semantics::Attr::CONTIGUOUS))
@@ -1351,7 +1351,9 @@ void Fortran::lower::mapSymbolAttributes(
               lowerExplicitCharLen(converter, loc, ba, symMap, stmtCtx))
         nonDeferredLenParams.push_back(len);
       else if (Fortran::semantics::IsAssumedLengthCharacter(sym))
-        TODO(loc, "assumed length character allocatable");
+        nonDeferredLenParams.push_back(
+            Fortran::lower::getAssumedCharAllocatableOrPointerLen(
+                builder, loc, sym, boxAlloc));
     } else if (const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType()) {
       if (const Fortran::semantics::DerivedTypeSpec *derived =
               declTy->AsDerived())

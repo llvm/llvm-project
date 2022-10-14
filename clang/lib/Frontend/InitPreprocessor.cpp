@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/SyncScope.h"
@@ -402,8 +403,8 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__SHADER_STAGE_LIBRARY",
                         Twine((uint32_t)ShaderStage::Library));
     // The current shader stage itself
-    uint32_t StageInteger = (uint32_t)TI.getTriple().getEnvironment() -
-                            (uint32_t)llvm::Triple::Pixel;
+    uint32_t StageInteger = static_cast<uint32_t>(
+        hlsl::getStageFromEnvironment(TI.getTriple().getEnvironment()));
 
     Builder.defineMacro("__SHADER_TARGET_STAGE", Twine(StageInteger));
     // Add target versions

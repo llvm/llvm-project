@@ -395,22 +395,20 @@ define <vscale x 16 x double> @vfneg_vv_nxv16f64(<vscale x 16 x double> %va, <vs
 ; CHECK-LABEL: vfneg_vv_nxv16f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a4, a1, 3
+; CHECK-NEXT:    srli a2, a1, 3
 ; CHECK-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    sub a3, a0, a1
-; CHECK-NEXT:    vslidedown.vx v0, v0, a4
-; CHECK-NEXT:    bltu a0, a3, .LBB32_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a2, a3
-; CHECK-NEXT:  .LBB32_2:
+; CHECK-NEXT:    vslidedown.vx v0, v0, a2
+; CHECK-NEXT:    sub a2, a0, a1
+; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vfneg.v v16, v16, v0.t
-; CHECK-NEXT:    bltu a0, a1, .LBB32_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    bltu a0, a1, .LBB32_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:  .LBB32_4:
+; CHECK-NEXT:  .LBB32_2:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vfneg.v v8, v8, v0.t
@@ -423,21 +421,18 @@ define <vscale x 16 x double> @vfneg_vv_nxv16f64_unmasked(<vscale x 16 x double>
 ; CHECK-LABEL: vfneg_vv_nxv16f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    sub a2, a0, a1
+; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    and a2, a3, a2
+; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-NEXT:    vfneg.v v16, v16
 ; CHECK-NEXT:    bltu a0, a1, .LBB33_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB33_2:
-; CHECK-NEXT:    li a3, 0
-; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
-; CHECK-NEXT:    sub a1, a0, a1
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfneg.v v8, v8
-; CHECK-NEXT:    bltu a0, a1, .LBB33_4
-; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    mv a3, a1
-; CHECK-NEXT:  .LBB33_4:
-; CHECK-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
-; CHECK-NEXT:    vfneg.v v16, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i1> poison, i1 true, i32 0
   %m = shufflevector <vscale x 16 x i1> %head, <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer

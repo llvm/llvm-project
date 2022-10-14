@@ -15,9 +15,9 @@
 # CHECK:        Symbol {
 # CHECK-NEXT:     Name: local
 # CHECK:        Symbol {
-# CHECK-NEXT:     Name: .Llocal
-# CHECK:        Symbol {
 # CHECK-NEXT:     Name: ltmp1
+# CHECK:        Symbol {
+# CHECK-NEXT:     Name: .Llocal
 # CHECK:        Symbol {
 # CHECK-NEXT:     Name: g1
 # CHECK:        Symbol {
@@ -35,6 +35,8 @@
 .addrsig_sym g3
 .addrsig_sym local
 .addrsig_sym .Llocal
+.addrsig_sym .Lunseen
+.addrsig_sym unseen
 
 local:
   nop

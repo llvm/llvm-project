@@ -187,7 +187,7 @@ if (LIBCXXABI_ENABLE_SHARED)
   set_target_properties(cxxabi_shared
     PROPERTIES
       LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
-      OUTPUT_NAME "c++abi"
+      OUTPUT_NAME "${LIBCXXABI_SHARED_OUTPUT_NAME}"
       SOVERSION "1"
       VERSION "${LIBCXXABI_LIBRARY_VERSION}"
   )
@@ -285,7 +285,7 @@ if (LIBCXXABI_ENABLE_STATIC)
   set_target_properties(cxxabi_static
     PROPERTIES
       LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
-      OUTPUT_NAME "c++abi"
+      OUTPUT_NAME "${LIBCXXABI_STATIC_OUTPUT_NAME}"
     )
   target_link_libraries(cxxabi_static
     PUBLIC cxxabi_static_objects

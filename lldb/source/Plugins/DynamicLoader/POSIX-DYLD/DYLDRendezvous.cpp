@@ -190,6 +190,14 @@ bool DYLDRendezvous::IsValid() {
 }
 
 DYLDRendezvous::RendezvousAction DYLDRendezvous::GetAction() const {
+  // If we have a core file, we will read the current rendezvous state
+  // from the core file's memory into m_current which can be in an inconsistent
+  // state, so we can't rely on its state to determine what we should do. We
+  // always need it to load all of the shared libraries one time when we attach
+  // to a core file.
+  if (IsCoreFile())
+    return eTakeSnapshot;
+
   switch (m_current.state) {
 
   case eConsistent:
@@ -663,4 +671,8 @@ void DYLDRendezvous::DumpToLog(Log *log) const {
     LLDB_LOGF(log, "      Next : %" PRIx64, I->next);
     LLDB_LOGF(log, "      Prev : %" PRIx64, I->prev);
   }
+}
+
+bool DYLDRendezvous::IsCoreFile() const {
+  return !m_process->IsLiveDebugSession();
 }

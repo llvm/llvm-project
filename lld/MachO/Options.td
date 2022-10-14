@@ -95,6 +95,12 @@ def no_call_graph_profile_sort : Flag<["--"], "no-call-graph-profile-sort">,
 def print_symbol_order_eq: Joined<["--"], "print-symbol-order=">,
     HelpText<"Print a symbol order specified by --call-graph-profile-sort into the specified file">,
     Group<grp_lld>;
+def ignore_auto_link_option : Separate<["--"], "ignore-auto-link-option">,
+    Group<grp_lld>;
+def ignore_auto_link_option_eq : Joined<["--"], "ignore-auto-link-option=">,
+    Alias<!cast<Separate>(ignore_auto_link_option)>,
+    HelpText<"Ignore a single auto-linked library or framework. Useful to ignore invalid options that ld64 ignores">,
+    Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo

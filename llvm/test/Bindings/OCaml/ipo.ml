@@ -43,7 +43,7 @@ let test_transforms () =
   let fn2 = define_function "fn2" fty m in begin
       ignore (build_ret (const_int i8_type 4) (builder_at_end context (entry_block fn)));
       let b = builder_at_end context  (entry_block fn2) in
-      ignore (build_ret (build_call2 fty fn [| |] "" b) b);
+      ignore (build_ret (build_call fty fn [| |] "" b) b);
   end;
 
   ignore (PassManager.create ()

@@ -11,7 +11,7 @@ define <32 x i8> @strided_load_i8(ptr %p, i64 %stride, <32 x i1> %m) {
 ; CHECK-LABEL: strided_load_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
-; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; CHECK-NEXT:    vlse8.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
   %res = call <32 x i8> @llvm.riscv.masked.strided.load.v32i8.p0.i64(<32 x i8> undef, ptr %p, i64 %stride, <32 x i1> %m)
@@ -21,7 +21,7 @@ define <32 x i8> @strided_load_i8(ptr %p, i64 %stride, <32 x i1> %m) {
 define <2 x i64> @strided_load_i64(ptr %p, i64 %stride, <2 x i1> %m) {
 ; CHECK-LABEL: strided_load_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vlse64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
   %res = call <2 x i64> @llvm.riscv.masked.strided.load.v2i64.p0.i64(<2 x i64> undef, ptr %p, i64 %stride, <2 x i1> %m)
@@ -32,7 +32,7 @@ define <32 x i8> @strided_load_i8_splat(ptr %p, <32 x i1> %m) {
 ; CHECK-LABEL: strided_load_i8_splat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vlse8.v v8, (a0), zero, v0.t
 ; CHECK-NEXT:    ret
   %res = call <32 x i8> @llvm.riscv.masked.strided.load.v32i8.p0.i64(<32 x i8> undef, ptr %p, i64 0, <32 x i1> %m)
@@ -44,7 +44,7 @@ define <32 x i8> @strided_load_i8_reverse(ptr %p, <32 x i1> %m) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    li a2, -1
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
   %res = call <32 x i8> @llvm.riscv.masked.strided.load.v32i8.p0.i64(<32 x i8> undef, ptr %p, i64 -1, <32 x i1> %m)
@@ -56,7 +56,7 @@ define <32 x i8> @strided_load_i8_nostride(ptr %p, <32 x i1> %m) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    li a2, 1
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vlse8.v v8, (a0), a2, v0.t
 ; CHECK-NEXT:    ret
   %res = call <32 x i8> @llvm.riscv.masked.strided.load.v32i8.p0.i64(<32 x i8> undef, ptr %p, i64 1, <32 x i1> %m)
@@ -117,7 +117,7 @@ declare <vscale x 1 x i64> @llvm.riscv.masked.strided.load.nxv1i64.p0.i64(<vscal
 define <vscale x 1 x i64> @strided_load_vscale_i64(ptr %p, i64 %stride, <vscale x 1 x i1> %m) {
 ; CHECK-LABEL: strided_load_vscale_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vlse64.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
   %res = call <vscale x 1 x i64> @llvm.riscv.masked.strided.load.nxv1i64.p0.i64(<vscale x 1 x i64> undef, ptr %p, i64 %stride, <vscale x 1 x i1> %m)

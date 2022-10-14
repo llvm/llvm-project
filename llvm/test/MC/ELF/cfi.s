@@ -9,27 +9,27 @@
 
 f1:
         .cfi_startproc
-	.cfi_lsda 0x3, bar
+        .cfi_lsda 0x3, bar
         nop
         .cfi_endproc
 
 f2:
         .cfi_startproc
         .cfi_personality 0x00, foo
-	.cfi_lsda 0x3, bar
+        .cfi_lsda 0x3, bar
         nop
         .cfi_endproc
 
 f3:
         .cfi_startproc
-	.cfi_lsda 0x3, bar
+        .cfi_lsda 0x3, bar
         nop
         .cfi_endproc
 
 f4:
         .cfi_startproc
         .cfi_personality 0x00, foo
-	.cfi_lsda 0x2, bar
+        .cfi_lsda 0x2, bar
         nop
         .cfi_endproc
 

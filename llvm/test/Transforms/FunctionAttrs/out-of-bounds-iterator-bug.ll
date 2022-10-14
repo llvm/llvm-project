@@ -4,40 +4,40 @@
 ; This checks for a previously existing iterator wraparound bug in
 ; FunctionAttrs, and in the process covers corner cases with varargs.
 
-declare void @llvm.va_start(i8*)
-declare void @llvm.va_end(i8*)
+declare void @llvm.va_start(ptr)
+declare void @llvm.va_end(ptr)
 
-define void @va_func(i32* readonly %b, ...) readonly nounwind {
-; CHECK-LABEL: define void @va_func(i32* nocapture readonly %b, ...)
+define void @va_func(ptr readonly %b, ...) readonly nounwind {
+; CHECK-LABEL: define void @va_func(ptr nocapture readonly %b, ...)
  entry:
   %valist = alloca i8
-  call void @llvm.va_start(i8* %valist)
-  call void @llvm.va_end(i8* %valist)
-  %x = call i32 @caller(i32* %b)
+  call void @llvm.va_start(ptr %valist)
+  call void @llvm.va_end(ptr %valist)
+  %x = call i32 @caller(ptr %b)
   ret void
 }
 
-define i32 @caller(i32* %x) {
-; CHECK-LABEL: define i32 @caller(i32* nocapture readonly %x)
+define i32 @caller(ptr %x) {
+; CHECK-LABEL: define i32 @caller(ptr nocapture readonly %x)
  entry:
-  call void(i32*,...) @va_func(i32* null, i32 0, i32 0, i32 0, i32* %x)
+  call void(ptr,...) @va_func(ptr null, i32 0, i32 0, i32 0, ptr %x)
   ret i32 42
 }
 
-define void @va_func2(i32* readonly %b, ...) {
-; CHECK-LABEL: define void @va_func2(i32* nocapture readonly %b, ...)
+define void @va_func2(ptr readonly %b, ...) {
+; CHECK-LABEL: define void @va_func2(ptr nocapture readonly %b, ...)
  entry:
   %valist = alloca i8
-  call void @llvm.va_start(i8* %valist)
-  call void @llvm.va_end(i8* %valist)
-  %x = call i32 @caller(i32* %b)
+  call void @llvm.va_start(ptr %valist)
+  call void @llvm.va_end(ptr %valist)
+  %x = call i32 @caller(ptr %b)
   ret void
 }
 
-define i32 @caller2(i32* %x, i32* %y) {
-; CHECK-LABEL: define i32 @caller2(i32* nocapture readonly %x, i32* %y)
+define i32 @caller2(ptr %x, ptr %y) {
+; CHECK-LABEL: define i32 @caller2(ptr nocapture readonly %x, ptr %y)
  entry:
-  call void(i32*,...) @va_func2(i32* %x, i32 0, i32 0, i32 0, i32* %y)
+  call void(ptr,...) @va_func2(ptr %x, i32 0, i32 0, i32 0, ptr %y)
   ret i32 42
 }
 

@@ -242,12 +242,16 @@ void Writer::layoutMemory() {
     if (config->relocatable || config->isPic)
       return;
     memoryPtr = alignTo(memoryPtr, stackAlignment);
+    if (WasmSym::stackLow)
+      WasmSym::stackLow->setVA(memoryPtr);
     if (config->zStackSize != alignTo(config->zStackSize, stackAlignment))
       error("stack size must be " + Twine(stackAlignment) + "-byte aligned");
     log("mem: stack size  = " + Twine(config->zStackSize));
     log("mem: stack base  = " + Twine(memoryPtr));
     memoryPtr += config->zStackSize;
     setGlobalPtr(cast<DefinedGlobal>(WasmSym::stackPointer), memoryPtr);
+    if (WasmSym::stackHigh)
+      WasmSym::stackHigh->setVA(memoryPtr);
     log("mem: stack top   = " + Twine(memoryPtr));
   };
 
@@ -443,6 +447,11 @@ void Writer::populateTargetFeatures() {
     // contain the mutable-globals feature.
     // TODO(https://bugs.llvm.org/show_bug.cgi?id=52339)
     allowed.insert("mutable-globals");
+  }
+
+  if (config->extraFeatures.has_value()) {
+    auto &extraFeatures = config->extraFeatures.value();
+    allowed.insert(extraFeatures.begin(), extraFeatures.end());
   }
 
   // Only infer used features if user did not specify features

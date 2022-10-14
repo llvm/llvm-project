@@ -499,26 +499,19 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
-        Return the iterator types attribute within the current operation.
-      }],
-      /*retTy=*/"ArrayAttr",
-      /*methodName=*/"iterator_types",
-      /*args=*/(ins),
-      /*methodBody=*/"",
-      /*defaultImplementation=*/[{
-        return $_op.getIteratorTypes();
-      }]
-    >,
-    InterfaceMethod<
-      /*desc=*/[{
         Return iterator types in the current operation.
+
+        Default implementation assumes that the operation has an attribute
+        `iterator_types`, but it's not always the case. Sometimes iterator types
+        can be infered from other parameters and in such cases default
+        getIteratorTypesArray should be overriden.
       }],
       /*retTy=*/"SmallVector<StringRef>",
       /*methodName=*/"getIteratorTypesArray",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        auto range = $_op.iterator_types().template getAsValueRange<StringAttr>();
+        auto range = $_op.getIteratorTypes().template getAsValueRange<StringAttr>();
         return {range.begin(), range.end()};
       }]
     >,
@@ -772,9 +765,6 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     /// shape of the input operands where possible
     LogicalResult reifyResultShapes(OpBuilder &b,
         ReifiedRankedShapedTypeDims &reifiedReturnShapes);
-
-    // TODO: Remove once prefixing is flipped.
-    ArrayAttr getIteratorTypes() { return iterator_types(); }
 
     SmallVector<StringRef> getIteratorTypeNames() {
       return getIteratorTypesArray();

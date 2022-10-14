@@ -1778,27 +1778,29 @@ namespace {
 struct CIEKey {
   static const CIEKey getEmptyKey() {
     return CIEKey(nullptr, 0, -1, false, false, static_cast<unsigned>(INT_MAX),
-                  false);
+                  false, false);
   }
 
   static const CIEKey getTombstoneKey() {
     return CIEKey(nullptr, -1, 0, false, false, static_cast<unsigned>(INT_MAX),
-                  false);
+                  false, false);
   }
 
   CIEKey(const MCSymbol *Personality, unsigned PersonalityEncoding,
          unsigned LSDAEncoding, bool IsSignalFrame, bool IsSimple,
-         unsigned RAReg, bool IsBKeyFrame)
+         unsigned RAReg, bool IsBKeyFrame, bool IsMTETaggedFrame)
       : Personality(Personality), PersonalityEncoding(PersonalityEncoding),
         LsdaEncoding(LSDAEncoding), IsSignalFrame(IsSignalFrame),
-        IsSimple(IsSimple), RAReg(RAReg), IsBKeyFrame(IsBKeyFrame) {}
+        IsSimple(IsSimple), RAReg(RAReg), IsBKeyFrame(IsBKeyFrame),
+        IsMTETaggedFrame(IsMTETaggedFrame) {}
 
   explicit CIEKey(const MCDwarfFrameInfo &Frame)
       : Personality(Frame.Personality),
         PersonalityEncoding(Frame.PersonalityEncoding),
         LsdaEncoding(Frame.LsdaEncoding), IsSignalFrame(Frame.IsSignalFrame),
         IsSimple(Frame.IsSimple), RAReg(Frame.RAReg),
-        IsBKeyFrame(Frame.IsBKeyFrame) {}
+        IsBKeyFrame(Frame.IsBKeyFrame),
+        IsMTETaggedFrame(Frame.IsMTETaggedFrame) {}
 
   StringRef PersonalityName() const {
     if (!Personality)
@@ -1808,10 +1810,12 @@ struct CIEKey {
 
   bool operator<(const CIEKey &Other) const {
     return std::make_tuple(PersonalityName(), PersonalityEncoding, LsdaEncoding,
-                           IsSignalFrame, IsSimple, RAReg) <
+                           IsSignalFrame, IsSimple, RAReg, IsBKeyFrame,
+                           IsMTETaggedFrame) <
            std::make_tuple(Other.PersonalityName(), Other.PersonalityEncoding,
                            Other.LsdaEncoding, Other.IsSignalFrame,
-                           Other.IsSimple, Other.RAReg);
+                           Other.IsSimple, Other.RAReg, Other.IsBKeyFrame,
+                           Other.IsMTETaggedFrame);
   }
 
   const MCSymbol *Personality;
@@ -1821,6 +1825,7 @@ struct CIEKey {
   bool IsSimple;
   unsigned RAReg;
   bool IsBKeyFrame;
+  bool IsMTETaggedFrame;
 };
 
 } // end anonymous namespace
@@ -1832,9 +1837,10 @@ template <> struct DenseMapInfo<CIEKey> {
   static CIEKey getTombstoneKey() { return CIEKey::getTombstoneKey(); }
 
   static unsigned getHashValue(const CIEKey &Key) {
-    return static_cast<unsigned>(hash_combine(
-        Key.Personality, Key.PersonalityEncoding, Key.LsdaEncoding,
-        Key.IsSignalFrame, Key.IsSimple, Key.RAReg, Key.IsBKeyFrame));
+    return static_cast<unsigned>(
+        hash_combine(Key.Personality, Key.PersonalityEncoding, Key.LsdaEncoding,
+                     Key.IsSignalFrame, Key.IsSimple, Key.RAReg,
+                     Key.IsBKeyFrame, Key.IsMTETaggedFrame));
   }
 
   static bool isEqual(const CIEKey &LHS, const CIEKey &RHS) {
@@ -1843,7 +1849,8 @@ template <> struct DenseMapInfo<CIEKey> {
            LHS.LsdaEncoding == RHS.LsdaEncoding &&
            LHS.IsSignalFrame == RHS.IsSignalFrame &&
            LHS.IsSimple == RHS.IsSimple && LHS.RAReg == RHS.RAReg &&
-           LHS.IsBKeyFrame == RHS.IsBKeyFrame;
+           LHS.IsBKeyFrame == RHS.IsBKeyFrame &&
+           LHS.IsMTETaggedFrame == RHS.IsMTETaggedFrame;
   }
 };
 

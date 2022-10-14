@@ -553,7 +553,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
 
     let extraClassDeclaration = structuredOpsBaseDecls # [{{
       // Auto-generated.
-      ArrayAttr iterator_types();
+      SmallVector<StringRef> getIteratorTypesArray();
       ArrayAttr getIndexingMaps();
       static void regionBuilder(ImplicitLocOpBuilder &b,
                                 Block &block, ArrayRef<NamedAttribute> attrs);
@@ -587,24 +587,24 @@ static const char structuredOpBuilderFormat[] = R"FMT(
   }]>
 )FMT";
 
-// The iterator_types() method for structured ops. Parameters:
+// The getIteratorTypesArray() method for structured ops. Parameters:
 // {0}: Class name
 // {1}: Comma interleaved iterator type names.
 static const char structuredOpIteratorTypesFormat[] =
     R"FMT(
-ArrayAttr {0}::iterator_types() {{
-  return Builder(getContext()).getStrArrayAttr(SmallVector<StringRef>{{ {1} });
+SmallVector<StringRef> {0}::getIteratorTypesArray() {{
+  return SmallVector<StringRef>{{ {1} };
 }
 )FMT";
 
-// The iterator_types() method for rank polymorphic structured ops. Parameters:
+// The getIteratorTypesArray() method for rank polymorphic structured ops.
+// Parameters:
 // {0}: Class name
 static const char rankPolyStructuredOpIteratorTypesFormat[] =
     R"FMT(
-ArrayAttr {0}::iterator_types() {{
+SmallVector<StringRef> {0}::getIteratorTypesArray() {{
   int64_t rank = getRank(getOutputOperand(0));
-  return Builder(getContext()).getStrArrayAttr(
-    SmallVector<StringRef>(rank, getParallelIteratorTypeName()));
+  return SmallVector<StringRef>(rank, getParallelIteratorTypeName());
 }
 )FMT";
 

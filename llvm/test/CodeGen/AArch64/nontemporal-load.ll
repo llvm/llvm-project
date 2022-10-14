@@ -103,8 +103,7 @@ define <32 x i8> @test_ldnp_v32i8(<32 x i8>* %A) {
 define <4 x i32> @test_ldnp_v4i32(<4 x i32>* %A) {
 ; CHECK-LABEL: test_ldnp_v4i32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldnp d0, d1, [x0]
-; CHECK-NEXT:    mov.d v0[1], v1[0]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_ldnp_v4i32:
@@ -118,8 +117,7 @@ define <4 x i32> @test_ldnp_v4i32(<4 x i32>* %A) {
 define <4 x float> @test_ldnp_v4f32(<4 x float>* %A) {
 ; CHECK-LABEL: test_ldnp_v4f32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldnp d0, d1, [x0]
-; CHECK-NEXT:    mov.d v0[1], v1[0]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_ldnp_v4f32:
@@ -133,8 +131,7 @@ define <4 x float> @test_ldnp_v4f32(<4 x float>* %A) {
 define <8 x i16> @test_ldnp_v8i16(<8 x i16>* %A) {
 ; CHECK-LABEL: test_ldnp_v8i16:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldnp d0, d1, [x0]
-; CHECK-NEXT:    mov.d v0[1], v1[0]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_ldnp_v8i16:
@@ -148,8 +145,7 @@ define <8 x i16> @test_ldnp_v8i16(<8 x i16>* %A) {
 define <16 x i8> @test_ldnp_v16i8(<16 x i8>* %A) {
 ; CHECK-LABEL: test_ldnp_v16i8:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldnp d0, d1, [x0]
-; CHECK-NEXT:    mov.d v0[1], v1[0]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_ldnp_v16i8:
@@ -162,8 +158,7 @@ define <16 x i8> @test_ldnp_v16i8(<16 x i8>* %A) {
 define <2 x double> @test_ldnp_v2f64(<2 x double>* %A) {
 ; CHECK-LABEL: test_ldnp_v2f64:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ldnp d0, d1, [x0]
-; CHECK-NEXT:    mov.d v0[1], v1[0]
+; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_ldnp_v2f64:

@@ -73,7 +73,7 @@ class NVVM_IntrOp<string mnem, list<Trait> traits,
 //===----------------------------------------------------------------------===//
 
 class NVVM_SpecialRegisterOp<string mnemonic, list<Trait> traits = []> :
-  NVVM_IntrOp<mnemonic, !listconcat(traits, [NoSideEffect]), 1> {
+  NVVM_IntrOp<mnemonic, !listconcat(traits, [Pure]), 1> {
   let arguments = (ins);
   let assemblyFormat = "attr-dict `:` type($res)";
 }
@@ -105,7 +105,7 @@ def NVVM_GridDimZOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.nctaid.z">;
 // NVVM approximate op definitions
 //===----------------------------------------------------------------------===//
 
-def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [NoSideEffect], 1> {
+def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
   let arguments = (ins F32:$arg);
   let results = (outs F32:$res);
   let assemblyFormat = "$arg attr-dict `:` type($res)";

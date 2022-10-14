@@ -85,7 +85,7 @@ body:             |
   ; CHECK-NEXT:   [[VLDRS2:%[0-9]+]]:spr = VLDRS [[COPY4]], 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep7)
   ; CHECK-NEXT:   [[t2ADDri1:%[0-9]+]]:rgpr = t2ADDri [[COPY3]], 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NEXT:   [[VLDRS3:%[0-9]+]]:spr = VLDRS [[COPY3]], 1, 14 /* CC::al */, $noreg :: (load (s32) from %ir.scevgep3)
-  ; CHECK-NEXT:   INLINEASM &nop, 0 /* attdialect */, 196618 /* regdef:SPR */, def %30, 2147483657 /* reguse tiedto:$0 */, [[VLDRS2]]
+  ; CHECK-NEXT:   INLINEASM &nop, 0 /* attdialect */, 196618 /* regdef:SPR */, def %30, 2147483657 /* reguse tiedto:$0 */, [[VLDRS2]](tied-def 3)
   ; CHECK-NEXT:   [[t2SUBri2:%[0-9]+]]:rgpr = t2SUBri [[COPY]], 1, 14 /* CC::al */, $noreg, def $cpsr
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gprnopc = COPY [[t2SUBri2]]
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gprnopc = COPY [[t2ADDri1]]
@@ -101,7 +101,7 @@ body:             |
   ; CHECK-NEXT:   [[VLDRS4:%[0-9]+]]:spr = VLDRS [[COPY7]], 1, 14 /* CC::al */, $noreg :: (load unknown-size from %ir.scevgep7, align 4)
   ; CHECK-NEXT:   [[t2ADDri3:%[0-9]+]]:rgpr = t2ADDri [[COPY6]], 4, 14 /* CC::al */, $noreg, $noreg
   ; CHECK-NEXT:   [[VLDRS5:%[0-9]+]]:spr = VLDRS [[COPY6]], 1, 14 /* CC::al */, $noreg :: (load unknown-size from %ir.scevgep3, align 4)
-  ; CHECK-NEXT:   INLINEASM &nop, 0 /* attdialect */, 196618 /* regdef:SPR */, def %40, 2147483657 /* reguse tiedto:$0 */, [[VLDRS4]]
+  ; CHECK-NEXT:   INLINEASM &nop, 0 /* attdialect */, 196618 /* regdef:SPR */, def %40, 2147483657 /* reguse tiedto:$0 */, [[VLDRS4]](tied-def 3)
   ; CHECK-NEXT:   [[t2SUBri3:%[0-9]+]]:rgpr = t2SUBri [[COPY5]], 1, 14 /* CC::al */, $noreg, def $cpsr
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:gpr = COPY [[t2SUBri3]]
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:gpr = COPY [[t2ADDri3]]

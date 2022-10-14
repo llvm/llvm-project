@@ -16,7 +16,6 @@
 #include "AArch64.h"
 #include "AArch64RegisterInfo.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/TypeSize.h"
 

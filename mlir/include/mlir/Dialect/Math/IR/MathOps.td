@@ -17,7 +17,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // Base class for math dialect ops. Ops in this dialect have no side effects and
 // can be applied element-wise to vectors and tensors.
 class Math_Op<string mnemonic, list<Trait> traits = []> :
-    Op<Math_Dialect, mnemonic, traits # [NoSideEffect,
+    Op<Math_Dialect, mnemonic, traits # [Pure,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface>] #
     ElementwiseMappable.traits>;
 

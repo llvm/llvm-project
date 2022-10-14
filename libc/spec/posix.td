@@ -52,7 +52,11 @@ def AtForkCallbackT : NamedType<"__atfork_callback_t">;
 
 def PosixSpawnFileActionsT : NamedType<"posix_spawn_file_actions_t">;
 def PosixSpawnFileActionsTPtr : PtrType<PosixSpawnFileActionsT>;
+def ConstPosixSpawnFileActionsTPtr : ConstType<PosixSpawnFileActionsTPtr>;
 def PosixSpawnFileActionsTRestrictedPtr : RestrictedPtrType<PosixSpawnFileActionsT>;
+
+def PosixSpawnAttrT : NamedType<"posix_spawnattr_t">;
+def RestrictedPosixSpawnAttrTPtrType : RestrictedPtrType<PosixSpawnAttrT>;
 
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
@@ -1052,7 +1056,7 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec Spawn = HeaderSpec<
     "spawn.h",
     [], // Macros
-    [PosixSpawnFileActionsT, ModeTType],
+    [ModeTType, PosixSpawnAttrT, PidT, PosixSpawnFileActionsT],
     [], // Enumerations
     [
       FunctionSpec<
@@ -1080,6 +1084,13 @@ def POSIX : StandardSpec<"POSIX"> {
         "posix_spawn_file_actions_init",
         RetValSpec<IntType>,
         [ArgSpec<PosixSpawnFileActionsTPtr>]
+      >,
+      FunctionSpec<
+        "posix_spawn",
+        RetValSpec<IntType>,
+        [ArgSpec<RestrictedPidTPtr>, ArgSpec<ConstCharRestrictedPtr>,
+         ArgSpec<PosixSpawnFileActionsTPtr>, ArgSpec<RestrictedPosixSpawnAttrTPtrType>,
+         ArgSpec<ConstCharRestrictedPtrPtr>, ArgSpec<ConstCharRestrictedPtrPtr>]
       >,
     ]
   >;

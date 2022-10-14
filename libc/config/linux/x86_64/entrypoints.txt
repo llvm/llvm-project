@@ -391,6 +391,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.signal
 
     # spawn.h entrypoints
+    libc.src.spawn.posix_spawn
     libc.src.spawn.posix_spawn_file_actions_addclose
     libc.src.spawn.posix_spawn_file_actions_adddup2
     libc.src.spawn.posix_spawn_file_actions_addopen

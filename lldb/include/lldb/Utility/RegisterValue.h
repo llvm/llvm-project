@@ -84,7 +84,7 @@ public:
 
   void SetType(RegisterValue::Type type) { m_type = type; }
 
-  RegisterValue::Type SetType(const RegisterInfo *reg_info);
+  RegisterValue::Type SetType(const RegisterInfo &reg_info);
 
   bool GetData(DataExtractor &data) const;
 
@@ -99,7 +99,7 @@ public:
                            uint32_t dst_len, lldb::ByteOrder dst_byte_order,
                            Status &error) const;
 
-  uint32_t SetFromMemoryData(const RegisterInfo *reg_info, const void *src,
+  uint32_t SetFromMemoryData(const RegisterInfo &reg_info, const void *src,
                              uint32_t src_len, lldb::ByteOrder src_byte_order,
                              Status &error);
 
@@ -238,7 +238,7 @@ public:
   Status SetValueFromString(const RegisterInfo *reg_info,
                             const char *value_str) = delete;
 
-  Status SetValueFromData(const RegisterInfo *reg_info, DataExtractor &data,
+  Status SetValueFromData(const RegisterInfo &reg_info, DataExtractor &data,
                           lldb::offset_t offset, bool partial_data_ok);
 
   const void *GetBytes() const;

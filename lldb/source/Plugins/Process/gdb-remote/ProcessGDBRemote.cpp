@@ -166,12 +166,12 @@ public:
   }
 };
 
+} // namespace
+
 static PluginProperties &GetGlobalPluginProperties() {
   static PluginProperties g_settings;
   return g_settings;
 }
-
-} // namespace
 
 // TODO Randomly assigning a port is unsafe.  We should get an unused
 // ephemeral port from the kernel and make sure we reserve it before passing it

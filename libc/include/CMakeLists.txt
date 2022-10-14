@@ -220,6 +220,8 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.mode_t
+    .llvm-libc-types.pid_t
+    .llvm-libc-types.posix_spawnattr_t
     .llvm-libc-types.posix_spawn_file_actions_t
 )
 
@@ -227,6 +229,15 @@ add_gen_header(
 # directory and the targets for sys/*.h files conditional to the OS requiring
 # them.
 file(MAKE_DIRECTORY "sys")
+
+add_gen_header(
+  sys_auxv
+  DEF_FILE sys/auxv.h.def
+  GEN_HDR sys/auxv.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_auxv_macros
+)
 
 add_gen_header(
   sys_ioctl
@@ -246,6 +257,14 @@ add_gen_header(
     .llvm-libc-types.off_t
     .llvm-libc-types.ssize_t
     .llvm-libc-macros.sys_mman_macros
+)
+
+add_gen_header(
+  sys_prctl
+  DEF_FILE sys/prctl.h.def
+  GEN_HDR sys/prctl.h
+  DEPENDS
+    .llvm_libc_common_h
 )
 
 add_gen_header(
@@ -299,6 +318,16 @@ add_gen_header(
     syscall_numbers=../config/${LIBC_TARGET_OS}/syscall_numbers.h.inc
   DATA_FILES
     ../config/${LIBC_TARGET_OS}/syscall_numbers.h.inc
+)
+
+add_gen_header(
+  sys_time
+  DEF_FILE sys/time.h.def
+  GEN_HDR sys/time.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_timeval
+    .llvm-libc-macros.sys_time_macros
 )
 
 add_gen_header(

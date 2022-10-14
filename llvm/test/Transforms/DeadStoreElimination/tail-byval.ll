@@ -1,4 +1,4 @@
-; RUN: opt -dse -S < %s | FileCheck %s
+; RUN: opt -passes=dse -S < %s | FileCheck %s
 
 ; Don't eliminate stores to allocas before tail calls to functions that use
 ; byval. It's correct to mark calls like these as 'tail'. To implement this tail

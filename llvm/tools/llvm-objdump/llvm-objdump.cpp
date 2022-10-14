@@ -1190,8 +1190,9 @@ static void addSymbolizer(
   for (size_t Index = 0; Index != Bytes.size();) {
     MCInst Inst;
     uint64_t Size;
-    ArrayRef<uint8_t> ThisBytes = Bytes.slice(Index - SectionAddr);
-    DisAsm->getInstruction(Inst, Size, ThisBytes, Index, nulls());
+    ArrayRef<uint8_t> ThisBytes = Bytes.slice(Index);
+    const uint64_t ThisAddr = SectionAddr + Index;
+    DisAsm->getInstruction(Inst, Size, ThisBytes, ThisAddr, nulls());
     if (Size == 0)
       Size = std::min<uint64_t>(ThisBytes.size(),
                                 DisAsm->suggestBytesToSkip(ThisBytes, Index));

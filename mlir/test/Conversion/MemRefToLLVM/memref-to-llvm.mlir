@@ -776,7 +776,7 @@ func.func @collapse_shape_dynamic_with_non_identity_layout(
 //       CHECK:      llvm.extractvalue %{{.*}}[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
 //       CHECK:      llvm.insertvalue %{{.*}}, %{{.*}}[4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
 //       CHECK:      llvm.extractvalue %{{.*}}[4, 2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
-//       CHECK:      llvm.mlir.constant(1 : i32) : i64
+//       CHECK:      llvm.mlir.constant(1 : index) : i64
 //       CHECK:      llvm.extractvalue %{{.*}}[3, 2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<3 x i64>, array<3 x i64>)>
 //       CHECK:      llvm.icmp "ne" %{{.*}}, %{{.*}} : i64
 //       CHECK:      llvm.cond_br %{{.*}}, ^bb2(%{{.*}} : i64), ^bb1
@@ -785,6 +785,10 @@ func.func @collapse_shape_dynamic_with_non_identity_layout(
 //       CHECK:      llvm.br ^bb2(%{{.*}} : i64)
 //       CHECK:      ^bb2(%[[STRIDE:.*]]: i64):
 //       CHECK:      llvm.insertvalue %[[STRIDE]], %{{.*}}[4, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK32-LABEL: func @collapse_shape_dynamic_with_non_identity_layout(
+//       CHECK32:      llvm.mlir.constant(1 : index) : i32
+//       CHECK32:      llvm.mlir.constant(4 : index) : i32
+//       CHECK32:      llvm.mlir.constant(1 : index) : i32
 
 // -----
 
@@ -1134,6 +1138,7 @@ func.func @memref_copy_unranked() {
   // CHECK: [[UNDEF:%.*]] = llvm.mlir.undef : !llvm.struct<(i64, ptr<i8>)>
   // CHECK: [[INSERT:%.*]] = llvm.insertvalue [[RANK]], [[UNDEF]][0] : !llvm.struct<(i64, ptr<i8>)>
   // CHECK: [[INSERT2:%.*]] = llvm.insertvalue [[BITCAST]], [[INSERT]][1] : !llvm.struct<(i64, ptr<i8>)>
+  // CHECK: [[STACKSAVE:%.*]] = llvm.intr.stacksave : !llvm.ptr<i8>
   // CHECK: [[RANK2:%.*]] = llvm.mlir.constant(1 : index) : i64
   // CHECK: [[ALLOCA2:%.*]] = llvm.alloca [[RANK2]] x !llvm.struct<(i64, ptr<i8>)> : (i64) -> !llvm.ptr<struct<(i64, ptr<i8>)>>
   // CHECK: llvm.store {{%.*}}, [[ALLOCA2]] : !llvm.ptr<struct<(i64, ptr<i8>)>>
@@ -1141,6 +1146,7 @@ func.func @memref_copy_unranked() {
   // CHECK: llvm.store [[INSERT2]], [[ALLOCA3]] : !llvm.ptr<struct<(i64, ptr<i8>)>>
   // CHECK: [[SIZE:%.*]] = llvm.mlir.constant(1 : index) : i64
   // CHECK: llvm.call @memrefCopy([[SIZE]], [[ALLOCA2]], [[ALLOCA3]]) : (i64, !llvm.ptr<struct<(i64, ptr<i8>)>>, !llvm.ptr<struct<(i64, ptr<i8>)>>) -> ()
+  // CHECK: llvm.intr.stackrestore [[STACKSAVE]]
   return
 }
 
@@ -1149,7 +1155,7 @@ func.func @memref_copy_unranked() {
 // CHECK-LABEL: func @extract_aligned_pointer_as_index
 func.func @extract_aligned_pointer_as_index(%m: memref<?xf32>) -> index {
   %0 = memref.extract_aligned_pointer_as_index %m: memref<?xf32> -> index
-  // CHECK: %[[E:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: %[[E:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: %[[I64:.*]] = llvm.ptrtoint %[[E]] : !llvm.ptr<f32> to i64
   // CHECK: %[[R:.*]] = builtin.unrealized_conversion_cast %[[I64]] : i64 to index
 

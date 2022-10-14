@@ -30,12 +30,10 @@ entry:
   %a = alloca i32, align 4
   %b = alloca i32, align 4
   call void @llvm.dbg.value(metadata i32 %n, metadata !12, metadata !DIExpression()), !dbg !17
-  %0 = bitcast i32* %a to i8*, !dbg !18
   call void @llvm.dbg.value(metadata i32 0, metadata !15, metadata !DIExpression()), !dbg !19
-  store i32 0, i32* %a, align 4, !dbg !19, !tbaa !20
-  %1 = bitcast i32* %b to i8*, !dbg !18
+  store i32 0, ptr %a, align 4, !dbg !19, !tbaa !20
   call void @llvm.dbg.value(metadata i32 1, metadata !16, metadata !DIExpression()), !dbg !24
-  store i32 1, i32* %b, align 4, !dbg !24, !tbaa !20
+  store i32 1, ptr %b, align 4, !dbg !24, !tbaa !20
   call void @llvm.dbg.value(metadata i32 0, metadata !13, metadata !DIExpression()), !dbg !25
   %cmp4 = icmp sgt i32 %n, 0, !dbg !26
   call void @llvm.dbg.value(metadata i32 1, metadata !16, metadata !DIExpression()), !dbg !24
@@ -45,41 +43,41 @@ for.body.preheader:                               ; preds = %entry
   call void @llvm.dbg.value(metadata i32 0, metadata !13, metadata !DIExpression()), !dbg !25
   call void @llvm.dbg.value(metadata i32 0, metadata !15, metadata !DIExpression()), !dbg !19
   call void @llvm.dbg.value(metadata i32 1, metadata !15, metadata !DIExpression()), !dbg !19
-  store i32 1, i32* %a, align 4, !dbg !30, !tbaa !20
-  call void @llvm.dbg.value(metadata i32* %a, metadata !15, metadata !DIExpression()), !dbg !19
-  call void @llvm.dbg.value(metadata i32* %b, metadata !16, metadata !DIExpression()), !dbg !24
-  call void @swap(i32* nonnull %a, i32* nonnull %b) #5, !dbg !32
+  store i32 1, ptr %a, align 4, !dbg !30, !tbaa !20
+  call void @llvm.dbg.value(metadata ptr %a, metadata !15, metadata !DIExpression()), !dbg !19
+  call void @llvm.dbg.value(metadata ptr %b, metadata !16, metadata !DIExpression()), !dbg !24
+  call void @swap(ptr nonnull %a, ptr nonnull %b) #5, !dbg !32
   call void @llvm.dbg.value(metadata i32 1, metadata !13, metadata !DIExpression()), !dbg !25
-  %2 = load i32, i32* %b, align 4, !dbg !33, !tbaa !20
-  call void @llvm.dbg.value(metadata i32 %2, metadata !16, metadata !DIExpression()), !dbg !24
+  %0 = load i32, ptr %b, align 4, !dbg !33, !tbaa !20
+  call void @llvm.dbg.value(metadata i32 %0, metadata !16, metadata !DIExpression()), !dbg !24
   %exitcond9 = icmp eq i32 %n, 1, !dbg !26
   br i1 %exitcond9, label %for.end, label %for.body.for.body_crit_edge, !dbg !29, !llvm.loop !34
 
 for.body.for.body_crit_edge:                      ; preds = %for.body.preheader, %for.body.for.body_crit_edge
-  %3 = phi i32 [ %4, %for.body.for.body_crit_edge ], [ %2, %for.body.preheader ]
+  %1 = phi i32 [ %2, %for.body.for.body_crit_edge ], [ %0, %for.body.preheader ]
   %inc10 = phi i32 [ %inc, %for.body.for.body_crit_edge ], [ 1, %for.body.preheader ]
-  %.pre = load i32, i32* %a, align 4, !dbg !30, !tbaa !20
+  %.pre = load i32, ptr %a, align 4, !dbg !30, !tbaa !20
   call void @llvm.dbg.value(metadata i32 %inc10, metadata !13, metadata !DIExpression()), !dbg !25
   call void @llvm.dbg.value(metadata i32 %.pre, metadata !15, metadata !DIExpression()), !dbg !19
-  %add = add nsw i32 %.pre, %3, !dbg !30
+  %add = add nsw i32 %.pre, %1, !dbg !30
   call void @llvm.dbg.value(metadata i32 %add, metadata !15, metadata !DIExpression()), !dbg !19
-  store i32 %add, i32* %a, align 4, !dbg !30, !tbaa !20
-  call void @llvm.dbg.value(metadata i32* %a, metadata !15, metadata !DIExpression()), !dbg !19
-  call void @llvm.dbg.value(metadata i32* %b, metadata !16, metadata !DIExpression()), !dbg !24
-  call void @swap(i32* nonnull %a, i32* nonnull %b) #5, !dbg !32
+  store i32 %add, ptr %a, align 4, !dbg !30, !tbaa !20
+  call void @llvm.dbg.value(metadata ptr %a, metadata !15, metadata !DIExpression()), !dbg !19
+  call void @llvm.dbg.value(metadata ptr %b, metadata !16, metadata !DIExpression()), !dbg !24
+  call void @swap(ptr nonnull %a, ptr nonnull %b) #5, !dbg !32
   %inc = add nuw nsw i32 %inc10, 1, !dbg !36
   call void @llvm.dbg.value(metadata i32 %inc, metadata !13, metadata !DIExpression()), !dbg !25
-  %4 = load i32, i32* %b, align 4, !dbg !33, !tbaa !20
-  call void @llvm.dbg.value(metadata i32 %4, metadata !16, metadata !DIExpression()), !dbg !24
+  %2 = load i32, ptr %b, align 4, !dbg !33, !tbaa !20
+  call void @llvm.dbg.value(metadata i32 %2, metadata !16, metadata !DIExpression()), !dbg !24
   %exitcond = icmp eq i32 %inc, %n, !dbg !26
   br i1 %exitcond, label %for.end, label %for.body.for.body_crit_edge, !dbg !29, !llvm.loop !34
 
 for.end:                                          ; preds = %for.body.for.body_crit_edge, %for.body.preheader, %entry
-  %.lcssa = phi i32 [ 1, %entry ], [ %2, %for.body.preheader ], [ %4, %for.body.for.body_crit_edge ]
+  %.lcssa = phi i32 [ 1, %entry ], [ %0, %for.body.preheader ], [ %2, %for.body.for.body_crit_edge ]
   ret i32 %.lcssa, !dbg !38
 }
 
-declare void @swap(i32*, i32*) local_unnamed_addr #2
+declare void @swap(ptr, ptr) local_unnamed_addr #2
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #4

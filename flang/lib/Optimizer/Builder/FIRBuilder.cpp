@@ -325,6 +325,13 @@ fir::FirOpBuilder::convertWithSemantics(mlir::Location loc, mlir::Type toTy,
     return create<fir::BoxAddrOp>(loc, toTy, val);
   }
 
+  if (fir::isPolymorphicType(fromTy) &&
+      (fir::isAllocatableType(fromTy) || fir::isPointerType(fromTy)) &&
+      fir::isPolymorphicType(toTy)) {
+    return create<fir::ReboxOp>(loc, toTy, val, mlir::Value{},
+                                /*slice=*/mlir::Value{});
+  }
+
   return createConvert(loc, toTy, val);
 }
 
@@ -458,9 +465,10 @@ mlir::Value fir::FirOpBuilder::createSlice(mlir::Location loc,
 }
 
 mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
-                                         const fir::ExtendedValue &exv) {
+                                         const fir::ExtendedValue &exv,
+                                         bool isPolymorphic) {
   mlir::Value itemAddr = fir::getBase(exv);
-  if (itemAddr.getType().isa<fir::BoxType>())
+  if (itemAddr.getType().isa<fir::BaseBoxType>())
     return itemAddr;
   auto elementType = fir::dyn_cast_ptrEleTy(itemAddr.getType());
   if (!elementType) {
@@ -469,6 +477,23 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
     llvm_unreachable("not a memory reference type");
   }
   mlir::Type boxTy = fir::BoxType::get(elementType);
+  mlir::Value tdesc;
+  if (isPolymorphic) {
+    boxTy = fir::ClassType::get(elementType);
+
+    // Look for the original tdesc for the new box.
+    if (auto *op = itemAddr.getDefiningOp()) {
+      if (auto coordOp = mlir::dyn_cast<fir::CoordinateOp>(op)) {
+        if (fir::isPolymorphicType(coordOp.getBaseType())) {
+          mlir::Type resultType = coordOp.getResult().getType();
+          mlir::Type tdescType =
+              fir::TypeDescType::get(fir::unwrapRefType(resultType));
+          tdesc = create<fir::BoxTypeDescOp>(loc, tdescType, coordOp.getRef());
+        }
+      }
+    }
+  }
+
   return exv.match(
       [&](const fir::ArrayBoxValue &box) -> mlir::Value {
         mlir::Value s = createShape(loc, exv);
@@ -497,7 +522,10 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
             loc, fir::factory::getMutableIRBox(*this, loc, x));
       },
       [&](const auto &) -> mlir::Value {
-        return create<fir::EmboxOp>(loc, boxTy, itemAddr);
+        mlir::Value empty;
+        mlir::ValueRange emptyRange;
+        return create<fir::EmboxOp>(loc, boxTy, itemAddr, empty, empty,
+                                    emptyRange, tdesc);
       });
 }
 
@@ -741,7 +769,7 @@ static llvm::SmallVector<mlir::Value> getFromBox(mlir::Location loc,
                                                  fir::FirOpBuilder &builder,
                                                  mlir::Type valTy,
                                                  mlir::Value boxVal) {
-  if (auto boxTy = valTy.dyn_cast<fir::BoxType>()) {
+  if (auto boxTy = valTy.dyn_cast<fir::BaseBoxType>()) {
     auto eleTy = fir::unwrapAllRefAndSeqType(boxTy.getEleTy());
     if (auto recTy = eleTy.dyn_cast<fir::RecordType>()) {
       if (recTy.getNumLenParams() > 0) {
@@ -795,7 +823,7 @@ llvm::SmallVector<mlir::Value>
 fir::factory::getTypeParams(mlir::Location loc, fir::FirOpBuilder &builder,
                             fir::ArrayLoadOp load) {
   mlir::Type memTy = load.getMemref().getType();
-  if (auto boxTy = memTy.dyn_cast<fir::BoxType>())
+  if (auto boxTy = memTy.dyn_cast<fir::BaseBoxType>())
     return getFromBox(loc, builder, boxTy, load.getMemref());
   return load.getTypeparams();
 }

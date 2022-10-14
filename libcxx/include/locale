@@ -265,7 +265,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 //  If the input is "a", the first keyword matches and eofbit is set.
 //  If the input is "abc", no match is found and "ab" are consumed.
 template <class _InputIterator, class _ForwardIterator, class _Ctype>
-_LIBCPP_HIDDEN
+_LIBCPP_HIDE_FROM_ABI
 _ForwardIterator
 __scan_keyword(_InputIterator& __b, _InputIterator __e,
                _ForwardIterator __kb, _ForwardIterator __ke,
@@ -746,7 +746,7 @@ locale::id
 num_get<_CharT, _InputIterator>::id;
 
 template <class _Tp>
-_LIBCPP_HIDDEN _Tp
+_LIBCPP_HIDE_FROM_ABI _Tp
 __num_get_signed_integral(const char* __a, const char* __a_end,
                           ios_base::iostate& __err, int __base)
 {
@@ -781,7 +781,7 @@ __num_get_signed_integral(const char* __a, const char* __a_end,
 }
 
 template <class _Tp>
-_LIBCPP_HIDDEN _Tp
+_LIBCPP_HIDE_FROM_ABI _Tp
 __num_get_unsigned_integral(const char* __a, const char* __a_end,
                             ios_base::iostate& __err, int __base)
 {
@@ -840,7 +840,7 @@ long double __do_strtod<long double>(const char* __a, char** __p2) {
 }
 
 template <class _Tp>
-_LIBCPP_HIDDEN
+_LIBCPP_HIDE_FROM_ABI
 _Tp
 __num_get_float(const char* __a, const char* __a_end, ios_base::iostate& __err)
 {
@@ -1384,7 +1384,7 @@ locale::id
 num_put<_CharT, _OutputIterator>::id;
 
 template <class _CharT, class _OutputIterator>
-_LIBCPP_HIDDEN
+_LIBCPP_HIDE_FROM_ABI
 _OutputIterator
 __pad_and_output(_OutputIterator __s,
                  const _CharT* __ob, const _CharT* __op, const _CharT* __oe,
@@ -1407,7 +1407,7 @@ __pad_and_output(_OutputIterator __s,
 }
 
 template <class _CharT, class _Traits>
-_LIBCPP_HIDDEN
+_LIBCPP_HIDE_FROM_ABI
 ostreambuf_iterator<_CharT, _Traits>
 __pad_and_output(ostreambuf_iterator<_CharT, _Traits> __s,
                  const _CharT* __ob, const _CharT* __op, const _CharT* __oe,
@@ -1646,7 +1646,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_put<wchar_t>;
 #endif
 
 template <class _CharT, class _InputIterator>
-_LIBCPP_HIDDEN
+_LIBCPP_HIDE_FROM_ABI
 int
 __get_up_to_n_digits(_InputIterator& __b, _InputIterator __e,
                      ios_base::iostate& __err, const ctype<_CharT>& __ct, int __n)
@@ -2814,7 +2814,7 @@ money_get<_CharT, _InputIterator>::id;
 _LIBCPP_FUNC_VIS void __do_nothing(void*);
 
 template <class _Tp>
-_LIBCPP_HIDDEN
+_LIBCPP_HIDE_FROM_ABI
 void
 __double_or_nothing(unique_ptr<_Tp, void(*)(void*)>& __b, _Tp*& __n, _Tp*& __e)
 {

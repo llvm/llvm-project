@@ -53,6 +53,12 @@ add_header(
 )
 
 add_header(
+  sys_time_macros
+  HDR
+    sys-time-macros.h
+)
+
+add_header(
   unistd_macros
   HDR
     unistd-macros.h

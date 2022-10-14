@@ -299,6 +299,43 @@ static int64_t GetAbsDifference(MCStreamer &Streamer, const MCSymbol *LHS,
   return *MaybeDiff;
 }
 
+static void checkARM64Instructions(MCStreamer &Streamer,
+                                   ArrayRef<WinEH::Instruction> Insns,
+                                   const MCSymbol *Begin, const MCSymbol *End,
+                                   StringRef Name, StringRef Type) {
+  if (!End)
+    return;
+  Optional<int64_t> MaybeDistance =
+      GetOptionalAbsDifference(Streamer, End, Begin);
+  if (!MaybeDistance)
+    return;
+  uint32_t Distance = (uint32_t)*MaybeDistance;
+
+  for (const auto &I : Insns) {
+    switch (static_cast<Win64EH::UnwindOpcodes>(I.Operation)) {
+    default:
+      break;
+    case Win64EH::UOP_TrapFrame:
+    case Win64EH::UOP_PushMachFrame:
+    case Win64EH::UOP_Context:
+    case Win64EH::UOP_ClearUnwoundToCall:
+      // Can't reason about these opcodes and how they map to actual
+      // instructions.
+      return;
+    }
+  }
+  // Exclude the end opcode which doesn't map to an instruction.
+  uint32_t InstructionBytes = 4 * (Insns.size() - 1);
+  if (Distance != InstructionBytes) {
+    Streamer.getContext().reportError(
+        SMLoc(), "Incorrect size for " + Name + " " + Type + ": " +
+                     Twine(Distance) +
+                     " bytes of instructions in range, but .seh directives "
+                     "corresponding to " +
+                     Twine(InstructionBytes) + " bytes\n");
+  }
+}
+
 static uint32_t ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
   uint32_t Count = 0;
   for (const auto &I : Insns) {
@@ -375,6 +412,9 @@ static uint32_t ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
       Count += 1;
       break;
     case Win64EH::UOP_ClearUnwoundToCall:
+      Count += 1;
+      break;
+    case Win64EH::UOP_PACSignLR:
       Count += 1;
       break;
     }
@@ -541,6 +581,10 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer,
     break;
   case Win64EH::UOP_ClearUnwoundToCall:
     b = 0xEC;
+    streamer.emitInt8(b);
+    break;
+  case Win64EH::UOP_PACSignLR:
+    b = 0xFC;
     streamer.emitInt8(b);
     break;
   }
@@ -727,6 +771,7 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
   enum {
     Start,
     Start2,
+    Start3,
     IntRegs,
     FloatRegs,
     InputArgs,
@@ -735,6 +780,7 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
     End
   } Location = Start;
   bool StandaloneLR = false, FPLRPair = false;
+  bool PAC = false;
   int StackOffset = 0;
   int Nops = 0;
   // Iterate over the prolog and check that all opcodes exactly match
@@ -750,15 +796,21 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
         return false;
       Location = Start2;
       break;
-    case Win64EH::UOP_SaveR19R20X:
+    case Win64EH::UOP_PACSignLR:
       if (Location != Start2)
+        return false;
+      PAC = true;
+      Location = Start3;
+      break;
+    case Win64EH::UOP_SaveR19R20X:
+      if (Location != Start2 && Location != Start3)
         return false;
       Predecrement = Inst.Offset;
       RegI = 2;
       Location = IntRegs;
       break;
     case Win64EH::UOP_SaveRegX:
-      if (Location != Start2)
+      if (Location != Start2 && Location != Start3)
         return false;
       Predecrement = Inst.Offset;
       if (Inst.Register == 19)
@@ -821,7 +873,7 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
       Location = InputArgs;
       break;
     case Win64EH::UOP_SaveFRegPX:
-      if (Location != Start2 || Inst.Register != 8)
+      if ((Location != Start2 && Location != Start3) || Inst.Register != 8)
         return false;
       Predecrement = Inst.Offset;
       RegF = 2;
@@ -851,8 +903,9 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
       break;
     case Win64EH::UOP_AllocSmall:
     case Win64EH::UOP_AllocMedium:
-      if (Location != Start2 && Location != IntRegs && Location != FloatRegs &&
-          Location != InputArgs && Location != StackAdjust)
+      if (Location != Start2 && Location != Start3 && Location != IntRegs &&
+          Location != FloatRegs && Location != InputArgs &&
+          Location != StackAdjust)
         return false;
       // Can have either a single decrement, or a pair of decrements with
       // 4080 and another decrement.
@@ -867,8 +920,8 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
     case Win64EH::UOP_SaveFPLRX:
       // Not allowing FPLRX after StackAdjust; if a StackAdjust is used, it
       // should be followed by a FPLR instead.
-      if (Location != Start2 && Location != IntRegs && Location != FloatRegs &&
-          Location != InputArgs)
+      if (Location != Start2 && Location != Start3 && Location != IntRegs &&
+          Location != FloatRegs && Location != InputArgs)
         return false;
       StackOffset = Inst.Offset;
       Location = FrameRecord;
@@ -895,6 +948,8 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
   if (FPLRPair && Location != End)
     return false;
   if (Nops != 0 && Nops != 4)
+    return false;
+  if (PAC && !FPLRPair)
     return false;
   int H = Nops == 4;
   // There's an inconsistency regarding packed unwind info with homed
@@ -926,7 +981,7 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
     RegF--; // Convert from actual number of registers, to value stored
   assert(FuncLength <= 0x7FF && "FuncLength should have been checked earlier");
   int Flag = 0x01; // Function segments not supported yet
-  int CR = FPLRPair ? 3 : StandaloneLR ? 1 : 0;
+  int CR = PAC ? 2 : FPLRPair ? 3 : StandaloneLR ? 1 : 0;
   info->PackedInfo |= Flag << 0;
   info->PackedInfo |= (FuncLength & 0x7FF) << 2;
   info->PackedInfo |= (RegF & 0x7) << 13;
@@ -984,6 +1039,10 @@ static void ARM64ProcessEpilogs(WinEH::FrameInfo *info,
 static void ARM64FindSegmentsInFunction(MCStreamer &streamer,
                                         WinEH::FrameInfo *info,
                                         int64_t RawFuncLength) {
+  if (info->PrologEnd)
+    checkARM64Instructions(streamer, info->Instructions, info->Begin,
+                           info->PrologEnd, info->Function->getName(),
+                           "prologue");
   struct EpilogStartEnd {
     MCSymbol *Start;
     int64_t Offset;
@@ -995,6 +1054,8 @@ static void ARM64FindSegmentsInFunction(MCStreamer &streamer,
     MCSymbol *Start = I.first;
     auto &Instrs = I.second.Instructions;
     int64_t Offset = GetAbsDifference(streamer, Start, info->Begin);
+    checkARM64Instructions(streamer, Instrs, Start, I.second.End,
+                           info->Function->getName(), "epilogue");
     assert((Epilogs.size() == 0 || Offset >= Epilogs.back().End) &&
            "Epilogs should be monotonically ordered");
     // Exclue the end opcode from Instrs.size() when calculating the end of the

@@ -1961,7 +1961,7 @@ int GCNHazardRecognizer::checkMAIHazards908(MachineInstr *MI) {
   unsigned Opc = MI->getOpcode();
 
   auto IsVALUFn = [](const MachineInstr &MI) {
-    return SIInstrInfo::isVALU(MI);
+    return SIInstrInfo::isVALU(MI) || MI.isInlineAsm();
   };
 
   if (Opc != AMDGPU::V_ACCVGPR_READ_B32_e64) { // MFMA or v_accvgpr_write

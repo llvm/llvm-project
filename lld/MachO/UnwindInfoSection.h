@@ -23,7 +23,7 @@ public:
   // section entirely.
   bool isNeeded() const override { return !allEntriesAreOmitted; }
   void addSymbol(const Defined *);
-  virtual void prepareRelocations() = 0;
+  virtual void prepare() = 0;
 
 protected:
   UnwindInfoSection();

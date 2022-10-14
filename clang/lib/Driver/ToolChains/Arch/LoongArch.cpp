@@ -26,3 +26,14 @@ StringRef loongarch::getLoongArchABI(const ArgList &Args,
   // TODO: select appropiate ABI.
   return Triple.getArch() == llvm::Triple::loongarch32 ? "ilp32d" : "lp64d";
 }
+
+void loongarch::getLoongArchTargetFeatures(const Driver &D,
+                                           const llvm::Triple &Triple,
+                                           const ArgList &Args,
+                                           std::vector<StringRef> &Features) {
+  // FIXME: hornor various clang options that may affect target features, e.g.
+  // -march/-mtune/-mdouble-float/-msingle-float/-msoft-float/-mfpu. See:
+  // https://loongson.github.io/LoongArch-Documentation/LoongArch-toolchain-conventions-EN.html
+  Features.push_back("+f");
+  Features.push_back("+d");
+}

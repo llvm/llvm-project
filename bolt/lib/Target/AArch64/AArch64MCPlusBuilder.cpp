@@ -289,21 +289,25 @@ public:
     return true;
   }
 
-  bool replaceMemOperandDisp(MCInst &Inst, MCOperand Operand) const override {
+  MCInst::iterator getMemOperandDisp(MCInst &Inst) const override {
     MCInst::iterator OI = Inst.begin();
     if (isADR(Inst) || isADRP(Inst)) {
       assert(MCPlus::getNumPrimeOperands(Inst) >= 2 &&
              "Unexpected number of operands");
-      ++OI;
-    } else {
-      const MCInstrDesc &MCII = Info->get(Inst.getOpcode());
-      for (unsigned I = 0, E = MCII.getNumOperands(); I != E; ++I) {
-        if (MCII.OpInfo[I].OperandType == MCOI::OPERAND_PCREL)
-          break;
-        ++OI;
-      }
-      assert(OI != Inst.end() && "Literal operand not found");
+      return ++OI;
     }
+    const MCInstrDesc &MCII = Info->get(Inst.getOpcode());
+    for (unsigned I = 0, E = MCII.getNumOperands(); I != E; ++I) {
+      if (MCII.OpInfo[I].OperandType == MCOI::OPERAND_PCREL)
+        break;
+      ++OI;
+    }
+    assert(OI != Inst.end() && "Literal operand not found");
+    return OI;
+  }
+
+  bool replaceMemOperandDisp(MCInst &Inst, MCOperand Operand) const override {
+    MCInst::iterator OI = getMemOperandDisp(Inst);
     *OI = Operand;
     return true;
   }

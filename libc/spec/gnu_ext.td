@@ -159,6 +159,14 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
       ]
   >;
 
+  HeaderSpec SysAuxv = HeaderSpec<
+      "sys/auxv.h",
+      [], // Macros
+      [], // Types
+      [], // Enumerations
+      []  // Functions
+  >;
+
   HeaderSpec SendFile = HeaderSpec<
       "sys/sendfile.h",
       [], // Macros
@@ -194,6 +202,7 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
     PThread,
     Sched,
     SendFile,
+    SysAuxv,
     StdIO,
     String,
     UniStd,

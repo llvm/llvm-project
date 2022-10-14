@@ -1504,7 +1504,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_F64MM,   AArch64::AEK_TME,      AArch64::AEK_LS64,
       AArch64::AEK_BRBE,    AArch64::AEK_PAUTH,    AArch64::AEK_FLAGM,
       AArch64::AEK_SME,     AArch64::AEK_SMEF64,   AArch64::AEK_SMEI64,
-      AArch64::AEK_HBC,     AArch64::AEK_MOPS,     AArch64::AEK_PERFMON};
+      AArch64::AEK_SME2,    AArch64::AEK_HBC,      AArch64::AEK_MOPS,
+      AArch64::AEK_PERFMON};
 
   std::vector<StringRef> Features;
 
@@ -1561,6 +1562,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+sme"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-f64"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-i64"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+hbc"));
   EXPECT_TRUE(llvm::is_contained(Features, "+mops"));
   EXPECT_TRUE(llvm::is_contained(Features, "+perfmon"));
@@ -1639,6 +1641,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"sme", "nosme", "+sme", "-sme"},
       {"sme-f64", "nosme-f64", "+sme-f64", "-sme-f64"},
       {"sme-i64", "nosme-i64", "+sme-i64", "-sme-i64"},
+      {"sme2", "nosme2", "+sme2", "-sme2"},
       {"hbc", "nohbc", "+hbc", "-hbc"},
       {"mops", "nomops", "+mops", "-mops"},
       {"pmuv3", "nopmuv3", "+perfmon", "-perfmon"},

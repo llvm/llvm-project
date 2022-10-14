@@ -1148,11 +1148,9 @@ struct ForeachThreadOpInterface
   bool isRepetitiveRegion(Operation *op, unsigned index) const {
     auto foreachThreadOp = cast<ForeachThreadOp>(op);
     // This op is not repetitive if it has just a single thread.
-    if (llvm::all_of(foreachThreadOp.getNumThreads(), [](Value v) {
-          return getConstantIntValue(v) == static_cast<int64_t>(1);
-        }))
-      return false;
-    return true;
+    return !llvm::all_of(foreachThreadOp.getNumThreads(), [](Value v) {
+      return getConstantIntValue(v) == static_cast<int64_t>(1);
+    });
   }
 };
 

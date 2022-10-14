@@ -380,7 +380,7 @@ static GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS) {
   auto IRLevelVersionVariable = new GlobalVariable(
       M, IntTy64, true, GlobalValue::WeakAnyLinkage,
       Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);
-  IRLevelVersionVariable->setVisibility(GlobalValue::DefaultVisibility);
+  IRLevelVersionVariable->setVisibility(GlobalValue::HiddenVisibility);
   Triple TT(M.getTargetTriple());
   if (TT.supportsCOMDAT()) {
     IRLevelVersionVariable->setLinkage(GlobalValue::ExternalLinkage);
@@ -1689,7 +1689,21 @@ void PGOUseFunc::setBranchWeights() {
         MaxCount = EdgeCount;
       EdgeCounts[SuccNum] = EdgeCount;
     }
-    setProfMetadata(M, TI, EdgeCounts, MaxCount);
+
+    if (MaxCount)
+      setProfMetadata(M, TI, EdgeCounts, MaxCount);
+    else {
+      // A zero MaxCount can come about when we have a BB with a positive
+      // count, and whose successor blocks all have 0 count. This can happen
+      // when there is no exit block and the code exits via a noreturn function.
+      auto &Ctx = M->getContext();
+      Ctx.diagnose(DiagnosticInfoPGOProfile(
+        M->getName().data(),
+        Twine("Profile in ") + F.getName().str() +
+            Twine(" partially ignored") +
+            Twine(", possibly due to the lack of a return path."),
+        DS_Warning));
+    }
   }
 }
 

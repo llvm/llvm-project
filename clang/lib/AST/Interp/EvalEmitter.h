@@ -71,7 +71,7 @@ protected:
   Local createLocal(Descriptor *D);
 
   /// Returns the source location of the current opcode.
-  SourceInfo getSource(Function *F, CodePtr PC) const override {
+  SourceInfo getSource(const Function *F, CodePtr PC) const override {
     return F ? F->getSource(PC) : CurrentSource;
   }
 

@@ -629,6 +629,12 @@ llvm::SmallVector<ReferenceLoc> refInDecl(const Decl *D,
                                    DeclRelation::Underlying, Resolver)});
     }
 
+    void VisitUsingEnumDecl(const UsingEnumDecl *D) {
+      // "using enum ns::E" is a non-declaration reference.
+      // The reference is covered by the embedded typeloc.
+      // Don't use the default VisitNamedDecl, which would report a declaration.
+    }
+
     void VisitNamespaceAliasDecl(const NamespaceAliasDecl *D) {
       // For namespace alias, "namespace Foo = Target;", we add two references.
       // Add a declaration reference for Foo.

@@ -20,8 +20,6 @@
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -36,59 +34,15 @@ using namespace mlir::sparse_tensor;
 
 namespace {
 
-/// Shorthand aliases for the `emitCInterface` argument to `getFunc()`,
-/// `createFuncCall()`, and `replaceOpWithFuncCall()`.
-enum class EmitCInterface : bool { Off = false, On = true };
-
 //===----------------------------------------------------------------------===//
 // Helper methods.
 //===----------------------------------------------------------------------===//
-
-/// Returns the equivalent of `void*` for opaque arguments to the
-/// execution engine.
-static Type getOpaquePointerType(OpBuilder &builder) {
-  return LLVM::LLVMPointerType::get(builder.getI8Type());
-}
 
 /// Maps each sparse tensor type to an opaque pointer.
 static Optional<Type> convertSparseTensorTypes(Type type) {
   if (getSparseTensorEncoding(type) != nullptr)
     return LLVM::LLVMPointerType::get(IntegerType::get(type.getContext(), 8));
   return llvm::None;
-}
-
-/// Returns a function reference (first hit also inserts into module). Sets
-/// the "_emit_c_interface" on the function declaration when requested,
-/// so that LLVM lowering generates a wrapper function that takes care
-/// of ABI complications with passing in and returning MemRefs to C functions.
-static FlatSymbolRefAttr getFunc(ModuleOp module, StringRef name,
-                                 TypeRange resultType, ValueRange operands,
-                                 EmitCInterface emitCInterface) {
-  MLIRContext *context = module.getContext();
-  auto result = SymbolRefAttr::get(context, name);
-  auto func = module.lookupSymbol<func::FuncOp>(result.getAttr());
-  if (!func) {
-    OpBuilder moduleBuilder(module.getBodyRegion());
-    func = moduleBuilder.create<func::FuncOp>(
-        module.getLoc(), name,
-        FunctionType::get(context, operands.getTypes(), resultType));
-    func.setPrivate();
-    if (static_cast<bool>(emitCInterface))
-      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                    UnitAttr::get(context));
-  }
-  return result;
-}
-
-/// Creates a `CallOp` to the function reference returned by `getFunc()` in
-/// the builder's module.
-static func::CallOp createFuncCall(OpBuilder &builder, Location loc,
-                                   StringRef name, TypeRange resultType,
-                                   ValueRange operands,
-                                   EmitCInterface emitCInterface) {
-  auto module = builder.getBlock()->getParentOp()->getParentOfType<ModuleOp>();
-  auto fn = getFunc(module, name, resultType, operands, emitCInterface);
-  return builder.create<func::CallOp>(loc, resultType, fn, operands);
 }
 
 /// Replaces the `op` with  a `CallOp` to the function reference returned
@@ -319,6 +273,14 @@ static void genDelCOOCall(OpBuilder &builder, Location loc, Type elemTp,
   createFuncCall(builder, loc, name, {}, coo, EmitCInterface::Off);
 }
 
+/// Generates a call to release/delete a `SparseTensorIterator`.
+static void genDelIteratorCall(OpBuilder &builder, Location loc, Type elemTp,
+                               Value iter) {
+  SmallString<26> name{"delSparseTensorIterator",
+                       primaryTypeFunctionSuffix(elemTp)};
+  createFuncCall(builder, loc, name, {}, iter, EmitCInterface::Off);
+}
+
 /// Generates a call that adds one element to a coordinate scheme.
 /// In particular, this generates code like the following:
 ///   val = a[i1,..,ik];
@@ -335,7 +297,7 @@ static void genAddEltCall(OpBuilder &builder, Location loc, Type eltType,
 /// Generates a call to `iter->getNext()`.  If there is a next element,
 /// then it is copied into the out-parameters `ind` and `elemPtr`,
 /// and the return value is true.  If there isn't a next element, then
-/// the memory for `iter` is freed and the return value is false.
+/// the return value is false.
 static Value genGetNextCall(OpBuilder &builder, Location loc, Value iter,
                             Value ind, Value elemPtr) {
   Type elemTp = elemPtr.getType().cast<ShapedType>().getElementType();
@@ -572,7 +534,7 @@ genSparse2SparseReshape(ReshapeOp op, typename ReshapeOp::Adaptor adaptor,
   params[7] = coo;
   Value dst = genNewCall(rewriter, loc, params);
   genDelCOOCall(rewriter, loc, elemTp, coo);
-  genDelCOOCall(rewriter, loc, elemTp, iter);
+  genDelIteratorCall(rewriter, loc, elemTp, iter);
   rewriter.replaceOp(op, dst);
   return success();
 }
@@ -584,6 +546,7 @@ genSparse2SparseReshape(ReshapeOp op, typename ReshapeOp::Adaptor adaptor,
 //   }
 // TODO: It can be used by other operators (ReshapeOp, ConvertOP) conversion to
 // reduce code repetition!
+// TODO: rename to `genSparseIterationLoop`?
 static void genSparseCOOIterationLoop(
     ConversionPatternRewriter &rewriter, Location loc, Value t,
     RankedTensorType tensorTp,
@@ -624,7 +587,7 @@ static void genSparseCOOIterationLoop(
   rewriter.setInsertionPointAfter(whileOp);
 
   // Free memory for iterator.
-  genDelCOOCall(rewriter, loc, elemTp, iter);
+  genDelIteratorCall(rewriter, loc, elemTp, iter);
 }
 
 // Generate loop that iterates over a dense tensor.
@@ -875,11 +838,11 @@ public:
     if (!encDst && encSrc) {
       // This is sparse => dense conversion, which is handled as follows:
       //   dst = new Tensor(0);
-      //   iter = src->toCOO();
-      //   iter->startIterator();
+      //   iter = new SparseTensorIterator(src);
       //   while (elem = iter->getNext()) {
       //     dst[elem.indices] = elem.value;
       //   }
+      //   delete iter;
       RankedTensorType dstTensorTp = resType.cast<RankedTensorType>();
       RankedTensorType srcTensorTp = srcType.cast<RankedTensorType>();
       unsigned rank = dstTensorTp.getRank();
@@ -918,7 +881,7 @@ public:
       insertScalarIntoDenseTensor(rewriter, loc, elemPtr, dst, ivs);
       rewriter.create<scf::YieldOp>(loc);
       rewriter.setInsertionPointAfter(whileOp);
-      genDelCOOCall(rewriter, loc, elemTp, iter);
+      genDelIteratorCall(rewriter, loc, elemTp, iter);
       rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, resType, dst);
       // Deallocate the buffer.
       if (bufferization::allocationDoesNotEscape(op->getOpResult(0))) {

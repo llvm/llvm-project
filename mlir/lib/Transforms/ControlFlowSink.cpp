@@ -44,7 +44,7 @@ void ControlFlowSink::runOnOperation() {
     // Sink side-effect free operations.
     numSunk = controlFlowSink(
         regionsToSink, domInfo,
-        [](Operation *op, Region *) { return isSideEffectFree(op); },
+        [](Operation *op, Region *) { return isMemoryEffectFree(op); },
         [](Operation *op, Region *region) {
           // Move the operation to the beginning of the region's entry block.
           // This guarantees the preservation of SSA dominance of all of the

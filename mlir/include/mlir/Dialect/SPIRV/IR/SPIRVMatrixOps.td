@@ -16,7 +16,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
-def SPIRV_MatrixTimesMatrixOp : SPIRV_Op<"MatrixTimesMatrix", [NoSideEffect]> {
+def SPIRV_MatrixTimesMatrixOp : SPIRV_Op<"MatrixTimesMatrix", [Pure]> {
   let summary = "Linear-algebraic multiply of LeftMatrix X RightMatrix.";
 
   let description = [{
@@ -70,7 +70,7 @@ def SPIRV_MatrixTimesMatrixOp : SPIRV_Op<"MatrixTimesMatrix", [NoSideEffect]> {
 
 // -----
 
-def SPIRV_MatrixTimesScalarOp : SPIRV_Op<"MatrixTimesScalar", [NoSideEffect]> {
+def SPIRV_MatrixTimesScalarOp : SPIRV_Op<"MatrixTimesScalar", [Pure]> {
   let summary = "Scale a floating-point matrix.";
 
   let description = [{
@@ -132,7 +132,7 @@ def SPIRV_MatrixTimesScalarOp : SPIRV_Op<"MatrixTimesScalar", [NoSideEffect]> {
 
 // -----
 
-def SPIRV_TransposeOp : SPIRV_Op<"Transpose", [NoSideEffect]> {
+def SPIRV_TransposeOp : SPIRV_Op<"Transpose", [Pure]> {
   let summary = "Transpose a matrix.";
 
   let description = [{

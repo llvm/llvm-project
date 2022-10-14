@@ -9,6 +9,7 @@
 #ifndef SUPPORT_CHARCONV_TEST_HELPERS_H
 #define SUPPORT_CHARCONV_TEST_HELPERS_H
 
+#include <algorithm>
 #include <charconv>
 #include <cassert>
 #include <limits>
@@ -78,9 +79,8 @@ template <typename X>
 struct to_chars_test_base
 {
     template <typename T, size_t N, typename... Ts>
-    void test(T v, char const (&expect)[N], Ts... args)
+    TEST_CONSTEXPR_CXX23 void test(T v, char const (&expect)[N], Ts... args)
     {
-        using std::to_chars;
         std::to_chars_result r;
 
         constexpr size_t len = N - 1;
@@ -89,29 +89,29 @@ struct to_chars_test_base
         if (!fits_in<X>(v))
             return;
 
-        r = to_chars(buf, buf + len - 1, X(v), args...);
+        r = std::to_chars(buf, buf + len - 1, X(v), args...);
         assert(r.ptr == buf + len - 1);
         assert(r.ec == std::errc::value_too_large);
 
-        r = to_chars(buf, buf + sizeof(buf), X(v), args...);
+        r = std::to_chars(buf, buf + sizeof(buf), X(v), args...);
         assert(r.ptr == buf + len);
         assert(r.ec == std::errc{});
-        assert(memcmp(buf, expect, len) == 0);
+        assert(std::equal(buf, buf + len, expect));
     }
 
     template <typename... Ts>
-    void test_value(X v, Ts... args)
+    TEST_CONSTEXPR_CXX23 void test_value(X v, Ts... args)
     {
-        using std::to_chars;
         std::to_chars_result r;
 
         // Poison the buffer for testing whether a successful std::to_chars
-        // doesn't modify data beyond r.ptr.
-        std::iota(buf, buf + sizeof(buf), char(1));
-        r = to_chars(buf, buf + sizeof(buf), v, args...);
+        // doesn't modify data beyond r.ptr. Use unsigned values to avoid
+        // overflowing char when it's signed.
+        std::iota(buf, buf + sizeof(buf), static_cast<unsigned char>(1));
+        r = std::to_chars(buf, buf + sizeof(buf), v, args...);
         assert(r.ec == std::errc{});
         for (size_t i = r.ptr - buf; i < sizeof(buf); ++i)
-            assert(buf[i] == static_cast<char>(i + 1));
+            assert(static_cast<unsigned char>(buf[i]) == i + 1);
         *r.ptr = '\0';
 
 #ifndef TEST_HAS_NO_INT128
@@ -126,42 +126,53 @@ struct to_chars_test_base
         }
 
         auto ep = r.ptr - 1;
-        r = to_chars(buf, ep, v, args...);
+        r = std::to_chars(buf, ep, v, args...);
         assert(r.ptr == ep);
         assert(r.ec == std::errc::value_too_large);
     }
 
 private:
-    static long long fromchars_impl(char const* p, char const* ep, int base, true_type)
+    static TEST_CONSTEXPR_CXX23 long long fromchars_impl(char const* p, char const* ep, int base, true_type)
     {
         char* last;
-        auto r = strtoll(p, &last, base);
+        long long r;
+        if (TEST_IS_CONSTANT_EVALUATED)
+          last = const_cast<char*>(std::from_chars(p, ep, r, base).ptr);
+        else
+          r = strtoll(p, &last, base);
         assert(last == ep);
 
         return r;
     }
 
-    static unsigned long long fromchars_impl(char const* p, char const* ep, int base, false_type)
+    static TEST_CONSTEXPR_CXX23 unsigned long long fromchars_impl(char const* p, char const* ep, int base, false_type)
     {
         char* last;
-        auto r = strtoull(p, &last, base);
+        unsigned long long r;
+        if (TEST_IS_CONSTANT_EVALUATED)
+          last = const_cast<char*>(std::from_chars(p, ep, r, base).ptr);
+        else
+          r = strtoull(p, &last, base);
         assert(last == ep);
 
         return r;
     }
 #ifndef TEST_HAS_NO_INT128
-    static __int128_t fromchars128_impl(char const* p, char const* ep, int base, true_type)
+    static TEST_CONSTEXPR_CXX23 __int128_t fromchars128_impl(char const* p, char const* ep, int base, true_type)
     {
-        char* last;
-        __int128_t r = strtoll(p, &last, base);
-        if(errno != ERANGE) {
-            assert(last == ep);
-            return r;
+        if (!TEST_IS_CONSTANT_EVALUATED) {
+            char* last;
+            __int128_t r = strtoll(p, &last, base);
+            if(errno != ERANGE) {
+                assert(last == ep);
+                return r;
+            }
         }
 
         // When the value doesn't fit in a long long use from_chars. This is
         // not ideal since it does a round-trip test instead if using an
         // external source.
+        __int128_t r;
         std::from_chars_result s = std::from_chars(p, ep, r, base);
         assert(s.ec == std::errc{});
         assert(s.ptr == ep);
@@ -169,15 +180,18 @@ private:
         return r;
     }
 
-    static __uint128_t fromchars128_impl(char const* p, char const* ep, int base, false_type)
+    static TEST_CONSTEXPR_CXX23 __uint128_t fromchars128_impl(char const* p, char const* ep, int base, false_type)
     {
-        char* last;
-        __uint128_t r = strtoull(p, &last, base);
-        if(errno != ERANGE) {
-            assert(last == ep);
-            return r;
+        if (!TEST_IS_CONSTANT_EVALUATED) {
+            char* last;
+            __uint128_t r = strtoull(p, &last, base);
+            if(errno != ERANGE) {
+                assert(last == ep);
+                return r;
+            }
         }
 
+        __uint128_t r;
         std::from_chars_result s = std::from_chars(p, ep, r, base);
         assert(s.ec == std::errc{});
         assert(s.ptr == ep);
@@ -185,7 +199,7 @@ private:
         return r;
     }
 
-    static auto fromchars128_impl(char const* p, char const* ep, int base = 10)
+    static TEST_CONSTEXPR_CXX23 auto fromchars128_impl(char const* p, char const* ep, int base = 10)
     -> decltype(fromchars128_impl(p, ep, base, std::is_signed<X>()))
     {
         return fromchars128_impl(p, ep, base, std::is_signed<X>());
@@ -193,7 +207,7 @@ private:
 
 #endif
 
-    static auto fromchars_impl(char const* p, char const* ep, int base = 10)
+    static TEST_CONSTEXPR_CXX23 auto fromchars_impl(char const* p, char const* ep, int base = 10)
     -> decltype(fromchars_impl(p, ep, base, std::is_signed<X>()))
     {
         return fromchars_impl(p, ep, base, std::is_signed<X>());
@@ -206,29 +220,27 @@ template <typename X>
 struct roundtrip_test_base
 {
     template <typename T, typename... Ts>
-    void test(T v, Ts... args)
+    TEST_CONSTEXPR_CXX23 void test(T v, Ts... args)
     {
-        using std::from_chars;
-        using std::to_chars;
         std::from_chars_result r2;
         std::to_chars_result r;
         X x = 0xc;
 
         if (fits_in<X>(v))
         {
-            r = to_chars(buf, buf + sizeof(buf), v, args...);
+            r = std::to_chars(buf, buf + sizeof(buf), v, args...);
             assert(r.ec == std::errc{});
 
-            r2 = from_chars(buf, r.ptr, x, args...);
+            r2 = std::from_chars(buf, r.ptr, x, args...);
             assert(r2.ptr == r.ptr);
             assert(x == X(v));
         }
         else
         {
-            r = to_chars(buf, buf + sizeof(buf), v, args...);
+            r = std::to_chars(buf, buf + sizeof(buf), v, args...);
             assert(r.ec == std::errc{});
 
-            r2 = from_chars(buf, r.ptr, x, args...);
+            r2 = std::from_chars(buf, r.ptr, x, args...);
 
             TEST_DIAGNOSTIC_PUSH
             TEST_MSVC_DIAGNOSTIC_IGNORED(4127) // conditional expression is constant
@@ -303,7 +315,7 @@ auto all_unsigned = type_list<
 auto integrals = concat(all_signed, all_unsigned);
 
 template <template <typename> class Fn, typename... Ts>
-void
+TEST_CONSTEXPR_CXX23 void
 run(type_list<Ts...>)
 {
     int ls[sizeof...(Ts)] = {(Fn<Ts>{}(), 0)...};

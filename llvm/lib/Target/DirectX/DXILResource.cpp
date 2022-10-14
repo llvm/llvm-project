@@ -99,21 +99,21 @@ StringRef ResourceBase::getComponentTypeName(ComponentType CompType) {
 }
 
 void ResourceBase::printComponentType(Kinds Kind, ComponentType CompType,
-                                      unsigned alignment, raw_ostream &OS) {
+                                      unsigned Alignment, raw_ostream &OS) {
   switch (Kind) {
   default:
     // TODO: add vector size.
-    OS << right_justify(getComponentTypeName(CompType), alignment);
+    OS << right_justify(getComponentTypeName(CompType), Alignment);
     break;
   case Kinds::RawBuffer:
-    OS << right_justify("byte", alignment);
+    OS << right_justify("byte", Alignment);
     break;
   case Kinds::StructuredBuffer:
-    OS << right_justify("struct", alignment);
+    OS << right_justify("struct", Alignment);
     break;
   case Kinds::CBuffer:
   case Kinds::Sampler:
-    OS << right_justify("NA", alignment);
+    OS << right_justify("NA", Alignment);
     break;
   case Kinds::Invalid:
   case Kinds::NumEntries:
@@ -165,37 +165,37 @@ StringRef ResourceBase::getKindName(Kinds Kind) {
   }
 }
 
-void ResourceBase::printKind(Kinds Kind, unsigned alignment, raw_ostream &OS,
+void ResourceBase::printKind(Kinds Kind, unsigned Alignment, raw_ostream &OS,
                              bool SRV, bool HasCounter, uint32_t SampleCount) {
   switch (Kind) {
   default:
-    OS << right_justify(getKindName(Kind), alignment);
+    OS << right_justify(getKindName(Kind), Alignment);
     break;
 
   case Kinds::RawBuffer:
   case Kinds::StructuredBuffer:
     if (SRV)
-      OS << right_justify("r/o", alignment);
+      OS << right_justify("r/o", Alignment);
     else {
       if (!HasCounter)
-        OS << right_justify("r/w", alignment);
+        OS << right_justify("r/w", Alignment);
       else
-        OS << right_justify("r/w+cnt", alignment);
+        OS << right_justify("r/w+cnt", Alignment);
     }
     break;
   case Kinds::TypedBuffer:
-    OS << right_justify("buf", alignment);
+    OS << right_justify("buf", Alignment);
     break;
   case Kinds::Texture2DMS:
   case Kinds::Texture2DMSArray: {
-    std::string dimName = getKindName(Kind).str();
+    std::string DimName = getKindName(Kind).str();
     if (SampleCount)
-      dimName += std::to_string(SampleCount);
-    OS << right_justify(dimName, alignment);
+      DimName += std::to_string(SampleCount);
+    OS << right_justify(DimName, Alignment);
   } break;
   case Kinds::CBuffer:
   case Kinds::Sampler:
-    OS << right_justify("NA", alignment);
+    OS << right_justify("NA", Alignment);
     break;
   case Kinds::Invalid:
   case Kinds::NumEntries:
@@ -287,7 +287,7 @@ void UAVResource::parseSourceType(StringRef S) {
     ExtProps.ElementType = ElTy;
 }
 
-MDNode *ResourceBase::ExtendedProperties::write(LLVMContext &Ctx) {
+MDNode *ResourceBase::ExtendedProperties::write(LLVMContext &Ctx) const {
   IRBuilder<> B(Ctx);
   SmallVector<Metadata *> Entries;
   if (ElementType) {
@@ -302,7 +302,7 @@ MDNode *ResourceBase::ExtendedProperties::write(LLVMContext &Ctx) {
 }
 
 void ResourceBase::write(LLVMContext &Ctx,
-                         MutableArrayRef<Metadata *> Entries) {
+                         MutableArrayRef<Metadata *> Entries) const {
   IRBuilder<> B(Ctx);
   Entries[0] = ConstantAsMetadata::get(B.getInt32(ID));
   Entries[1] = ConstantAsMetadata::get(GV);
@@ -312,7 +312,7 @@ void ResourceBase::write(LLVMContext &Ctx,
   Entries[5] = ConstantAsMetadata::get(B.getInt32(RangeSize));
 }
 
-MDNode *UAVResource::write() {
+MDNode *UAVResource::write() const {
   auto &Ctx = GV->getContext();
   IRBuilder<> B(Ctx);
   Metadata *Entries[11];
@@ -326,7 +326,7 @@ MDNode *UAVResource::write() {
   return MDNode::get(Ctx, Entries);
 }
 
-void Resources::write(Module &M) {
+void Resources::write(Module &M) const {
   Metadata *ResourceMDs[4] = {nullptr, nullptr, nullptr, nullptr};
   SmallVector<Metadata *> UAVMDs;
   for (auto &UAV : UAVs)

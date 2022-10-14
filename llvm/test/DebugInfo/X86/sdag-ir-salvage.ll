@@ -20,22 +20,20 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-linux-gnu"
 
-define i8 @f(i32* %foo) local_unnamed_addr !dbg !6 {
+define i8 @f(ptr %foo) local_unnamed_addr !dbg !6 {
 entry:
-  %bar = getelementptr i32, i32* %foo, i32 4
-  %baz = bitcast i32* %bar to i8*
-  %quux = load i8, i8* %baz
+  %bar = getelementptr i32, ptr %foo, i32 4
+  %quux = load i8, ptr %bar
   br label %next
 
 next:                                             ; preds = %entry
-  tail call void @llvm.dbg.value(metadata i8* %baz, metadata !15, metadata !DIExpression()), !dbg !30
+  tail call void @llvm.dbg.value(metadata ptr %bar, metadata !15, metadata !DIExpression()), !dbg !30
   %xyzzy = add i8 %quux, 123
   br label %fin
 
 fin:                                              ; preds = %next
-  %trains = getelementptr i32, i32* %foo, i32 3
-  %planes = bitcast i32* %trains to i8*
-  %cars = load i8, i8* %planes
+  %trains = getelementptr i32, ptr %foo, i32 3
+  %cars = load i8, ptr %trains
   %ret = add i8 %xyzzy, %cars
   ret i8 %ret
 }

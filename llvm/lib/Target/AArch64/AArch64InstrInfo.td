@@ -142,6 +142,8 @@ def HasSMEF64        : Predicate<"Subtarget->hasSMEF64()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEF64), "sme-f64">;
 def HasSMEI64        : Predicate<"Subtarget->hasSMEI64()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEI64), "sme-i64">;
+def HasSME2          : Predicate<"Subtarget->hasSME2()">,
+                                 AssemblerPredicate<(all_of FeatureSME2), "sme2">;
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVEorSME
@@ -319,7 +321,6 @@ def SDT_AArch64uaddlp : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 
 def SDT_AArch64ldp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64ldnp : SDTypeProfile<2, 1, [SDTCisVT<0, v4i32>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
-def SDT_AArch64ldnp128 : SDTypeProfile<2, 1, [SDTCisVT<0, v2i32>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stnp : SDTypeProfile<0, 3, [SDTCisVT<0, v4i32>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 
@@ -733,7 +734,6 @@ def AArch64uunpklo : SDNode<"AArch64ISD::UUNPKLO", SDT_AArch64unpk>;
 
 def AArch64ldp : SDNode<"AArch64ISD::LDP", SDT_AArch64ldp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def AArch64ldnp : SDNode<"AArch64ISD::LDNP", SDT_AArch64ldnp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ldnp128 : SDNode<"AArch64ISD::LDNP128", SDT_AArch64ldnp128, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def AArch64stp : SDNode<"AArch64ISD::STP", SDT_AArch64stp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def AArch64stnp : SDNode<"AArch64ISD::STNP", SDT_AArch64stnp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
@@ -2595,9 +2595,6 @@ def : Pat<(AArch64ldp (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
 
 def : Pat<(AArch64ldnp (am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset)),
           (LDNPQi GPR64sp:$Rn, simm7s16:$offset)>;
-
-def : Pat<(AArch64ldnp128 (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
-          (LDNPDi GPR64sp:$Rn, simm7s8:$offset)>;
 //---
 // (register offset)
 //---
@@ -4260,6 +4257,7 @@ let isPseudo = 1 in {
   def SEH_PrologEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EpilogStart : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EpilogEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SEH_PACSignLR : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
 // Pseudo instructions for Windows EH

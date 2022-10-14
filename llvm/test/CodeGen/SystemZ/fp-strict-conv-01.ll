@@ -26,11 +26,11 @@ define float @f1(double %d1, double %d2) #0 {
 }
 
 ; Test f128->f32.
-define float @f2(fp128 *%ptr) #0 {
+define float @f2(ptr %ptr) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK: lexbr %f0, %f0
 ; CHECK: br %r14
-  %val = load fp128, fp128 *%ptr
+  %val = load fp128, ptr %ptr
   %res = call float @llvm.experimental.constrained.fptrunc.f32.f128(
                                                fp128 %val,
                                                metadata !"round.dynamic",
@@ -40,13 +40,13 @@ define float @f2(fp128 *%ptr) #0 {
 
 ; Make sure that we don't use %f0 as the destination of LEXBR when %f2
 ; is still live.
-define void @f3(float *%dst, fp128 *%ptr, float %d1, float %d2) #0 {
+define void @f3(ptr %dst, ptr %ptr, float %d1, float %d2) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK: lexbr %f1, %f1
 ; CHECK: aebr %f1, %f2
 ; CHECK: ste %f1, 0(%r2)
 ; CHECK: br %r14
-  %val = load fp128, fp128 *%ptr
+  %val = load fp128, ptr %ptr
   %conv = call float @llvm.experimental.constrained.fptrunc.f32.f128(
                                                fp128 %val,
                                                metadata !"round.dynamic",
@@ -55,16 +55,16 @@ define void @f3(float *%dst, fp128 *%ptr, float %d1, float %d2) #0 {
                         float %conv, float %d2,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  store float %res, float *%dst
+  store float %res, ptr %dst
   ret void
 }
 
 ; Test f128->f64.
-define double @f4(fp128 *%ptr) #0 {
+define double @f4(ptr %ptr) #0 {
 ; CHECK-LABEL: f4:
 ; CHECK: ldxbr %f0, %f0
 ; CHECK: br %r14
-  %val = load fp128, fp128 *%ptr
+  %val = load fp128, ptr %ptr
   %res = call double @llvm.experimental.constrained.fptrunc.f64.f128(
                                                fp128 %val,
                                                metadata !"round.dynamic",
@@ -73,7 +73,7 @@ define double @f4(fp128 *%ptr) #0 {
 }
 
 ; Like f3, but for f128->f64.
-define void @f5(double *%dst, fp128 *%ptr, double %d1, double %d2) #0 {
+define void @f5(ptr %dst, ptr %ptr, double %d1, double %d2) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK: ldxbr %f1, %f1
 ; CHECK-SCALAR: adbr %f1, %f2
@@ -81,7 +81,7 @@ define void @f5(double *%dst, fp128 *%ptr, double %d1, double %d2) #0 {
 ; CHECK-VECTOR: wfadb [[REG:%f[0-9]+]], %f1, %f2
 ; CHECK-VECTOR: std [[REG]], 0(%r2)
 ; CHECK: br %r14
-  %val = load fp128, fp128 *%ptr
+  %val = load fp128, ptr %ptr
   %conv = call double @llvm.experimental.constrained.fptrunc.f64.f128(
                                                fp128 %val,
                                                metadata !"round.dynamic",
@@ -90,7 +90,7 @@ define void @f5(double *%dst, fp128 *%ptr, double %d1, double %d2) #0 {
                         double %conv, double %d2,
                         metadata !"round.dynamic",
                         metadata !"fpexcept.strict") #0
-  store double %res, double *%dst
+  store double %res, ptr %dst
   ret void
 }
 

@@ -203,7 +203,7 @@ inline unsigned getRankOfShapeType(mlir::Type t) {
 }
 
 /// Get the memory reference type of the data pointer from the box type,
-inline mlir::Type boxMemRefType(fir::BoxType t) {
+inline mlir::Type boxMemRefType(fir::BaseBoxType t) {
   auto eleTy = t.getEleTy();
   if (!eleTy.isa<fir::PointerType, fir::HeapType>())
     eleTy = fir::ReferenceType::get(t);

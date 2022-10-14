@@ -18,8 +18,8 @@
 using namespace clang;
 using namespace clang::interp;
 
-InterpFrame::InterpFrame(InterpState &S, Function *Func, InterpFrame *Caller,
-                         CodePtr RetPC, Pointer &&This)
+InterpFrame::InterpFrame(InterpState &S, const Function *Func,
+                         InterpFrame *Caller, CodePtr RetPC, Pointer &&This)
     : Caller(Caller), S(S), Func(Func), This(std::move(This)), RetPC(RetPC),
       ArgSize(Func ? Func->getArgSize() : 0),
       Args(static_cast<char *>(S.Stk.top())), FrameOffset(S.Stk.size()) {
@@ -31,6 +31,36 @@ InterpFrame::InterpFrame(InterpState &S, Function *Func, InterpFrame *Caller,
           Block *B = new (localBlock(Local.Offset)) Block(Local.Desc);
           B->invokeCtor();
         }
+      }
+    }
+  }
+}
+
+InterpFrame::InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC)
+    : Caller(S.Current), S(S), Func(Func), RetPC(RetPC),
+      ArgSize(Func ? Func->getArgSize() : 0),
+      Args(static_cast<char *>(S.Stk.top())), FrameOffset(S.Stk.size()) {
+  assert(Func);
+
+  // As per our calling convention, the this pointer is
+  // part of the ArgSize.
+  // If the function has RVO, the RVO pointer is first.
+  // If the fuction has a This pointer, that one is next.
+  // Then follow the actual arguments (but those are handled
+  // in getParamPointer()).
+  if (Func->hasThisPointer()) {
+    if (Func->hasRVO())
+      This = stackRef<Pointer>(sizeof(Pointer));
+    else
+      This = stackRef<Pointer>(0);
+  }
+
+  if (unsigned FrameSize = Func->getFrameSize()) {
+    Locals = std::make_unique<char[]>(FrameSize);
+    for (auto &Scope : Func->scopes()) {
+      for (auto &Local : Scope.locals()) {
+        Block *B = new (localBlock(Local.Offset)) Block(Local.Desc);
+        B->invokeCtor();
       }
     }
   }

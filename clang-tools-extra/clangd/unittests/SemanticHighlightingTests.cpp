@@ -828,6 +828,14 @@ sizeof...($TemplateParameter[[Elements]]);
         typedef int $Primitive_decl[[MyTypedef]];
         enum $Enum_decl[[MyEnum]] : $Primitive[[MyTypedef]] {};
       )cpp",
+      // Using enum
+      R"cpp(
+      enum class $Enum_decl[[Color]] { $EnumConstant_decl_readonly[[Black]] };
+      namespace $Namespace_decl[[ns]] {
+        using enum $Enum[[Color]];
+        $Enum[[Color]] $Variable_decl[[ModelT]] = $EnumConstant[[Black]];
+      }
+      )cpp",
       // Issue 1096
       R"cpp(
         void $Function_decl[[Foo]]();
@@ -845,6 +853,17 @@ sizeof...($TemplateParameter[[Elements]]);
       R"cpp(
         void $Function_decl[[Foo]]() {
             const char *$LocalVariable_decl_readonly[[s]] = $LocalVariable_readonly_static[[__func__]];
+        }
+      )cpp",
+      // Issue 1022: readonly modifier for generic parameter
+      R"cpp(
+        template <typename $TemplateParameter_decl[[T]]>
+        auto $Function_decl[[foo]](const $TemplateParameter[[T]] $Parameter_decl_readonly[[template_type]], 
+                                   const $TemplateParameter[[auto]] $Parameter_decl_readonly[[auto_type]], 
+                                   const int $Parameter_decl_readonly[[explicit_type]]) {
+            return $Parameter_readonly[[template_type]] 
+                 + $Parameter_readonly[[auto_type]] 
+                 + $Parameter_readonly[[explicit_type]];
         }
       )cpp",
       // Explicit template specialization

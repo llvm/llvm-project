@@ -1,4 +1,4 @@
-; RUN: opt -S -indvars < %s | FileCheck %s
+; RUN: opt -S -passes=indvars < %s | FileCheck %s
 
 ; PR12627
 define void @test1(i32 %x) nounwind uwtable ssp {

@@ -7,7 +7,7 @@ define void @fun() {
 ; CHECK: vperm
 ; CHECK-NOT: vperm
 bb:
-  %tmp = load <4 x i8>, <4 x i8>* undef
+  %tmp = load <4 x i8>, ptr undef
   %tmp1 = icmp eq <4 x i8> zeroinitializer, %tmp
   %tmp2 = extractelement <4 x i1> %tmp1, i32 0
   br i1 %tmp2, label %bb1, label %bb2

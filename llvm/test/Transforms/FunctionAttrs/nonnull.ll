@@ -4,166 +4,165 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-declare nonnull i8* @ret_nonnull()
+declare nonnull ptr @ret_nonnull()
 
 ; Return a pointer trivially nonnull (call return attribute)
-define i8* @test1() {
-; FNATTR: define nonnull i8* @test1
-  %ret = call i8* @ret_nonnull()
-  ret i8* %ret
+define ptr @test1() {
+; FNATTR: define nonnull ptr @test1
+  %ret = call ptr @ret_nonnull()
+  ret ptr %ret
 }
 
 ; Return a pointer trivially nonnull (argument attribute)
-define i8* @test2(i8* nonnull %p) {
-; FNATTR: define nonnull i8* @test2
-  ret i8* %p
+define ptr @test2(ptr nonnull %p) {
+; FNATTR: define nonnull ptr @test2
+  ret ptr %p
 }
 
 ; Given an SCC where one of the functions can not be marked nonnull,
 ; can we still mark the other one which is trivially nonnull
-define i8* @scc_binder(i1 %c) {
-; FNATTR: define i8* @scc_binder
+define ptr @scc_binder(i1 %c) {
+; FNATTR: define ptr @scc_binder
   br i1 %c, label %rec, label %end
 rec:
-  call i8* @test3(i1 %c)
+  call ptr @test3(i1 %c)
   br label %end
 end:
-  ret i8* null
+  ret ptr null
 }
 
-define i8* @test3(i1 %c) {
-; FNATTR: define nonnull i8* @test3
-  call i8* @scc_binder(i1 %c)
-  %ret = call i8* @ret_nonnull()
-  ret i8* %ret
+define ptr @test3(i1 %c) {
+; FNATTR: define nonnull ptr @test3
+  call ptr @scc_binder(i1 %c)
+  %ret = call ptr @ret_nonnull()
+  ret ptr %ret
 }
 
 ; Given a mutual recursive set of functions, we can mark them
 ; nonnull if neither can ever return null.  (In this case, they
 ; just never return period.)
-define i8* @test4_helper() {
-; FNATTR: define noalias nonnull i8* @test4_helper
-  %ret = call i8* @test4()
-  ret i8* %ret
+define ptr @test4_helper() {
+; FNATTR: define noalias nonnull ptr @test4_helper
+  %ret = call ptr @test4()
+  ret ptr %ret
 }
 
-define i8* @test4() {
-; FNATTR: define noalias nonnull i8* @test4
-  %ret = call i8* @test4_helper()
-  ret i8* %ret
+define ptr @test4() {
+; FNATTR: define noalias nonnull ptr @test4
+  %ret = call ptr @test4_helper()
+  ret ptr %ret
 }
 
 ; Given a mutual recursive set of functions which *can* return null
 ; make sure we haven't marked them as nonnull.
-define i8* @test5_helper(i1 %c) {
-; FNATTR: define noalias i8* @test5_helper
+define ptr @test5_helper(i1 %c) {
+; FNATTR: define noalias ptr @test5_helper
   br i1 %c, label %rec, label %end
 rec:
-  %ret = call i8* @test5(i1 %c)
+  %ret = call ptr @test5(i1 %c)
   br label %end
 end:
-  ret i8* null
+  ret ptr null
 }
 
-define i8* @test5(i1 %c) {
-; FNATTR: define noalias i8* @test5
-  %ret = call i8* @test5_helper(i1 %c)
-  ret i8* %ret
+define ptr @test5(i1 %c) {
+; FNATTR: define noalias ptr @test5
+  %ret = call ptr @test5_helper(i1 %c)
+  ret ptr %ret
 }
 
 ; Local analysis, but going through a self recursive phi
-define i8* @test6a() {
+define ptr @test6a() {
 entry:
-  %ret = call i8* @ret_nonnull()
+  %ret = call ptr @ret_nonnull()
   br label %loop
 loop:
-  %phi = phi i8* [%ret, %entry], [%phi, %loop]
+  %phi = phi ptr [%ret, %entry], [%phi, %loop]
   br i1 undef, label %loop, label %exit
 exit:
-  ret i8* %phi
+  ret ptr %phi
 }
 
-define i8* @test6b(i1 %c) {
+define ptr @test6b(i1 %c) {
 entry:
-  %ret = call i8* @ret_nonnull()
+  %ret = call ptr @ret_nonnull()
   br label %loop
 loop:
-  %phi = phi i8* [%ret, %entry], [%phi, %loop]
+  %phi = phi ptr [%ret, %entry], [%phi, %loop]
   br i1 %c, label %loop, label %exit
 exit:
-  ret i8* %phi
+  ret ptr %phi
 }
 
-; FNATTR: define i8* @test7
-define i8* @test7(i8* %a) {
-  %b = getelementptr inbounds i8, i8* %a, i64 0
-  ret i8* %b
+; FNATTR: define ptr @test7
+define ptr @test7(ptr %a) {
+  ret ptr %a
 }
 
-; FNATTR: define nonnull i8* @test8
-define i8* @test8(i8* %a) {
-  %b = getelementptr inbounds i8, i8* %a, i64 1
-  ret i8* %b
+; FNATTR: define nonnull ptr @test8
+define ptr @test8(ptr %a) {
+  %b = getelementptr inbounds i8, ptr %a, i64 1
+  ret ptr %b
 }
 
-; FNATTR: define i8* @test9
-define i8* @test9(i8* %a, i64 %n) {
-  %b = getelementptr inbounds i8, i8* %a, i64 %n
-  ret i8* %b
+; FNATTR: define ptr @test9
+define ptr @test9(ptr %a, i64 %n) {
+  %b = getelementptr inbounds i8, ptr %a, i64 %n
+  ret ptr %b
 }
 
 declare void @llvm.assume(i1)
-; FNATTR: define i8* @test10
+; FNATTR: define ptr @test10
 ; FIXME: missing nonnull
-define i8* @test10(i8* %a, i64 %n) {
+define ptr @test10(ptr %a, i64 %n) {
   %cmp = icmp ne i64 %n, 0
   call void @llvm.assume(i1 %cmp)
-  %b = getelementptr inbounds i8, i8* %a, i64 %n
-  ret i8* %b
+  %b = getelementptr inbounds i8, ptr %a, i64 %n
+  ret ptr %b
 }
 
 ; TEST 11
 ; char* test11(char *p) {
 ;   return p? p: nonnull();
 ; }
-; FNATTR: define i8* @test11
+; FNATTR: define ptr @test11
 ; FIXME: missing nonnull
-define i8* @test11(i8*) local_unnamed_addr {
-  %2 = icmp eq i8* %0, null
+define ptr @test11(ptr) local_unnamed_addr {
+  %2 = icmp eq ptr %0, null
   br i1 %2, label %3, label %5
 
 ; <label>:3:                                      ; preds = %1
-  %4 = tail call i8* @ret_nonnull()
+  %4 = tail call ptr @ret_nonnull()
   br label %5
 
 ; <label>:5:                                      ; preds = %3, %1
-  %6 = phi i8* [ %4, %3 ], [ %0, %1 ]
-  ret i8* %6
+  %6 = phi ptr [ %4, %3 ], [ %0, %1 ]
+  ret ptr %6
 }
 
 ; TEST 12
 ; Simple CallSite Test
-declare void @test12_helper(i8*)
-define void @test12(i8* nonnull %a) {
-  tail call void @test12_helper(i8* %a)
+declare void @test12_helper(ptr)
+define void @test12(ptr nonnull %a) {
+  tail call void @test12_helper(ptr %a)
   ret void
 }
 
 ; TEST 13
 ; Simple Argument Tests
-declare i8* @unknown()
+declare ptr @unknown()
 define void @test13_helper() {
-  %nonnullptr = tail call i8* @ret_nonnull()
-  %maybenullptr = tail call i8* @unknown()
-  tail call void @test13(i8* %nonnullptr, i8* %nonnullptr, i8* %maybenullptr)
-  tail call void @test13(i8* %nonnullptr, i8* %maybenullptr, i8* %nonnullptr)
+  %nonnullptr = tail call ptr @ret_nonnull()
+  %maybenullptr = tail call ptr @unknown()
+  tail call void @test13(ptr %nonnullptr, ptr %nonnullptr, ptr %maybenullptr)
+  tail call void @test13(ptr %nonnullptr, ptr %maybenullptr, ptr %nonnullptr)
   ret void
 }
-define internal void @test13(i8* %a, i8* %b, i8* %c) {
+define internal void @test13(ptr %a, ptr %b, ptr %c) {
   ret void
 }
 
-declare nonnull i8* @nonnull()
+declare nonnull ptr @nonnull()
 
 ; TEST 14
 ; Complex propagation
@@ -171,83 +170,83 @@ declare nonnull i8* @nonnull()
 
 ; * Argument
 ; 1. In f1:bb6, %arg can be marked with nonnull because of the comparison in bb1
-; 2. Because f2 is internal function, f2(i32* %arg) -> @f2(i32* nonnull %arg)
+; 2. Because f2 is internal function, f2(ptr %arg) -> @f2(ptr nonnull %arg)
 ; 3. In f1:bb4 %tmp5 is nonnull and f3 is internal function.
-;    Then, f3(i32* %arg) -> @f3(i32* nonnull %arg)
-; 4. We get nonnull in whole f1 call sites so f1(i32* %arg) -> @f1(i32* nonnull %arg)
+;    Then, f3(ptr %arg) -> @f3(ptr nonnull %arg)
+; 4. We get nonnull in whole f1 call sites so f1(ptr %arg) -> @f1(ptr nonnull %arg)
 
 
-define internal i32* @f1(i32* %arg) {
-; FIXME: missing nonnull It should be nonnull @f1(i32* nonnull readonly %arg)
+define internal ptr @f1(ptr %arg) {
+; FIXME: missing nonnull It should be nonnull @f1(ptr nonnull readonly %arg)
 
 bb:
-  %tmp = icmp eq i32* %arg, null
+  %tmp = icmp eq ptr %arg, null
   br i1 %tmp, label %bb9, label %bb1
 
 bb1:                                              ; preds = %bb
-  %tmp2 = load i32, i32* %arg, align 4
+  %tmp2 = load i32, ptr %arg, align 4
   %tmp3 = icmp eq i32 %tmp2, 0
   br i1 %tmp3, label %bb6, label %bb4
 
 bb4:                                              ; preds = %bb1
-  %tmp5 = getelementptr inbounds i32, i32* %arg, i64 1
-  %tmp5b = tail call i32* @f3(i32* %tmp5)
-  %tmp5c = getelementptr inbounds i32, i32* %tmp5b, i64 -1
+  %tmp5 = getelementptr inbounds i32, ptr %arg, i64 1
+  %tmp5b = tail call ptr @f3(ptr %tmp5)
+  %tmp5c = getelementptr inbounds i32, ptr %tmp5b, i64 -1
   br label %bb9
 
 bb6:                                              ; preds = %bb1
-; FIXME: missing nonnull. It should be @f2(i32* nonnull %arg)
-  %tmp7 = tail call i32* @f2(i32* %arg)
-  ret i32* %tmp7
+; FIXME: missing nonnull. It should be @f2(ptr nonnull %arg)
+  %tmp7 = tail call ptr @f2(ptr %arg)
+  ret ptr %tmp7
 
 bb9:                                              ; preds = %bb4, %bb
-  %tmp10 = phi i32* [ %tmp5c, %bb4 ], [ inttoptr (i64 4 to i32*), %bb ]
-  ret i32* %tmp10
+  %tmp10 = phi ptr [ %tmp5c, %bb4 ], [ inttoptr (i64 4 to ptr), %bb ]
+  ret ptr %tmp10
 }
 
-define internal i32* @f2(i32* %arg) {
-; FIXME: missing nonnull. It should be nonnull @f2(i32* nonnull %arg)
+define internal ptr @f2(ptr %arg) {
+; FIXME: missing nonnull. It should be nonnull @f2(ptr nonnull %arg)
 bb:
 
-; FIXME: missing nonnull. It should be @f1(i32* nonnull readonly %arg)
-  %tmp = tail call i32* @f1(i32* %arg)
-  ret i32* %tmp
+; FIXME: missing nonnull. It should be @f1(ptr nonnull readonly %arg)
+  %tmp = tail call ptr @f1(ptr %arg)
+  ret ptr %tmp
 }
 
-define dso_local noalias i32* @f3(i32* %arg) {
-; FIXME: missing nonnull. It should be nonnull @f3(i32* nonnull readonly %arg)
+define dso_local noalias ptr @f3(ptr %arg) {
+; FIXME: missing nonnull. It should be nonnull @f3(ptr nonnull readonly %arg)
 bb:
-; FIXME: missing nonnull. It should be @f1(i32* nonnull readonly %arg)
-  %tmp = call i32* @f1(i32* %arg)
-  ret i32* %tmp
+; FIXME: missing nonnull. It should be @f1(ptr nonnull readonly %arg)
+  %tmp = call ptr @f1(ptr %arg)
+  ret ptr %tmp
 }
 
 ; TEST 15
-define void @f15(i8* %arg) {
+define void @f15(ptr %arg) {
 
-  tail call void @use1(i8* dereferenceable(4) %arg)
+  tail call void @use1(ptr dereferenceable(4) %arg)
   ret void
 }
 
 declare void @fun0() #1
-declare void @fun1(i8*) #1
-declare void @fun2(i8*, i8*) #1
-declare void @fun3(i8*, i8*, i8*) #1
+declare void @fun1(ptr) #1
+declare void @fun2(ptr, ptr) #1
+declare void @fun3(ptr, ptr, ptr) #1
 ; TEST 16 simple path test
 ; if(..)
 ;   fun2(nonnull %a, nonnull %b)
 ; else
 ;   fun2(nonnull %a, %b)
 ; We can say that %a is nonnull but %b is not.
-define void @f16(i8* %a, i8 * %b, i8 %c) {
+define void @f16(ptr %a, ptr %b, i8 %c) {
 ; FIXME: missing nonnull on %a
   %cmp = icmp eq i8 %c, 0
   br i1 %cmp, label %if.then, label %if.else
 if.then:
-  tail call void @fun2(i8* nonnull %a, i8* nonnull %b)
+  tail call void @fun2(ptr nonnull %a, ptr nonnull %b)
   ret void
 if.else:
-  tail call void @fun2(i8* nonnull %a, i8* %b)
+  tail call void @fun2(ptr nonnull %a, ptr %b)
   ret void
 }
 ; TEST 17 explore child BB test
@@ -257,7 +256,7 @@ if.else:
 ;    ... (willreturn & nounwind)
 ; fun1(nonnull %a)
 ; We can say that %a is nonnull
-define void @f17(i8* %a, i8 %c) {
+define void @f17(ptr %a, i8 %c) {
   %cmp = icmp eq i8 %c, 0
   br i1 %cmp, label %if.then, label %if.else
 if.then:
@@ -267,7 +266,7 @@ if.else:
   tail call void @fun0()
   br label %cont
 cont:
-  tail call void @fun1(i8* nonnull %a)
+  tail call void @fun1(ptr nonnull %a)
   ret void
 }
 ; TEST 18 More complex test
@@ -281,7 +280,7 @@ cont:
 ;    ... (willreturn & nounwind)
 ; fun1(nonnull %a)
 
-define void @f18(i8* %a, i8* %b, i8 %c) {
+define void @f18(ptr %a, ptr %b, i8 %c) {
   %cmp1 = icmp eq i8 %c, 0
   br i1 %cmp1, label %if.then, label %if.else
 if.then:
@@ -294,109 +293,109 @@ cont:
   %cmp2 = icmp eq i8 %c, 1
   br i1 %cmp2, label %cont.then, label %cont.else
 cont.then:
-  tail call void @fun1(i8* nonnull %b)
+  tail call void @fun1(ptr nonnull %b)
   br label %cont2
 cont.else:
   tail call void @fun0()
   br label %cont2
 cont2:
-  tail call void @fun1(i8* nonnull %a)
+  tail call void @fun1(ptr nonnull %a)
   ret void
 }
 
 ; TEST 19: Loop
 
-define void @f19(i8* %a, i8* %b, i8 %c) {
+define void @f19(ptr %a, ptr %b, i8 %c) {
 ; FIXME: missing nonnull on %b
   br label %loop.header
 loop.header:
   %cmp2 = icmp eq i8 %c, 0
   br i1 %cmp2, label %loop.body, label %loop.exit
 loop.body:
-  tail call void @fun1(i8* nonnull %b)
-  tail call void @fun1(i8* nonnull %a)
+  tail call void @fun1(ptr nonnull %b)
+  tail call void @fun1(ptr nonnull %a)
   br label %loop.header
 loop.exit:
-  tail call void @fun1(i8* nonnull %b)
+  tail call void @fun1(ptr nonnull %b)
   ret void
 }
 
 ; Test propagation of nonnull callsite args back to caller.
 
-declare void @use1(i8* %x)
-declare void @use2(i8* %x, i8* %y);
-declare void @use3(i8* %x, i8* %y, i8* %z);
+declare void @use1(ptr %x)
+declare void @use2(ptr %x, ptr %y);
+declare void @use3(ptr %x, ptr %y, ptr %z);
 
-declare void @use1nonnull(i8* nonnull noundef %x);
-declare void @use1nonnull_without_noundef(i8* nonnull %x);
-declare void @use2nonnull(i8* nonnull noundef %x, i8* nonnull noundef %y);
-declare void @use3nonnull(i8* nonnull noundef %x, i8* nonnull noundef %y, i8* nonnull noundef %z);
+declare void @use1nonnull(ptr nonnull noundef %x);
+declare void @use1nonnull_without_noundef(ptr nonnull %x);
+declare void @use2nonnull(ptr nonnull noundef %x, ptr nonnull noundef %y);
+declare void @use3nonnull(ptr nonnull noundef %x, ptr nonnull noundef %y, ptr nonnull noundef %z);
 
-declare i8 @use1safecall(i8* %x) nounwind willreturn ; nounwind+willreturn guarantees that execution continues to successor
+declare i8 @use1safecall(ptr %x) nounwind willreturn ; nounwind+willreturn guarantees that execution continues to successor
 
 ; Without noundef, nonnull cannot be propagated to the parent
 
-define void @parent_poison(i8* %a) {
-; FNATTR-LABEL: @parent_poison(i8* %a)
-  call void @use1nonnull_without_noundef(i8* %a)
+define void @parent_poison(ptr %a) {
+; FNATTR-LABEL: @parent_poison(ptr %a)
+  call void @use1nonnull_without_noundef(ptr %a)
   ret void
 }
 
 ; Can't extend non-null to parent for any argument because the 2nd call is not guaranteed to execute.
 
-define void @parent1(i8* %a, i8* %b, i8* %c) {
-; FNATTR-LABEL: @parent1(i8* %a, i8* %b, i8* %c)
-; FNATTR-NEXT:    call void @use3(i8* %c, i8* %a, i8* %b)
-; FNATTR-NEXT:    call void @use3nonnull(i8* %b, i8* %c, i8* %a)
+define void @parent1(ptr %a, ptr %b, ptr %c) {
+; FNATTR-LABEL: @parent1(ptr %a, ptr %b, ptr %c)
+; FNATTR-NEXT:    call void @use3(ptr %c, ptr %a, ptr %b)
+; FNATTR-NEXT:    call void @use3nonnull(ptr %b, ptr %c, ptr %a)
 ; FNATTR-NEXT:    ret void
-  call void @use3(i8* %c, i8* %a, i8* %b)
-  call void @use3nonnull(i8* %b, i8* %c, i8* %a)
+  call void @use3(ptr %c, ptr %a, ptr %b)
+  call void @use3nonnull(ptr %b, ptr %c, ptr %a)
   ret void
 }
 
 ; Extend non-null to parent for all arguments.
 
-define void @parent2(i8* %a, i8* %b, i8* %c) {
-; FNATTR-LABEL: @parent2(i8* nonnull %a, i8* nonnull %b, i8* nonnull %c)
-; FNATTR-NEXT:    call void @use3nonnull(i8* %b, i8* %c, i8* %a)
-; FNATTR-NEXT:    call void @use3(i8* %c, i8* %a, i8* %b)
+define void @parent2(ptr %a, ptr %b, ptr %c) {
+; FNATTR-LABEL: @parent2(ptr nonnull %a, ptr nonnull %b, ptr nonnull %c)
+; FNATTR-NEXT:    call void @use3nonnull(ptr %b, ptr %c, ptr %a)
+; FNATTR-NEXT:    call void @use3(ptr %c, ptr %a, ptr %b)
 
 
 ; FNATTR-NEXT:    ret void
-  call void @use3nonnull(i8* %b, i8* %c, i8* %a)
-  call void @use3(i8* %c, i8* %a, i8* %b)
+  call void @use3nonnull(ptr %b, ptr %c, ptr %a)
+  call void @use3(ptr %c, ptr %a, ptr %b)
   ret void
 }
 
 ; Extend non-null to parent for 1st argument.
 
-define void @parent3(i8* %a, i8* %b, i8* %c) {
-; FNATTR-LABEL: @parent3(i8* nonnull %a, i8* %b, i8* %c)
-; FNATTR-NEXT:    call void @use1nonnull(i8* %a)
-; FNATTR-NEXT:    call void @use3(i8* %c, i8* %b, i8* %a)
+define void @parent3(ptr %a, ptr %b, ptr %c) {
+; FNATTR-LABEL: @parent3(ptr nonnull %a, ptr %b, ptr %c)
+; FNATTR-NEXT:    call void @use1nonnull(ptr %a)
+; FNATTR-NEXT:    call void @use3(ptr %c, ptr %b, ptr %a)
 
 
 ; FNATTR-NEXT:  ret void
 
-  call void @use1nonnull(i8* %a)
-  call void @use3(i8* %c, i8* %b, i8* %a)
+  call void @use1nonnull(ptr %a)
+  call void @use3(ptr %c, ptr %b, ptr %a)
   ret void
 }
 
 ; Extend non-null to parent for last 2 arguments.
 
-define void @parent4(i8* %a, i8* %b, i8* %c) {
-; CHECK-LABEL: @parent4(i8* %a, i8* nonnull %b, i8* nonnull %c)
-; CHECK-NEXT:    call void @use2nonnull(i8* %c, i8* %b)
-; CHECK-NEXT:    call void @use2(i8* %a, i8* %c)
-; CHECK-NEXT:    call void @use1(i8* %b)
+define void @parent4(ptr %a, ptr %b, ptr %c) {
+; CHECK-LABEL: @parent4(ptr %a, ptr nonnull %b, ptr nonnull %c)
+; CHECK-NEXT:    call void @use2nonnull(ptr %c, ptr %b)
+; CHECK-NEXT:    call void @use2(ptr %a, ptr %c)
+; CHECK-NEXT:    call void @use1(ptr %b)
 
 
 ; FNATTR: ret void
 
-  call void @use2nonnull(i8* %c, i8* %b)
-  call void @use2(i8* %a, i8* %c)
-  call void @use1(i8* %b)
+  call void @use2nonnull(ptr %c, ptr %b)
+  call void @use2(ptr %a, ptr %c)
+  call void @use1(ptr %b)
   ret void
 }
 
@@ -404,18 +403,18 @@ define void @parent4(i8* %a, i8* %b, i8* %c) {
 ; It appears benign to extend non-null to the parent in this case, but we can't do that
 ; because it would incorrectly propagate the wrong information to its callers.
 
-define void @parent5(i8* %a, i1 %a_is_notnull) {
-; FNATTR: @parent5(i8* %a, i1 %a_is_notnull)
+define void @parent5(ptr %a, i1 %a_is_notnull) {
+; FNATTR: @parent5(ptr %a, i1 %a_is_notnull)
 ; FNATTR-NEXT:    br i1 %a_is_notnull, label %t, label %f
 ; FNATTR:       t:
-; FNATTR-NEXT:    call void @use1nonnull(i8* %a)
+; FNATTR-NEXT:    call void @use1nonnull(ptr %a)
 ; FNATTR-NEXT:    ret void
 ; FNATTR:       f:
 ; FNATTR-NEXT:    ret void
 
   br i1 %a_is_notnull, label %t, label %f
 t:
-  call void @use1nonnull(i8* %a)
+  call void @use1nonnull(ptr %a)
   ret void
 f:
   ret void
@@ -424,30 +423,30 @@ f:
 ; The callsite must execute in order for the attribute to transfer to the parent.
 ; The volatile load can't trap, so we can guarantee that we'll get to the call.
 
-define i8 @parent6(i8* %a, i8* %b) {
-; FNATTR-LABEL: @parent6(i8* nonnull %a, i8* %b)
-; FNATTR-NEXT:    [[C:%.*]] = load volatile i8, i8* %b
-; FNATTR-NEXT:    call void @use1nonnull(i8* %a)
+define i8 @parent6(ptr %a, ptr %b) {
+; FNATTR-LABEL: @parent6(ptr nonnull %a, ptr %b)
+; FNATTR-NEXT:    [[C:%.*]] = load volatile i8, ptr %b
+; FNATTR-NEXT:    call void @use1nonnull(ptr %a)
 ; FNATTR-NEXT:    ret i8 [[C]]
 
-  %c = load volatile i8, i8* %b
-  call void @use1nonnull(i8* %a)
+  %c = load volatile i8, ptr %b
+  call void @use1nonnull(ptr %a)
   ret i8 %c
 }
 
 ; The nonnull callsite is guaranteed to execute, so the argument must be nonnull throughout the parent.
 
-define i8 @parent7(i8* %a) {
-; FNATTR-LABEL: @parent7(i8* nonnull %a)
-; FNATTR-NEXT:    [[RET:%.*]] = call i8 @use1safecall(i8* %a)
-; FNATTR-NEXT:    call void @use1nonnull(i8* %a)
+define i8 @parent7(ptr %a) {
+; FNATTR-LABEL: @parent7(ptr nonnull %a)
+; FNATTR-NEXT:    [[RET:%.*]] = call i8 @use1safecall(ptr %a)
+; FNATTR-NEXT:    call void @use1nonnull(ptr %a)
 
 
 
 ; FNATTR-NEXT: ret i8 [[RET]]
 
-  %ret = call i8 @use1safecall(i8* %a)
-  call void @use1nonnull(i8* %a)
+  %ret = call i8 @use1safecall(ptr %a)
+  call void @use1nonnull(ptr %a)
   ret i8 %ret
 }
 
@@ -455,99 +454,99 @@ define i8 @parent7(i8* %a) {
 
 declare i32 @esfp(...)
 
-define i1 @parent8(i8* %a, i8* %bogus1, i8* %b) personality i8* bitcast (i32 (...)* @esfp to i8*){
-; FNATTR-LABEL: @parent8(i8* nonnull %a, i8* nocapture readnone %bogus1, i8* nonnull %b)
+define i1 @parent8(ptr %a, ptr %bogus1, ptr %b) personality ptr @esfp{
+; FNATTR-LABEL: @parent8(ptr nonnull %a, ptr nocapture readnone %bogus1, ptr nonnull %b)
 ; FNATTR-NEXT:  entry:
-; FNATTR-NEXT:    invoke void @use2nonnull(i8* %a, i8* %b)
+; FNATTR-NEXT:    invoke void @use2nonnull(ptr %a, ptr %b)
 ; FNATTR-NEXT:    to label %cont unwind label %exc
 ; FNATTR:       cont:
-; FNATTR-NEXT:    [[NULL_CHECK:%.*]] = icmp eq i8* %b, null
+; FNATTR-NEXT:    [[NULL_CHECK:%.*]] = icmp eq ptr %b, null
 ; FNATTR-NEXT:    ret i1 [[NULL_CHECK]]
 ; FNATTR:       exc:
-; FNATTR-NEXT:    [[LP:%.*]] = landingpad { i8*, i32 }
-; FNATTR-NEXT:    filter [0 x i8*] zeroinitializer
+; FNATTR-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
+; FNATTR-NEXT:    filter [0 x ptr] zeroinitializer
 ; FNATTR-NEXT:    unreachable
 
 entry:
-  invoke void @use2nonnull(i8* %a, i8* %b)
+  invoke void @use2nonnull(ptr %a, ptr %b)
   to label %cont unwind label %exc
 
 cont:
-  %null_check = icmp eq i8* %b, null
+  %null_check = icmp eq ptr %b, null
   ret i1 %null_check
 
 exc:
-  %lp = landingpad { i8*, i32 }
-  filter [0 x i8*] zeroinitializer
+  %lp = landingpad { ptr, i32 }
+  filter [0 x ptr] zeroinitializer
   unreachable
 }
 
-; FNATTR: define nonnull i32* @gep1(
-define i32* @gep1(i32* %p) {
-  %q = getelementptr inbounds i32, i32* %p, i32 1
-  ret i32* %q
+; FNATTR: define nonnull ptr @gep1(
+define ptr @gep1(ptr %p) {
+  %q = getelementptr inbounds i32, ptr %p, i32 1
+  ret ptr %q
 }
 
-define i32* @gep1_no_null_opt(i32* %p) #0 {
+define ptr @gep1_no_null_opt(ptr %p) #0 {
 ; Should't be able to derive nonnull based on gep.
-; FNATTR: define i32* @gep1_no_null_opt(
-  %q = getelementptr inbounds i32, i32* %p, i32 1
-  ret i32* %q
+; FNATTR: define ptr @gep1_no_null_opt(
+  %q = getelementptr inbounds i32, ptr %p, i32 1
+  ret ptr %q
 }
 
-; FNATTR: define i32 addrspace(3)* @gep2(
-define i32 addrspace(3)* @gep2(i32 addrspace(3)* %p) {
-  %q = getelementptr inbounds i32, i32 addrspace(3)* %p, i32 1
-  ret i32 addrspace(3)* %q
+; FNATTR: define ptr addrspace(3) @gep2(
+define ptr addrspace(3) @gep2(ptr addrspace(3) %p) {
+  %q = getelementptr inbounds i32, ptr addrspace(3) %p, i32 1
+  ret ptr addrspace(3) %q
 }
 
-; FNATTR:     define i32 addrspace(3)* @as(i32 addrspace(3)* readnone returned dereferenceable(4) %p)
+; FNATTR:     define ptr addrspace(3) @as(ptr addrspace(3) readnone returned dereferenceable(4) %p)
 ; FIXME: We should propagate dereferenceable here but *not* nonnull
-define i32 addrspace(3)* @as(i32 addrspace(3)* dereferenceable(4) %p) {
-  ret i32 addrspace(3)* %p
+define ptr addrspace(3) @as(ptr addrspace(3) dereferenceable(4) %p) {
+  ret ptr addrspace(3) %p
 }
 
-; FNATTR: define internal nonnull i32* @g2()
-define internal i32* @g2() {
-  ret i32* inttoptr (i64 4 to i32*)
+; FNATTR: define internal nonnull ptr @g2()
+define internal ptr @g2() {
+  ret ptr inttoptr (i64 4 to ptr)
 }
 
-define  i32* @g1() {
- %c = call i32* @g2()
-  ret i32* %c
+define  ptr @g1() {
+ %c = call ptr @g2()
+  ret ptr %c
 }
 
-declare void @use_i32_ptr(i32*) readnone nounwind
-define internal void @called_by_weak(i32* %a) {
-  call void @use_i32_ptr(i32* %a)
+declare void @use_i32_ptr(ptr) readnone nounwind
+define internal void @called_by_weak(ptr %a) {
+  call void @use_i32_ptr(ptr %a)
   ret void
 }
 
 ; Check we do not annotate the function interface of this weak function.
-define weak_odr void @weak_caller(i32* nonnull %a) {
-  call void @called_by_weak(i32* %a)
+define weak_odr void @weak_caller(ptr nonnull %a) {
+  call void @called_by_weak(ptr %a)
   ret void
 }
 
 ; Expect nonnull
-define internal void @control(i32* dereferenceable(4) %a) {
-  call void @use_i32_ptr(i32* %a)
+define internal void @control(ptr dereferenceable(4) %a) {
+  call void @use_i32_ptr(ptr %a)
   ret void
 }
 ; Avoid nonnull as we do not touch naked functions
-define internal void @naked(i32* dereferenceable(4) %a) naked {
-  call void @use_i32_ptr(i32* %a)
+define internal void @naked(ptr dereferenceable(4) %a) naked {
+  call void @use_i32_ptr(ptr %a)
   ret void
 }
 ; Avoid nonnull as we do not touch optnone
-define internal void @optnone(i32* dereferenceable(4) %a) optnone noinline {
-  call void @use_i32_ptr(i32* %a)
+define internal void @optnone(ptr dereferenceable(4) %a) optnone noinline {
+  call void @use_i32_ptr(ptr %a)
   ret void
 }
-define void @make_live(i32* nonnull dereferenceable(8) %a) {
-  call void @naked(i32* nonnull dereferenceable(8) align 16 %a)
-  call void @control(i32* nonnull dereferenceable(8) align 16 %a)
-  call void @optnone(i32* nonnull dereferenceable(8) align 16 %a)
+define void @make_live(ptr nonnull dereferenceable(8) %a) {
+  call void @naked(ptr nonnull dereferenceable(8) align 16 %a)
+  call void @control(ptr nonnull dereferenceable(8) align 16 %a)
+  call void @optnone(ptr nonnull dereferenceable(8) align 16 %a)
   ret void
 }
 
@@ -557,20 +556,20 @@ define void @make_live(i32* nonnull dereferenceable(8) %a) {
 ;  }
 ;  return g(nonnull u);
 ;}
-declare void @h(i32*) willreturn nounwind
-declare i32 @g(i32*) willreturn nounwind
-define i32 @nonnull_exec_ctx_1(i32* %a, i32 %b) {
+declare void @h(ptr) willreturn nounwind
+declare i32 @g(ptr) willreturn nounwind
+define i32 @nonnull_exec_ctx_1(ptr %a, i32 %b) {
 ; FNATTR-LABEL: define {{[^@]+}}@nonnull_exec_ctx_1
-; FNATTR-SAME: (i32* [[A:%.*]], i32 [[B:%.*]])
+; FNATTR-SAME: (ptr [[A:%.*]], i32 [[B:%.*]])
 ; FNATTR-NEXT:  en:
 ; FNATTR-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B:%.*]], 0
 ; FNATTR-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; FNATTR:       ex:
-; FNATTR-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A:%.*]])
+; FNATTR-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A:%.*]])
 ; FNATTR-NEXT:    ret i32 [[TMP5]]
 ; FNATTR:       hd:
 ; FNATTR-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
-; FNATTR-NEXT:    tail call void @h(i32* [[A]])
+; FNATTR-NEXT:    tail call void @h(ptr [[A]])
 ; FNATTR-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
 ; FNATTR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
 ; FNATTR-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
@@ -581,29 +580,29 @@ en:
   br i1 %tmp3, label %ex, label %hd
 
 ex:
-  %tmp5 = tail call i32 @g(i32* nonnull %a)
+  %tmp5 = tail call i32 @g(ptr nonnull %a)
   ret i32 %tmp5
 
 hd:
   %tmp7 = phi i32 [ %tmp8, %hd ], [ 0, %en ]
-  tail call void @h(i32* %a)
+  tail call void @h(ptr %a)
   %tmp8 = add nuw i32 %tmp7, 1
   %tmp9 = icmp eq i32 %tmp8, %b
   br i1 %tmp9, label %ex, label %hd
 }
 
-define i32 @nonnull_exec_ctx_1b(i32* %a, i32 %b) {
+define i32 @nonnull_exec_ctx_1b(ptr %a, i32 %b) {
 ; FNATTR-LABEL: define {{[^@]+}}@nonnull_exec_ctx_1b
-; FNATTR-SAME: (i32* [[A:%.*]], i32 [[B:%.*]])
+; FNATTR-SAME: (ptr [[A:%.*]], i32 [[B:%.*]])
 ; FNATTR-NEXT:  en:
 ; FNATTR-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B:%.*]], 0
 ; FNATTR-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; FNATTR:       ex:
-; FNATTR-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A:%.*]])
+; FNATTR-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A:%.*]])
 ; FNATTR-NEXT:    ret i32 [[TMP5]]
 ; FNATTR:       hd:
 ; FNATTR-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
-; FNATTR-NEXT:    tail call void @h(i32* [[A]])
+; FNATTR-NEXT:    tail call void @h(ptr [[A]])
 ; FNATTR-NEXT:    br label [[HD2]]
 ; FNATTR:       hd2:
 ; FNATTR-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
@@ -616,12 +615,12 @@ en:
   br i1 %tmp3, label %ex, label %hd
 
 ex:
-  %tmp5 = tail call i32 @g(i32* nonnull %a)
+  %tmp5 = tail call i32 @g(ptr nonnull %a)
   ret i32 %tmp5
 
 hd:
   %tmp7 = phi i32 [ %tmp8, %hd2 ], [ 0, %en ]
-  tail call void @h(i32* %a)
+  tail call void @h(ptr %a)
   br label %hd2
 
 hd2:
@@ -630,18 +629,18 @@ hd2:
   br i1 %tmp9, label %ex, label %hd
 }
 
-define i32 @nonnull_exec_ctx_2(i32* %a, i32 %b) willreturn nounwind {
+define i32 @nonnull_exec_ctx_2(ptr %a, i32 %b) willreturn nounwind {
 ; FNATTR-LABEL: define {{[^@]+}}@nonnull_exec_ctx_2
-; FNATTR-SAME: (i32* [[A:%.*]], i32 [[B:%.*]])
+; FNATTR-SAME: (ptr [[A:%.*]], i32 [[B:%.*]])
 ; FNATTR-NEXT:  en:
 ; FNATTR-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B:%.*]], 0
 ; FNATTR-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; FNATTR:       ex:
-; FNATTR-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A:%.*]])
+; FNATTR-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A:%.*]])
 ; FNATTR-NEXT:    ret i32 [[TMP5]]
 ; FNATTR:       hd:
 ; FNATTR-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD]] ], [ 0, [[EN:%.*]] ]
-; FNATTR-NEXT:    tail call void @h(i32* [[A]])
+; FNATTR-NEXT:    tail call void @h(ptr [[A]])
 ; FNATTR-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
 ; FNATTR-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], [[B]]
 ; FNATTR-NEXT:    br i1 [[TMP9]], label [[EX]], label [[HD]]
@@ -652,29 +651,29 @@ en:
   br i1 %tmp3, label %ex, label %hd
 
 ex:
-  %tmp5 = tail call i32 @g(i32* nonnull %a)
+  %tmp5 = tail call i32 @g(ptr nonnull %a)
   ret i32 %tmp5
 
 hd:
   %tmp7 = phi i32 [ %tmp8, %hd ], [ 0, %en ]
-  tail call void @h(i32* %a)
+  tail call void @h(ptr %a)
   %tmp8 = add nuw i32 %tmp7, 1
   %tmp9 = icmp eq i32 %tmp8, %b
   br i1 %tmp9, label %ex, label %hd
 }
 
-define i32 @nonnull_exec_ctx_2b(i32* %a, i32 %b) willreturn nounwind {
+define i32 @nonnull_exec_ctx_2b(ptr %a, i32 %b) willreturn nounwind {
 ; FNATTR-LABEL: define {{[^@]+}}@nonnull_exec_ctx_2b
-; FNATTR-SAME: (i32* [[A:%.*]], i32 [[B:%.*]])
+; FNATTR-SAME: (ptr [[A:%.*]], i32 [[B:%.*]])
 ; FNATTR-NEXT:  en:
 ; FNATTR-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[B:%.*]], 0
 ; FNATTR-NEXT:    br i1 [[TMP3]], label [[EX:%.*]], label [[HD:%.*]]
 ; FNATTR:       ex:
-; FNATTR-NEXT:    [[TMP5:%.*]] = tail call i32 @g(i32* nonnull [[A:%.*]])
+; FNATTR-NEXT:    [[TMP5:%.*]] = tail call i32 @g(ptr nonnull [[A:%.*]])
 ; FNATTR-NEXT:    ret i32 [[TMP5]]
 ; FNATTR:       hd:
 ; FNATTR-NEXT:    [[TMP7:%.*]] = phi i32 [ [[TMP8:%.*]], [[HD2:%.*]] ], [ 0, [[EN:%.*]] ]
-; FNATTR-NEXT:    tail call void @h(i32* [[A]])
+; FNATTR-NEXT:    tail call void @h(ptr [[A]])
 ; FNATTR-NEXT:    br label [[HD2]]
 ; FNATTR:       hd2:
 ; FNATTR-NEXT:    [[TMP8]] = add nuw i32 [[TMP7]], 1
@@ -687,12 +686,12 @@ en:
   br i1 %tmp3, label %ex, label %hd
 
 ex:
-  %tmp5 = tail call i32 @g(i32* nonnull %a)
+  %tmp5 = tail call i32 @g(ptr nonnull %a)
   ret i32 %tmp5
 
 hd:
   %tmp7 = phi i32 [ %tmp8, %hd2 ], [ 0, %en ]
-  tail call void @h(i32* %a)
+  tail call void @h(ptr %a)
   br label %hd2
 
 hd2:
@@ -702,22 +701,22 @@ hd2:
 }
 
 ; Original from PR43833
-declare void @sink(i32*)
+declare void @sink(ptr)
 
 ; FIXME: the sink argument should be marked nonnull as in @PR43833_simple.
-define void @PR43833(i32* %0, i32 %1) {
+define void @PR43833(ptr %0, i32 %1) {
 ; FNATTR-LABEL: @PR43833(
 ; FNATTR-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[TMP1:%.*]], 1
 ; FNATTR-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP7:%.*]]
 ; FNATTR:       4:
 ; FNATTR-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP1]] to i64
-; FNATTR-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0:%.*]], i64 [[TMP5]]
+; FNATTR-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP0:%.*]], i64 [[TMP5]]
 ; FNATTR-NEXT:    br label [[TMP8:%.*]]
 ; FNATTR:       7:
 ; FNATTR-NEXT:    ret void
 ; FNATTR:       8:
 ; FNATTR-NEXT:    [[TMP9:%.*]] = phi i32 [ 1, [[TMP4]] ], [ [[TMP10:%.*]], [[TMP8]] ]
-; FNATTR-NEXT:    tail call void @sink(i32* [[TMP6]])
+; FNATTR-NEXT:    tail call void @sink(ptr [[TMP6]])
 ; FNATTR-NEXT:    [[TMP10]] = add nuw nsw i32 [[TMP9]], 1
 ; FNATTR-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP1]]
 ; FNATTR-NEXT:    br i1 [[TMP11]], label [[TMP7]], label [[TMP8]]
@@ -727,7 +726,7 @@ define void @PR43833(i32* %0, i32 %1) {
 
 4:                                                ; preds = %2
   %5 = zext i32 %1 to i64
-  %6 = getelementptr inbounds i32, i32* %0, i64 %5
+  %6 = getelementptr inbounds i32, ptr %0, i64 %5
   br label %8
 
 7:                                                ; preds = %8, %2
@@ -735,26 +734,26 @@ define void @PR43833(i32* %0, i32 %1) {
 
 8:                                                ; preds = %8, %4
   %9 = phi i32 [ 1, %4 ], [ %10, %8 ]
-  tail call void @sink(i32* %6)
+  tail call void @sink(ptr %6)
   %10 = add nuw nsw i32 %9, 1
   %11 = icmp eq i32 %10, %1
   br i1 %11, label %7, label %8
 }
 
 ; Adjusted from PR43833
-define void @PR43833_simple(i32* %0, i32 %1) {
+define void @PR43833_simple(ptr %0, i32 %1) {
 ; FNATTR-LABEL: @PR43833_simple(
 ; FNATTR-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP1:%.*]], 0
 ; FNATTR-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP7:%.*]]
 ; FNATTR:       4:
 ; FNATTR-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP1]] to i64
-; FNATTR-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[TMP0:%.*]], i64 [[TMP5]]
+; FNATTR-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP0:%.*]], i64 [[TMP5]]
 ; FNATTR-NEXT:    br label [[TMP8:%.*]]
 ; FNATTR:       7:
 ; FNATTR-NEXT:    ret void
 ; FNATTR:       8:
 ; FNATTR-NEXT:    [[TMP9:%.*]] = phi i32 [ 1, [[TMP4]] ], [ [[TMP10:%.*]], [[TMP8]] ]
-; FNATTR-NEXT:    tail call void @sink(i32* [[TMP6]])
+; FNATTR-NEXT:    tail call void @sink(ptr [[TMP6]])
 ; FNATTR-NEXT:    [[TMP10]] = add nuw nsw i32 [[TMP9]], 1
 ; FNATTR-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], [[TMP1]]
 ; FNATTR-NEXT:    br i1 [[TMP11]], label [[TMP7]], label [[TMP8]]
@@ -765,7 +764,7 @@ define void @PR43833_simple(i32* %0, i32 %1) {
 
 4:                                                ; preds = %2
   %5 = zext i32 %1 to i64
-  %6 = getelementptr inbounds i32, i32* %0, i64 %5
+  %6 = getelementptr inbounds i32, ptr %0, i64 %5
   br label %8
 
 7:                                                ; preds = %8, %2
@@ -773,7 +772,7 @@ define void @PR43833_simple(i32* %0, i32 %1) {
 
 8:                                                ; preds = %8, %4
   %9 = phi i32 [ 1, %4 ], [ %10, %8 ]
-  tail call void @sink(i32* %6)
+  tail call void @sink(ptr %6)
   %10 = add nuw nsw i32 %9, 1
   %11 = icmp eq i32 %10, %1
   br i1 %11, label %7, label %8

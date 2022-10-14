@@ -56,6 +56,60 @@ define i32 @smul24_i32(i32 %lhs, i32 %rhs) {
   ret i32 %mul
 }
 
+define <2 x i8> @mul_v1i16(<1 x i16> %arg) {
+; SI-LABEL: @mul_v1i16(
+; SI-NEXT:  BB:
+; SI-NEXT:    [[TMP0:%.*]] = extractelement <1 x i16> [[ARG:%.*]], i64 0
+; SI-NEXT:    [[TMP1:%.*]] = zext i16 [[TMP0]] to i32
+; SI-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.mul.u24(i32 [[TMP1]], i32 42)
+; SI-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i16
+; SI-NEXT:    [[MUL:%.*]] = insertelement <1 x i16> undef, i16 [[TMP3]], i64 0
+; SI-NEXT:    [[CAST:%.*]] = bitcast <1 x i16> [[MUL]] to <2 x i8>
+; SI-NEXT:    ret <2 x i8> [[CAST]]
+;
+; VI-LABEL: @mul_v1i16(
+; VI-NEXT:  BB:
+; VI-NEXT:    [[MUL:%.*]] = mul <1 x i16> [[ARG:%.*]], <i16 42>
+; VI-NEXT:    [[CAST:%.*]] = bitcast <1 x i16> [[MUL]] to <2 x i8>
+; VI-NEXT:    ret <2 x i8> [[CAST]]
+;
+; DISABLED-LABEL: @mul_v1i16(
+; DISABLED-NEXT:  BB:
+; DISABLED-NEXT:    [[MUL:%.*]] = mul <1 x i16> [[ARG:%.*]], <i16 42>
+; DISABLED-NEXT:    [[CAST:%.*]] = bitcast <1 x i16> [[MUL]] to <2 x i8>
+; DISABLED-NEXT:    ret <2 x i8> [[CAST]]
+;
+BB:
+  %mul = mul <1 x i16> %arg, <i16 42>
+  %cast = bitcast <1 x i16> %mul to <2 x i8>
+  ret <2 x i8> %cast
+}
+
+define <1 x i8> @mul_v1i8(<1 x i8> %arg) {
+; SI-LABEL: @mul_v1i8(
+; SI-NEXT:  BB:
+; SI-NEXT:    [[TMP0:%.*]] = extractelement <1 x i8> [[ARG:%.*]], i64 0
+; SI-NEXT:    [[TMP1:%.*]] = zext i8 [[TMP0]] to i32
+; SI-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.mul.u24(i32 [[TMP1]], i32 42)
+; SI-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
+; SI-NEXT:    [[MUL:%.*]] = insertelement <1 x i8> undef, i8 [[TMP3]], i64 0
+; SI-NEXT:    ret <1 x i8> [[MUL]]
+;
+; VI-LABEL: @mul_v1i8(
+; VI-NEXT:  BB:
+; VI-NEXT:    [[MUL:%.*]] = mul <1 x i8> [[ARG:%.*]], <i8 42>
+; VI-NEXT:    ret <1 x i8> [[MUL]]
+;
+; DISABLED-LABEL: @mul_v1i8(
+; DISABLED-NEXT:  BB:
+; DISABLED-NEXT:    [[MUL:%.*]] = mul <1 x i8> [[ARG:%.*]], <i8 42>
+; DISABLED-NEXT:    ret <1 x i8> [[MUL]]
+;
+BB:
+  %mul = mul <1 x i8> %arg, <i8 42>
+  ret <1 x i8> %mul
+}
+
 define <2 x i32> @smul24_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
 ; SI-LABEL: @smul24_v2i32(
 ; SI-NEXT:    [[SHL_LHS:%.*]] = shl <2 x i32> [[LHS:%.*]], <i32 8, i32 8>

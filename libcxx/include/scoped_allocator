@@ -125,19 +125,6 @@ template <class OuterA1, class OuterA2, class... InnerAllocs>
 #include <tuple>
 #include <version>
 
-#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#  include <atomic>
-#  include <climits>
-#  include <concepts>
-#  include <cstring>
-#  include <ctime>
-#  include <iterator>
-#  include <memory>
-#  include <ratio>
-#  include <stdexcept>
-#  include <variant>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
@@ -727,5 +714,18 @@ operator!=(const scoped_allocator_adaptor<_OuterA1, _InnerAllocs...>& __a,
 #endif // !defined(_LIBCPP_CXX03_LANG)
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <atomic>
+#  include <climits>
+#  include <concepts>
+#  include <cstring>
+#  include <ctime>
+#  include <iterator>
+#  include <memory>
+#  include <ratio>
+#  include <stdexcept>
+#  include <variant>
+#endif
 
 #endif // _LIBCPP_SCOPED_ALLOCATOR

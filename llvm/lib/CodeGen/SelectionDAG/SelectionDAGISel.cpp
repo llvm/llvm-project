@@ -1969,7 +1969,7 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
 
   while (i != e) {
     unsigned Flags = cast<ConstantSDNode>(InOps[i])->getZExtValue();
-    if (!InlineAsm::isMemKind(Flags)) {
+    if (!InlineAsm::isMemKind(Flags) && !InlineAsm::isFuncKind(Flags)) {
       // Just skip over this operand, copying the operands verbatim.
       Ops.insert(Ops.end(), InOps.begin()+i,
                  InOps.begin()+i+InlineAsm::getNumOperandRegisters(Flags) + 1);
@@ -1998,7 +1998,9 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
 
       // Add this to the output node.
       unsigned NewFlags =
-        InlineAsm::getFlagWord(InlineAsm::Kind_Mem, SelOps.size());
+          InlineAsm::isMemKind(Flags)
+              ? InlineAsm::getFlagWord(InlineAsm::Kind_Mem, SelOps.size())
+              : InlineAsm::getFlagWord(InlineAsm::Kind_Func, SelOps.size());
       NewFlags = InlineAsm::getFlagWordForMem(NewFlags, ConstraintID);
       Ops.push_back(CurDAG->getTargetConstant(NewFlags, DL, MVT::i32));
       llvm::append_range(Ops, SelOps);

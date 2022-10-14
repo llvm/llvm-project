@@ -5,39 +5,39 @@
 declare i32 @foo()
 
 ; Check subtraction of 1.
-define zeroext i1 @f1(i32 *%ptr) {
+define zeroext i1 @f1(ptr %ptr) {
 ; CHECK-LABEL: f1:
 ; CHECK: asi 0(%r2), -1
 ; CHECK: ipm [[REG:%r[0-5]]]
 ; CHECK: afi [[REG]], 1342177280
 ; CHECK: risbg %r2, [[REG]], 63, 191, 33
 ; CHECK: br %r14
-  %a = load i32, i32 *%ptr
+  %a = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 1)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%ptr
+  store i32 %val, ptr %ptr
   ret i1 %obit
 }
 
 ; Check the high end of the constant range.
-define zeroext i1 @f2(i32 *%ptr) {
+define zeroext i1 @f2(ptr %ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: asi 0(%r2), -128
 ; CHECK: ipm [[REG:%r[0-5]]]
 ; CHECK: afi [[REG]], 1342177280
 ; CHECK: risbg %r2, [[REG]], 63, 191, 33
 ; CHECK: br %r14
-  %a = load i32, i32 *%ptr
+  %a = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 128)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%ptr
+  store i32 %val, ptr %ptr
   ret i1 %obit
 }
 
 ; Check the next constant up, which must use an subtraction and a store.
-define zeroext i1 @f3(i32 %dummy, i32 *%ptr) {
+define zeroext i1 @f3(i32 %dummy, ptr %ptr) {
 ; CHECK-LABEL: f3:
 ; CHECK: l [[VAL:%r[0-5]]], 0(%r3)
 ; CHECK: ahi [[VAL]], -129
@@ -46,32 +46,32 @@ define zeroext i1 @f3(i32 %dummy, i32 *%ptr) {
 ; CHECK-DAG: afi [[REG]], 1342177280
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 33
 ; CHECK: br %r14
-  %a = load i32, i32 *%ptr
+  %a = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 129)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%ptr
+  store i32 %val, ptr %ptr
   ret i1 %obit
 }
 
 ; Check the low end of the constant range.
-define zeroext i1 @f4(i32 *%ptr) {
+define zeroext i1 @f4(ptr %ptr) {
 ; CHECK-LABEL: f4:
 ; CHECK: asi 0(%r2), 127
 ; CHECK: ipm [[REG:%r[0-5]]]
 ; CHECK: afi [[REG]], 1342177280
 ; CHECK: risbg %r2, [[REG]], 63, 191, 33
 ; CHECK: br %r14
-  %a = load i32, i32 *%ptr
+  %a = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 -127)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%ptr
+  store i32 %val, ptr %ptr
   ret i1 %obit
 }
 
 ; Check the next value down, with the same comment as f3.
-define zeroext i1 @f5(i32 %dummy, i32 *%ptr) {
+define zeroext i1 @f5(i32 %dummy, ptr %ptr) {
 ; CHECK-LABEL: f5:
 ; CHECK: l [[VAL:%r[0-5]]], 0(%r3)
 ; CHECK: ahi [[VAL]], 128
@@ -80,34 +80,34 @@ define zeroext i1 @f5(i32 %dummy, i32 *%ptr) {
 ; CHECK-DAG: afi [[REG]], 1342177280
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 33
 ; CHECK: br %r14
-  %a = load i32, i32 *%ptr
+  %a = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 -128)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%ptr
+  store i32 %val, ptr %ptr
   ret i1 %obit
 }
 
 ; Check the high end of the aligned ASI range.
-define zeroext i1 @f6(i32 *%base) {
+define zeroext i1 @f6(ptr %base) {
 ; CHECK-LABEL: f6:
 ; CHECK: asi 524284(%r2), -1
 ; CHECK: ipm [[REG:%r[0-5]]]
 ; CHECK: afi [[REG]], 1342177280
 ; CHECK: risbg %r2, [[REG]], 63, 191, 33
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%base, i64 131071
-  %a = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %base, i64 131071
+  %a = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 1)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%ptr
+  store i32 %val, ptr %ptr
   ret i1 %obit
 }
 
 ; Check the next word up, which must use separate address logic.
 ; Other sequences besides this one would be OK.
-define zeroext i1 @f7(i32 *%base) {
+define zeroext i1 @f7(ptr %base) {
 ; CHECK-LABEL: f7:
 ; CHECK: agfi %r2, 524288
 ; CHECK: asi 0(%r2), -1
@@ -115,35 +115,35 @@ define zeroext i1 @f7(i32 *%base) {
 ; CHECK: afi [[REG]], 1342177280
 ; CHECK: risbg %r2, [[REG]], 63, 191, 33
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%base, i64 131072
-  %a = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %base, i64 131072
+  %a = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 1)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%ptr
+  store i32 %val, ptr %ptr
   ret i1 %obit
 }
 
 ; Check the low end of the ASI range.
-define zeroext i1 @f8(i32 *%base) {
+define zeroext i1 @f8(ptr %base) {
 ; CHECK-LABEL: f8:
 ; CHECK: asi -524288(%r2), -1
 ; CHECK: ipm [[REG:%r[0-5]]]
 ; CHECK: afi [[REG]], 1342177280
 ; CHECK: risbg %r2, [[REG]], 63, 191, 33
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%base, i64 -131072
-  %a = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %base, i64 -131072
+  %a = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 1)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%ptr
+  store i32 %val, ptr %ptr
   ret i1 %obit
 }
 
 ; Check the next word down, which must use separate address logic.
 ; Other sequences besides this one would be OK.
-define zeroext i1 @f9(i32 *%base) {
+define zeroext i1 @f9(ptr %base) {
 ; CHECK-LABEL: f9:
 ; CHECK: agfi %r2, -524292
 ; CHECK: asi 0(%r2), -1
@@ -151,12 +151,12 @@ define zeroext i1 @f9(i32 *%base) {
 ; CHECK: afi [[REG]], 1342177280
 ; CHECK: risbg %r2, [[REG]], 63, 191, 33
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%base, i64 -131073
-  %a = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %base, i64 -131073
+  %a = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 1)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%ptr
+  store i32 %val, ptr %ptr
   ret i1 %obit
 }
 
@@ -171,37 +171,37 @@ define zeroext i1 @f10(i64 %base, i64 %index) {
 ; CHECK: br %r14
   %add1 = add i64 %base, %index
   %add2 = add i64 %add1, 4
-  %ptr = inttoptr i64 %add2 to i32 *
-  %a = load i32, i32 *%ptr
+  %ptr = inttoptr i64 %add2 to ptr
+  %a = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 1)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%ptr
+  store i32 %val, ptr %ptr
   ret i1 %obit
 }
 
 ; Check that subtracting 128 from a spilled value can use ASI.
-define zeroext i1 @f11(i32 *%ptr, i32 %sel) {
+define zeroext i1 @f11(ptr %ptr, i32 %sel) {
 ; CHECK-LABEL: f11:
 ; CHECK: asi {{[0-9]+}}(%r15), -128
 ; CHECK: br %r14
 entry:
-  %val0 = load volatile i32, i32 *%ptr
-  %val1 = load volatile i32, i32 *%ptr
-  %val2 = load volatile i32, i32 *%ptr
-  %val3 = load volatile i32, i32 *%ptr
-  %val4 = load volatile i32, i32 *%ptr
-  %val5 = load volatile i32, i32 *%ptr
-  %val6 = load volatile i32, i32 *%ptr
-  %val7 = load volatile i32, i32 *%ptr
-  %val8 = load volatile i32, i32 *%ptr
-  %val9 = load volatile i32, i32 *%ptr
-  %val10 = load volatile i32, i32 *%ptr
-  %val11 = load volatile i32, i32 *%ptr
-  %val12 = load volatile i32, i32 *%ptr
-  %val13 = load volatile i32, i32 *%ptr
-  %val14 = load volatile i32, i32 *%ptr
-  %val15 = load volatile i32, i32 *%ptr
+  %val0 = load volatile i32, ptr %ptr
+  %val1 = load volatile i32, ptr %ptr
+  %val2 = load volatile i32, ptr %ptr
+  %val3 = load volatile i32, ptr %ptr
+  %val4 = load volatile i32, ptr %ptr
+  %val5 = load volatile i32, ptr %ptr
+  %val6 = load volatile i32, ptr %ptr
+  %val7 = load volatile i32, ptr %ptr
+  %val8 = load volatile i32, ptr %ptr
+  %val9 = load volatile i32, ptr %ptr
+  %val10 = load volatile i32, ptr %ptr
+  %val11 = load volatile i32, ptr %ptr
+  %val12 = load volatile i32, ptr %ptr
+  %val13 = load volatile i32, ptr %ptr
+  %val14 = load volatile i32, ptr %ptr
+  %val15 = load volatile i32, ptr %ptr
 
   %test = icmp ne i32 %sel, 0
   br i1 %test, label %add, label %store
@@ -292,48 +292,48 @@ store:
   %new15 = phi i32 [ %val15, %entry ], [ %add15, %add ]
   %res = phi i1 [ 0, %entry ], [ %res15, %add ]
 
-  store volatile i32 %new0, i32 *%ptr
-  store volatile i32 %new1, i32 *%ptr
-  store volatile i32 %new2, i32 *%ptr
-  store volatile i32 %new3, i32 *%ptr
-  store volatile i32 %new4, i32 *%ptr
-  store volatile i32 %new5, i32 *%ptr
-  store volatile i32 %new6, i32 *%ptr
-  store volatile i32 %new7, i32 *%ptr
-  store volatile i32 %new8, i32 *%ptr
-  store volatile i32 %new9, i32 *%ptr
-  store volatile i32 %new10, i32 *%ptr
-  store volatile i32 %new11, i32 *%ptr
-  store volatile i32 %new12, i32 *%ptr
-  store volatile i32 %new13, i32 *%ptr
-  store volatile i32 %new14, i32 *%ptr
-  store volatile i32 %new15, i32 *%ptr
+  store volatile i32 %new0, ptr %ptr
+  store volatile i32 %new1, ptr %ptr
+  store volatile i32 %new2, ptr %ptr
+  store volatile i32 %new3, ptr %ptr
+  store volatile i32 %new4, ptr %ptr
+  store volatile i32 %new5, ptr %ptr
+  store volatile i32 %new6, ptr %ptr
+  store volatile i32 %new7, ptr %ptr
+  store volatile i32 %new8, ptr %ptr
+  store volatile i32 %new9, ptr %ptr
+  store volatile i32 %new10, ptr %ptr
+  store volatile i32 %new11, ptr %ptr
+  store volatile i32 %new12, ptr %ptr
+  store volatile i32 %new13, ptr %ptr
+  store volatile i32 %new14, ptr %ptr
+  store volatile i32 %new15, ptr %ptr
 
   ret i1 %res
 }
 
 ; Check that subtracting -127 from a spilled value can use ASI.
-define zeroext i1 @f12(i32 *%ptr, i32 %sel) {
+define zeroext i1 @f12(ptr %ptr, i32 %sel) {
 ; CHECK-LABEL: f12:
 ; CHECK: asi {{[0-9]+}}(%r15), 127
 ; CHECK: br %r14
 entry:
-  %val0 = load volatile i32, i32 *%ptr
-  %val1 = load volatile i32, i32 *%ptr
-  %val2 = load volatile i32, i32 *%ptr
-  %val3 = load volatile i32, i32 *%ptr
-  %val4 = load volatile i32, i32 *%ptr
-  %val5 = load volatile i32, i32 *%ptr
-  %val6 = load volatile i32, i32 *%ptr
-  %val7 = load volatile i32, i32 *%ptr
-  %val8 = load volatile i32, i32 *%ptr
-  %val9 = load volatile i32, i32 *%ptr
-  %val10 = load volatile i32, i32 *%ptr
-  %val11 = load volatile i32, i32 *%ptr
-  %val12 = load volatile i32, i32 *%ptr
-  %val13 = load volatile i32, i32 *%ptr
-  %val14 = load volatile i32, i32 *%ptr
-  %val15 = load volatile i32, i32 *%ptr
+  %val0 = load volatile i32, ptr %ptr
+  %val1 = load volatile i32, ptr %ptr
+  %val2 = load volatile i32, ptr %ptr
+  %val3 = load volatile i32, ptr %ptr
+  %val4 = load volatile i32, ptr %ptr
+  %val5 = load volatile i32, ptr %ptr
+  %val6 = load volatile i32, ptr %ptr
+  %val7 = load volatile i32, ptr %ptr
+  %val8 = load volatile i32, ptr %ptr
+  %val9 = load volatile i32, ptr %ptr
+  %val10 = load volatile i32, ptr %ptr
+  %val11 = load volatile i32, ptr %ptr
+  %val12 = load volatile i32, ptr %ptr
+  %val13 = load volatile i32, ptr %ptr
+  %val14 = load volatile i32, ptr %ptr
+  %val15 = load volatile i32, ptr %ptr
 
   %test = icmp ne i32 %sel, 0
   br i1 %test, label %add, label %store
@@ -424,37 +424,37 @@ store:
   %new15 = phi i32 [ %val15, %entry ], [ %add15, %add ]
   %res = phi i1 [ 0, %entry ], [ %res15, %add ]
 
-  store volatile i32 %new0, i32 *%ptr
-  store volatile i32 %new1, i32 *%ptr
-  store volatile i32 %new2, i32 *%ptr
-  store volatile i32 %new3, i32 *%ptr
-  store volatile i32 %new4, i32 *%ptr
-  store volatile i32 %new5, i32 *%ptr
-  store volatile i32 %new6, i32 *%ptr
-  store volatile i32 %new7, i32 *%ptr
-  store volatile i32 %new8, i32 *%ptr
-  store volatile i32 %new9, i32 *%ptr
-  store volatile i32 %new10, i32 *%ptr
-  store volatile i32 %new11, i32 *%ptr
-  store volatile i32 %new12, i32 *%ptr
-  store volatile i32 %new13, i32 *%ptr
-  store volatile i32 %new14, i32 *%ptr
-  store volatile i32 %new15, i32 *%ptr
+  store volatile i32 %new0, ptr %ptr
+  store volatile i32 %new1, ptr %ptr
+  store volatile i32 %new2, ptr %ptr
+  store volatile i32 %new3, ptr %ptr
+  store volatile i32 %new4, ptr %ptr
+  store volatile i32 %new5, ptr %ptr
+  store volatile i32 %new6, ptr %ptr
+  store volatile i32 %new7, ptr %ptr
+  store volatile i32 %new8, ptr %ptr
+  store volatile i32 %new9, ptr %ptr
+  store volatile i32 %new10, ptr %ptr
+  store volatile i32 %new11, ptr %ptr
+  store volatile i32 %new12, ptr %ptr
+  store volatile i32 %new13, ptr %ptr
+  store volatile i32 %new14, ptr %ptr
+  store volatile i32 %new15, ptr %ptr
 
   ret i1 %res
 }
 
 ; Check using the overflow result for a branch.
-define void @f13(i32 *%ptr) {
+define void @f13(ptr %ptr) {
 ; CHECK-LABEL: f13:
 ; CHECK: asi 0(%r2), -1
 ; CHECK: jgo foo@PLT
 ; CHECK: br %r14
-  %a = load i32, i32 *%ptr
+  %a = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 1)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%ptr
+  store i32 %val, ptr %ptr
   br i1 %obit, label %call, label %exit
 
 call:
@@ -466,16 +466,16 @@ exit:
 }
 
 ; ... and the same with the inverted direction.
-define void @f14(i32 *%ptr) {
+define void @f14(ptr %ptr) {
 ; CHECK-LABEL: f14:
 ; CHECK: asi 0(%r2), -1
 ; CHECK: jgno foo@PLT
 ; CHECK: br %r14
-  %a = load i32, i32 *%ptr
+  %a = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %a, i32 1)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%ptr
+  store i32 %val, ptr %ptr
   br i1 %obit, label %exit, label %call
 
 call:

@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 ;
 ; This loop has multiple exits, and the value of %b1 depends on which
 ; exit is taken. Indvars should correctly compute the exit values.

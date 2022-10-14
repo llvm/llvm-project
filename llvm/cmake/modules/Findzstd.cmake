@@ -3,6 +3,7 @@
 # If successful, the following variables will be defined:
 # zstd_INCLUDE_DIR
 # zstd_LIBRARY
+# zstd_STATIC_LIBRARY
 # zstd_FOUND
 #
 # Additionally, one of the following import targets will be defined:
@@ -19,6 +20,9 @@ endif()
 
 find_path(zstd_INCLUDE_DIR NAMES zstd.h)
 find_library(zstd_LIBRARY NAMES zstd zstd_static)
+find_library(zstd_STATIC_LIBRARY NAMES
+  zstd_static
+  "${CMAKE_STATIC_LIBRARY_PREFIX}zstd${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(
@@ -33,17 +37,19 @@ if(zstd_FOUND)
     set_target_properties(zstd::libzstd_shared PROPERTIES
           INTERFACE_INCLUDE_DIRECTORIES "${zstd_INCLUDE_DIR}"
           IMPORTED_LOCATION "${zstd_LIBRARY}")
+  else()
+    set(zstd_STATIC_LIBRARY "${zstd_LIBRARY}")
   endif()
-  if(zstd_LIBRARY MATCHES "${zstd_STATIC_LIBRARY_SUFFIX}$" AND
+  if(zstd_STATIC_LIBRARY MATCHES "${zstd_STATIC_LIBRARY_SUFFIX}$" AND
      NOT TARGET zstd::libzstd_static)
     add_library(zstd::libzstd_static STATIC IMPORTED)
     set_target_properties(zstd::libzstd_static PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES "${zstd_INCLUDE_DIR}"
-        IMPORTED_LOCATION "${zstd_LIBRARY}")
+        IMPORTED_LOCATION "${zstd_STATIC_LIBRARY}")
   endif()
 endif()
 
 unset(zstd_SHARED_LIBRARY_SUFFIX)
 unset(zstd_STATIC_LIBRARY_SUFFIX)
 
-mark_as_advanced(zstd_INCLUDE_DIR zstd_LIBRARY)
+mark_as_advanced(zstd_INCLUDE_DIR zstd_LIBRARY zstd_STATIC_LIBRARY)

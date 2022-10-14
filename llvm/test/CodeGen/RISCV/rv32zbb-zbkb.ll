@@ -296,33 +296,20 @@ define i32 @not_shl_one_i32(i32 %x) {
 }
 
 define i64 @not_shl_one_i64(i64 %x) {
-; RV32I-LABEL: not_shl_one_i64:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    li a1, 1
-; RV32I-NEXT:    sll a2, a1, a0
-; RV32I-NEXT:    addi a0, a0, -32
-; RV32I-NEXT:    sll a1, a1, a0
-; RV32I-NEXT:    slti a0, a0, 0
-; RV32I-NEXT:    neg a3, a0
-; RV32I-NEXT:    not a1, a1
-; RV32I-NEXT:    or a1, a3, a1
-; RV32I-NEXT:    not a2, a2
-; RV32I-NEXT:    addi a0, a0, -1
-; RV32I-NEXT:    or a0, a0, a2
-; RV32I-NEXT:    ret
-;
-; RV32ZBB-ZBKB-LABEL: not_shl_one_i64:
-; RV32ZBB-ZBKB:       # %bb.0:
-; RV32ZBB-ZBKB-NEXT:    addi a1, a0, -32
-; RV32ZBB-ZBKB-NEXT:    li a2, -2
-; RV32ZBB-ZBKB-NEXT:    rol a3, a2, a1
-; RV32ZBB-ZBKB-NEXT:    slti a4, a1, 0
-; RV32ZBB-ZBKB-NEXT:    neg a1, a4
-; RV32ZBB-ZBKB-NEXT:    or a1, a1, a3
-; RV32ZBB-ZBKB-NEXT:    rol a0, a2, a0
-; RV32ZBB-ZBKB-NEXT:    addi a2, a4, -1
-; RV32ZBB-ZBKB-NEXT:    or a0, a2, a0
-; RV32ZBB-ZBKB-NEXT:    ret
+; CHECK-LABEL: not_shl_one_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    sll a2, a1, a0
+; CHECK-NEXT:    addi a0, a0, -32
+; CHECK-NEXT:    slti a3, a0, 0
+; CHECK-NEXT:    neg a4, a3
+; CHECK-NEXT:    and a2, a4, a2
+; CHECK-NEXT:    sll a0, a1, a0
+; CHECK-NEXT:    addi a1, a3, -1
+; CHECK-NEXT:    and a1, a1, a0
+; CHECK-NEXT:    not a0, a2
+; CHECK-NEXT:    not a1, a1
+; CHECK-NEXT:    ret
   %1 = shl i64 1, %x
   %2 = xor i64 %1, -1
   ret i64 %2

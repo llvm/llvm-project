@@ -2,8 +2,8 @@
 
 @foo = dso_local global i32 42
 
-define dso_local i32* @get_foo() {
-  ret i32* @foo
+define dso_local ptr @get_foo() {
+  ret ptr @foo
 }
 
 ; CHECK: larl    %r2, foo{{$}}
