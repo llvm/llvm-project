@@ -1,4 +1,4 @@
-; RUN: opt -indvars -S < %s | FileCheck %s
+; RUN: opt -passes=indvars -S < %s | FileCheck %s
 
 ; Check that IndVarSimplify's result is not influenced by stray calls to
 ; ScalarEvolution in debug builds. However, -verify-indvars may still do
