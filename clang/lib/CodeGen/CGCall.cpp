@@ -1863,9 +1863,9 @@ void CodeGenModule::getDefaultFunctionAttributes(StringRef Name,
     if (LangOpts.ApproxFunc)
       FuncAttrs.addAttribute("approx-func-fp-math", "true");
     if ((LangOpts.FastMath ||
-         !LangOpts.FastMath && LangOpts.AllowFPReassoc && LangOpts.AllowRecip &&
-             !LangOpts.FiniteMathOnly && LangOpts.NoSignedZero &&
-             LangOpts.ApproxFunc) &&
+         (!LangOpts.FastMath && LangOpts.AllowFPReassoc &&
+          LangOpts.AllowRecip && !LangOpts.FiniteMathOnly &&
+          LangOpts.NoSignedZero && LangOpts.ApproxFunc)) &&
         LangOpts.getDefaultFPContractMode() != LangOptions::FPModeKind::FPM_Off)
       FuncAttrs.addAttribute("unsafe-fp-math", "true");
     if (CodeGenOpts.SoftFloat)
