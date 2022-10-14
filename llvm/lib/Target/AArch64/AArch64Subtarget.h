@@ -303,7 +303,8 @@ public:
   /// This function is design to compatible with the function def in other
   /// targets and escape build error about the virtual function def in base
   /// class TargetSubtargetInfo. Updeate me if AArch64 target need to use it.
-  unsigned char classifyGlobalFunctionReference(const GlobalValue *GV) const {
+  unsigned char
+  classifyGlobalFunctionReference(const GlobalValue *GV) const override {
     return 0;
   }
 
