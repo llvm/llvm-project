@@ -2851,6 +2851,14 @@ MaybeExpr ExpressionAnalyzer::Analyze(
     const parser::Expr::ComplexConstructor &x) {
   auto re{Analyze(std::get<0>(x.t).value())};
   auto im{Analyze(std::get<1>(x.t).value())};
+  if (re && re->Rank() > 0) {
+    context().Say(std::get<0>(x.t).value().source,
+        "Real part of complex constructor must be scalar"_err_en_US);
+  }
+  if (im && im->Rank() > 0) {
+    context().Say(std::get<1>(x.t).value().source,
+        "Imaginary part of complex constructor must be scalar"_err_en_US);
+  }
   if (re && im) {
     ConformabilityCheck(GetContextualMessages(), *re, *im);
   }
