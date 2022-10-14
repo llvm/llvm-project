@@ -17323,8 +17323,8 @@ provided.
 #define vec_ncipherlast_be __builtin_altivec_crypto_vncipherlast
 
 #ifdef __VSX__
-static __inline__ vector unsigned long long __attribute__((__always_inline__))
-__builtin_crypto_vsbox(vector unsigned long long __a) {
+static __inline__ vector unsigned char __attribute__((__always_inline__))
+__builtin_crypto_vsbox(vector unsigned char __a) {
   return __builtin_altivec_crypto_vsbox(__a);
 }
 
