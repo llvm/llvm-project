@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple i686 -verify %s
 // RUN: %clang_cc1 -verify=ref %s
+// RUN: %clang_cc1 -verify=ref -triple i686 %s
 
 // expected-no-diagnostics
 
