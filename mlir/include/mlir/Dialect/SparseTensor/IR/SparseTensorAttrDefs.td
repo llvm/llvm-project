@@ -145,7 +145,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     ins
     // A dimension level type for each dimension of the tensor type.
     ArrayRefParameter<
-      "SparseTensorEncodingAttr::DimLevelType",
+      "::mlir::sparse_tensor::DimLevelType",
       "per dimension level type"
       >: $dimLevelType,
     // A dimension order on the indices of this tensor type.
@@ -160,26 +160,6 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
 
   let genVerifyDecl = 1;
   let hasCustomAssemblyFormat = 1;
-
-  let extraClassDeclaration = [{
-    // Dimension level types. By default, each type has the unique and
-    // ordered properties. Alternatives properties are indicated by
-    // Nu (not-unique) and No (not-ordered).
-    //
-    // TODO: separate type and property in encoding
-    //
-    enum class DimLevelType : uint8_t {
-      Dense            = 4,  // 0b001_00
-      Compressed       = 8,  // 0b010_00
-      CompressedNu     = 9,  // 0b010_01
-      CompressedNo     = 10, // 0b010_10
-      CompressedNuNo   = 11, // 0b010_11
-      Singleton        = 16, // 0b100_00
-      SingletonNu      = 17, // 0b100_01
-      SingletonNo      = 18, // 0b100_10
-      SingletonNuNo    = 19, // 0b100_11
-    };
-  }];
 }
 
 def IsSparseTensorPred
