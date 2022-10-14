@@ -17,68 +17,68 @@ PERF_RECORD_MMAP2 2854748/2854748: [0x400000(0x1000) @ 0 00:1d 123291722 526021]
 
 ; CHECK:       [Probe]: FUNC: bar Index: 1  Type: Block
 ; CHECK-NEXT:  [Probe]: FUNC: bar Index: 4  Type: Block
-; CHECK-NEXT:      754: imull $2863311531, %edi, %eax
+; CHECK-NEXT:   201754: imull $2863311531, %edi, %eax
 
 ; CHECK:      <foo>:
 ; CHECK:       [Probe]: FUNC: foo Index: 1  Type: Block
 ; CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block
-; CHECK-NEXT:      770: movl  $1, %ecx
+; CHECK-NEXT:   201770: movl  $1, %ecx
 
 ; CHECK:       [Probe]: FUNC: foo Index: 5  Type: Block
-; CHECK-NEXT:      780: addl  $30, %esi
+; CHECK-NEXT:    201780: addl  $30, %esi
 ; CHECK:       [Probe]: FUNC: foo Index: 6  Type: Block
 ; CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block
-; CHECK-NEXT:      783: addl  $1, %ecx
+; CHECK-NEXT:   201783: addl  $1, %ecx
 
 ; CHECK:       [Probe]: FUNC: foo Index: 3  Type: Block
-; CHECK-NEXT:      78e:	movl	%ecx, %edx
+; CHECK-NEXT:   20178e:	movl	%ecx, %edx
 
 ; CHECK:       [Probe]: FUNC: foo Index: 4  Type: Block
 ; CHECK-NEXT:  [Probe]: FUNC: bar Index: 1  Type: Block  Inlined: @ foo:8
 ; CHECK-NEXT:  [Probe]:	FUNC: bar Index: 4  Type: Block  Inlined: @ foo:8
-; CHECK-NEXT:      7bf: addl  %ecx, %edx
+; CHECK-NEXT:   2017bf: addl  %ecx, %edx
 
 
 ; CHECK:       [Probe]: FUNC: foo Index: 6  Type: Block
 ; CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block
-; CHECK-NEXT:      7cf:	addl	$1, %ecx
+; CHECK-NEXT:   2017cf:	addl	$1, %ecx
 
 ; CHECK:       [Probe]: FUNC: foo Index: 7  Type: Block
-; CHECK-NEXT:      7de: movl  $2098432, %edi
+; CHECK-NEXT:   2017de: movl  $2098432, %edi
 
 ; CHECK:       [Probe]: FUNC: foo Index: 9  Type: DirectCall
-; CHECK-NEXT:      7e5: callq 0x930
+; CHECK-NEXT:   2017e5: callq 0x201930
 
 
 ; CHECK:      <main>:
 ; CHECK:       [Probe]: FUNC: main Index: 1  Type: Block
 ; CHECK-NEXT:  [Probe]: FUNC: foo Index: 1  Type: Block  Inlined: @ main:2
 ; CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block  Inlined: @ main:2
-; CHECK-NEXT:      7f0: movl  $1, %ecx
+; CHECK-NEXT:   2017f0: movl  $1, %ecx
 
 ; CHECK:       [Probe]: FUNC: foo Index: 5  Type: Block  Inlined: @ main:2
-; CHECK-NEXT:      800: addl  $30, %esi
+; CHECK-NEXT:   201800: addl  $30, %esi
 ; CHECK:       [Probe]: FUNC: foo Index: 6  Type: Block  Inlined: @ main:2
 ; CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block  Inlined: @ main:2
-; CHECK-NEXT:      803: addl  $1, %ecx
+; CHECK-NEXT:   201803: addl  $1, %ecx
 
 ; CHECK:       [Probe]: FUNC: foo Index: 3  Type: Block  Inlined: @ main:2
-; CHECK-NEXT:      80e:	movl	%ecx, %edx
+; CHECK-NEXT:   20180e:	movl	%ecx, %edx
 
 ; CHECK:       [Probe]: FUNC: foo Index: 4  Type: Block  Inlined: @ main:2
 ; CHECK-NEXT:  [Probe]: FUNC: bar Index: 1  Type: Block  Inlined: @ main:2 @ foo:8
 ; CHECK-NEXT:  [Probe]:	FUNC: bar Index: 4  Type: Block  Inlined: @ main:2 @ foo:8
-; CHECK-NEXT:      83f: addl  %ecx, %edx
+; CHECK-NEXT:   20183f: addl  %ecx, %edx
 
 ; CHECK:       [Probe]: FUNC: foo Index: 6  Type: Block  Inlined: @ main:2
 ; CHECK-NEXT:  [Probe]: FUNC: foo Index: 2  Type: Block  Inlined: @ main:2
-; CHECK-NEXT:      84f: addl  $1, %ecx
+; CHECK-NEXT:   20184f: addl  $1, %ecx
 
 ; CHECK:       [Probe]: FUNC: foo Index: 7  Type: Block  Inlined: @ main:2
-; CHECK-NEXT:      85e: movl  $2098432, %edi
+; CHECK-NEXT:   20185e: movl  $2098432, %edi
 
 ; CHECK:       [Probe]: FUNC: foo Index: 9  Type: DirectCall  Inlined: @ main:2
-; CHECK-NEXT:      865: callq 0x930
+; CHECK-NEXT:   201865: callq 0x201930
 
 ; SYM-NOT: <bar>:
 ; SYM: <foo>:
