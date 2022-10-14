@@ -133,13 +133,18 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
   if (!ThisBody)
     return OrigMRB;
 
-  // Scan the function body for instructions that may read or write memory.
   FunctionModRefBehavior MRB = FunctionModRefBehavior::none();
+  // Inalloca and preallocated arguments are always clobbered by the call.
+  if (F.getAttributes().hasAttrSomewhere(Attribute::InAlloca) ||
+      F.getAttributes().hasAttrSomewhere(Attribute::Preallocated))
+    MRB |= FunctionModRefBehavior::argMemOnly(ModRefInfo::ModRef);
+
   // Returns true if Ptr is not based on a function argument.
   auto IsArgumentOrAlloca = [](const Value *Ptr) {
     const Value *UO = getUnderlyingObject(Ptr);
     return isa<Argument>(UO) || isa<AllocaInst>(UO);
   };
+  // Scan the function body for instructions that may read or write memory.
   for (Instruction &I : instructions(F)) {
     // Some instructions can be ignored even if they read or write memory.
     // Detect these now, skipping to the next instruction if one is found.
