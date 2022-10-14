@@ -2835,9 +2835,10 @@ def TestLinalgConvOp :
       return "";
     }
 
-    // To conform with interface requirement on operand naming.
-    mlir::ValueRange inputs() { return getInputs(); }
-    mlir::ValueRange outputs() { return getOutputs(); }
+    std::pair<int64_t, int64_t> getOutputsPositionRange() {
+      int64_t getNumOperands = this->getNumOperands();
+      return {getNumOperands - 1, getNumOperands};
+    }
   }];
 }
 
@@ -2894,9 +2895,10 @@ def TestLinalgFillOp :
       return "";
     }
 
-    // To conform with interface requirement on operand naming.
-    mlir::ValueRange inputs() { return getInputs(); }
-    mlir::ValueRange outputs() { return getOutputs(); }
+    std::pair<int64_t, int64_t> getOutputsPositionRange() {
+      int64_t getNumOperands = this->getNumOperands();
+      return {getNumOperands - 1, getNumOperands};
+    }
   }];
 }
 

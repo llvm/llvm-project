@@ -275,7 +275,7 @@ func.func @self_copy(%arg0 : memref<2x3x?x4xf32>) {
 // -----
 
 // CHECK-LABEL: func @remove_deadargs_generic_basic
-//  CHECK-SAME: (%[[ARG0:.*]]: tensor<?xf32>) -> tensor<?xf32> { 
+//  CHECK-SAME: (%[[ARG0:.*]]: tensor<?xf32>) -> tensor<?xf32> {
 //       CHECK: %[[GENERIC_OP:.*]] = linalg.generic
 //  CHECK-SAME: ins(%[[ARG0]] : tensor<?xf32>)
 //  CHECK-SAME: outs({{.*}} : tensor<?xf32>) {

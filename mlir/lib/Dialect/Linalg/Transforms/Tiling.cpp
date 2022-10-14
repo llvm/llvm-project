@@ -503,7 +503,7 @@ tileLinalgOpImpl(RewriterBase &b, LinalgOp op, ArrayRef<OpFoldResult> tileSizes,
     // Tile the `operandValuesToUse` that either match the `op` operands
     // themselves or the tile loop arguments forwarding them.
     assert(operandValuesToUse.size() ==
-               static_cast<size_t>(op.getNumInputsAndOutputs()) &&
+               static_cast<size_t>(op->getNumOperands()) &&
            "expect the number of operands and inputs and outputs to match");
     SmallVector<Value> valuesToTile = operandValuesToUse;
     SmallVector<OpFoldResult> sizeBounds =

@@ -105,8 +105,7 @@ static bool isZeroYield(GenericOp op) {
   auto yieldOp = cast<linalg::YieldOp>(op.getRegion().front().getTerminator());
   if (auto arg = yieldOp.getOperand(0).dyn_cast<BlockArgument>()) {
     if (arg.getOwner()->getParentOp() == op) {
-      OpOperand *t = op.getInputAndOutputOperands()[arg.getArgNumber()];
-      return isZeroValue(t->get());
+      return isZeroValue(op->getOperand(arg.getArgNumber()));
     }
   }
   return isZeroValue(yieldOp.getOperand(0));
@@ -242,8 +241,8 @@ public:
       return failure();
     // Modify operand structure of producer and consumer.
     Location loc = prod.getLoc();
-    SmallVector<Value> inputOps = prod.getInputOperands();
-    SmallVector<Value> outputOps = op.getOutputOperands();
+    SmallVector<Value> inputOps = prod.getInputs();
+    SmallVector<Value> outputOps = op.getOutputs();
     SmallVector<AffineMap> fusedIndexMaps = prod.getIndexingMapsArray();
     inputOps.push_back(op.getInputOperand(1 - other)->get());
     fusedIndexMaps.push_back(fusedIndexMaps.back()); // mimic other

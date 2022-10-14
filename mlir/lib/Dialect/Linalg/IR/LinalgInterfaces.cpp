@@ -31,10 +31,10 @@ using namespace mlir::linalg;
 bool linalg::detail::canOpOperandsBeDroppedImpl(
     linalg::LinalgOp linalgOp, ArrayRef<OpOperand *> droppedOperands) {
   SmallVector<AffineMap> indexingMaps;
-  for (auto *opOperand : linalgOp.getInputAndOutputOperands()) {
-    if (llvm::is_contained(droppedOperands, opOperand))
+  for (auto &opOperand : linalgOp->getOpOperands()) {
+    if (llvm::is_contained(droppedOperands, &opOperand))
       continue;
-    indexingMaps.push_back(linalgOp.getMatchingIndexingMap(opOperand));
+    indexingMaps.push_back(linalgOp.getMatchingIndexingMap(&opOperand));
   }
   return inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
 }
@@ -491,9 +491,9 @@ static OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value source,
 SmallVector<OpFoldResult> LinalgOp::createFlatListOfOperandDims(OpBuilder &b,
                                                                 Location loc) {
   SmallVector<OpFoldResult> res;
-  for (OpOperand *opOperand : getInputAndOutputOperands()) {
-    for (int64_t i = 0, e = getRank(opOperand); i < e; ++i)
-      res.push_back(createFoldedDimOp(b, loc, opOperand->get(), i));
+  for (OpOperand &opOperand : getOperation()->getOpOperands()) {
+    for (int64_t i = 0, e = getRank(&opOperand); i < e; ++i)
+      res.push_back(createFoldedDimOp(b, loc, opOperand.get(), i));
   }
   return res;
 }
@@ -501,8 +501,8 @@ SmallVector<OpFoldResult> LinalgOp::createFlatListOfOperandDims(OpBuilder &b,
 SmallVector<int64_t, 4> LinalgOp::createFlatListOfOperandStaticDims() {
   SmallVector<int64_t, 4> res;
   assert(!hasDynamicShape() && "expected operands to have static shapes");
-  for (OpOperand *opOperand : getInputAndOutputOperands())
-    llvm::append_range(res, getShape(opOperand));
+  for (OpOperand &opOperand : getOperation()->getOpOperands())
+    llvm::append_range(res, getShape(&opOperand));
   return res;
 }
 
@@ -644,32 +644,32 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
 
   // All input/output operands must be indexed.
   if (static_cast<int64_t>(linalgOp.getIndexingMapsArray().size()) !=
-      linalgOp.getNumInputsAndOutputs())
+      linalgOp->getNumOperands())
     return op->emitOpError("expected the number of indexing_map (")
            << linalgOp.getIndexingMapsArray().size()
            << ") to be equal to the number of input/output operands ("
-           << linalgOp.getNumInputsAndOutputs() << ")";
+           << linalgOp->getNumOperands() << ")";
 
-  for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
-    AffineMap indexingMap = linalgOp.getMatchingIndexingMap(opOperand);
+  for (OpOperand &opOperand : linalgOp->getOpOperands()) {
+    AffineMap indexingMap = linalgOp.getMatchingIndexingMap(&opOperand);
 
     // Symbols disallowed.
     if (indexingMap.getNumSymbols() != 0)
       return op->emitOpError("unexpected symbols in indexing_map #")
-             << opOperand->getOperandNumber();
+             << opOperand.getOperandNumber();
 
     // Domain must be consistent.
     unsigned numLoops = linalgOp.getNumLoops();
     if (indexingMap.getNumDims() != numLoops)
       return op->emitOpError("expected indexing_map #")
-             << opOperand->getOperandNumber() << " to have " << numLoops
+             << opOperand.getOperandNumber() << " to have " << numLoops
              << " dim(s) to match the number of loops";
 
-    int64_t rank = linalgOp.getRank(opOperand);
+    int64_t rank = linalgOp.getRank(&opOperand);
     if (indexingMap.getNumResults() != rank)
       return op->emitOpError("expected operand rank (")
              << rank << ") to match the result rank of indexing_map #"
-             << opOperand->getOperandNumber() << " ("
+             << opOperand.getOperandNumber() << " ("
              << indexingMap.getNumResults() << ")";
   }
 
@@ -688,13 +688,13 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
   if (llvm::none_of(endLoopRangeValues, ShapedType::isDynamic)) {
     for (int64_t &range : endLoopRangeValues)
       range -= 1;
-    for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
-      AffineMap indexingMap = linalgOp.getMatchingIndexingMap(opOperand);
+    for (OpOperand &opOperand : linalgOp->getOpOperands()) {
+      AffineMap indexingMap = linalgOp.getMatchingIndexingMap(&opOperand);
       SmallVector<int64_t, 4> startIndices =
           indexingMap.compose(startLoopRangeValues);
       SmallVector<int64_t, 4> endIndices =
           indexingMap.compose(endLoopRangeValues);
-      ArrayRef<int64_t> shape = linalgOp.getShape(opOperand);
+      ArrayRef<int64_t> shape = linalgOp.getShape(&opOperand);
       for (auto dim : llvm::seq<int64_t>(0, shape.size())) {
         // Ignore dynamic dimension or the case that the dimension size is 0
         if (ShapedType::isDynamic(shape[dim]) || shape[dim] == 0)
@@ -725,17 +725,16 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
         if (indexingMap.getResult(dim).dyn_cast<AffineDimExpr>()) {
           if (inferredDimSize != shape[dim]) {
             return op->emitOpError("inferred input/output operand #")
-                   << opOperand->getOperandNumber()
-                   << " has shape's dimension #" << dim << " to be "
-                   << inferredDimSize << ", but found " << shape[dim];
+                   << opOperand.getOperandNumber() << " has shape's dimension #"
+                   << dim << " to be " << inferredDimSize << ", but found "
+                   << shape[dim];
           }
         } else {
           if (inferredDimSize > shape[dim]) {
             return op->emitOpError("inferred input/output operand #")
-                   << opOperand->getOperandNumber()
-                   << " has shape's dimension #" << dim
-                   << " to be greater than or equal to " << inferredDimSize
-                   << ", but found " << shape[dim];
+                   << opOperand.getOperandNumber() << " has shape's dimension #"
+                   << dim << " to be greater than or equal to "
+                   << inferredDimSize << ", but found " << shape[dim];
           }
         }
       }
@@ -777,6 +776,15 @@ mlir::linalg::detail::verifyDestinationStyleOpInterface(Operation *op) {
   DestinationStyleOpInterface dstStyleOp =
       cast<DestinationStyleOpInterface>(op);
 
+  SmallVector<OpOperand *> outputBufferOperands, outputTensorOperands;
+  for (OpOperand *operand : dstStyleOp.getOutputOperands()) {
+    Type type = operand->get().getType();
+    if (type.isa<MemRefType>())
+      outputBufferOperands.push_back(operand);
+    if (type.isa<RankedTensorType>())
+      outputTensorOperands.push_back(operand);
+  }
+
   // Expect at least one output operand.
   // This means an op that constructs a tensor out of indices cannot be a
   // LinalgOp at the moment. For now this will have to be a special op until we
@@ -788,23 +796,22 @@ mlir::linalg::detail::verifyDestinationStyleOpInterface(Operation *op) {
   if (failed(OpTrait::impl::verifyNOperands(op, numInputs + numOutputs)))
     return failure();
   // Verify the number of results matches the number of output tensors.
-  if (op->getNumResults() != dstStyleOp.getOutputTensorOperands().size())
+  if (op->getNumResults() != outputTensorOperands.size())
     return op->emitOpError("expected the number of results (")
            << op->getNumResults()
            << ") to be equal to the number of output tensors ("
-           << dstStyleOp.getOutputTensorOperands().size() << ")";
+           << outputTensorOperands.size() << ")";
 
   // Simplifying assumption: either full tensor or full buffer mode.
   // This allows simpler verification of output operands vs result types
   // without premature tracking of which operand is what in mixed-mode.
   // TODO: relax when mixed-mode needs to pass verification.
-  if (!dstStyleOp.getOutputBufferOperands().empty() &&
-      !dstStyleOp.getOutputTensorOperands().empty())
+  if (!outputBufferOperands.empty() && !outputTensorOperands.empty())
     return op->emitOpError(
         "expected output operands to all have tensor type or "
         "all have buffer type");
 
-  for (OpOperand *opOperand : dstStyleOp.getOutputTensorOperands()) {
+  for (OpOperand *opOperand : outputTensorOperands) {
     OpResult result = dstStyleOp.getTiedOpResult(opOperand);
     if (result.getType() != opOperand->get().getType())
       return op->emitOpError("expected type of operand #")
@@ -813,6 +820,5 @@ mlir::linalg::detail::verifyDestinationStyleOpInterface(Operation *op) {
              << " to match type of corresponding result (" << result.getType()
              << ")";
   }
-
   return success();
 }
