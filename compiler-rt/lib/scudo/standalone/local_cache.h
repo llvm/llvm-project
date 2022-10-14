@@ -151,7 +151,7 @@ private:
     for (uptr I = 0; I < NumClasses; I++) {
       PerClass *P = &PerClassArray[I];
       const uptr Size = SizeClassAllocator::getSizeByClassId(I);
-      P->MaxCount = 2 * TransferBatch::getMaxCached(Size);
+      P->MaxCount = static_cast<u16>(2 * TransferBatch::getMaxCached(Size));
       if (I != BatchClassId) {
         P->ClassSize = Size;
       } else {
@@ -187,8 +187,9 @@ private:
     if (UNLIKELY(!B))
       reportOutOfMemory(SizeClassAllocator::getSizeByClassId(BatchClassId));
     B->setFromArray(&C->Chunks[0], Count);
-    C->Count -= Count;
-    for (uptr I = 0; I < C->Count; I++)
+    // u16 will be promoted to int by arithmetic type conversion.
+    C->Count = static_cast<u16>(C->Count - Count);
+    for (u16 I = 0; I < C->Count; I++)
       C->Chunks[I] = C->Chunks[I + Count];
     Allocator->pushBatch(ClassId, B);
   }
