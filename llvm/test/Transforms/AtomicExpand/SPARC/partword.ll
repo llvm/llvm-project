@@ -14,7 +14,6 @@ define i8 @test_cmpxchg_i8(i8* %arg, i8 %old, i8 %new) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    fence seq_cst
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call i8* @llvm.ptrmask.p0i8.i64(i8* [[ARG:%.*]], i64 -4)
-; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i8* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i8* [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[PTRLSB]], 3
@@ -22,6 +21,7 @@ define i8 @test_cmpxchg_i8(i8* %arg, i8 %old, i8 %new) {
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 255, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i8* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i8 [[NEW:%.*]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i8 [[OLD:%.*]] to i32
@@ -61,7 +61,6 @@ define i16 @test_cmpxchg_i16(i16* %arg, i16 %old, i16 %new) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    fence seq_cst
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call i16* @llvm.ptrmask.p0i16.i64(i16* [[ARG:%.*]], i64 -4)
-; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i16* [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[PTRLSB]], 2
@@ -69,6 +68,7 @@ define i16 @test_cmpxchg_i16(i16* %arg, i16 %old, i16 %new) {
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[NEW:%.*]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext i16 [[OLD:%.*]] to i32
@@ -108,7 +108,6 @@ define i16 @test_add_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    fence seq_cst
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call i16* @llvm.ptrmask.p0i16.i64(i16* [[ARG:%.*]], i64 -4)
-; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i16* [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[PTRLSB]], 2
@@ -116,6 +115,7 @@ define i16 @test_add_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VAL:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ALIGNEDADDR1]], align 4
@@ -146,7 +146,6 @@ define i16 @test_xor_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    fence seq_cst
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call i16* @llvm.ptrmask.p0i16.i64(i16* [[ARG:%.*]], i64 -4)
-; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i16* [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[PTRLSB]], 2
@@ -154,6 +153,7 @@ define i16 @test_xor_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VAL:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ALIGNEDADDR1]], align 4
@@ -181,7 +181,6 @@ define i16 @test_or_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    fence seq_cst
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call i16* @llvm.ptrmask.p0i16.i64(i16* [[ARG:%.*]], i64 -4)
-; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i16* [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[PTRLSB]], 2
@@ -189,6 +188,7 @@ define i16 @test_or_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VAL:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ALIGNEDADDR1]], align 4
@@ -216,7 +216,6 @@ define i16 @test_and_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    fence seq_cst
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call i16* @llvm.ptrmask.p0i16.i64(i16* [[ARG:%.*]], i64 -4)
-; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i16* [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[PTRLSB]], 2
@@ -224,6 +223,7 @@ define i16 @test_and_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VAL:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[INV_MASK]], [[VALOPERAND_SHIFTED]]
@@ -252,7 +252,6 @@ define i16 @test_min_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    fence seq_cst
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call i16* @llvm.ptrmask.p0i16.i64(i16* [[ARG:%.*]], i64 -4)
-; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i16* [[ARG]] to i64
 ; CHECK-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i64 [[PTRLSB]], 2
@@ -260,6 +259,7 @@ define i16 @test_min_i16(i16* %arg, i16 %val) {
 ; CHECK-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
 ; CHECK-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; CHECK-NEXT:    [[ALIGNEDADDR1:%.*]] = bitcast i16* [[ALIGNEDADDR]] to i32*
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[VAL:%.*]] to i32
 ; CHECK-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, i32* [[ALIGNEDADDR1]], align 4
