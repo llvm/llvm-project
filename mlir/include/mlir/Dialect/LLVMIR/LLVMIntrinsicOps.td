@@ -44,8 +44,7 @@ def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure]> {
   let arguments = (ins LLVM_Type:$in, I1:$is_int_min_poison);
 }
 
-def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0],
-                                          [NoSideEffect]> {
+def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure]> {
   let arguments = (ins LLVM_Type:$in, I32:$bit);
 }
 
