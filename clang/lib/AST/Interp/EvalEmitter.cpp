@@ -113,6 +113,7 @@ bool EvalEmitter::emitCall(const Function *Func, const SourceInfo &Info) {
 bool EvalEmitter::emitCallVoid(const Function *Func, const SourceInfo &Info) {
   APValue VoidResult;
   InterpFrame *before = S.Current;
+  (void)before;
   S.Current = new InterpFrame(S, const_cast<Function *>(Func), {});
   bool Success = Interpret(S, VoidResult);
   assert(VoidResult.isAbsent());
