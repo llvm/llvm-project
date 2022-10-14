@@ -246,12 +246,21 @@ static Expr<T> FoldCount(FoldingContext &context, FunctionRef<T> &&ref) {
               : Folder<LogicalResult>{context}.Folding(arg[0])}) {
     std::optional<int> dim;
     if (CheckReductionDIM(dim, context, arg, 1, mask->Rank())) {
-      auto accumulator{[&](Scalar<T> &element, const ConstantSubscripts &at) {
-        if (mask->At(at).IsTrue()) {
-          element = element.AddSigned(Scalar<T>{1}).value;
-        }
-      }};
-      return Expr<T>{DoReduction<T>(*mask, dim, Scalar<T>{}, accumulator)};
+      bool overflow{false};
+      auto accumulator{
+          [&mask, &overflow](Scalar<T> &element, const ConstantSubscripts &at) {
+            if (mask->At(at).IsTrue()) {
+              auto incremented{element.AddSigned(Scalar<T>{1})};
+              overflow |= incremented.overflow;
+              element = incremented.value;
+            }
+          }};
+      Constant<T> result{DoReduction<T>(*mask, dim, Scalar<T>{}, accumulator)};
+      if (overflow) {
+        context.messages().Say(
+            "Result of intrinsic function COUNT overflows its result type"_warn_en_US);
+      }
+      return Expr<T>{std::move(result)};
     }
   }
   return Expr<T>{std::move(ref)};
@@ -494,6 +503,15 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
   std::string name{intrinsic->name};
+  auto FromInt64{[&name, &context](std::int64_t n) {
+    Scalar<T> result{n};
+    if (result.ToInt64() != n) {
+      context.messages().Say(
+          "Result of intrinsic function '%s' (%jd) overflows its result type"_warn_en_US,
+          name, std::intmax_t{n});
+    }
+    return result;
+  }};
   if (name == "abs") { // incl. babs, iiabs, jiaabs, & kiabs
     return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
         ScalarFunc<T, T>([&context](const Scalar<T> &i) -> Scalar<T> {
@@ -592,12 +610,13 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
             name);
       } else {
         return common::visit(
-            [&funcRef, &context](const auto &str) -> Expr<T> {
+            [&funcRef, &name, &context, &FromInt64](
+                const auto &str) -> Expr<T> {
               using Char = typename std::decay_t<decltype(str)>::Result;
               return FoldElementalIntrinsic<T, Char>(context,
                   std::move(funcRef),
-                  ScalarFunc<T, Char>([](const Scalar<Char> &c) {
-                    return Scalar<T>{CharacterUtils<Char::kind>::ICHAR(c)};
+                  ScalarFunc<T, Char>([&FromInt64](const Scalar<Char> &c) {
+                    return FromInt64(CharacterUtils<Char::kind>::ICHAR(c));
                   }));
             },
             someChar->u);
@@ -676,27 +695,29 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
               return FoldElementalIntrinsic<T, TC, TC, LogicalResult>(context,
                   std::move(funcRef),
                   ScalarFunc<T, TC, TC, LogicalResult>{
-                      [&name](const Scalar<TC> &str, const Scalar<TC> &other,
-                          const Scalar<LogicalResult> &back) -> Scalar<T> {
-                        return name == "index"
-                            ? CharacterUtils<TC::kind>::INDEX(
-                                  str, other, back.IsTrue())
-                            : name == "scan" ? CharacterUtils<TC::kind>::SCAN(
-                                                   str, other, back.IsTrue())
-                                             : CharacterUtils<TC::kind>::VERIFY(
-                                                   str, other, back.IsTrue());
+                      [&name, &FromInt64](const Scalar<TC> &str,
+                          const Scalar<TC> &other,
+                          const Scalar<LogicalResult> &back) {
+                        return FromInt64(name == "index"
+                                ? CharacterUtils<TC::kind>::INDEX(
+                                      str, other, back.IsTrue())
+                                : name == "scan"
+                                ? CharacterUtils<TC::kind>::SCAN(
+                                      str, other, back.IsTrue())
+                                : CharacterUtils<TC::kind>::VERIFY(
+                                      str, other, back.IsTrue()));
                       }});
             } else {
               return FoldElementalIntrinsic<T, TC, TC>(context,
                   std::move(funcRef),
                   ScalarFunc<T, TC, TC>{
-                      [&name](const Scalar<TC> &str,
-                          const Scalar<TC> &other) -> Scalar<T> {
-                        return name == "index"
-                            ? CharacterUtils<TC::kind>::INDEX(str, other)
-                            : name == "scan"
-                            ? CharacterUtils<TC::kind>::SCAN(str, other)
-                            : CharacterUtils<TC::kind>::VERIFY(str, other);
+                      [&name, &FromInt64](
+                          const Scalar<TC> &str, const Scalar<TC> &other) {
+                        return FromInt64(name == "index"
+                                ? CharacterUtils<TC::kind>::INDEX(str, other)
+                                : name == "scan"
+                                ? CharacterUtils<TC::kind>::SCAN(str, other)
+                                : CharacterUtils<TC::kind>::VERIFY(str, other));
                       }});
             }
           },
@@ -835,8 +856,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           [&](const auto &kch) -> Expr<T> {
             using TC = typename std::decay_t<decltype(kch)>::Result;
             return FoldElementalIntrinsic<T, TC>(context, std::move(funcRef),
-                ScalarFunc<T, TC>{[](const Scalar<TC> &str) -> Scalar<T> {
-                  return CharacterUtils<TC::kind>::LEN_TRIM(str);
+                ScalarFunc<T, TC>{[&FromInt64](const Scalar<TC> &str) {
+                  return FromInt64(CharacterUtils<TC::kind>::LEN_TRIM(str));
                 }});
           },
           charExpr->u);
