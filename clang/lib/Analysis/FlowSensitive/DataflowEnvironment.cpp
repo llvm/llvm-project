@@ -49,28 +49,6 @@ llvm::DenseMap<K, V> intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
   return Result;
 }
 
-static bool areEquivalentIndirectionValues(Value *Val1, Value *Val2) {
-  if (auto *IndVal1 = dyn_cast<ReferenceValue>(Val1)) {
-    auto *IndVal2 = cast<ReferenceValue>(Val2);
-    return &IndVal1->getReferentLoc() == &IndVal2->getReferentLoc();
-  }
-  if (auto *IndVal1 = dyn_cast<PointerValue>(Val1)) {
-    auto *IndVal2 = cast<PointerValue>(Val2);
-    return &IndVal1->getPointeeLoc() == &IndVal2->getPointeeLoc();
-  }
-  return false;
-}
-
-/// Returns true if and only if `Val1` is equivalent to `Val2`.
-static bool equivalentValues(QualType Type, Value *Val1,
-                             const Environment &Env1, Value *Val2,
-                             const Environment &Env2,
-                             Environment::ValueModel &Model) {
-  return Val1 == Val2 || (isa<TopBoolValue>(Val1) && isa<TopBoolValue>(Val2)) ||
-         areEquivalentIndirectionValues(Val1, Val2) ||
-         Model.compareEquivalent(Type, *Val1, Env1, *Val2, Env2);
-}
-
 /// Attempts to merge distinct values `Val1` and `Val2` in `Env1` and `Env2`,
 /// respectively, of the same type `Type`. Merging generally produces a single
 /// value that (soundly) approximates the two inputs, although the actual
@@ -91,11 +69,6 @@ static Value *mergeDistinctValues(QualType Type, Value *Val1,
         MergedEnv.makeAnd(Env2.getFlowConditionToken(),
                           MergedEnv.makeIff(MergedVal, *Expr2))));
     return &MergedVal;
-  }
-
-  // FIXME: add unit tests that cover this statement.
-  if (areEquivalentIndirectionValues(Val1, Val2)) {
-    return Val1;
   }
 
   // FIXME: Consider destroying `MergedValue` immediately if `ValueModel::merge`
@@ -321,7 +294,9 @@ bool Environment::equivalentTo(const Environment &Other,
       continue;
     assert(It->second != nullptr);
 
-    if (!equivalentValues(Loc->getType(), Val, *this, It->second, Other, Model))
+    if (!areEquivalentValues(*Val, *It->second) &&
+        !Model.compareEquivalent(Loc->getType(), *Val, *this, *It->second,
+                                 Other))
       return false;
   }
 
@@ -372,8 +347,7 @@ LatticeJoinEffect Environment::join(const Environment &Other,
       continue;
     assert(It->second != nullptr);
 
-    if (Val == It->second ||
-        (isa<TopBoolValue>(Val) && isa<TopBoolValue>(It->second))) {
+    if (areEquivalentValues(*Val, *It->second)) {
       JoinedEnv.LocToVal.insert({Loc, Val});
       continue;
     }
