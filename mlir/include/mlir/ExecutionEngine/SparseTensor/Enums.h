@@ -131,32 +131,32 @@ enum class Action : uint32_t {
 /// breaking dependency cycles.  `SparseTensorEncodingAttr::DimLevelType`
 /// is the source of truth and this enum should be kept consistent with it.
 enum class DimLevelType : uint8_t {
-  kDense = 4,           // 0b001_00
-  kCompressed = 8,      // 0b010_00
-  kCompressedNu = 9,    // 0b010_01
-  kCompressedNo = 10,   // 0b010_10
-  kCompressedNuNo = 11, // 0b010_11
-  kSingleton = 16,      // 0b100_00
-  kSingletonNu = 17,    // 0b100_01
-  kSingletonNo = 18,    // 0b100_10
-  kSingletonNuNo = 19,  // 0b100_11
+  Dense = 4,           // 0b001_00
+  Compressed = 8,      // 0b010_00
+  CompressedNu = 9,    // 0b010_01
+  CompressedNo = 10,   // 0b010_10
+  CompressedNuNo = 11, // 0b010_11
+  Singleton = 16,      // 0b100_00
+  SingletonNu = 17,    // 0b100_01
+  SingletonNo = 18,    // 0b100_10
+  SingletonNuNo = 19,  // 0b100_11
 };
 
 /// Check if the `DimLevelType` is dense.
 constexpr bool isDenseDLT(DimLevelType dlt) {
-  return dlt == DimLevelType::kDense;
+  return dlt == DimLevelType::Dense;
 }
 
 /// Check if the `DimLevelType` is compressed (regardless of properties).
 constexpr bool isCompressedDLT(DimLevelType dlt) {
   return static_cast<uint8_t>(dlt) &
-         static_cast<uint8_t>(DimLevelType::kCompressed);
+         static_cast<uint8_t>(DimLevelType::Compressed);
 }
 
 /// Check if the `DimLevelType` is singleton (regardless of properties).
 constexpr bool isSingletonDLT(DimLevelType dlt) {
   return static_cast<uint8_t>(dlt) &
-         static_cast<uint8_t>(DimLevelType::kSingleton);
+         static_cast<uint8_t>(DimLevelType::Singleton);
 }
 
 /// Check if the `DimLevelType` is ordered (regardless of storage format).
@@ -170,48 +170,48 @@ constexpr bool isUniqueDLT(DimLevelType dlt) {
 }
 
 // Ensure the above predicates work as intended.
-static_assert((!isCompressedDLT(DimLevelType::kDense) &&
-               isCompressedDLT(DimLevelType::kCompressed) &&
-               isCompressedDLT(DimLevelType::kCompressedNu) &&
-               isCompressedDLT(DimLevelType::kCompressedNo) &&
-               isCompressedDLT(DimLevelType::kCompressedNuNo) &&
-               !isCompressedDLT(DimLevelType::kSingleton) &&
-               !isCompressedDLT(DimLevelType::kSingletonNu) &&
-               !isCompressedDLT(DimLevelType::kSingletonNo) &&
-               !isCompressedDLT(DimLevelType::kSingletonNuNo)),
+static_assert((!isCompressedDLT(DimLevelType::Dense) &&
+               isCompressedDLT(DimLevelType::Compressed) &&
+               isCompressedDLT(DimLevelType::CompressedNu) &&
+               isCompressedDLT(DimLevelType::CompressedNo) &&
+               isCompressedDLT(DimLevelType::CompressedNuNo) &&
+               !isCompressedDLT(DimLevelType::Singleton) &&
+               !isCompressedDLT(DimLevelType::SingletonNu) &&
+               !isCompressedDLT(DimLevelType::SingletonNo) &&
+               !isCompressedDLT(DimLevelType::SingletonNuNo)),
               "isCompressedDLT definition is broken");
 
-static_assert((!isSingletonDLT(DimLevelType::kDense) &&
-               !isSingletonDLT(DimLevelType::kCompressed) &&
-               !isSingletonDLT(DimLevelType::kCompressedNu) &&
-               !isSingletonDLT(DimLevelType::kCompressedNo) &&
-               !isSingletonDLT(DimLevelType::kCompressedNuNo) &&
-               isSingletonDLT(DimLevelType::kSingleton) &&
-               isSingletonDLT(DimLevelType::kSingletonNu) &&
-               isSingletonDLT(DimLevelType::kSingletonNo) &&
-               isSingletonDLT(DimLevelType::kSingletonNuNo)),
+static_assert((!isSingletonDLT(DimLevelType::Dense) &&
+               !isSingletonDLT(DimLevelType::Compressed) &&
+               !isSingletonDLT(DimLevelType::CompressedNu) &&
+               !isSingletonDLT(DimLevelType::CompressedNo) &&
+               !isSingletonDLT(DimLevelType::CompressedNuNo) &&
+               isSingletonDLT(DimLevelType::Singleton) &&
+               isSingletonDLT(DimLevelType::SingletonNu) &&
+               isSingletonDLT(DimLevelType::SingletonNo) &&
+               isSingletonDLT(DimLevelType::SingletonNuNo)),
               "isSingletonDLT definition is broken");
 
-static_assert((isOrderedDLT(DimLevelType::kDense) &&
-               isOrderedDLT(DimLevelType::kCompressed) &&
-               isOrderedDLT(DimLevelType::kCompressedNu) &&
-               !isOrderedDLT(DimLevelType::kCompressedNo) &&
-               !isOrderedDLT(DimLevelType::kCompressedNuNo) &&
-               isOrderedDLT(DimLevelType::kSingleton) &&
-               isOrderedDLT(DimLevelType::kSingletonNu) &&
-               !isOrderedDLT(DimLevelType::kSingletonNo) &&
-               !isOrderedDLT(DimLevelType::kSingletonNuNo)),
+static_assert((isOrderedDLT(DimLevelType::Dense) &&
+               isOrderedDLT(DimLevelType::Compressed) &&
+               isOrderedDLT(DimLevelType::CompressedNu) &&
+               !isOrderedDLT(DimLevelType::CompressedNo) &&
+               !isOrderedDLT(DimLevelType::CompressedNuNo) &&
+               isOrderedDLT(DimLevelType::Singleton) &&
+               isOrderedDLT(DimLevelType::SingletonNu) &&
+               !isOrderedDLT(DimLevelType::SingletonNo) &&
+               !isOrderedDLT(DimLevelType::SingletonNuNo)),
               "isOrderedDLT definition is broken");
 
-static_assert((isUniqueDLT(DimLevelType::kDense) &&
-               isUniqueDLT(DimLevelType::kCompressed) &&
-               !isUniqueDLT(DimLevelType::kCompressedNu) &&
-               isUniqueDLT(DimLevelType::kCompressedNo) &&
-               !isUniqueDLT(DimLevelType::kCompressedNuNo) &&
-               isUniqueDLT(DimLevelType::kSingleton) &&
-               !isUniqueDLT(DimLevelType::kSingletonNu) &&
-               isUniqueDLT(DimLevelType::kSingletonNo) &&
-               !isUniqueDLT(DimLevelType::kSingletonNuNo)),
+static_assert((isUniqueDLT(DimLevelType::Dense) &&
+               isUniqueDLT(DimLevelType::Compressed) &&
+               !isUniqueDLT(DimLevelType::CompressedNu) &&
+               isUniqueDLT(DimLevelType::CompressedNo) &&
+               !isUniqueDLT(DimLevelType::CompressedNuNo) &&
+               isUniqueDLT(DimLevelType::Singleton) &&
+               !isUniqueDLT(DimLevelType::SingletonNu) &&
+               isUniqueDLT(DimLevelType::SingletonNo) &&
+               !isUniqueDLT(DimLevelType::SingletonNuNo)),
               "isUniqueDLT definition is broken");
 
 } // namespace sparse_tensor
