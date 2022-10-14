@@ -64,6 +64,7 @@ enum BlockId {
   BI_FUNCTION_BLOCK_ID,
   BI_COMMENT_BLOCK_ID,
   BI_REFERENCE_BLOCK_ID,
+  BI_TYPEDEF_BLOCK_ID,
   BI_LAST,
   BI_FIRST = BI_VERSION_BLOCK_ID
 };
@@ -123,6 +124,10 @@ enum RecordId {
   REFERENCE_TYPE,
   REFERENCE_PATH,
   REFERENCE_FIELD,
+  TYPEDEF_USR,
+  TYPEDEF_NAME,
+  TYPEDEF_DEFLOCATION,
+  TYPEDEF_IS_USING,
   RI_LAST,
   RI_FIRST = VERSION
 };
@@ -160,8 +165,9 @@ public:
   void emitBlock(const EnumInfo &I);
   void emitBlock(const EnumValueInfo &I);
   void emitBlock(const TypeInfo &B);
+  void emitBlock(const TypedefInfo &B);
   void emitBlock(const FieldTypeInfo &B);
-  void emitBlock(const MemberTypeInfo &B);
+  void emitBlock(const MemberTypeInfo &T);
   void emitBlock(const CommentInfo &B);
   void emitBlock(const Reference &B, FieldId F);
 

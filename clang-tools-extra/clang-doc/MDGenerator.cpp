@@ -189,9 +189,9 @@ static void genMarkdown(const ClangDocContext &CDCtx, const NamespaceInfo &I,
 
   llvm::SmallString<64> BasePath = I.getRelativeFilePath("");
 
-  if (!I.ChildNamespaces.empty()) {
+  if (!I.Children.Namespaces.empty()) {
     writeHeader("Namespaces", 2, OS);
-    for (const auto &R : I.ChildNamespaces) {
+    for (const auto &R : I.Children.Namespaces) {
       OS << "* ";
       writeNameLink(BasePath, R, OS);
       OS << "\n";
@@ -199,9 +199,9 @@ static void genMarkdown(const ClangDocContext &CDCtx, const NamespaceInfo &I,
     writeNewLine(OS);
   }
 
-  if (!I.ChildRecords.empty()) {
+  if (!I.Children.Records.empty()) {
     writeHeader("Records", 2, OS);
-    for (const auto &R : I.ChildRecords) {
+    for (const auto &R : I.Children.Records) {
       OS << "* ";
       writeNameLink(BasePath, R, OS);
       OS << "\n";
@@ -209,15 +209,15 @@ static void genMarkdown(const ClangDocContext &CDCtx, const NamespaceInfo &I,
     writeNewLine(OS);
   }
 
-  if (!I.ChildFunctions.empty()) {
+  if (!I.Children.Functions.empty()) {
     writeHeader("Functions", 2, OS);
-    for (const auto &F : I.ChildFunctions)
+    for (const auto &F : I.Children.Functions)
       genMarkdown(CDCtx, F, OS);
     writeNewLine(OS);
   }
-  if (!I.ChildEnums.empty()) {
+  if (!I.Children.Enums.empty()) {
     writeHeader("Enums", 2, OS);
-    for (const auto &E : I.ChildEnums)
+    for (const auto &E : I.Children.Enums)
       genMarkdown(CDCtx, E, OS);
     writeNewLine(OS);
   }
@@ -259,24 +259,29 @@ static void genMarkdown(const ClangDocContext &CDCtx, const RecordInfo &I,
     writeNewLine(OS);
   }
 
-  if (!I.ChildRecords.empty()) {
+  if (!I.Children.Records.empty()) {
     writeHeader("Records", 2, OS);
-    for (const auto &R : I.ChildRecords)
+    for (const auto &R : I.Children.Records)
       writeLine(R.Name, OS);
     writeNewLine(OS);
   }
-  if (!I.ChildFunctions.empty()) {
+  if (!I.Children.Functions.empty()) {
     writeHeader("Functions", 2, OS);
-    for (const auto &F : I.ChildFunctions)
+    for (const auto &F : I.Children.Functions)
       genMarkdown(CDCtx, F, OS);
     writeNewLine(OS);
   }
-  if (!I.ChildEnums.empty()) {
+  if (!I.Children.Enums.empty()) {
     writeHeader("Enums", 2, OS);
-    for (const auto &E : I.ChildEnums)
+    for (const auto &E : I.Children.Enums)
       genMarkdown(CDCtx, E, OS);
     writeNewLine(OS);
   }
+}
+
+static void genMarkdown(const ClangDocContext &CDCtx, const TypedefInfo &I,
+                        llvm::raw_ostream &OS) {
+  // TODO support typedefs in markdown.
 }
 
 static void serializeReference(llvm::raw_fd_ostream &OS, Index &I, int Level) {
@@ -337,6 +342,9 @@ static llvm::Error genIndex(ClangDocContext &CDCtx) {
       case InfoType::IT_function:
         Type = "Function";
         break;
+      case InfoType::IT_typedef:
+        Type = "Typedef";
+        break;
       case InfoType::IT_default:
         Type = "Other";
       }
@@ -374,6 +382,9 @@ llvm::Error MDGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
     break;
   case InfoType::IT_function:
     genMarkdown(CDCtx, *static_cast<clang::doc::FunctionInfo *>(I), OS);
+    break;
+  case InfoType::IT_typedef:
+    genMarkdown(CDCtx, *static_cast<clang::doc::TypedefInfo *>(I), OS);
     break;
   case InfoType::IT_default:
     return createStringError(llvm::inconvertibleErrorCode(),
