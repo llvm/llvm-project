@@ -675,10 +675,35 @@ static void getAliasingReads(DenseSet<OpOperand *> &res, Value root,
                              const BufferizationAliasInfo &aliasInfo,
                              const AnalysisState &state) {
   aliasInfo.applyOnAliases(root, [&](Value alias) {
-    for (auto &use : alias.getUses())
-      // Read to a value that aliases root.
-      if (state.bufferizesToMemoryRead(use))
+    for (auto &use : alias.getUses()) {
+      // Read of a value that aliases root.
+      if (state.bufferizesToMemoryRead(use)) {
         res.insert(&use);
+        continue;
+      }
+
+      // Read of a dependent value in the SSA use-def chain. E.g.:
+      //
+      // %0 = ...
+      // %1 = tensor.extract_slice %0 {not_analyzed_yet}
+      // "read"(%1)
+      //
+      // In the above example, getAliasingReads(%0) includes the first OpOperand
+      // of the tensor.extract_slice op. The extract_slice itself does not read
+      // but its aliasing result is eventually fed into an op that does.
+      //
+      // Note: This is considered a "read" only if the use does not bufferize to
+      // a memory write. (We already ruled out memory reads. In case of a memory
+      // write, the buffer would be entirely overwritten; in the above example
+      // there would then be no flow of data from the extract_slice operand to
+      // its result's uses.)
+      if (!state.bufferizesToMemoryWrite(use)) {
+        SmallVector<OpResult> opResults = state.getAliasingOpResult(use);
+        if (llvm::any_of(opResults,
+                         [&](OpResult r) { return state.isValueRead(r); }))
+          res.insert(&use);
+      }
+    }
   });
 }
 
@@ -837,14 +862,33 @@ static LogicalResult inPlaceAnalysis(SmallVector<Operation *> &ops,
     llvm::shuffle(ops.begin(), ops.end(), g);
   }
 
-  // Walk ops in reverse for better interference analysis.
-  for (Operation *op : reverse(ops))
+  // Analyze a single op.
+  auto analyzeOp = [&](Operation *op) {
     for (OpOperand &opOperand : op->getOpOperands())
       if (opOperand.get().getType().isa<TensorType>())
         if (auto bufferizableOp = state.getOptions().dynCastBufferizableOp(op))
           if (failed(bufferizableInPlaceAnalysisImpl(opOperand, aliasInfo,
                                                      state, domInfo)))
             return failure();
+    return success();
+  };
+
+  OneShotBufferizationOptions::AnalysisHeuristic heuristic =
+      static_cast<const OneShotBufferizationOptions &>(state.getOptions())
+          .analysisHeuristic;
+  if (heuristic == OneShotBufferizationOptions::AnalysisHeuristic::BottomUp) {
+    // Default: Walk ops in reverse for better interference analysis.
+    for (Operation *op : reverse(ops))
+      if (failed(analyzeOp(op)))
+        return failure();
+  } else if (heuristic ==
+             OneShotBufferizationOptions::AnalysisHeuristic::TopDown) {
+    for (Operation *op : ops)
+      if (failed(analyzeOp(op)))
+        return failure();
+  } else {
+    llvm_unreachable("unsupported heuristic");
+  }
 
   return success();
 }

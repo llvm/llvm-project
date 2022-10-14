@@ -172,6 +172,15 @@ parseLayoutMapOption(const std::string &s) {
   llvm_unreachable("invalid layout map option");
 }
 
+static OneShotBufferizationOptions::AnalysisHeuristic
+parseHeuristicOption(const std::string &s) {
+  if (s == "bottom-up")
+    return OneShotBufferizationOptions::AnalysisHeuristic::BottomUp;
+  if (s == "top-down")
+    return OneShotBufferizationOptions::AnalysisHeuristic::TopDown;
+  llvm_unreachable("invalid analysisheuristic option");
+}
+
 struct OneShotBufferizePass
     : public bufferization::impl::OneShotBufferizeBase<OneShotBufferizePass> {
   OneShotBufferizePass() = default;
@@ -193,6 +202,7 @@ struct OneShotBufferizePass
       opt.allowReturnAllocs = allowReturnAllocs;
       opt.allowUnknownOps = allowUnknownOps;
       opt.analysisFuzzerSeed = analysisFuzzerSeed;
+      opt.analysisHeuristic = parseHeuristicOption(analysisHeuristic);
       opt.copyBeforeWrite = copyBeforeWrite;
       opt.createDeallocs = createDeallocs;
       opt.functionBoundaryTypeConversion =
