@@ -452,6 +452,32 @@ C2x Feature Support
     typeof(Val) OtherVal; // type is '__attribute__((address_space(1))) const _Atomic int'
     typeof_unqual(Val) OtherValUnqual; // type is 'int'
 
+- Implemented `WG14 N3042 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3042.htm>`_,
+  Introduce the nullptr constant. This introduces a new type ``nullptr_t``,
+  declared in ``<stddef.h>`` which represents the type of the null pointer named
+  constant, ``nullptr``. This constant is implicitly convertible to any pointer
+  type and represents a type-safe null value.
+
+  Note, there are some known incompatibilities with this same feature in C++.
+  The following examples were discovered during implementation and are subject
+  to change depending on how national body comments are resolved by WG14 (C
+  status is based on standard requirements, not necessarily implementation
+  behavior):
+
+  .. code-block:: c
+
+    nullptr_t null_val;
+    (nullptr_t)nullptr;       // Rejected in C, accepted in C++, Clang accepts
+    (void)(1 ? nullptr : 0);  // Rejected in C, accepted in C++, Clang rejects
+    (void)(1 ? null_val : 0); // Rejected in C, accepted in C++, Clang rejects
+    bool b1 = nullptr;        // Accepted in C, rejected in C++, Clang rejects
+    b1 = null_val;            // Accepted in C, rejected in C++, Clang rejects
+    null_val = 0;             // Rejected in C, accepted in C++, Clang rejects
+
+    void func(nullptr_t);
+    func(0);                  // Rejected in C, accepted in C++, Clang rejects
+
+
 C++ Language Changes in Clang
 -----------------------------
 - Implemented DR692, DR1395 and DR1432. Use the ``-fclang-abi-compat=15`` option

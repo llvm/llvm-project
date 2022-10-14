@@ -16780,11 +16780,10 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
     AllowFoldKind FoldKind = NoFold;
 
     if (!getLangOpts().CPlusPlus) {
-      // In C mode only allow folding and strip the implicit conversion
-      // to the type of the first _Static_assert argument that would
-      // otherwise suppress diagnostics for arguments that convert to int.
+      // In C mode, allow folding as an extension for better compatibility with
+      // C++ in terms of expressions like static_assert("test") or
+      // static_assert(nullptr).
       FoldKind = AllowFold;
-      BaseExpr = BaseExpr->IgnoreImpCasts();
     }
 
     if (!Failed && VerifyIntegerConstantExpression(
