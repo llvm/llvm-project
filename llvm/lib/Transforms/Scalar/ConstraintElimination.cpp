@@ -193,6 +193,13 @@ static SmallVector<DecompEntry, 4>
 decomposeGEP(GetElementPtrInst &GEP,
              SmallVector<PreconditionTy, 4> &Preconditions, bool IsSigned,
              const DataLayout &DL) {
+  // Do not reason about pointers where the index size is larger than 64 bits,
+  // as the coefficients used to encode constraints are 64 bit integers.
+  unsigned AS =
+      cast<PointerType>(GEP.getPointerOperand()->getType())->getAddressSpace();
+  if (DL.getIndexSizeInBits(AS) > 64)
+    return {};
+
   auto GTI = gep_type_begin(GEP);
   if (GEP.getNumOperands() != 2 || !GEP.isInBounds() ||
       isa<ScalableVectorType>(GTI.getIndexedType()))
@@ -200,7 +207,6 @@ decomposeGEP(GetElementPtrInst &GEP,
 
   int64_t Scale = static_cast<int64_t>(
       DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize());
-  int64_t MulRes;
   // Handle the (gep (gep ....), C) case by incrementing the constant
   // coefficient of the inner GEP, if C is a constant.
   auto *InnerGEP = dyn_cast<GetElementPtrInst>(GEP.getPointerOperand());
@@ -208,52 +214,53 @@ decomposeGEP(GetElementPtrInst &GEP,
       isa<ConstantInt>(GEP.getOperand(1))) {
     APInt Offset = cast<ConstantInt>(GEP.getOperand(1))->getValue();
     auto Result = decompose(InnerGEP, Preconditions, IsSigned, DL);
-    if (!MulOverflow(Scale, Offset.getSExtValue(), MulRes)) {
-      Result[0].Coefficient += MulRes;
-      if (Offset.isNegative()) {
-        // Add pre-condition ensuring the GEP is increasing monotonically and
-        // can be de-composed.
-        Preconditions.emplace_back(
-            CmpInst::ICMP_SGE, InnerGEP->getOperand(1),
-            ConstantInt::get(InnerGEP->getOperand(1)->getType(),
-                             -1 * Offset.getSExtValue()));
-      }
-      return Result;
+    Result[0].Coefficient += Scale * Offset.getSExtValue();
+    if (Offset.isNegative()) {
+      // Add pre-condition ensuring the GEP is increasing monotonically and
+      // can be de-composed.
+      Preconditions.emplace_back(
+          CmpInst::ICMP_SGE, InnerGEP->getOperand(1),
+          ConstantInt::get(InnerGEP->getOperand(1)->getType(),
+                           -1 * Offset.getSExtValue()));
     }
+    return Result;
   }
 
   Value *Op0, *Op1;
   ConstantInt *CI;
   // If the index is zero-extended, it is guaranteed to be positive.
   if (match(GEP.getOperand(GEP.getNumOperands() - 1), m_ZExt(m_Value(Op0)))) {
-    if (match(Op0, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) &&
-        canUseSExt(CI) &&
-        !MulOverflow(Scale, int64_t(std::pow(int64_t(2), CI->getSExtValue())),
-                     MulRes))
-      return {{0, nullptr}, {1, GEP.getPointerOperand()}, {MulRes, Op1}};
+    if (match(Op0, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI))
+      return {{0, nullptr},
+              {1, GEP.getPointerOperand()},
+              {Scale * int64_t(std::pow(int64_t(2), CI->getSExtValue())), Op1}};
     if (match(Op0, m_NSWAdd(m_Value(Op1), m_ConstantInt(CI))) &&
-        canUseSExt(CI) && match(Op0, m_NUWAdd(m_Value(), m_Value())) &&
-        !MulOverflow(Scale, CI->getSExtValue(), MulRes))
-      return {{MulRes, nullptr}, {1, GEP.getPointerOperand()}, {Scale, Op1}};
+        canUseSExt(CI) && match(Op0, m_NUWAdd(m_Value(), m_Value())))
+      return {{Scale * CI->getSExtValue(), nullptr},
+              {1, GEP.getPointerOperand()},
+              {Scale, Op1}};
+
     return {{0, nullptr}, {1, GEP.getPointerOperand()}, {Scale, Op0, true}};
   }
 
   if (match(GEP.getOperand(GEP.getNumOperands() - 1), m_ConstantInt(CI)) &&
-      !CI->isNegative() && canUseSExt(CI) &&
-      !MulOverflow(Scale, CI->getSExtValue(), MulRes))
-    return {{MulRes, nullptr}, {1, GEP.getPointerOperand()}};
+      !CI->isNegative() && canUseSExt(CI))
+    return {{Scale * CI->getSExtValue(), nullptr},
+            {1, GEP.getPointerOperand()}};
 
   SmallVector<DecompEntry, 4> Result;
   if (match(GEP.getOperand(GEP.getNumOperands() - 1),
             m_NSWShl(m_Value(Op0), m_ConstantInt(CI))) &&
-      canUseSExt(CI) &&
-      !MulOverflow(Scale, int64_t(std::pow(int64_t(2), CI->getSExtValue())),
-                   MulRes))
-    Result = {{0, nullptr}, {1, GEP.getPointerOperand()}, {MulRes, Op0}};
+      canUseSExt(CI))
+    Result = {{0, nullptr},
+              {1, GEP.getPointerOperand()},
+              {Scale * int64_t(std::pow(int64_t(2), CI->getSExtValue())), Op0}};
   else if (match(GEP.getOperand(GEP.getNumOperands() - 1),
                  m_NSWAdd(m_Value(Op0), m_ConstantInt(CI))) &&
-           canUseSExt(CI) && !MulOverflow(Scale, CI->getSExtValue(), MulRes))
-    Result = {{MulRes, nullptr}, {1, GEP.getPointerOperand()}, {Scale, Op0}};
+           canUseSExt(CI))
+    Result = {{Scale * CI->getSExtValue(), nullptr},
+              {1, GEP.getPointerOperand()},
+              {Scale, Op0}};
   else {
     Op0 = GEP.getOperand(GEP.getNumOperands() - 1);
     Result = {{0, nullptr}, {1, GEP.getPointerOperand()}, {Scale, Op0}};
