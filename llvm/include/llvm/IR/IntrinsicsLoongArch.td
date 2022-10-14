@@ -33,4 +33,6 @@ defm int_loongarch_masked_atomicrmw_xchg : MaskedAtomicRMWIntrinsics;
 defm int_loongarch_masked_atomicrmw_add : MaskedAtomicRMWIntrinsics;
 defm int_loongarch_masked_atomicrmw_sub : MaskedAtomicRMWIntrinsics;
 defm int_loongarch_masked_atomicrmw_nand : MaskedAtomicRMWIntrinsics;
+defm int_loongarch_masked_atomicrmw_umax : MaskedAtomicRMWIntrinsics;
+defm int_loongarch_masked_atomicrmw_umin : MaskedAtomicRMWIntrinsics;
 } // TargetPrefix = "loongarch"
