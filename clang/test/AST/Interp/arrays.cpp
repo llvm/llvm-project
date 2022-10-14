@@ -117,3 +117,15 @@ namespace indices {
                                        // expected-error {{must be initialized by a constant expression}} \
                                        // expected-note {{cannot refer to element -2 of array of 10}}
 };
+
+namespace DefaultInit {
+  template <typename T, unsigned N>
+  struct B {
+    T a[N];
+  };
+
+  int f() {
+     constexpr B<int,10> arr = {};
+     constexpr int x = arr.a[0];
+  }
+};
