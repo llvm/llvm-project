@@ -722,6 +722,27 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
         return false;
     }
     return true;
+  } else if (const auto *IVIE = dyn_cast<ImplicitValueInitExpr>(Initializer)) {
+    const ArrayType *AT = IVIE->getType()->getAsArrayTypeUnsafe();
+    assert(AT);
+    const auto *CAT = cast<ConstantArrayType>(AT);
+    size_t NumElems = CAT->getSize().getZExtValue();
+
+    if (Optional<PrimType> ElemT = classify(CAT->getElementType())) {
+      // TODO(perf): For int and bool types, we can probably just skip this
+      //   since we memset our Block*s to 0 and so we have the desired value
+      //   without this.
+      for (size_t I = 0; I != NumElems; ++I) {
+        if (!this->emitZero(*ElemT, Initializer))
+          return false;
+        if (!this->emitInitElem(*ElemT, I, Initializer))
+          return false;
+      }
+    } else {
+      assert(false && "default initializer for non-primitive type");
+    }
+
+    return true;
   }
 
   assert(false && "Unknown expression for array initialization");
