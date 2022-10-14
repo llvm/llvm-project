@@ -13,6 +13,15 @@
 using namespace llvm;
 using namespace llvm::objcopy::macho;
 
+Section::Section(StringRef SegName, StringRef SectName)
+    : Segname(std::string(SegName)), Sectname(std::string(SectName)),
+      CanonicalName((Twine(SegName) + Twine(',') + SectName).str()) {}
+
+Section::Section(StringRef SegName, StringRef SectName, StringRef Content)
+    : Segname(std::string(SegName)), Sectname(std::string(SectName)),
+      CanonicalName((Twine(SegName) + Twine(',') + SectName).str()),
+      Content(Content) {}
+
 const SymbolEntry *SymbolTable::getSymbolByIndex(uint32_t Index) const {
   assert(Index < Symbols.size() && "invalid symbol index");
   return Symbols[Index].get();
