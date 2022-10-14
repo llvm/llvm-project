@@ -4,6 +4,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=VI %s
 
 
+declare half @llvm.nearbyint.f16(half) #0
 declare float @llvm.nearbyint.f32(float) #0
 declare <2 x float> @llvm.nearbyint.v2f32(<2 x float>) #0
 declare <4 x float> @llvm.nearbyint.v4f32(<4 x float>) #0
@@ -11,6 +12,48 @@ declare double @llvm.nearbyint.f64(double) #0
 declare <2 x double> @llvm.nearbyint.v2f64(<2 x double>) #0
 declare <4 x double> @llvm.nearbyint.v4f64(<4 x double>) #0
 
+
+define amdgpu_kernel void @fnearbyint_f16(half addrspace(1)* %out, half %in) #1 {
+; SI-LABEL: fnearbyint_f16:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; SI-NEXT:    s_mov_b32 s3, 0xf000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, s4
+; SI-NEXT:    v_rndne_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; SI-NEXT:    s_endpgm
+;
+; CI-LABEL: fnearbyint_f16:
+; CI:       ; %bb.0:
+; CI-NEXT:    s_load_dword s2, s[0:1], 0xb
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x9
+; CI-NEXT:    s_mov_b32 s3, 0xf000
+; CI-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, s2
+; CI-NEXT:    s_mov_b32 s2, -1
+; CI-NEXT:    v_rndne_f32_e32 v0, v0
+; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; CI-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; CI-NEXT:    s_endpgm
+;
+; VI-LABEL: fnearbyint_f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dword s4, s[0:1], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
+; VI-NEXT:    s_mov_b32 s3, 0xf000
+; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_rndne_f16_e32 v0, s4
+; VI-NEXT:    buffer_store_short v0, off, s[0:3], 0
+; VI-NEXT:    s_endpgm
+  %1 = call half @llvm.nearbyint.f16(half %in)
+  store half %1, half addrspace(1)* %out
+  ret void
+}
 
 define amdgpu_kernel void @fnearbyint_f32(float addrspace(1)* %out, float %in) #1 {
 ; SI-LABEL: fnearbyint_f32:
