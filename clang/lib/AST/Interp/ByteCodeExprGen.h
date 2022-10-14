@@ -244,6 +244,15 @@ private:
     return (*InitFn)();
   }
 
+  /// Returns the CXXRecordDecl for the type of the given expression,
+  /// or nullptr if no such decl exists.
+  const CXXRecordDecl *getRecordDecl(const Expr *E) const {
+    QualType T = E->getType();
+    if (const auto *RD = T->getPointeeCXXRecordDecl())
+      return RD;
+    return T->getAsCXXRecordDecl();
+  }
+
 protected:
   /// Variable to storage mapping.
   llvm::DenseMap<const ValueDecl *, Scope::Local> Locals;
