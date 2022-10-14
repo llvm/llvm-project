@@ -1,4 +1,4 @@
-; RUN: opt -indvars -S < %s | FileCheck %s
+; RUN: opt -passes=indvars -S < %s | FileCheck %s
 ; rdar://8197217
 
 ; Indvars should be able to emit a clean GEP here, not an uglygep.

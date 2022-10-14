@@ -1,5 +1,5 @@
 ; PR1015
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 
 target datalayout = "e-p:32:32"
 target triple = "i686-apple-darwin8"

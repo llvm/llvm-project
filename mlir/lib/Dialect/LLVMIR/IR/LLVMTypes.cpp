@@ -934,6 +934,15 @@ Type mlir::LLVM::getVectorType(Type elementType, unsigned numElements,
   return VectorType::get(numElements, elementType, (unsigned)isScalable);
 }
 
+Type mlir::LLVM::getVectorType(Type elementType,
+                               const llvm::ElementCount &numElements) {
+  if (numElements.isScalable())
+    return getVectorType(elementType, numElements.getKnownMinValue(),
+                         /*isScalable=*/true);
+  return getVectorType(elementType, numElements.getFixedValue(),
+                       /*isScalable=*/false);
+}
+
 Type mlir::LLVM::getFixedVectorType(Type elementType, unsigned numElements) {
   bool useLLVM = LLVMFixedVectorType::isValidElementType(elementType);
   bool useBuiltIn = VectorType::isValidElementType(elementType);

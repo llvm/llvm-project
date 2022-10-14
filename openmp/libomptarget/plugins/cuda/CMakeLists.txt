@@ -55,6 +55,7 @@ if (LIBOMPTARGET_CAN_LINK_LIBCUDA AND NOT LIBOMPTARGET_FORCE_DLOPEN_LIBCUDA)
     ${LIBOMPTARGET_DEP_CUDA_DRIVER_LIBRARIES}
     ${OPENMP_PTHREAD_LIB}
     "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
+    "-Wl,--undefined-version"
     "-Wl,-z,defs"
 
     NO_INSTALL_RPATH
@@ -77,6 +78,7 @@ else()
     MemoryManager
     ${OPENMP_PTHREAD_LIB}
     "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
+    "-Wl,--undefined-version"
     "-Wl,-z,defs"
 
     NO_INSTALL_RPATH

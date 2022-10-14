@@ -1857,7 +1857,7 @@ public:
     if (op.getNumOutputs() != 1)
       return failure();
     unsigned numTensors = op.getNumInputsAndOutputs();
-    unsigned numLoops = op.iterator_types().getValue().size();
+    unsigned numLoops = op.getNumLoops();
     Merger merger(numTensors, numLoops);
     if (!findSparseAnnotations(merger, op))
       return failure();

@@ -2816,7 +2816,7 @@ def TestLinalgConvOp :
       return &regionBuilder;
     }
 
-    mlir::ArrayAttr iterator_types() {
+    mlir::ArrayAttr getIteratorTypes() {
       return getOperation()->getAttrOfType<mlir::ArrayAttr>("iterator_types");
     }
 
@@ -2875,7 +2875,7 @@ def TestLinalgFillOp :
       return &regionBuilder;
     }
 
-    mlir::ArrayAttr iterator_types() {
+    mlir::ArrayAttr getIteratorTypes() {
       return getOperation()->getAttrOfType<mlir::ArrayAttr>("iterator_types");
     }
 

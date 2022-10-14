@@ -98,16 +98,12 @@ GlobalVariable *replaceBuffer(CGHLSLRuntime::Buffer &Buf) {
   IRBuilder<> B(CBGV->getContext());
   Value *ZeroIdx = B.getInt32(0);
   // Replace Const use with CB use.
-  for (auto &Const : Buf.Constants) {
-    llvm::Type *EltTy = Buf.LayoutStruct->getElementType(Const.second);
-    GlobalVariable *GV = Const.first;
-    unsigned Offset = Const.second;
-
+  for (auto &[GV, Offset]: Buf.Constants) {
     Value *GEP =
         B.CreateGEP(Buf.LayoutStruct, CBGV, {ZeroIdx, B.getInt32(Offset)});
 
-    llvm::Type *GVTy = GV->getValueType();
-    assert(EltTy == GVTy && "constant type mismatch");
+    assert(Buf.LayoutStruct->getElementType(Offset) == GV->getValueType() &&
+           "constant type mismatch");
 
     // Replace.
     GV->replaceAllUsesWith(GEP);

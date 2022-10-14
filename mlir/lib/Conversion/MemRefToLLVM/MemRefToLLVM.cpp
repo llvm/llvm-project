@@ -961,6 +961,10 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
                                             ValueRange{rank, voidPtr});
     };
 
+    // Save stack position before promoting descriptors
+    auto stackSaveOp =
+        rewriter.create<LLVM::StackSaveOp>(loc, getVoidPtrType());
+
     Value unrankedSource = srcType.hasRank()
                                ? makeUnranked(adaptor.getSource(), srcType)
                                : adaptor.getSource();
@@ -990,6 +994,10 @@ struct MemRefCopyOpLowering : public ConvertOpToLLVMPattern<memref::CopyOp> {
         op->getParentOfType<ModuleOp>(), getIndexType(), sourcePtr.getType());
     rewriter.create<LLVM::CallOp>(loc, copyFn,
                                   ValueRange{elemSize, sourcePtr, targetPtr});
+
+    // Restore stack used for descriptors
+    rewriter.create<LLVM::StackRestoreOp>(loc, stackSaveOp);
+
     rewriter.eraseOp(op);
 
     return success();

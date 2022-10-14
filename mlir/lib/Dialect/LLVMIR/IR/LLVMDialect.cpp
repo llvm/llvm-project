@@ -88,28 +88,27 @@ static LogicalResult verifySymbolAttrUse(FlatSymbolRefAttr symbol,
   return success();
 }
 
+/// Returns a boolean type that has the same shape as `type`. It supports both
+/// fixed size vectors as well as scalable vectors.
+static Type getI1SameShape(Type type) {
+  Type i1Type = IntegerType::get(type.getContext(), 1);
+  if (LLVM::isCompatibleVectorType(type))
+    return LLVM::getVectorType(i1Type, LLVM::getVectorNumElements(type));
+  return i1Type;
+}
+
 //===----------------------------------------------------------------------===//
 // Printing, parsing and builder for LLVM::CmpOp.
 //===----------------------------------------------------------------------===//
 
 void ICmpOp::build(OpBuilder &builder, OperationState &result,
                    ICmpPredicate predicate, Value lhs, Value rhs) {
-  auto boolType = IntegerType::get(lhs.getType().getContext(), 1);
-  if (LLVM::isCompatibleVectorType(lhs.getType()) ||
-      LLVM::isCompatibleVectorType(rhs.getType())) {
-    int64_t numLHSElements = 1, numRHSElements = 1;
-    if (LLVM::isCompatibleVectorType(lhs.getType()))
-      numLHSElements =
-          LLVM::getVectorNumElements(lhs.getType()).getFixedValue();
-    if (LLVM::isCompatibleVectorType(rhs.getType()))
-      numRHSElements =
-          LLVM::getVectorNumElements(rhs.getType()).getFixedValue();
-    build(builder, result,
-          VectorType::get({std::max(numLHSElements, numRHSElements)}, boolType),
-          predicate, lhs, rhs);
-  } else {
-    build(builder, result, boolType, predicate, lhs, rhs);
-  }
+  build(builder, result, getI1SameShape(lhs.getType()), predicate, lhs, rhs);
+}
+
+void FCmpOp::build(OpBuilder &builder, OperationState &result,
+                   FCmpPredicate predicate, Value lhs, Value rhs) {
+  build(builder, result, getI1SameShape(lhs.getType()), predicate, lhs, rhs);
 }
 
 void ICmpOp::print(OpAsmPrinter &p) {
@@ -132,8 +131,6 @@ void FCmpOp::print(OpAsmPrinter &p) {
 //                 attribute-dict? `:` type
 template <typename CmpPredicateType>
 static ParseResult parseCmpOp(OpAsmParser &parser, OperationState &result) {
-  Builder &builder = parser.getBuilder();
-
   StringAttr predicateAttr;
   OpAsmParser::UnresolvedOperand lhs, rhs;
   Type type;
@@ -173,23 +170,10 @@ static ParseResult parseCmpOp(OpAsmParser &parser, OperationState &result) {
 
   // The result type is either i1 or a vector type <? x i1> if the inputs are
   // vectors.
-  Type resultType = IntegerType::get(builder.getContext(), 1);
   if (!isCompatibleType(type))
     return parser.emitError(trailingTypeLoc,
                             "expected LLVM dialect-compatible type");
-  if (LLVM::isCompatibleVectorType(type)) {
-    if (LLVM::isScalableVectorType(type)) {
-      resultType = LLVM::getVectorType(
-          resultType, LLVM::getVectorNumElements(type).getKnownMinValue(),
-          /*isScalable=*/true);
-    } else {
-      resultType = LLVM::getVectorType(
-          resultType, LLVM::getVectorNumElements(type).getFixedValue(),
-          /*isScalable=*/false);
-    }
-  }
-
-  result.addTypes({resultType});
+  result.addTypes(getI1SameShape(type));
   return success();
 }
 
