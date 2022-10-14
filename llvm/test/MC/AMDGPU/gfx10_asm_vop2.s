@@ -99,6 +99,34 @@ v_cndmask_b32_e64 v5, v1, v2, vcc
 // W64: encoding: [0x05,0x00,0x01,0xd5,0x01,0x05,0xaa,0x01]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
+v_cndmask_b32_e64 v5, -v1, |v2|, vcc
+// W64: encoding: [0x05,0x02,0x01,0xd5,0x01,0x05,0xaa,0x21]
+// W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_cndmask_b32_e64 v5, |v1|, -v2, vcc
+// W64: encoding: [0x05,0x01,0x01,0xd5,0x01,0x05,0xaa,0x41]
+// W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_cndmask_b32_sdwa v5, -v1, |v2|, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+// W64: encoding: [0xf9,0x04,0x0a,0x02,0x01,0x06,0x16,0x26]
+// W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+v_cndmask_b32_sdwa v5, |v1|, -v2, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+// W64: encoding: [0xf9,0x04,0x0a,0x02,0x01,0x06,0x26,0x16]
+// W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+v_cndmask_b32_dpp v5, -v1, |v2|, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 bound_ctrl:0
+// W64: encoding: [0xfa,0x04,0x0a,0x02,0x01,0xe4,0x98,0x00]
+// W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+v_cndmask_b32_dpp v5, |v1|, -v2, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 bound_ctrl:0
+// W64: encoding: [0xfa,0x04,0x0a,0x02,0x01,0xe4,0x68,0x00]
+// W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+v_cndmask_b32_dpp v5, -|v1|, -|v2|, vcc quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 bound_ctrl:0
+// W64: encoding: [0xfa,0x04,0x0a,0x02,0x01,0xe4,0xf8,0x00]
+// W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
 v_cndmask_b32_e32 v5, v1, v2, vcc_lo
 // W32: encoding: [0x01,0x05,0x0a,0x02]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
@@ -189,6 +217,42 @@ v_cndmask_b32_e64 v5, v1, v2, s100
 
 v_cndmask_b32_e64 v5, v1, v2, vcc_lo
 // W32: encoding: [0x05,0x00,0x01,0xd5,0x01,0x05,0xaa,0x01]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+v_cndmask_b32_e64 v5, -v1, |v2|, vcc_lo
+// W32: encoding: [0x05,0x02,0x01,0xd5,0x01,0x05,0xaa,0x21]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_cndmask_b32_e64 v5, |v1|, -v2, vcc_lo
+// W32: encoding: [0x05,0x01,0x01,0xd5,0x01,0x05,0xaa,0x41]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_cndmask_b32_sdwa v5, -v1, |v2|, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+// W32: encoding: [0xf9,0x04,0x0a,0x02,0x01,0x06,0x16,0x26]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+v_cndmask_b32_sdwa v5, |v1|, -v2, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+// W32: encoding: [0xf9,0x04,0x0a,0x02,0x01,0x06,0x26,0x16]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+v_cndmask_b32_sdwa v5, sext(v1), v2, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
+
+v_cndmask_b32_sdwa v5, v1, sext(v2), vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+// W32-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: not a valid operand
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
+
+v_cndmask_b32_dpp v5, -v1, |v2|, vcc_lo quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 bound_ctrl:0
+// W32: encoding: [0xfa,0x04,0x0a,0x02,0x01,0xe4,0x98,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+v_cndmask_b32_dpp v5, |v1|, -v2, vcc_lo quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 bound_ctrl:0
+// W32: encoding: [0xfa,0x04,0x0a,0x02,0x01,0xe4,0x68,0x00]
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+
+v_cndmask_b32_dpp v5, -|v1|, -|v2|, vcc_lo quad_perm:[0,1,2,3] row_mask:0x0 bank_mask:0x0 bound_ctrl:0
+// W32: encoding: [0xfa,0x04,0x0a,0x02,0x01,0xe4,0xf8,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 v_add_f32_e32 v5, v1, v2

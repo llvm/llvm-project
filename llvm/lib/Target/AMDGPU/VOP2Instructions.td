@@ -581,7 +581,7 @@ class VOP2e_SGPR<list<ValueType> ArgVT> : VOPProfile<ArgVT, /*EnableF32SrcMods=*
   let Asm64 = "$vdst, $src0_modifiers, $src1_modifiers, $src2";
   let AsmSDWA = "$vdst, $src0_modifiers, $src1_modifiers, vcc$clamp $dst_sel $dst_unused $src0_sel $src1_sel";
   let AsmSDWA9 = "$vdst, $src0_modifiers, $src1_modifiers, vcc$clamp $dst_sel $dst_unused $src0_sel $src1_sel";
-  let AsmDPP = "$vdst, $src0, $src1, vcc $dpp_ctrl$row_mask$bank_mask$bound_ctrl";
+  let AsmDPP = "$vdst, $src0_modifiers, $src1_modifiers, vcc $dpp_ctrl$row_mask$bank_mask$bound_ctrl";
   let AsmDPP8 = "$vdst, $src0, $src1, vcc $dpp8$fi";
   let AsmDPP16 = AsmDPP#"$fi";
   let AsmVOP3DPPBase = Asm64;
@@ -593,22 +593,29 @@ class VOP2e_SGPR<list<ValueType> ArgVT> : VOPProfile<ArgVT, /*EnableF32SrcMods=*
   // implicit VCC use.
   let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1);
 
-  let InsSDWA = (ins Src0ModSDWA:$src0_modifiers, Src0SDWA:$src0,
-                     Src1ModSDWA:$src1_modifiers, Src1SDWA:$src1,
+  let HasSrc0IntMods = 0;
+  let HasSrc1IntMods = 0;
+  let HasSrc0FloatMods = 1;
+  let HasSrc1FloatMods = 1;
+  let InsSDWA = (ins FP32SDWAInputMods:$src0_modifiers, Src0SDWA:$src0,
+                     FP32SDWAInputMods:$src1_modifiers, Src1SDWA:$src1,
                      clampmod:$clamp,
                      dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel, src1_sel:$src1_sel);
 
   let InsDPP = (ins DstRCDPP:$old,
-                    Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
-                    Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
+                    FPVRegInputMods:$src0_modifiers, Src0DPP:$src0,
+                    FPVRegInputMods:$src1_modifiers, Src1DPP:$src1,
                     dpp_ctrl:$dpp_ctrl, row_mask:$row_mask,
                     bank_mask:$bank_mask, bound_ctrl:$bound_ctrl);
   let InsDPP16 = !con(InsDPP, (ins FI:$fi));
   let InsDPP8 = (ins DstRCDPP:$old,
-                     Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
-                     Src1ModDPP:$src1_modifiers, Src1DPP:$src1,
+                     FPVRegInputMods:$src0_modifiers, Src0DPP:$src0,
+                     FPVRegInputMods:$src1_modifiers, Src1DPP:$src1,
                      dpp8:$dpp8, FI:$fi);
+
+  let Src0ModVOP3DPP = FPVRegInputMods;
+  let Src1ModVOP3DPP = FPVRegInputMods;
 
   let HasExt = 1;
   let HasExtDPP = 1;

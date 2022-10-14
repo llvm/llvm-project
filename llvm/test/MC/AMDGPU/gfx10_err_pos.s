@@ -1344,3 +1344,11 @@ ds_swizzle_b32 v8, v2 offset:0x10000
 // CHECK: error: expected a 16-bit offset
 // CHECK-NEXT:{{^}}ds_swizzle_b32 v8, v2 offset:0x10000
 // CHECK-NEXT:{{^}}                             ^
+
+//==============================================================================
+// not a valid operand
+
+v_cndmask_b32_sdwa v5, v1, sext(v2), vcc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:BYTE_0 src1_sel:WORD_0
+// CHECK: error: not a valid operand.
+// CHECK-NEXT:{{^}}v_cndmask_b32_sdwa v5, v1, sext(v2), vcc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:BYTE_0 src1_sel:WORD_0
+// CHECK-NEXT:{{^}}                           ^
