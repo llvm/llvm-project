@@ -312,11 +312,14 @@ struct Object {
   LinkData FunctionStarts;
   LinkData ExportsTrie;
   LinkData ChainedFixups;
+  LinkData DylibCodeSignDRs;
 
   Optional<uint32_t> SwiftVersion;
 
   /// The index of LC_CODE_SIGNATURE load command if present.
   Optional<size_t> CodeSignatureCommandIndex;
+  /// The index of LC_DYLIB_CODE_SIGN_DRS load command if present.
+  Optional<size_t> DylibCodeSignDRsIndex;
   /// The index of LC_SYMTAB load command if present.
   Optional<size_t> SymTabCommandIndex;
   /// The index of LC_DYLD_INFO or LC_DYLD_INFO_ONLY load command if present.
