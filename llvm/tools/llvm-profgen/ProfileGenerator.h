@@ -108,7 +108,7 @@ protected:
 
   void updateCallsiteSamples();
 
-  StringRef getCalleeNameForOffset(uint64_t TargetOffset);
+  StringRef getCalleeNameForAddress(uint64_t TargetAddress);
 
   void computeSummaryAndThreshold(SampleProfileMap &ProfileMap);
 
