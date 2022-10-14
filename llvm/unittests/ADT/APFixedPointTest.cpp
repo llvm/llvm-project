@@ -276,7 +276,8 @@ void CheckIntPartMax(const FixedPointSemantics &Sema, uint64_t Expected) {
                                     APSInt::getUnsigned(Expected)) == 0);
 }
 
-void CheckIntPartRes(const FixedPointSemantics &Sema, int64_t Representation, int64_t Result) {
+void CheckIntPartRes(const FixedPointSemantics &Sema, int64_t Representation,
+                     uint64_t Result) {
   APFixedPoint Val(Representation, Sema);
   ASSERT_EQ(Val.getIntPart().getZExtValue(), Result) ;
 }
