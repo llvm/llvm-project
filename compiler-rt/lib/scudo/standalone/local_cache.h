@@ -31,8 +31,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     void appendFromArray(CompactPtrT *Array, u16 N) {
       DCHECK_LE(N, MaxNumCached - Count);
       memcpy(Batch + Count, Array, sizeof(Batch[0]) * N);
-      // u16 will be promoted to int by arithmetic type conversion.
-      Count = static_cast<u16>(Count + N);
+      Count += N;
     }
     void clear() { Count = 0; }
     void add(CompactPtrT P) {
@@ -190,7 +189,7 @@ private:
     for (uptr I = 0; I < NumClasses; I++) {
       PerClass *P = &PerClassArray[I];
       const uptr Size = SizeClassAllocator::getSizeByClassId(I);
-      P->MaxCount = static_cast<u16>(2 * TransferBatch::getMaxCached(Size));
+      P->MaxCount = 2 * TransferBatch::getMaxCached(Size);
       if (I != BatchClassId) {
         P->ClassSize = Size;
       } else {
@@ -222,8 +221,7 @@ private:
   NOINLINE void drain(PerClass *C, uptr ClassId) {
     const u16 Count = Min(static_cast<u16>(C->MaxCount / 2), C->Count);
     Allocator->pushBlocks(this, ClassId, &C->Chunks[0], Count);
-    // u16 will be promoted to int by arithmetic type conversion.
-    C->Count = static_cast<u16>(C->Count - Count);
+    C->Count -= Count;
     for (u16 I = 0; I < C->Count; I++)
       C->Chunks[I] = C->Chunks[I + Count];
   }
