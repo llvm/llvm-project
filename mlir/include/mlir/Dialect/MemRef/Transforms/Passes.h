@@ -20,6 +20,10 @@ namespace mlir {
 class AffineDialect;
 class ModuleOp;
 
+namespace arith {
+class WideIntEmulationConverter;
+} // namespace arith
+
 namespace func {
 class FuncDialect;
 } // namespace func
@@ -59,6 +63,17 @@ void populateResolveShapedTypeResultDimsPatterns(RewritePatternSet &patterns);
 /// easier to analyze constructs.
 void populateSimplifyExtractStridedMetadataOpPatterns(
     RewritePatternSet &patterns);
+
+/// Appends patterns for emulating wide integer memref operations with ops over
+/// narrower integer types.
+void populateMemRefWideIntEmulationPatterns(
+    arith::WideIntEmulationConverter &typeConverter,
+    RewritePatternSet &patterns);
+
+/// Appends type converions for emulating wide integer memref operations with
+/// ops over narrowe integer types.
+void populateMemRefWideIntEmulationConversions(
+    arith::WideIntEmulationConverter &typeConverter);
 
 /// Transformation to do multi-buffering/array expansion to remove dependencies
 /// on the temporary allocation between consecutive loop iterations.
