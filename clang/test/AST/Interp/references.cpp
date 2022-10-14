@@ -83,9 +83,8 @@ constexpr int RefToMemberExpr() {
   S s{1, 2};
 
   int &j = s.i;
-  j += 10;
+  j = j + 10;
 
   return j;
 }
-// FIXME: Should be accepted.
-static_assert(RefToMemberExpr() == 11, ""); // expected-error {{not an integral constant expression}}
+static_assert(RefToMemberExpr() == 11, "");

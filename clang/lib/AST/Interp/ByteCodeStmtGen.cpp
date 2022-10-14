@@ -94,10 +94,6 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
   // Classify the return type.
   ReturnType = this->classify(F->getReturnType());
 
-  // Set up fields and context if a constructor.
-  if (auto *MD = dyn_cast<CXXMethodDecl>(F))
-    return this->bail(MD);
-
   if (auto *Body = F->getBody())
     if (!visitStmt(Body))
       return false;
