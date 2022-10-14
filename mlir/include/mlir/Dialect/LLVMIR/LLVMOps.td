@@ -815,8 +815,14 @@ def LLVM_ExtractValueOp : LLVM_Op<"extractvalue", [Pure]> {
   let hasFolder = 1;
   let hasVerifier = 1;
 
+  string llvmInstName = "ExtractValue";
   string llvmBuilder = [{
     $res = builder.CreateExtractValue($container, extractPosition($position));
+  }];
+  string mlirBuilder = [{
+    auto *evInst = cast<llvm::ExtractValueInst>(inst);
+    $res = $_builder.create<LLVM::ExtractValueOp>($_location,
+      $container, getPositionFromIndices(evInst->getIndices()));
   }];
 }
 
@@ -871,9 +877,15 @@ def LLVM_InsertValueOp : LLVM_Op<
 
   let hasVerifier = 1;
 
+  string llvmInstName = "InsertValue";
   string llvmBuilder = [{
     $res = builder.CreateInsertValue($container, $value,
                                      extractPosition($position));
+  }];
+  string mlirBuilder = [{
+    auto *ivInst = cast<llvm::InsertValueInst>(inst);
+    $res = $_builder.create<LLVM::InsertValueOp>($_location,
+      $container, $value, getPositionFromIndices(ivInst->getIndices()));
   }];
 }
 
