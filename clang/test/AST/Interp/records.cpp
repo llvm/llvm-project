@@ -48,6 +48,7 @@ static_assert(ints2.a == -20, "");
 static_assert(ints2.b == -30, "");
 static_assert(!ints2.c, "");
 
+#if 0
 constexpr Ints getInts() {
   return {64, 128, true};
 }
@@ -55,6 +56,7 @@ constexpr Ints ints3 = getInts();
 static_assert(ints3.a == 64, "");
 static_assert(ints3.b == 128, "");
 static_assert(ints3.c, "");
+#endif
 
 constexpr Ints ints4 = {
   .a = 40 * 50,
@@ -118,10 +120,12 @@ constexpr const C* getPointer() {
 }
 static_assert(getPointer()->a == 100, "");
 
+#if 0
 constexpr C RVOAndParams(const C *c) {
   return C();
 }
 constexpr C RVOAndParamsResult = RVOAndParams(&c);
+#endif
 
 constexpr int locals() {
   C c;
