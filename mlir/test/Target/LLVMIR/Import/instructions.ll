@@ -276,6 +276,41 @@ define <4 x half> @insert_element(<4 x half>* %vec, half %val, i32 %idx) {
 
 ; // -----
 
+; CHECK-LABEL: @insert_extract_value_struct
+; CHECK-SAME:  %[[PTR:[a-zA-Z0-9]+]]
+define float @insert_extract_value_struct({{i32},{float, double}}* %ptr) {
+  ; CHECK:  %[[C0:.+]] = llvm.mlir.constant(2.000000e+00 : f64)
+  ; CHECK:  %[[VT:.+]] = llvm.load %[[PTR]]
+  %1 = load {{i32},{float, double}}, {{i32},{float, double}}* %ptr
+  ; CHECK:  %[[EV:.+]] = llvm.extractvalue %[[VT]][1, 0] :
+  ; CHECK-SAME: !llvm.struct<(struct<(i32)>, struct<(f32, f64)>)>
+  %2 = extractvalue {{i32},{float, double}} %1, 1, 0
+  ; CHECK:  %[[IV:.+]] = llvm.insertvalue %[[C0]], %[[VT]][1, 1] :
+  ; CHECK-SAME: !llvm.struct<(struct<(i32)>, struct<(f32, f64)>)>
+  %3 = insertvalue {{i32},{float, double}} %1, double 2.0, 1, 1
+  ; CHECK:  llvm.store %[[IV]], %[[PTR]]
+  store {{i32},{float, double}} %3, {{i32},{float, double}}* %ptr
+  ; CHECK:  llvm.return %[[EV]]
+  ret float %2
+}
+
+; // -----
+
+; CHECK-LABEL: @insert_extract_value_array
+; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
+define void @insert_extract_value_array([4 x [4 x i8]] %arg1) {
+  ; CHECK:  %[[C0:.+]] = llvm.mlir.constant(0 : i8)
+  ; CHECK:  llvm.insertvalue %[[C0]], %[[ARG1]][0, 0] : !llvm.array<4 x array<4 x i8>>
+  %1 = insertvalue [4 x [4 x i8 ]] %arg1, i8 0, 0, 0
+  ; CHECK:  llvm.extractvalue %[[ARG1]][1] : !llvm.array<4 x array<4 x i8>>
+  %2 = extractvalue [4 x [4 x i8 ]] %arg1, 1
+  ; CHECK:  llvm.extractvalue %[[ARG1]][0, 1] : !llvm.array<4 x array<4 x i8>>
+  %3 = extractvalue [4 x [4 x i8 ]] %arg1, 0, 1
+  ret void
+}
+
+; // -----
+
 ; CHECK-LABEL: @select
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[ARG2:[a-zA-Z0-9]+]]
