@@ -104,6 +104,7 @@ static BoolValue &unpackValue(BoolValue &V, Environment &Env) {
     return unpackBinaryBoolValue<BiconditionalValue>(Env, V,
                                                      &Environment::makeIff);
   }
+  llvm_unreachable("All reachable cases in switch return");
 }
 
 // Unpacks the value (if any) associated with `E` and updates `E` to the new
