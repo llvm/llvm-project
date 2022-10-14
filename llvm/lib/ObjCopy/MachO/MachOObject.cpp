@@ -75,6 +75,9 @@ void Object::updateLoadCommandIndexes() {
     case MachO::LC_FUNCTION_STARTS:
       FunctionStartsCommandIndex = Index;
       break;
+    case MachO::LC_DYLIB_CODE_SIGN_DRS:
+      DylibCodeSignDRsIndex = Index;
+      break;
     case MachO::LC_DYLD_CHAINED_FIXUPS:
       ChainedFixupsCommandIndex = Index;
       break;
