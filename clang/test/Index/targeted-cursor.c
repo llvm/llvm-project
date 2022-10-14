@@ -62,4 +62,4 @@ int LocalVar2;
 // PREAMBLE-CURSOR1: VarDecl=PreambleVar:2:12
 
 // FIELD-CURSOR1: FieldDecl=z:2:7 (Definition)
-// FIELD-CURSOR2: StructDecl=:13:9 (Definition)
+// FIELD-CURSOR2: StructDecl=Vector:13:9 (Definition)

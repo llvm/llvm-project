@@ -5,13 +5,13 @@ void a() {
 }
 
 // CHECK-LABEL: {{^---$}}
-// CHECK: {{^name:[ ]+'lambda at .*templight-empty-entries-fix.cpp:4:3'$}}
+// CHECK: {{^name:[ ]+'\(lambda at .*templight-empty-entries-fix.cpp:4:3\)'$}}
 // CHECK: {{^kind:[ ]+Memoization$}}
 // CHECK: {{^event:[ ]+Begin$}}
 // CHECK: {{^orig:[ ]+'.*templight-empty-entries-fix.cpp:4:3'$}}
 // CHECK: {{^poi:[ ]+'.*templight-empty-entries-fix.cpp:4:3'$}}
 // CHECK-LABEL: {{^---$}}
-// CHECK: {{^name:[ ]+'lambda at .*templight-empty-entries-fix.cpp:4:3'$}}
+// CHECK: {{^name:[ ]+'\(lambda at .*templight-empty-entries-fix.cpp:4:3\)'$}}
 // CHECK: {{^kind:[ ]+Memoization$}}
 // CHECK: {{^event:[ ]+End$}}
 // CHECK: {{^orig:[ ]+'.*templight-empty-entries-fix.cpp:4:3'$}}
@@ -225,37 +225,37 @@ void e() {
 }
 
 // CHECK-LABEL: {{^---$}}
-// CHECK: {{^name:[ ]+unnamed struct$}}
+// CHECK: {{^name:[ ]+'\(unnamed struct at .*templight-empty-entries-fix.cpp:223:3\)'$}}
 // CHECK: {{^kind:[ ]+Memoization$}}
 // CHECK: {{^event:[ ]+Begin$}}
 // CHECK: {{^orig:[ ]+'.*templight-empty-entries-fix.cpp:223:3'$}}
 // CHECK: {{^poi:[ ]+'.*templight-empty-entries-fix.cpp:224:5'$}}
 // CHECK-LABEL: {{^---$}}
-// CHECK: {{^name:[ ]+unnamed struct$}}
+// CHECK: {{^name:[ ]+'\(unnamed struct at .*templight-empty-entries-fix.cpp:223:3\)'$}}
 // CHECK: {{^kind:[ ]+Memoization$}}
 // CHECK: {{^event:[ ]+End$}}
 // CHECK: {{^orig:[ ]+'.*templight-empty-entries-fix.cpp:223:3'$}}
 // CHECK: {{^poi:[ ]+'.*templight-empty-entries-fix.cpp:224:5'$}}
 // CHECK-LABEL: {{^---$}}
-// CHECK: {{^name:[ ]+unnamed struct$}}
+// CHECK: {{^name:[ ]+'\(unnamed struct at .*templight-empty-entries-fix.cpp:223:3\)'$}}
 // CHECK: {{^kind:[ ]+Memoization$}}
 // CHECK: {{^event:[ ]+Begin$}}
 // CHECK: {{^orig:[ ]+'.*templight-empty-entries-fix.cpp:223:3'$}}
 // CHECK: {{^poi:[ ]+'.*templight-empty-entries-fix.cpp:224:5'$}}
 // CHECK-LABEL: {{^---$}}
-// CHECK: {{^name:[ ]+unnamed struct$}}
+// CHECK: {{^name:[ ]+'\(unnamed struct at .*templight-empty-entries-fix.cpp:223:3\)'$}}
 // CHECK: {{^kind:[ ]+Memoization$}}
 // CHECK: {{^event:[ ]+End$}}
 // CHECK: {{^orig:[ ]+'.*templight-empty-entries-fix.cpp:223:3'$}}
 // CHECK: {{^poi:[ ]+'.*templight-empty-entries-fix.cpp:224:5'$}}
 // CHECK-LABEL: {{^---$}}
-// CHECK: {{^name:[ ]+unnamed struct$}}
+// CHECK: {{^name:[ ]+'\(unnamed struct at .*templight-empty-entries-fix.cpp:223:3\)'$}}
 // CHECK: {{^kind:[ ]+Memoization$}}
 // CHECK: {{^event:[ ]+Begin$}}
 // CHECK: {{^orig:[ ]+'.*templight-empty-entries-fix.cpp:223:3'$}}
 // CHECK: {{^poi:[ ]+'.*templight-empty-entries-fix.cpp:223:3'$}}
 // CHECK-LABEL: {{^---$}}
-// CHECK: {{^name:[ ]+unnamed struct$}}
+// CHECK: {{^name:[ ]+'\(unnamed struct at .*templight-empty-entries-fix.cpp:223:3\)'$}}
 // CHECK: {{^kind:[ ]+Memoization$}}
 // CHECK: {{^event:[ ]+End$}}
 // CHECK: {{^orig:[ ]+'.*templight-empty-entries-fix.cpp:223:3'$}}

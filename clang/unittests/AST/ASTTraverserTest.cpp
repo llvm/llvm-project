@@ -1011,7 +1011,7 @@ LambdaExpr
 | |-FieldDecl ''
 | |-FieldDecl ''
 | |-FieldDecl ''
-| `-CXXDestructorDecl '~'
+| `-CXXDestructorDecl '~(lambda at input.cc:9:3)'
 |-ImplicitCastExpr
 | `-DeclRefExpr 'a'
 |-DeclRefExpr 'b'

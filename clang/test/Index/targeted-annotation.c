@@ -45,10 +45,10 @@ int LocalVar2;
 
 // FIELD: Keyword: "int" [2:3 - 2:6] FieldDecl=z:2:7 (Definition)
 // FIELD: Identifier: "z" [2:7 - 2:8] FieldDecl=z:2:7 (Definition)
-// FIELD: Punctuation: ";" [2:8 - 2:9] StructDecl=:13:9 (Definition)
+// FIELD: Punctuation: ";" [2:8 - 2:9] StructDecl=Vector:13:9 (Definition)
 // FIELD: Keyword: "int" [3:3 - 3:6] FieldDecl=w:3:7 (Definition)
 // FIELD: Identifier: "w" [3:7 - 3:8] FieldDecl=w:3:7 (Definition)
-// FIELD: Punctuation: ";" [3:8 - 3:9] StructDecl=:13:9 (Definition)
+// FIELD: Punctuation: ";" [3:8 - 3:9] StructDecl=Vector:13:9 (Definition)
 
 // RUN: env CINDEXTEST_FAILONERROR=1 c-index-test -test-annotate-tokens=%S/targeted-nested1.h:1:1:3:1 %s -include %t.h \
 // RUN:    -Xclang -error-on-deserialized-decl=TopVar  \
@@ -86,12 +86,12 @@ int LocalVar2;
 // TOP: Punctuation: "#" [5:1 - 5:2] inclusion directive=targeted-nested1.h
 // TOP: Identifier: "include" [5:2 - 5:9] inclusion directive=targeted-nested1.h
 // TOP: Literal: ""targeted-nested1.h"" [5:10 - 5:30] inclusion directive=targeted-nested1.h
-// TOP: Keyword: "enum" [7:1 - 7:5] EnumDecl=:7:1 (Definition)
-// TOP: Punctuation: "{" [7:6 - 7:7] EnumDecl=:7:1 (Definition)
+// TOP: Keyword: "enum" [7:1 - 7:5] EnumDecl=enum (unnamed at {{.*}}):7:1 (Definition)
+// TOP: Punctuation: "{" [7:6 - 7:7] EnumDecl=enum (unnamed at {{.*}}):7:1 (Definition)
 // TOP: Identifier: "VALUE" [8:3 - 8:8] EnumConstantDecl=VALUE:8:3 (Definition)
 // TOP: Punctuation: "=" [8:9 - 8:10] EnumConstantDecl=VALUE:8:3 (Definition)
 // TOP: Literal: "3" [8:11 - 8:12] IntegerLiteral=
-// TOP: Punctuation: "}" [9:1 - 9:2] EnumDecl=:7:1 (Definition)
+// TOP: Punctuation: "}" [9:1 - 9:2] EnumDecl=enum (unnamed at {{.*}}):7:1 (Definition)
 // TOP: Punctuation: ";" [9:2 - 9:3]
 // TOP: Keyword: "extern" [11:1 - 11:7]
 // TOP: Keyword: "int" [11:8 - 11:11] VarDecl=TopVar:11:12
