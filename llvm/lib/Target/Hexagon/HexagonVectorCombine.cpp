@@ -1342,6 +1342,7 @@ auto HvxIdioms::run() -> bool {
         RecursivelyDeleteTriviallyDeadInstructions(&*It, &HVC.TLI);
         It = StartOver ? B.rbegin()
                        : cast<Instruction>(New)->getReverseIterator();
+        Changed = true;
       }
     }
   }
