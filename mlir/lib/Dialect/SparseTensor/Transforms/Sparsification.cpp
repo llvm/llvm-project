@@ -136,23 +136,23 @@ static DimLevelFormat toDimLevelFormat(const SparseTensorEncodingAttr &enc,
                                        unsigned d) {
   if (enc) {
     switch (enc.getDimLevelType()[d]) {
-    case SparseTensorEncodingAttr::DimLevelType::Dense:
+    case DimLevelType::Dense:
       return DimLevelFormat(DimLvlType::kDense);
-    case SparseTensorEncodingAttr::DimLevelType::Compressed:
+    case DimLevelType::Compressed:
       return DimLevelFormat(DimLvlType::kCompressed);
-    case SparseTensorEncodingAttr::DimLevelType::CompressedNu:
+    case DimLevelType::CompressedNu:
       return DimLevelFormat(DimLvlType::kCompressed, true, false);
-    case SparseTensorEncodingAttr::DimLevelType::CompressedNo:
+    case DimLevelType::CompressedNo:
       return DimLevelFormat(DimLvlType::kCompressed, false, true);
-    case SparseTensorEncodingAttr::DimLevelType::CompressedNuNo:
+    case DimLevelType::CompressedNuNo:
       return DimLevelFormat(DimLvlType::kCompressed, false, false);
-    case SparseTensorEncodingAttr::DimLevelType::Singleton:
+    case DimLevelType::Singleton:
       return DimLevelFormat(DimLvlType::kSingleton);
-    case SparseTensorEncodingAttr::DimLevelType::SingletonNu:
+    case DimLevelType::SingletonNu:
       return DimLevelFormat(DimLvlType::kSingleton, true, false);
-    case SparseTensorEncodingAttr::DimLevelType::SingletonNo:
+    case DimLevelType::SingletonNo:
       return DimLevelFormat(DimLvlType::kSingleton, false, true);
-    case SparseTensorEncodingAttr::DimLevelType::SingletonNuNo:
+    case DimLevelType::SingletonNuNo:
       return DimLevelFormat(DimLvlType::kSingleton, false, false);
     }
   }
