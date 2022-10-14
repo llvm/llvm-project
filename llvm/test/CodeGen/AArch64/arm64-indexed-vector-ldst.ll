@@ -9114,13 +9114,12 @@ define i16 @load_single_extract_variable_index_i16(<8 x i16>* %A, i32 %idx) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    and x8, x1, #0x7
+; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    ldr q0, [x0]
-; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    bfi x9, x8, #1, #3
+; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    bfi x8, x1, #1, #3
 ; CHECK-NEXT:    str q0, [sp]
-; CHECK-NEXT:    ldrh w0, [x9]
+; CHECK-NEXT:    ldrh w0, [x8]
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %lv = load <8 x i16>, <8 x i16>* %A
