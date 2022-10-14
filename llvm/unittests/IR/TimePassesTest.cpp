@@ -110,6 +110,9 @@ TEST(TimePassesTest, LegacyCustomOut) {
   EXPECT_TRUE(TimePassesStr.str().contains("report"));
   EXPECT_FALSE(TimePassesStr.str().contains("Pass1"));
   EXPECT_TRUE(TimePassesStr.str().contains("Pass2"));
+
+  // Reset flag to not affect other tests.
+  TimePassesIsEnabled = false;
 }
 
 class MyPass1 : public PassInfoMixin<MyPass1> {};
