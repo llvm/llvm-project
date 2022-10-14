@@ -10,7 +10,7 @@ __interface I1 {
   bool operator!();
   // expected-error@+1 {{operator 'operator int' is not permitted within an interface type}}
   operator int();
-  // expected-error@+1 {{nested class I1::(anonymous) is not permitted within an interface type}}
+  // expected-error-re@+1 {{nested class I1::(unnamed struct at {{.*}}) is not permitted within an interface type}}
   struct { int a; };
   void fn2() {
     struct A { }; // should be ignored: not a nested class
