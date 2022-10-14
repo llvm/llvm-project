@@ -1200,9 +1200,12 @@ bool RISCVInstrInfo::hasReassociableSibling(const MachineInstr &Inst,
   return RISCV::hasEqualFRM(Inst, Sibling);
 }
 
-bool RISCVInstrInfo::isAssociativeAndCommutative(
-    const MachineInstr &Inst) const {
+bool RISCVInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
+                                                 bool Invert) const {
   unsigned Opc = Inst.getOpcode();
+  if (Invert)
+    return false;
+
   if (isFADD(Opc) || isFMUL(Opc))
     return Inst.getFlag(MachineInstr::MIFlag::FmReassoc) &&
            Inst.getFlag(MachineInstr::MIFlag::FmNsz);
