@@ -1116,7 +1116,7 @@ void OpEmitter::genAttrSetters() {
     if (!canUseUnwrappedRawValue(baseAttr))
       return;
     FmtContext fctx;
-    fctx.withBuilder("::mlir::Builder(getContext())");
+    fctx.withBuilder("::mlir::Builder((*this)->getContext())");
     bool isUnitAttr = attr.getAttrDefName() == "UnitAttr";
     bool isOptional = attr.isOptional();
 
