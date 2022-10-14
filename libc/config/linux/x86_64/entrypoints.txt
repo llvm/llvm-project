@@ -359,6 +359,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.ferror_unlocked
     libc.src.stdio.fflush
     libc.src.stdio.fopen
+    libc.src.stdio.fputc
     libc.src.stdio.fputs
     libc.src.stdio.fopencookie
     libc.src.stdio.fread
@@ -369,6 +370,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fwrite_unlocked
     libc.src.stdio.fprintf
     libc.src.stdio.printf
+    libc.src.stdio.putc
+    libc.src.stdio.putchar
     libc.src.stdio.puts
     libc.src.stdio.stderr
     libc.src.stdio.stdout
