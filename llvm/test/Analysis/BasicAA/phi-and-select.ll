@@ -82,10 +82,9 @@ entry:
 ; On the first iteration, sel1 = a1, sel2 = a2, phi = a3
 ; On the second iteration, sel1 = a2, sel1 = a1, phi = a2
 ; As such, sel1 and phi may alias.
-; FIXME: Miscompile.
 ; CHECK-LABEL: Function: select_backedge
 ; CHECK: NoAlias:	i32* %sel1, i32* %sel2
-; CHECK: NoAlias:	i32* %phi, i32* %sel1
+; CHECK: MayAlias:	i32* %phi, i32* %sel1
 ; CHECK: MayAlias:	i32* %phi, i32* %sel2
 define void @select_backedge() {
 entry:
