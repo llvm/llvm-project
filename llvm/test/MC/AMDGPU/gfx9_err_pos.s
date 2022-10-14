@@ -221,6 +221,14 @@ tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7], dfmt:1 s0 format:[BUF_NUM_FORM
 // CHECK-NEXT:{{^}}                                                            ^
 
 //==============================================================================
+// not a valid operand
+
+v_cndmask_b32_sdwa v5, sext(v1), v2, vcc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:BYTE_0 src1_sel:WORD_0
+// CHECK: error: not a valid operand.
+// CHECK-NEXT:{{^}}v_cndmask_b32_sdwa v5, sext(v1), v2, vcc dst_sel:DWORD dst_unused:UNUSED_PRESERVE src0_sel:BYTE_0 src1_sel:WORD_0
+// CHECK-NEXT:{{^}}                       ^
+
+//==============================================================================
 // out of range dfmt
 
 tbuffer_store_format_xyzw v[1:4], off, ttmp[4:7] dfmt:16 nfmt:1 s0
