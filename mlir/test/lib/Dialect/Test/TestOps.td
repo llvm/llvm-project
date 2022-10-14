@@ -2183,6 +2183,13 @@ def FormatOptionalEnumAttr : TEST_Op<"format_optional_enum_attr"> {
   let assemblyFormat = "($attr^)? attr-dict";
 }
 
+def FormatOptionalDefaultAttrs : TEST_Op<"format_optional_default_attrs"> {
+  let arguments = (ins DefaultValuedStrAttr<StrAttr, "default">:$str,
+                       DefaultValuedStrAttr<SymbolNameAttr, "default">:$sym,
+                       DefaultValuedAttr<SomeI64Enum, "SomeI64Enum::case5">:$e);
+  let assemblyFormat = "($str^)? ($sym^)? ($e^)? attr-dict";
+}
+
 def FormatOptionalWithElse : TEST_Op<"format_optional_else"> {
   let arguments = (ins UnitAttr:$isFirstBranchPresent);
   let assemblyFormat = "(`then` $isFirstBranchPresent^):(`else`)? attr-dict";
