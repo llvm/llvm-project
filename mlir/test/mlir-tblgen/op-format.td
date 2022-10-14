@@ -71,3 +71,13 @@ def OptionalGroupA : TestFormat_Op<[{
 def OptionalGroupB : TestFormat_Op<[{
   (`foo`) : (`bar` $a^)? attr-dict
 }]>, Arguments<(ins UnitAttr:$a)>;
+
+// Optional group anchored on a default-valued attribute:
+// CHECK-LABEL: OptionalGroupC::parse
+//       CHECK: if ((*this)->getAttr("a") != ::mlir::OpBuilder((*this)->getContext()).getStringAttr("default")) {
+//  CHECK-NEXT:   odsPrinter << ' ';
+//  CHECK-NEXT:   odsPrinter.printAttributeWithoutType(getAAttr());
+//  CHECK-NEXT: }
+def OptionalGroupC : TestFormat_Op<[{
+  ($a^)? attr-dict
+}]>, Arguments<(ins DefaultValuedStrAttr<StrAttr, "default">:$a)>;
