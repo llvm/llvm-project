@@ -24,7 +24,7 @@ namespace __llvm_libc {
 inline_bcmp_embedded_tiny(CPtr p1, CPtr p2, size_t count) {
 #pragma nounroll
   for (size_t offset = 0; offset < count; ++offset)
-    if (auto value = generic::Bcmp<1>::block(p1, p2))
+    if (auto value = generic::Bcmp<1>::block(p1 + offset, p2 + offset))
       return value;
   return BcmpReturnType::ZERO();
 }
