@@ -279,7 +279,7 @@ void CheckIntPartMax(const FixedPointSemantics &Sema, uint64_t Expected) {
 void CheckIntPartRes(const FixedPointSemantics &Sema, int64_t Representation,
                      uint64_t Result) {
   APFixedPoint Val(Representation, Sema);
-  ASSERT_EQ(Val.getIntPart().getZExtValue(), Result) ;
+  ASSERT_EQ(Val.getIntPart().getSExtValue(), Result);
 }
 
 TEST(FixedPoint, getIntPart) {
