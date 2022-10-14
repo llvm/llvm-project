@@ -55,7 +55,10 @@ commonBuildCXXMemberOrOperatorCall(CIRGenFunction &CGF, const CXXMethodDecl *MD,
 
   // Add the rest of the call args
   if (RtlArgs) {
-    llvm_unreachable("NYI");
+    // Special case: if the caller emitted the arguments right-to-left already
+    // (prior to emitting the *this argument), we're done. This happens for
+    // assignment operators.
+    Args.addFrom(*RtlArgs);
   } else if (CE) {
     // Special case: skip first argument of CXXOperatorCall (it is "this").
     unsigned ArgsToSkip = isa<CXXOperatorCallExpr>(CE) ? 1 : 0;
@@ -117,15 +120,15 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
   LValue TrivialAssignmentRHS;
   if (auto *OCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
     if (OCE->isAssignmentOp()) {
-      if (TrivialAssignment) {
-        TrivialAssignmentRHS = buildLValue(CE->getArg(1));
-      } else {
-        assert(0 && "remove me once there's a testcase to cover this");
-        RtlArgs = &RtlArgStorage;
-        buildCallArgs(*RtlArgs, MD->getType()->castAs<FunctionProtoType>(),
-                      drop_begin(CE->arguments(), 1), CE->getDirectCallee(),
-                      /*ParamsToSkip*/ 0, EvaluationOrder::ForceRightToLeft);
-      }
+      // See further note on TrivialAssignment, we don't handle this during
+      // codegen, differently than LLVM, which early optimizes like this:
+      //  if (TrivialAssignment) {
+      //    TrivialAssignmentRHS = buildLValue(CE->getArg(1));
+      //  } else {
+      RtlArgs = &RtlArgStorage;
+      buildCallArgs(*RtlArgs, MD->getType()->castAs<FunctionProtoType>(),
+                    drop_begin(CE->arguments(), 1), CE->getDirectCallee(),
+                    /*ParamsToSkip*/ 0, EvaluationOrder::ForceRightToLeft);
     }
   }
 
@@ -145,14 +148,14 @@ RValue CIRGenFunction::buildCXXMemberOrOperatorMemberCallExpr(
       return RValue::get(nullptr);
 
     if (TrivialAssignment) {
+      // From LLVM codegen:
       // We don't like to generate the trivial copy/move assignment operator
       // when it isn't necessary; just produce the proper effect here.
       // It's important that we use the result of EmitLValue here rather than
       // emitting call arguments, in order to preserve TBAA information from
       // the RHS.
       //
-      // TODO(cir): once there are testcases evaluate if CIR needs to abstract
-      // this away or optimizing is fine.
+      // We don't early optimize like LLVM does:
       // LValue RHS = isa<CXXOperatorCallExpr>(CE) ? TrivialAssignmentRHS
       //                                           :
       //                                           buildLValue(*CE->arg_begin());
