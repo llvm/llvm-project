@@ -25,6 +25,7 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 
 namespace clang {
+class ASTContext;
 class Decl;
 class NamedDecl;
 namespace include_cleaner {
@@ -40,6 +41,11 @@ namespace include_cleaner {
 /// walkAST is typically called once per top-level declaration in the file
 /// being analyzed, in order to find all references within it.
 void walkAST(Decl &Root, llvm::function_ref<void(SourceLocation, NamedDecl &)>);
+
+/// Write an HTML summary of the analysis to the given stream.
+/// FIXME: Once analysis has a public API, this should be public too.
+void writeHTMLReport(FileID File, llvm::ArrayRef<Decl *> Roots, ASTContext &Ctx,
+                     llvm::raw_ostream &OS);
 
 } // namespace include_cleaner
 } // namespace clang
