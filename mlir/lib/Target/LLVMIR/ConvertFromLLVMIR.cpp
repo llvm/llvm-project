@@ -236,6 +236,13 @@ static StringRef getLLVMSyncScope(llvm::FenceInst *fenceInst) {
   llvm_unreachable("incorrect sync scope identifier");
 }
 
+/// Converts an array of unsigned indices to a signed integer position array.
+static SmallVector<int64_t> getPositionFromIndices(ArrayRef<unsigned> indices) {
+  SmallVector<int64_t> position;
+  llvm::append_range(position, indices);
+  return position;
+}
+
 DataLayoutSpecInterface
 mlir::translateDataLayout(const llvm::DataLayout &dataLayout,
                           MLIRContext *context) {
@@ -983,27 +990,6 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
 
     Type type = convertType(inst->getType());
     Value res = b.create<GEPOp>(loc, type, sourceElementType, basePtr, indices);
-    mapValue(inst, res);
-    return success();
-  }
-  if (inst->getOpcode() == llvm::Instruction::InsertValue) {
-    auto *ivInst = cast<llvm::InsertValueInst>(inst);
-    Value inserted = processValue(ivInst->getInsertedValueOperand());
-    Value aggOperand = processValue(ivInst->getAggregateOperand());
-
-    SmallVector<int64_t> indices;
-    llvm::append_range(indices, ivInst->getIndices());
-    Value res = b.create<InsertValueOp>(loc, aggOperand, inserted, indices);
-    mapValue(inst, res);
-    return success();
-  }
-  if (inst->getOpcode() == llvm::Instruction::ExtractValue) {
-    auto *evInst = cast<llvm::ExtractValueInst>(inst);
-    Value aggOperand = processValue(evInst->getAggregateOperand());
-
-    SmallVector<int64_t> indices;
-    llvm::append_range(indices, evInst->getIndices());
-    Value res = b.create<ExtractValueOp>(loc, aggOperand, indices);
     mapValue(inst, res);
     return success();
   }
