@@ -232,15 +232,14 @@ define signext i32 @test_atomic_fetch_umax_4() {
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, i@hi(, %s0)
 ; CHECK-NEXT:    ldl.sx %s1, (, %s0)
-; CHECK-NEXT:    or %s2, 1, (0)1
 ; CHECK-NEXT:  .LBB8_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    or %s3, 0, %s1
-; CHECK-NEXT:    cmpu.w %s4, %s1, %s2
-; CHECK-NEXT:    or %s1, 1, (0)1
-; CHECK-NEXT:    cmov.w.gt %s1, %s3, %s4
-; CHECK-NEXT:    cas.w %s1, (%s0), %s3
-; CHECK-NEXT:    brne.w %s1, %s3, .LBB8_1
+; CHECK-NEXT:    or %s2, 0, %s1
+; CHECK-NEXT:    cmpu.w %s3, %s1, (63)0
+; CHECK-NEXT:    or %s1, 0, %s2
+; CHECK-NEXT:    cmov.w.le %s1, (63)0, %s3
+; CHECK-NEXT:    cas.w %s1, (%s0), %s2
+; CHECK-NEXT:    brne.w %s1, %s2, .LBB8_1
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
 ; CHECK-NEXT:    adds.w.sx %s0, %s1, (0)1
 ; CHECK-NEXT:    fencem 3
@@ -259,15 +258,14 @@ define signext i32 @test_atomic_fetch_umin_4() {
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, i@hi(, %s0)
 ; CHECK-NEXT:    ldl.sx %s1, (, %s0)
-; CHECK-NEXT:    or %s2, 2, (0)1
 ; CHECK-NEXT:  .LBB9_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    or %s3, 0, %s1
-; CHECK-NEXT:    cmpu.w %s4, %s1, %s2
-; CHECK-NEXT:    or %s1, 1, (0)1
-; CHECK-NEXT:    cmov.w.lt %s1, %s3, %s4
-; CHECK-NEXT:    cas.w %s1, (%s0), %s3
-; CHECK-NEXT:    brne.w %s1, %s3, .LBB9_1
+; CHECK-NEXT:    or %s2, 0, %s1
+; CHECK-NEXT:    cmpu.w %s3, 2, %s1
+; CHECK-NEXT:    or %s1, 0, %s2
+; CHECK-NEXT:    cmov.w.le %s1, (63)0, %s3
+; CHECK-NEXT:    cas.w %s1, (%s0), %s2
+; CHECK-NEXT:    brne.w %s1, %s2, .LBB9_1
 ; CHECK-NEXT:  # %bb.2: # %atomicrmw.end
 ; CHECK-NEXT:    adds.w.sx %s0, %s1, (0)1
 ; CHECK-NEXT:    fencem 3
