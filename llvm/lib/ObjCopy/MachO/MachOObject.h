@@ -57,14 +57,9 @@ struct Section {
   StringRef Content;
   std::vector<RelocationInfo> Relocations;
 
-  Section(StringRef SegName, StringRef SectName)
-      : Segname(std::string(SegName)), Sectname(std::string(SectName)),
-        CanonicalName((Twine(SegName) + Twine(',') + SectName).str()) {}
+  Section(StringRef SegName, StringRef SectName);
 
-  Section(StringRef SegName, StringRef SectName, StringRef Content)
-      : Segname(std::string(SegName)), Sectname(std::string(SectName)),
-        CanonicalName((Twine(SegName) + Twine(',') + SectName).str()),
-        Content(Content) {}
+  Section(StringRef SegName, StringRef SectName, StringRef Content);
 
   MachO::SectionType getType() const {
     return static_cast<MachO::SectionType>(Flags & MachO::SECTION_TYPE);
