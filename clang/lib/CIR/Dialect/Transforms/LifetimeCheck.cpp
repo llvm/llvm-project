@@ -40,6 +40,8 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkLoad(LoadOp op);
   void checkCall(CallOp callOp);
 
+  void checkPointerDeref(mlir::Value addr, mlir::Location loc);
+
   void checkCtor(CallOp callOp, const clang::CXXConstructorDecl *ctor);
   void checkMoveAssignment(CallOp callOp, const clang::CXXMethodDecl *m);
 
@@ -757,6 +759,11 @@ void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
   if (!loadOp.getIsDeref())
     return;
 
+  checkPointerDeref(addr, loadOp.getLoc());
+}
+
+void LifetimeCheckPass::checkPointerDeref(mlir::Value addr,
+                                          mlir::Location loc) {
   bool hasInvalid = getPmap()[addr].count(State::getInvalid());
   bool hasNullptr = getPmap()[addr].count(State::getNullPtr());
 
@@ -764,7 +771,7 @@ void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
     llvm::SmallString<128> psetStr;
     llvm::raw_svector_ostream Out(psetStr);
     printPset(getPmap()[addr], Out);
-    emitRemark(loadOp.getLoc()) << "pset => " << Out.str();
+    emitRemark(loc) << "pset => " << Out.str();
   };
 
   bool psetRemarkEmitted = false;
@@ -780,7 +787,7 @@ void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
   // Looks like we found a bad path leading to this deference point,
   // diagnose it.
   StringRef varName = getVarNameFromValue(addr);
-  auto D = emitWarning(loadOp.getLoc());
+  auto D = emitWarning(loc);
   D << "use of invalid pointer '" << varName << "'";
 
   if (hasInvalid && opts.emitHistoryInvalid()) {
