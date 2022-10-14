@@ -521,6 +521,10 @@ bool isScalableVectorType(Type vectorType);
 Type getVectorType(Type elementType, unsigned numElements,
                    bool isScalable = false);
 
+/// Creates an LLVM dialect-compatible vector type with the given element type
+/// and length.
+Type getVectorType(Type elementType, const llvm::ElementCount &numElements);
+
 /// Creates an LLVM dialect-compatible type with the given element type and
 /// length.
 Type getFixedVectorType(Type elementType, unsigned numElements);
