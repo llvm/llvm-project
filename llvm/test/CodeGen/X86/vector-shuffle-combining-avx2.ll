@@ -636,6 +636,20 @@ define <16 x i16> @shuffle_combine_packusdw_pshufb(<8 x i32> %a0, <8 x i32> %a1)
 }
 declare <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32>, <8 x i32>) nounwind readnone
 
+; TODO: Failure to merge vpunpcklqdq(vextracti128(x,0),vextracti128(x,1)) -> vpermq
+define <8 x i16> @shuffle_combine_packusdw_permq_extract(<8 x i32> %a0) {
+; CHECK-LABEL: shuffle_combine_packusdw_permq_extract:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpackusdw %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; CHECK-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = tail call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a0, <8 x i32> poison)
+  %2 = shufflevector <16 x i16> %1, <16 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  ret <8 x i16> %2
+}
+
 define <32 x i8> @shuffle_combine_packuswb_pshufb(<16 x i16> %a0, <16 x i16> %a1) {
 ; CHECK-LABEL: shuffle_combine_packuswb_pshufb:
 ; CHECK:       # %bb.0:
