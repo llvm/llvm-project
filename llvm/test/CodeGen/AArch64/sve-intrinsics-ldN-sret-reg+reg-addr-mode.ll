@@ -90,7 +90,7 @@ define { <vscale x 2 x double>, <vscale x 2 x double> } @ld2.nxv4f64(<vscale x 2
 define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3.nxv48i8(<vscale x 16 x i1> %Pg, i8 *%addr, i64 %a) {
 ; CHECK-LABEL: ld3.nxv48i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld3b { z0.b, z1.b, z2.b }, p0/z, [x0, x1]
+; CHECK-NEXT:    ld3b { z0.b - z2.b }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %addr2 = getelementptr i8, i8 *  %addr, i64 %a
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%addr2)
@@ -101,7 +101,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3.nxv48
 define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @ld3.nxv24i16(<vscale x 8 x i1> %Pg, i16 *%addr, i64 %a) {
 ; CHECK-LABEL: ld3.nxv24i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld3h { z0.h, z1.h, z2.h }, p0/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ld3h { z0.h - z2.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %addr2 = getelementptr i16, i16 *  %addr, i64 %a
   %res = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld3.sret.nxv8i16(<vscale x 8 x i1> %Pg, i16 *%addr2)
@@ -111,7 +111,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @ld3.nxv24
 define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @ld3.nxv24f16(<vscale x 8 x i1> %Pg, half *%addr, i64 %a) {
 ; CHECK-LABEL: ld3.nxv24f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld3h { z0.h, z1.h, z2.h }, p0/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ld3h { z0.h - z2.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %addr2 = getelementptr half, half *  %addr, i64 %a
   %res = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld3.sret.nxv8f16(<vscale x 8 x i1> %Pg, half *%addr2)
@@ -121,7 +121,7 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @ld3.nx
 define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ld3.nxv24bf16(<vscale x 8 x i1> %Pg, bfloat *%addr, i64 %a) #0 {
 ; CHECK-LABEL: ld3.nxv24bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld3h { z0.h, z1.h, z2.h }, p0/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ld3h { z0.h - z2.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %addr2 = getelementptr bfloat, bfloat *  %addr, i64 %a
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld3.sret.nxv8bf16(<vscale x 8 x i1> %Pg, bfloat *%addr2)
@@ -132,7 +132,7 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @ld3.nxv12i32(<vscale x 4 x i1> %Pg, i32 *%addr, i64 %a) {
 ; CHECK-LABEL: ld3.nxv12i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld3w { z0.s, z1.s, z2.s }, p0/z, [x0, x1, lsl #2]
+; CHECK-NEXT:    ld3w { z0.s - z2.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %addr2 = getelementptr i32, i32 *  %addr, i64 %a
   %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld3.sret.nxv4i32(<vscale x 4 x i1> %Pg, i32 *%addr2)
@@ -142,7 +142,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @ld3.nxv12
 define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @ld3.nxv12f32(<vscale x 4 x i1> %Pg, float *%addr, i64 %a) {
 ; CHECK-LABEL: ld3.nxv12f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld3w { z0.s, z1.s, z2.s }, p0/z, [x0, x1, lsl #2]
+; CHECK-NEXT:    ld3w { z0.s - z2.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %addr2 = getelementptr float, float *  %addr, i64 %a
   %res = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld3.sret.nxv4f32(<vscale x 4 x i1> %Pg, float *%addr2)
@@ -153,7 +153,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @ld3
 define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @ld3.nxv6i64(<vscale x 2 x i1> %Pg, i64 *%addr, i64 %a) {
 ; CHECK-LABEL: ld3.nxv6i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld3d { z0.d, z1.d, z2.d }, p0/z, [x0, x1, lsl #3]
+; CHECK-NEXT:    ld3d { z0.d - z2.d }, p0/z, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ret
   %addr2 = getelementptr i64, i64 *  %addr, i64 %a
   %res = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld3.sret.nxv2i64(<vscale x 2 x i1> %Pg, i64 *%addr2)
@@ -163,7 +163,7 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @ld3.nxv6i
 define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @ld3.nxv6f64(<vscale x 2 x i1> %Pg, double *%addr, i64 %a) {
 ; CHECK-LABEL: ld3.nxv6f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld3d { z0.d, z1.d, z2.d }, p0/z, [x0, x1, lsl #3]
+; CHECK-NEXT:    ld3d { z0.d - z2.d }, p0/z, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ret
   %addr2 = getelementptr double, double *  %addr, i64 %a
   %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld3.sret.nxv2f64(<vscale x 2 x i1> %Pg, double *%addr2)
@@ -174,7 +174,7 @@ define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @
 define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld4.nxv64i8(<vscale x 16 x i1> %Pg, i8 *%addr, i64 %a) {
 ; CHECK-LABEL: ld4.nxv64i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld4b { z0.b, z1.b, z2.b, z3.b }, p0/z, [x0, x1]
+; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0, x1]
 ; CHECK-NEXT:    ret
   %addr2 = getelementptr i8, i8 *  %addr, i64 %a
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%addr2)
@@ -185,7 +185,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @ld4.nxv32i16(<vscale x 8 x i1> %Pg, i16 *%addr, i64 %a) {
 ; CHECK-LABEL: ld4.nxv32i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld4h { z0.h, z1.h, z2.h, z3.h }, p0/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ld4h { z0.h - z3.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %addr2 = getelementptr i16, i16 *  %addr, i64 %a
   %res = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld4.sret.nxv8i16(<vscale x 8 x i1> %Pg, i16 *%addr2)
@@ -195,7 +195,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @ld4.nxv32f16(<vscale x 8 x i1> %Pg, half *%addr, i64 %a) {
 ; CHECK-LABEL: ld4.nxv32f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld4h { z0.h, z1.h, z2.h, z3.h }, p0/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ld4h { z0.h - z3.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %addr2 = getelementptr half, half *  %addr, i64 %a
   %res = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld4.sret.nxv8f16(<vscale x 8 x i1> %Pg, half *%addr2)
@@ -205,7 +205,7 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale 
 define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ld4.nxv32bf16(<vscale x 8 x i1> %Pg, bfloat *%addr, i64 %a) #0 {
 ; CHECK-LABEL: ld4.nxv32bf16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld4h { z0.h, z1.h, z2.h, z3.h }, p0/z, [x0, x1, lsl #1]
+; CHECK-NEXT:    ld4h { z0.h - z3.h }, p0/z, [x0, x1, lsl #1]
 ; CHECK-NEXT:    ret
   %addr2 = getelementptr bfloat, bfloat *  %addr, i64 %a
   %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld4.sret.nxv8bf16(<vscale x 8 x i1> %Pg, bfloat *%addr2)
@@ -216,7 +216,7 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <v
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @ld4.nxv16i32(<vscale x 4 x i1> %Pg, i32 *%addr, i64 %a) {
 ; CHECK-LABEL: ld4.nxv16i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld4w { z0.s, z1.s, z2.s, z3.s }, p0/z, [x0, x1, lsl #2]
+; CHECK-NEXT:    ld4w { z0.s - z3.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %addr2 = getelementptr i32, i32 *  %addr, i64 %a
   %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld4.sret.nxv4i32(<vscale x 4 x i1> %Pg, i32 *%addr2)
@@ -226,7 +226,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @ld4.nxv16f32(<vscale x 4 x i1> %Pg, float *%addr, i64 %a) {
 ; CHECK-LABEL: ld4.nxv16f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld4w { z0.s, z1.s, z2.s, z3.s }, p0/z, [x0, x1, lsl #2]
+; CHECK-NEXT:    ld4w { z0.s - z3.s }, p0/z, [x0, x1, lsl #2]
 ; CHECK-NEXT:    ret
   %addr2 = getelementptr float, float *  %addr, i64 %a
   %res = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld4.sret.nxv4f32(<vscale x 4 x i1> %Pg, float *%addr2)
@@ -237,7 +237,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
 define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @ld4.nxv8i64(<vscale x 2 x i1> %Pg, i64 *%addr, i64 %a) {
 ; CHECK-LABEL: ld4.nxv8i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld4d { z0.d, z1.d, z2.d, z3.d }, p0/z, [x0, x1, lsl #3]
+; CHECK-NEXT:    ld4d { z0.d - z3.d }, p0/z, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ret
   %addr2 = getelementptr i64, i64 *  %addr, i64 %a
   %res = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld4.sret.nxv2i64(<vscale x 2 x i1> %Pg, i64 *%addr2)
@@ -247,7 +247,7 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2
 define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @ld4.nxv8f64(<vscale x 2 x i1> %Pg, double *%addr, i64 %a) {
 ; CHECK-LABEL: ld4.nxv8f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld4d { z0.d, z1.d, z2.d, z3.d }, p0/z, [x0, x1, lsl #3]
+; CHECK-NEXT:    ld4d { z0.d - z3.d }, p0/z, [x0, x1, lsl #3]
 ; CHECK-NEXT:    ret
   %addr2 = getelementptr double, double *  %addr, i64 %a
   %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %Pg, double *%addr2)
