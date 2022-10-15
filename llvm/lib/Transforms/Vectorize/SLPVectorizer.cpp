@@ -325,8 +325,7 @@ template <bool IsPoisonOnly = false>
 static SmallBitVector isUndefVector(const Value *V,
                                     ArrayRef<int> ShuffleMask = None) {
   SmallBitVector Res(ShuffleMask.empty() ? 1 : ShuffleMask.size(), true);
-  using T =
-      typename std::conditional<IsPoisonOnly, PoisonValue, UndefValue>::type;
+  using T = std::conditional_t<IsPoisonOnly, PoisonValue, UndefValue>;
   if (isa<T>(V))
     return Res;
   auto *VecTy = dyn_cast<FixedVectorType>(V->getType());
