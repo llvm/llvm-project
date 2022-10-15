@@ -15,6 +15,8 @@
 #ifndef LLVM_SUPPORT_SAVEANDRESTORE_H
 #define LLVM_SUPPORT_SAVEANDRESTORE_H
 
+#include <utility>
+
 namespace llvm {
 
 /// A utility class that uses RAII to save and restore the value of a variable.
