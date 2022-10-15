@@ -326,12 +326,28 @@ static SmallVector<DecompEntry, 4>
 decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
           bool IsSigned, const DataLayout &DL) {
 
+  auto MergeResults = [&Preconditions, IsSigned,
+                       DL](Value *A, Value *B,
+                           bool IsSignedB) -> SmallVector<DecompEntry, 4> {
+    auto ResA = decompose(A, Preconditions, IsSigned, DL);
+    auto ResB = decompose(B, Preconditions, IsSignedB, DL);
+    if (ResA.empty() || ResB.empty())
+      return {};
+    ResA[0].Coefficient += ResB[0].Coefficient;
+    append_range(ResA, drop_begin(ResB));
+    return ResA;
+  };
+
   // Decompose \p V used with a signed predicate.
   if (IsSigned) {
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
       if (canUseSExt(CI))
         return {{CI->getSExtValue(), nullptr}};
     }
+    Value *Op0;
+    Value *Op1;
+    if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1))))
+      return MergeResults(Op0, Op1, IsSigned);
 
     return {{0, nullptr}, {1, V}};
   }
@@ -352,17 +368,6 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
     V = Op0;
   }
 
-  auto MergeResults = [&Preconditions, IsSigned,
-                       DL](Value *A, Value *B,
-                           bool IsSignedB) -> SmallVector<DecompEntry, 4> {
-    auto ResA = decompose(A, Preconditions, IsSigned, DL);
-    auto ResB = decompose(B, Preconditions, IsSignedB, DL);
-    if (ResA.empty() || ResB.empty())
-      return {};
-    ResA[0].Coefficient += ResB[0].Coefficient;
-    append_range(ResA, drop_begin(ResB));
-    return ResA;
-  };
   Value *Op1;
   ConstantInt *CI;
   if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1)))) {
