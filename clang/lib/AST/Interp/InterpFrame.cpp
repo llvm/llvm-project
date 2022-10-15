@@ -18,8 +18,8 @@
 using namespace clang;
 using namespace clang::interp;
 
-InterpFrame::InterpFrame(InterpState &S, Function *Func, InterpFrame *Caller,
-                         CodePtr RetPC, Pointer &&This)
+InterpFrame::InterpFrame(InterpState &S, const Function *Func,
+                         InterpFrame *Caller, CodePtr RetPC, Pointer &&This)
     : Caller(Caller), S(S), Func(Func), This(std::move(This)), RetPC(RetPC),
       ArgSize(Func ? Func->getArgSize() : 0),
       Args(static_cast<char *>(S.Stk.top())), FrameOffset(S.Stk.size()) {
@@ -36,7 +36,7 @@ InterpFrame::InterpFrame(InterpState &S, Function *Func, InterpFrame *Caller,
   }
 }
 
-InterpFrame::InterpFrame(InterpState &S, Function *Func, CodePtr RetPC)
+InterpFrame::InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC)
     : Caller(S.Current), S(S), Func(Func), RetPC(RetPC),
       ArgSize(Func ? Func->getArgSize() : 0),
       Args(static_cast<char *>(S.Stk.top())), FrameOffset(S.Stk.size()) {
