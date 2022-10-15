@@ -50,7 +50,7 @@ define i1 @test_mul_const_nuw_unsigned_3(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[START_MUL_2:%.*]] = mul nuw i8 [[START]], 2
 ; CHECK-NEXT:    [[START_ADD_1:%.*]] = add nuw i8 [[START]], [[START]]
 ; CHECK-NEXT:    [[T:%.*]] = icmp ule i8 [[START_ADD_1]], [[START_MUL_2]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %start.mul.4 = mul nuw i8 %start, 4
@@ -73,7 +73,7 @@ define i1 @test_mul_const_nuw_unsigned_4(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[START_MUL_2:%.*]] = mul nuw i8 [[START]], 2
 ; CHECK-NEXT:    [[START_ADD_1:%.*]] = add nuw i8 [[START]], [[START]]
 ; CHECK-NEXT:    [[F:%.*]] = icmp ult i8 [[START_ADD_1]], [[START_MUL_2]]
-; CHECK-NEXT:    ret i1 [[F]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %start.mul.4 = mul nuw i8 %start, 4
@@ -96,7 +96,7 @@ define i1 @test_mul_const_nuw_unsigned_5(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[START_ADD_1:%.*]] = add nuw i8 [[START]], [[START]]
 ; CHECK-NEXT:    [[START_ADD_2:%.*]] = add nuw i8 [[START_ADD_1]], [[START_ADD_1]]
 ; CHECK-NEXT:    [[T_4:%.*]] = icmp ule i8 [[START_ADD_2]], [[START_MUL_4]]
-; CHECK-NEXT:    ret i1 [[T_4]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %start.mul.4 = mul nuw i8 %start, 4
@@ -118,7 +118,7 @@ define i1 @test_mul_const_nuw_unsigned_6(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[START_ADD_1:%.*]] = add nuw i8 [[START]], [[START]]
 ; CHECK-NEXT:    [[START_ADD_2:%.*]] = add nuw i8 [[START_ADD_1]], [[START_ADD_1]]
 ; CHECK-NEXT:    [[F_2:%.*]] = icmp ult i8 [[START_ADD_2]], [[START_MUL_4]]
-; CHECK-NEXT:    ret i1 [[F_2]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %start.mul.4 = mul nuw i8 %start, 4
@@ -142,7 +142,7 @@ define i1 @test_mul_const_nuw_unsigned_7(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[START_ADD_2:%.*]] = add nuw i8 [[START_ADD_1]], [[START_ADD_1]]
 ; CHECK-NEXT:    [[START_ADD_2_1:%.*]] = add nuw i8 [[START_ADD_2]], 1
 ; CHECK-NEXT:    [[F_3:%.*]] = icmp ule i8 [[START_ADD_2_1]], [[START_MUL_4]]
-; CHECK-NEXT:    ret i1 [[F_3]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %start.mul.4 = mul nuw i8 %start, 4
@@ -221,7 +221,7 @@ define i1 @test_mul_const_nuw_unsigned_10(i8 %start, i8 %high) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
 ; CHECK-NEXT:    [[START_MUL_3:%.*]] = mul nuw i8 [[START]], 3
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[START_MUL_3]], [[START_MUL_5]]
-; CHECK-NEXT:    ret i1 [[T_1]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %start.mul.5 = mul nuw i8 %start, 5
@@ -241,7 +241,7 @@ define i1 @test_mul_const_nuw_unsigned_11(i8 %start, i8 %high) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
 ; CHECK-NEXT:    [[START_MUL_3:%.*]] = mul nuw i8 [[START]], 3
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[START_MUL_5]], [[START_MUL_3]]
-; CHECK-NEXT:    ret i1 [[C_1]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %start.mul.5 = mul nuw i8 %start, 5
@@ -261,7 +261,7 @@ define i1 @test_mul_const_nuw_unsigned_12(i8 %start) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    [[START_MUL_5:%.*]] = mul nuw i8 [[START]], 5
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[START_MUL_3]], [[START_MUL_5]]
-; CHECK-NEXT:    ret i1 [[T_1]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %start.mul.3 = mul nuw i8 %start, 3
@@ -281,7 +281,7 @@ define i1 @test_mul_const_nuw_unsigned_13(i8 %start) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    [[START_MUL_5:%.*]] = mul nuw i8 [[START]], 5
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i8 [[START_MUL_5]], [[START_MUL_3]]
-; CHECK-NEXT:    ret i1 [[F_1]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %start.mul.3 = mul nuw i8 %start, 3
@@ -373,7 +373,6 @@ entry:
   ret i1 %c.1
 }
 
-
 define i1 @test_mul_add_const_nuw_unsigned_1(i8 %start, i8 %high) {
 ; CHECK-LABEL: @test_mul_add_const_nuw_unsigned_1(
 ; CHECK-NEXT:  entry:
@@ -426,7 +425,7 @@ define i1 @test_mul_add_const_nuw_unsigned_3(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[START_ADD_1:%.*]] = add nuw i8 [[START]], [[START]]
 ; CHECK-NEXT:    [[START_ADD_2:%.*]] = add nuw i8 [[START_ADD_1]], [[START_ADD_1]]
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i8 [[START_ADD_2]], [[START_MUL_4]]
-; CHECK-NEXT:    ret i1 [[T_3]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %add = add nuw i8 %start, 3
@@ -451,7 +450,7 @@ define i1 @test_mul_add_const_nuw_unsigned_4(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[START_ADD_1:%.*]] = add nuw i8 [[START]], [[START]]
 ; CHECK-NEXT:    [[START_ADD_2:%.*]] = add nuw i8 [[START_ADD_1]], [[START_ADD_1]]
 ; CHECK-NEXT:    [[T_4:%.*]] = icmp ult i8 [[START_ADD_2]], [[START_MUL_4]]
-; CHECK-NEXT:    ret i1 [[T_4]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %add = add nuw i8 %start, 3
@@ -477,7 +476,7 @@ define i1 @test_mul_add_const_nuw_unsigned_5(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[START_ADD_2:%.*]] = add nuw i8 [[START_ADD_1]], [[START_ADD_1]]
 ; CHECK-NEXT:    [[START_ADD_2_12:%.*]] = add nuw i8 [[START_ADD_2]], 12
 ; CHECK-NEXT:    [[T_5:%.*]] = icmp ule i8 [[START_ADD_2_12]], [[START_MUL_4]]
-; CHECK-NEXT:    ret i1 [[T_5]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %add = add nuw i8 %start, 3
@@ -503,7 +502,7 @@ define i1 @test_mul_add_const_nuw_unsigned_6(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[START_ADD_2:%.*]] = add nuw i8 [[START_ADD_1]], [[START_ADD_1]]
 ; CHECK-NEXT:    [[START_ADD_2_13:%.*]] = add nuw i8 [[START_ADD_2]], 13
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i8 [[START_ADD_2_13]], [[START_MUL_4]]
-; CHECK-NEXT:    ret i1 [[F_1]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %add = add nuw i8 %start, 3
