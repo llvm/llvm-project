@@ -14,30 +14,15 @@ class ExprCharTestCase(TestBase):
         self.expect_expr("foo(c)", result_value="1")
         self.expect_expr("foo(sc)", result_value="2")
         self.expect_expr("foo(uc)", result_value="3")
+        self.expect_expr("g", result_type="char")
+        self.expect_expr("gs", result_type="signed char")
+        self.expect_expr("gu", result_type="unsigned char")
 
     def test_default_char(self):
         self.do_test()
 
-    @skipIf(oslist=["linux"], archs=["aarch64", "arm"], bugnumber="llvm.org/pr23069")
-    @expectedFailureAll(
-        archs=[
-            "powerpc64le",
-            "s390x"],
-        bugnumber="llvm.org/pr23069")
     def test_signed_char(self):
         self.do_test(dictionary={'CFLAGS_EXTRAS': '-fsigned-char'})
 
-    @expectedFailureAll(
-        archs=[
-            "i[3-6]86",
-            "x86_64",
-            "arm64",
-            'arm64e',
-            'armv7',
-            'armv7k',
-            'arm64_32'],
-        bugnumber="llvm.org/pr23069, <rdar://problem/28721938>")
-    @expectedFailureAll(triple='mips*', bugnumber="llvm.org/pr23069")
-    @expectedFailureAll(oslist=['windows'], archs=['aarch64'], bugnumber="llvm.org/pr23069")
     def test_unsigned_char(self):
         self.do_test(dictionary={'CFLAGS_EXTRAS': '-funsigned-char'})
