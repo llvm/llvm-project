@@ -1808,6 +1808,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FMUL,    MVT::f64, Legal);
   }
 
+  setTargetDAGCombine(ISD::TRUNCATE);
   setTargetDAGCombine(ISD::VSELECT);
 
   if (Subtarget.useHVXOps())
@@ -3399,6 +3400,19 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
                                        Op.getOperand(2), Op.getOperand(1));
         return VSel;
       }
+    }
+  } else if (Opc == ISD::TRUNCATE) {
+    SDValue Op0 = Op.getOperand(0);
+    // fold (truncate (build pair x, y)) -> (truncate x) or x
+    if (Op0.getOpcode() == ISD::BUILD_PAIR) {
+      MVT TruncTy = ty(Op);
+      SDValue Elem0 = Op0.getOperand(0);
+      // if we match the low element of the pair, just return it.
+      if (ty(Elem0) == TruncTy)
+        return Elem0;
+      // otherwise, if the low part is still too large, apply the truncate.
+      if (ty(Elem0).bitsGT(TruncTy))
+        return DCI.DAG.getNode(ISD::TRUNCATE, dl, TruncTy, Elem0);
     }
   }
 
