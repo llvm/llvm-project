@@ -145,7 +145,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, BasicPrimary) {
 
 struct SmallRegionsConfig {
   using SizeClassMap = scudo::DefaultSizeClassMap;
-  static const scudo::uptr PrimaryRegionSizeLog = 20U;
+  static const scudo::uptr PrimaryRegionSizeLog = 21U;
   static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
   static const bool MaySupportMemoryTagging = false;
