@@ -238,7 +238,7 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
   // The order of LINKEDIT elements is as follows:
   // rebase info, binding info, weak binding info, lazy binding info, export
   // trie, data-in-code, symbol table, indirect symbol table, symbol table
-  // strings, code signature.
+  // strings, dylib codesign drs, code signature.
   uint64_t NListSize = Is64Bit ? sizeof(MachO::nlist_64) : sizeof(MachO::nlist);
   uint64_t StartOfLinkEdit = Offset;
   uint64_t StartOfRebaseInfo = StartOfLinkEdit;
@@ -264,8 +264,10 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
   uint64_t StartOfSymbolStrings =
       StartOfIndirectSymbols +
       sizeof(uint32_t) * O.IndirectSymTable.Symbols.size();
-  uint64_t StartOfCodeSignature =
+  uint64_t StartOfDylibCodeSignDRs =
       StartOfSymbolStrings + StrTableBuilder.getSize();
+  uint64_t StartOfCodeSignature =
+      StartOfDylibCodeSignDRs + O.DylibCodeSignDRs.Data.size();
   uint32_t CodeSignatureSize = 0;
   if (O.CodeSignatureCommandIndex) {
     StartOfCodeSignature = alignTo(StartOfCodeSignature, 16);
@@ -319,6 +321,10 @@ Error MachOLayoutBuilder::layoutTail(uint64_t Offset) {
     case MachO::LC_CODE_SIGNATURE:
       MLC.linkedit_data_command_data.dataoff = StartOfCodeSignature;
       MLC.linkedit_data_command_data.datasize = CodeSignatureSize;
+      break;
+    case MachO::LC_DYLIB_CODE_SIGN_DRS:
+      MLC.linkedit_data_command_data.dataoff = StartOfDylibCodeSignDRs;
+      MLC.linkedit_data_command_data.datasize = O.DylibCodeSignDRs.Data.size();
       break;
     case MachO::LC_SYMTAB:
       MLC.symtab_command_data.symoff = StartOfSymbols;
