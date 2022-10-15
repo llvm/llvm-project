@@ -170,18 +170,14 @@ static const std::array<const StringRef, 4> Msgs = {{
 CognitiveComplexity::Criteria operator|(CognitiveComplexity::Criteria LHS,
                                         CognitiveComplexity::Criteria RHS) {
   return static_cast<CognitiveComplexity::Criteria>(
-      static_cast<std::underlying_type<CognitiveComplexity::Criteria>::type>(
-          LHS) |
-      static_cast<std::underlying_type<CognitiveComplexity::Criteria>::type>(
-          RHS));
+      static_cast<std::underlying_type_t<CognitiveComplexity::Criteria>>(LHS) |
+      static_cast<std::underlying_type_t<CognitiveComplexity::Criteria>>(RHS));
 }
 CognitiveComplexity::Criteria operator&(CognitiveComplexity::Criteria LHS,
                                         CognitiveComplexity::Criteria RHS) {
   return static_cast<CognitiveComplexity::Criteria>(
-      static_cast<std::underlying_type<CognitiveComplexity::Criteria>::type>(
-          LHS) &
-      static_cast<std::underlying_type<CognitiveComplexity::Criteria>::type>(
-          RHS));
+      static_cast<std::underlying_type_t<CognitiveComplexity::Criteria>>(LHS) &
+      static_cast<std::underlying_type_t<CognitiveComplexity::Criteria>>(RHS));
 }
 CognitiveComplexity::Criteria &operator|=(CognitiveComplexity::Criteria &LHS,
                                           CognitiveComplexity::Criteria RHS) {
