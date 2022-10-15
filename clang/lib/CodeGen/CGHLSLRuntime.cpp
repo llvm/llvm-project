@@ -17,6 +17,7 @@
 #include "CodeGenModule.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/TargetOptions.h"
+#include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -227,9 +228,8 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
   auto &Ctx = CGM.getModule().getContext();
   IRBuilder<> B(Ctx);
   QualType QT(Ty, 0);
-  ResourceMD->addOperand(MDNode::get(
-      Ctx, {ValueAsMetadata::get(GV), MDString::get(Ctx, QT.getAsString()),
-            ConstantAsMetadata::get(B.getInt32(Counter))}));
+  llvm::hlsl::FrontendResource Res(GV, QT.getAsString(), Counter);
+  ResourceMD->addOperand(Res.getMetadata());
 }
 
 void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(

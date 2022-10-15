@@ -35,6 +35,7 @@ add_llvm_target(DirectXCodeGen
   Support
   DirectXInfo
   DXILBitWriter
+  FrontendHLSL
 
   ADD_TO_COMPONENT
   DirectX
