@@ -141,3 +141,63 @@ module {
     transform.structured.fuse_into_containing_op %0 into %1
   }
 }
+
+// -----
+
+#map0 = affine_map<()[s0, s1] -> (s0 ceildiv s1)>
+#map1 = affine_map<(d0)[s0] -> (d0 * s0)>
+#map2 = affine_map<(d0)[s0, s1] -> (-(d0 * s1) + s0, s1)>
+
+module {
+  // CHECK-LABEL: func.func @fuse_tileable_multi_output_op
+  //  CHECK-SAME:   %[[CHUNK_SIZE:[0-9a-z]+]]: index
+  //  CHECK-SAME:   %[[IN:[0-9a-z]+]]: tensor<?xf32>
+  //  CHECK-SAME:   %[[OUT_1:[0-9a-z]+]]: tensor<?xf32>
+  //  CHECK-SAME:   %[[OUT_2:[0-9a-z]+]]: tensor<?xf32>
+  //  CHECK-SAME:   %[[OUT_3:[0-9a-z]+]]: tensor<?xf32>
+  func.func @fuse_tileable_multi_output_op(%idx: index, %in: tensor<?xf32>, %out_1: tensor<?xf32>, %out_2: tensor<?xf32>, %out_3: tensor<?xf32>) -> tensor<?xf32> {
+    %cst = arith.constant 4.200000e+01 : f32
+    %c0 = arith.constant 0 : index
+
+    %0:2 = linalg.generic {
+      indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
+      iterator_types = ["parallel"]
+    } ins(%in : tensor<?xf32>) outs(%out_1, %out_3 : tensor<?xf32>, tensor<?xf32>) {
+      ^bb0(%a: f32, %b: f32, %c: f32):
+        %d = arith.addf %a, %b : f32
+        %e = arith.addf %d, %c : f32
+        linalg.yield %d, %e : f32, f32
+    } -> (tensor<?xf32>, tensor<?xf32>)
+    %d0 = tensor.dim %out_1, %c0 : tensor<?xf32>
+
+    %1 = affine.apply #map0()[%d0, %idx]
+
+    // CHECK: scf.foreach_thread {{.*}} {
+    %2 = scf.foreach_thread (%i) in (%1) shared_outs(%o = %out_2) -> (tensor<?xf32>) {
+      %3 = affine.apply #map1(%i)[%idx]
+      %4 = affine.min #map2(%i)[%d0, %idx]
+      %5 = tensor.extract_slice %o[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
+
+      // CHECK: %[[T0:.*]] = tensor.extract_slice %[[IN]][%{{.*}}] [%{{.*}}] [{{.*}}]
+      // CHECK: %[[T1:.*]]:2 = linalg.generic {{.*}} ins(%[[T0]]
+      %6 = tensor.extract_slice %0#0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
+
+      // CHECK: %[[T2:.*]] = linalg.elemwise_unary ins(%[[T1]]#0
+      %7 = linalg.elemwise_unary ins(%6 : tensor<?xf32>) outs(%5 : tensor<?xf32>) -> tensor<?xf32>
+      scf.foreach_thread.perform_concurrently {
+        tensor.parallel_insert_slice %7 into %o[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
+      }
+    }
+    // CHECK: }
+    func.return %2 : tensor<?xf32>
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb1(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+    %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1
+
+    // linalg.generic is tileable. The op is tiled and fused.
+    transform.structured.fuse_into_containing_op %0 into %1
+  }
+}
