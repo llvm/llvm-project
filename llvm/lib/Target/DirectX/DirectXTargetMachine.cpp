@@ -129,6 +129,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
   }
   switch (FileType) {
   case CGFT_AssemblyFile:
+    PM.add(createDXILPrettyPrinterPass(Out));
     PM.add(createPrintModulePass(Out, "", true));
     break;
   case CGFT_ObjectFile:
