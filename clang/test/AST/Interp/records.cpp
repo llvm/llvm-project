@@ -164,3 +164,24 @@ namespace thisPointer {
   static_assert(foo() == 12, ""); // ref-error {{not an integral constant expression}} \
                                   // ref-note {{in call to 'foo()'}}
 };
+
+struct FourBoolPairs {
+  BoolPair v[4] = {
+    {false, false},
+    {false,  true},
+    {true,  false},
+    {true,  true },
+  };
+};
+// Init
+constexpr FourBoolPairs LT;
+// Copy ctor
+constexpr FourBoolPairs LT2 = LT;
+// FIXME: The copy constructor call above
+//   works, but APValue we generate for it is
+//   not sufficiently correct, so the lvalue-to-rvalue
+//   conversion in ExprConstant.c runs into an assertion.
+//static_assert(LT2.v[0].first == false, "");
+//static_assert(LT2.v[0].second == false, "");
+//static_assert(LT2.v[2].first == true, "");
+//static_assert(LT2.v[2].second == false, "");
