@@ -87,6 +87,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getcwd
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getcwd
+)
+
+add_entrypoint_object(
   getpid
   ALIAS
   DEPENDS
