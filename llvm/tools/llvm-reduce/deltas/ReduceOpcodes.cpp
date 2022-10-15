@@ -93,7 +93,7 @@ static void replaceOpcodesInModule(Oracle &O, Module &Mod) {
         Instruction *Replacement =
             dyn_cast_or_null<Instruction>(reduceInstruction(Mod, I));
         if (Replacement && Replacement != &I) {
-          if (auto *Op = dyn_cast<FPMathOperator>(Replacement))
+          if (isa<FPMathOperator>(Replacement))
             Replacement->copyFastMathFlags(&I);
 
           Replacement->copyIRFlags(&I);
