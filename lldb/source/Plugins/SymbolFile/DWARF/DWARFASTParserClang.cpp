@@ -1523,6 +1523,55 @@ TypeSP DWARFASTParserClang::UpdateSymbolContextScopeForType(
   return type_sp;
 }
 
+std::string
+DWARFASTParserClang::GetCPlusPlusQualifiedName(const DWARFDIE &die) {
+  if (!die.IsValid())
+    return "";
+  const char *name = die.GetName();
+  if (!name)
+    return "";
+  std::string qualified_name;
+  DWARFDIE parent_decl_ctx_die = die.GetParentDeclContextDIE();
+  // TODO: change this to get the correct decl context parent....
+  while (parent_decl_ctx_die) {
+    const dw_tag_t parent_tag = parent_decl_ctx_die.Tag();
+    switch (parent_tag) {
+    case DW_TAG_namespace: {
+      if (const char *namespace_name = parent_decl_ctx_die.GetName()) {
+        qualified_name.insert(0, "::");
+        qualified_name.insert(0, namespace_name);
+      } else {
+        qualified_name.insert(0, "(anonymous namespace)::");
+      }
+      parent_decl_ctx_die = parent_decl_ctx_die.GetParentDeclContextDIE();
+      break;
+    }
+
+    case DW_TAG_class_type:
+    case DW_TAG_structure_type:
+    case DW_TAG_union_type: {
+      if (const char *class_union_struct_name = parent_decl_ctx_die.GetName()) {
+        qualified_name.insert(0, "::");
+        qualified_name.insert(0, class_union_struct_name);
+      }
+      parent_decl_ctx_die = parent_decl_ctx_die.GetParentDeclContextDIE();
+      break;
+    }
+
+    default:
+      parent_decl_ctx_die.Clear();
+      break;
+    }
+  }
+
+  if (qualified_name.empty())
+    qualified_name.append("::");
+
+  qualified_name.append(name);
+
+  return qualified_name;
+}
+
 TypeSP
 DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
                                            const DWARFDIE &die,
@@ -1548,8 +1597,8 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
       // For C++, we rely solely upon the one definition rule that says
       // only one thing can exist at a given decl context. We ignore the
       // file and line that things are declared on.
-      std::string qualified_name;
-      if (die.GetQualifiedName(qualified_name))
+      std::string qualified_name = GetCPlusPlusQualifiedName(die);
+      if (!qualified_name.empty())
         unique_typename = ConstString(qualified_name);
       unique_decl.Clear();
     }

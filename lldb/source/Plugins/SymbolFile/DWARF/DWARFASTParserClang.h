@@ -121,10 +121,13 @@ protected:
   bool ParseTemplateDIE(const DWARFDIE &die,
                         lldb_private::TypeSystemClang::TemplateParameterInfos
                             &template_param_infos);
+
   bool ParseTemplateParameterInfos(
       const DWARFDIE &parent_die,
       lldb_private::TypeSystemClang::TemplateParameterInfos
           &template_param_infos);
+
+  std::string GetCPlusPlusQualifiedName(const DWARFDIE &die);
 
   bool ParseChildMembers(
       const DWARFDIE &die, lldb_private::CompilerType &class_compiler_type,
