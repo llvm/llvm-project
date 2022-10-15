@@ -412,6 +412,7 @@ def Rem : Opcode {
   let HasGroup = 1;
 }
 def BitAnd : IntegerOpcode;
+def BitOr : IntegerOpcode;
 def Div : Opcode {
   let Types = [NumberTypeClass];
   let HasGroup = 1;

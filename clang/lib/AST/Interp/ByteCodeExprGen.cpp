@@ -223,6 +223,7 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
     case BO_And:
       return Discard(this->emitBitAnd(*T, BO));
     case BO_Or:
+      return Discard(this->emitBitOr(*T, BO));
     case BO_LAnd:
     case BO_LOr:
     default:
