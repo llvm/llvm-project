@@ -232,15 +232,13 @@ private:
                       llvm::function_ref<bool(PrimType)> Indirect);
 
   /// Emits an APInt constant.
-  bool emitConst(PrimType T, unsigned NumBits, const llvm::APInt &Value,
-                 const Expr *E);
+  bool emitConst(PrimType T, const llvm::APInt &Value, const Expr *E);
 
   /// Emits an integer constant.
   template <typename T> bool emitConst(const Expr *E, T Value) {
     QualType Ty = E->getType();
-    unsigned NumBits = getIntWidth(Ty);
-    APInt WrappedValue(NumBits, Value, std::is_signed<T>::value);
-    return emitConst(*Ctx.classify(Ty), NumBits, WrappedValue, E);
+    APInt WrappedValue(getIntWidth(Ty), Value, std::is_signed<T>::value);
+    return emitConst(*Ctx.classify(Ty), WrappedValue, E);
   }
 
   /// Returns the index of a global.
