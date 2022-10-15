@@ -1075,6 +1075,27 @@ auto HvxIdioms::matchFxpMul(Instruction &In) const -> std::optional<FxpOp> {
 
 auto HvxIdioms::processFxpMul(Instruction &In, const FxpOp &Op) const
     -> Value * {
+  // FIXME: make this more elegant
+  struct TempValues {
+    void insert(Value* V) {
+      Values.push_back(V);
+    }
+    void insert(ArrayRef<Value*> Vs) {
+      Values.insert(Values.end(), Vs.begin(), Vs.end());
+    }
+    void clear() { //
+      Values.clear();
+    }
+    ~TempValues() {
+      for (Value *V : llvm::reverse(Values)) {
+        if (auto *In = dyn_cast<Instruction>(V))
+          In->eraseFromParent();
+      }
+    }
+    SmallVector<Value*> Values;
+  };
+  TempValues DeleteOnFailure;
+
   // TODO: Make it general.
   if (Op.Frac != 15 && Op.Frac != 31)
     return nullptr;
@@ -1095,6 +1116,10 @@ auto HvxIdioms::processFxpMul(Instruction &In, const FxpOp &Op) const
   // These may end up dead, but should be removed in isel.
   Value *NewX = Builder.CreateTrunc(Op.X, TruncTy);
   Value *NewY = Builder.CreateTrunc(Op.Y, TruncTy);
+  if (NewX != Op.X)
+    DeleteOnFailure.insert(NewX);
+  if (NewY != Op.Y)
+    DeleteOnFailure.insert(NewY);
 
   if (!Op.RoundAt || *Op.RoundAt == Op.Frac - 1) {
     bool Rounding = Op.RoundAt.has_value();
@@ -1105,8 +1130,10 @@ auto HvxIdioms::processFxpMul(Instruction &In, const FxpOp &Op) const
       } else if (Width == 32) {
         QMul = createMulQ31(Builder, NewX, NewY, Rounding);
       }
-      if (QMul != nullptr)
+      if (QMul != nullptr) {
+        DeleteOnFailure.clear();
         return Builder.CreateSExt(QMul, OrigTy);
+      }
     }
   }
 
@@ -1124,10 +1151,15 @@ auto HvxIdioms::processFxpMul(Instruction &In, const FxpOp &Op) const
   // widths to save on the number of multiplications to perform.
   unsigned WidthX = PowerOf2Ceil(BitsX);
   unsigned WidthY = PowerOf2Ceil(BitsY);
+  Value *OldX = NewX, *OldY = NewY;
   NewX = Builder.CreateTrunc(
       NewX, VectorType::get(HVC.getIntTy(WidthX), HVC.length(NewX), false));
   NewY = Builder.CreateTrunc(
       NewY, VectorType::get(HVC.getIntTy(WidthY), HVC.length(NewY), false));
+  if (NewX != OldX)
+    DeleteOnFailure.insert(NewX);
+  if (NewY != OldY)
+    DeleteOnFailure.insert(NewY);
 
   // Break up the arguments NewX and NewY into vectors of smaller widths
   // in preparation of doing the multiplication via HVX intrinsics.
@@ -1209,6 +1241,7 @@ auto HvxIdioms::processFxpMul(Instruction &In, const FxpOp &Op) const
   if (SkipWords != 0)
     WordP.resize(WordP.size() - SkipWords);
 
+  DeleteOnFailure.clear();
   return HVC.joinVectorElements(Builder, WordP, OrigTy);
 }
 
