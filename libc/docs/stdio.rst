@@ -1,13 +1,8 @@
-=============================
-StdIO Functions in LLVM-libc
-=============================
+===============
+StdIO Functions
+===============
 
--------
-Summary
--------
-
-This document tracks the status of the implementation of stdio functions in LLVM
-Libc.
+.. include:: check.rst
 
 ---------------
 Source location
@@ -44,23 +39,23 @@ the ``FILE`` object is only available on linux.
 =============  =========
 Function_Name  Available
 =============  =========
-fopen          YES
+fopen          |check|
 freopen
-fclose         YES
-fflush         YES
+fclose         |check|
+fflush         |check|
 setbuf
 setvbuf
 ftell
 fgetpos
-fseek          YES
+fseek          |check|
 fsetpos
 rewind
 tmpfile
-clearerr       YES
-feof           YES
-ferror         YES
-flockfile      YES
-funlockfile    YES
+clearerr       |check|
+feof           |check|
+ferror         |check|
+flockfile      |check|
+funlockfile    |check|
 =============  =========
 
 Operations on system files
@@ -72,7 +67,7 @@ These functions operate on files on the host's system, without using the
 =============  =========
 Function_Name  Available
 =============  =========
-remove         YES
+remove         |check|
 rename
 tmpnam
 =============  =========
@@ -89,10 +84,10 @@ Function_Name  Available
 (f)getc
 fgets
 getchar
-fread          YES
+fread          |check|
 (f)putc
-(f)puts        YES
+(f)puts        |check|
 putchar
-fwrite         YES
+fwrite         |check|
 ungetc
 =============  =========
