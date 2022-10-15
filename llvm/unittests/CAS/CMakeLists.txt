@@ -1,3 +1,7 @@
+if (LLVM_ENABLE_ONDISK_CAS)
+  add_definitions(-DLLVM_ENABLE_ONDISK_CAS=1)
+endif()
+
 if (LLVM_CAS_ENABLE_REMOTE_CACHE)
   add_definitions(-DLLVM_CAS_ENABLE_REMOTE_CACHE=1)
   set(ADDITIONAL_CAS_TEST_DEPS "RemoteCacheServer")
