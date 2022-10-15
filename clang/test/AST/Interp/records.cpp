@@ -204,6 +204,26 @@ static_assert(a2.i == 200, ""); // ref-error {{static assertion failed}} \
                                 // expected-error {{static assertion failed}} \
                                 // expected-note {{evaluates to '12 == 200'}}
 
+
+struct S {
+  int a = 0;
+  constexpr int get5() const { return 5; }
+  constexpr void fo() const {
+    this; // expected-warning {{expression result unused}} \
+          // ref-warning {{expression result unused}}
+    this->a; // expected-warning {{expression result unused}} \
+             // ref-warning {{expression result unused}}
+    get5();
+  }
+
+  constexpr int m() const {
+    fo();
+    return 1;
+  }
+};
+constexpr S s;
+static_assert(s.m() == 1, "");
+
 namespace MI {
   class A {
   public:
