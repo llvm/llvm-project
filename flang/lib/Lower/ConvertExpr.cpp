@@ -2794,6 +2794,7 @@ public:
     // function return value.
     assert(callNumResults == 1 &&
            "Expected exactly one result in FUNCTION call");
+    (void)callNumResults;
 
     // Call a BIND(C) function that return a char.
     if (caller.characterize().IsBindC() &&
