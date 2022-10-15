@@ -642,3 +642,17 @@ struct t2 {
 _Static_assert(_Alignof(t1) == 1, "");
 _Static_assert(_Alignof(t2) == 1, "");
 } // namespace non_pod_packed
+
+namespace non_pod_packed_packed {
+struct B {
+  int b;
+};
+struct  FromB : B {
+} __attribute__((packed));
+struct C {
+  char a[3];
+  FromB b;
+} __attribute__((packed));
+_Static_assert(__builtin_offsetof(C, b) == 3, "");
+}
+
