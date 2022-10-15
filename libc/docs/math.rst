@@ -1,21 +1,19 @@
-===========================
-Math Functions in LLVM-libc
-===========================
+==============
+Math Functions
+==============
 
-.. role::  raw-html(raw)
-    :format: html
-
-.. |check| replace:: :raw-html:`&#x2705`
+.. include:: check.rst
 
 .. contents:: Table of Contents
   :depth: 4
   :local:
 
-Summary
-=======
+Source Locations
+================
 
-* This document tracks the status of the implementation of math functions in
-  LLVM libc.
+- The main source is located at: `libc/src/math <https://github.com/llvm/llvm-project/tree/main/libc/src/math>`_.
+- The tests are located at: `libc/test/src/math <https://github.com/llvm/llvm-project/tree/main/libc/test/src/math>`_.
+- The floating point utilities are located at: `libc/src/__support/FPUtil <https://github.com/llvm/llvm-project/tree/main/libc/src/__support/FPUtil>`_.
 
 Implementation Requirements / Goals
 ===================================
@@ -47,13 +45,6 @@ Implementation Requirements / Goals
   as possible within the memory or latency budgets, and consistent across all
   platforms.
 
-
-Source Locations
-================
-
-- The main source is located at: `libc/src/math <https://github.com/llvm/llvm-project/tree/main/libc/src/math>`_.
-- The tests are located at: `libc/test/src/math <https://github.com/llvm/llvm-project/tree/main/libc/test/src/math>`_.
-- The floating point utilities are located at: `libc/src/__support/FPUtil <https://github.com/llvm/llvm-project/tree/main/libc/src/__support/FPUtil>`_.
 
 Add a new math function to LLVM libc
 ====================================
