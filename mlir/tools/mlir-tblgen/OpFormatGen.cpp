@@ -1724,8 +1724,8 @@ static void genCustomDirectiveParameterPrinter(FormatElement *element,
 
   } else if (auto *string = dyn_cast<StringElement>(element)) {
     FmtContext ctx;
-    ctx.withBuilder("parser.getBuilder()");
-    ctx.addSubst("_ctxt", "parser.getContext()");
+    ctx.withBuilder("::mlir::Builder(getContext())");
+    ctx.addSubst("_ctxt", "getContext()");
     body << tgfmt(string->getValue(), &ctx);
 
   } else {

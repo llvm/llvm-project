@@ -20,7 +20,7 @@ class TestFormat_Op<string fmt, list<Trait> traits = []>
 // CHECK-LABEL: CustomStringLiteralA::parse
 // CHECK: parseFoo({{.*}}, parser.getBuilder().getI1Type())
 // CHECK-LABEL: CustomStringLiteralA::print
-// CHECK: printFoo({{.*}}, parser.getBuilder().getI1Type())
+// CHECK: printFoo({{.*}}, ::mlir::Builder(getContext()).getI1Type())
 def CustomStringLiteralA : TestFormat_Op<[{
   custom<Foo>("$_builder.getI1Type()") attr-dict
 }]>;
@@ -28,7 +28,7 @@ def CustomStringLiteralA : TestFormat_Op<[{
 // CHECK-LABEL: CustomStringLiteralB::parse
 // CHECK: parseFoo({{.*}}, IndexType::get(parser.getContext()))
 // CHECK-LABEL: CustomStringLiteralB::print
-// CHECK: printFoo({{.*}}, IndexType::get(parser.getContext()))
+// CHECK: printFoo({{.*}}, IndexType::get(getContext()))
 def CustomStringLiteralB : TestFormat_Op<[{
   custom<Foo>("IndexType::get($_ctxt)") attr-dict
 }]>;
@@ -36,7 +36,7 @@ def CustomStringLiteralB : TestFormat_Op<[{
 // CHECK-LABEL: CustomStringLiteralC::parse
 // CHECK: parseFoo({{.*}}, parser.getBuilder().getStringAttr("foo"))
 // CHECK-LABEL: CustomStringLiteralC::print
-// CHECK: printFoo({{.*}}, parser.getBuilder().getStringAttr("foo"))
+// CHECK: printFoo({{.*}}, ::mlir::Builder(getContext()).getStringAttr("foo"))
 def CustomStringLiteralC : TestFormat_Op<[{
   custom<Foo>("$_builder.getStringAttr(\"foo\")") attr-dict
 }]>;
