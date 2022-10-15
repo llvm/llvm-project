@@ -279,6 +279,16 @@ namespace bitOr {
   static_assert((12 | true) == 13, "");
 };
 
+#if __cplusplus >= 201402L
+constexpr bool IgnoredUnary() {
+  bool bo = true;
+  !bo; // expected-warning {{expression result unused}} \
+       // ref-warning {{expression result unused}}
+  return bo;
+}
+static_assert(IgnoredUnary(), "");
+#endif
+
 namespace strings {
   constexpr const char *S = "abc";
   static_assert(S[0] == 97, "");
