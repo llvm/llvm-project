@@ -71,7 +71,7 @@ static void emitDenseMapInfo(StringRef enumName, std::string underlyingType,
       std::string(formatv("{0}::{1}", cppNamespace, enumName));
   if (underlyingType.empty())
     underlyingType =
-        std::string(formatv("std::underlying_type<{0}>::type", qualName));
+        std::string(formatv("std::underlying_type_t<{0}>", qualName));
 
   const char *const mapInfo = R"(
 namespace llvm {
