@@ -212,6 +212,8 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
       return Discard(this->emitAdd(*T, BO));
     case BO_Mul:
       return Discard(this->emitMul(*T, BO));
+    case BO_Rem:
+      return Discard(this->emitRem(*T, BO));
     case BO_Assign:
       if (!this->emitStore(*T, BO))
         return false;
