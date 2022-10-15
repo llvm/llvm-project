@@ -748,8 +748,10 @@ static bool checkAndReplaceCondition(CmpInst *Cmp, ConstraintInfo &Info) {
   Value *B = Cmp->getOperand(1);
 
   auto R = Info.getConstraintForSolving(Pred, A, B);
-  if (R.empty() || !R.isValid(Info))
+  if (R.empty() || !R.isValid(Info)){
+    LLVM_DEBUG(dbgs() << "   failed to decompose condition\n");
     return false;
+  }
 
   auto &CSToUse = Info.getCS(R.IsSigned);
 
