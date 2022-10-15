@@ -436,7 +436,8 @@ private:
 
       for (u32 I = 0; I < Size;) {
         DCHECK_GE(BG->MaxCachedPerBatch, CurBatch->getCount());
-        u16 UnusedSlots = BG->MaxCachedPerBatch - CurBatch->getCount();
+        u16 UnusedSlots =
+            static_cast<u16>(BG->MaxCachedPerBatch - CurBatch->getCount());
         if (UnusedSlots == 0) {
           CurBatch = C->createBatch(ClassId, reinterpret_cast<void *>(
               decompactPtr(ClassId, Array[I])));
@@ -444,6 +445,7 @@ private:
           Batches.push_front(CurBatch);
           UnusedSlots = BG->MaxCachedPerBatch;
         }
+        // `UnusedSlots` is u16 so the result will be also fit in u16.
         u16 AppendSize = static_cast<u16>(Min<u32>(UnusedSlots, Size - I));
         CurBatch->appendFromArray(&Array[I], AppendSize);
         I += AppendSize;

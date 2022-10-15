@@ -442,7 +442,8 @@ private:
 
       for (u32 I = 0; I < Size;) {
         DCHECK_GE(BG->MaxCachedPerBatch, CurBatch->getCount());
-        u16 UnusedSlots = BG->MaxCachedPerBatch - CurBatch->getCount();
+        u16 UnusedSlots =
+            static_cast<u16>(BG->MaxCachedPerBatch - CurBatch->getCount());
         if (UnusedSlots == 0) {
           CurBatch = C->createBatch(ClassId, reinterpret_cast<void *>(
               decompactPtr(ClassId, Array[I])));
