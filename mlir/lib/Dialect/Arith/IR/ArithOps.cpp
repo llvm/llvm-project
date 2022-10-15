@@ -1481,7 +1481,7 @@ OpFoldResult arith::CmpIOp::fold(ArrayRef<Attribute> operands) {
     Pred origPred = getPredicate();
     for (auto pred : invPreds) {
       if (origPred == pred.first) {
-        setPredicateAttr(CmpIPredicateAttr::get(getContext(), pred.second));
+        setPredicate(pred.second);
         Value lhs = getLhs();
         Value rhs = getRhs();
         getLhsMutable().assign(rhs);
