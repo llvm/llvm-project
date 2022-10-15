@@ -816,18 +816,6 @@ bool ByteCodeExprGen<Emitter>::visitInitializer(const Expr *Initializer) {
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::getPtrVarDecl(const VarDecl *VD, const Expr *E) {
-  // Generate a pointer to the local, loading refs.
-  if (Optional<unsigned> Idx = getGlobalIdx(VD)) {
-    if (VD->getType()->isReferenceType())
-      return this->emitGetGlobalPtr(*Idx, E);
-    else
-      return this->emitGetPtrGlobal(*Idx, E);
-  }
-  return this->bail(VD);
-}
-
-template <class Emitter>
 llvm::Optional<unsigned>
 ByteCodeExprGen<Emitter>::getGlobalIdx(const VarDecl *VD) {
   if (VD->isConstexpr()) {
