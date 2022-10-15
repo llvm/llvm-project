@@ -361,6 +361,57 @@ define void @load_store(double* %ptr) {
 
 ; // -----
 
+; CHECK-LABEL: @atomic_rmw
+; CHECK-SAME:  %[[PTR1:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[VAL1:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[PTR2:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[VAL2:[a-zA-Z0-9]+]]
+define void @atomic_rmw(i32* %ptr1, i32 %val1, float* %ptr2, float %val2) {
+  ; CHECK:  llvm.atomicrmw xchg %[[PTR1]], %[[VAL1]] acquire  : i32
+  %1 = atomicrmw xchg i32* %ptr1, i32 %val1 acquire
+  ; CHECK:  llvm.atomicrmw add %[[PTR1]], %[[VAL1]] release  : i32
+  %2 = atomicrmw add i32* %ptr1, i32 %val1 release
+  ; CHECK:  llvm.atomicrmw sub %[[PTR1]], %[[VAL1]] acq_rel  : i32
+  %3 = atomicrmw sub i32* %ptr1, i32 %val1 acq_rel
+  ; CHECK:  llvm.atomicrmw _and %[[PTR1]], %[[VAL1]] seq_cst  : i32
+  %4 = atomicrmw and i32* %ptr1, i32 %val1 seq_cst
+  ; CHECK:  llvm.atomicrmw nand %[[PTR1]], %[[VAL1]] acquire  : i32
+  %5 = atomicrmw nand i32* %ptr1, i32 %val1 acquire
+  ; CHECK:  llvm.atomicrmw _or %[[PTR1]], %[[VAL1]] acquire  : i32
+  %6 = atomicrmw or i32* %ptr1, i32 %val1 acquire
+  ; CHECK:  llvm.atomicrmw _xor %[[PTR1]], %[[VAL1]] acquire  : i32
+  %7 = atomicrmw xor i32* %ptr1, i32 %val1 acquire
+  ; CHECK:  llvm.atomicrmw max %[[PTR1]], %[[VAL1]] acquire  : i32
+  %8 = atomicrmw max i32* %ptr1, i32 %val1 acquire
+  ; CHECK:  llvm.atomicrmw min %[[PTR1]], %[[VAL1]] acquire  : i32
+  %9 = atomicrmw min i32* %ptr1, i32 %val1 acquire
+  ; CHECK:  llvm.atomicrmw umax %[[PTR1]], %[[VAL1]] acquire  : i32
+  %10 = atomicrmw umax i32* %ptr1, i32 %val1 acquire
+  ; CHECK:  llvm.atomicrmw umin %[[PTR1]], %[[VAL1]] acquire  : i32
+  %11 = atomicrmw umin i32* %ptr1, i32 %val1 acquire
+  ; CHECK:  llvm.atomicrmw fadd %[[PTR2]], %[[VAL2]] acquire  : f32
+  %12 = atomicrmw fadd float* %ptr2, float %val2 acquire
+  ; CHECK:  llvm.atomicrmw fsub %[[PTR2]], %[[VAL2]] acquire  : f32
+  %13 = atomicrmw fsub float* %ptr2, float %val2 acquire
+  ret void
+}
+
+; // -----
+
+; CHECK-LABEL: @atomic_cmpxchg
+; CHECK-SAME:  %[[PTR1:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[VAL1:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[VAL2:[a-zA-Z0-9]+]]
+define void @atomic_cmpxchg(i32* %ptr1, i32 %val1, i32 %val2) {
+  ; CHECK:  llvm.cmpxchg %[[PTR1]], %[[VAL1]], %[[VAL2]] seq_cst seq_cst : i32
+  %1 = cmpxchg i32* %ptr1, i32 %val1, i32 %val2 seq_cst seq_cst
+  ; CHECK:  llvm.cmpxchg %[[PTR1]], %[[VAL1]], %[[VAL2]] monotonic seq_cst : i32
+  %2 = cmpxchg i32* %ptr1, i32 %val1, i32 %val2 monotonic seq_cst
+  ret void
+}
+
+; // -----
+
 ; CHECK-LABEL: @freeze
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
 define void @freeze(i32 %arg1) {
