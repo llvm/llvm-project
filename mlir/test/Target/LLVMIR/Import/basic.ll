@@ -448,18 +448,6 @@ def: ; pred: bb3, bbs
   ret void
 }
 
-; Shufflevector
-; CHECK-LABEL: llvm.func @shuffle_vec
-define <4 x half> @shuffle_vec(<4 x half>* %arg0, <4 x half>* %arg1) {
-  ; CHECK: %[[V0:.+]] = llvm.load %{{.+}} : !llvm.ptr<vector<4xf16>>
-  %val0 = load <4 x half>, <4 x half>* %arg0
-  ; CHECK: %[[V1:.+]] = llvm.load %{{.+}} : !llvm.ptr<vector<4xf16>>
-  %val1 = load <4 x half>, <4 x half>* %arg1
-  ; CHECK: llvm.shufflevector %[[V0]], %[[V1]] [2, 3, -1, -1] : vector<4xf16>
-  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
-  ret <4 x half> %shuffle
-}
-
 ; Varadic function definition
 %struct.va_list = type { i8* }
 
@@ -488,48 +476,5 @@ define void @variadic_function(i32 %X, ...) {
   ; CHECK: llvm.intr.vaend %[[CAST0]]
   call void @llvm.va_end(i8* %ap2)
   ; CHECK: llvm.return
-  ret void
-}
-
-; CHECK-LABEL: llvm.func @atomic_rmw
-define void @atomic_rmw(i32* %ptr0, i32 %v, float* %ptr1, float %f) {
-  ; CHECK: llvm.atomicrmw add %arg0, %arg1 acquire  : i32
-  %1 = atomicrmw add i32* %ptr0, i32 %v acquire
-  ; CHECK: llvm.atomicrmw add %arg0, %arg1 release  : i32
-  %2 = atomicrmw add i32* %ptr0, i32 %v release
-
-  ; CHECK: llvm.atomicrmw sub %arg0, %arg1 acquire  : i32
-  %3 = atomicrmw sub i32* %ptr0, i32 %v acquire
-  ; CHECK: llvm.atomicrmw xchg %arg0, %arg1 acquire  : i32
-  %4 = atomicrmw xchg i32* %ptr0, i32 %v acquire
-  ; CHECK: llvm.atomicrmw _and %arg0, %arg1 acquire  : i32
-  %5 = atomicrmw and i32* %ptr0, i32 %v acquire
-  ; CHECK: llvm.atomicrmw nand %arg0, %arg1 acquire  : i32
-  %6 = atomicrmw nand i32* %ptr0, i32 %v acquire
-  ; CHECK: llvm.atomicrmw _or %arg0, %arg1 acquire  : i32
-  %7 = atomicrmw or i32* %ptr0, i32 %v acquire
-  ; CHECK: llvm.atomicrmw _xor %arg0, %arg1 acquire  : i32
-  %8 = atomicrmw xor i32* %ptr0, i32 %v acquire
-  ; CHECK: llvm.atomicrmw max %arg0, %arg1 acquire  : i32
-  %9 = atomicrmw max i32* %ptr0, i32 %v acquire
-  ; CHECK: llvm.atomicrmw min %arg0, %arg1 acquire  : i32
-  %10 = atomicrmw min i32* %ptr0, i32 %v acquire
-  ; CHECK: llvm.atomicrmw umax %arg0, %arg1 acquire  : i32
-  %11 = atomicrmw umax i32* %ptr0, i32 %v acquire
-  ; CHECK: llvm.atomicrmw umin %arg0, %arg1 acquire  : i32
-  %12 = atomicrmw umin i32* %ptr0, i32 %v acquire
-  ; CHECK: llvm.atomicrmw fadd %arg2, %arg3 acquire  : f32
-  %13 = atomicrmw fadd float* %ptr1, float %f acquire
-  ; CHECK: llvm.atomicrmw fsub %arg2, %arg3 acquire  : f32
-  %14 = atomicrmw fsub float* %ptr1, float %f acquire
-  ret void
-}
-
-; CHECK-LABEL: llvm.func @atomic_cmpxchg
-define void @atomic_cmpxchg(i32* %ptr0, i32 %v, i32 %c) {
-  ; CHECK: llvm.cmpxchg %arg0, %arg2, %arg1 seq_cst seq_cst : i32
-  %1 = cmpxchg i32* %ptr0, i32 %c, i32 %v seq_cst seq_cst
-  ; CHECK: llvm.cmpxchg %arg0, %arg2, %arg1 monotonic seq_cst : i32
-  %2 = cmpxchg i32* %ptr0, i32 %c, i32 %v monotonic seq_cst
   ret void
 }

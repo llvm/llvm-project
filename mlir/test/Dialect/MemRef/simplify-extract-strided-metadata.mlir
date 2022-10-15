@@ -841,3 +841,29 @@ func.func @extract_strided_metadata_of_collapse_to_rank0(%arg : memref<1x1x1x1x1
   return %base, %offset :
       memref<i32>, index
 }
+
+// -----
+
+// Check that we simplify extract_strided_metadata of
+// extract_strided_metadata.
+//
+// CHECK-LABEL: func @extract_strided_metadata_of_extract_strided_metadata(
+//  CHECK-SAME: %[[ARG:.*]]: memref<i32>)
+//
+//   CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]] = memref.extract_strided_metadata %[[ARG]]
+//
+//       CHECK: return %[[BASE]], %[[C0]]
+func.func @extract_strided_metadata_of_extract_strided_metadata(%arg : memref<i32>)
+  -> (memref<i32>, index) {
+
+  %base, %offset =
+    memref.extract_strided_metadata %arg:memref<i32>
+    -> memref<i32>, index
+  %base2, %offset2 =
+    memref.extract_strided_metadata %base:memref<i32>
+    -> memref<i32>, index
+
+  return %base2, %offset2 :
+      memref<i32>, index
+}

@@ -849,6 +849,38 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
   }
 }
 
+static bool replaceSubOverflowUses(IntrinsicInst *II, Value *A, Value *B,
+                                   SmallVectorImpl<Instruction *> &ToRemove) {
+  bool Changed = false;
+  IRBuilder<> Builder(II->getParent(), II->getIterator());
+  Value *Sub = nullptr;
+  for (User *U : make_early_inc_range(II->users())) {
+    if (match(U, m_ExtractValue<0>(m_Value()))) {
+      if (!Sub)
+        Sub = Builder.CreateSub(A, B);
+      U->replaceAllUsesWith(Sub);
+      Changed = true;
+    } else if (match(U, m_ExtractValue<1>(m_Value()))) {
+      U->replaceAllUsesWith(Builder.getFalse());
+      Changed = true;
+    } else
+      continue;
+
+    if (U->use_empty()) {
+      auto *I = cast<Instruction>(U);
+      ToRemove.push_back(I);
+      I->setOperand(0, PoisonValue::get(II->getType()));
+      Changed = true;
+    }
+  }
+
+  if (II->use_empty()) {
+    II->eraseFromParent();
+    Changed = true;
+  }
+  return Changed;
+}
+
 static bool
 tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
                           SmallVectorImpl<Instruction *> &ToRemove) {
@@ -872,33 +904,7 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
         !DoesConditionHold(CmpInst::ICMP_SGE, B,
                            ConstantInt::get(A->getType(), 0), Info))
       return false;
-
-    IRBuilder<> Builder(II->getParent(), II->getIterator());
-    Value *Sub = nullptr;
-    for (User *U : make_early_inc_range(II->users())) {
-      if (match(U, m_ExtractValue<0>(m_Value()))) {
-        if (!Sub)
-          Sub = Builder.CreateSub(A, B);
-        U->replaceAllUsesWith(Sub);
-        Changed = true;
-      } else if (match(U, m_ExtractValue<1>(m_Value()))) {
-        U->replaceAllUsesWith(Builder.getFalse());
-        Changed = true;
-      } else
-        continue;
-
-      if (U->use_empty()) {
-        auto *I = cast<Instruction>(U);
-        ToRemove.push_back(I);
-        I->setOperand(0, PoisonValue::get(II->getType()));
-        Changed = true;
-      }
-    }
-
-    if (II->use_empty()) {
-      II->eraseFromParent();
-      Changed = true;
-    }
+    Changed = replaceSubOverflowUses(II, A, B, ToRemove);
   }
   return Changed;
 }

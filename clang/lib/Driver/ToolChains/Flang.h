@@ -29,7 +29,7 @@ private:
   ///
   /// \param [in] Args The list of input driver arguments
   /// \param [out] CmdArgs The list of output command arguments
-  void AddFortranDialectOptions(const llvm::opt::ArgList &Args,
+  void addFortranDialectOptions(const llvm::opt::ArgList &Args,
                                 llvm::opt::ArgStringList &CmdArgs) const;
 
   /// Extract preprocessing options from the driver arguments and add them to
@@ -37,7 +37,7 @@ private:
   ///
   /// \param [in] Args The list of input driver arguments
   /// \param [out] CmdArgs The list of output command arguments
-  void AddPreprocessingOptions(const llvm::opt::ArgList &Args,
+  void addPreprocessingOptions(const llvm::opt::ArgList &Args,
                                llvm::opt::ArgStringList &CmdArgs) const;
 
   /// Extract PIC options from the driver arguments and add them to
@@ -48,13 +48,12 @@ private:
   void AddPicOptions(const llvm::opt::ArgList &Args,
                      llvm::opt::ArgStringList &CmdArgs) const;
 
-  /// Extract other compilation options from the driver arguments and add them
-  /// to the command arguments.
+  /// This method will effectively copy options from \a Args into \a CmdArgs.
   ///
   /// \param [in] Args The list of input driver arguments
   /// \param [out] CmdArgs The list of output command arguments
-  void AddOtherOptions(const llvm::opt::ArgList &Args,
-                       llvm::opt::ArgStringList &CmdArgs) const;
+  void forwardOptions(const llvm::opt::ArgList &Args,
+                      llvm::opt::ArgStringList &CmdArgs) const;
 
 public:
   Flang(const ToolChain &TC);

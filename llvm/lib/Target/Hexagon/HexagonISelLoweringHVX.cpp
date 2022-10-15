@@ -10,6 +10,12 @@
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -219,6 +225,8 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::ANY_EXTEND,         T, Custom);
     setOperationAction(ISD::SIGN_EXTEND,        T, Custom);
     setOperationAction(ISD::ZERO_EXTEND,        T, Custom);
+    setOperationAction(ISD::FSHL,               T, Custom);
+    setOperationAction(ISD::FSHR,               T, Custom);
     if (T != ByteV) {
       setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG, T, Custom);
       // HVX only has shifts of words and halfwords.
@@ -293,12 +301,14 @@ HexagonTargetLowering::initializeHVXLowering() {
       // Promote all shuffles to operate on vectors of bytes.
       setPromoteTo(ISD::VECTOR_SHUFFLE, T, ByteW);
     }
+    setOperationAction(ISD::FSHL,     T, Custom);
+    setOperationAction(ISD::FSHR,     T, Custom);
 
     setOperationAction(ISD::SMIN,     T, Custom);
     setOperationAction(ISD::SMAX,     T, Custom);
     if (T.getScalarType() != MVT::i32) {
-      setOperationAction(ISD::UMIN,   T, Custom);
-      setOperationAction(ISD::UMAX,   T, Custom);
+      setOperationAction(ISD::UMIN,     T, Custom);
+      setOperationAction(ISD::UMAX,     T, Custom);
     }
 
     if (Subtarget.useHVXFloatingPoint()) {
@@ -562,6 +572,116 @@ bool HexagonTargetLowering::allowsHvxMisalignedMemoryAccesses(
   if (Fast)
     *Fast = true;
   return true;
+}
+
+void HexagonTargetLowering::AdjustHvxInstrPostInstrSelection(
+    MachineInstr &MI, SDNode *Node) const {
+  unsigned Opc = MI.getOpcode();
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  MachineBasicBlock &MB = *MI.getParent();
+  MachineFunction &MF = *MB.getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  auto At = MI.getIterator();
+
+  switch (Opc) {
+  case Hexagon::PS_vsplatib:
+    if (Subtarget.useHVXV62Ops()) {
+      // SplatV = A2_tfrsi #imm
+      // OutV = V6_lvsplatb SplatV
+      Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      BuildMI(MB, At, DL, TII.get(Hexagon::A2_tfrsi), SplatV)
+        .add(MI.getOperand(1));
+      Register OutV = MI.getOperand(0).getReg();
+      BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatb), OutV)
+        .addReg(SplatV);
+    } else {
+      // SplatV = A2_tfrsi #imm:#imm:#imm:#imm
+      // OutV = V6_lvsplatw SplatV
+      Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      const MachineOperand &InpOp = MI.getOperand(1);
+      assert(InpOp.isImm());
+      uint32_t V = InpOp.getImm() & 0xFF;
+      BuildMI(MB, At, DL, TII.get(Hexagon::A2_tfrsi), SplatV)
+          .addImm(V << 24 | V << 16 | V << 8 | V);
+      Register OutV = MI.getOperand(0).getReg();
+      BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatw), OutV).addReg(SplatV);
+    }
+    MB.erase(At);
+    break;
+  case Hexagon::PS_vsplatrb:
+    if (Subtarget.useHVXV62Ops()) {
+      // OutV = V6_lvsplatb Inp
+      Register OutV = MI.getOperand(0).getReg();
+      BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatb), OutV)
+        .add(MI.getOperand(1));
+    } else {
+      Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      const MachineOperand &InpOp = MI.getOperand(1);
+      BuildMI(MB, At, DL, TII.get(Hexagon::S2_vsplatrb), SplatV)
+          .addReg(InpOp.getReg(), 0, InpOp.getSubReg());
+      Register OutV = MI.getOperand(0).getReg();
+      BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatw), OutV)
+          .addReg(SplatV);
+    }
+    MB.erase(At);
+    break;
+  case Hexagon::PS_vsplatih:
+    if (Subtarget.useHVXV62Ops()) {
+      // SplatV = A2_tfrsi #imm
+      // OutV = V6_lvsplath SplatV
+      Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      BuildMI(MB, At, DL, TII.get(Hexagon::A2_tfrsi), SplatV)
+        .add(MI.getOperand(1));
+      Register OutV = MI.getOperand(0).getReg();
+      BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplath), OutV)
+        .addReg(SplatV);
+    } else {
+      // SplatV = A2_tfrsi #imm:#imm
+      // OutV = V6_lvsplatw SplatV
+      Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      const MachineOperand &InpOp = MI.getOperand(1);
+      assert(InpOp.isImm());
+      uint32_t V = InpOp.getImm() & 0xFFFF;
+      BuildMI(MB, At, DL, TII.get(Hexagon::A2_tfrsi), SplatV)
+          .addImm(V << 16 | V);
+      Register OutV = MI.getOperand(0).getReg();
+      BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatw), OutV).addReg(SplatV);
+    }
+    MB.erase(At);
+    break;
+  case Hexagon::PS_vsplatrh:
+    if (Subtarget.useHVXV62Ops()) {
+      // OutV = V6_lvsplath Inp
+      Register OutV = MI.getOperand(0).getReg();
+      BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplath), OutV)
+        .add(MI.getOperand(1));
+    } else {
+      // SplatV = A2_combine_ll Inp, Inp
+      // OutV = V6_lvsplatw SplatV
+      Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      const MachineOperand &InpOp = MI.getOperand(1);
+      BuildMI(MB, At, DL, TII.get(Hexagon::A2_combine_ll), SplatV)
+          .addReg(InpOp.getReg(), 0, InpOp.getSubReg())
+          .addReg(InpOp.getReg(), 0, InpOp.getSubReg());
+      Register OutV = MI.getOperand(0).getReg();
+      BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatw), OutV).addReg(SplatV);
+    }
+    MB.erase(At);
+    break;
+  case Hexagon::PS_vsplatiw:
+  case Hexagon::PS_vsplatrw:
+    if (Opc == Hexagon::PS_vsplatiw) {
+      // SplatV = A2_tfrsi #imm
+      Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      BuildMI(MB, At, DL, TII.get(Hexagon::A2_tfrsi), SplatV)
+        .add(MI.getOperand(1));
+      MI.getOperand(1).ChangeToRegister(SplatV, false);
+    }
+    // OutV = V6_lvsplatw SplatV/Inp
+    MI.setDesc(TII.get(Hexagon::V6_lvsplatw));
+    break;
+  }
 }
 
 SDValue
@@ -1996,6 +2116,31 @@ HexagonTargetLowering::LowerHvxShift(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue
+HexagonTargetLowering::LowerHvxFunnelShift(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  unsigned Opc = Op.getOpcode();
+  assert(Opc == ISD::FSHL || Opc == ISD::FSHR);
+
+  // Make sure the shift amount is within the range of the bitwidth
+  // of the element type.
+  SDValue A = Op.getOperand(0);
+  SDValue B = Op.getOperand(1);
+  SDValue S = Op.getOperand(2);
+
+  MVT InpTy = ty(A);
+  MVT ElemTy = InpTy.getVectorElementType();
+
+  const SDLoc &dl(Op);
+  unsigned ElemWidth = ElemTy.getSizeInBits();
+  SDValue Mask = DAG.getSplatBuildVector(
+      InpTy, dl, DAG.getConstant(ElemWidth - 1, dl, ElemTy));
+
+  unsigned MOpc = Opc == ISD::FSHL ? HexagonISD::MFSHL : HexagonISD::MFSHR;
+  return DAG.getNode(MOpc, dl, ty(Op),
+                     {A, B, DAG.getNode(ISD::AND, dl, InpTy, {S, Mask})});
+}
+
+SDValue
 HexagonTargetLowering::LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
   MVT ResTy = ty(Op);
@@ -2842,6 +2987,8 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::SRA:
       case ISD::SHL:
       case ISD::SRL:
+      case ISD::FSHL:
+      case ISD::FSHR:
       case ISD::SMIN:
       case ISD::SMAX:
       case ISD::UMIN:
@@ -2880,6 +3027,8 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::SRA:
     case ISD::SHL:
     case ISD::SRL:                     return LowerHvxShift(Op, DAG);
+    case ISD::FSHL:
+    case ISD::FSHR:                    return LowerHvxFunnelShift(Op, DAG);
     case ISD::MULHS:
     case ISD::MULHU:                   return LowerHvxMulh(Op, DAG);
     case ISD::ANY_EXTEND_VECTOR_INREG: return LowerHvxExtend(Op, DAG);

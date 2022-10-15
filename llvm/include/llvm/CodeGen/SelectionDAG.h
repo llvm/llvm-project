@@ -250,6 +250,12 @@ class SelectionDAG {
   ProfileSummaryInfo *PSI = nullptr;
   BlockFrequencyInfo *BFI = nullptr;
 
+  /// List of non-single value types.
+  FoldingSet<SDVTListNode> VTListMap;
+
+  /// Pool allocation for misc. objects that are created once per SelectionDAG.
+  BumpPtrAllocator Allocator;
+
   /// The starting token.
   SDNode EntryNode;
 
@@ -275,9 +281,6 @@ class SelectionDAG {
   /// Pool allocation for machine-opcode SDNode operands.
   BumpPtrAllocator OperandAllocator;
   ArrayRecycler<SDUse> OperandRecycler;
-
-  /// Pool allocation for misc. objects that are created once per SelectionDAG.
-  BumpPtrAllocator Allocator;
 
   /// Tracks dbg_value and dbg_label information through SDISel.
   SDDbgInfo *DbgInfo;
@@ -2310,9 +2313,6 @@ private:
   /// additional processing for constant nodes.
   SDNode *FindNodeOrInsertPos(const FoldingSetNodeID &ID, const SDLoc &DL,
                               void *&InsertPos);
-
-  /// List of non-single value types.
-  FoldingSet<SDVTListNode> VTListMap;
 
   /// Maps to auto-CSE operations.
   std::vector<CondCodeSDNode*> CondCodeNodes;

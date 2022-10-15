@@ -305,10 +305,14 @@ def data_in_code : Flag<["--"], "data-in-code">,
   HelpText<"Print the data in code table for Mach-O objects (requires --macho)">,
   Group<grp_mach_o>;
 
-def function_starts : Flag<["--"], "function-starts">,
-  HelpText<"Print the function starts table for "
-           "Mach-O objects (requires --macho)">,
+def function_starts_EQ : Joined<["--"], "function-starts=">,
+  HelpText<"Print the function starts table for Mach-O objects. "
+           "Options: addrs (default), names, both (requires --macho)">,
+  Values<"addrs,names,both">,
   Group<grp_mach_o>;
+
+def : Flag<["--"], "function-starts">, Alias<function_starts_EQ>,
+  AliasArgs<["addrs"]>, Group<grp_mach_o>;
 
 def link_opt_hints : Flag<["--"], "link-opt-hints">,
   HelpText<"Print the linker optimization hints for "

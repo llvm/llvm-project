@@ -64,20 +64,22 @@ def Vector_CombiningKindAttr : EnumAttr<Vector_Dialect, CombiningKind, "kind"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-def IteratorType : I32EnumAttr<"IteratorType", "Iterator type", [
+def Vector_IteratorType : I32EnumAttr<"IteratorType", "Iterator type", [
   I32EnumAttrCase<"parallel", 0>,
   I32EnumAttrCase<"reduction", 1>
-  ]> {
+]> {
     let genSpecializedAttr = 0;
     let cppNamespace = "::mlir::vector";
 }
 
-def IteratorTypeEnum : EnumAttr<Vector_Dialect, IteratorType, "iterator_type"> {
-  let assemblyFormat = "`<` $value `>`";
+def Vector_IteratorTypeEnum
+    : EnumAttr<Vector_Dialect, Vector_IteratorType, "iterator_type"> {
+    let assemblyFormat = "`<` $value `>`";
 }
 
-def IteratorTypeArrayAttr : TypedArrayAttrBase<IteratorTypeEnum,
-    "Iterator type should be an enum.">;
+def Vector_IteratorTypeArrayAttr
+    : TypedArrayAttrBase<Vector_IteratorTypeEnum,
+                         "Iterator type should be an enum.">;
 
 // TODO: Add an attribute to specify a different algebra with operators other
 // than the current set: {*, +}.
@@ -92,7 +94,7 @@ def Vector_ContractionOp :
     Arguments<(ins AnyVector:$lhs, AnyVector:$rhs, AnyType:$acc,
                Variadic<VectorOf<[I1]>>:$masks,
                ArrayAttr:$indexing_maps,
-               IteratorTypeArrayAttr:$iterator_types,
+               Vector_IteratorTypeArrayAttr:$iterator_types,
                DefaultValuedAttr<Vector_CombiningKindAttr,
                                  "CombiningKind::ADD">:$kind)>,
     Results<(outs AnyType)> {

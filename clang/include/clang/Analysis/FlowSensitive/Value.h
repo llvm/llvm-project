@@ -38,6 +38,7 @@ public:
     Struct,
 
     // Synthetic boolean values are either atomic values or logical connectives.
+    TopBool,
     AtomicBool,
     Conjunction,
     Disjunction,
@@ -82,12 +83,27 @@ public:
   explicit BoolValue(Kind ValueKind) : Value(ValueKind) {}
 
   static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::AtomicBool ||
+    return Val->getKind() == Kind::TopBool ||
+           Val->getKind() == Kind::AtomicBool ||
            Val->getKind() == Kind::Conjunction ||
            Val->getKind() == Kind::Disjunction ||
            Val->getKind() == Kind::Negation ||
            Val->getKind() == Kind::Implication ||
            Val->getKind() == Kind::Biconditional;
+  }
+};
+
+/// Models the trivially true formula, which is Top in the lattice of boolean
+/// formulas.
+///
+/// FIXME: Given the subtlety of comparison involving `TopBoolValue`, define
+/// `operator==` for `Value`.
+class TopBoolValue final : public BoolValue {
+public:
+  TopBoolValue() : BoolValue(Kind::TopBool) {}
+
+  static bool classof(const Value *Val) {
+    return Val->getKind() == Kind::TopBool;
   }
 };
 

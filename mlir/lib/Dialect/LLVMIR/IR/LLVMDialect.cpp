@@ -2551,8 +2551,7 @@ OpFoldResult LLVM::GEPOp::fold(ArrayRef<Attribute> operands) {
                        dynamicIndices);
 
     getDynamicIndicesMutable().assign(dynamicIndices);
-    setRawConstantIndicesAttr(
-        DenseI32ArrayAttr::get(getContext(), rawConstantIndices));
+    setRawConstantIndices(rawConstantIndices);
     return Value{*this};
   }
 

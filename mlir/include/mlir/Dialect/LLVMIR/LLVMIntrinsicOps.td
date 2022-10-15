@@ -44,6 +44,10 @@ def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure]> {
   let arguments = (ins LLVM_Type:$in, I1:$is_int_min_poison);
 }
 
+def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure]> {
+  let arguments = (ins LLVM_Type:$in, I32:$bit);
+}
+
 def LLVM_CopySignOp : LLVM_BinarySameArgsIntrinsicOp<"copysign">;
 def LLVM_CosOp : LLVM_UnaryIntrinsicOp<"cos">;
 def LLVM_ExpOp : LLVM_UnaryIntrinsicOp<"exp">;

@@ -174,6 +174,9 @@ Error MachOReader::readLoadCommands(Object &O) const {
     case MachO::LC_FUNCTION_STARTS:
       O.FunctionStartsCommandIndex = O.LoadCommands.size();
       break;
+    case MachO::LC_DYLIB_CODE_SIGN_DRS:
+      O.DylibCodeSignDRsIndex = O.LoadCommands.size();
+      break;
     case MachO::LC_DYLD_EXPORTS_TRIE:
       O.ExportsTrieCommandIndex = O.LoadCommands.size();
       break;
@@ -307,6 +310,10 @@ void MachOReader::readFunctionStartsData(Object &O) const {
   return readLinkData(O, O.FunctionStartsCommandIndex, O.FunctionStarts);
 }
 
+void MachOReader::readDylibCodeSignDRs(Object &O) const {
+  return readLinkData(O, O.DylibCodeSignDRsIndex, O.DylibCodeSignDRs);
+}
+
 void MachOReader::readExportsTrie(Object &O) const {
   return readLinkData(O, O.ExportsTrieCommandIndex, O.ExportsTrie);
 }
@@ -366,6 +373,7 @@ Expected<std::unique_ptr<Object>> MachOReader::create() const {
   readDataInCodeData(*Obj);
   readLinkerOptimizationHint(*Obj);
   readFunctionStartsData(*Obj);
+  readDylibCodeSignDRs(*Obj);
   readExportsTrie(*Obj);
   readChainedFixups(*Obj);
   readIndirectSymbolTable(*Obj);

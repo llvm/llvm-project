@@ -161,10 +161,6 @@ TEST(ScudoListTest, SinglyLinkedList) {
   setList(&L1, X);
   checkList(&L1, X);
 
-  setList(&L1, X, Y);
-  L1.insert(X, Z);
-  checkList(&L1, X, Z, Y);
-
   setList(&L1, X, Y, Z);
   setList(&L2, A, B, C);
   L1.append_back(&L2);

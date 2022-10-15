@@ -151,6 +151,10 @@ struct AssemblerInvocation {
   /// Darwin target variant triple, the variant of the deployment target
   /// for which the code is being compiled.
   llvm::Optional<llvm::Triple> DarwinTargetVariantTriple;
+
+  /// The version of the darwin target variant SDK which was used during the
+  /// compilation
+  llvm::VersionTuple DarwinTargetVariantSDKVersion;
   /// @}
 
 public:
@@ -220,6 +224,14 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.Triple = llvm::Triple::normalize(Args.getLastArgValue(OPT_triple));
   if (Arg *A = Args.getLastArg(options::OPT_darwin_target_variant_triple))
     Opts.DarwinTargetVariantTriple = llvm::Triple(A->getValue());
+  if (Arg *A = Args.getLastArg(OPT_darwin_target_variant_sdk_version_EQ)) {
+    VersionTuple Version;
+    if (Version.tryParse(A->getValue()))
+      Diags.Report(diag::err_drv_invalid_value)
+          << A->getAsString(Args) << A->getValue();
+    else
+      Opts.DarwinTargetVariantSDKVersion = Version;
+  }
 
   Opts.CPU = std::string(Args.getLastArgValue(OPT_target_cpu));
   Opts.Features = Args.getAllArgValues(OPT_target_feature);
@@ -433,6 +445,8 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
       TheTarget->createMCObjectFileInfo(Ctx, PIC));
   if (Opts.DarwinTargetVariantTriple)
     MOFI->setDarwinTargetVariantTriple(*Opts.DarwinTargetVariantTriple);
+  if (!Opts.DarwinTargetVariantSDKVersion.empty())
+    MOFI->setDarwinTargetVariantSDKVersion(Opts.DarwinTargetVariantSDKVersion);
   Ctx.setObjectFileInfo(MOFI.get());
 
   if (Opts.SaveTemporaryLabels)

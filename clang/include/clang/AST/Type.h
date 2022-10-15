@@ -2223,7 +2223,8 @@ public:
   bool isObjCARCBridgableType() const;
   bool isCARCBridgableType() const;
   bool isTemplateTypeParmType() const;          // C++ template type parameter
-  bool isNullPtrType() const;                   // C++11 std::nullptr_t
+  bool isNullPtrType() const;                   // C++11 std::nullptr_t or
+                                                // C2x nullptr_t
   bool isNothrowT() const;                      // C++   std::nothrow_t
   bool isAlignValT() const;                     // C++17 std::align_val_t
   bool isStdByteType() const;                   // C++17 std::byte

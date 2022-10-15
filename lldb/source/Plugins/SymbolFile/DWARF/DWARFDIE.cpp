@@ -210,13 +210,6 @@ const char *DWARFDIE::GetPubname() const {
     return nullptr;
 }
 
-const char *DWARFDIE::GetQualifiedName(std::string &storage) const {
-  if (IsValid())
-    return m_die->GetQualifiedName(m_cu, storage);
-  else
-    return nullptr;
-}
-
 // GetName
 //
 // Get value of the DW_AT_name attribute and place that value into the supplied

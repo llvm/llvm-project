@@ -145,10 +145,8 @@ bool ByteCodeExprGen<Emitter>::VisitIntegerLiteral(const IntegerLiteral *LE) {
   if (DiscardResult)
     return true;
 
-  auto Val = LE->getValue();
-  QualType LitTy = LE->getType();
-  if (Optional<PrimType> T = classify(LitTy))
-    return emitConst(*T, getIntWidth(LitTy), LE->getValue(), LE);
+  if (Optional<PrimType> T = classify(LE->getType()))
+    return emitConst(*T, LE->getValue(), LE);
   return this->bail(LE);
 }
 
@@ -212,10 +210,20 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
       return Discard(this->emitAdd(*T, BO));
     case BO_Mul:
       return Discard(this->emitMul(*T, BO));
+    case BO_Rem:
+      return Discard(this->emitRem(*T, BO));
+    case BO_Div:
+      return Discard(this->emitDiv(*T, BO));
     case BO_Assign:
       if (!this->emitStore(*T, BO))
         return false;
       return DiscardResult ? this->emitPopPtr(BO) : true;
+    case BO_And:
+      return Discard(this->emitBitAnd(*T, BO));
+    case BO_Or:
+      return Discard(this->emitBitOr(*T, BO));
+    case BO_LAnd:
+    case BO_LOr:
     default:
       return this->bail(BO);
     }
@@ -335,12 +343,43 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitIndexExpr(
     return false;
   QualType IndexType = E->getType();
   APInt Value(getIntWidth(IndexType), *ArrayIndex);
-  return this->emitConst(classifyPrim(IndexType), 0, Value, E);
+  return this->emitConst(classifyPrim(IndexType), Value, E);
 }
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
   return this->visit(E->getSourceExpr());
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitAbstractConditionalOperator(
+    const AbstractConditionalOperator *E) {
+  const Expr *Condition = E->getCond();
+  const Expr *TrueExpr = E->getTrueExpr();
+  const Expr *FalseExpr = E->getFalseExpr();
+
+  LabelTy LabelEnd = this->getLabel();   // Label after the operator.
+  LabelTy LabelFalse = this->getLabel(); // Label for the false expr.
+
+  if (!this->visit(Condition))
+    return false;
+  if (!this->jumpFalse(LabelFalse))
+    return false;
+
+  if (!this->visit(TrueExpr))
+    return false;
+  if (!this->jump(LabelEnd))
+    return false;
+
+  this->emitLabel(LabelFalse);
+
+  if (!this->visit(FalseExpr))
+    return false;
+
+  this->fallthrough(LabelEnd);
+  this->emitLabel(LabelEnd);
+
+  return true;
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
@@ -528,8 +567,8 @@ bool ByteCodeExprGen<Emitter>::dereferenceVar(
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::emitConst(PrimType T, unsigned NumBits,
-                                         const APInt &Value, const Expr *E) {
+bool ByteCodeExprGen<Emitter>::emitConst(PrimType T, const APInt &Value,
+                                         const Expr *E) {
   switch (T) {
   case PT_Sint8:
     return this->emitConstSint8(Value.getSExtValue(), E);
@@ -781,18 +820,6 @@ bool ByteCodeExprGen<Emitter>::visitInitializer(const Expr *Initializer) {
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::getPtrVarDecl(const VarDecl *VD, const Expr *E) {
-  // Generate a pointer to the local, loading refs.
-  if (Optional<unsigned> Idx = getGlobalIdx(VD)) {
-    if (VD->getType()->isReferenceType())
-      return this->emitGetGlobalPtr(*Idx, E);
-    else
-      return this->emitGetPtrGlobal(*Idx, E);
-  }
-  return this->bail(VD);
-}
-
-template <class Emitter>
 llvm::Optional<unsigned>
 ByteCodeExprGen<Emitter>::getGlobalIdx(const VarDecl *VD) {
   if (VD->isConstexpr()) {
@@ -1022,6 +1049,11 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
           return DiscardResult ? this->emitPop(T, E) : true;
         });
   case UO_Not:    // ~x
+    if (!this->Visit(SubExpr))
+      return false;
+    if (Optional<PrimType> T = classify(E->getType()))
+      return this->emitComp(*T, E);
+    return false;
   case UO_Real:   // __real x
   case UO_Imag:   // __imag x
   case UO_Extension:
@@ -1035,7 +1067,6 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   const auto *Decl = E->getDecl();
-  bool IsReference = Decl->getType()->isReferenceType();
   bool FoundDecl = false;
 
   if (auto It = Locals.find(Decl); It != Locals.end()) {
@@ -1059,14 +1090,13 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(Decl)) {
     PrimType T = *classify(ECD->getType());
 
-    return this->emitConst(T, getIntWidth(ECD->getType()), ECD->getInitVal(),
-                           E);
+    return this->emitConst(T, ECD->getInitVal(), E);
   }
 
   // References are implemented using pointers, so when we get here,
   // we have a pointer to a pointer, which we need to de-reference once.
   if (FoundDecl) {
-    if (IsReference) {
+    if (Decl->getType()->isReferenceType()) {
       if (!this->emitLoadPopPtr(E))
         return false;
     }

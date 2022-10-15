@@ -19,9 +19,11 @@ using namespace clang::interp;
 using APSInt = llvm::APSInt;
 using Error = llvm::Error;
 
-Expected<Function *> ByteCodeEmitter::compileFunc(const FunctionDecl *F) {
+Expected<Function *>
+ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Do not try to compile undefined functions.
-  if (!F->isDefined(F) || (!F->hasBody() && F->willHaveBody()))
+  if (!FuncDecl->isDefined(FuncDecl) ||
+      (!FuncDecl->hasBody() && FuncDecl->willHaveBody()))
     return nullptr;
 
   // Set up argument indices.
@@ -32,7 +34,7 @@ Expected<Function *> ByteCodeEmitter::compileFunc(const FunctionDecl *F) {
   // If the return is not a primitive, a pointer to the storage where the value
   // is initialized in is passed as the first argument.
   // See 'RVO' elsewhere in the code.
-  QualType Ty = F->getReturnType();
+  QualType Ty = FuncDecl->getReturnType();
   bool HasRVO = false;
   if (!Ty->isVoidType() && !Ctx.classify(Ty)) {
     HasRVO = true;
@@ -44,7 +46,8 @@ Expected<Function *> ByteCodeEmitter::compileFunc(const FunctionDecl *F) {
   // the 'this' pointer. This parameter is pop()ed from the
   // InterStack when calling the function.
   bool HasThisPointer = false;
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(F); MD && MD->isInstance()) {
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
+      MD && !MD->isStatic()) {
     HasThisPointer = true;
     ParamTypes.push_back(PT_Ptr);
     ParamOffset += align(primSize(PT_Ptr));
@@ -52,7 +55,7 @@ Expected<Function *> ByteCodeEmitter::compileFunc(const FunctionDecl *F) {
 
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
-  for (const ParmVarDecl *PD : F->parameters()) {
+  for (const ParmVarDecl *PD : FuncDecl->parameters()) {
     PrimType Ty;
     if (llvm::Optional<PrimType> T = Ctx.classify(PD->getType())) {
       Ty = *T;
@@ -69,10 +72,10 @@ Expected<Function *> ByteCodeEmitter::compileFunc(const FunctionDecl *F) {
 
   // Create a handle over the emitted code.
   Function *Func =
-      P.createFunction(F, ParamOffset, std::move(ParamTypes),
+      P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
                        std::move(ParamDescriptors), HasThisPointer, HasRVO);
   // Compile the function body.
-  if (!F->isConstexpr() || !visitFunc(F)) {
+  if (!FuncDecl->isConstexpr() || !visitFunc(FuncDecl)) {
     // Return a dummy function if compilation failed.
     if (BailLocation)
       return llvm::make_error<ByteCodeGenError>(*BailLocation);

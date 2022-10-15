@@ -1342,11 +1342,16 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
   // If we have a symbol export directive and we're linking in the profile
   // runtime, automatically export symbols necessary to implement some of the
   // runtime's functionality.
-  if (hasExportSymbolDirective(Args) && ForGCOV) {
-    addExportedSymbol(CmdArgs, "___gcov_dump");
-    addExportedSymbol(CmdArgs, "___gcov_reset");
-    addExportedSymbol(CmdArgs, "_writeout_fn_list");
-    addExportedSymbol(CmdArgs, "_reset_fn_list");
+  if (hasExportSymbolDirective(Args)) {
+    if (ForGCOV) {
+      addExportedSymbol(CmdArgs, "___gcov_dump");
+      addExportedSymbol(CmdArgs, "___gcov_reset");
+      addExportedSymbol(CmdArgs, "_writeout_fn_list");
+      addExportedSymbol(CmdArgs, "_reset_fn_list");
+    } else {
+      addExportedSymbol(CmdArgs, "___llvm_profile_filename");
+      addExportedSymbol(CmdArgs, "___llvm_profile_raw_version");
+    }
   }
 
   // Align __llvm_prf_{cnts,data} sections to the maximum expected page
@@ -2761,10 +2766,25 @@ void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
       isAlignedAllocationUnavailable())
     CC1Args.push_back("-faligned-alloc-unavailable");
 
+  addClangCC1ASTargetOptions(DriverArgs, CC1Args);
+
+  // Enable compatibility mode for NSItemProviderCompletionHandler in
+  // Foundation/NSItemProvider.h.
+  CC1Args.push_back("-fcompatibility-qualified-id-block-type-checking");
+
+  // Give static local variables in inline functions hidden visibility when
+  // -fvisibility-inlines-hidden is enabled.
+  if (!DriverArgs.getLastArgNoClaim(
+          options::OPT_fvisibility_inlines_hidden_static_local_var,
+          options::OPT_fno_visibility_inlines_hidden_static_local_var))
+    CC1Args.push_back("-fvisibility-inlines-hidden-static-local-var");
+}
+
+void Darwin::addClangCC1ASTargetOptions(
+    const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CC1ASArgs) const {
   if (TargetVariantTriple) {
-    CC1Args.push_back("-darwin-target-variant-triple");
-    CC1Args.push_back(
-        DriverArgs.MakeArgString(TargetVariantTriple->getTriple()));
+    CC1ASArgs.push_back("-darwin-target-variant-triple");
+    CC1ASArgs.push_back(Args.MakeArgString(TargetVariantTriple->getTriple()));
   }
 
   if (SDKInfo) {
@@ -2774,7 +2794,7 @@ void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
       std::string Arg;
       llvm::raw_string_ostream OS(Arg);
       OS << "-target-sdk-version=" << V;
-      CC1Args.push_back(DriverArgs.MakeArgString(OS.str()));
+      CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
     };
 
     if (isTargetMacCatalyst()) {
@@ -2796,7 +2816,7 @@ void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
         std::string Arg;
         llvm::raw_string_ostream OS(Arg);
         OS << "-darwin-target-variant-sdk-version=" << SDKInfo->getVersion();
-        CC1Args.push_back(DriverArgs.MakeArgString(OS.str()));
+        CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
       } else if (const auto *MacOStoMacCatalystMapping =
                      SDKInfo->getVersionMapping(
                          DarwinSDKInfo::OSEnvPair::macOStoMacCatalystPair())) {
@@ -2806,22 +2826,11 @@ void Darwin::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
           std::string Arg;
           llvm::raw_string_ostream OS(Arg);
           OS << "-darwin-target-variant-sdk-version=" << *SDKVersion;
-          CC1Args.push_back(DriverArgs.MakeArgString(OS.str()));
+          CC1ASArgs.push_back(Args.MakeArgString(OS.str()));
         }
       }
     }
   }
-
-  // Enable compatibility mode for NSItemProviderCompletionHandler in
-  // Foundation/NSItemProvider.h.
-  CC1Args.push_back("-fcompatibility-qualified-id-block-type-checking");
-
-  // Give static local variables in inline functions hidden visibility when
-  // -fvisibility-inlines-hidden is enabled.
-  if (!DriverArgs.getLastArgNoClaim(
-          options::OPT_fvisibility_inlines_hidden_static_local_var,
-          options::OPT_fno_visibility_inlines_hidden_static_local_var))
-    CC1Args.push_back("-fvisibility-inlines-hidden-static-local-var");
 }
 
 DerivedArgList *

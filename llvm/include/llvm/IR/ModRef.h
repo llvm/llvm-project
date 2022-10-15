@@ -15,6 +15,8 @@
 #define LLVM_IR_MODREF_H
 
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 

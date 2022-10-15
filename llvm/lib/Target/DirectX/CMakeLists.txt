@@ -21,6 +21,7 @@ add_llvm_target(DirectXCodeGen
   DXILOpBuilder.cpp
   DXILOpLowering.cpp
   DXILPrepare.cpp
+  DXILPrettyPrinter.cpp
   DXILResource.cpp
   DXILResourceAnalysis.cpp
   DXILShaderFlags.cpp
@@ -34,6 +35,7 @@ add_llvm_target(DirectXCodeGen
   Support
   DirectXInfo
   DXILBitWriter
+  FrontendHLSL
 
   ADD_TO_COMPONENT
   DirectX

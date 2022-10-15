@@ -3930,7 +3930,7 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
   if (getType().isNull())
     return NPCK_NotNull;
 
-  // C++11 nullptr_t is always a null pointer constant.
+  // C++11/C2x nullptr_t is always a null pointer constant.
   if (getType()->isNullPtrType())
     return NPCK_CXX11_nullptr;
 

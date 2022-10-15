@@ -589,122 +589,123 @@ __smusdx(int16x2_t __a, int16x2_t __b) {
 #endif
 
 /* 9.7 CRC32 intrinsics */
-#if defined(__ARM_FEATURE_CRC32) && __ARM_FEATURE_CRC32
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+#if (defined(__ARM_FEATURE_CRC32) && __ARM_FEATURE_CRC32) ||                   \
+    (defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE)
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__, target("crc")))
 __crc32b(uint32_t __a, uint8_t __b) {
   return __builtin_arm_crc32b(__a, __b);
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__, target("crc")))
 __crc32h(uint32_t __a, uint16_t __b) {
   return __builtin_arm_crc32h(__a, __b);
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__, target("crc")))
 __crc32w(uint32_t __a, uint32_t __b) {
   return __builtin_arm_crc32w(__a, __b);
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__, target("crc")))
 __crc32d(uint32_t __a, uint64_t __b) {
   return __builtin_arm_crc32d(__a, __b);
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__, target("crc")))
 __crc32cb(uint32_t __a, uint8_t __b) {
   return __builtin_arm_crc32cb(__a, __b);
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__, target("crc")))
 __crc32ch(uint32_t __a, uint16_t __b) {
   return __builtin_arm_crc32ch(__a, __b);
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__, target("crc")))
 __crc32cw(uint32_t __a, uint32_t __b) {
   return __builtin_arm_crc32cw(__a, __b);
 }
 
-static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint32_t __attribute__((__always_inline__, __nodebug__, target("crc")))
 __crc32cd(uint32_t __a, uint64_t __b) {
   return __builtin_arm_crc32cd(__a, __b);
 }
 #endif
 
 /* Armv8.3-A Javascript conversion intrinsic */
-#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE && defined(__ARM_FEATURE_JCVT)
-static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
+static __inline__ int32_t __attribute__((__always_inline__, __nodebug__, target("v8.3a")))
 __jcvt(double __a) {
   return __builtin_arm_jcvt(__a);
 }
 #endif
 
 /* Armv8.5-A FP rounding intrinsics */
-#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE && defined(__ARM_FEATURE_FRINT)
-static __inline__ float __attribute__((__always_inline__, __nodebug__))
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
+static __inline__ float __attribute__((__always_inline__, __nodebug__, target("v8.5a")))
 __rint32zf(float __a) {
   return __builtin_arm_rint32zf(__a);
 }
 
-static __inline__ double __attribute__((__always_inline__, __nodebug__))
+static __inline__ double __attribute__((__always_inline__, __nodebug__, target("v8.5a")))
 __rint32z(double __a) {
   return __builtin_arm_rint32z(__a);
 }
 
-static __inline__ float __attribute__((__always_inline__, __nodebug__))
+static __inline__ float __attribute__((__always_inline__, __nodebug__, target("v8.5a")))
 __rint64zf(float __a) {
   return __builtin_arm_rint64zf(__a);
 }
 
-static __inline__ double __attribute__((__always_inline__, __nodebug__))
+static __inline__ double __attribute__((__always_inline__, __nodebug__, target("v8.5a")))
 __rint64z(double __a) {
   return __builtin_arm_rint64z(__a);
 }
 
-static __inline__ float __attribute__((__always_inline__, __nodebug__))
+static __inline__ float __attribute__((__always_inline__, __nodebug__, target("v8.5a")))
 __rint32xf(float __a) {
   return __builtin_arm_rint32xf(__a);
 }
 
-static __inline__ double __attribute__((__always_inline__, __nodebug__))
+static __inline__ double __attribute__((__always_inline__, __nodebug__, target("v8.5a")))
 __rint32x(double __a) {
   return __builtin_arm_rint32x(__a);
 }
 
-static __inline__ float __attribute__((__always_inline__, __nodebug__))
+static __inline__ float __attribute__((__always_inline__, __nodebug__, target("v8.5a")))
 __rint64xf(float __a) {
   return __builtin_arm_rint64xf(__a);
 }
 
-static __inline__ double __attribute__((__always_inline__, __nodebug__))
+static __inline__ double __attribute__((__always_inline__, __nodebug__, target("v8.5a")))
 __rint64x(double __a) {
   return __builtin_arm_rint64x(__a);
 }
 #endif
 
 /* Armv8.7-A load/store 64-byte intrinsics */
-#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE && defined(__ARM_FEATURE_LS64)
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
 typedef struct {
     uint64_t val[8];
 } data512_t;
 
-static __inline__ data512_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ data512_t __attribute__((__always_inline__, __nodebug__, target("ls64")))
 __arm_ld64b(const void *__addr) {
-    data512_t __value;
-    __builtin_arm_ld64b(__addr, __value.val);
-    return __value;
+  data512_t __value;
+  __builtin_arm_ld64b(__addr, __value.val);
+  return __value;
 }
-static __inline__ void __attribute__((__always_inline__, __nodebug__))
+static __inline__ void __attribute__((__always_inline__, __nodebug__, target("ls64")))
 __arm_st64b(void *__addr, data512_t __value) {
-    __builtin_arm_st64b(__addr, __value.val);
+  __builtin_arm_st64b(__addr, __value.val);
 }
-static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__, target("ls64")))
 __arm_st64bv(void *__addr, data512_t __value) {
-    return __builtin_arm_st64bv(__addr, __value.val);
+  return __builtin_arm_st64bv(__addr, __value.val);
 }
-static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
+static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__, target("ls64")))
 __arm_st64bv0(void *__addr, data512_t __value) {
-    return __builtin_arm_st64bv0(__addr, __value.val);
+  return __builtin_arm_st64bv0(__addr, __value.val);
 }
 #endif
 
@@ -759,12 +760,12 @@ __arm_st64bv0(void *__addr, data512_t __value) {
 #endif /* __ARM_FEATURE_TME */
 
 /* Armv8.5-A Random number generation intrinsics */
-#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE && defined(__ARM_FEATURE_RNG)
-static __inline__ int __attribute__((__always_inline__, __nodebug__))
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
+static __inline__ int __attribute__((__always_inline__, __nodebug__, target("rand")))
 __rndr(uint64_t *__p) {
   return __builtin_arm_rndr(__p);
 }
-static __inline__ int __attribute__((__always_inline__, __nodebug__))
+static __inline__ int __attribute__((__always_inline__, __nodebug__, target("rand")))
 __rndrrs(uint64_t *__p) {
   return __builtin_arm_rndrrs(__p);
 }

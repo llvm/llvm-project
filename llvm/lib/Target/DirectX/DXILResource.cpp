@@ -20,19 +20,7 @@
 
 using namespace llvm;
 using namespace llvm::dxil;
-
-GlobalVariable *FrontendResource::getGlobalVariable() {
-  return cast<GlobalVariable>(
-      cast<ConstantAsMetadata>(Entry->getOperand(0))->getValue());
-}
-
-StringRef FrontendResource::getSourceType() {
-  return cast<MDString>(Entry->getOperand(1))->getString();
-}
-
-Constant *FrontendResource::getID() {
-  return cast<ConstantAsMetadata>(Entry->getOperand(2))->getValue();
-}
+using namespace llvm::hlsl;
 
 void Resources::collectUAVs(Module &M) {
   NamedMDNode *Entry = M.getNamedMetadata("hlsl.uavs");

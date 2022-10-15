@@ -59,16 +59,12 @@ public:
     // Build a plain extract_strided_metadata(memref) from
     // extract_strided_metadata(subview(memref)).
     Location origLoc = op.getLoc();
-    IndexType indexType = rewriter.getIndexType();
     Value source = subview.getSource();
     auto sourceType = source.getType().cast<MemRefType>();
     unsigned sourceRank = sourceType.getRank();
-    SmallVector<Type> sizeStrideTypes(sourceRank, indexType);
 
     auto newExtractStridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(
-            origLoc, op.getBaseBuffer().getType(), indexType, sizeStrideTypes,
-            sizeStrideTypes, source);
+        rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
 
     SmallVector<int64_t> sourceStrides;
     int64_t sourceOffset;
@@ -486,16 +482,12 @@ public:
     // Build a plain extract_strided_metadata(memref) from
     // extract_strided_metadata(reassociative_reshape_like(memref)).
     Location origLoc = op.getLoc();
-    IndexType indexType = rewriter.getIndexType();
     Value source = reshape.getSrc();
     auto sourceType = source.getType().cast<MemRefType>();
     unsigned sourceRank = sourceType.getRank();
-    SmallVector<Type> sizeStrideTypes(sourceRank, indexType);
 
     auto newExtractStridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(
-            origLoc, op.getBaseBuffer().getType(), indexType, sizeStrideTypes,
-            sizeStrideTypes, source);
+        rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
 
     // Collect statically known information.
     SmallVector<int64_t> strides;
@@ -726,6 +718,34 @@ class RewriteExtractAlignedPointerAsIndexOfViewLikeOp
     return success();
   }
 };
+
+/// Replace `base, offset =
+///            extract_strided_metadata(extract_strided_metadata(src)#0)`
+/// With
+/// ```
+/// base, ... = extract_strided_metadata(src)
+/// offset = 0
+/// ```
+class ExtractStridedMetadataOpExtractStridedMetadataFolder
+    : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult
+  matchAndRewrite(memref::ExtractStridedMetadataOp extractStridedMetadataOp,
+                  PatternRewriter &rewriter) const override {
+    auto sourceExtractStridedMetadataOp =
+        extractStridedMetadataOp.getSource()
+            .getDefiningOp<memref::ExtractStridedMetadataOp>();
+    if (!sourceExtractStridedMetadataOp)
+      return failure();
+    Location loc = extractStridedMetadataOp.getLoc();
+    rewriter.replaceOp(extractStridedMetadataOp,
+                       {sourceExtractStridedMetadataOp.getBaseBuffer(),
+                        getValueOrCreateConstantIndexOp(
+                            rewriter, loc, rewriter.getIndexAttr(0))});
+    return success();
+  }
+};
 } // namespace
 
 void memref::populateSimplifyExtractStridedMetadataOpPatterns(
@@ -739,7 +759,8 @@ void memref::populateSimplifyExtractStridedMetadataOpPatterns(
            ForwardStaticMetadata,
            ExtractStridedMetadataOpAllocFolder<memref::AllocOp>,
            ExtractStridedMetadataOpAllocFolder<memref::AllocaOp>,
-           RewriteExtractAlignedPointerAsIndexOfViewLikeOp>(
+           RewriteExtractAlignedPointerAsIndexOfViewLikeOp,
+           ExtractStridedMetadataOpExtractStridedMetadataFolder>(
           patterns.getContext());
 }
 

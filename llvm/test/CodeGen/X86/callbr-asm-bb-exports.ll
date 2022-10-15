@@ -5,7 +5,7 @@
 ; inlineasm_br. Not sure how to get a MachineIR change so this reads the debug
 ; output from SelectionDAG.
 
-; CHECK: t0: ch = EntryToken
+; CHECK: t0: ch,glue = EntryToken
 ; CHECK-NEXT: t4: i32,ch = CopyFromReg t0, Register:i32 %3
 ; CHECK-NEXT: t10: i32 = add t4, Constant:i32<1>
 ; CHECK-NEXT: t12: ch = CopyToReg t0, Register:i32 %0, t10

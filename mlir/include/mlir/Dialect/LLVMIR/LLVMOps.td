@@ -914,8 +914,15 @@ def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector",
 
   let hasVerifier = 1;
 
+  string llvmInstName = "ShuffleVector";
   string llvmBuilder = [{
     $res = builder.CreateShuffleVector($v1, $v2, $mask);
+  }];
+  string mlirBuilder = [{
+    auto *svInst = cast<llvm::ShuffleVectorInst>(inst);
+    SmallVector<int32_t> mask(svInst->getShuffleMask());
+    $res = $_builder.create<LLVM::ShuffleVectorOp>(
+      $_location, $v1, $v2, mask);
   }];
 }
 
@@ -1780,13 +1787,22 @@ def LLVM_AtomicRMWOp : LLVM_Op<"atomicrmw"> {
                    LLVM_PointerTo<LLVM_AtomicRMWType>:$ptr,
                    LLVM_AtomicRMWType:$val, AtomicOrdering:$ordering);
   let results = (outs LLVM_AtomicRMWType:$res);
-  let llvmBuilder = [{
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+  string llvmInstName = "AtomicRMW";
+  string llvmBuilder = [{
     $res = builder.CreateAtomicRMW(getLLVMAtomicBinOp($bin_op), $ptr, $val,
                                    llvm::MaybeAlign(),
                                    getLLVMAtomicOrdering($ordering));
   }];
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
+  string mlirBuilder = [{
+    auto *atomicInst = cast<llvm::AtomicRMWInst>(inst);
+    $res = $_builder.create<LLVM::AtomicRMWOp>($_location, $_resultType,
+        getLLVMAtomicBinOp(atomicInst->getOperation()), $ptr, $val,
+        getLLVMAtomicOrdering(atomicInst->getOrdering()));
+  }];
+  // Only $ptr and $val are llvm instruction operands.
+  list<int> llvmArgIndices = [-1, 0, 1, -1];
 }
 
 def LLVM_AtomicCmpXchgType : AnyTypeOf<[AnyInteger, LLVM_AnyPointer]>;
@@ -1809,13 +1825,21 @@ def LLVM_AtomicCmpXchgOp : LLVM_Op<"cmpxchg"> {
                    AtomicOrdering:$success_ordering,
                    AtomicOrdering:$failure_ordering);
   let results = (outs LLVM_AtomicCmpXchgResultType:$res);
-  let llvmBuilder = [{
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+  string llvmInstName = "AtomicCmpXchg";
+  string llvmBuilder = [{
     $res = builder.CreateAtomicCmpXchg($ptr, $cmp, $val, llvm::MaybeAlign(),
                    getLLVMAtomicOrdering($success_ordering),
                    getLLVMAtomicOrdering($failure_ordering));
   }];
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
+  string mlirBuilder = [{
+    auto *cmpXchgInst = cast<llvm::AtomicCmpXchgInst>(inst);
+    $res = $_builder.create<LLVM::AtomicCmpXchgOp>(
+      $_location, $_resultType, $ptr, $cmp, $val,
+      getLLVMAtomicOrdering(cmpXchgInst->getSuccessOrdering()),
+      getLLVMAtomicOrdering(cmpXchgInst->getFailureOrdering()));
+  }];
 }
 
 def LLVM_FenceOp : LLVM_Op<"fence"> {

@@ -414,6 +414,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT_CC, MVT::f64, Custom);
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
   setOperationAction(ISD::JumpTable, MVT::i64, Custom);
+  setOperationAction(ISD::SETCCCARRY, MVT::i64, Custom);
 
   setOperationAction(ISD::SHL_PARTS, MVT::i64, Custom);
   setOperationAction(ISD::SRA_PARTS, MVT::i64, Custom);
@@ -5545,6 +5546,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
     return LowerSETCC(Op, DAG);
+  case ISD::SETCCCARRY:
+    return LowerSETCCCARRY(Op, DAG);
   case ISD::BRCOND:
     return LowerBRCOND(Op, DAG);
   case ISD::BR_CC:
@@ -5754,7 +5757,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::MLOAD:
     return LowerMLOAD(Op, DAG);
   case ISD::LOAD:
-    if (useSVEForFixedLengthVectorVT(Op.getValueType()))
+    if (useSVEForFixedLengthVectorVT(Op.getValueType(),
+                                     Subtarget->forceStreamingCompatibleSVE()))
       return LowerFixedLengthVectorLoadToSVE(Op, DAG);
     return LowerLOAD(Op, DAG);
   case ISD::ADD:
@@ -6037,6 +6041,13 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     (void)Res;
   }
 
+  SMEAttrs Attrs(MF.getFunction());
+  bool IsLocallyStreaming =
+      !Attrs.hasStreamingInterface() && Attrs.hasStreamingBody();
+  assert(Chain.getOpcode() == ISD::EntryToken && "Unexpected Chain value");
+  SDValue Glue = Chain.getValue(1);
+
+  SmallVector<SDValue, 16> ArgValues;
   unsigned ExtraArgLocs = 0;
   for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i - ExtraArgLocs];
@@ -6091,7 +6102,22 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
 
       // Transform the arguments in physical registers into virtual ones.
       Register Reg = MF.addLiveIn(VA.getLocReg(), RC);
-      ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT);
+
+      if (IsLocallyStreaming) {
+        // LocallyStreamingFunctions must insert the SMSTART in the correct
+        // position, so we use Glue to ensure no instructions can be scheduled
+        // between the chain of:
+        //        t0: ch,glue = EntryNode
+        //      t1:  res,ch,glue = CopyFromReg
+        //     ...
+        //   tn: res,ch,glue = CopyFromReg t(n-1), ..
+        // t(n+1): ch, glue = SMSTART t0:0, ...., tn:2
+        // ^^^^^^
+        // This will be the new Chain/Root node.
+        ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT, Glue);
+        Glue = ArgValue.getValue(2);
+      } else
+        ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT);
 
       // If this is an 8, 16 or 32-bit value, it is really passed promoted
       // to 64 bits.  Insert an assert[sz]ext to capture this, then
@@ -6244,6 +6270,27 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     }
   }
   assert((ArgLocs.size() + ExtraArgLocs) == Ins.size());
+
+  // Insert the SMSTART if this is a locally streaming function and
+  // make sure it is Glued to the last CopyFromReg value.
+  if (IsLocallyStreaming) {
+    const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
+    Chain = DAG.getNode(
+        AArch64ISD::SMSTART, DL, DAG.getVTList(MVT::Other, MVT::Glue),
+        {DAG.getRoot(),
+          DAG.getTargetConstant((int32_t)AArch64SVCR::SVCRSM, DL, MVT::i32),
+         DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64),
+         DAG.getRegisterMask(TRI->getSMStartStopCallPreservedMask()), Glue});
+    // Ensure that the SMSTART happens after the CopyWithChain such that its
+    // chain result is used.
+    for (unsigned I=0; I<InVals.size(); ++I) {
+      Register Reg = MF.getRegInfo().createVirtualRegister(
+          getRegClassFor(InVals[I].getValueType().getSimpleVT()));
+      SDValue X = DAG.getCopyToReg(Chain, DL, Reg, InVals[I]);
+      InVals[I] = DAG.getCopyFromReg(X, DL, Reg,
+                                     InVals[I].getValueType());
+    }
+  }
 
   // varargs
   if (isVarArg) {
@@ -7485,6 +7532,19 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     }
   }
 
+  const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
+
+  // Emit SMSTOP before returning from a locally streaming function
+  SMEAttrs FuncAttrs(MF.getFunction());
+  if (FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface()) {
+    Chain = DAG.getNode(
+        AArch64ISD::SMSTOP, DL, DAG.getVTList(MVT::Other, MVT::Glue), Chain,
+        DAG.getTargetConstant((int32_t)AArch64SVCR::SVCRSM, DL, MVT::i32),
+        DAG.getConstant(1, DL, MVT::i64), DAG.getConstant(0, DL, MVT::i64),
+        DAG.getRegisterMask(TRI->getSMStartStopCallPreservedMask()));
+    Flag = Chain.getValue(1);
+  }
+
   SmallVector<SDValue, 4> RetOps(1, Chain);
   for (auto &RetVal : RetVals) {
     Chain = DAG.getCopyToReg(Chain, DL, RetVal.first, RetVal.second, Flag);
@@ -7509,7 +7569,6 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       DAG.getRegister(RetValReg, getPointerTy(DAG.getDataLayout())));
   }
 
-  const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
   const MCPhysReg *I = TRI->getCalleeSavedRegsViaCopy(&MF);
   if (I) {
     for (; *I; ++I) {
@@ -8532,6 +8591,36 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     Res = DAG.getNode(AArch64ISD::CSEL, dl, VT, TVal, CS1, CC2Val, Cmp);
   }
   return IsStrict ? DAG.getMergeValues({Res, Cmp.getValue(1)}, dl) : Res;
+}
+
+SDValue AArch64TargetLowering::LowerSETCCCARRY(SDValue Op,
+                                               SelectionDAG &DAG) const {
+
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  EVT VT = LHS.getValueType();
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  SDLoc DL(Op);
+  SDValue Carry = Op.getOperand(2);
+  // SBCS uses a carry not a borrow so the carry flag should be inverted first.
+  SDValue InvCarry = valueToCarryFlag(Carry, DAG, true);
+  SDValue Cmp = DAG.getNode(AArch64ISD::SBCS, DL, DAG.getVTList(VT, MVT::Glue),
+                            LHS, RHS, InvCarry);
+
+  EVT OpVT = Op.getValueType();
+  SDValue TVal = DAG.getConstant(1, DL, OpVT);
+  SDValue FVal = DAG.getConstant(0, DL, OpVT);
+
+  ISD::CondCode Cond = cast<CondCodeSDNode>(Op.getOperand(3))->get();
+  ISD::CondCode CondInv = ISD::getSetCCInverse(Cond, VT);
+  SDValue CCVal =
+      DAG.getConstant(changeIntCCToAArch64CC(CondInv), DL, MVT::i32);
+  // Inputs are swapped because the condition is inverted. This will allow
+  // matching with a single CSINC instruction.
+  return DAG.getNode(AArch64ISD::CSEL, DL, OpVT, FVal, TVal, CCVal,
+                     Cmp.getValue(1));
 }
 
 SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
@@ -11000,7 +11089,8 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
 
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
 
-  if (useSVEForFixedLengthVectorVT(VT))
+  if (useSVEForFixedLengthVectorVT(VT,
+                                   Subtarget->forceStreamingCompatibleSVE()))
     return LowerFixedLengthVECTOR_SHUFFLEToSVE(Op, DAG);
 
   // Convert shuffles that are directly supported on NEON to target-specific
@@ -11690,7 +11780,8 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
 
-  if (useSVEForFixedLengthVectorVT(VT)) {
+  if (useSVEForFixedLengthVectorVT(VT,
+                                   Subtarget->forceStreamingCompatibleSVE())) {
     if (auto SeqInfo = cast<BuildVectorSDNode>(Op)->isConstantSequence()) {
       SDLoc DL(Op);
       EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
@@ -15458,21 +15549,32 @@ static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
     return SDValue();
 
   SDLoc DL(N);
-  SDValue CCmp;
+  SDValue CCmp, Condition;
+  unsigned NZCV;
 
   if (N->getOpcode() == ISD::AND) {
     AArch64CC::CondCode InvCC0 = AArch64CC::getInvertedCondCode(CC0);
-    SDValue Condition = DAG.getConstant(InvCC0, DL, MVT_CC);
-    unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(CC1);
-    SDValue NZCVOp = DAG.getConstant(NZCV, DL, MVT::i32);
-    CCmp = DAG.getNode(AArch64ISD::CCMP, DL, MVT_CC, Cmp1.getOperand(0),
-                       Cmp1.getOperand(1), NZCVOp, Condition, Cmp0);
+    Condition = DAG.getConstant(InvCC0, DL, MVT_CC);
+    NZCV = AArch64CC::getNZCVToSatisfyCondCode(CC1);
   } else {
-    SDLoc DL(N);
     AArch64CC::CondCode InvCC1 = AArch64CC::getInvertedCondCode(CC1);
-    SDValue Condition = DAG.getConstant(CC0, DL, MVT_CC);
-    unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(InvCC1);
-    SDValue NZCVOp = DAG.getConstant(NZCV, DL, MVT::i32);
+    Condition = DAG.getConstant(CC0, DL, MVT_CC);
+    NZCV = AArch64CC::getNZCVToSatisfyCondCode(InvCC1);
+  }
+
+  SDValue NZCVOp = DAG.getConstant(NZCV, DL, MVT::i32);
+
+  auto *Op1 = dyn_cast<ConstantSDNode>(Cmp1.getOperand(1));
+  if (Op1 && Op1->getAPIntValue().isNegative() &&
+      Op1->getAPIntValue().sgt(-32)) {
+    // CCMP accept the constant int the range [0, 31]
+    // if the Op1 is a constant in the range [-31, -1], we
+    // can select to CCMN to avoid the extra mov
+    SDValue AbsOp1 =
+        DAG.getConstant(Op1->getAPIntValue().abs(), DL, Op1->getValueType(0));
+    CCmp = DAG.getNode(AArch64ISD::CCMN, DL, MVT_CC, Cmp1.getOperand(0), AbsOp1,
+                       NZCVOp, Condition, Cmp0);
+  } else {
     CCmp = DAG.getNode(AArch64ISD::CCMP, DL, MVT_CC, Cmp1.getOperand(0),
                        Cmp1.getOperand(1), NZCVOp, Condition, Cmp0);
   }

@@ -98,3 +98,22 @@ struct fred {
 struct fred y [] = { [0] = { .s[0] = 'q' } };
 #endif
 #pragma clang diagnostic pop
+
+namespace indices {
+  constexpr int first[] = {1};
+  constexpr int firstValue = first[2]; // ref-error {{must be initialized by a constant expression}} \
+                                       // ref-note {{cannot refer to element 2 of array of 1}} \
+                                       // expected-error {{must be initialized by a constant expression}} \
+                                       // expected-note {{cannot refer to element 2 of array of 1}}
+
+  constexpr int second[10] = {17};
+  constexpr int secondValue = second[10];// ref-error {{must be initialized by a constant expression}} \
+                                         // ref-note {{read of dereferenced one-past-the-end pointer}} \
+                                         // expected-error {{must be initialized by a constant expression}} \
+                                         // expected-note {{read of dereferenced one-past-the-end pointer}}
+
+  constexpr int negative = second[-2]; // ref-error {{must be initialized by a constant expression}} \
+                                       // ref-note {{cannot refer to element -2 of array of 10}} \
+                                       // expected-error {{must be initialized by a constant expression}} \
+                                       // expected-note {{cannot refer to element -2 of array of 10}}
+};

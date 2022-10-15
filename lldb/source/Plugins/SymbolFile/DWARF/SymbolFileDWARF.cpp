@@ -2960,8 +2960,6 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
 
         if (!try_resolving_type) {
           if (log) {
-            std::string qualified_name;
-            type_die.GetQualifiedName(qualified_name);
             GetObjectFile()->GetModule()->LogMessage(
                 log,
                 "SymbolFileDWARF::"
@@ -2969,7 +2967,7 @@ TypeSP SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(
                 "qualified-name='%s') ignoring die=0x%8.8x (%s)",
                 DW_TAG_value_to_name(dwarf_decl_ctx[0].tag),
                 dwarf_decl_ctx.GetQualifiedName(), type_die.GetOffset(),
-                qualified_name.c_str());
+                type_die.GetName());
           }
           return true;
         }

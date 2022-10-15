@@ -3173,7 +3173,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
   if (!MathErrno && AssociativeMath && ReciprocalMath && !SignedZeros &&
       ApproxFunc && !TrappingMath)
-    CmdArgs.push_back("-menable-unsafe-fp-math");
+    CmdArgs.push_back("-funsafe-math-optimizations");
 
   if (!SignedZeros)
     CmdArgs.push_back("-fno-signed-zeros");
@@ -8060,8 +8060,6 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 
   const llvm::Triple &Triple = getToolChain().getEffectiveTriple();
   const std::string &TripleStr = Triple.getTriple();
-  const Optional<llvm::Triple> TargetVariantTriple =
-      getToolChain().getTargetVariantTriple();
   const auto &D = getToolChain().getDriver();
 
   // Don't warn about "clang -w -c foo.s"
@@ -8079,10 +8077,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   // Add the "effective" target triple.
   CmdArgs.push_back("-triple");
   CmdArgs.push_back(Args.MakeArgString(TripleStr));
-  if (TargetVariantTriple) {
-    CmdArgs.push_back("-darwin-target-variant-triple");
-    CmdArgs.push_back(Args.MakeArgString(TargetVariantTriple->getTriple()));
-  }
+
+  getToolChain().addClangCC1ASTargetOptions(Args, CmdArgs);
 
   // Set the output mode, we currently only expect to be used as a real
   // assembler.

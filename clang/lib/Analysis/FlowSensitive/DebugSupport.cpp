@@ -44,6 +44,8 @@ llvm::StringRef debugString(Value::Kind Kind) {
     return "Struct";
   case Value::Kind::AtomicBool:
     return "AtomicBool";
+  case Value::Kind::TopBool:
+    return "TopBool";
   case Value::Kind::Conjunction:
     return "Conjunction";
   case Value::Kind::Disjunction:

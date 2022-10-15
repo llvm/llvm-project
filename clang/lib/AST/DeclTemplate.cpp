@@ -1532,9 +1532,10 @@ TemplateParamObjectDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
   return TPOD;
 }
 
-void TemplateParamObjectDecl::printName(llvm::raw_ostream &OS) const {
+void TemplateParamObjectDecl::printName(llvm::raw_ostream &OS,
+                                        const PrintingPolicy &Policy) const {
   OS << "<template param ";
-  printAsExpr(OS);
+  printAsExpr(OS, Policy);
   OS << ">";
 }
 
