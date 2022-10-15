@@ -253,22 +253,35 @@ namespace llvm {
     /// @{
 
     /// Check if this string starts with the given \p Prefix.
-    [[nodiscard]] bool startswith(StringRef Prefix) const {
+    [[nodiscard]] bool starts_with(StringRef Prefix) const {
       return Length >= Prefix.Length &&
              compareMemory(Data, Prefix.Data, Prefix.Length) == 0;
     }
+    [[nodiscard]] bool startswith(StringRef Prefix) const {
+      return starts_with(Prefix);
+    }
 
     /// Check if this string starts with the given \p Prefix, ignoring case.
-    [[nodiscard]] bool startswith_insensitive(StringRef Prefix) const;
+    [[nodiscard]] bool starts_with_insensitive(StringRef Prefix) const;
+    [[nodiscard]] bool startswith_insensitive(StringRef Prefix) const {
+      return starts_with_insensitive(Prefix);
+    }
 
     /// Check if this string ends with the given \p Suffix.
-    [[nodiscard]] bool endswith(StringRef Suffix) const {
+    [[nodiscard]] bool ends_with(StringRef Suffix) const {
       return Length >= Suffix.Length &&
-        compareMemory(end() - Suffix.Length, Suffix.Data, Suffix.Length) == 0;
+             compareMemory(end() - Suffix.Length, Suffix.Data, Suffix.Length) ==
+                 0;
+    }
+    [[nodiscard]] bool endswith(StringRef Suffix) const {
+      return ends_with(Suffix);
     }
 
     /// Check if this string ends with the given \p Suffix, ignoring case.
-    [[nodiscard]] bool endswith_insensitive(StringRef Suffix) const;
+    [[nodiscard]] bool ends_with_insensitive(StringRef Suffix) const;
+    [[nodiscard]] bool endswith_insensitive(StringRef Suffix) const {
+      return ends_with_insensitive(Suffix);
+    }
 
     /// @}
     /// @name String Searching
@@ -612,7 +625,7 @@ namespace llvm {
     /// Returns true if this StringRef has the given prefix and removes that
     /// prefix.
     bool consume_front(StringRef Prefix) {
-      if (!startswith(Prefix))
+      if (!starts_with(Prefix))
         return false;
 
       *this = drop_front(Prefix.size());
@@ -632,7 +645,7 @@ namespace llvm {
     /// Returns true if this StringRef has the given suffix and removes that
     /// suffix.
     bool consume_back(StringRef Suffix) {
-      if (!endswith(Suffix))
+      if (!ends_with(Suffix))
         return false;
 
       *this = drop_back(Suffix.size());
