@@ -1194,14 +1194,11 @@ entry:
 }
 declare i32 @callee(i32)
 
-; FIXME: mov w8, #-2 + ccmp w1, w8, #0, eq
-;    --> ccmn w1, #2, #0, eq
 define i1 @cmp_and_negative_const(i32 %0, i32 %1) {
 ; SDISEL-LABEL: cmp_and_negative_const:
 ; SDISEL:       ; %bb.0:
 ; SDISEL-NEXT:    cmn w0, #1
-; SDISEL-NEXT:    mov w8, #-2
-; SDISEL-NEXT:    ccmp w1, w8, #0, eq
+; SDISEL-NEXT:    ccmn w1, #2, #0, eq
 ; SDISEL-NEXT:    cset w0, eq
 ; SDISEL-NEXT:    ret
 ;
@@ -1219,14 +1216,11 @@ define i1 @cmp_and_negative_const(i32 %0, i32 %1) {
   ret i1 %5
 }
 
-; FIXME: mov w8, #-2 + ccmp w1, w8, #4, ne
-;    --> ccmn w1, #2, #4, ne
 define i1 @cmp_or_negative_const(i32 %a, i32 %b) {
 ; SDISEL-LABEL: cmp_or_negative_const:
 ; SDISEL:       ; %bb.0:
 ; SDISEL-NEXT:    cmn w0, #1
-; SDISEL-NEXT:    mov w8, #-2
-; SDISEL-NEXT:    ccmp w1, w8, #4, ne
+; SDISEL-NEXT:    ccmn w1, #2, #4, ne
 ; SDISEL-NEXT:    cset w0, eq
 ; SDISEL-NEXT:    ret
 ;
