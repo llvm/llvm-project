@@ -87,6 +87,8 @@ public:
   bool VisitCharacterLiteral(const CharacterLiteral *E);
   bool VisitCompoundAssignOperator(const CompoundAssignOperator *E);
   bool VisitFloatCompoundAssignOperator(const CompoundAssignOperator *E);
+  bool VisitExprWithCleanups(const ExprWithCleanups *E);
+  bool VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
