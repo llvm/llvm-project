@@ -167,8 +167,8 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
 
 static Value floatCst(ImplicitLocOpBuilder &builder, float value,
                       Type elementType) {
-  assert(elementType.isF16() ||
-         elementType.isF32() && "x must be f16 or f32 type.");
+  assert((elementType.isF16() || elementType.isF32()) &&
+         "x must be f16 or f32 type.");
   return builder.create<arith::ConstantOp>(
       builder.getFloatAttr(elementType, value));
 }
@@ -279,8 +279,8 @@ namespace {
 Value makePolynomialCalculation(ImplicitLocOpBuilder &builder,
                                 llvm::ArrayRef<Value> coeffs, Value x) {
   Type elementType = getElementTypeOrSelf(x);
-  assert(elementType.isF32() ||
-         elementType.isF16() && "x must be f32 or f16 type");
+  assert((elementType.isF32() || elementType.isF16()) &&
+         "x must be f32 or f16 type");
   ArrayRef<int64_t> shape = vectorShape(x);
 
   if (coeffs.empty())
