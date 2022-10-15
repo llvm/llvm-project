@@ -343,6 +343,8 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
     const Record *R = getRecord(RD);
     const Record::Field *F = R->getField(FD);
     // Leave a pointer to the field on the stack.
+    if (F->Decl->getType()->isReferenceType())
+      return this->emitGetFieldPop(PT_Ptr, F->Offset, E);
     return this->emitGetPtrField(F->Offset, E);
   }
 
@@ -809,7 +811,7 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
       if (!this->emitDupPtr(Initializer))
         return false;
 
-      if (Optional<PrimType> T = classify(Init->getType())) {
+      if (Optional<PrimType> T = classify(Init)) {
         if (!this->visit(Init))
           return false;
 

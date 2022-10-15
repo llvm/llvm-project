@@ -470,6 +470,8 @@ bool SetParam(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
+/// 1) Peeks a pointer on the stack
+/// 2) Pushes the value of the pointer's field on the stack
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetField(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Obj = S.Stk.peek<Pointer>();
@@ -499,6 +501,8 @@ bool SetField(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
+/// 1) Pops a pointer from the stack
+/// 2) Pushes the value of the pointer's field on the stack
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetFieldPop(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Obj = S.Stk.pop<Pointer>();
