@@ -60,10 +60,10 @@ vector unsigned long long test_vpmsumd(void)
 // CHECK: @llvm.ppc.altivec.crypto.vpmsumd
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vsbox
-vector unsigned long long test_vsbox(void)
+// CHECK-LABEL: define{{.*}} <16 x i8> @test_vsbox
+vector unsigned char test_vsbox(void)
 {
-  vector unsigned long long a = D_INIT1
+  vector unsigned char a = B_INIT1
   return __builtin_altivec_crypto_vsbox(a);
 // CHECK: @llvm.ppc.altivec.crypto.vsbox
 }
@@ -200,10 +200,10 @@ vector unsigned long long test_vpmsumd_e(void)
 // CHECK: @llvm.ppc.altivec.crypto.vpmsumd
 }
 
-// CHECK-LABEL: define{{.*}} <2 x i64> @test_vsbox_e
-vector unsigned long long test_vsbox_e(void)
+// CHECK-LABEL: define{{.*}} <16 x i8> @test_vsbox_e
+vector unsigned char test_vsbox_e(void)
 {
-  vector unsigned long long a = D_INIT1
+  vector unsigned char a = B_INIT1
   return __builtin_crypto_vsbox(a);
 // CHECK: @llvm.ppc.altivec.crypto.vsbox
 }
@@ -283,9 +283,9 @@ vector unsigned long long test_vshasigmad_e(void)
 }
 
 // CHECK-LABEL: @test_vec_sbox_be
-vector unsigned long long test_vec_sbox_be(void)
+vector unsigned char test_vec_sbox_be(void)
 {
-  vector unsigned long long a = D_INIT1
+  vector unsigned char a = B_INIT1
   return vec_sbox_be(a);
 // CHECK: @llvm.ppc.altivec.crypto.vsbox
 }
