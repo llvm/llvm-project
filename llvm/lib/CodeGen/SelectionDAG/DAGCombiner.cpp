@@ -3103,7 +3103,7 @@ SDValue DAGCombiner::visitSADDO_CARRY(SDNode *N) {
  *   (addcarry X, 0, (addcarry A, B, Z):Carry)
  *
  * The end result is usually an increase in operation required, but because the
- * carry is now linearized, other tranforms can kick in and optimize the DAG.
+ * carry is now linearized, other transforms can kick in and optimize the DAG.
  *
  * Patterns typically look something like
  *            (uaddo A, B)
