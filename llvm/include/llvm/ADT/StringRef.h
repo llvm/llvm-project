@@ -458,28 +458,23 @@ namespace llvm {
     /// If the string is invalid or if only a subset of the string is valid,
     /// this returns true to signify the error.  The string is considered
     /// erroneous if empty or if it overflows T.
-    template <typename T>
-    std::enable_if_t<std::numeric_limits<T>::is_signed, bool>
-    getAsInteger(unsigned Radix, T &Result) const {
-      long long LLVal;
-      if (getAsSignedInteger(*this, Radix, LLVal) ||
+    template <typename T> bool getAsInteger(unsigned Radix, T &Result) const {
+      if constexpr (std::numeric_limits<T>::is_signed) {
+        long long LLVal;
+        if (getAsSignedInteger(*this, Radix, LLVal) ||
             static_cast<T>(LLVal) != LLVal)
-        return true;
-      Result = LLVal;
-      return false;
-    }
-
-    template <typename T>
-    std::enable_if_t<!std::numeric_limits<T>::is_signed, bool>
-    getAsInteger(unsigned Radix, T &Result) const {
-      unsigned long long ULLVal;
-      // The additional cast to unsigned long long is required to avoid the
-      // Visual C++ warning C4805: '!=' : unsafe mix of type 'bool' and type
-      // 'unsigned __int64' when instantiating getAsInteger with T = bool.
-      if (getAsUnsignedInteger(*this, Radix, ULLVal) ||
-          static_cast<unsigned long long>(static_cast<T>(ULLVal)) != ULLVal)
-        return true;
-      Result = ULLVal;
+          return true;
+        Result = LLVal;
+      } else {
+        unsigned long long ULLVal;
+        // The additional cast to unsigned long long is required to avoid the
+        // Visual C++ warning C4805: '!=' : unsafe mix of type 'bool' and type
+        // 'unsigned __int64' when instantiating getAsInteger with T = bool.
+        if (getAsUnsignedInteger(*this, Radix, ULLVal) ||
+            static_cast<unsigned long long>(static_cast<T>(ULLVal)) != ULLVal)
+          return true;
+        Result = ULLVal;
+      }
       return false;
     }
 
@@ -492,25 +487,20 @@ namespace llvm {
     /// erroneous if empty or if it overflows T.
     /// The portion of the string representing the discovered numeric value
     /// is removed from the beginning of the string.
-    template <typename T>
-    std::enable_if_t<std::numeric_limits<T>::is_signed, bool>
-    consumeInteger(unsigned Radix, T &Result) {
-      long long LLVal;
-      if (consumeSignedInteger(*this, Radix, LLVal) ||
-          static_cast<long long>(static_cast<T>(LLVal)) != LLVal)
-        return true;
-      Result = LLVal;
-      return false;
-    }
-
-    template <typename T>
-    std::enable_if_t<!std::numeric_limits<T>::is_signed, bool>
-    consumeInteger(unsigned Radix, T &Result) {
-      unsigned long long ULLVal;
-      if (consumeUnsignedInteger(*this, Radix, ULLVal) ||
-          static_cast<unsigned long long>(static_cast<T>(ULLVal)) != ULLVal)
-        return true;
-      Result = ULLVal;
+    template <typename T> bool consumeInteger(unsigned Radix, T &Result) {
+      if constexpr (std::numeric_limits<T>::is_signed) {
+        long long LLVal;
+        if (consumeSignedInteger(*this, Radix, LLVal) ||
+            static_cast<long long>(static_cast<T>(LLVal)) != LLVal)
+          return true;
+        Result = LLVal;
+      } else {
+        unsigned long long ULLVal;
+        if (consumeUnsignedInteger(*this, Radix, ULLVal) ||
+            static_cast<unsigned long long>(static_cast<T>(ULLVal)) != ULLVal)
+          return true;
+        Result = ULLVal;
+      }
       return false;
     }
 
