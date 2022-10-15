@@ -21,7 +21,6 @@ config.osx_sysroot = path(r"@CMAKE_OSX_SYSROOT@")
 config.ocamlfind_executable = "@OCAMLFIND@"
 config.have_ocamlopt = @HAVE_OCAMLOPT@
 config.ocaml_flags = "@OCAMLFLAGS@"
-config.include_go_tests = @LLVM_INCLUDE_GO_TESTS@
 config.ptxas_executable = "@PTXAS_EXECUTABLE@"
 config.enable_shared = @ENABLE_SHARED@
 config.enable_assertions = @ENABLE_ASSERTIONS@
