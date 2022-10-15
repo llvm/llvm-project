@@ -332,6 +332,9 @@ public:
   bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
                              EVT NewVT) const override;
 
+  void AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                     SDNode *Node) const override;
+
   // Handling of atomic RMW instructions.
   Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
                         AtomicOrdering Ord) const override;
@@ -433,6 +436,7 @@ private:
   bool allowsHvxMisalignedMemoryAccesses(MVT VecTy,
                                          MachineMemOperand::Flags Flags,
                                          bool *Fast) const;
+  void AdjustHvxInstrPostInstrSelection(MachineInstr &MI, SDNode *Node) const;
 
   bool isHvxSingleTy(MVT Ty) const;
   bool isHvxPairTy(MVT Ty) const;
