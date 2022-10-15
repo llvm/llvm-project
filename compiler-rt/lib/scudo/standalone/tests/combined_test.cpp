@@ -511,7 +511,7 @@ struct DeathSizeClassConfig {
   static const scudo::uptr SizeDelta = 0;
 };
 
-static const scudo::uptr DeathRegionSizeLog = 20U;
+static const scudo::uptr DeathRegionSizeLog = 21U;
 struct DeathConfig {
   static const bool MaySupportMemoryTagging = false;
 
