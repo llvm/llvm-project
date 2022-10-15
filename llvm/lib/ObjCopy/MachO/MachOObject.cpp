@@ -14,11 +14,11 @@ using namespace llvm;
 using namespace llvm::objcopy::macho;
 
 Section::Section(StringRef SegName, StringRef SectName)
-    : Segname(std::string(SegName)), Sectname(std::string(SectName)),
+    : Segname(SegName), Sectname(SectName),
       CanonicalName((Twine(SegName) + Twine(',') + SectName).str()) {}
 
 Section::Section(StringRef SegName, StringRef SectName, StringRef Content)
-    : Segname(std::string(SegName)), Sectname(std::string(SectName)),
+    : Segname(SegName), Sectname(SectName),
       CanonicalName((Twine(SegName) + Twine(',') + SectName).str()),
       Content(Content) {}
 
