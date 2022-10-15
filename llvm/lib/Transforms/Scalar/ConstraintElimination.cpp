@@ -381,6 +381,22 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
     return MergeResults(Op0, CI, true);
   }
 
+  if (match(V, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI)) {
+    int64_t Mult = int64_t(std::pow(int64_t(2), CI->getSExtValue()));
+    auto Result = decompose(Op1, Preconditions, IsSigned, DL);
+    for (auto &KV : Result)
+      KV.Coefficient *= Mult;
+    return Result;
+  }
+
+  if (match(V, m_NUWMul(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI) &&
+      (!CI->isNegative())) {
+    auto Result = decompose(Op1, Preconditions, IsSigned, DL);
+    for (auto &KV : Result)
+      KV.Coefficient *= CI->getSExtValue();
+    return Result;
+  }
+
   if (match(V, m_NUWSub(m_Value(Op0), m_ConstantInt(CI))) && canUseSExt(CI))
     return {{-1 * CI->getSExtValue(), nullptr}, {1, Op0}};
   if (match(V, m_NUWSub(m_Value(Op0), m_Value(Op1))))
