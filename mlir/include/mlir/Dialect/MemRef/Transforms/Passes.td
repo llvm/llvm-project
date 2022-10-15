@@ -28,6 +28,22 @@ def FoldMemRefAliasOps : Pass<"fold-memref-alias-ops"> {
   ];
 }
 
+def MemRefEmulateWideInt : Pass<"memref-emulate-wide-int"> {
+  let summary = "Emulate 2*N-bit integer operations using N-bit operations";
+  let description = [{
+    Emulate memref integer operations that use too wide integer types with
+    equivalent operations on supported narrow integer types. This is done by
+    splitting original integer values into two halves.
+
+    Currently, only power-of-two integer bitwidths are supported.
+  }];
+  let options = [
+    Option<"widestIntSupported", "widest-int-supported", "unsigned",
+           /*default=*/"32", "Widest integer type supported by the target">,
+  ];
+  let dependentDialects = ["vector::VectorDialect"];
+}
+
 def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
   let summary = "Normalize memrefs";
    let description = [{
