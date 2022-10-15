@@ -389,12 +389,9 @@ public:
   void VisitBTFTagAttributedType(const BTFTagAttributedType *T) {
     Visit(T->getWrappedType());
   }
-  void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *T) {
-    Visit(T->getReplacedParameter());
-  }
+  void VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *) {}
   void
   VisitSubstTemplateTypeParmPackType(const SubstTemplateTypeParmPackType *T) {
-    Visit(T->getReplacedParameter());
     Visit(T->getArgumentPack());
   }
   void VisitTemplateSpecializationType(const TemplateSpecializationType *T) {

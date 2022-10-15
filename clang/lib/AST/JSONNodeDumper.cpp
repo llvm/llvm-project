@@ -692,8 +692,14 @@ void JSONNodeDumper::VisitTemplateTypeParmType(
 
 void JSONNodeDumper::VisitSubstTemplateTypeParmType(
     const SubstTemplateTypeParmType *STTPT) {
+  JOS.attribute("index", STTPT->getIndex());
   if (auto PackIndex = STTPT->getPackIndex())
     JOS.attribute("pack_index", *PackIndex);
+}
+
+void JSONNodeDumper::VisitSubstTemplateTypeParmPackType(
+    const SubstTemplateTypeParmPackType *T) {
+  JOS.attribute("index", T->getIndex());
 }
 
 void JSONNodeDumper::VisitAutoType(const AutoType *AT) {
