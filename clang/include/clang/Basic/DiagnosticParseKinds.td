@@ -702,6 +702,11 @@ def warn_cxx98_compat_noexcept_expr : Warning<
   InGroup<CXX98Compat>, DefaultIgnore;
 def warn_cxx98_compat_nullptr : Warning<
   "'nullptr' is incompatible with C++98">, InGroup<CXX98Compat>, DefaultIgnore;
+def ext_c_nullptr : Extension<
+  "'nullptr' is a C2x extension">, InGroup<C2x>;
+def warn_c17_compat_nullptr : Warning<
+  "'nullptr' is incompatible with C standards before C2x">,
+  InGroup<CPre2xCompat>, DefaultIgnore;
 
 def warn_wrong_clang_attr_namespace : Warning<
   "'__clang__' is a predefined macro name, not an attribute scope specifier; "
