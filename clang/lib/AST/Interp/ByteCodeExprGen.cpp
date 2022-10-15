@@ -782,6 +782,57 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   return this->emitStore(*ResultT, E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitExprWithCleanups(
+    const ExprWithCleanups *E) {
+  const Expr *SubExpr = E->getSubExpr();
+
+  assert(E->getNumObjects() == 0 && "TODO: Implement cleanups");
+  return this->visit(SubExpr);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
+    const MaterializeTemporaryExpr *E) {
+  StorageDuration SD = E->getStorageDuration();
+
+  // We conservatively only support these for now.
+  if (SD != SD_Static && SD != SD_Automatic)
+    return false;
+
+  const Expr *SubExpr = E->getSubExpr();
+  std::optional<PrimType> SubExprT = classify(SubExpr);
+  // FIXME: Implement this for records and arrays as well.
+  if (!SubExprT)
+    return false;
+
+  if (SD == SD_Static) {
+    if (std::optional<unsigned> GlobalIndex = P.createGlobal(E)) {
+      const LifetimeExtendedTemporaryDecl *TempDecl =
+          E->getLifetimeExtendedTemporaryDecl();
+
+      if (!this->visitInitializer(SubExpr))
+        return false;
+
+      if (!this->emitInitGlobalTemp(*SubExprT, *GlobalIndex, TempDecl, E))
+        return false;
+      return this->emitGetPtrGlobal(*GlobalIndex, E);
+    }
+  } else if (SD == SD_Automatic) {
+    if (std::optional<unsigned> LocalIndex =
+            allocateLocalPrimitive(SubExpr, *SubExprT, true, true)) {
+      if (!this->visitInitializer(SubExpr))
+        return false;
+
+      if (!this->emitSetLocal(*SubExprT, *LocalIndex, E))
+        return false;
+      return this->emitGetPtrLocal(*LocalIndex, E);
+    }
+  }
+
+  return false;
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
