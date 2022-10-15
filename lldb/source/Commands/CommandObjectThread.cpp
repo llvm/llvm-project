@@ -63,7 +63,7 @@ public:
 
       switch (short_option) {
       case 'c':
-        if (option_arg.getAsInteger(0, m_count) || (m_count < 0)) {
+        if (option_arg.getAsInteger(0, m_count)) {
           m_count = UINT32_MAX;
           error.SetErrorStringWithFormat(
               "invalid integer value for option '%c'", short_option);
