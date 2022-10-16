@@ -1332,7 +1332,15 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
                               ConstantInt::getAllOnesValue(Ty));
   }
 
-  if (isKnownNonNegative(Op0, DL, 0, &AC, &I, &DT)) {
+  KnownBits KnownDividend = computeKnownBits(Op0, 0, &I);
+  if (!I.isExact() &&
+      (match(Op1, m_Power2(Op1C)) || match(Op1, m_NegatedPower2(Op1C))) &&
+      KnownDividend.countMinTrailingZeros() >= Op1C->countTrailingZeros()) {
+    I.setIsExact();
+    return &I;
+  }
+
+  if (KnownDividend.isNonNegative()) {
     // If both operands are unsigned, turn this into a udiv.
     if (isKnownNonNegative(Op1, DL, 0, &AC, &I, &DT)) {
       auto *BO = BinaryOperator::CreateUDiv(Op0, Op1, I.getName());
