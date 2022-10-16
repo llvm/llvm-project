@@ -236,8 +236,6 @@ public:
     assert(type.isa<mlir::IntegerType>() && "operand type not supported yet");
 
     switch (op.getKind()) {
-    case mlir::cir::UnaryOpKind::Plus:
-    case mlir::cir::UnaryOpKind::Minus:
       llvm_unreachable("NYI");
     case mlir::cir::UnaryOpKind::Inc: {
       auto One = rewriter.create<mlir::arith::ConstantOp>(
@@ -251,6 +249,17 @@ public:
           op.getLoc(), type, mlir::IntegerAttr::get(type, 1));
       rewriter.replaceOpWithNewOp<mlir::arith::SubIOp>(op, op.getType(),
                                                        op.getInput(), One);
+      break;
+    }
+    case mlir::cir::UnaryOpKind::Plus: {
+      rewriter.replaceOp(op, op.getInput());
+      break;
+    }
+    case mlir::cir::UnaryOpKind::Minus: {
+      auto Zero = rewriter.create<mlir::arith::ConstantOp>(
+          op.getLoc(), type, mlir::IntegerAttr::get(type, 0));
+      rewriter.replaceOpWithNewOp<mlir::arith::SubIOp>(op, op.getType(), Zero,
+                                                       op.getInput());
       break;
     }
     }
