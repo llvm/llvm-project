@@ -1331,6 +1331,12 @@ LogicalResult UnaryOp::verify() {
     return emitOpError() << "requires result to be used by a memory store "
                             "to the same address as the input memory load";
   }
+  case cir::UnaryOpKind::Plus:
+    // Nothing to verify.
+    return success();
+  case cir::UnaryOpKind::Minus:
+    // Nothing to verify.
+    return success();
   }
 
   llvm_unreachable("Unknown UnaryOp kind?");

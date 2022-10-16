@@ -542,14 +542,18 @@ def ScopeOp : CIR_Op<"scope", [DeclareOpInterfaceMethods<RegionBranchOpInterface
 // UnaryOp
 //===----------------------------------------------------------------------===//
 
-def UnaryOpKind_Inc : I32EnumAttrCase<"Inc", 1, "inc">;
-def UnaryOpKind_Dec : I32EnumAttrCase<"Dec", 2, "dec">;
+def UnaryOpKind_Inc   : I32EnumAttrCase<"Inc",   1, "inc">;
+def UnaryOpKind_Dec   : I32EnumAttrCase<"Dec",   2, "dec">;
+def UnaryOpKind_Plus  : I32EnumAttrCase<"Plus",  3, "plus">;
+def UnaryOpKind_Minus : I32EnumAttrCase<"Minus", 4, "minus">;
 
 def UnaryOpKind : I32EnumAttr<
     "UnaryOpKind",
     "unary operation kind",
     [UnaryOpKind_Inc,
-     UnaryOpKind_Dec]> {
+     UnaryOpKind_Dec,
+     UnaryOpKind_Plus,
+     UnaryOpKind_Minus]> {
   let cppNamespace = "::mlir::cir";
 }
 
@@ -558,7 +562,7 @@ def UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
   let summary = "Unary operations";
   let description = [{
     `cir.unary` performs the unary operation according to
-    the specified opcode kind: [inc, dec].
+    the specified opcode kind: [inc, dec, plus, minus].
 
     Note for inc and dec: the operation corresponds only to the
     addition/subtraction, its input is expect to come from a load
