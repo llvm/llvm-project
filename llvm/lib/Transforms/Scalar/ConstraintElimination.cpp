@@ -265,55 +265,20 @@ decomposeGEP(GetElementPtrInst &GEP,
     // For an array/pointer, add the element offset, explicitly scaled.
     unsigned Scale = DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize();
 
-    Value *Op0, *Op1;
-    ConstantInt *CI;
-    // If the index is zero-extended, it is guaranteed to be positive.
-    if (match(Index, m_ZExt(m_Value(Op0)))) {
-      if (match(Op0, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) &&
-          canUseSExt(CI)) {
-        Result.emplace_back(
-            multiplyWithOverflow(
-                Scale, int64_t(std::pow(int64_t(2), CI->getSExtValue()))),
-            Op1);
-        continue;
-      }
-
-      if (match(Op0, m_NSWAdd(m_Value(Op1), m_ConstantInt(CI))) &&
-          canUseSExt(CI) && match(Op0, m_NUWAdd(m_Value(), m_Value()))) {
-        Result[0].Coefficient +=
-            multiplyWithOverflow(Scale, CI->getSExtValue());
-        Result.emplace_back(Scale, Op1);
-        continue;
-      }
-
-      Result.emplace_back(Scale, Op0, true);
-      continue;
-    }
-
-    if (match(Index, m_ConstantInt(CI)) && !CI->isNegative() &&
-        canUseSExt(CI)) {
-      Result[0].Coefficient += multiplyWithOverflow(Scale, CI->getSExtValue());
-      continue;
-    }
-
-    if (match(Index, m_NSWShl(m_Value(Op0), m_ConstantInt(CI))) &&
-        canUseSExt(CI)) {
-      Result.emplace_back(
-          multiplyWithOverflow(
-              Scale, int64_t(std::pow(int64_t(2), CI->getSExtValue()))),
-          Op0);
-    } else if (match(Index, m_NSWAdd(m_Value(Op0), m_ConstantInt(CI))) &&
-               canUseSExt(CI)) {
-      Result[0].Coefficient += multiplyWithOverflow(Scale, CI->getSExtValue());
-      Result.emplace_back(Scale, Op0);
+    auto IdxResult = decompose(Index, Preconditions, IsSigned, DL);
+    if (IdxResult.empty()) {
+      Result.emplace_back(Scale, Index);
     } else {
-      Op0 = Index;
-      Result.emplace_back(Scale, Op0);
+      for (auto &KV : IdxResult)
+        KV.Coefficient *= Scale;
+      Result[0].Coefficient += IdxResult[0].Coefficient;
+      append_range(Result, ArrayRef<DecompEntry>(IdxResult).drop_front());
     }
     // If Op0 is signed non-negative, the GEP is increasing monotonically and
     // can be de-composed.
-    Preconditions.emplace_back(CmpInst::ICMP_SGE, Op0,
-                               ConstantInt::get(Op0->getType(), 0));
+    if (!isKnownNonNegative(Index, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
+      Preconditions.emplace_back(CmpInst::ICMP_SGE, Index,
+                                 ConstantInt::get(Index->getType(), 0));
   }
   return Result;
 }
