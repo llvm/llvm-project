@@ -247,7 +247,7 @@ define i64 @extractelt_v3i64(<3 x i64>* %x) nounwind {
   ret i64 %b
 }
 
-define i8 @extractelt_v16i8_idx(<16 x i8>* %x, i32 signext %idx) nounwind {
+define i8 @extractelt_v16i8_idx(<16 x i8>* %x, i32 zeroext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v16i8_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
@@ -261,7 +261,7 @@ define i8 @extractelt_v16i8_idx(<16 x i8>* %x, i32 signext %idx) nounwind {
   ret i8 %b
 }
 
-define i16 @extractelt_v8i16_idx(<8 x i16>* %x, i32 signext %idx) nounwind {
+define i16 @extractelt_v8i16_idx(<8 x i16>* %x, i32 zeroext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v8i16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -275,7 +275,7 @@ define i16 @extractelt_v8i16_idx(<8 x i16>* %x, i32 signext %idx) nounwind {
   ret i16 %b
 }
 
-define i32 @extractelt_v4i32_idx(<4 x i32>* %x, i32 signext %idx) nounwind {
+define i32 @extractelt_v4i32_idx(<4 x i32>* %x, i32 zeroext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v4i32_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -291,7 +291,7 @@ define i32 @extractelt_v4i32_idx(<4 x i32>* %x, i32 signext %idx) nounwind {
   ret i32 %c
 }
 
-define i64 @extractelt_v2i64_idx(<2 x i64>* %x, i32 signext %idx) nounwind {
+define i64 @extractelt_v2i64_idx(<2 x i64>* %x, i32 zeroext %idx) nounwind {
 ; RV32-LABEL: extractelt_v2i64_idx:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -320,7 +320,7 @@ define i64 @extractelt_v2i64_idx(<2 x i64>* %x, i32 signext %idx) nounwind {
   ret i64 %c
 }
 
-define half @extractelt_v8f16_idx(<8 x half>* %x, i32 signext %idx) nounwind {
+define half @extractelt_v8f16_idx(<8 x half>* %x, i32 zeroext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v8f16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
@@ -336,7 +336,7 @@ define half @extractelt_v8f16_idx(<8 x half>* %x, i32 signext %idx) nounwind {
   ret half %c
 }
 
-define float @extractelt_v4f32_idx(<4 x float>* %x, i32 signext %idx) nounwind {
+define float @extractelt_v4f32_idx(<4 x float>* %x, i32 zeroext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v4f32_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -352,7 +352,7 @@ define float @extractelt_v4f32_idx(<4 x float>* %x, i32 signext %idx) nounwind {
   ret float %c
 }
 
-define double @extractelt_v2f64_idx(<2 x double>* %x, i32 signext %idx) nounwind {
+define double @extractelt_v2f64_idx(<2 x double>* %x, i32 zeroext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v2f64_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -368,7 +368,7 @@ define double @extractelt_v2f64_idx(<2 x double>* %x, i32 signext %idx) nounwind
   ret double %c
 }
 
-define i8 @extractelt_v32i8_idx(<32 x i8>* %x, i32 signext %idx) nounwind {
+define i8 @extractelt_v32i8_idx(<32 x i8>* %x, i32 zeroext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v32i8_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
@@ -383,7 +383,7 @@ define i8 @extractelt_v32i8_idx(<32 x i8>* %x, i32 signext %idx) nounwind {
   ret i8 %b
 }
 
-define i16 @extractelt_v16i16_idx(<16 x i16>* %x, i32 signext %idx) nounwind {
+define i16 @extractelt_v16i16_idx(<16 x i16>* %x, i32 zeroext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v16i16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
@@ -397,7 +397,7 @@ define i16 @extractelt_v16i16_idx(<16 x i16>* %x, i32 signext %idx) nounwind {
   ret i16 %b
 }
 
-define i32 @extractelt_v8i32_idx(<8 x i32>* %x, i32 signext %idx) nounwind {
+define i32 @extractelt_v8i32_idx(<8 x i32>* %x, i32 zeroext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v8i32_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -413,7 +413,7 @@ define i32 @extractelt_v8i32_idx(<8 x i32>* %x, i32 signext %idx) nounwind {
   ret i32 %c
 }
 
-define i64 @extractelt_v4i64_idx(<4 x i64>* %x, i32 signext %idx) nounwind {
+define i64 @extractelt_v4i64_idx(<4 x i64>* %x, i32 zeroext %idx) nounwind {
 ; RV32-LABEL: extractelt_v4i64_idx:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -442,7 +442,7 @@ define i64 @extractelt_v4i64_idx(<4 x i64>* %x, i32 signext %idx) nounwind {
   ret i64 %c
 }
 
-define half @extractelt_v16f16_idx(<16 x half>* %x, i32 signext %idx) nounwind {
+define half @extractelt_v16f16_idx(<16 x half>* %x, i32 zeroext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v16f16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
@@ -458,7 +458,7 @@ define half @extractelt_v16f16_idx(<16 x half>* %x, i32 signext %idx) nounwind {
   ret half %c
 }
 
-define float @extractelt_v8f32_idx(<8 x float>* %x, i32 signext %idx) nounwind {
+define float @extractelt_v8f32_idx(<8 x float>* %x, i32 zeroext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v8f32_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -474,7 +474,7 @@ define float @extractelt_v8f32_idx(<8 x float>* %x, i32 signext %idx) nounwind {
   ret float %c
 }
 
-define double @extractelt_v4f64_idx(<4 x double>* %x, i32 signext %idx) nounwind {
+define double @extractelt_v4f64_idx(<4 x double>* %x, i32 zeroext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v4f64_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -491,10 +491,10 @@ define double @extractelt_v4f64_idx(<4 x double>* %x, i32 signext %idx) nounwind
 }
 
 ; This uses a non-power of 2 type so that it isn't an MVT to catch an
-; incorrect use of getSimpleValueType_idx(, i32 signext %idx).
+; incorrect use of getSimpleValueType_idx(, i32 zeroext %idx).
 ; NOTE: Type legalization is bitcasting to vXi32 and doing 2 independent
 ; slidedowns and extracts.
-define i64 @extractelt_v3i64_idx(<3 x i64>* %x, i32 signext %idx) nounwind {
+define i64 @extractelt_v3i64_idx(<3 x i64>* %x, i32 zeroext %idx) nounwind {
 ; RV32-LABEL: extractelt_v3i64_idx:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma

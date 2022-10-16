@@ -6,7 +6,7 @@
 ; RUN:  --check-prefix=CHECK-P7
 
 ; Function Attrs: norecurse nounwind readnone
-define signext i32 @geti(<4 x i32> %a, i32 signext %b) {
+define zeroext i32 @geti(<4 x i32> %a, i32 zeroext %b) {
 ; CHECK-LABEL: geti:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 3, 2
@@ -19,7 +19,7 @@ define signext i32 @geti(<4 x i32> %a, i32 signext %b) {
 ; CHECK-NEXT:    sldi 3, 3, 5
 ; CHECK-NEXT:    mfvsrd 4, 34
 ; CHECK-NEXT:    srd 3, 4, 3
-; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    clrldi 3, 3, 32
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: geti:
@@ -33,7 +33,7 @@ define signext i32 @geti(<4 x i32> %a, i32 signext %b) {
 ; CHECK-BE-NEXT:    vperm 2, 2, 2, 3
 ; CHECK-BE-NEXT:    mfvsrd 4, 34
 ; CHECK-BE-NEXT:    srd 3, 4, 3
-; CHECK-BE-NEXT:    extsw 3, 3
+; CHECK-BE-NEXT:    clrldi 3, 3, 32
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-P7-LABEL: geti:
@@ -41,7 +41,7 @@ define signext i32 @geti(<4 x i32> %a, i32 signext %b) {
 ; CHECK-P7-NEXT:    addi 3, 1, -16
 ; CHECK-P7-NEXT:    rlwinm 4, 5, 2, 28, 29
 ; CHECK-P7-NEXT:    stxvw4x 34, 0, 3
-; CHECK-P7-NEXT:    lwax 3, 3, 4
+; CHECK-P7-NEXT:    lwzx 3, 3, 4
 ; CHECK-P7-NEXT:    blr
 entry:
   %vecext = extractelement <4 x i32> %a, i32 %b
@@ -49,7 +49,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define i64 @getl(<2 x i64> %a, i32 signext %b) {
+define i64 @getl(<2 x i64> %a, i32 zeroext %b) {
 ; CHECK-LABEL: getl:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 3, 1
@@ -82,7 +82,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define float @getf(<4 x float> %a, i32 signext %b) {
+define float @getf(<4 x float> %a, i32 zeroext %b) {
 ; CHECK-LABEL: getf:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xori 3, 5, 3
@@ -113,7 +113,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define double @getd(<2 x double> %a, i32 signext %b) {
+define double @getd(<2 x double> %a, i32 zeroext %b) {
 ; CHECK-LABEL: getd:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 3, 1
