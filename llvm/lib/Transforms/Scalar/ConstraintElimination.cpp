@@ -373,6 +373,17 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
   if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1)))) {
     return MergeResults(Op0, Op1, IsSigned);
   }
+  if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1)))) {
+    if (!isKnownNonNegative(Op0, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
+      Preconditions.emplace_back(CmpInst::ICMP_SGE, Op0,
+                                 ConstantInt::get(Op0->getType(), 0));
+    if (!isKnownNonNegative(Op1, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
+      Preconditions.emplace_back(CmpInst::ICMP_SGE, Op1,
+                                 ConstantInt::get(Op1->getType(), 0));
+
+    return MergeResults(Op0, Op1, IsSigned);
+  }
+
   if (match(V, m_Add(m_Value(Op0), m_ConstantInt(CI))) && CI->isNegative() &&
       canUseSExt(CI)) {
     Preconditions.emplace_back(
