@@ -247,13 +247,13 @@ private:
   }
 
   void DumpFunctionCallTree(const TraceDumper::FunctionCall &function_call) {
-    if (function_call.GetUntracedSegment()) {
+    if (function_call.GetUntracedPrefixSegment()) {
       m_s.Indent();
       DumpUntracedContext(function_call);
       m_s << "\n";
 
       m_s.IndentMore();
-      DumpFunctionCallTree(function_call.GetUntracedSegment()->GetNestedCall());
+      DumpFunctionCallTree(function_call.GetUntracedPrefixSegment()->GetNestedCall());
       m_s.IndentLess();
     }
 
@@ -313,6 +313,43 @@ public:
   };
 
   ~OutputWriterJSON() { m_j.arrayEnd(); }
+
+  void FunctionCallForest(
+      const std::vector<TraceDumper::FunctionCallUP> &forest) override {
+    for (size_t i = 0; i < forest.size(); i++) {
+      m_j.object([&] { DumpFunctionCallTree(*forest[i]); });
+    }
+  }
+
+  void DumpFunctionCallTree(const TraceDumper::FunctionCall &function_call) {
+    if (function_call.GetUntracedPrefixSegment()) {
+      m_j.attributeObject("untracedPrefixSegment", [&] {
+        m_j.attributeObject("nestedCall", [&] {
+          DumpFunctionCallTree(
+              function_call.GetUntracedPrefixSegment()->GetNestedCall());
+        });
+      });
+    }
+
+    if (!function_call.GetTracedSegments().empty()) {
+      m_j.attributeArray("tracedSegments", [&] {
+        for (const TraceDumper::FunctionCall::TracedSegment &segment :
+             function_call.GetTracedSegments()) {
+          m_j.object([&] {
+            m_j.attribute("firstInstructionId",
+                          std::to_string(segment.GetFirstInstructionID()));
+            m_j.attribute("lastInstructionId",
+                          std::to_string(segment.GetLastInstructionID()));
+            segment.IfNestedCall(
+                [&](const TraceDumper::FunctionCall &nested_call) {
+                  m_j.attributeObject(
+                      "nestedCall", [&] { DumpFunctionCallTree(nested_call); });
+                });
+          });
+        }
+      });
+    }
+  }
 
   void DumpEvent(const TraceDumper::TraceItem &item) {
     m_j.attribute("event", TraceCursor::EventKindToString(*item.event));
@@ -597,7 +634,7 @@ TraceDumper::FunctionCall::TracedSegment::GetLastInstructionSymbolInfo() const {
 }
 
 const TraceDumper::FunctionCall &
-TraceDumper::FunctionCall::UntracedSegment::GetNestedCall() const {
+TraceDumper::FunctionCall::UntracedPrefixSegment::GetNestedCall() const {
   return *m_nested_call;
 }
 
@@ -631,14 +668,14 @@ TraceDumper::FunctionCall::GetLastTracedSegment() {
   return m_traced_segments.back();
 }
 
-const Optional<TraceDumper::FunctionCall::UntracedSegment> &
-TraceDumper::FunctionCall::GetUntracedSegment() const {
-  return m_untraced_segment;
+const Optional<TraceDumper::FunctionCall::UntracedPrefixSegment> &
+TraceDumper::FunctionCall::GetUntracedPrefixSegment() const {
+  return m_untraced_prefix_segment;
 }
 
-void TraceDumper::FunctionCall::SetUntracedSegment(
+void TraceDumper::FunctionCall::SetUntracedPrefixSegment(
     TraceDumper::FunctionCallUP &&nested_call) {
-  m_untraced_segment.emplace(std::move(nested_call));
+  m_untraced_prefix_segment.emplace(std::move(nested_call));
 }
 
 TraceDumper::FunctionCall *TraceDumper::FunctionCall::GetParentCall() const {
@@ -694,8 +731,8 @@ static TraceDumper::FunctionCall &AppendReturnedInstructionToFunctionCallForest(
   // one that will contain the new instruction in its first traced segment.
   TraceDumper::FunctionCallUP new_root =
       std::make_unique<TraceDumper::FunctionCall>(cursor_sp, symbol_info);
-  // This new root will own the previous root through an untraced segment.
-  new_root->SetUntracedSegment(std::move(roots.back()));
+  // This new root will own the previous root through an untraced prefix segment.
+  new_root->SetUntracedPrefixSegment(std::move(roots.back()));
   roots.pop_back();
   // We update the roots container to point to the new root
   roots.emplace_back(std::move(new_root));
