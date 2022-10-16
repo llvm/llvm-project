@@ -7845,7 +7845,7 @@ void MSP430TargetCodeGenInfo::setTargetAttributes(
 namespace {
 class MipsABIInfo : public ABIInfo {
   bool IsO32;
-  unsigned MinABIStackAlignInBytes, StackAlignInBytes;
+  const unsigned MinABIStackAlignInBytes, StackAlignInBytes;
   void CoerceToIntArgs(uint64_t TySize,
                        SmallVectorImpl<llvm::Type *> &ArgList) const;
   llvm::Type* HandleAggregates(QualType Ty, uint64_t TySize) const;
@@ -8022,8 +8022,8 @@ MipsABIInfo::classifyArgumentType(QualType Ty, uint64_t &Offset) const {
   uint64_t TySize = getContext().getTypeSize(Ty);
   uint64_t Align = getContext().getTypeAlign(Ty) / 8;
 
-  Align = std::min(std::max(Align, (uint64_t)MinABIStackAlignInBytes),
-                   (uint64_t)StackAlignInBytes);
+  Align = std::clamp(Align, (uint64_t)MinABIStackAlignInBytes,
+                     (uint64_t)StackAlignInBytes);
   unsigned CurrOffset = llvm::alignTo(Offset, Align);
   Offset = CurrOffset + llvm::alignTo(TySize, Align * 8) / 8;
 
