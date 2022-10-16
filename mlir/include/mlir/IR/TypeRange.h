@@ -44,9 +44,8 @@ public:
   TypeRange(ValueTypeRange<ValueRangeT> values)
       : TypeRange(ValueRange(ValueRangeT(values.begin().getCurrent(),
                                          values.end().getCurrent()))) {}
-  template <typename Arg,
-            typename = typename std::enable_if_t<
-                std::is_constructible<ArrayRef<Type>, Arg>::value>>
+  template <typename Arg, typename = std::enable_if_t<std::is_constructible<
+                              ArrayRef<Type>, Arg>::value>>
   TypeRange(Arg &&arg) : TypeRange(ArrayRef<Type>(std::forward<Arg>(arg))) {}
   TypeRange(std::initializer_list<Type> types)
       : TypeRange(ArrayRef<Type>(types)) {}
