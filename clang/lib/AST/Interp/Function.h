@@ -111,7 +111,7 @@ public:
   using arg_reverse_iterator =
       SmallVectorImpl<PrimType>::const_reverse_iterator;
   llvm::iterator_range<arg_reverse_iterator> args_reverse() const {
-    return llvm::make_range(ParamTypes.rbegin(), ParamTypes.rend());
+    return llvm::reverse(ParamTypes);
   }
 
   /// Returns a specific scope.
