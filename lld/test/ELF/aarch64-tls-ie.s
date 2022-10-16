@@ -8,15 +8,16 @@
 # RUN: llvm-readobj -d -r %t | FileCheck %s --check-prefix=LE-REL
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=LE
 
+# IE-REL:      FLAGS STATIC_TLS
 # IE-REL:      .rela.dyn {
-# IE-REL-NEXT:   0x20380 R_AARCH64_TLS_TPREL64 - 0xC
-# IE-REL-NEXT:   0x20378 R_AARCH64_TLS_TPREL64 a 0x0
+# IE-REL-NEXT:   0x20390 R_AARCH64_TLS_TPREL64 - 0xC
+# IE-REL-NEXT:   0x20388 R_AARCH64_TLS_TPREL64 a 0x0
 # IE-REL-NEXT: }
 
 # IE:          adrp    x0, 0x20000
-# IE-NEXT:     ldr     x0, [x0, #0x378]
+# IE-NEXT:     ldr     x0, [x0, #0x388]
 # IE-NEXT:     adrp    x1, 0x20000
-# IE-NEXT:     ldr     x1, [x1, #0x380]
+# IE-NEXT:     ldr     x1, [x1, #0x390]
 
 # LE-REL-NOT:  FLAGS
 # LE-REL:      Relocations [
