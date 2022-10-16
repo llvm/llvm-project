@@ -334,11 +334,44 @@ public:
     llvm_unreachable("NYI");
   }
   mlir::Value VisitUnaryPlus(const UnaryOperator *E) {
-    llvm_unreachable("NYI");
+    // NOTE(cir): QualType function parameter still not used, so don´t replicate
+    // it here yet.
+    QualType promotionTy = getPromotionType(E->getSubExpr()->getType());
+    auto result = VisitPlus(E, promotionTy);
+    if (result && !promotionTy.isNull())
+      assert(0 && "not implemented yet");
+    return buildUnaryOp(E, mlir::cir::UnaryOpKind::Plus, result);
   }
+
+  mlir::Value VisitPlus(const UnaryOperator *E, QualType PromotionType) {
+    // This differs from gcc, though, most likely due to a bug in gcc.
+    TestAndClearIgnoreResultAssign();
+    if (!PromotionType.isNull())
+      assert(0 && "scalar promotion not implemented yet");
+    return Visit(E->getSubExpr());
+  }
+
   mlir::Value VisitUnaryMinus(const UnaryOperator *E) {
-    llvm_unreachable("NYI");
+    // NOTE(cir): QualType function parameter still not used, so don´t replicate
+    // it here yet.
+    QualType promotionTy = getPromotionType(E->getSubExpr()->getType());
+    auto result = VisitMinus(E, promotionTy);
+    if (result && !promotionTy.isNull())
+      assert(0 && "not implemented yet");
+    return buildUnaryOp(E, mlir::cir::UnaryOpKind::Minus, result);
   }
+
+  mlir::Value VisitMinus(const UnaryOperator *E, QualType PromotionType) {
+    TestAndClearIgnoreResultAssign();
+    if (!PromotionType.isNull())
+      assert(0 && "scalar promotion not implemented yet");
+
+    // NOTE: LLVM codegen will lower this directly to either a FNeg
+    // or a Sub instruction.  In CIR this will be handled later in LowerToLLVM.
+
+    return Visit(E->getSubExpr());
+  }
+
   mlir::Value VisitUnaryNot(const UnaryOperator *E) { llvm_unreachable("NYI"); }
   mlir::Value VisitUnaryLNot(const UnaryOperator *E) {
     llvm_unreachable("NYI");
@@ -591,6 +624,16 @@ public:
   mlir::Value
   buildCompoundAssign(const CompoundAssignOperator *E,
                       mlir::Value (ScalarExprEmitter::*F)(const BinOpInfo &));
+
+  // TODO(cir): Candidate to be in a common AST helper between CIR and LLVM codegen.
+  QualType getPromotionType(QualType Ty) {
+    if (auto *CT = Ty->getAs<ComplexType>()) {
+      llvm_unreachable("NYI");
+    }
+    if (Ty.UseExcessPrecision(CGF.getContext()))
+      llvm_unreachable("NYI");
+    return QualType();
+  }
 
   // Binary operators and binary compound assignment operators.
 #define HANDLEBINOP(OP)                                                        \
