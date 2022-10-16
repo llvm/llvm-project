@@ -64,8 +64,9 @@ define <2 x i8> @n4_vec_undef(<2 x i8> %x) {
 
 define i8 @prove_exact_with_high_mask(i8 %x, i8 %y) {
 ; CHECK-LABEL: @prove_exact_with_high_mask(
-; CHECK-NEXT:    [[A:%.*]] = and i8 [[X:%.*]], -32
-; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[A]], -4
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[D_NEG:%.*]] = and i8 [[A]], -8
+; CHECK-NEXT:    [[D:%.*]] = sub nsw i8 0, [[D_NEG]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %a = and i8 %x, -32
@@ -75,14 +76,16 @@ define i8 @prove_exact_with_high_mask(i8 %x, i8 %y) {
 
 define i8 @prove_exact_with_high_mask_limit(i8 %x, i8 %y) {
 ; CHECK-LABEL: @prove_exact_with_high_mask_limit(
-; CHECK-NEXT:    [[A:%.*]] = and i8 [[X:%.*]], -32
-; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[A]], -32
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[D:%.*]] = sub nsw i8 0, [[A]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %a = and i8 %x, -32
   %d = sdiv i8 %a, -32
   ret i8 %d
 }
+
+; negative test - not enough low zeros in dividend
 
 define i8 @not_prove_exact_with_high_mask(i8 %x, i8 %y) {
 ; CHECK-LABEL: @not_prove_exact_with_high_mask(
@@ -98,13 +101,16 @@ define i8 @not_prove_exact_with_high_mask(i8 %x, i8 %y) {
 define <2 x i8> @prove_exact_with_high_mask_splat_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @prove_exact_with_high_mask_splat_vec(
 ; CHECK-NEXT:    [[A:%.*]] = shl <2 x i8> [[X:%.*]], <i8 5, i8 5>
-; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i8> [[A]], <i8 -16, i8 -16>
+; CHECK-NEXT:    [[D_NEG:%.*]] = ashr exact <2 x i8> [[A]], <i8 4, i8 4>
+; CHECK-NEXT:    [[D:%.*]] = sub nsw <2 x i8> zeroinitializer, [[D_NEG]]
 ; CHECK-NEXT:    ret <2 x i8> [[D]]
 ;
   %a = shl <2 x i8> %x, <i8 5, i8 5>
   %d = sdiv <2 x i8> %a, <i8 -16, i8 -16>
   ret <2 x i8> %d
 }
+
+; TODO: Needs knownbits to handle arbitrary vector constants.
 
 define <2 x i8> @prove_exact_with_high_mask_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @prove_exact_with_high_mask_vec(
