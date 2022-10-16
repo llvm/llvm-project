@@ -583,3 +583,19 @@ func::CallOp mlir::sparse_tensor::createFuncCall(
 Type mlir::sparse_tensor::getOpaquePointerType(OpBuilder &builder) {
   return LLVM::LLVMPointerType::get(builder.getI8Type());
 }
+
+Value mlir::sparse_tensor::genAlloca(OpBuilder &builder, Location loc,
+                                     unsigned sz, Type tp) {
+  return genAlloca(builder, loc, constantIndex(builder, loc, sz), tp);
+}
+
+Value mlir::sparse_tensor::genAlloca(OpBuilder &builder, Location loc, Value sz,
+                                     Type tp) {
+  auto memTp = MemRefType::get({ShapedType::kDynamicSize}, tp);
+  return builder.create<memref::AllocaOp>(loc, memTp, ValueRange{sz});
+}
+
+Value mlir::sparse_tensor::genAllocaScalar(OpBuilder &builder, Location loc,
+                                           Type tp) {
+  return builder.create<memref::AllocaOp>(loc, MemRefType::get({}, tp));
+}
