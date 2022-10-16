@@ -364,6 +364,14 @@ public:
   bool isSanitizerChecked() const { return SanitizerCheckedFlag; }
 
   IsZeroed_t isZeroed() const { return IsZeroed_t(ZeroedFlag); }
+
+  /// Get the preferred size to use when storing a value to this slot. This
+  /// is the type size unless that might overlap another object, in which
+  /// case it's the dsize.
+  clang::CharUnits getPreferredSize(clang::ASTContext &Ctx, clang::QualType Type) {
+    return mayOverlap() ? Ctx.getTypeInfoDataSizeInChars(Type).Width
+                        : Ctx.getTypeSizeInChars(Type);
+  }
 };
 
 } // namespace cir

@@ -299,6 +299,11 @@ static void CheckAggExprForMemSetUse(AggValueSlot &Slot, const Expr *E,
         return;
     }
 
+  // If the type is 16-bytes or smaller, prefer individual stores over memset.
+  CharUnits Size = Slot.getPreferredSize(CGF.getContext(), E->getType());
+  if (Size <= CharUnits::fromQuantity(16))
+    return;
+
   llvm_unreachable("NYI");
 }
 
