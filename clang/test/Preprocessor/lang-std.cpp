@@ -1,5 +1,5 @@
-// UNSUPPORTED: default-std-cxx, ps4, ps5
-/// Test default standards when CLANG_DEFAULT_STD_CXX is unspecified.
+// UNSUPPORTED: ps4, ps5
+/// Test default standards.
 /// PS4/PS5 default to gnu++14.
 
 // RUN: %clang_cc1 -dM -E %s | FileCheck --check-prefix=CXX17 %s
