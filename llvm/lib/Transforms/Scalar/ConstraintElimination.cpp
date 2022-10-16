@@ -270,7 +270,7 @@ decomposeGEP(GetElementPtrInst &GEP,
       Result.emplace_back(Scale, Index);
     } else {
       for (auto &KV : IdxResult)
-        KV.Coefficient *= Scale;
+        KV.Coefficient = multiplyWithOverflow(KV.Coefficient, Scale);
       Result[0].Coefficient += IdxResult[0].Coefficient;
       append_range(Result, ArrayRef<DecompEntry>(IdxResult).drop_front());
     }
