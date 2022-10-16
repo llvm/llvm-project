@@ -428,7 +428,7 @@ func.func @parallel_invalid_yield(
 
 func.func @yield_invalid_parent_op() {
   "my.op"() ({
-   // expected-error@+1 {{'scf.yield' op expects parent op to be one of 'scf.execute_region, scf.for, scf.if, scf.parallel, scf.while'}}
+   // expected-error@+1 {{'scf.yield' op expects parent op to be one of 'scf.execute_region, scf.for, scf.if, scf.index_switch, scf.parallel, scf.while'}}
    scf.yield
   }) : () -> ()
   return
@@ -569,6 +569,60 @@ func.func @wrong_terminator_op(%in: tensor<100xf32>, %out: tensor<100xf32>) {
           tensor<1xf32> into tensor<100xf32>
         %0 = arith.constant 1: index
       }
+  }
+  return
+}
+
+// -----
+
+func.func @switch_wrong_case_count(%arg0: index) {
+  // expected-error @below {{'scf.index_switch' op has 0 case regions but 1 case values}}
+  "scf.index_switch"(%arg0) ({
+    scf.yield
+  }) {cases = array<i64: 1>} : (index) -> ()
+  return
+}
+
+// -----
+
+func.func @switch_duplicate_case(%arg0: index) {
+  // expected-error @below {{'scf.index_switch' op has duplicate case value: 0}}
+  scf.index_switch %arg0
+  case 0 {
+    scf.yield
+  }
+  case 0 {
+    scf.yield
+  }
+  default {
+    scf.yield
+  }
+  return
+}
+
+// -----
+
+func.func @switch_wrong_types(%arg0: index) {
+  // expected-error @below {{'scf.index_switch' op expected each region to return 0 values, but default region returns 1}}
+  scf.index_switch %arg0
+  default {
+    // expected-note @below {{see yield operation here}}
+    scf.yield %arg0 : index
+  }
+  return
+}
+
+// -----
+
+func.func @switch_wrong_types(%arg0: index, %arg1: i32) {
+  // expected-error @below {{'scf.index_switch' op expected result #0 of each region to be 'index'}}
+  scf.index_switch %arg0 -> index
+  case 0 {
+    // expected-note @below {{case region #0 returns 'i32' here}}
+    scf.yield %arg1 : i32
+  }
+  default {
+    scf.yield %arg0 : index
   }
   return
 }
