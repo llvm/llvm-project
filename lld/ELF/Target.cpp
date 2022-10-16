@@ -93,7 +93,7 @@ TargetInfo *elf::getTarget() {
 
 ErrorPlace elf::getErrorPlace(const uint8_t *loc) {
   assert(loc != nullptr);
-  for (InputSectionBase *d : inputSections) {
+  for (InputSectionBase *d : ctx.inputSections) {
     auto *isec = dyn_cast<InputSection>(d);
     if (!isec || !isec->getParent() || (isec->type & SHT_NOBITS))
       continue;

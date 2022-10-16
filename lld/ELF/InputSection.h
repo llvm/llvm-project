@@ -423,10 +423,6 @@ inline bool isDebugSection(const InputSectionBase &sec) {
          sec.name.startswith(".debug");
 }
 
-// The list of all input sections.
-extern SmallVector<InputSectionBase *, 0> inputSections;
-extern SmallVector<EhInputSection *, 0> ehInputSections;
-
 // The set of TOC entries (.toc + addend) for which we should not apply
 // toc-indirect to toc-relative relaxation. const Symbol * refers to the
 // STT_SECTION symbol associated to the .toc input section.
