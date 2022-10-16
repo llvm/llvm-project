@@ -1189,8 +1189,14 @@ static unsigned handleMipsTlsRelocation(RelType type, Symbol &sym,
 static unsigned handleTlsRelocation(RelType type, Symbol &sym,
                                     InputSectionBase &c, uint64_t offset,
                                     int64_t addend, RelExpr expr) {
-  if (!sym.isTls())
+  if (expr == R_TPREL || expr == R_TPREL_NEG) {
+    if (config->shared) {
+      errorOrWarn("relocation " + toString(type) + " against " + toString(sym) +
+                  " cannot be used with -shared" + getLocation(c, sym, offset));
+      return 1;
+    }
     return 0;
+  }
 
   if (config->emachine == EM_MIPS)
     return handleMipsTlsRelocation(type, sym, c, offset, addend, expr);
@@ -1386,17 +1392,12 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
 
   // Process TLS relocations, including relaxing TLS relocations. Note that
   // R_TPREL and R_TPREL_NEG relocations are resolved in processAux.
-  if (expr == R_TPREL || expr == R_TPREL_NEG) {
-    if (config->shared) {
-      errorOrWarn("relocation " + toString(type) + " against " + toString(sym) +
-                  " cannot be used with -shared" +
-                  getLocation(*sec, sym, offset));
+  if (sym.isTls()) {
+    if (unsigned processed =
+            handleTlsRelocation(type, sym, *sec, offset, addend, expr)) {
+      i += processed - 1;
       return;
     }
-  } else if (unsigned processed =
-                 handleTlsRelocation(type, sym, *sec, offset, addend, expr)) {
-    i += (processed - 1);
-    return;
   }
 
   // Relax relocations.
