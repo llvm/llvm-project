@@ -40,32 +40,7 @@ protected:
   void write(LLVMContext &Ctx, MutableArrayRef<Metadata *> Entries) const;
 
   void print(raw_ostream &O, StringRef IDPrefix, StringRef BindingPrefix) const;
-
-  // The value ordering of this enumeration is part of the DXIL ABI. Elements
-  // can only be added to the end, and not removed.
-  enum class Kinds : uint32_t {
-    Invalid = 0,
-    Texture1D,
-    Texture2D,
-    Texture2DMS,
-    Texture3D,
-    TextureCube,
-    Texture1DArray,
-    Texture2DArray,
-    Texture2DMSArray,
-    TextureCubeArray,
-    TypedBuffer,
-    RawBuffer,
-    StructuredBuffer,
-    CBuffer,
-    Sampler,
-    TBuffer,
-    RTAccelerationStructure,
-    FeedbackTexture2D,
-    FeedbackTexture2DArray,
-    NumEntries,
-  };
-
+  using Kinds = hlsl::ResourceKind;
   static StringRef getKindName(Kinds Kind);
   static void printKind(Kinds Kind, unsigned Alignment, raw_ostream &OS,
                         bool SRV = false, bool HasCounter = false,
