@@ -177,3 +177,65 @@ func.func @no_sliced_linearized_dims(%input: tensor<30x11x100xf32>, %offt: index
   // CHECK: return %[[res]]
   return %slice : tensor<330x?xf32>
 }
+
+// -----
+
+// The below tests verify that a dimension which is the result of collapsing at
+// most one non-unit dim is handled properly.
+
+// CHECK: @collapse_and_slice_unit_dim(%[[arg0:.+]]: tensor<{{.*}}>, %[[arg1:.+]]: index, %[[arg2:.+]]: index
+func.func @collapse_and_slice_unit_dim(%input: tensor<1x11x100xf32>, %offt: index, %size: index) -> tensor<?x100xf32> {
+  %collapsed = tensor.collapse_shape %input [[0, 1], [2]] : tensor<1x11x100xf32> into tensor<11x100xf32>
+  %slice = tensor.extract_slice %collapsed [%offt, 0] [%size, 100] [1, 1] : tensor<11x100xf32> to tensor<?x100xf32>
+  // CHECK-NOT: scf.for
+  // CHECK: %[[e:.+]] = tensor.extract_slice %[[arg0]][0, 0, 0] [1, 11, 100] [1, 1, 1]
+  // CHECK-SAME:           tensor<1x11x100xf32> to tensor<11x100xf32>
+  // CHECK: %[[e1:.+]] = tensor.extract_slice %[[e]][%[[arg1]], 0] [%[[arg2]], 100] [1, 1]
+  // CHECK-SAME:           tensor<11x100xf32> to tensor<?x100xf32>    
+  return %slice : tensor<?x100xf32>
+}
+
+// CHECK: @collapse_and_slice_multiple_unit_dim_dynamic(%[[arg0:.+]]: tensor<{{.*}}>, %[[arg1:.+]]: index, %[[arg2:.+]]: index
+func.func @collapse_and_slice_multiple_unit_dim_dynamic(%input: tensor<1x?x1x100xf32>, %offt: index, %size: index) -> tensor<?x100xf32> {
+  %collapsed = tensor.collapse_shape %input [[0, 1, 2], [3]] : tensor<1x?x1x100xf32> into tensor<?x100xf32>
+  %slice = tensor.extract_slice %collapsed [%offt, 0] [%size, 100] [1, 1] : tensor<?x100xf32> to tensor<?x100xf32>
+  // CHECK-NOT: scf.for
+  // CHECK: %[[c1:.+]] = arith.constant 1 : index
+  // CHECK: %[[dim:.+]] = tensor.dim %[[arg0]], %[[c1]] : 
+  // CHECK: %[[e:.+]] = tensor.extract_slice %[[arg0]][0, 0, 0, 0] [1, %[[dim]], 1, 100] [1, 1, 1, 1]
+  // CHECK-SAME:           tensor<1x?x1x100xf32> to tensor<?x100xf32>
+  // CHECK: %[[e1:.+]] = tensor.extract_slice %[[e]][%[[arg1]], 0] [%[[arg2]], 100] [1, 1]
+  // CHECK-SAME:           tensor<?x100xf32> to tensor<?x100xf32>  
+  return %slice : tensor<?x100xf32>
+}
+
+// CHECK: @collapse_and_slice_multiple_unit_dim_mixed(%[[arg0:.+]]: tensor<{{.*}}>, %[[arg1:.+]]: index, %[[arg2:.+]]: index
+func.func @collapse_and_slice_multiple_unit_dim_mixed(%input: tensor<1x?x1x100x10xf32>, %offt: index, %size: index) -> tensor<?x?xf32> {
+  %collapsed = tensor.collapse_shape %input [[0, 1, 2], [3, 4]] : tensor<1x?x1x100x10xf32> into tensor<?x1000xf32>
+  %slice = tensor.extract_slice %collapsed [%offt, %offt] [%size, %size] [1, 1] : tensor<?x1000xf32> to tensor<?x?xf32>
+  // CHECK-DAG: %[[c0]] = arith.constant 0 : index
+  // CHECK-DAG: %[[c1]] = arith.constant 1 : index
+  // CHECK: %[[dim:.+]] = tensor.dim %[[arg0]], %[[c1]]
+  // CHECK: %[[rank_reduced:.+]] = tensor.extract_slice %[[arg0]][0, 0, 0, 0, 0] [1, %[[dim]], 1, 100, 10] [1, 1, 1, 1, 1]
+  // CHECK: %[[empty:.+]] = tensor.empty
+  // CHECK: %[[result:.+]] = scf.for %[[iv:.+]] = %[[c0]] to %[[arg2]] step %[[c1]] iter_args(%[[ia:.+]] = %[[empty]])
+  // CHECK:     %[[idx:.+]] = affine.apply
+  // CHECK:     %[[multi_index:.+]] = affine.delinearize_index %[[idx]] into
+  // CHECK:     %[[collapsed:.+]] = tensor.collapse_shape
+  // CHECK:     %[[updated:.+]] = tensor.insert_slice
+  // CHECK:     scf.yield %[[updated]]
+  // CHECK: return %[[result]]
+  return %slice : tensor<?x?xf32>
+}
+
+// Edge case where all collapsed dims are unit dims. This pattern can't eliminate the collapse shape, 
+// that should be handled by `linalg-fold-unit-extent-dims`.
+
+// CHECK: @collapse_and_slice_multiple_all_unit_dim(%[[arg0:.+]]: tensor<{{.*}}>)
+func.func @collapse_and_slice_multiple_all_unit_dim(%input: tensor<1x1x1x100xf32>) -> tensor<1x100xf32> {
+  %collapsed = tensor.collapse_shape %input [[0, 1, 2], [3]] : tensor<1x1x1x100xf32> into tensor<1x100xf32>
+  %slice = tensor.extract_slice %collapsed [0, 0] [1, 100] [1, 1] : tensor<1x100xf32> to tensor<1x100xf32>  
+  return %slice : tensor<1x100xf32>  
+  // CHECK: %[[collapse:.+]] = tensor.collapse_shape %[[arg0]] {{\[}}[0, 1, 2], [3]] : tensor<1x1x1x100xf32> into tensor<1x100xf32>
+  // CHECK: return %[[collapse]]  
+}
