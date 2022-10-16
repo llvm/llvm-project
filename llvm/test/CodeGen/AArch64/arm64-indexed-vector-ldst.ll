@@ -9143,8 +9143,7 @@ define i32 @load_single_extract_variable_index_i32(<4 x i32>* %A, i32 %idx) {
 define i32 @load_single_extract_variable_index_v3i32_small_align(<3 x i32>* %A, i32 %idx) {
 ; CHECK-LABEL: load_single_extract_variable_index_v3i32_small_align:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    sxtw x9, w1
+; CHECK-NEXT:    mov w9, w1
 ; CHECK-NEXT:    mov w8, #2
 ; CHECK-NEXT:    cmp x9, #2
 ; CHECK-NEXT:    csel x8, x9, x8, lo
@@ -9158,8 +9157,7 @@ define i32 @load_single_extract_variable_index_v3i32_small_align(<3 x i32>* %A, 
 define i32 @load_single_extract_variable_index_v3i32_default_align(<3 x i32>* %A, i32 %idx) {
 ; CHECK-LABEL: load_single_extract_variable_index_v3i32_default_align:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    sxtw x9, w1
+; CHECK-NEXT:    mov w9, w1
 ; CHECK-NEXT:    mov w8, #2
 ; CHECK-NEXT:    cmp x9, #2
 ; CHECK-NEXT:    csel x8, x9, x8, lo

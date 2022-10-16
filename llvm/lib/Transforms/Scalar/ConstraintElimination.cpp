@@ -326,12 +326,28 @@ static SmallVector<DecompEntry, 4>
 decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
           bool IsSigned, const DataLayout &DL) {
 
+  auto MergeResults = [&Preconditions, IsSigned,
+                       DL](Value *A, Value *B,
+                           bool IsSignedB) -> SmallVector<DecompEntry, 4> {
+    auto ResA = decompose(A, Preconditions, IsSigned, DL);
+    auto ResB = decompose(B, Preconditions, IsSignedB, DL);
+    if (ResA.empty() || ResB.empty())
+      return {};
+    ResA[0].Coefficient += ResB[0].Coefficient;
+    append_range(ResA, drop_begin(ResB));
+    return ResA;
+  };
+
   // Decompose \p V used with a signed predicate.
   if (IsSigned) {
     if (auto *CI = dyn_cast<ConstantInt>(V)) {
       if (canUseSExt(CI))
         return {{CI->getSExtValue(), nullptr}};
     }
+    Value *Op0;
+    Value *Op1;
+    if (match(V, m_NSWAdd(m_Value(Op0), m_Value(Op1))))
+      return MergeResults(Op0, Op1, IsSigned);
 
     return {{0, nullptr}, {1, V}};
   }
@@ -352,17 +368,6 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
     V = Op0;
   }
 
-  auto MergeResults = [&Preconditions, IsSigned,
-                       DL](Value *A, Value *B,
-                           bool IsSignedB) -> SmallVector<DecompEntry, 4> {
-    auto ResA = decompose(A, Preconditions, IsSigned, DL);
-    auto ResB = decompose(B, Preconditions, IsSignedB, DL);
-    if (ResA.empty() || ResB.empty())
-      return {};
-    ResA[0].Coefficient += ResB[0].Coefficient;
-    append_range(ResA, drop_begin(ResB));
-    return ResA;
-  };
   Value *Op1;
   ConstantInt *CI;
   if (match(V, m_NUWAdd(m_Value(Op0), m_Value(Op1)))) {
@@ -374,6 +379,22 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
         CmpInst::ICMP_UGE, Op0,
         ConstantInt::get(Op0->getType(), CI->getSExtValue() * -1));
     return MergeResults(Op0, CI, true);
+  }
+
+  if (match(V, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI)) {
+    int64_t Mult = int64_t(std::pow(int64_t(2), CI->getSExtValue()));
+    auto Result = decompose(Op1, Preconditions, IsSigned, DL);
+    for (auto &KV : Result)
+      KV.Coefficient *= Mult;
+    return Result;
+  }
+
+  if (match(V, m_NUWMul(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI) &&
+      (!CI->isNegative())) {
+    auto Result = decompose(Op1, Preconditions, IsSigned, DL);
+    for (auto &KV : Result)
+      KV.Coefficient *= CI->getSExtValue();
+    return Result;
   }
 
   if (match(V, m_NUWSub(m_Value(Op0), m_ConstantInt(CI))) && canUseSExt(CI))

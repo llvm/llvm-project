@@ -539,48 +539,6 @@ void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
 
 void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   VisitRedeclarable(D);
-  VisitDeclaratorDecl(D);
-  Record.AddDeclarationNameLoc(D->DNLoc, D->getDeclName());
-  Record.push_back(D->getIdentifierNamespace());
-
-  // FunctionDecl's body is handled last at ASTWriterDecl::Visit,
-  // after everything else is written.
-  Record.push_back(static_cast<int>(D->getStorageClass())); // FIXME: stable encoding
-  Record.push_back(D->isInlineSpecified());
-  Record.push_back(D->isInlined());
-  Record.push_back(D->isVirtualAsWritten());
-  Record.push_back(D->isPure());
-  Record.push_back(D->hasInheritedPrototype());
-  Record.push_back(D->hasWrittenPrototype());
-  Record.push_back(D->isDeletedBit());
-  Record.push_back(D->isTrivial());
-  Record.push_back(D->isTrivialForCall());
-  Record.push_back(D->isDefaulted());
-  Record.push_back(D->isExplicitlyDefaulted());
-  Record.push_back(D->hasImplicitReturnZero());
-  Record.push_back(static_cast<uint64_t>(D->getConstexprKind()));
-  Record.push_back(D->usesSEHTry());
-  Record.push_back(D->hasSkippedBody());
-  Record.push_back(D->isMultiVersion());
-  Record.push_back(D->isLateTemplateParsed());
-  Record.push_back(D->FriendConstraintRefersToEnclosingTemplate());
-  Record.push_back(D->getLinkageInternal());
-  Record.AddSourceLocation(D->getEndLoc());
-  Record.AddSourceLocation(D->getDefaultLoc());
-
-  Record.push_back(D->getODRHash());
-
-  if (D->isDefaulted()) {
-    if (auto *FDI = D->getDefaultedFunctionInfo()) {
-      Record.push_back(FDI->getUnqualifiedLookups().size());
-      for (DeclAccessPair P : FDI->getUnqualifiedLookups()) {
-        Record.AddDeclRef(P.getDecl());
-        Record.push_back(P.getAccess());
-      }
-    } else {
-      Record.push_back(0);
-    }
-  }
 
   Record.push_back(D->getTemplatedKind());
   switch (D->getTemplatedKind()) {
@@ -659,6 +617,50 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     Record.AddSourceLocation(DFTSInfo->getRAngleLoc());
     break;
   }
+  }
+
+  VisitDeclaratorDecl(D);
+  Record.AddDeclarationNameLoc(D->DNLoc, D->getDeclName());
+  Record.push_back(D->getIdentifierNamespace());
+
+  // FunctionDecl's body is handled last at ASTWriterDecl::Visit,
+  // after everything else is written.
+  Record.push_back(
+      static_cast<int>(D->getStorageClass())); // FIXME: stable encoding
+  Record.push_back(D->isInlineSpecified());
+  Record.push_back(D->isInlined());
+  Record.push_back(D->isVirtualAsWritten());
+  Record.push_back(D->isPure());
+  Record.push_back(D->hasInheritedPrototype());
+  Record.push_back(D->hasWrittenPrototype());
+  Record.push_back(D->isDeletedBit());
+  Record.push_back(D->isTrivial());
+  Record.push_back(D->isTrivialForCall());
+  Record.push_back(D->isDefaulted());
+  Record.push_back(D->isExplicitlyDefaulted());
+  Record.push_back(D->hasImplicitReturnZero());
+  Record.push_back(static_cast<uint64_t>(D->getConstexprKind()));
+  Record.push_back(D->usesSEHTry());
+  Record.push_back(D->hasSkippedBody());
+  Record.push_back(D->isMultiVersion());
+  Record.push_back(D->isLateTemplateParsed());
+  Record.push_back(D->FriendConstraintRefersToEnclosingTemplate());
+  Record.push_back(D->getLinkageInternal());
+  Record.AddSourceLocation(D->getEndLoc());
+  Record.AddSourceLocation(D->getDefaultLoc());
+
+  Record.push_back(D->getODRHash());
+
+  if (D->isDefaulted()) {
+    if (auto *FDI = D->getDefaultedFunctionInfo()) {
+      Record.push_back(FDI->getUnqualifiedLookups().size());
+      for (DeclAccessPair P : FDI->getUnqualifiedLookups()) {
+        Record.AddDeclRef(P.getDecl());
+        Record.push_back(P.getAccess());
+      }
+    } else {
+      Record.push_back(0);
+    }
   }
 
   Record.push_back(D->param_size());
@@ -1405,14 +1407,12 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
   }
 
   if (D->getDeclContext() == D->getLexicalDeclContext() &&
-      D->getFirstDecl() == D->getMostRecentDecl() &&
-      !D->isInvalidDecl() &&
-      !D->hasAttrs() &&
-      !D->isTopLevelDeclInObjCContainer() &&
+      D->getFirstDecl() == D->getMostRecentDecl() && !D->isInvalidDecl() &&
+      !D->hasAttrs() && !D->isTopLevelDeclInObjCContainer() &&
       D->getDeclName().getNameKind() == DeclarationName::Identifier &&
-      !D->hasExtInfo() &&
-      !D->hasInheritedPrototype() &&
-      D->hasWrittenPrototype())
+      !D->hasExtInfo() && !D->hasInheritedPrototype() &&
+      D->hasWrittenPrototype() &&
+      D->getTemplatedKind() == FunctionDecl::TK_NonTemplate)
     AbbrevToUse = Writer.getDeclCXXMethodAbbrev();
 
   Code = serialization::DECL_CXX_METHOD;
@@ -1506,8 +1506,8 @@ void ASTDeclWriter::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
 void ASTDeclWriter::VisitTemplateDecl(TemplateDecl *D) {
   VisitNamedDecl(D);
 
-  Record.AddDeclRef(D->getTemplatedDecl());
   Record.AddTemplateParameterList(D->getTemplateParameters());
+  Record.AddDeclRef(D->getTemplatedDecl());
 }
 
 void ASTDeclWriter::VisitConceptDecl(ConceptDecl *D) {
@@ -1608,8 +1608,6 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
     VarTemplateSpecializationDecl *D) {
   RegisterTemplateSpecialization(D->getSpecializedTemplate(), D);
 
-  VisitVarDecl(D);
-
   llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
   InstFrom = D->getSpecializedTemplateOrPartial();
   if (Decl *InstFromD = InstFrom.dyn_cast<VarTemplateDecl *>()) {
@@ -1630,6 +1628,9 @@ void ASTDeclWriter::VisitVarTemplateSpecializationDecl(
   Record.AddSourceLocation(D->getPointOfInstantiation());
   Record.push_back(D->getSpecializationKind());
   Record.push_back(D->IsCompleteDefinition);
+
+  VisitVarDecl(D);
+
   Record.push_back(D->isCanonicalDecl());
 
   if (D->isCanonicalDecl()) {
@@ -2245,6 +2246,8 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(serialization::DECL_CXX_METHOD));
   // RedeclarableDecl
   Abv->Add(BitCodeAbbrevOp(0));                         // CanonicalDecl
+  // FIXME: Implement abbreviation for other template kinds.
+  Abv->Add(BitCodeAbbrevOp(FunctionDecl::TK_NonTemplate)); // TemplateKind
   // Decl
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // DeclContext
   Abv->Add(BitCodeAbbrevOp(0));                         // LexicalDeclContext
@@ -2292,11 +2295,10 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // LocEnd
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // Default
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 32)); // ODRHash
-  Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // TemplateKind
   // This Array slurps the rest of the record. Fortunately we want to encode
   // (nearly) all the remaining (variable number of) fields in the same way.
   //
-  // This is the function template information if any, then
+  // This is:
   //         NumParams and Params[] from FunctionDecl, and
   //         NumOverriddenMethods, OverriddenMethods[] from CXXMethodDecl.
   //

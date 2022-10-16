@@ -459,18 +459,17 @@ protected:
   NamedDecl *TemplatedDecl;
   TemplateParameterList *TemplateParams;
 
+public:
   void setTemplateParameters(TemplateParameterList *TParams) {
     TemplateParams = TParams;
   }
 
-public:
-  /// Initialize the underlying templated declaration and
-  /// template parameters.
-  void init(NamedDecl *templatedDecl, TemplateParameterList* templateParams) {
-    assert(!TemplatedDecl && "TemplatedDecl already set!");
-    assert(!TemplateParams && "TemplateParams already set!");
-    TemplatedDecl = templatedDecl;
-    TemplateParams = templateParams;
+  /// Initialize the underlying templated declaration.
+  void init(NamedDecl *NewTemplatedDecl) {
+    if (TemplatedDecl)
+      assert(TemplatedDecl == NewTemplatedDecl && "Inconsistent TemplatedDecl");
+    else
+      TemplatedDecl = NewTemplatedDecl;
   }
 };
 
@@ -3424,6 +3423,10 @@ inline Optional<unsigned> getExpandedPackSize(const NamedDecl *Param) {
 
   return None;
 }
+
+/// Internal helper used by Subst* nodes to retrieve the parameter list
+/// for their AssociatedDecl.
+TemplateParameterList *getReplacedTemplateParameterList(Decl *D);
 
 } // namespace clang
 

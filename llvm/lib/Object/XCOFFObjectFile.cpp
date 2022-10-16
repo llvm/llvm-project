@@ -998,8 +998,8 @@ Expected<ArrayRef<Reloc>> XCOFFObjectFile::relocations(const Shdr &Sec) const {
 
 template <typename ExceptEnt>
 Expected<ArrayRef<ExceptEnt>> XCOFFObjectFile::getExceptionEntries() const {
-  assert(is64Bit() && sizeof(ExceptEnt) == sizeof(ExceptionSectionEntry64) ||
-         !is64Bit() && sizeof(ExceptEnt) == sizeof(ExceptionSectionEntry32));
+  assert((is64Bit() && sizeof(ExceptEnt) == sizeof(ExceptionSectionEntry64)) ||
+         (!is64Bit() && sizeof(ExceptEnt) == sizeof(ExceptionSectionEntry32)));
 
   Expected<uintptr_t> ExceptionSectOrErr =
       getSectionFileOffsetToRawData(XCOFF::STYP_EXCEPT);
