@@ -5359,4 +5359,19 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysArguments) {
   EXPECT_EQ(RTArgs.MappersArray->getType(), VoidPtrPtrTy);
   EXPECT_EQ(RTArgs.MapNamesArray->getType(), VoidPtrPtrTy);
 }
+
+TEST_F(OpenMPIRBuilderTest, OffloadEntriesInfoManager) {
+  OffloadEntriesInfoManager InfoManager;
+  InfoManager.initializeTargetRegionEntryInfo(1, 2, "parent", 4, 0);
+  InfoManager.initializeDeviceGlobalVarEntryInfo(
+      "gvar", OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo, 0);
+  InfoManager.registerTargetRegionEntryInfo(
+      1, 2, "parent", 4, nullptr, nullptr,
+      OffloadEntriesInfoManager::OMPTargetRegionEntryTargetRegion, true);
+  InfoManager.registerDeviceGlobalVarEntryInfo(
+      "gvar", 0x0, 8, OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo,
+      GlobalValue::WeakAnyLinkage, true);
+  EXPECT_TRUE(InfoManager.hasTargetRegionEntryInfo(1, 2, "parent", 4, true));
+  EXPECT_TRUE(InfoManager.hasDeviceGlobalVarEntryInfo("gvar"));
+}
 } // namespace
