@@ -233,7 +233,7 @@ static void writeSequence(MutableArrayRef<uint32_t> buf, const char *prefix,
       makeArrayRef(reinterpret_cast<uint8_t *>(buf.data() + first),
                    4 * (buf.size() - first)),
       ".text");
-  inputSections.push_back(sec);
+  ctx.inputSections.push_back(sec);
   for (Defined *sym : defined) {
     sym->section = sec;
     sym->value -= 4 * first;

@@ -107,7 +107,7 @@ std::unique_ptr<MipsAbiFlagsSection<ELFT>> MipsAbiFlagsSection<ELFT>::create() {
   Elf_Mips_ABIFlags flags = {};
   bool create = false;
 
-  for (InputSectionBase *sec : inputSections) {
+  for (InputSectionBase *sec : ctx.inputSections) {
     if (sec->type != SHT_MIPS_ABIFLAGS)
       continue;
     sec->markDead();
@@ -174,7 +174,7 @@ std::unique_ptr<MipsOptionsSection<ELFT>> MipsOptionsSection<ELFT>::create() {
     return nullptr;
 
   SmallVector<InputSectionBase *, 0> sections;
-  for (InputSectionBase *sec : inputSections)
+  for (InputSectionBase *sec : ctx.inputSections)
     if (sec->type == SHT_MIPS_OPTIONS)
       sections.push_back(sec);
 
@@ -231,7 +231,7 @@ std::unique_ptr<MipsReginfoSection<ELFT>> MipsReginfoSection<ELFT>::create() {
     return nullptr;
 
   SmallVector<InputSectionBase *, 0> sections;
-  for (InputSectionBase *sec : inputSections)
+  for (InputSectionBase *sec : ctx.inputSections)
     if (sec->type == SHT_MIPS_REGINFO)
       sections.push_back(sec);
 
@@ -2840,7 +2840,7 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
   // note that isec->data() may uncompress the full content, which should be
   // parallelized.
   SetVector<InputFile *> files;
-  for (InputSectionBase *s : inputSections) {
+  for (InputSectionBase *s : ctx.inputSections) {
     InputSection *isec = dyn_cast<InputSection>(s);
     if (!isec)
       continue;
@@ -2853,7 +2853,7 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
       files.insert(isec->file);
   }
   // Drop .rel[a].debug_gnu_pub{names,types} for --emit-relocs.
-  llvm::erase_if(inputSections, [](InputSectionBase *s) {
+  llvm::erase_if(ctx.inputSections, [](InputSectionBase *s) {
     if (auto *isec = dyn_cast<InputSection>(s))
       if (InputSectionBase *rel = isec->getRelocatedSection())
         return !rel->isLive();
@@ -3309,7 +3309,7 @@ template <class ELFT> void elf::splitSections() {
 
 void elf::combineEhSections() {
   llvm::TimeTraceScope timeScope("Combine EH sections");
-  for (EhInputSection *sec : ehInputSections) {
+  for (EhInputSection *sec : ctx.ehInputSections) {
     EhFrameSection &eh = *sec->getPartition().ehFrame;
     sec->parent = &eh;
     eh.alignment = std::max(eh.alignment, sec->alignment);
@@ -3319,7 +3319,7 @@ void elf::combineEhSections() {
 
   if (!mainPart->armExidx)
     return;
-  llvm::erase_if(inputSections, [](InputSectionBase *s) {
+  llvm::erase_if(ctx.inputSections, [](InputSectionBase *s) {
     // Ignore dead sections and the partition end marker (.part.end),
     // whose partition number is out of bounds.
     if (!s->isLive() || s->partition == 255)
