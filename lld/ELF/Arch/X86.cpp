@@ -77,9 +77,6 @@ int X86::getTlsGdRelaxSkip(RelType type) const {
 
 RelExpr X86::getRelExpr(RelType type, const Symbol &s,
                         const uint8_t *loc) const {
-  if (type == R_386_TLS_IE || type == R_386_TLS_GOTIE)
-    config->hasTlsIe = true;
-
   switch (type) {
   case R_386_8:
   case R_386_16:
