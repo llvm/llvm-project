@@ -99,8 +99,8 @@ public:
 
   /// Construct an interface instance from a type that implements this
   /// interface's trait.
-  template <typename T, typename std::enable_if_t<
-                            std::is_base_of<Trait<T>, T>::value> * = nullptr>
+  template <typename T,
+            std::enable_if_t<std::is_base_of<Trait<T>, T>::value> * = nullptr>
   Interface(T t)
       : BaseType(t), impl(t ? ConcreteType::getInterfaceFor(t) : nullptr) {
     assert((!t || impl) && "expected value to provide interface instance");
