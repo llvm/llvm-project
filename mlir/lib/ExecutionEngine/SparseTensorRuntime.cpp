@@ -626,13 +626,8 @@ void delSparseTensorReader(void *p) {
     index_type *indices = iref->data + iref->offset;                           \
     SparseTensorReader *stfile = static_cast<SparseTensorReader *>(p);         \
     index_type rank = stfile->getRank();                                       \
-    char *linePtr = stfile->readLine();                                        \
-    for (index_type r = 0; r < rank; ++r) {                                    \
-      uint64_t idx = strtoul(linePtr, &linePtr, 10);                           \
-      indices[r] = idx - 1;                                                    \
-    }                                                                          \
     V *value = vref->data + vref->offset;                                      \
-    *value = detail::readCOOValue<V>(&linePtr, stfile->isPattern());           \
+    *value = stfile->readCOOElement<V>(rank, indices);                         \
   }
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_GETNEXT)
 #undef IMPL_GETNEXT

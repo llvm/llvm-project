@@ -119,7 +119,7 @@ public:
     if (ranked)
       adaptor.getDims(*this);
   }
-  template <typename Arg, typename = typename std::enable_if_t<
+  template <typename Arg, typename = std::enable_if_t<
                               std::is_constructible<ShapeStorageT, Arg>::value>>
   ShapedTypeComponents(Arg &&arg, Type elementType = nullptr,
                        Attribute attr = nullptr)

@@ -477,7 +477,7 @@ template <class ELFT> void ICF<ELFT>::run() {
         [&](InputSection &s) { s.eqClass[0] = s.eqClass[1] = ++uniqueId; });
 
   // Collect sections to merge.
-  for (InputSectionBase *sec : inputSections) {
+  for (InputSectionBase *sec : ctx.inputSections) {
     auto *s = dyn_cast<InputSection>(sec);
     if (s && s->eqClass[0] == 0) {
       if (isEligible(s))

@@ -596,7 +596,7 @@ struct SymbolScope {
   /// This variant is used when the callback type matches that expected by
   /// 'walkSymbolUses'.
   template <typename CallbackT,
-            typename std::enable_if_t<!std::is_same<
+            std::enable_if_t<!std::is_same<
                 typename llvm::function_traits<CallbackT>::result_t,
                 void>::value> * = nullptr>
   Optional<WalkResult> walk(CallbackT cback) {
@@ -607,7 +607,7 @@ struct SymbolScope {
   /// This variant is used when the callback type matches a stripped down type:
   /// void(SymbolTable::SymbolUse use)
   template <typename CallbackT,
-            typename std::enable_if_t<std::is_same<
+            std::enable_if_t<std::is_same<
                 typename llvm::function_traits<CallbackT>::result_t,
                 void>::value> * = nullptr>
   Optional<WalkResult> walk(CallbackT cback) {

@@ -155,14 +155,6 @@ static void concatSizesFromInputs(OpBuilder &builder,
   }
 }
 
-/// Generates an uninitialized temporary buffer of the given size and
-/// type, but returns it as type `memref<? x $tp>` (rather than as type
-/// `memref<$sz x $tp>`).
-static Value genAlloca(OpBuilder &builder, Location loc, Value sz, Type tp) {
-  auto memTp = MemRefType::get({ShapedType::kDynamicSize}, tp);
-  return builder.create<memref::AllocaOp>(loc, memTp, ValueRange{sz});
-}
-
 /// Generates an uninitialized buffer of the given size and type,
 /// but returns it as type `memref<? x $tp>` (rather than as type
 /// `memref<$sz x $tp>`). Unlike temporary buffers on the stack,
@@ -170,19 +162,6 @@ static Value genAlloca(OpBuilder &builder, Location loc, Value sz, Type tp) {
 static Value genAlloc(RewriterBase &rewriter, Location loc, Value sz, Type tp) {
   auto memTp = MemRefType::get({ShapedType::kDynamicSize}, tp);
   return rewriter.create<memref::AllocOp>(loc, memTp, ValueRange{sz});
-}
-
-/// Generates an uninitialized temporary buffer of the given size and
-/// type, but returns it as type `memref<? x $tp>` (rather than as type
-/// `memref<$sz x $tp>`).
-static Value genAlloca(OpBuilder &builder, Location loc, unsigned sz, Type tp) {
-  return genAlloca(builder, loc, constantIndex(builder, loc, sz), tp);
-}
-
-/// Generates an uninitialized temporary buffer with room for one value
-/// of the given type, and returns the `memref<$tp>`.
-static Value genAllocaScalar(OpBuilder &builder, Location loc, Type tp) {
-  return builder.create<memref::AllocaOp>(loc, MemRefType::get({}, tp));
 }
 
 /// Generates a temporary buffer of the given type and given contents.

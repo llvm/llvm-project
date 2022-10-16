@@ -589,7 +589,7 @@ LinkerScript::createInputSectionList(OutputSection &outCmd) {
 
   for (SectionCommand *cmd : outCmd.commands) {
     if (auto *isd = dyn_cast<InputSectionDescription>(cmd)) {
-      isd->sectionBases = computeInputSections(isd, inputSections);
+      isd->sectionBases = computeInputSections(isd, ctx.inputSections);
       for (InputSectionBase *s : isd->sectionBases)
         s->parent = &outCmd;
       ret.insert(ret.end(), isd->sectionBases.begin(), isd->sectionBases.end());
@@ -847,10 +847,10 @@ void LinkerScript::addOrphanSections() {
   // to create target sections first. We do not want priority handling
   // for synthetic sections because them are special.
   size_t n = 0;
-  for (InputSectionBase *isec : inputSections) {
+  for (InputSectionBase *isec : ctx.inputSections) {
     // Process InputSection and MergeInputSection.
     if (LLVM_LIKELY(isa<InputSection>(isec)))
-      inputSections[n++] = isec;
+      ctx.inputSections[n++] = isec;
 
     // In -r links, SHF_LINK_ORDER sections are added while adding their parent
     // sections because we need to know the parent's output section before we
@@ -869,7 +869,7 @@ void LinkerScript::addOrphanSections() {
           add(depSec);
   }
   // Keep just InputSection.
-  inputSections.resize(n);
+  ctx.inputSections.resize(n);
 
   // If no SECTIONS command was given, we should insert sections commands
   // before others, so that we can handle scripts which refers them,
