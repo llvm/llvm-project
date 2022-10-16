@@ -1332,12 +1332,9 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
                               ConstantInt::getAllOnesValue(Ty));
   }
 
-  // If the sign bits of both operands are zero (i.e. we can prove they are
-  // unsigned inputs), turn this into a udiv.
-  APInt Mask(APInt::getSignMask(Ty->getScalarSizeInBits()));
-  if (MaskedValueIsZero(Op0, Mask, 0, &I)) {
-    if (MaskedValueIsZero(Op1, Mask, 0, &I)) {
-      // X sdiv Y -> X udiv Y, iff X and Y don't have sign bit set
+  if (isKnownNonNegative(Op0, DL, 0, &AC, &I, &DT)) {
+    // If both operands are unsigned, turn this into a udiv.
+    if (isKnownNonNegative(Op1, DL, 0, &AC, &I, &DT)) {
       auto *BO = BinaryOperator::CreateUDiv(Op0, Op1, I.getName());
       BO->setIsExact(I.isExact());
       return BO;
