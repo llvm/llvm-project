@@ -31,11 +31,31 @@ Constant *FrontendResource::getID() {
   return cast<ConstantAsMetadata>(Entry->getOperand(2))->getValue();
 }
 
+uint32_t FrontendResource::FrontendResource::getResourceKind() {
+  return cast<ConstantInt>(
+             cast<ConstantAsMetadata>(Entry->getOperand(3))->getValue())
+      ->getLimitedValue();
+}
+uint32_t FrontendResource::getResourceIndex() {
+  return cast<ConstantInt>(
+             cast<ConstantAsMetadata>(Entry->getOperand(4))->getValue())
+      ->getLimitedValue();
+}
+uint32_t FrontendResource::getSpace() {
+  return cast<ConstantInt>(
+             cast<ConstantAsMetadata>(Entry->getOperand(5))->getValue())
+      ->getLimitedValue();
+}
+
 FrontendResource::FrontendResource(GlobalVariable *GV, StringRef TypeStr,
-                                   uint32_t Counter) {
+                                   uint32_t Counter, ResourceKind RK,
+                                   uint32_t ResIndex, uint32_t Space) {
   auto &Ctx = GV->getContext();
   IRBuilder<> B(Ctx);
-  Entry =
-      MDNode::get(Ctx, {ValueAsMetadata::get(GV), MDString::get(Ctx, TypeStr),
-                        ConstantAsMetadata::get(B.getInt32(Counter))});
+  Entry = MDNode::get(
+      Ctx, {ValueAsMetadata::get(GV), MDString::get(Ctx, TypeStr),
+            ConstantAsMetadata::get(B.getInt32(Counter)),
+            ConstantAsMetadata::get(B.getInt32(static_cast<int>(RK))),
+            ConstantAsMetadata::get(B.getInt32(ResIndex)),
+            ConstantAsMetadata::get(B.getInt32(Space))});
 }
