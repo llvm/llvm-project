@@ -573,8 +573,8 @@ public:
   /// Create a class with a name, and whether it should be declared as a `class`
   /// or `struct`. Also, prevent this from being mistaken as a move constructor
   /// candidate.
-  template <typename NameT, typename = typename std::enable_if_t<
-                                !std::is_same<NameT, Class>::value>>
+  template <typename NameT,
+            typename = std::enable_if_t<!std::is_same<NameT, Class>::value>>
   Class(NameT &&name, bool isStruct = false)
       : className(stringify(std::forward<NameT>(name))), isStruct(isStruct) {}
 
