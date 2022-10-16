@@ -24,7 +24,6 @@ config.have_zlib = @LLVM_ENABLE_ZLIB@
 config.have_zstd = @LLVM_ENABLE_ZSTD@
 config.clang_arcmt = @CLANG_ENABLE_ARCMT@
 config.clang_default_pie_on_linux = @CLANG_DEFAULT_PIE_ON_LINUX@
-config.clang_default_std_cxx = "@CLANG_DEFAULT_STD_CXX@"
 config.clang_default_cxx_stdlib = "@CLANG_DEFAULT_CXX_STDLIB@"
 config.clang_staticanalyzer = @CLANG_ENABLE_STATIC_ANALYZER@
 config.clang_staticanalyzer_z3 = @LLVM_WITH_Z3@
