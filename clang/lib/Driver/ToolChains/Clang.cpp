@@ -1657,7 +1657,7 @@ void RenderARMABI(const Driver &D, const llvm::Triple &Triple,
 
 void AddUnalignedAccessWarning(ArgStringList &CmdArgs) {
   auto StrictAlignIter =
-      std::find_if(CmdArgs.rbegin(), CmdArgs.rend(), [](StringRef Arg) {
+      llvm::find_if(llvm::reverse(CmdArgs), [](StringRef Arg) {
         return Arg == "+strict-align" || Arg == "-strict-align";
       });
   if (StrictAlignIter != CmdArgs.rend() &&
