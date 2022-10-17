@@ -16,7 +16,8 @@ end
 submodule(m1) sm1
 contains
   module procedure sub1
-    !ERROR: Left-hand side of assignment is not modifiable
+    !ERROR: Left-hand side of assignment is not definable
+    !BECAUSE: 'a' is an INTENT(IN) dummy argument
     a = 1.0
     b = 2.0
     !ERROR: No intrinsic or user-defined ASSIGNMENT(=) matches operand types REAL(4) and LOGICAL(4)
