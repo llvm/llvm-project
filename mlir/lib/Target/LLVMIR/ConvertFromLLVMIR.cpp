@@ -451,8 +451,10 @@ LogicalResult Importer::convertIntrinsic(OpBuilder &odsBuilder,
   if (!isConvertibleIntrinsic(intrinsicID))
     return failure();
 
-  // Copy the call arguments to an operands array used by the conversion.
-  SmallVector<llvm::Value *> llvmOperands(inst->args());
+  // Copy the call arguments to initialize operands array reference used by
+  // the conversion.
+  SmallVector<llvm::Value *> args(inst->args());
+  ArrayRef<llvm::Value *> llvmOperands(args);
 #include "mlir/Dialect/LLVMIR/LLVMIntrinsicFromLLVMIRConversions.inc"
 
   return failure();
@@ -460,8 +462,10 @@ LogicalResult Importer::convertIntrinsic(OpBuilder &odsBuilder,
 
 LogicalResult Importer::convertOperation(OpBuilder &odsBuilder,
                                          llvm::Instruction *inst) {
-  // Copy the instruction operands used for the conversion.
-  SmallVector<llvm::Value *> llvmOperands(inst->operands());
+  // Copy the instruction operands to initialize the operands array reference
+  // used by the conversion.
+  SmallVector<llvm::Value *> operands(inst->operands());
+  ArrayRef<llvm::Value *> llvmOperands(operands);
 #include "mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc"
 
   return failure();
