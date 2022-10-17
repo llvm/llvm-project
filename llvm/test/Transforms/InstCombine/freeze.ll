@@ -1076,5 +1076,30 @@ define ptr @freeze_load_dereferenceable_or_null(ptr %ptr) {
   ret ptr %p.fr
 }
 
+define i32 @freeze_load_with_range(ptr %ptr) {
+; CHECK-LABEL: @freeze_load_with_range(
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[PTR:%.*]], align 4, !range [[RNG2:![0-9]+]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X]]
+; CHECK-NEXT:    ret i32 [[X_FR]]
+;
+  %x = load i32, ptr %ptr, !range !2
+  %x.fr = freeze i32 %x
+  ret i32 %x.fr
+}
+
+declare i32 @foo.i32()
+
+define i32 @freeze_call_with_range() {
+; CHECK-LABEL: @freeze_call_with_range(
+; CHECK-NEXT:    [[X:%.*]] = call i32 @foo.i32(), !range [[RNG2]]
+; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X]]
+; CHECK-NEXT:    ret i32 [[X_FR]]
+;
+  %x = call i32 @foo.i32(), !range !2
+  %x.fr = freeze i32 %x
+  ret i32 %x.fr
+}
+
 !0 = !{}
 !1 = !{i64 4}
+!2 = !{i32 0, i32 100}
