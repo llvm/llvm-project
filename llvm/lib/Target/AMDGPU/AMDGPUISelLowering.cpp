@@ -3245,9 +3245,14 @@ SDValue AMDGPUTargetLowering::performTruncateCombine(
          Src.getOpcode() == ISD::SHL)) {
       SDValue Amt = Src.getOperand(1);
       KnownBits Known = DAG.computeKnownBits(Amt);
-      unsigned Size = VT.getScalarSizeInBits();
-      if ((Known.isConstant() && Known.getConstant().ule(Size)) ||
-          (Known.countMaxActiveBits() <= Log2_32(Size))) {
+
+      // - For left shifts, do the transform as long as the shift
+      //   amount is still legal for i32, so when ShiftAmt < 32 (<= 31)
+      // - For right shift, do it if ShiftAmt <= (32 - Size) to avoid
+      //   losing information stored in the high bits when truncating.
+      const unsigned MaxCstSize =
+          (Src.getOpcode() == ISD::SHL) ? 31 : (32 - VT.getScalarSizeInBits());
+      if (Known.getMaxValue().ule(MaxCstSize)) {
         EVT MidVT = VT.isVector() ?
           EVT::getVectorVT(*DAG.getContext(), MVT::i32,
                            VT.getVectorNumElements()) : MVT::i32;
