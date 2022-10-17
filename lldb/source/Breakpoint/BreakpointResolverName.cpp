@@ -164,7 +164,7 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
         error.SetErrorString("BRN::CFSD: name entry is not a string.");
         return nullptr;
       }
-      std::underlying_type_t<FunctionNameType> fnt;
+      std::underlying_type<FunctionNameType>::type fnt;
       success = names_mask_array->GetItemAtIndexAsInteger(i, fnt);
       if (!success) {
         error.SetErrorString("BRN::CFSD: name mask entry is not an integer.");
