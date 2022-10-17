@@ -34,7 +34,7 @@
 // OBJDUMP-NEXT: 0040 01000000 01000000 08000000 00000000
 // OBJDUMP-NEXT: 0050 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0060 00000000 00000000 00000000 01000000
-// OBJDUMP-NEXT: 0070 015001e4 1f0f007f 5e040000 00000000
+// OBJDUMP-NEXT: 0070 015021e4 1f0f007f 5e040000 00000000
 // special_sgpr
 // OBJDUMP-NEXT: 0080 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0090 00000000 00000000 00000000 00000000
@@ -119,6 +119,7 @@ disabled_user_sgpr:
   .amdhsa_memory_ordered 1
   .amdhsa_forward_progress 1
   .amdhsa_shared_vgpr_count 1
+  .amdhsa_round_robin_scheduling 1
   .amdhsa_exception_fp_ieee_invalid_op 1
   .amdhsa_exception_fp_denorm_src 1
   .amdhsa_exception_fp_ieee_div_zero 1
@@ -157,6 +158,7 @@ disabled_user_sgpr:
 // ASM-NEXT: .amdhsa_memory_ordered 1
 // ASM-NEXT: .amdhsa_forward_progress 1
 // ASM-NEXT: .amdhsa_shared_vgpr_count 1
+// ASM-NEXT: .amdhsa_round_robin_scheduling 1
 // ASM-NEXT: .amdhsa_exception_fp_ieee_invalid_op 1
 // ASM-NEXT: .amdhsa_exception_fp_denorm_src 1
 // ASM-NEXT: .amdhsa_exception_fp_ieee_div_zero 1

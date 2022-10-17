@@ -1062,7 +1062,7 @@ amdhsa::kernel_descriptor_t getDefaultAmdhsaKernelDescriptor(
                   amdhsa::FLOAT_DENORM_MODE_FLUSH_NONE);
   if (Version.Major >= 12) {
     AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
-                    amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_WG_RR_EN, 0);
+                    amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_ENABLE_WG_RR_EN, 0);
     AMDHSA_BITS_SET(KD.compute_pgm_rsrc1,
                     amdhsa::COMPUTE_PGM_RSRC1_GFX12_PLUS_DISABLE_PERF, 0);
   } else {

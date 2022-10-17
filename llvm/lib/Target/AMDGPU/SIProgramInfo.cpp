@@ -33,6 +33,9 @@ uint64_t SIProgramInfo::getComputePGMRSrc1(const GCNSubtarget &ST) const {
   if (ST.hasIEEEMode())
     Reg |= S_00B848_IEEE_MODE(IEEEMode);
 
+  if (ST.hasRrWGMode())
+    Reg |= S_00B848_RR_WG_MODE(RrWgMode);
+
   return Reg;
 }
 
@@ -50,6 +53,9 @@ uint64_t SIProgramInfo::getPGMRSrc1(CallingConv::ID CC,
 
   if (ST.hasIEEEMode())
     Reg |= S_00B848_IEEE_MODE(IEEEMode);
+
+  if (ST.hasRrWGMode())
+    Reg |= S_00B848_RR_WG_MODE(RrWgMode);
 
   switch (CC) {
   case CallingConv::AMDGPU_PS:

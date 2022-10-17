@@ -36,6 +36,7 @@ struct SIProgramInfo {
     uint32_t IEEEMode = 0;
     uint32_t WgpMode = 0; // GFX10+
     uint32_t MemOrdered = 0; // GFX10+
+    uint32_t RrWgMode = 0; // GFX12+
     uint64_t ScratchSize = 0;
 
     // Fields set in PGM_RSRC2 pm4 packet.
