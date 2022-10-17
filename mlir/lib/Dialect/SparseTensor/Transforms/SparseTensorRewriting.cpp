@@ -612,11 +612,14 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
 // Methods that add patterns described in this file to a pattern list.
 //===---------------------------------------------------------------------===//
 void mlir::populateSparseTensorRewriting(RewritePatternSet &patterns,
-                                         bool enableRT) {
+                                         bool enableRT, bool enableForeach,
+                                         bool /*enableConvert*/) {
   patterns.add<FoldInvariantYield, FuseSparseMultiplyOverAdd,
                ReshapeRewriter<tensor::ExpandShapeOp>,
-               ReshapeRewriter<tensor::CollapseShapeOp>, ForeachRewriter>(
-      patterns.getContext());
+               ReshapeRewriter<tensor::CollapseShapeOp>>(patterns.getContext());
+  if (enableForeach)
+    patterns.add<ForeachRewriter>(patterns.getContext());
+
   // TODO: If RT not enabled, rewrite concatenate ops, etc here.
   if (!enableRT)
     patterns.add<ConcatenateRewriter, NewRewriter,

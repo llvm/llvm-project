@@ -158,14 +158,21 @@ void populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
 std::unique_ptr<Pass> createSparseTensorCodegenPass();
 
 //===----------------------------------------------------------------------===//
-// Other rewriting rules and passes.
+// The SparseTensorRewriting pass.
 //===----------------------------------------------------------------------===//
 
-void populateSparseTensorRewriting(RewritePatternSet &patterns, bool enableRT);
+void populateSparseTensorRewriting(RewritePatternSet &patterns, bool enableRT,
+                                   bool enableForeach, bool enableConvert);
 
 std::unique_ptr<Pass> createSparseTensorRewritePass();
 std::unique_ptr<Pass>
-createSparseTensorRewritePass(const SparsificationOptions &options);
+createSparseTensorRewritePass(const SparsificationOptions &options,
+                              bool enableForeach = true,
+                              bool enableConvert = true);
+
+//===----------------------------------------------------------------------===//
+// Other rewriting rules and passes.
+//===----------------------------------------------------------------------===//
 
 std::unique_ptr<Pass> createDenseBufferizationPass(
     const bufferization::OneShotBufferizationOptions &options);

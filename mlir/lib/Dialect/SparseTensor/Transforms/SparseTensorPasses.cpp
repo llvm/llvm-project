@@ -43,14 +43,18 @@ struct SparseTensorRewritePass
 
   SparseTensorRewritePass() = default;
   SparseTensorRewritePass(const SparseTensorRewritePass &pass) = default;
-  SparseTensorRewritePass(const SparsificationOptions &options) {
+  SparseTensorRewritePass(const SparsificationOptions &options, bool foreach,
+                          bool convert) {
     enableRuntimeLibrary = options.enableRuntimeLibrary;
+    enableForeach = foreach;
+    enableConvert = convert;
   }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populateSparseTensorRewriting(patterns, enableRuntimeLibrary);
+    populateSparseTensorRewriting(patterns, enableRuntimeLibrary, enableForeach,
+                                  enableConvert);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -255,8 +259,10 @@ std::unique_ptr<Pass> mlir::createSparseTensorRewritePass() {
 }
 
 std::unique_ptr<Pass>
-mlir::createSparseTensorRewritePass(const SparsificationOptions &options) {
-  return std::make_unique<SparseTensorRewritePass>(options);
+mlir::createSparseTensorRewritePass(const SparsificationOptions &options,
+                                    bool enableForeach, bool enableConvert) {
+  return std::make_unique<SparseTensorRewritePass>(options, enableForeach,
+                                                   enableConvert);
 }
 
 std::unique_ptr<Pass> mlir::createSparsificationPass() {
