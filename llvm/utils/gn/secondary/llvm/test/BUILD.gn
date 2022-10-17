@@ -255,6 +255,7 @@ group("test") {
     "//llvm/tools/llvm-cxxdump",
     "//llvm/tools/llvm-cxxfilt",
     "//llvm/tools/llvm-cxxmap",
+    "//llvm/tools/llvm-debuginfo-analyzer",
     "//llvm/tools/llvm-debuginfod:symlinks",
     "//llvm/tools/llvm-debuginfod-find:symlinks",
     "//llvm/tools/llvm-diff",
