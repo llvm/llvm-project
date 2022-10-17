@@ -702,6 +702,12 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.NoHonorInfs = true;
   }
 
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_menable_no_nans)) {
+    diags.Report(diagUnimplemented) << a->getOption().getName();
+    opts.NoHonorNaNs = true;
+  }
+
   return true;
 }
 
