@@ -128,7 +128,7 @@ public:
   /// expression value. The clean-up for this temporary is added to \p context.
   virtual fir::ExtendedValue genExprAddr(const SomeExpr &expr,
                                          StatementContext &context,
-                                         mlir::Location *loc = nullptr) = 0;
+                                         mlir::Location *locPtr = nullptr) = 0;
 
   /// Generate the address of the location holding the expression, \p expr.
   fir::ExtendedValue genExprAddr(mlir::Location loc, const SomeExpr *expr,
@@ -143,7 +143,7 @@ public:
   /// Generate the computations of the expression to produce a value.
   virtual fir::ExtendedValue genExprValue(const SomeExpr &expr,
                                           StatementContext &context,
-                                          mlir::Location *loc = nullptr) = 0;
+                                          mlir::Location *locPtr = nullptr) = 0;
 
   /// Generate the computations of the expression, \p expr, to produce a value.
   fir::ExtendedValue genExprValue(mlir::Location loc, const SomeExpr *expr,
