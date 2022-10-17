@@ -1035,9 +1035,30 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
 // space for the extra PT_LOAD even if we end up not using it.
 void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
                                    Symbol &sym, int64_t addend) const {
+  // If non-ifunc non-preemptible, change PLT to direct call and optimize GOT
+  // indirection.
+  const bool isIfunc = sym.isGnuIFunc();
+  if (!sym.isPreemptible && (!isIfunc || config->zIfuncNoplt)) {
+    if (expr != R_GOT_PC) {
+      // The 0x8000 bit of r_addend of R_PPC_PLTREL24 is used to choose call
+      // stub type. It should be ignored if optimized to R_PC.
+      if (config->emachine == EM_PPC && expr == R_PPC32_PLTREL)
+        addend &= ~0x8000;
+      // R_HEX_GD_PLT_B22_PCREL (call a@GDPLT) is transformed into
+      // call __tls_get_addr even if the symbol is non-preemptible.
+      if (!(config->emachine == EM_HEXAGON &&
+           (type == R_HEX_GD_PLT_B22_PCREL ||
+            type == R_HEX_GD_PLT_B22_PCREL_X ||
+            type == R_HEX_GD_PLT_B32_PCREL_X)))
+      expr = fromPlt(expr);
+    } else if (!isAbsoluteValue(sym)) {
+      expr =
+          target->adjustGotPcExpr(type, addend, sec->rawData.data() + offset);
+    }
+  }
+
   // We were asked not to generate PLT entries for ifuncs. Instead, pass the
   // direct relocation on through.
-  const bool isIfunc = sym.isGnuIFunc();
   if (LLVM_UNLIKELY(isIfunc) && config->zIfuncNoplt) {
     std::lock_guard<std::mutex> lock(relocMutex);
     sym.exportDynamic = true;
@@ -1425,30 +1446,6 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
             handleTlsRelocation(type, sym, *sec, offset, addend, expr)) {
       i += processed - 1;
       return;
-    }
-  }
-
-  // If we know that a PLT entry will be resolved within the same ELF module, we
-  // can skip PLT access and directly jump to the destination function. For
-  // example, if we are linking a main executable, all dynamic symbols that can
-  // be resolved within the executable will actually be resolved that way at
-  // runtime, because the main executable is always at the beginning of a search
-  // list. We can leverage that fact.
-  if (!sym.isPreemptible && (!sym.isGnuIFunc() || config->zIfuncNoplt)) {
-    if (expr != R_GOT_PC) {
-      // The 0x8000 bit of r_addend of R_PPC_PLTREL24 is used to choose call
-      // stub type. It should be ignored if optimized to R_PC.
-      if (config->emachine == EM_PPC && expr == R_PPC32_PLTREL)
-        addend &= ~0x8000;
-      // R_HEX_GD_PLT_B22_PCREL (call a@GDPLT) is transformed into
-      // call __tls_get_addr even if the symbol is non-preemptible.
-      if (!(config->emachine == EM_HEXAGON &&
-           (type == R_HEX_GD_PLT_B22_PCREL ||
-            type == R_HEX_GD_PLT_B22_PCREL_X ||
-            type == R_HEX_GD_PLT_B32_PCREL_X)))
-      expr = fromPlt(expr);
-    } else if (!isAbsoluteValue(sym)) {
-      expr = target->adjustGotPcExpr(type, addend, relocatedAddr);
     }
   }
 
