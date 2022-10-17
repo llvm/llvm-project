@@ -7,6 +7,7 @@ add_clang_library(MLIRCIRTransforms
   MLIRCIRPassIncGen
 
   LINK_LIBS PUBLIC
+  clangAST
 
   MLIRAnalysis
   MLIRIR
