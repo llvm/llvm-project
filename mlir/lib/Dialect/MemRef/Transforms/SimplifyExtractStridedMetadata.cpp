@@ -39,7 +39,7 @@ namespace {
 /// baseBuffer, baseOffset, baseSizes, baseStrides =
 ///     extract_strided_metadata(memref)
 /// strides#i = baseStrides#i * subSizes#i
-/// offset = baseOffset + sum(subOffset#i * strides#i)
+/// offset = baseOffset + sum(subOffset#i * baseStrides#i)
 /// sizes = subSizes
 /// \endverbatim
 ///
@@ -83,8 +83,8 @@ public:
     auto origStrides = newExtractStridedMetadata.getStrides();
 
     // Hold the affine symbols and values for the computation of the offset.
-    SmallVector<OpFoldResult> values(3 * sourceRank + 1);
-    SmallVector<AffineExpr> symbols(3 * sourceRank + 1);
+    SmallVector<OpFoldResult> values(2 * sourceRank + 1);
+    SmallVector<AffineExpr> symbols(2 * sourceRank + 1);
 
     detail::bindSymbolsList(rewriter.getContext(), symbols);
     AffineExpr expr = symbols.front();
@@ -105,14 +105,11 @@ public:
           rewriter, origLoc, s0 * s1, {subStrides[i], origStride}));
 
       // Build up the computation of the offset.
-      unsigned baseIdxForDim = 1 + 3 * i;
+      unsigned baseIdxForDim = 1 + 2 * i;
       unsigned subOffsetForDim = baseIdxForDim;
-      unsigned subStrideForDim = baseIdxForDim + 1;
-      unsigned origStrideForDim = baseIdxForDim + 2;
-      expr = expr + symbols[subOffsetForDim] * symbols[subStrideForDim] *
-                        symbols[origStrideForDim];
+      unsigned origStrideForDim = baseIdxForDim + 1;
+      expr = expr + symbols[subOffsetForDim] * symbols[origStrideForDim];
       values[subOffsetForDim] = subOffsets[i];
-      values[subStrideForDim] = subStrides[i];
       values[origStrideForDim] = origStride;
     }
 
