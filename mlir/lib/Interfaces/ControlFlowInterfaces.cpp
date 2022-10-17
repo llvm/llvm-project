@@ -159,10 +159,6 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
   if (failed(verifyTypesAlongAllEdges(op, llvm::None, inputTypesFromParent)))
     return failure();
 
-  // RegionBranchOpInterface should not be implemented by Ops that do not have
-  // attached regions.
-  assert(op->getNumRegions() != 0);
-
   auto areTypesCompatible = [&](TypeRange lhs, TypeRange rhs) {
     if (lhs.size() != rhs.size())
       return false;
