@@ -63,20 +63,29 @@ def TransformOpInterface : OpInterface<"TransformOpInterface"> {
     }
 
     /// Creates the silenceable failure object with a diagnostic located at the
-    /// current operation.
-    DiagnosedSilenceableFailure emitSilenceableError() {
-      Diagnostic diag($_op->getLoc(), DiagnosticSeverity::Error);
-      return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+    /// current operation. Silenceable failure must be suppressed or reported
+    /// explicitly at some later time.
+    DiagnosedSilenceableFailure
+    emitSilenceableError(const ::llvm::Twine &message = {}) {
+      return ::mlir::emitSilenceableFailure($_op);
+    }
+
+    /// Creates the definite failure object with a diagnostic located at the
+    /// current operation. Definite failure will be reported when the object
+    /// is destroyed or converted.
+    DiagnosedDefiniteFailure
+    emitDefiniteFailure(const ::llvm::Twine &message = {}) {
+      return ::mlir::emitDefiniteFailure($_op, message);
     }
 
     /// Creates the default silenceable failure for a transform op that failed
     /// to properly apply to a target.
     DiagnosedSilenceableFailure emitDefaultSilenceableFailure(
         Operation *target) {
-      Diagnostic diag($_op->getLoc(), DiagnosticSeverity::Error);
+      DiagnosedSilenceableFailure diag = emitSilenceableFailure($_op->getLoc());
       diag << $_op->getName() << " failed to apply";
       diag.attachNote(target->getLoc()) << "when applied to this op";
-      return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+      return diag;
     }
   }];
 }
