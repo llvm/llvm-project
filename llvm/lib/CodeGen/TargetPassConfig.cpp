@@ -1270,6 +1270,7 @@ void TargetPassConfig::addMachinePasses() {
 
   addPass(&StackMapLivenessID);
   addPass(&LiveDebugValuesID);
+  addPass(&MachineSanitizerBinaryMetadataID);
 
   if (TM->Options.EnableMachineOutliner && getOptLevel() != CodeGenOpt::None &&
       EnableMachineOutliner != RunOutliner::NeverOutline) {
