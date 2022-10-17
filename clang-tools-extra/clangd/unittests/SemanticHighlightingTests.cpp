@@ -864,12 +864,12 @@ sizeof...($TemplateParameter[[Elements]]);
             const char *$LocalVariable_def_readonly[[s]] = $LocalVariable_readonly_static[[__func__]];
         }
       )cpp",
-      // Issue 1022: readonly modifier for generic parameter
+      // Issue 1222: readonly modifier for generic parameter
       R"cpp(
-        template <typename $TemplateParameter_decl[[T]]>
-        auto $Function_decl[[foo]](const $TemplateParameter[[T]] $Parameter_decl_readonly[[template_type]], 
-                                   const $TemplateParameter[[auto]] $Parameter_decl_readonly[[auto_type]], 
-                                   const int $Parameter_decl_readonly[[explicit_type]]) {
+        template <typename $TemplateParameter_def[[T]]>
+        auto $Function_def[[foo]](const $TemplateParameter[[T]] $Parameter_def_readonly[[template_type]], 
+                                  const $TemplateParameter[[auto]] $Parameter_def_readonly[[auto_type]], 
+                                  const int $Parameter_def_readonly[[explicit_type]]) {
             return $Parameter_readonly[[template_type]] 
                  + $Parameter_readonly[[auto_type]] 
                  + $Parameter_readonly[[explicit_type]];
