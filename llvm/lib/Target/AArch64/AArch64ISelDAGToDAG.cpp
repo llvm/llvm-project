@@ -444,12 +444,14 @@ static bool isOpcWithIntImmediate(const SDNode *N, unsigned Opc,
 
 // isIntImmediateEq - This method tests to see if N is a constant operand that
 // is equivalent to 'ImmExpected'.
+#ifndef NDEBUG
 static bool isIntImmediateEq(SDValue N, const uint64_t ImmExpected) {
   uint64_t Imm;
   if (!isIntImmediate(N.getNode(), Imm))
     return false;
   return Imm == ImmExpected;
 }
+#endif
 
 bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
     const SDValue &Op, unsigned ConstraintID, std::vector<SDValue> &OutOps) {
@@ -2560,6 +2562,7 @@ static bool isBitfieldPositioningOpFromAnd(SelectionDAG *CurDAG, SDValue Op,
   EVT VT = Op.getValueType();
   assert((VT == MVT::i32 || VT == MVT::i64) &&
          "Caller guarantees VT is one of i32 or i64");
+  (void)VT;
 
   uint64_t AndImm;
   if (!isOpcWithIntImmediate(Op.getNode(), ISD::AND, AndImm))
@@ -2593,7 +2596,7 @@ static bool isBitfieldPositioningOpFromAnd(SelectionDAG *CurDAG, SDValue Op,
   // amount.  BiggerPattern is true when this pattern is being matched for BFI,
   // BiggerPattern is false when this pattern is being matched for UBFIZ, in
   // which case it is not profitable to insert an extra shift.
-  if (ShlImm != DstLSB && !BiggerPattern)
+  if (ShlImm != uint64_t(DstLSB) && !BiggerPattern)
     return false;
 
   Src = getLeftShift(CurDAG, AndOp0.getOperand(0), ShlImm - DstLSB);
@@ -2644,6 +2647,7 @@ static bool isBitfieldPositioningOpFromShl(SelectionDAG *CurDAG, SDValue Op,
   EVT VT = Op.getValueType();
   assert((VT == MVT::i32 || VT == MVT::i64) &&
          "Caller guarantees that type is i32 or i64");
+  (void)VT;
 
   uint64_t ShlImm;
   if (!isOpcWithIntImmediate(Op.getNode(), ISD::SHL, ShlImm))
@@ -2658,7 +2662,7 @@ static bool isBitfieldPositioningOpFromShl(SelectionDAG *CurDAG, SDValue Op,
   DstLSB = countTrailingZeros(NonZeroBits);
   Width = countTrailingOnes(NonZeroBits >> DstLSB);
 
-  if (DstLSB != ShlImm && !BiggerPattern)
+  if (ShlImm != uint64_t(DstLSB) && !BiggerPattern)
     return false;
 
   Src = getLeftShift(CurDAG, Op.getOperand(0), ShlImm - DstLSB);
