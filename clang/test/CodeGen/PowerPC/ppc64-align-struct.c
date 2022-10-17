@@ -128,12 +128,12 @@ struct test4 test4va (int x, ...)
   return y;
 }
 
-// Error pattern will be fixed in https://reviews.llvm.org/D133338
 // CHECK: define{{.*}} void @test8va(ptr noalias sret(%struct.test8) align 1 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i64 8
 // CHECK: store ptr %[[NEXT]], ptr %ap
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[AGG_RESULT]], ptr align 8 %[[CUR]], i64 1, i1 false)
+// CHECK: [[T0:%.*]] = getelementptr inbounds i8, ptr %[[CUR]], i64 7
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[AGG_RESULT]], ptr align 1 [[T0]], i64 1, i1 false)
 struct test8 test8va (int x, ...)
 {
   struct test8 y;
@@ -144,12 +144,12 @@ struct test8 test8va (int x, ...)
   return y;
 }
 
-// Error pattern will be fixed in https://reviews.llvm.org/D133338
 // CHECK: define{{.*}} void @test9va(ptr noalias sret(%struct.test9) align 1 %[[AGG_RESULT:.*]], i32 noundef signext %x, ...)
 // CHECK: %[[CUR:[^ ]+]] = load ptr, ptr %ap
 // CHECK: %[[NEXT:[^ ]+]] = getelementptr inbounds i8, ptr %[[CUR]], i64 8
 // CHECK: store ptr %[[NEXT]], ptr %ap
-// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[AGG_RESULT]], ptr align 8 %[[CUR]], i64 2, i1 false)
+// CHECK: [[T0:%.*]] = getelementptr inbounds i8, ptr %[[CUR]], i64 6
+// CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[AGG_RESULT]], ptr align 2 [[T0]], i64 2, i1 false)
 struct test9 test9va (int x, ...)
 {
   struct test9 y;
