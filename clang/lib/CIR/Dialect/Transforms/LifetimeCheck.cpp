@@ -173,7 +173,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
     // Track all local values added in this scope
     llvm::SmallVector<mlir::Value, 4> localValues;
 
-    void dumpLocalValues();
+    LLVM_DUMP_METHOD void dumpLocalValues();
   };
 
   class LexicalScopeGuard {
@@ -233,7 +233,8 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
 
   void joinPmaps(SmallVectorImpl<PMapType> &pmaps);
   void printPset(PSetType &pset, llvm::raw_ostream &OS = llvm::errs());
-  void dumpPmap(PMapType &pmap);
+  LLVM_DUMP_METHOD void dumpPmap(PMapType &pmap);
+  LLVM_DUMP_METHOD void dumpCurrentPmap();
 };
 } // namespace
 
@@ -1013,6 +1014,11 @@ void LifetimeCheckPass::State::dump(llvm::raw_ostream &OS) {
   case LocalValue:
     OS << getVarNameFromValue(val.getPointer());
     break;
+  case OwnedBy:
+    OS << getVarNameFromValue(val.getPointer()) << "'";
+    break;
+  default:
+    llvm_unreachable("Not handled");
   }
 }
 
@@ -1027,6 +1033,8 @@ void LifetimeCheckPass::printPset(PSetType &pset, llvm::raw_ostream &OS) {
   }
   OS << " }";
 }
+
+void LifetimeCheckPass::dumpCurrentPmap() { dumpPmap(*currPmap); }
 
 void LifetimeCheckPass::dumpPmap(PMapType &pmap) {
   llvm::errs() << "pmap {\n";
