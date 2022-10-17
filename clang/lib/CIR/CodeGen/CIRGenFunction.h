@@ -979,9 +979,6 @@ public:
   void buildAnyExprToMem(const Expr *E, Address Location, Qualifiers Quals,
                          bool IsInitializer);
 
-  /// Check if \p E is a C++ "this" pointer wrapped in value-preserving casts.
-  static bool IsWrappedCXXThis(const Expr *E);
-
   LValue buildCheckedLValue(const Expr *E, TypeCheckKind TCK);
   LValue buildMemberExpr(const MemberExpr *E);
 
