@@ -22,14 +22,15 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
 using namespace llvm;
 using namespace mlir;
 
-static LogicalResult emitError(const Twine &message) {
-  llvm::errs() << message << "\n";
+static LogicalResult emitError(const Record &record, const Twine &message) {
+  PrintError(&record, message);
   return failure();
 }
 
@@ -118,7 +119,7 @@ static LogicalResult emitOneBuilder(const Record &record, raw_ostream &os) {
   auto op = tblgen::Operator(record);
 
   if (!record.getValue("llvmBuilder"))
-    return emitError("no 'llvmBuilder' field for op " + op.getOperationName());
+    return emitError(record, "expected 'llvmBuilder' field");
 
   // Return early if there is no builder specified.
   StringRef builderStrRef = record.getValueAsString("llvmBuilder");
@@ -158,8 +159,8 @@ static LogicalResult emitOneBuilder(const Record &record, raw_ostream &os) {
     } else if (name == "$") {
       bs << '$';
     } else {
-      return emitError(name + " is neither an argument nor a result of " +
-                       op.getOperationName());
+      return emitError(
+          record, "expected keyword, argument, or result, but got " + name);
     }
     // Finally, only keep the untraversed part of the string.
     builderStrRef = builderStrRef.substr(loc.pos + loc.length);
@@ -197,7 +198,7 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
   auto op = tblgen::Operator(record);
 
   if (!record.getValue("mlirBuilder"))
-    return emitError("no 'mlirBuilder' field for op " + op.getOperationName());
+    return emitError(record, "expected 'mlirBuilder' field");
 
   // Return early if there is no builder specified.
   StringRef builderStrRef = record.getValueAsString("mlirBuilder");
@@ -213,8 +214,8 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
     append_range(llvmArgIndices, seq<int64_t>(0, op.getNumArgs()));
   if (llvmArgIndices.size() != static_cast<size_t>(op.getNumArgs())) {
     return emitError(
-        "'llvmArgIndices' does not match the number of arguments for op " +
-        op.getOperationName());
+        record,
+        "expected 'llvmArgIndices' size to match the number of arguments");
   }
 
   // Progressively create the builder string by replacing $-variables. Keep only
@@ -233,12 +234,15 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
       // the provided argument indices mapping.
       // FIXME: support trailing variadic arguments.
       int64_t operandIdx = llvmArgIndices[*argIndex];
-      assert(operandIdx >= 0 && "expected argument to have a mapping");
+      if (operandIdx < 0) {
+        return emitError(
+            record, "expected non-negative operand index for argument " + name);
+      }
       assert(!isVariadicOperandName(op, name) && "unexpected variadic operand");
       bs << formatv("processValue(llvmOperands[{0}])", operandIdx);
     } else if (isResultName(op, name)) {
-      assert(op.getNumResults() == 1 &&
-             "expected operation to have one result");
+      if (op.getNumResults() != 1)
+        return emitError(record, "expected op to have one result");
       bs << formatv("mapValue(inst)");
     } else if (name == "_int_attr") {
       bs << "matchIntegerAttr";
@@ -253,9 +257,8 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
     } else if (name == "$") {
       bs << '$';
     } else {
-      return emitError(name +
-                       " is not a known keyword, argument, or result of " +
-                       op.getOperationName());
+      return emitError(
+          record, "expected keyword, argument, or result, but got " + name);
     }
     // Finally, only keep the untraversed part of the string.
     builderStrRef = builderStrRef.substr(loc.pos + loc.length);
