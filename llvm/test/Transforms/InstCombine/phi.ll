@@ -1317,6 +1317,7 @@ exit:
 }
 
 declare void @use(i32)
+declare i1 @get.i1()
 
 define i32 @phi_op_self_simplify() {
 ; CHECK-LABEL: @phi_op_self_simplify(
@@ -1338,6 +1339,38 @@ loop:
   call void @use(i32 %iv.add)
   %iv.add2 = xor i32 %iv, -1
   br label %loop
+}
+
+define i32 @phi_op_self_simplify_2(i32 %x) {
+; CHECK-LABEL: @phi_op_self_simplify_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X:%.*]], [[ENTRY:%.*]] ], [ [[OR:%.*]], [[LOOP]] ], [ 10, [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[OR]] = or i32 [[PHI]], 1
+; CHECK-NEXT:    [[C1:%.*]] = call i1 @get.i1()
+; CHECK-NEXT:    br i1 [[C1]], label [[LOOP_LATCH]], label [[LOOP]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[C2:%.*]] = call i1 @get.i1()
+; CHECK-NEXT:    br i1 [[C2]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+entry:
+  br label %loop
+
+loop:
+  %phi = phi i32 [ %x, %entry ], [ %or, %loop ], [ 10, %loop.latch ]
+  %or = or i32 %phi, 1
+  %c1 = call i1 @get.i1()
+  br i1 %c1, label %loop.latch, label %loop
+
+loop.latch:
+  %c2 = call i1 @get.i1()
+  br i1 %c2, label %exit, label %loop
+
+exit:
+  ret i32 %or
 }
 
 ; Caused an infinite loop with D134954.
