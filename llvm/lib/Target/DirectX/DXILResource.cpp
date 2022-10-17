@@ -36,8 +36,8 @@ void Resources::collectUAVs(Module &M) {
 void Resources::collect(Module &M) { collectUAVs(M); }
 
 ResourceBase::ResourceBase(uint32_t I, FrontendResource R)
-    : ID(I), GV(R.getGlobalVariable()), Name(""), Space(0), LowerBound(0),
-      RangeSize(1) {
+    : ID(I), GV(R.getGlobalVariable()), Name(""), Space(R.getSpace()),
+      LowerBound(R.getResourceIndex()), RangeSize(1) {
   if (auto *ArrTy = dyn_cast<ArrayType>(GV->getInitializer()->getType()))
     RangeSize = ArrTy->getNumElements();
 }
@@ -210,8 +210,9 @@ void ResourceBase::print(raw_ostream &OS, StringRef IDPrefix,
 }
 
 UAVResource::UAVResource(uint32_t I, FrontendResource R)
-    : ResourceBase(I, R), Shape(Kinds::Invalid), GloballyCoherent(false),
-      HasCounter(false), IsROV(false), ExtProps() {
+    : ResourceBase(I, R),
+      Shape(static_cast<ResourceBase::Kinds>(R.getResourceKind())),
+      GloballyCoherent(false), HasCounter(false), IsROV(false), ExtProps() {
   parseSourceType(R.getSourceType());
 }
 
