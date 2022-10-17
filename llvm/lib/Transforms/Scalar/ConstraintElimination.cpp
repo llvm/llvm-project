@@ -196,6 +196,13 @@ static int64_t multiplyWithOverflow(int64_t A, int64_t B) {
   return Result;
 }
 
+// A helper to add 2 signed integers where overflowing is allowed.
+static int64_t addWithOverflow(int64_t A, int64_t B) {
+  int64_t Result;
+  AddOverflow(A, B, Result);
+  return Result;
+}
+
 static SmallVector<DecompEntry, 4>
 decomposeGEP(GetElementPtrInst &GEP,
              SmallVector<PreconditionTy, 4> &Preconditions, bool IsSigned,
@@ -225,7 +232,9 @@ decomposeGEP(GetElementPtrInst &GEP,
     int64_t Scale = static_cast<int64_t>(
         DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize());
 
-    Result[0].Coefficient += multiplyWithOverflow(Scale, Offset.getSExtValue());
+    Result[0].Coefficient =
+        addWithOverflow(Result[0].Coefficient,
+                        multiplyWithOverflow(Scale, Offset.getSExtValue()));
     if (Offset.isNegative()) {
       // Add pre-condition ensuring the GEP is increasing monotonically and
       // can be de-composed.
@@ -257,8 +266,9 @@ decomposeGEP(GetElementPtrInst &GEP,
         continue;
 
       // Add offset to constant factor.
-      Result[0].Coefficient +=
-          DL.getStructLayout(STy)->getElementOffset(FieldNo);
+      Result[0].Coefficient = addWithOverflow(
+          Result[0].Coefficient,
+          int64_t(DL.getStructLayout(STy)->getElementOffset(FieldNo)));
       continue;
     }
 
