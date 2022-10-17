@@ -1,20 +1,27 @@
-; RUN: llc < %s -mtriple=arm-apple-ios -mcpu=cortex-a8    | \
-; RUN:     FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-SWDIV
-; RUN: llc < %s -mtriple=arm-apple-ios -mcpu=swift        | \
-; RUN:     FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-HWDIV
-; RUN: llc < %s -mtriple=arm-apple-ios -mcpu=cortex-r4    | \
-; RUN:     FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-SWDIV
-; RUN: llc < %s -mtriple=arm-apple-ios -mcpu=cortex-r4f   | \
-; RUN:     FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-SWDIV
-; RUN: llc < %s -mtriple=arm-apple-ios -mcpu=cortex-r5    | \
-; RUN:     FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-HWDIV
-; RUN: llc < %s -mtriple=arm-none-eabi -mcpu=cortex-a8    | \
-; RUN:     FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-EABI
-; RUN: llc < %s -mtriple=armv7ve-none-linux-gnu           | \
-; RUN:     FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-HWDIV
-; RUN: llc < %s -mtriple=thumbv7ve-none-linux-gnu         | \
-; RUN:     FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-HWDIV \
-; RUN:                  -check-prefix=CHECK-THUMB
+; RUN: llc < %s -mtriple=arm-apple-ios -mcpu=cortex-a8      | \
+; RUN:     FileCheck %s -check-prefixes=CHECK,CHECK-SWDIV
+; RUN: llc < %s -mtriple=arm-apple-ios -mcpu=swift          | \
+; RUN:     FileCheck %s -check-prefixes=CHECK,CHECK-HWDIV,CHECK-HWDIV-ARM-OR-THUMB2
+; RUN: llc < %s -mtriple=arm-apple-ios -mcpu=cortex-r4      | \
+; RUN:     FileCheck %s -check-prefixes=CHECK,CHECK-SWDIV
+; RUN: llc < %s -mtriple=arm-apple-ios -mcpu=cortex-r4f     | \
+; RUN:     FileCheck %s -check-prefixes=CHECK,CHECK-SWDIV
+; RUN: llc < %s -mtriple=arm-apple-ios -mcpu=cortex-r5      | \
+; RUN:     FileCheck %s -check-prefixes=CHECK,CHECK-HWDIV,CHECK-HWDIV-ARM-OR-THUMB2
+; RUN: llc < %s -mtriple=arm-none-eabi -mcpu=cortex-a8      | \
+; RUN:     FileCheck %s -check-prefixes=CHECK,CHECK-EABI
+; RUN: llc < %s -mtriple=armv7 -mcpu=cortex-a7              | \
+; RUN:     FileCheck %s -check-prefixes=CHECK,CHECK-HWDIV,CHECK-HWDIV-ARM-OR-THUMB2
+; RUN: llc < %s -mtriple=armv7 -mcpu=cortex-a7 -march=thumb | \
+; RUN:     FileCheck %s -check-prefixes=CHECK,CHECK-HWDIV,CHECK-THUMB,CHECK-HWDIV-ARM-OR-THUMB2
+; RUN: llc %s -o - -mtriple=thumbv8m.main -mcpu=cortex-m33  | \
+; RUN:     FileCheck %s -check-prefixes=CHECK,CHECK-HWDIV,CHECK-THUMB,CHECK-HWDIV-ARM-OR-THUMB2
+; RUN: llc < %s -mtriple=thumbv8m.base -mcpu=cortex-m23     | \
+; RUN:     FileCheck %s -check-prefixes=CHECK,CHECK-HWDIV,CHECK-THUMB,CHECK-HWDIV-THUMB1
+; RUN: llc < %s -mtriple=armv7ve-none-linux-gnu             | \
+; RUN:     FileCheck %s -check-prefixes=CHECK,CHECK-HWDIV
+; RUN: llc < %s -mtriple=thumbv7ve-none-linux-gnu           | \
+; RUN:     FileCheck %s -check-prefixes=CHECK,CHECK-HWDIV,CHECK-THUMB
 
 define i32 @f1(i32 %a, i32 %b) {
 entry:
@@ -49,7 +56,9 @@ entry:
 
 ; CHECK-THUMB: .thumb_func
 ; CHECK-HWDIV: sdiv
-; CHECK-HWDIV: mls
+; CHECK-HWDIV-ARM-OR-THUMB2-NEXT: mls
+; CHECK-HWDIV-THUMB1-NEXT: muls
+; CHECK-HWDIV-THUMB1-NEXT: subs
 
 ; EABI MODE = Remainder in R1, quotient in R0
 ; CHECK-EABI: __aeabi_idivmod
@@ -65,7 +74,9 @@ entry:
 
 ; CHECK-THUMB: .thumb_func
 ; CHECK-HWDIV: udiv
-; CHECK-HWDIV: mls
+; CHECK-HWDIV-ARM-OR-THUMB2-NEXT: mls
+; CHECK-HWDIV-THUMB1-NEXT: muls
+; CHECK-HWDIV-THUMB1-NEXT: subs
 
 ; EABI MODE = Remainder in R1, quotient in R0
 ; CHECK-EABI: __aeabi_uidivmod
@@ -107,30 +118,30 @@ entry:
 
 ; Make sure we avoid a libcall for some constants.
 define i64 @f7(i64 %a) {
-; CHECK-SWDIV-LABEL: f7
+; CHECK-LABEL: f7
 ; CHECK-SWDIV: adc
 ; CHECK-SWDIV: umull
-; CHECK-HWDIV-LABEL: f7
-; CHECK-HWDIV: adc
-; CHECK-HWDIV: umull
-; CHECK-EABI-LABEL: f7
+; CHECK-HWDIV-ARM-OR-THUMB2: adc
+; CHECK-HWDIV-ARM-OR-THUMB2: umull
 ; CHECK-EABI: adc
 ; CHECK-EABI: umull
+; No 32-bit => 64-bit HW multiply instruction prevents optimisation
+; CHECK-HWDIV-THUMB1: __umoddi3
   %tmp1 = urem i64 %a, 3
   ret i64 %tmp1
 }
 
 ; Make sure we avoid a libcall for some constants.
 define i64 @f8(i64 %a) {
-; CHECK-SWDIV-LABEL: f8
+; CHECK-LABEL: f8
 ; CHECK-SWDIV: adc
 ; CHECK-SWDIV: umull
-; CHECK-HWDIV-LABEL: f8
-; CHECK-HWDIV: adc
-; CHECK-HWDIV: umull
-; CHECK-EABI-LABEL: f8
+; CHECK-HWDIV-ARM-OR-THUMB2: adc
+; CHECK-HWDIV-ARM-OR-THUMB2: umull
 ; CHECK-EABI: adc
 ; CHECK-EABI: umull
+; No 32-bit => 64-bit HW multiply instruction prevents optimisation
+; CHECK-HWDIV-THUMB1: __udivdi3
   %tmp1 = udiv i64 %a, 3
   ret i64 %tmp1
 }
