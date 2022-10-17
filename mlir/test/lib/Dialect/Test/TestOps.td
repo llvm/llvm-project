@@ -2920,6 +2920,16 @@ def : Pat<(TestDefaultStrAttrNoValueOp $value),
           (TestDefaultStrAttrHasValueOp ConstantStrAttr<StrAttr, "foo">)>;
 
 //===----------------------------------------------------------------------===//
+// Test Ops with Default-Valued Attributes and Differing Print Settings
+//===----------------------------------------------------------------------===//
+
+def TestDefaultAttrPrintOp : TEST_Op<"default_value_print"> {
+  let arguments = (ins DefaultValuedAttr<I32Attr, "0">:$value_with_default,
+                   I32:$operand);
+  let assemblyFormat = "attr-dict $operand";
+}
+
+//===----------------------------------------------------------------------===//
 // Test Ops with effects
 //===----------------------------------------------------------------------===//
 
