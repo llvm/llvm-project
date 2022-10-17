@@ -248,6 +248,9 @@ Bug Fixes
   not satisfied in the event of an instantiation failures in a requires expression's
   parameter list. We previously handled this correctly in a constraint evaluation
   context, but not in a requires clause evaluated as a boolean.
+- Address the thread identification problems in coroutines.
+  `Issue 47177 <https://github.com/llvm/llvm-project/issues/47177>`_
+  `Issue 47179 <https://github.com/llvm/llvm-project/issues/47179>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
