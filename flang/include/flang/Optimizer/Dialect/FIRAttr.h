@@ -142,4 +142,9 @@ void printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
 
 } // namespace fir
 
+#include "flang/Optimizer/Dialect/FIREnumAttr.h.inc"
+
+#define GET_ATTRDEF_CLASSES
+#include "flang/Optimizer/Dialect/FIRAttr.h.inc"
+
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIRATTR_H
