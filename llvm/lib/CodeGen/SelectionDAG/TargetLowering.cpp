@@ -8184,15 +8184,15 @@ SDValue TargetLowering::CTTZTableLookup(SDNode *Node, SelectionDAG &DAG,
   SDValue ExtLoad = DAG.getExtLoad(ISD::ZEXTLOAD, DL, VT, DAG.getEntryNode(),
                                    DAG.getMemBasePlusOffset(CPIdx, Lookup, DL),
                                    PtrInfo, MVT::i8);
-  if (Node->getOpcode() != ISD::CTLZ_ZERO_UNDEF) {
-    EVT SetCCVT =
-        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-    SDValue Zero = DAG.getConstant(0, DL, VT);
-    SDValue SrcIsZero = DAG.getSetCC(DL, SetCCVT, Op, Zero, ISD::SETEQ);
-    ExtLoad = DAG.getSelect(DL, VT, SrcIsZero,
-                            DAG.getConstant(BitWidth, DL, VT), ExtLoad);
-  }
-  return ExtLoad;
+  if (Node->getOpcode() == ISD::CTTZ_ZERO_UNDEF)
+    return ExtLoad;
+
+  EVT SetCCVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  SDValue SrcIsZero = DAG.getSetCC(DL, SetCCVT, Op, Zero, ISD::SETEQ);
+  return DAG.getSelect(DL, VT, SrcIsZero,
+                       DAG.getConstant(BitWidth, DL, VT), ExtLoad);
 }
 
 SDValue TargetLowering::expandCTTZ(SDNode *Node, SelectionDAG &DAG) const {
