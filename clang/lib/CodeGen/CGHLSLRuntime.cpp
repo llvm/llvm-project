@@ -270,6 +270,7 @@ castResourceShapeToResourceKind(HLSLResourceAttr::ResourceKind RK) {
       static_cast<uint32_t>(
           HLSLResourceAttr::ResourceKind::FeedbackTexture2DArray) ==
       (static_cast<uint32_t>(llvm::hlsl::ResourceKind::NumEntries) - 2));
+  return llvm::hlsl::ResourceKind::Invalid;
 }
 
 void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
