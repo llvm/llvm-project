@@ -226,9 +226,9 @@ static void setGlobalPtr(DefinedGlobal *g, uint64_t memoryPtr) {
 // to each of the input data sections as well as the explicit stack region.
 // The default memory layout is as follows, from low to high.
 //
-//  - initialized data (starting at Config->globalBase)
+//  - initialized data (starting at config->globalBase)
 //  - BSS data (not currently implemented in llvm)
-//  - explicit stack (Config->ZStackSize)
+//  - explicit stack (config->ZStackSize)
 //  - heap start / unallocated
 //
 // The --stack-first option means that stack is placed before any static data.
@@ -257,11 +257,25 @@ void Writer::layoutMemory() {
 
   if (config->stackFirst) {
     placeStack();
+    if (config->globalBase) {
+      if (config->globalBase < memoryPtr) {
+        error("--global-base cannot be less than stack size when --stack-first is used");
+        return;
+      }
+      memoryPtr = config->globalBase;
+    }
   } else {
+    if (!config->globalBase && !config->relocatable && !config->isPic) {
+      // The default offset for static/global data, for when --global-base is
+      // not specified on the command line.  The precise value of 1024 is
+      // somewhat arbitrary, and pre-dates wasm-ld (Its the value that
+      // emscripten used prior to wasm-ld).
+      config->globalBase = 1024;
+    }
     memoryPtr = config->globalBase;
-    log("mem: global base = " + Twine(config->globalBase));
   }
 
+  log("mem: global base = " + Twine(memoryPtr));
   if (WasmSym::globalBase)
     WasmSym::globalBase->setVA(memoryPtr);
 
@@ -1523,9 +1537,6 @@ void Writer::createSyntheticSectionsPostLayout() {
 }
 
 void Writer::run() {
-  if (config->relocatable || config->isPic)
-    config->globalBase = 0;
-
   // For PIC code the table base is assigned dynamically by the loader.
   // For non-PIC, we start at 1 so that accessing table index 0 always traps.
   if (!config->isPic) {
