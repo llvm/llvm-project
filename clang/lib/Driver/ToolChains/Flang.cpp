@@ -84,6 +84,7 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   StringRef FPContract;
   bool HonorINFs = true;
+  bool HonorNaNs = true;
 
   if (const Arg *A = Args.getLastArg(options::OPT_ffp_contract)) {
     const StringRef Val = A->getValue();
@@ -115,6 +116,12 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     case options::OPT_fno_honor_infinities:
       HonorINFs = false;
       break;
+    case options::OPT_fhonor_nans:
+      HonorNaNs = true;
+      break;
+    case options::OPT_fno_honor_nans:
+      HonorNaNs = false;
+      break;
     }
 
     // If we handled this option claim it
@@ -126,6 +133,9 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
 
   if (!HonorINFs)
     CmdArgs.push_back("-menable-no-infs");
+
+  if (!HonorNaNs)
+    CmdArgs.push_back("-menable-no-nans");
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,

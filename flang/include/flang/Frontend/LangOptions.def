@@ -23,6 +23,8 @@ ENUM_LANGOPT(FPContractMode, FPModeKind, 2, FPM_Off) ///< FP Contract Mode (off/
 
 /// Permit floating point optimization without regard to infinities
 LANGOPT(NoHonorInfs, 1, false)
+/// Permit floating point optimization without regard to NaN
+LANGOPT(NoHonorNaNs, 1, false)
 
 #undef LANGOPT
 #undef ENUM_LANGOPT
