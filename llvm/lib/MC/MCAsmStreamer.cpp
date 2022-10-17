@@ -378,7 +378,7 @@ public:
 
   void emitPseudoProbe(uint64_t Guid, uint64_t Index, uint64_t Type,
                        uint64_t Attr,
-                       const MCPseudoProbeInlineStack &InlineStack) override;
+                       const MCPseudoProbeInlineStack &InlineStack, MCSymbol *FnSym) override;
 
   void emitBundleAlignMode(unsigned AlignPow2) override;
   void emitBundleLock(bool AlignToEnd) override;
@@ -2338,13 +2338,16 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
 
 void MCAsmStreamer::emitPseudoProbe(
     uint64_t Guid, uint64_t Index, uint64_t Type, uint64_t Attr,
-    const MCPseudoProbeInlineStack &InlineStack) {
+    const MCPseudoProbeInlineStack &InlineStack, MCSymbol *FnSym) {
   OS << "\t.pseudoprobe\t" << Guid << " " << Index << " " << Type << " "
      << Attr;
   // Emit inline stack like
   //  @ GUIDmain:3 @ GUIDCaller:1 @ GUIDDirectCaller:11
   for (const auto &Site : InlineStack)
     OS << " @ " << std::get<0>(Site) << ":" << std::get<1>(Site);
+
+  OS << " " << FnSym->getName();
+
   EmitEOL();
 }
 

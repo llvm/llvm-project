@@ -15,7 +15,9 @@
 //
 // FUNCTION BODY (one for each outlined function present in the text section)
 //    GUID (uint64)
-//        GUID of the function
+//        GUID of the function's source name which may be different from the
+//        actual binary linkage name. This GUID will be used to decode and
+//        generate a profile against the source function name.
 //    NPROBES (ULEB128)
 //        Number of probes originating from this function.
 //    NUM_INLINED_FUNCTIONS (ULEB128)
@@ -29,7 +31,9 @@
 //          ATTRIBUTE (uint3)
 //            1 - reserved
 //          ADDRESS_TYPE (uint1)
-//            0 - code address, 1 - address delta
+//            0 - code address for regular probes (for downwards compatibility)
+//              - GUID of linkage name for sentinel probes
+//            1 - address delta
 //          CODE_ADDRESS (uint64 or ULEB128)
 //            code address or address delta, depending on ADDRESS_TYPE
 //    INLINED FUNCTION RECORDS
@@ -39,11 +43,15 @@
 //            ID of the callsite probe (ULEB128)
 //          FUNCTION BODY
 //            A FUNCTION BODY entry describing the inlined function.
+//
+// TODO: retire the ADDRESS_TYPE encoding for code addresses once compatibility
+// is no longer an issue.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_MC_MCPSEUDOPROBE_H
 #define LLVM_MC_MCPSEUDOPROBE_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/PseudoProbe.h"
@@ -276,23 +284,20 @@ public:
 
 /// Instances of this class represent the pseudo probes inserted into a compile
 /// unit.
-class MCPseudoProbeSection {
+class MCPseudoProbeSections {
 public:
-  void addPseudoProbe(MCSection *Sec, const MCPseudoProbe &Probe,
+  void addPseudoProbe(MCSymbol *FuncSym, const MCPseudoProbe &Probe,
                       const MCPseudoProbeInlineStack &InlineStack) {
-    MCProbeDivisions[Sec].addPseudoProbe(Probe, InlineStack);
+    MCProbeDivisions[FuncSym].addPseudoProbe(Probe, InlineStack);
   }
 
   // TODO: Sort by getOrdinal to ensure a determinstic section order
-  using MCProbeDivisionMap = std::map<MCSection *, MCPseudoProbeInlineTree>;
+  using MCProbeDivisionMap = std::map<MCSymbol *, MCPseudoProbeInlineTree>;
 
 private:
-  // A collection of MCPseudoProbe for each text section. The MCPseudoProbes
-  // are grouped by GUID of the functions where they are from and will be
-  // encoded by groups. In the comdat scenario where a text section really only
-  // contains the code of a function solely, the probes associated with a comdat
-  // function are still grouped by GUIDs due to inlining that can bring probes
-  // from different functions into one function.
+  // A collection of MCPseudoProbe for each function. The MCPseudoProbes are
+  // grouped by GUIDs due to inlining that can bring probes from different
+  // functions into one function.
   MCProbeDivisionMap MCProbeDivisions;
 
 public:
@@ -304,18 +309,18 @@ public:
 };
 
 class MCPseudoProbeTable {
-  // A collection of MCPseudoProbe in the current module grouped by text
-  // sections. MCPseudoProbes will be encoded into a corresponding
+  // A collection of MCPseudoProbe in the current module grouped by
+  // functions. MCPseudoProbes will be encoded into a corresponding
   // .pseudoprobe section. With functions emitted as separate comdats,
   // a text section really only contains the code of a function solely, and the
   // probes associated with the text section will be emitted into a standalone
   // .pseudoprobe section that shares the same comdat group with the function.
-  MCPseudoProbeSection MCProbeSections;
+  MCPseudoProbeSections MCProbeSections;
 
 public:
   static void emit(MCObjectStreamer *MCOS);
 
-  MCPseudoProbeSection &getProbeSections() { return MCProbeSections; }
+  MCPseudoProbeSections &getProbeSections() { return MCProbeSections; }
 
 #ifndef NDEBUG
   static int DdgPrintIndent;
@@ -341,6 +346,9 @@ class MCPseudoProbeDecoder {
   /// Points to the end of the buffer.
   const uint8_t *End = nullptr;
 
+  /// Whether encoding is based on a starting probe with absolute code address.
+  bool EncodingIsAddrBased = false;
+
   // Decoding helper function
   template <typename T> ErrorOr<T> readUnencodedNumber();
   template <typename T> ErrorOr<T> readUnsignedNumber();
@@ -348,20 +356,21 @@ class MCPseudoProbeDecoder {
   ErrorOr<StringRef> readString(uint32_t Size);
 
 public:
+  using Uint64Set = DenseSet<uint64_t>;
+  using Uint64Map = DenseMap<uint64_t, uint64_t>;
+
   // Decode pseudo_probe_desc section to build GUID to PseudoProbeFuncDesc map.
   bool buildGUID2FuncDescMap(const uint8_t *Start, std::size_t Size);
-
-  // Decode pseudo_probe section to build address to probes map.
-  bool buildAddress2ProbeMap(const uint8_t *Start, std::size_t Size);
 
   // Decode pseudo_probe section to build address to probes map for specifed
   // functions only.
   bool buildAddress2ProbeMap(const uint8_t *Start, std::size_t Size,
-                             std::unordered_set<uint64_t> &GuildFilter);
+                             const Uint64Set &GuildFilter,
+                             const Uint64Map &FuncStartAddrs);
 
   bool buildAddress2ProbeMap(MCDecodedPseudoProbeInlineTree *Cur,
-                             uint64_t &LastAddr,
-                             std::unordered_set<uint64_t> &GuildFilter);
+                             uint64_t &LastAddr, const Uint64Set &GuildFilter,
+                             const Uint64Map &FuncStartAddrs);
 
   // Print pseudo_probe_desc section info
   void printGUID2FuncDescMap(raw_ostream &OS);
