@@ -297,18 +297,34 @@ void LifetimeCheckPass::LexicalScopeGuard::cleanup() {
       if (pointee == ptr)
         continue;
 
-      // If the local value is part of this pset, it means
-      // we need to invalidate it, otherwise keep searching.
-      // FIXME: add support for x', x'', etc...
+      // If the local value is part of this pset, it means we need to invalidate
+      // it, otherwise keep searching. Note that this assumes a current pset
+      // cannot have multiple entries for values and owned values at the same
+      // time, for example this should not be possible: pset(s) = {o, o'}.
       auto &pset = mapEntry.second;
-      State valState = State::getLocalValue(pointee);
-      if (!pset.contains(valState))
-        continue;
+      auto killValueInPset = [&](mlir::Value v) {
+        State valState = State::getLocalValue(v);
+        if (pset.contains(valState)) {
+          // Erase the reference and mark this invalid.
+          // FIXME: add a way to just mutate the state.
+          pset.erase(valState);
+          pset.insert(State::getInvalid());
+          return;
+        }
 
-      // Erase the reference and mark this invalid.
-      // FIXME: add a way to just mutate the state.
-      pset.erase(valState);
-      pset.insert(State::getInvalid());
+        if (Pass.owners.count(v)) {
+          valState = State::getOwnedBy(v);
+          if (pset.contains(valState)) {
+            pset.erase(valState);
+            pset.insert(State::getInvalid());
+            return;
+          }
+          // TODO: o'', ...
+        }
+      };
+
+      // KILL(x) for a particular pset.
+      killValueInPset(pointee);
       Pass.pmapInvalidHist[ptr] =
           std::make_pair(getEndLocForHist(*Pass.currScope), pointee);
     }
@@ -846,7 +862,10 @@ void LifetimeCheckPass::checkMoveAssignment(CallOp callOp,
   // where we finally materialize it back to the original pointer category.
   // TODO: should CIR ops retain xvalue information somehow?
   getPmap()[dst] = getPmap()[src];
-  getPmap()[src].clear(); // TODO: should we add null to 'src' pset?
+  // TODO: should this be null? or should we swap dst/src pset state?
+  // For now just consider moved-from state as invalid.
+  getPmap()[src].clear();
+  getPmap()[src].insert(State::getInvalid());
 }
 
 // User defined ctors that initialize from owner types is one
