@@ -470,10 +470,9 @@ transform::FuseIntoContainingOp::apply(transform::TransformResults &results,
   }
   ArrayRef<Operation *> containingOps = state.getPayloadOps(getContainingOp());
   if (containingOps.size() != 1) {
-    // Definite failure.
-    return DiagnosedSilenceableFailure(
-        this->emitOpError("requires exactly one containing_op handle (got ")
-        << containingOps.size() << ")");
+    return emitDefiniteFailure()
+           << "requires exactly one containing_op handle (got "
+           << containingOps.size() << ")";
   }
   Operation *containingOp = containingOps.front();
 
@@ -925,11 +924,11 @@ DiagnosedSilenceableFailure SplitOp::apply(TransformResults &results,
     }
 
     if (splitPoints.size() != payload.size()) {
-      emitError() << "expected the dynamic split point handle to point to as "
-                     "many operations ("
-                  << splitPoints.size() << ") as the target handle ("
-                  << payload.size() << ")";
-      return DiagnosedSilenceableFailure::definiteFailure();
+      return emitDefiniteFailure()
+             << "expected the dynamic split point handle to point to as "
+                "many operations ("
+             << splitPoints.size() << ") as the target handle ("
+             << payload.size() << ")";
     }
   } else {
     splitPoints.resize(payload.size(),
