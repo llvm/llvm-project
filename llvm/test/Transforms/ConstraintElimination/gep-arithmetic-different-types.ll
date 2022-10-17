@@ -136,7 +136,7 @@ define i1 @gep_shl_nsw_positive_index(ptr %A, ptr %upper, i8 %idx) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[ADD_I32_IDX_1]], [[UPPER]]
 ; CHECK-NEXT:    [[ADD_I8_IDX_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i8 [[IDX_1]]
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ult ptr [[ADD_I8_IDX_1]], [[UPPER]]
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], true
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], [[T_1]]
 ; CHECK-NEXT:    ret i1 [[RES_1]]
 ;
   %idx.pos = icmp sge i8 %idx, 0
@@ -208,7 +208,7 @@ define i1 @gep_zext_add_nuw_index(ptr %A, ptr %upper, i8 %idx) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[ADD_I32_IDX_1]], [[UPPER]]
 ; CHECK-NEXT:    [[ADD_I8_IDX_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i16 [[IDX_1_EXT]]
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ult ptr [[ADD_I8_IDX_1]], [[UPPER]]
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], [[T_1]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], true
 ; CHECK-NEXT:    ret i1 [[RES_1]]
 ;
   %idx.2 = add nuw i8 %idx, 2

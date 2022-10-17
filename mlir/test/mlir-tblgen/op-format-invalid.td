@@ -369,7 +369,7 @@ def OptionalInvalidE : TestFormat_Op<[{
 def OptionalInvalidF : TestFormat_Op<[{
   ($attr^ $attr2^)? attr-dict
 }]>, Arguments<(ins OptionalAttr<I64Attr>:$attr, OptionalAttr<I64Attr>:$attr2)>;
-// CHECK: error: only optional attributes can be used to anchor an optional group
+// CHECK: error: only optional or default-valued attributes can be used to anchor an optional group
 def OptionalInvalidG : TestFormat_Op<[{
   ($attr^)? attr-dict
 }]>, Arguments<(ins I64Attr:$attr)>;

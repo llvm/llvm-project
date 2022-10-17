@@ -4,7 +4,7 @@
 # RUN: llvm-readobj -r %t.o | FileCheck --check-prefix=INPUT-REL %s
 ## IE
 # RUN: ld.lld -shared %t.o -o %t.so
-# RUN: llvm-readobj -r %t.so | FileCheck --check-prefix=IE-REL %s
+# RUN: llvm-readobj -d -r %t.so | FileCheck --check-prefix=IE-REL %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck --check-prefix=IE %s
 ## IE -> LE
 # RUN: ld.lld %t.o -o %t
@@ -15,18 +15,19 @@
 # RUN: llvm-readobj -r %t.o | FileCheck --check-prefix=INPUT-REL %s
 ## IE
 # RUN: ld.lld -shared %t.o -o %t.so
-# RUN: llvm-readobj -r %t.so | FileCheck --check-prefix=IE-REL %s
+# RUN: llvm-readobj -d -r %t.so | FileCheck --check-prefix=IE-REL %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck --check-prefix=IE %s
 ## IE -> LE
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readelf -r %t | FileCheck --check-prefix=NOREL %s
 # RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=LE %s
 
+# IE-REL:      FLAGS STATIC_TLS
 # IE-REL:      .rela.dyn {
-# IE-REL-NEXT:   0x204A8 R_PPC64_TPREL64 c 0x0
-# IE-REL-NEXT:   0x204B0 R_PPC64_TPREL64 s 0x0
-# IE-REL-NEXT:   0x204B8 R_PPC64_TPREL64 i 0x0
-# IE-REL-NEXT:   0x204C0 R_PPC64_TPREL64 l 0x0
+# IE-REL-NEXT:   0x204B8 R_PPC64_TPREL64 c 0x0
+# IE-REL-NEXT:   0x204C0 R_PPC64_TPREL64 s 0x0
+# IE-REL-NEXT:   0x204C8 R_PPC64_TPREL64 i 0x0
+# IE-REL-NEXT:   0x204D0 R_PPC64_TPREL64 l 0x0
 # IE-REL-NEXT: }
 
 # INPUT-REL: R_PPC64_GOT_TPREL16_HA c 0x0

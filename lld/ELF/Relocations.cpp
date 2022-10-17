@@ -444,7 +444,6 @@ public:
 private:
   InputSectionBase *sec;
   OffsetGetter getter;
-  const TargetInfo &target = *elf::target;
 
   // End of relocations, used by Mips/PPC64.
   const void *end = nullptr;
@@ -491,7 +490,7 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
   for (const RelTy *ri = &rel; ri != static_cast<const RelTy *>(end); ++ri)
     if (ri->getType(config->isMips64EL) == pairTy &&
         ri->getSymbol(config->isMips64EL) == symIndex)
-      return target.getImplicitAddend(buf + ri->r_offset, pairTy);
+      return target->getImplicitAddend(buf + ri->r_offset, pairTy);
 
   warn("can't find matching " + toString(pairTy) + " relocation for " +
        toString(type));
@@ -511,7 +510,7 @@ int64_t RelocationScanner::computeAddend(const RelTy &rel, RelExpr expr,
     addend = getAddend<ELFT>(rel);
   } else {
     const uint8_t *buf = sec->rawData.data();
-    addend = target.getImplicitAddend(buf + rel.r_offset, type);
+    addend = target->getImplicitAddend(buf + rel.r_offset, type);
   }
 
   if (config->emachine == EM_PPC64 && config->isPic && type == R_PPC64_TOC)
@@ -979,7 +978,7 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // These never do, except if the entire file is position dependent or if
   // only the low bits are used.
   if (e == R_GOT || e == R_PLT)
-    return target.usesOnlyLowPageBits(type) || !config->isPic;
+    return target->usesOnlyLowPageBits(type) || !config->isPic;
 
   if (sym.isPreemptible)
     return false;
@@ -999,7 +998,7 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   if (!absVal && relE)
     return true;
   if (!absVal && !relE)
-    return target.usesOnlyLowPageBits(type);
+    return target->usesOnlyLowPageBits(type);
 
   assert(absVal && relE);
 
@@ -1058,13 +1057,13 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
 
   bool canWrite = (sec->flags & SHF_WRITE) || !config->zText;
   if (canWrite) {
-    RelType rel = target.getDynRel(type);
-    if (expr == R_GOT || (rel == target.symbolicRel && !sym.isPreemptible)) {
+    RelType rel = target->getDynRel(type);
+    if (expr == R_GOT || (rel == target->symbolicRel && !sym.isPreemptible)) {
       addRelativeReloc<true>(*sec, offset, sym, addend, expr, type);
       return;
     } else if (rel != 0) {
-      if (config->emachine == EM_MIPS && rel == target.symbolicRel)
-        rel = target.relativeRel;
+      if (config->emachine == EM_MIPS && rel == target->symbolicRel)
+        rel = target->relativeRel;
       std::lock_guard<std::mutex> lock(relocMutex);
       sec->getPartition().relaDyn->addSymbolReloc(rel, *sec, offset, sym,
                                                   addend, type);
@@ -1189,8 +1188,14 @@ static unsigned handleMipsTlsRelocation(RelType type, Symbol &sym,
 static unsigned handleTlsRelocation(RelType type, Symbol &sym,
                                     InputSectionBase &c, uint64_t offset,
                                     int64_t addend, RelExpr expr) {
-  if (!sym.isTls())
+  if (expr == R_TPREL || expr == R_TPREL_NEG) {
+    if (config->shared) {
+      errorOrWarn("relocation " + toString(type) + " against " + toString(sym) +
+                  " cannot be used with -shared" + getLocation(c, sym, offset));
+      return 1;
+    }
     return 0;
+  }
 
   if (config->emachine == EM_MIPS)
     return handleMipsTlsRelocation(type, sym, c, offset, addend, expr);
@@ -1283,6 +1288,7 @@ static unsigned handleTlsRelocation(RelType type, Symbol &sym,
 
   if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, R_AARCH64_GOT_PAGE_PC, R_GOT_OFF,
             R_TLSIE_HINT>(expr)) {
+    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
     // Initial-Exec relocs can be relaxed to Local-Exec if the symbol is locally
     // defined.
     if (toExecRelax && isLocalInExecutable) {
@@ -1328,7 +1334,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     return;
 
   const uint8_t *relocatedAddr = sec->rawData.begin() + offset;
-  RelExpr expr = target.getRelExpr(type, sym, relocatedAddr);
+  RelExpr expr = target->getRelExpr(type, sym, relocatedAddr);
 
   // Ignore R_*_NONE and other marker relocations.
   if (expr == R_NONE)
@@ -1385,17 +1391,12 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
 
   // Process TLS relocations, including relaxing TLS relocations. Note that
   // R_TPREL and R_TPREL_NEG relocations are resolved in processAux.
-  if (expr == R_TPREL || expr == R_TPREL_NEG) {
-    if (config->shared) {
-      errorOrWarn("relocation " + toString(type) + " against " + toString(sym) +
-                  " cannot be used with -shared" +
-                  getLocation(*sec, sym, offset));
+  if (sym.isTls()) {
+    if (unsigned processed =
+            handleTlsRelocation(type, sym, *sec, offset, addend, expr)) {
+      i += processed - 1;
       return;
     }
-  } else if (unsigned processed =
-                 handleTlsRelocation(type, sym, *sec, offset, addend, expr)) {
-    i += (processed - 1);
-    return;
   }
 
   // Relax relocations.
@@ -1421,7 +1422,7 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
             type == R_HEX_GD_PLT_B32_PCREL_X)))
       expr = fromPlt(expr);
     } else if (!isAbsoluteValue(sym)) {
-      expr = target.adjustGotPcExpr(type, addend, relocatedAddr);
+      expr = target->adjustGotPcExpr(type, addend, relocatedAddr);
     }
   }
 

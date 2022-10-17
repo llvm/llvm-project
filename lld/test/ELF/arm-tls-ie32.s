@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc %s -o %t.o -filetype=obj -triple=armv7a-linux-gnueabi
 // RUN: ld.lld %t.o -o %t.so -shared
-// RUN: llvm-readobj -S --dyn-relocations %t.so | FileCheck --check-prefix=SEC %s
+// RUN: llvm-readobj -S -d --dyn-relocations %t.so | FileCheck --check-prefix=SEC %s
 // RUN: llvm-objdump -d --triple=armv7a-linux-gnueabi %t.so | FileCheck %s
 
 /// Test the handling of the initial-exec TLS model. Relative location within
@@ -73,14 +73,15 @@ x:
 // SEC-NEXT:    SHF_ALLOC
 // SEC-NEXT:    SHF_WRITE
 // SEC-NEXT: ]
-// SEC-NEXT: Address: 0x20254
+// SEC-NEXT: Address: 0x2025C
 // SEC:      Size: 12
 
 
+// SEC: FLAGS STATIC_TLS
 // SEC: Dynamic Relocations {
-// SEC:  0x2025C R_ARM_TLS_TPOFF32
-// SEC:  0x20254 R_ARM_TLS_TPOFF32 x
-// SEC:  0x20258 R_ARM_TLS_TPOFF32 y
+// SEC:  0x20264 R_ARM_TLS_TPOFF32
+// SEC:  0x2025C R_ARM_TLS_TPOFF32 x
+// SEC:  0x20260 R_ARM_TLS_TPOFF32 y
 
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
@@ -89,9 +90,9 @@ x:
 // CHECK-NEXT:    101ec: e320f000        nop
 // CHECK-NEXT:    101f0: e320f000        nop
 
-/// (0x20254 - 0x101f4) + (0x101f4 - 0x101e8 - 8) = 0x10064
-// CHECK:         101f4: 64 00 01 00
-/// (0x20258 - 0x101f8) + (0x101f8 - 0x101ec - 8) = 0x10064
-// CHECK-NEXT:    101f8: 64 00 01 00
-/// (0x2025c - 0x101f8) + (0x101f8 - 0x101f0 - 8) = 0x10064
-// CHECK-NEXT:    101fc: 64 00 01 00
+/// (0x20264 - 0x101f4) + (0x101f4 - 0x101e8 - 8) = 0x1006c
+// CHECK:         101f4: 6c 00 01 00
+/// (0x2025C - 0x101f8) + (0x101f8 - 0x101ec - 8) = 0x1006c
+// CHECK-NEXT:    101f8: 6c 00 01 00
+/// (0x20260 - 0x101f8) + (0x101f8 - 0x101f0 - 8) = 0x1006c
+// CHECK-NEXT:    101fc: 6c 00 01 00

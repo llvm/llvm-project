@@ -126,9 +126,6 @@ if config.has_plugins and config.llvm_plugin_ext:
 if config.clang_default_pie_on_linux:
     config.available_features.add('default-pie-on-linux')
 
-if config.clang_default_std_cxx != '':
-    config.available_features.add('default-std-cxx')
-
 # Set available features we allow tests to conditionalize on.
 #
 if config.clang_default_cxx_stdlib != '':
