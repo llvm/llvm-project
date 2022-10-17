@@ -553,7 +553,7 @@ def UnaryOpKind : I32EnumAttr<
   let cppNamespace = "::mlir::cir";
 }
 
-// FIXME: NoSideEffect won't work when we add overloading.
+// FIXME: Pure won't work when we add overloading.
 def UnaryOp : CIR_Op<"unary", [Pure, SameOperandsAndResultType]> {
   let summary = "Unary operations";
   let description = [{
