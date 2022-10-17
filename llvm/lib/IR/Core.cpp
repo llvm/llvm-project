@@ -2806,7 +2806,7 @@ LLVMValueRef LLVMIsATerminatorInst(LLVMValueRef Inst) {
 
 unsigned LLVMGetNumArgOperands(LLVMValueRef Instr) {
   if (FuncletPadInst *FPI = dyn_cast<FuncletPadInst>(unwrap(Instr))) {
-    return FPI->getNumArgOperands();
+    return FPI->arg_size();
   }
   return unwrap<CallBase>(Instr)->arg_size();
 }
