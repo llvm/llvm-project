@@ -71,14 +71,14 @@ static StringLoc findNextVariable(StringRef str) {
   return {startPos, endPos - startPos};
 }
 
-// Check if `name` is the name of the variadic operand of `op`.  The variadic
-// operand can only appear at the last position in the list of operands.
+// Check if `name` is a variadic operand of `op`. Seach all operands since the
+// MLIR and LLVM IR operand order may differ and only for the latter the
+// variadic operand is guaranteed to be at the end of the operands list.
 static bool isVariadicOperandName(const tblgen::Operator &op, StringRef name) {
-  unsigned numOperands = op.getNumOperands();
-  if (numOperands == 0)
-    return false;
-  const auto &operand = op.getOperand(numOperands - 1);
-  return operand.isVariableLength() && operand.name == name;
+  for (int i = 0, e = op.getNumOperands(); i < e; ++i)
+    if (op.getOperand(i).name == name)
+      return op.getOperand(i).isVariadic();
+  return false;
 }
 
 // Check if `result` is a known name of a result of `op`.
@@ -232,14 +232,17 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
     if (succeeded(argIndex)) {
       // Access the LLVM IR operand that maps to the given argument index using
       // the provided argument indices mapping.
-      // FIXME: support trailing variadic arguments.
-      int64_t operandIdx = llvmArgIndices[*argIndex];
-      if (operandIdx < 0) {
+      int64_t idx = llvmArgIndices[*argIndex];
+      if (idx < 0) {
         return emitError(
             record, "expected non-negative operand index for argument " + name);
       }
-      assert(!isVariadicOperandName(op, name) && "unexpected variadic operand");
-      bs << formatv("processValue(llvmOperands[{0}])", operandIdx);
+      bool isVariadicOperand = isVariadicOperandName(op, name);
+      auto result =
+          isVariadicOperand
+              ? formatv("processValues(llvmOperands.drop_front({0}))", idx)
+              : formatv("processValue(llvmOperands[{0}])", idx);
+      bs << result;
     } else if (isResultName(op, name)) {
       if (op.getNumResults() != 1)
         return emitError(record, "expected op to have one result");

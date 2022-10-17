@@ -1021,7 +1021,7 @@ def LLVM_ReturnOp : LLVM_TerminatorOp<"return", [Pure]> {
   string llvmInstName = "Ret";
   string llvmBuilder = [{
     if ($_numOperands != 0)
-      builder.CreateRet($arg[0]);
+      builder.CreateRet($arg);
     else
       builder.CreateRetVoid();
   }];
