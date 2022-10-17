@@ -148,6 +148,48 @@ enum class LegacyToPrefixMask : uint64_t {
       0x8000000003e00000, // S/T (6-10) - The [S/T]X bit moves from 28 to 5.
 };
 
+namespace {
+class PPC64 final : public TargetInfo {
+public:
+  PPC64();
+  int getTlsGdRelaxSkip(RelType type) const override;
+  uint32_t calcEFlags() const override;
+  RelExpr getRelExpr(RelType type, const Symbol &s,
+                     const uint8_t *loc) const override;
+  RelType getDynRel(RelType type) const override;
+  int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
+  void writePltHeader(uint8_t *buf) const override;
+  void writePlt(uint8_t *buf, const Symbol &sym,
+                uint64_t pltEntryAddr) const override;
+  void writeIplt(uint8_t *buf, const Symbol &sym,
+                 uint64_t pltEntryAddr) const override;
+  void relocate(uint8_t *loc, const Relocation &rel,
+                uint64_t val) const override;
+  void writeGotHeader(uint8_t *buf) const override;
+  bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
+                  uint64_t branchAddr, const Symbol &s,
+                  int64_t a) const override;
+  uint32_t getThunkSectionSpacing() const override;
+  bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
+  RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
+  RelExpr adjustGotPcExpr(RelType type, int64_t addend,
+                          const uint8_t *loc) const override;
+  void relaxGot(uint8_t *loc, const Relocation &rel,
+                uint64_t val) const override;
+  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
+                      uint64_t val) const override;
+
+  bool adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
+                                        uint8_t stOther) const override;
+};
+} // namespace
+
 uint64_t elf::getPPC64TocBase() {
   // The TOC consists of sections .got, .toc, .tocbss, .plt in that order. The
   // TOC starts where the first of these sections starts. We always create a
@@ -354,48 +396,6 @@ bool elf::tryRelaxPPC64TocIndirection(const Relocation &rel, uint8_t *bufLoc) {
   target->relaxGot(bufLoc, rel, tocRelative + ppc64TocOffset);
   return true;
 }
-
-namespace {
-class PPC64 final : public TargetInfo {
-public:
-  PPC64();
-  int getTlsGdRelaxSkip(RelType type) const override;
-  uint32_t calcEFlags() const override;
-  RelExpr getRelExpr(RelType type, const Symbol &s,
-                     const uint8_t *loc) const override;
-  RelType getDynRel(RelType type) const override;
-  int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
-  void writePltHeader(uint8_t *buf) const override;
-  void writePlt(uint8_t *buf, const Symbol &sym,
-                uint64_t pltEntryAddr) const override;
-  void writeIplt(uint8_t *buf, const Symbol &sym,
-                 uint64_t pltEntryAddr) const override;
-  void relocate(uint8_t *loc, const Relocation &rel,
-                uint64_t val) const override;
-  void writeGotHeader(uint8_t *buf) const override;
-  bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
-                  uint64_t branchAddr, const Symbol &s,
-                  int64_t a) const override;
-  uint32_t getThunkSectionSpacing() const override;
-  bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
-  RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
-  RelExpr adjustGotPcExpr(RelType type, int64_t addend,
-                          const uint8_t *loc) const override;
-  void relaxGot(uint8_t *loc, const Relocation &rel,
-                uint64_t val) const override;
-  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-
-  bool adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
-                                        uint8_t stOther) const override;
-};
-} // namespace
 
 // Relocation masks following the #lo(value), #hi(value), #ha(value),
 // #higher(value), #highera(value), #highest(value), and #highesta(value)
