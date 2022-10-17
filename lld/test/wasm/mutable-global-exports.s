@@ -79,10 +79,13 @@ _start:
 # CHECK-ALL-NEXT:      - Name:            __heap_base
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           5
-# CHECK-ALL-NEXT:      - Name:            __memory_base
+# CHECK-ALL-NEXT:      - Name:            __heap_end
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           6
-# CHECK-ALL-NEXT:      - Name:            __table_base
+# CHECK-ALL-NEXT:      - Name:            __memory_base
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           7
+# CHECK-ALL-NEXT:      - Name:            __table_base
+# CHECK-ALL-NEXT:        Kind:            GLOBAL
+# CHECK-ALL-NEXT:        Index:           8
 # CHECK-ALL-NEXT:  - Type:            CODE
