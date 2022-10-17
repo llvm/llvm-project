@@ -4857,6 +4857,14 @@ static Value *simplifyExtractElementInst(Value *Vec, Value *Idx,
     if (Value *Elt = findScalarElement(Vec, IdxC->getZExtValue()))
       return Elt;
   } else {
+    // extractelt x, (insertelt y, elt, n), n -> elt
+    // If the possibly-variable indices are trivially known to be equal
+    // (because they are the same operand) then use the value that was
+    // inserted directly.
+    auto *IE = dyn_cast<InsertElementInst>(Vec);
+    if (IE && IE->getOperand(2) == Idx)
+      return IE->getOperand(1);
+
     // The index is not relevant if our vector is a splat.
     if (Value *Splat = getSplatValue(Vec))
       return Splat;
