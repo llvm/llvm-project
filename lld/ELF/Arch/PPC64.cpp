@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
+#include "OutputSections.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -174,19 +175,17 @@ public:
   RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
   RelExpr adjustGotPcExpr(RelType type, int64_t addend,
                           const uint8_t *loc) const override;
-  void relaxGot(uint8_t *loc, const Relocation &rel,
-                uint64_t val) const override;
-  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
+  void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
 
   bool adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                         uint8_t stOther) const override;
+
+private:
+  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsLdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
 };
 } // namespace
 
@@ -362,7 +361,8 @@ getRelaTocSymAndAddend(InputSectionBase *tocSec, uint64_t offset) {
 //   ld/lwa 3, 0(3)           # load the value from the address
 //
 // Returns true if the relaxation is performed.
-bool elf::tryRelaxPPC64TocIndirection(const Relocation &rel, uint8_t *bufLoc) {
+static bool tryRelaxPPC64TocIndirection(const Relocation &rel,
+                                        uint8_t *bufLoc) {
   assert(config->tocOptimize);
   if (rel.addend < 0)
     return false;
@@ -393,7 +393,8 @@ bool elf::tryRelaxPPC64TocIndirection(const Relocation &rel, uint8_t *bufLoc) {
     return false;
 
   // Add PPC64TocOffset that will be subtracted by PPC64::relocate().
-  target->relaxGot(bufLoc, rel, tocRelative + ppc64TocOffset);
+  static_cast<const PPC64 &>(*target).relaxGot(bufLoc, rel,
+                                               tocRelative + ppc64TocOffset);
   return true;
 }
 
@@ -1509,6 +1510,87 @@ void PPC64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
   }
   default:
     llvm_unreachable("unsupported relocation for TLS GD to IE relaxation");
+  }
+}
+
+void PPC64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr;
+  if (auto *s = dyn_cast<InputSection>(&sec))
+    secAddr += s->outSecOff;
+  uint64_t lastPPCRelaxedRelocOff = -1;
+  for (const Relocation &rel : sec.relocations) {
+    uint8_t *loc = buf + rel.offset;
+    const uint64_t val =
+        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
+                             secAddr + rel.offset, *rel.sym, rel.expr);
+    switch (rel.expr) {
+    case R_PPC64_RELAX_GOT_PC: {
+      // The R_PPC64_PCREL_OPT relocation must appear immediately after
+      // R_PPC64_GOT_PCREL34 in the relocations table at the same offset.
+      // We can only relax R_PPC64_PCREL_OPT if we have also relaxed
+      // the associated R_PPC64_GOT_PCREL34 since only the latter has an
+      // associated symbol. So save the offset when relaxing R_PPC64_GOT_PCREL34
+      // and only relax the other if the saved offset matches.
+      if (rel.type == R_PPC64_GOT_PCREL34)
+        lastPPCRelaxedRelocOff = rel.offset;
+      if (rel.type == R_PPC64_PCREL_OPT && rel.offset != lastPPCRelaxedRelocOff)
+        break;
+      relaxGot(loc, rel, val);
+      break;
+    }
+    case R_PPC64_RELAX_TOC:
+      // rel.sym refers to the STT_SECTION symbol associated to the .toc input
+      // section. If an R_PPC64_TOC16_LO (.toc + addend) references the TOC
+      // entry, there may be R_PPC64_TOC16_HA not paired with
+      // R_PPC64_TOC16_LO_DS. Don't relax. This loses some relaxation
+      // opportunities but is safe.
+      if (ppc64noTocRelax.count({rel.sym, rel.addend}) ||
+          !tryRelaxPPC64TocIndirection(rel, loc))
+        relocate(loc, rel, val);
+      break;
+    case R_PPC64_CALL:
+      // If this is a call to __tls_get_addr, it may be part of a TLS
+      // sequence that has been relaxed and turned into a nop. In this
+      // case, we don't want to handle it as a call.
+      if (read32(loc) == 0x60000000) // nop
+        break;
+
+      // Patch a nop (0x60000000) to a ld.
+      if (rel.sym->needsTocRestore) {
+        // gcc/gfortran 5.4, 6.3 and earlier versions do not add nop for
+        // recursive calls even if the function is preemptible. This is not
+        // wrong in the common case where the function is not preempted at
+        // runtime. Just ignore.
+        if ((rel.offset + 8 > sec.rawData.size() ||
+             read32(loc + 4) != 0x60000000) &&
+            rel.sym->file != sec.file) {
+          // Use substr(6) to remove the "__plt_" prefix.
+          errorOrWarn(getErrorLocation(loc) + "call to " +
+                      lld::toString(*rel.sym).substr(6) +
+                      " lacks nop, can't restore toc");
+          break;
+        }
+        write32(loc + 4, 0xe8410018); // ld %r2, 24(%r1)
+      }
+      relocate(loc, rel, val);
+      break;
+    case R_RELAX_TLS_GD_TO_IE:
+    case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
+      relaxTlsGdToIe(loc, rel, val);
+      break;
+    case R_RELAX_TLS_GD_TO_LE:
+      relaxTlsGdToLe(loc, rel, val);
+      break;
+    case R_RELAX_TLS_LD_TO_LE_ABS:
+      relaxTlsLdToLe(loc, rel, val);
+      break;
+    case R_RELAX_TLS_IE_TO_LE:
+      relaxTlsIeToLe(loc, rel, val);
+      break;
+    default:
+      relocate(loc, rel, val);
+      break;
+    }
   }
 }
 
