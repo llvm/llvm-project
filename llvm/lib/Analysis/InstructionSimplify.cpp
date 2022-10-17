@@ -5461,6 +5461,10 @@ simplifyFDivInst(Value *Op0, Value *Op1, FastMathFlags FMF,
     if (match(Op0, m_FNegNSZ(m_Specific(Op1))) ||
         match(Op1, m_FNegNSZ(m_Specific(Op0))))
       return ConstantFP::get(Op0->getType(), -1.0);
+
+    // nnan ninf X / [-]0.0 -> poison
+    if (FMF.noInfs() && match(Op1, m_AnyZeroFP()))
+      return PoisonValue::get(Op1->getType());
   }
 
   return nullptr;
