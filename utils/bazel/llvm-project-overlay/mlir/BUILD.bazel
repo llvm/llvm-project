@@ -7406,6 +7406,8 @@ gentbl_cc_library(
 cc_library(
     name = "QuantOps",
     srcs = [
+        "lib/Dialect/Quant/IR/QuantDialectBytecode.h"
+        "lib/Dialect/Quant/IR/QuantDialectBytecode.cpp"
         "lib/Dialect/Quant/IR/QuantOps.cpp",
         "lib/Dialect/Quant/IR/QuantTypes.cpp",
         "lib/Dialect/Quant/IR/TypeDetail.h",
