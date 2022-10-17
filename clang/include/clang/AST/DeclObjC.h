@@ -2055,6 +2055,12 @@ class ObjCProtocolDecl : public ObjCContainerDecl,
 
     /// Referenced protocols
     ObjCProtocolList ReferencedProtocols;
+
+    /// Tracks whether a ODR hash has been computed for this protocol.
+    unsigned HasODRHash : 1;
+
+    /// A hash of parts of the class to help in ODR checking.
+    unsigned ODRHash = 0;
   };
 
   /// Contains a pointer to the data associated with this class,
@@ -2091,10 +2097,15 @@ class ObjCProtocolDecl : public ObjCContainerDecl,
     return getMostRecentDecl();
   }
 
+  /// True if a valid hash is stored in ODRHash.
+  bool hasODRHash() const;
+  void setHasODRHash(bool HasHash);
+
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTReader;
+  friend class ODRDiagsEmitter;
 
   static ObjCProtocolDecl *Create(ASTContext &C, DeclContext *DC,
                                   IdentifierInfo *Id,
@@ -2249,6 +2260,9 @@ public:
   void collectInheritedProtocolProperties(const ObjCPropertyDecl *Property,
                                           ProtocolPropertySet &PS,
                                           PropertyDeclOrder &PO) const;
+
+  /// Get precomputed ODRHash or add a new one.
+  unsigned getODRHash();
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == ObjCProtocol; }

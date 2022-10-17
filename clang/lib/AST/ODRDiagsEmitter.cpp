@@ -266,6 +266,65 @@ bool ODRDiagsEmitter::diagnoseSubMismatchVar(const NamedDecl *FirstRecord,
   return false;
 }
 
+bool ODRDiagsEmitter::diagnoseSubMismatchProtocols(
+    const ObjCProtocolList &FirstProtocols,
+    const ObjCContainerDecl *FirstContainer, StringRef FirstModule,
+    const ObjCProtocolList &SecondProtocols,
+    const ObjCContainerDecl *SecondContainer, StringRef SecondModule) const {
+  // Keep in sync with err_module_odr_violation_referenced_protocols.
+  enum ODRReferencedProtocolDifference {
+    NumProtocols,
+    ProtocolType,
+  };
+  auto DiagRefProtocolError = [FirstContainer, FirstModule,
+                               this](SourceLocation Loc, SourceRange Range,
+                                     ODRReferencedProtocolDifference DiffType) {
+    return Diag(Loc, diag::err_module_odr_violation_referenced_protocols)
+           << FirstContainer << FirstModule.empty() << FirstModule << Range
+           << DiffType;
+  };
+  auto DiagRefProtocolNote = [SecondModule,
+                              this](SourceLocation Loc, SourceRange Range,
+                                    ODRReferencedProtocolDifference DiffType) {
+    return Diag(Loc, diag::note_module_odr_violation_referenced_protocols)
+           << SecondModule << Range << DiffType;
+  };
+  auto GetProtoListSourceRange = [](const ObjCProtocolList &PL) {
+    if (PL.empty())
+      return SourceRange();
+    return SourceRange(*PL.loc_begin(), *std::prev(PL.loc_end()));
+  };
+
+  if (FirstProtocols.size() != SecondProtocols.size()) {
+    DiagRefProtocolError(FirstContainer->getLocation(),
+                         GetProtoListSourceRange(FirstProtocols), NumProtocols)
+        << FirstProtocols.size();
+    DiagRefProtocolNote(SecondContainer->getLocation(),
+                        GetProtoListSourceRange(SecondProtocols), NumProtocols)
+        << SecondProtocols.size();
+    return true;
+  }
+
+  for (unsigned I = 0, E = FirstProtocols.size(); I != E; ++I) {
+    const ObjCProtocolDecl *FirstProtocol = FirstProtocols[I];
+    const ObjCProtocolDecl *SecondProtocol = SecondProtocols[I];
+    DeclarationName FirstProtocolName = FirstProtocol->getDeclName();
+    DeclarationName SecondProtocolName = SecondProtocol->getDeclName();
+    if (FirstProtocolName != SecondProtocolName) {
+      SourceLocation FirstLoc = *(FirstProtocols.loc_begin() + I);
+      SourceLocation SecondLoc = *(SecondProtocols.loc_begin() + I);
+      SourceRange EmptyRange;
+      DiagRefProtocolError(FirstLoc, EmptyRange, ProtocolType)
+          << (I + 1) << FirstProtocolName;
+      DiagRefProtocolNote(SecondLoc, EmptyRange, ProtocolType)
+          << (I + 1) << SecondProtocolName;
+      return true;
+    }
+  }
+
+  return false;
+}
+
 ODRDiagsEmitter::DiffResult
 ODRDiagsEmitter::FindTypeDiffs(DeclHashes &FirstHashes,
                                DeclHashes &SecondHashes) {
@@ -1532,4 +1591,93 @@ bool ODRDiagsEmitter::diagnoseMismatch(const EnumDecl *FirstEnum,
     }
   }
   return false;
+}
+
+bool ODRDiagsEmitter::diagnoseMismatch(
+    const ObjCProtocolDecl *FirstProtocol,
+    const ObjCProtocolDecl *SecondProtocol,
+    const struct ObjCProtocolDecl::DefinitionData *SecondDD) const {
+  if (FirstProtocol == SecondProtocol)
+    return false;
+
+  std::string FirstModule = getOwningModuleNameForDiagnostic(FirstProtocol);
+  std::string SecondModule = getOwningModuleNameForDiagnostic(SecondProtocol);
+
+  const ObjCProtocolDecl::DefinitionData *FirstDD = &FirstProtocol->data();
+  assert(FirstDD && SecondDD && "Definitions without DefinitionData");
+  // Diagnostics from ObjCProtocol DefinitionData are emitted here.
+  if (FirstDD != SecondDD) {
+    // Check both protocols reference the same protocols.
+    const ObjCProtocolList &FirstProtocols =
+        FirstProtocol->getReferencedProtocols();
+    const ObjCProtocolList &SecondProtocols = SecondDD->ReferencedProtocols;
+    if (diagnoseSubMismatchProtocols(FirstProtocols, FirstProtocol, FirstModule,
+                                     SecondProtocols, SecondProtocol,
+                                     SecondModule))
+      return true;
+  }
+
+  auto PopulateHashes = [](DeclHashes &Hashes, const ObjCProtocolDecl *ID,
+                           const DeclContext *DC) {
+    for (const Decl *D : ID->decls()) {
+      if (!ODRHash::isDeclToBeProcessed(D, DC))
+        continue;
+      Hashes.emplace_back(D, computeODRHash(D));
+    }
+  };
+
+  DeclHashes FirstHashes;
+  DeclHashes SecondHashes;
+  // Use definition as DeclContext because definitions are merged when
+  // DeclContexts are merged and separate when DeclContexts are separate.
+  PopulateHashes(FirstHashes, FirstProtocol, FirstProtocol->getDefinition());
+  PopulateHashes(SecondHashes, SecondProtocol, SecondProtocol->getDefinition());
+
+  DiffResult DR = FindTypeDiffs(FirstHashes, SecondHashes);
+  ODRMismatchDecl FirstDiffType = DR.FirstDiffType;
+  ODRMismatchDecl SecondDiffType = DR.SecondDiffType;
+  const Decl *FirstDecl = DR.FirstDecl;
+  const Decl *SecondDecl = DR.SecondDecl;
+
+  if (FirstDiffType == Other || SecondDiffType == Other) {
+    diagnoseSubMismatchUnexpected(DR, FirstProtocol, FirstModule,
+                                  SecondProtocol, SecondModule);
+    return true;
+  }
+
+  if (FirstDiffType != SecondDiffType) {
+    diagnoseSubMismatchDifferentDeclKinds(DR, FirstProtocol, FirstModule,
+                                          SecondProtocol, SecondModule);
+    return true;
+  }
+
+  assert(FirstDiffType == SecondDiffType);
+  switch (FirstDiffType) {
+  // Already handled.
+  case EndOfClass:
+  case Other:
+  // Cannot be contained by ObjCProtocolDecl, invalid in this context.
+  case Field:
+  case TypeDef:
+  case Var:
+  // C++ only, invalid in this context.
+  case PublicSpecifer:
+  case PrivateSpecifer:
+  case ProtectedSpecifer:
+  case StaticAssert:
+  case CXXMethod:
+  case TypeAlias:
+  case Friend:
+  case FunctionTemplate:
+    llvm_unreachable("Invalid diff type");
+  }
+
+  Diag(FirstDecl->getLocation(),
+       diag::err_module_odr_violation_mismatch_decl_unknown)
+      << FirstProtocol << FirstModule.empty() << FirstModule << FirstDiffType
+      << FirstDecl->getSourceRange();
+  Diag(SecondDecl->getLocation(),
+       diag::note_module_odr_violation_mismatch_decl_unknown)
+      << SecondModule << FirstDiffType << SecondDecl->getSourceRange();
+  return true;
 }
