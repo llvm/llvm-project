@@ -1120,7 +1120,7 @@ LValue CIRGenFunction::buildCheckedLValue(const Expr *E, TypeCheckKind TCK) {
   if (!isa<DeclRefExpr>(E) && !LV.isBitField() && LV.isSimple()) {
     SanitizerSet SkippedChecks;
     if (const auto *ME = dyn_cast<MemberExpr>(E)) {
-      bool IsBaseCXXThis = IsWrappedCXXThis(ME->getBase());
+      bool IsBaseCXXThis = isWrappedCXXThis(ME->getBase());
       if (IsBaseCXXThis)
         SkippedChecks.set(SanitizerKind::Alignment, true);
       if (IsBaseCXXThis || isa<DeclRefExpr>(ME->getBase()))
@@ -1133,7 +1133,7 @@ LValue CIRGenFunction::buildCheckedLValue(const Expr *E, TypeCheckKind TCK) {
 }
 
 // TODO(cir): candidate for common AST helper for LLVM and CIR codegen
-bool CIRGenFunction::IsWrappedCXXThis(const Expr *Obj) {
+bool CIRGenFunction::isWrappedCXXThis(const Expr *Obj) {
   const Expr *Base = Obj;
   while (!isa<CXXThisExpr>(Base)) {
     // The result of a dynamic_cast can be null.
@@ -1171,7 +1171,7 @@ LValue CIRGenFunction::buildMemberExpr(const MemberExpr *E) {
     Address Addr = buildPointerWithAlignment(BaseExpr, &BaseInfo);
     QualType PtrTy = BaseExpr->getType()->getPointeeType();
     SanitizerSet SkippedChecks;
-    bool IsBaseCXXThis = IsWrappedCXXThis(BaseExpr);
+    bool IsBaseCXXThis = isWrappedCXXThis(BaseExpr);
     if (IsBaseCXXThis)
       SkippedChecks.set(SanitizerKind::Alignment, true);
     if (IsBaseCXXThis || isa<DeclRefExpr>(BaseExpr))
@@ -1639,29 +1639,6 @@ RValue CIRGenFunction::buildCXXMemberCallExpr(const CXXMemberCallExpr *CE,
 
   return buildCXXMemberOrOperatorMemberCallExpr(
       CE, MD, ReturnValue, HasQualifier, Qualifier, IsArrow, Base);
-}
-
-bool CIRGenFunction::isWrappedCXXThis(const Expr *object) {
-  const Expr *base = object;
-  while (!isa<CXXThisExpr>(base)) {
-    // The result of a dynamic_cast can be null.
-    if (isa<CXXDynamicCastExpr>(base))
-      return false;
-
-    if (const auto *ce = dyn_cast<CastExpr>(base)) {
-      (void)ce;
-      llvm_unreachable("NYI");
-    } else if (const auto *pe = dyn_cast<ParenExpr>(base)) {
-      (void)pe;
-      llvm_unreachable("NYI");
-    } else if (const auto *uo = dyn_cast<UnaryOperator>(base)) {
-      (void)uo;
-      llvm_unreachable("NYI");
-    } else {
-      return false;
-    }
-  }
-  return true;
 }
 
 RValue CIRGenFunction::buildReferenceBindingToExpr(const Expr *E) {
