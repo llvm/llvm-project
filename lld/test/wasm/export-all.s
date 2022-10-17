@@ -46,9 +46,12 @@ foo:
 # CHECK-NEXT:       - Name:            __heap_base
 # CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         Index:           6
-# CHECK-NEXT:       - Name:            __memory_base
+# CHECK-NEXT:       - Name:            __heap_end
 # CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         Index:           7
-# CHECK-NEXT:       - Name:            __table_base
+# CHECK-NEXT:       - Name:            __memory_base
 # CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         Index:           8
+# CHECK-NEXT:       - Name:            __table_base
+# CHECK-NEXT:         Kind:            GLOBAL
+# CHECK-NEXT:         Index:           9
