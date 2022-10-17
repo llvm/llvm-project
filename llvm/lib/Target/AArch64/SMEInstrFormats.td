@@ -1337,3 +1337,60 @@ multiclass sme2_mla_add_sub_array_vg4_multi_D<string mnemonic, bits<2> op>{
   def : InstAlias<mnemonic # "\t$ZAd[$Rv, $imm3], $Zn, $Zm",
                  (!cast<Instruction>(NAME) MatrixOp64:$ZAd,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3, ZZZZ_d_mul_r:$Zn, ZZZZ_d_mul_r:$Zm), 0>;
 }
+
+//===----------------------------------------------------------------------===//
+// SME2 Multi-vector - Multiple and Single SVE Destructive
+// Two and Four registers
+
+class sme2_sqdmulh_add_vector_vg2_single<bits<2> sz, bits<6> op,
+                                         RegisterOperand vector_ty,
+                                         ZPRRegOp zpr_ty, string mnemonic>
+    : I<(outs vector_ty:$Zdn), (ins vector_ty:$_Zdn, zpr_ty:$Zm),
+        mnemonic, "\t$Zdn, $_Zdn, $Zm",
+        "", []>, Sched<[]> {
+  bits<4> Zm;
+  bits<4> Zdn;
+  let Inst{31-24} = 0b11000001;
+  let Inst{23-22} = sz;
+  let Inst{21-20} = 0b10;
+  let Inst{19-16} = Zm;
+  let Inst{15-11} = 0b10100;
+  let Inst{10-5}  = op;
+  let Inst{4-1}   = Zdn;
+  let Inst{0}     = 0b0;
+  let Constraints = "$Zdn = $_Zdn";
+}
+
+multiclass sme2_sqdmulh_add_vector_vg2_single<string mnemonic, bits<6> op> {
+  def _B : sme2_sqdmulh_add_vector_vg2_single<0b00, op, ZZ_b_mul_r, ZPR4b8, mnemonic>;
+  def _H : sme2_sqdmulh_add_vector_vg2_single<0b01, op, ZZ_h_mul_r, ZPR4b16, mnemonic>;
+  def _S : sme2_sqdmulh_add_vector_vg2_single<0b10, op, ZZ_s_mul_r, ZPR4b32, mnemonic>;
+  def _D : sme2_sqdmulh_add_vector_vg2_single<0b11, op, ZZ_d_mul_r, ZPR4b64, mnemonic>;
+}
+
+class sme2_sqdmulh_add_vector_vg4_single<bits<2> sz, bits<6> op,
+                                         RegisterOperand vector_ty,
+                                         ZPRRegOp zpr_ty, string mnemonic>
+    : I<(outs vector_ty:$Zdn), (ins vector_ty:$_Zdn, zpr_ty:$Zm),
+        mnemonic, "\t$Zdn, $_Zdn, $Zm",
+        "", []>, Sched<[]> {
+  bits<4> Zm;
+  bits<3> Zdn;
+  let Inst{31-24} = 0b11000001;
+  let Inst{23-22} = sz;
+  let Inst{21-20} = 0b10;
+  let Inst{19-16} = Zm;
+  let Inst{15-11} = 0b10101;
+  let Inst{10-5}  = op;
+  let Inst{4-2}   = Zdn;
+  let Inst{1-0}   = 0b00;
+  let Constraints = "$Zdn = $_Zdn";
+}
+
+multiclass sme2_sqdmulh_add_vector_vg4_single<string mnemonic, bits<6> op> {
+  def _B : sme2_sqdmulh_add_vector_vg4_single<0b00, op, ZZZZ_b_mul_r, ZPR4b8, mnemonic>;
+  def _H : sme2_sqdmulh_add_vector_vg4_single<0b01, op, ZZZZ_h_mul_r, ZPR4b16, mnemonic>;
+  def _S : sme2_sqdmulh_add_vector_vg4_single<0b10, op, ZZZZ_s_mul_r, ZPR4b32, mnemonic>;
+  def _D : sme2_sqdmulh_add_vector_vg4_single<0b11, op, ZZZZ_d_mul_r, ZPR4b64, mnemonic>;
+}
+
