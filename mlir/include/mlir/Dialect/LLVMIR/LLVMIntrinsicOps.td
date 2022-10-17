@@ -400,60 +400,84 @@ def LLVM_GetActiveLaneMaskOp
 }
 
 /// Create a call to Masked Load intrinsic.
-def LLVM_MaskedLoadOp : LLVM_Op<"intr.masked.load"> {
+def LLVM_MaskedLoadOp : LLVM_OneResultIntrOp<"masked.load"> {
   let arguments = (ins LLVM_Type:$data, LLVM_Type:$mask,
                    Variadic<LLVM_Type>:$pass_thru, I32Attr:$alignment);
   let results = (outs LLVM_AnyVector:$res);
+  let assemblyFormat =
+    "operands attr-dict `:` functional-type(operands, results)";
+
   string llvmBuilder = [{
     $res = $pass_thru.empty() ? builder.CreateMaskedLoad(
         $_resultType, $data, llvm::Align($alignment), $mask) :
       builder.CreateMaskedLoad(
         $_resultType, $data, llvm::Align($alignment), $mask, $pass_thru[0]);
   }];
-  let assemblyFormat =
-    "operands attr-dict `:` functional-type(operands, results)";
+  string mlirBuilder = [{
+    $res = $_builder.create<LLVM::MaskedLoadOp>($_location,
+      $_resultType, $data, $mask, $pass_thru, $_int_attr($alignment));
+  }];
+  list<int> llvmArgIndices = [0, 2, 3, 1];
 }
 
 /// Create a call to Masked Store intrinsic.
-def LLVM_MaskedStoreOp : LLVM_Op<"intr.masked.store"> {
+def LLVM_MaskedStoreOp : LLVM_ZeroResultIntrOp<"masked.store"> {
   let arguments = (ins LLVM_Type:$value, LLVM_Type:$data, LLVM_Type:$mask,
                    I32Attr:$alignment);
   let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
+  let assemblyFormat = "$value `,` $data `,` $mask attr-dict `:` "
+    "type($value) `,` type($mask) `into` type($data)";
+
   string llvmBuilder = [{
     builder.CreateMaskedStore(
       $value, $data, llvm::Align($alignment), $mask);
   }];
-  let assemblyFormat = "$value `,` $data `,` $mask attr-dict `:` "
-    "type($value) `,` type($mask) `into` type($data)";
+  string mlirBuilder = [{
+    $_builder.create<LLVM::MaskedStoreOp>($_location,
+      $value, $data, $mask, $_int_attr($alignment));
+  }];
+  list<int> llvmArgIndices = [0, 1, 3, 2];
 }
 
 /// Create a call to Masked Gather intrinsic.
-def LLVM_masked_gather : LLVM_Op<"intr.masked.gather"> {
+def LLVM_masked_gather : LLVM_OneResultIntrOp<"masked.gather"> {
   let arguments = (ins LLVM_AnyVector:$ptrs, LLVM_Type:$mask,
                    Variadic<LLVM_Type>:$pass_thru, I32Attr:$alignment);
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
+  let assemblyFormat =
+    "operands attr-dict `:` functional-type(operands, results)";
+
   string llvmBuilder = [{
     $res = $pass_thru.empty() ? builder.CreateMaskedGather(
         $_resultType, $ptrs, llvm::Align($alignment), $mask) :
       builder.CreateMaskedGather(
         $_resultType, $ptrs, llvm::Align($alignment), $mask, $pass_thru[0]);
   }];
-  let assemblyFormat =
-    "operands attr-dict `:` functional-type(operands, results)";
+  string mlirBuilder = [{
+    $res = $_builder.create<LLVM::masked_gather>($_location,
+      $_resultType, $ptrs, $mask, $pass_thru, $_int_attr($alignment));
+  }];
+  list<int> llvmArgIndices = [0, 2, 3, 1];
 }
 
 /// Create a call to Masked Scatter intrinsic.
-def LLVM_masked_scatter : LLVM_Op<"intr.masked.scatter"> {
+def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
   let arguments = (ins LLVM_Type:$value, LLVM_Type:$ptrs, LLVM_Type:$mask,
                    I32Attr:$alignment);
   let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
+  let assemblyFormat = "$value `,` $ptrs `,` $mask attr-dict `:` "
+    "type($value) `,` type($mask) `into` type($ptrs)";
+
   string llvmBuilder = [{
     builder.CreateMaskedScatter(
       $value, $ptrs, llvm::Align($alignment), $mask);
   }];
-  let assemblyFormat = "$value `,` $ptrs `,` $mask attr-dict `:` "
-    "type($value) `,` type($mask) `into` type($ptrs)";
+  string mlirBuilder = [{
+    $_builder.create<LLVM::masked_scatter>($_location,
+      $value, $ptrs, $mask, $_int_attr($alignment));
+  }];
+  list<int> llvmArgIndices = [0, 1, 3, 2];
 }
 
 /// Create a call to Masked Expand Load intrinsic.

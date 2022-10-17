@@ -228,7 +228,6 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<Trait> traits = []> :
   //   - $_builder - substituted with the MLIR builder;
   //   - $_qualCppClassName - substitiuted with the MLIR operation class name.
   // Additionally, `$$` can be used to produce the dollar character.
-  // FIXME: The $name variable resolution does not support variadic arguments.
   string mlirBuilder = "";
 
   // An array that specifies a mapping from MLIR argument indices to LLVM IR
