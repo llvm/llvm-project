@@ -350,6 +350,19 @@ add_gen_header(
     .llvm-libc-types.struct_rusage
 )
 
+add_gen_header(
+  termios
+  DEF_FILE termios.h.def
+  GEN_HDR termios.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.termios_macros
+    .llvm-libc-types.cc_t
+    .llvm-libc-types.speed_t
+    .llvm-libc-types.struct_termios
+    .llvm-libc-types.tcflag_t
+)
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   # We don't install headers in non-fullbuild mode.
   return()

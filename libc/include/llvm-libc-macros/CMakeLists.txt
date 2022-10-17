@@ -100,6 +100,14 @@ add_header(
 )
 
 add_header(
+  termios_macros
+  HDR
+    termios-macros.h
+  DEPENDS
+    .linux.termios_macros
+)
+
+add_header(
   time_macros
   HDR
     time-macros.h
