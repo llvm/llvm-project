@@ -1035,6 +1035,35 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
 // space for the extra PT_LOAD even if we end up not using it.
 void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
                                    Symbol &sym, int64_t addend) const {
+  // We were asked not to generate PLT entries for ifuncs. Instead, pass the
+  // direct relocation on through.
+  const bool isIfunc = sym.isGnuIFunc();
+  if (LLVM_UNLIKELY(isIfunc) && config->zIfuncNoplt) {
+    std::lock_guard<std::mutex> lock(relocMutex);
+    sym.exportDynamic = true;
+    mainPart->relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
+    return;
+  }
+
+  if (needsGot(expr)) {
+    if (config->emachine == EM_MIPS) {
+      // MIPS ABI has special rules to process GOT entries and doesn't
+      // require relocation entries for them. A special case is TLS
+      // relocations. In that case dynamic loader applies dynamic
+      // relocations to initialize TLS GOT entries.
+      // See "Global Offset Table" in Chapter 5 in the following document
+      // for detailed description:
+      // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+      in.mipsGot->addEntry(*sec->file, sym, addend, expr);
+    } else {
+      sym.setFlags(NEEDS_GOT);
+    }
+  } else if (needsPlt(expr)) {
+    sym.setFlags(NEEDS_PLT);
+  } else if (LLVM_UNLIKELY(isIfunc)) {
+    sym.setFlags(HAS_DIRECT_RELOC);
+  }
+
   // If the relocation is known to be a link-time constant, we know no dynamic
   // relocation will be created, pass the control to relocateAlloc() or
   // relocateNonAlloc() to resolve it.
@@ -1399,16 +1428,13 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     }
   }
 
-  // Relax relocations.
-  //
   // If we know that a PLT entry will be resolved within the same ELF module, we
   // can skip PLT access and directly jump to the destination function. For
   // example, if we are linking a main executable, all dynamic symbols that can
   // be resolved within the executable will actually be resolved that way at
   // runtime, because the main executable is always at the beginning of a search
   // list. We can leverage that fact.
-  const bool isIfunc = sym.isGnuIFunc();
-  if (!sym.isPreemptible && (!isIfunc || config->zIfuncNoplt)) {
+  if (!sym.isPreemptible && (!sym.isGnuIFunc() || config->zIfuncNoplt)) {
     if (expr != R_GOT_PC) {
       // The 0x8000 bit of r_addend of R_PPC_PLTREL24 is used to choose call
       // stub type. It should be ignored if optimized to R_PC.
@@ -1424,34 +1450,6 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
     } else if (!isAbsoluteValue(sym)) {
       expr = target->adjustGotPcExpr(type, addend, relocatedAddr);
     }
-  }
-
-  // We were asked not to generate PLT entries for ifuncs. Instead, pass the
-  // direct relocation on through.
-  if (LLVM_UNLIKELY(isIfunc) && config->zIfuncNoplt) {
-    std::lock_guard<std::mutex> lock(relocMutex);
-    sym.exportDynamic = true;
-    mainPart->relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
-    return;
-  }
-
-  if (needsGot(expr)) {
-    if (config->emachine == EM_MIPS) {
-      // MIPS ABI has special rules to process GOT entries and doesn't
-      // require relocation entries for them. A special case is TLS
-      // relocations. In that case dynamic loader applies dynamic
-      // relocations to initialize TLS GOT entries.
-      // See "Global Offset Table" in Chapter 5 in the following document
-      // for detailed description:
-      // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
-      in.mipsGot->addEntry(*sec->file, sym, addend, expr);
-    } else {
-      sym.setFlags(NEEDS_GOT);
-    }
-  } else if (needsPlt(expr)) {
-    sym.setFlags(NEEDS_PLT);
-  } else if (LLVM_UNLIKELY(isIfunc)) {
-    sym.setFlags(HAS_DIRECT_RELOC);
   }
 
   processAux(expr, type, offset, sym, addend);
