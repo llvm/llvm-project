@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-io.h"
+#include "definable.h"
 #include "flang/Common/format.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/tools.h"
@@ -1005,11 +1006,12 @@ void IoChecker::CheckForDefinableVariable(
   if (const auto *var{parser::Unwrap<parser::Variable>(variable)}) {
     if (auto expr{AnalyzeExpr(context_, *var)}) {
       auto at{var->GetSource()};
-      if (auto whyNot{WhyNotModifiable(at, *expr, context_.FindScope(at),
-              true /*vectorSubscriptIsOk*/)}) {
+      if (auto whyNot{WhyNotDefinable(at, context_.FindScope(at),
+              DefinabilityFlags{DefinabilityFlag::VectorSubscriptIsOk},
+              *expr)}) {
         const Symbol *base{GetFirstSymbol(*expr)};
         context_
-            .Say(at, "%s variable '%s' must be definable"_err_en_US, s,
+            .Say(at, "%s variable '%s' is not definable"_err_en_US, s,
                 (base ? base->name() : at).ToString())
             .Attach(std::move(*whyNot));
       }

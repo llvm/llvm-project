@@ -7,6 +7,7 @@
 
 #include "resolve-names.h"
 #include "assignment.h"
+#include "definable.h"
 #include "mod-file.h"
 #include "pointer-assignment.h"
 #include "program-tree.h"
@@ -5744,11 +5745,12 @@ bool DeclarationVisitor::PassesLocalityChecks(
         "Assumed size array '%s' not allowed in a locality-spec"_err_en_US);
     return false;
   }
-  if (std::optional<Message> msg{WhyNotModifiable(symbol, currScope())}) {
+  if (std::optional<Message> whyNot{WhyNotDefinable(
+          name.source, currScope(), DefinabilityFlags{}, symbol)}) {
     SayWithReason(name, symbol,
         "'%s' may not appear in a locality-spec because it is not "
         "definable"_err_en_US,
-        std::move(*msg));
+        std::move(*whyNot));
     return false;
   }
   return PassesSharedLocalityChecks(name, symbol);

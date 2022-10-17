@@ -1808,11 +1808,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(
       }
       unavailable.insert(symbol->name());
       if (value) {
+        const auto &innermost{context_.FindScope(expr.source)};
         if (symbol->has<semantics::ProcEntityDetails>()) {
           CHECK(IsPointer(*symbol));
         } else if (symbol->has<semantics::ObjectEntityDetails>()) {
           // C1594(4)
-          const auto &innermost{context_.FindScope(expr.source)};
           if (const auto *pureProc{FindPureProcedureContaining(innermost)}) {
             if (const Symbol * pointer{FindPointerComponent(*symbol)}) {
               if (const Symbol *
@@ -1842,8 +1842,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(
           continue;
         }
         if (IsPointer(*symbol)) {
-          semantics::CheckPointerAssignment(
-              GetFoldingContext(), *symbol, *value); // C7104, C7105
+          semantics::CheckStructConstructorPointerComponent(
+              GetFoldingContext(), *symbol, *value, innermost); // C7104, C7105
           result.Add(*symbol, Fold(std::move(*value)));
         } else if (MaybeExpr converted{
                        ConvertToType(*symbol, std::move(*value))}) {

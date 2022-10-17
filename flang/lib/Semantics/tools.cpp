@@ -221,10 +221,9 @@ bool IsCommonBlockContaining(const Symbol &block, const Symbol &object) {
 }
 
 bool IsUseAssociated(const Symbol &symbol, const Scope &scope) {
-  const Scope &owner{
-      GetProgramUnitOrBlockConstructContaining(symbol.GetUltimate().owner())};
+  const Scope &owner{GetTopLevelUnitContaining(symbol.GetUltimate().owner())};
   return owner.kind() == Scope::Kind::Module &&
-      owner != GetProgramUnitOrBlockConstructContaining(scope);
+      owner != GetTopLevelUnitContaining(scope);
 }
 
 bool DoesScopeContain(
@@ -362,7 +361,7 @@ const Symbol *FindPointerComponent(const Symbol &symbol) {
 
 // C1594 specifies several ways by which an object might be globally visible.
 const Symbol *FindExternallyVisibleObject(
-    const Symbol &object, const Scope &scope) {
+    const Symbol &object, const Scope &scope, bool isPointerDefinition) {
   // TODO: Storage association with any object for which this predicate holds,
   // once EQUIVALENCE is supported.
   const Symbol &ultimate{GetAssociationRoot(object)};
@@ -370,10 +369,12 @@ const Symbol *FindExternallyVisibleObject(
     if (IsIntentIn(ultimate)) {
       return &ultimate;
     }
-    if (IsPointer(ultimate) && IsPureProcedure(ultimate.owner()) &&
-        IsFunction(ultimate.owner())) {
+    if (!isPointerDefinition && IsPointer(ultimate) &&
+        IsPureProcedure(ultimate.owner()) && IsFunction(ultimate.owner())) {
       return &ultimate;
     }
+  } else if (ultimate.owner().IsDerivedType()) {
+    return nullptr;
   } else if (&GetProgramUnitContaining(ultimate) !=
       &GetProgramUnitContaining(scope)) {
     return &object;
@@ -776,13 +777,6 @@ std::list<std::list<SymbolRef>> GetStorageAssociations(const Scope &scope) {
 bool IsModuleProcedure(const Symbol &symbol) {
   return ClassifyProcedure(symbol) == ProcedureDefinitionClass::Module;
 }
-const Symbol *IsExternalInPureContext(
-    const Symbol &symbol, const Scope &scope) {
-  if (const auto *pureProc{FindPureProcedureContaining(scope)}) {
-    return FindExternallyVisibleObject(symbol.GetUltimate(), *pureProc);
-  }
-  return nullptr;
-}
 
 PotentialComponentIterator::const_iterator FindPolymorphicPotentialComponent(
     const DerivedTypeSpec &derived) {
@@ -810,114 +804,6 @@ bool IsOrContainsPolymorphicComponent(const Symbol &original) {
     }
   }
   return false;
-}
-
-bool InProtectedContext(const Symbol &symbol, const Scope &currentScope) {
-  return IsProtected(symbol) && !IsHostAssociated(symbol, currentScope);
-}
-
-// C1101 and C1158
-// Modifiability checks on the leftmost symbol ("base object")
-// of a data-ref
-static std::optional<parser::Message> WhyNotModifiableFirst(
-    parser::CharBlock at, const Symbol &symbol, const Scope &scope) {
-  if (const auto *assoc{symbol.detailsIf<AssocEntityDetails>()}) {
-    if (assoc->rank().has_value()) {
-      return std::nullopt; // SELECT RANK always modifiable variable
-    } else if (IsVariable(assoc->expr())) {
-      if (evaluate::HasVectorSubscript(assoc->expr().value())) {
-        return parser::Message{
-            at, "Construct association has a vector subscript"_en_US};
-      } else {
-        return WhyNotModifiable(at, *assoc->expr(), scope);
-      }
-    } else {
-      return parser::Message{at,
-          "'%s' is construct associated with an expression"_en_US,
-          symbol.name()};
-    }
-  } else if (IsExternalInPureContext(symbol, scope)) {
-    return parser::Message{at,
-        "'%s' is externally visible and referenced in a pure"
-        " procedure"_en_US,
-        symbol.name()};
-  } else if (!IsVariableName(symbol)) {
-    return parser::Message{at, "'%s' is not a variable"_en_US, symbol.name()};
-  } else {
-    return std::nullopt;
-  }
-}
-
-// Modifiability checks on the rightmost symbol of a data-ref
-static std::optional<parser::Message> WhyNotModifiableLast(
-    parser::CharBlock at, const Symbol &symbol, const Scope &scope) {
-  if (IsOrContainsEventOrLockComponent(symbol)) {
-    return parser::Message{at,
-        "'%s' is an entity with either an EVENT_TYPE or LOCK_TYPE"_en_US,
-        symbol.name()};
-  } else {
-    return std::nullopt;
-  }
-}
-
-// Modifiability checks on the leftmost (base) symbol of a data-ref
-// that apply only when there are no pointer components or a base
-// that is a pointer.
-static std::optional<parser::Message> WhyNotModifiableIfNoPtr(
-    parser::CharBlock at, const Symbol &symbol, const Scope &scope) {
-  if (InProtectedContext(symbol, scope)) {
-    return parser::Message{
-        at, "'%s' is protected in this scope"_en_US, symbol.name()};
-  } else if (IsIntentIn(symbol)) {
-    return parser::Message{
-        at, "'%s' is an INTENT(IN) dummy argument"_en_US, symbol.name()};
-  } else {
-    return std::nullopt;
-  }
-}
-
-// Apply all modifiability checks to a single symbol
-std::optional<parser::Message> WhyNotModifiable(
-    const Symbol &original, const Scope &scope) {
-  const Symbol &symbol{GetAssociationRoot(original)};
-  if (auto first{WhyNotModifiableFirst(symbol.name(), symbol, scope)}) {
-    return first;
-  } else if (auto last{WhyNotModifiableLast(symbol.name(), symbol, scope)}) {
-    return last;
-  } else if (!IsPointer(symbol)) {
-    return WhyNotModifiableIfNoPtr(symbol.name(), symbol, scope);
-  } else {
-    return std::nullopt;
-  }
-}
-
-// Modifiability checks for a data-ref
-std::optional<parser::Message> WhyNotModifiable(parser::CharBlock at,
-    const SomeExpr &expr, const Scope &scope, bool vectorSubscriptIsOk) {
-  if (auto dataRef{evaluate::ExtractDataRef(expr, true)}) {
-    if (!vectorSubscriptIsOk && evaluate::HasVectorSubscript(expr)) {
-      return parser::Message{at, "Variable has a vector subscript"_en_US};
-    }
-    const Symbol &first{GetAssociationRoot(dataRef->GetFirstSymbol())};
-    if (auto maybeWhyFirst{WhyNotModifiableFirst(at, first, scope)}) {
-      return maybeWhyFirst;
-    }
-    const Symbol &last{dataRef->GetLastSymbol()};
-    if (auto maybeWhyLast{WhyNotModifiableLast(at, last, scope)}) {
-      return maybeWhyLast;
-    }
-    if (!GetLastPointerSymbol(*dataRef)) {
-      if (auto maybeWhyFirst{WhyNotModifiableIfNoPtr(at, first, scope)}) {
-        return maybeWhyFirst;
-      }
-    }
-  } else if (!evaluate::IsVariable(expr)) {
-    return parser::Message{
-        at, "'%s' is not a variable"_en_US, expr.AsFortran()};
-  } else {
-    // reference to function returning POINTER
-  }
-  return std::nullopt;
 }
 
 class ImageControlStmtHelper {
