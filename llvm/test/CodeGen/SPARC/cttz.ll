@@ -16,7 +16,6 @@ define i32 @f(i32 %x) {
 ; CHECK-NEXT:    add %o2, %lo(.LCPI0_0), %o2
 ; CHECK-NEXT:    ldub [%o2+%o1], %o1
 ; CHECK-NEXT:    cmp %o0, 0
-; CHECK-NEXT:    move %icc, 32, %o1
 ; CHECK-NEXT:    move %icc, 0, %o1
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:    mov %o1, %o0
@@ -39,22 +38,18 @@ define i64 @g(i64 %x) {
 ; CHECK-NEXT:    sethi 122669, %o4
 ; CHECK-NEXT:    or %o4, 305, %o4
 ; CHECK-NEXT:    smul %o3, %o4, %o3
-; CHECK-NEXT:    srl %o3, 27, %o3
 ; CHECK-NEXT:    sethi %hi(.LCPI1_0), %o5
 ; CHECK-NEXT:    add %o5, %lo(.LCPI1_0), %o5
-; CHECK-NEXT:    ldub [%o5+%o3], %g2
-; CHECK-NEXT:    sub %o2, %o0, %o3
-; CHECK-NEXT:    and %o0, %o3, %o3
-; CHECK-NEXT:    smul %o3, %o4, %o3
+; CHECK-NEXT:    sub %o2, %o0, %g2
+; CHECK-NEXT:    and %o0, %g2, %g2
+; CHECK-NEXT:    smul %g2, %o4, %o4
+; CHECK-NEXT:    srl %o4, 27, %o4
+; CHECK-NEXT:    ldub [%o5+%o4], %o4
 ; CHECK-NEXT:    srl %o3, 27, %o3
-; CHECK-NEXT:    ldub [%o5+%o3], %o3
+; CHECK-NEXT:    ldub [%o5+%o3], %o5
+; CHECK-NEXT:    add %o4, 32, %o3
 ; CHECK-NEXT:    cmp %o1, 0
-; CHECK-NEXT:    move %icc, 32, %g2
-; CHECK-NEXT:    cmp %o0, 0
-; CHECK-NEXT:    move %icc, 32, %o3
-; CHECK-NEXT:    add %o3, 32, %o3
-; CHECK-NEXT:    cmp %o1, 0
-; CHECK-NEXT:    movne %icc, %g2, %o3
+; CHECK-NEXT:    movne %icc, %o5, %o3
 ; CHECK-NEXT:    or %o1, %o0, %o0
 ; CHECK-NEXT:    cmp %o0, 0
 ; CHECK-NEXT:    move %icc, 0, %o3
