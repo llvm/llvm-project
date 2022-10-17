@@ -950,7 +950,7 @@ define float @fdiv_zero_f32(float %x) {
 ; https://alive2.llvm.org/ce/z/gLBFKB
 define float @fdiv_nnan_zero_f32(float %x) {
 ; CHECK-LABEL: @fdiv_nnan_zero_f32(
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan float @llvm.copysign.f32(float 0x7FF0000000000000, float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[FDIV]]
 ;
   %fdiv = fdiv nnan float %x, 0.0
@@ -959,7 +959,7 @@ define float @fdiv_nnan_zero_f32(float %x) {
 
 define <2 x float> @fdiv_nnan_zero_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @fdiv_nnan_zero_v2f32(
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan <2 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan <2 x float> @llvm.copysign.v2f32(<2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, <2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[FDIV]]
 ;
   %fdiv = fdiv nnan <2 x float> %x, zeroinitializer
@@ -968,7 +968,7 @@ define <2 x float> @fdiv_nnan_zero_v2f32(<2 x float> %x) {
 
 define float @fdiv_nnan_zero_f32_fmf(float %x) {
 ; CHECK-LABEL: @fdiv_nnan_zero_f32_fmf(
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan nsz float [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan nsz float @llvm.copysign.f32(float 0x7FF0000000000000, float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[FDIV]]
 ;
   %fdiv = fdiv nnan nsz float %x, 0.0
@@ -977,7 +977,7 @@ define float @fdiv_nnan_zero_f32_fmf(float %x) {
 
 define <2 x float> @fdiv_nnan_zero_v2f32_fmf(<2 x float> %x) {
 ; CHECK-LABEL: @fdiv_nnan_zero_v2f32_fmf(
-; CHECK-NEXT:    [[FDIV:%.*]] = fdiv nnan nsz <2 x float> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[FDIV:%.*]] = call nnan nsz <2 x float> @llvm.copysign.v2f32(<2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, <2 x float> [[X:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[FDIV]]
 ;
   %fdiv = fdiv nnan nsz <2 x float> %x, zeroinitializer
