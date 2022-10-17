@@ -1217,7 +1217,7 @@ bool BinaryFunction::disassemble() {
     // Check integrity of LLVM assembler/disassembler.
     if (opts::CheckEncoding && !BC.MIB->isBranch(Instruction) &&
         !BC.MIB->isCall(Instruction) && !BC.MIB->isNoop(Instruction)) {
-      if (!BC.validateEncoding(Instruction, FunctionData.slice(Offset, Size))) {
+      if (!BC.validateInstructionEncoding(FunctionData.slice(Offset, Size))) {
         errs() << "BOLT-WARNING: mismatching LLVM encoding detected in "
                << "function " << *this << " for instruction :\n";
         BC.printInstruction(errs(), Instruction, AbsoluteInstrAddr);
@@ -1233,15 +1233,10 @@ bool BinaryFunction::disassemble() {
         break;
       }
 
-      // Disassemble again without the symbolizer and check that the disassembly
-      // matches the assembler output.
-      MCInst TempInst;
-      BC.DisAsm->getInstruction(TempInst, Size, FunctionData.slice(Offset),
-                                AbsoluteInstrAddr, nulls());
-      if (!BC.validateEncoding(TempInst, FunctionData.slice(Offset, Size))) {
+      if (!BC.validateInstructionEncoding(FunctionData.slice(Offset, Size))) {
         errs() << "BOLT-WARNING: internal assembler/disassembler error "
                   "detected for AVX512 instruction:\n";
-        BC.printInstruction(errs(), TempInst, AbsoluteInstrAddr);
+        BC.printInstruction(errs(), Instruction, AbsoluteInstrAddr);
         errs() << " in function " << *this << '\n';
         setIgnored();
         break;
