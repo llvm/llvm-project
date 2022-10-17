@@ -786,3 +786,20 @@ func.func @wrong_shape_fail() {
   } : () -> ()
   return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Test DefaultValuedAttr Printing
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @default_value_printing
+func.func @default_value_printing(%arg0 : i32) {
+  // The attribute SHOULD NOT be printed because it is equal to the default
+  // CHECK: test.default_value_print %arg0
+  "test.default_value_print"(%arg0) {"value_with_default" = 0 : i32} : (i32) -> ()
+  // The attribute SHOULD be printed because it is not equal to the default
+  // CHECK: test.default_value_print {value_with_default = 1 : i32} %arg0
+  "test.default_value_print"(%arg0) {"value_with_default" = 1 : i32} : (i32) -> ()
+  return
+}
