@@ -1068,6 +1068,7 @@ void RewriteInstance::discoverFileObjects() {
         if (opts::Verbosity >= 1)
           outs() << "BOLT-INFO: skipping possibly another entry for function "
                  << *PreviousFunction << " : " << UniqueName << '\n';
+        registerName(SymbolSize);
       } else {
         outs() << "BOLT-INFO: using " << UniqueName << " as another entry to "
                << "function " << *PreviousFunction << '\n';
@@ -1084,7 +1085,6 @@ void RewriteInstance::discoverFileObjects() {
         assert(SI->second == Symbol && "wrong symbol found");
         FileSymRefs.erase(SI);
       }
-      registerName(SymbolSize);
       continue;
     }
 
