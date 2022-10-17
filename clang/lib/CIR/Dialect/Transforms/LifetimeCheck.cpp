@@ -46,6 +46,10 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkMoveAssignment(CallOp callOp, const clang::CXXMethodDecl *m);
   void checkOperatorStar(CallOp callOp);
 
+  // Helpers
+  bool isCtorInitFromOwner(CallOp callOp,
+                           const clang::CXXConstructorDecl *ctor);
+
   struct Options {
     enum : unsigned {
       None = 0,
@@ -106,7 +110,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
     State(DataTy d) { val.setInt(d); }
     State(mlir::Value v, DataTy d = LocalValue) {
       assert((d == LocalValue || d == OwnedBy) && "expected value or owned");
-      val.setPointerAndInt(v, LocalValue);
+      val.setPointerAndInt(v, d);
     }
 
     static constexpr int KindBits = 3;
@@ -845,6 +849,27 @@ void LifetimeCheckPass::checkMoveAssignment(CallOp callOp,
   getPmap()[src].clear(); // TODO: should we add null to 'src' pset?
 }
 
+// User defined ctors that initialize from owner types is one
+// way of tracking owned pointers.
+//
+// Example:
+//  MyIntPointer::MyIntPointer(MyIntOwner const&)(%5, %4)
+//
+bool LifetimeCheckPass::isCtorInitFromOwner(
+    CallOp callOp, const clang::CXXConstructorDecl *ctor) {
+  if (callOp.getNumOperands() < 2)
+    return false;
+
+  // FIXME: should we scan all arguments past first to look for an owner?
+  auto addr = callOp.getOperand(0);
+  auto owner = callOp.getOperand(1);
+
+  if (ptrs.count(addr) && owners.count(owner))
+    return true;
+
+  return false;
+}
+
 void LifetimeCheckPass::checkCtor(CallOp callOp,
                                   const clang::CXXConstructorDecl *ctor) {
   // TODO: zero init
@@ -879,17 +904,17 @@ void LifetimeCheckPass::checkCtor(CallOp callOp,
     return;
   }
 
-  // Copy ctor call that initializes a pointer type from an owner
-  // Example:
-  //  MyIntPointer::MyIntPointer(MyIntOwner const&)(%5, %4)
+  // User defined copy ctor calls ...
   if (ctor->isCopyConstructor()) {
+    llvm_unreachable("NYI");
+  }
+
+  if (isCtorInitFromOwner(callOp, ctor)) {
     auto addr = callOp.getOperand(0);
     auto owner = callOp.getOperand(1);
-
-    if (ptrs.count(addr) && owners.count(owner)) {
-      getPmap()[addr].clear();
-      getPmap()[addr].insert(State::getOwnedBy(owner));
-    }
+    getPmap()[addr].clear();
+    getPmap()[addr].insert(State::getOwnedBy(owner));
+    return;
   }
 }
 
