@@ -1644,24 +1644,39 @@ const char *enumAttrBeginPrinterCode = R"(
 /// Generate the printer for the 'attr-dict' directive.
 static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
                                MethodBody &body, bool withKeyword) {
-  body << "  _odsPrinter.printOptionalAttrDict"
-       << (withKeyword ? "WithKeyword" : "")
-       << "((*this)->getAttrs(), /*elidedAttrs=*/{";
+  body << "  ::llvm::SmallVector<::llvm::StringRef, 2> elidedAttrs;\n";
   // Elide the variadic segment size attributes if necessary.
   if (!fmt.allOperands &&
       op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
-    body << "\"operand_segment_sizes\", ";
+    body << "  elidedAttrs.push_back(\"operand_segment_sizes\");\n";
   if (!fmt.allResultTypes &&
       op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
-    body << "\"result_segment_sizes\", ";
-  if (!fmt.inferredAttributes.empty()) {
-    for (const auto &attr : fmt.inferredAttributes)
-      body << "\"" << attr.getKey() << "\", ";
+    body << "  elidedAttrs.push_back(\"result_segment_sizes\");\n";
+  for (const StringRef key : fmt.inferredAttributes.keys())
+    body << "  elidedAttrs.push_back(\"" << key << "\");\n";
+  for (const NamedAttribute *attr : fmt.usedAttributes)
+    body << "  elidedAttrs.push_back(\"" << attr->name << "\");\n";
+  // Add code to check attributes for equality with the default value
+  // for attributes with the elidePrintingDefaultValue bit set.
+  for (const NamedAttribute &namedAttr : op.getAttributes()) {
+    const Attribute &attr = namedAttr.attr;
+    if (!attr.isDerivedAttr() && attr.hasDefaultValue()) {
+      const StringRef &name = namedAttr.name;
+      FmtContext fctx;
+      fctx.withBuilder("odsBuilder");
+      std::string defaultValue = std::string(
+          tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
+      body << "  {\n";
+      body << "     ::mlir::Builder odsBuilder(getContext());\n";
+      body << "     Attribute attr = " << op.getGetterName(name) << "Attr();\n";
+      body << "     if(attr && (attr == " << defaultValue << "))\n";
+      body << "       elidedAttrs.push_back(\"" << name << "\");\n";
+      body << "  }\n";
+    }
   }
-  llvm::interleaveComma(
-      fmt.usedAttributes, body,
-      [&](const NamedAttribute *attr) { body << "\"" << attr->name << "\""; });
-  body << "});\n";
+  body << "  _odsPrinter.printOptionalAttrDict"
+       << (withKeyword ? "WithKeyword" : "")
+       << "((*this)->getAttrs(), elidedAttrs);\n";
 }
 
 /// Generate the printer for a literal value. `shouldEmitSpace` is true if a
