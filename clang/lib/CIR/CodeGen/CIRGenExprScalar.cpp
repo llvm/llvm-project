@@ -331,7 +331,9 @@ public:
   }
 
   mlir::Value VisitUnaryDeref(const UnaryOperator *E) {
-    llvm_unreachable("NYI");
+    if (E->getType()->isVoidType())
+      return Visit(E->getSubExpr()); // the actual value should be unused
+    return buildLoadOfLValue(E);
   }
   mlir::Value VisitUnaryPlus(const UnaryOperator *E) {
     // NOTE(cir): QualType function parameter still not used, so don´t replicate
@@ -998,8 +1000,10 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     llvm_unreachable("NYI");
   case CK_PointerToIntegral:
     llvm_unreachable("NYI");
-  case CK_ToVoid:
-    llvm_unreachable("NYI");
+  case CK_ToVoid: {
+    CGF.buildIgnoredExpr(E);
+    return nullptr;
+  }
   case CK_MatrixCast:
     llvm_unreachable("NYI");
   case CK_VectorSplat:
