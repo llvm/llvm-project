@@ -289,7 +289,7 @@ define void @fptr_test2c(ptr %p, ptr %f) {
 }
 
 define void @alloca_recphi() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone
 ; CHECK-LABEL: define {{[^@]+}}@alloca_recphi
 ; CHECK-SAME: () #[[ATTR14:[0-9]+]] {
 ; CHECK-NEXT:  entry:
