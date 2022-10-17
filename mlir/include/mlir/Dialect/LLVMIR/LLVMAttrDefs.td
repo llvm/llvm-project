@@ -15,17 +15,6 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 // All of the attributes will extend this class.
 class LLVM_Attr<string name> : AttrDef<LLVM_Dialect, name>;
 
-// The "FastMath" flags associated with floating point LLVM instructions.
-def FastmathFlagsAttr : LLVM_Attr<"FMF"> {
-  let mnemonic = "fastmath";
-
-  // List of type parameters.
-  let parameters = (ins
-    "FastmathFlags":$flags
-  );
-  let hasCustomAssemblyFormat = 1;
-}
-
 // Attribute definition for the LLVM Linkage enum.
 def LinkageAttr : LLVM_Attr<"Linkage"> {
   let mnemonic = "linkage";
