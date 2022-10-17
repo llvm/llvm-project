@@ -451,8 +451,6 @@ private:
   template <class RelTy> RelType getMipsN32RelType(RelTy *&rel) const;
   template <class ELFT, class RelTy>
   int64_t computeMipsAddend(const RelTy &rel, RelExpr expr, bool isLocal) const;
-  template <class ELFT, class RelTy>
-  int64_t computeAddend(const RelTy &rel, RelExpr expr, bool isLocal) const;
   bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
                                 uint64_t relOff) const;
   void processAux(RelExpr expr, RelType type, uint64_t offset, Symbol &sym,
@@ -495,30 +493,6 @@ int64_t RelocationScanner::computeMipsAddend(const RelTy &rel, RelExpr expr,
   warn("can't find matching " + toString(pairTy) + " relocation for " +
        toString(type));
   return 0;
-}
-
-// Returns an addend of a given relocation. If it is RELA, an addend
-// is in a relocation itself. If it is REL, we need to read it from an
-// input section.
-template <class ELFT, class RelTy>
-int64_t RelocationScanner::computeAddend(const RelTy &rel, RelExpr expr,
-                                         bool isLocal) const {
-  int64_t addend;
-  RelType type = rel.getType(config->isMips64EL);
-
-  if (RelTy::IsRela) {
-    addend = getAddend<ELFT>(rel);
-  } else {
-    const uint8_t *buf = sec->rawData.data();
-    addend = target->getImplicitAddend(buf + rel.r_offset, type);
-  }
-
-  if (config->emachine == EM_PPC64 && config->isPic && type == R_PPC64_TOC)
-    addend += getPPC64TocBase();
-  if (config->emachine == EM_MIPS)
-    addend += computeMipsAddend<ELFT>(rel, expr, isLocal);
-
-  return addend;
 }
 
 // Custom error message if Sym is defined in a discarded section.
@@ -1363,18 +1337,29 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
   uint32_t symIndex = rel.getSymbol(config->isMips64EL);
   Symbol &sym = sec->getFile<ELFT>()->getSymbol(symIndex);
   RelType type;
-
-  // Deal with MIPS oddity.
   if (config->mipsN32Abi) {
     type = getMipsN32RelType(i);
   } else {
     type = rel.getType(config->isMips64EL);
     ++i;
   }
-
   // Get an offset in an output section this relocation is applied to.
   uint64_t offset = getter.get(rel.r_offset);
   if (offset == uint64_t(-1))
+    return;
+
+  RelExpr expr = target->getRelExpr(type, sym, sec->rawData.data() + offset);
+  int64_t addend =
+      RelTy::IsRela
+          ? getAddend<ELFT>(rel)
+          : target->getImplicitAddend(sec->rawData.data() + rel.r_offset, type);
+  if (LLVM_UNLIKELY(config->emachine == EM_MIPS))
+    addend += computeMipsAddend<ELFT>(rel, expr, sym.isLocal());
+  else if (config->emachine == EM_PPC64 && config->isPic && type == R_PPC64_TOC)
+    addend += getPPC64TocBase();
+
+  // Ignore R_*_NONE and other marker relocations.
+  if (expr == R_NONE)
     return;
 
   // Error if the target symbol is undefined. Symbol index 0 may be used by
@@ -1382,16 +1367,6 @@ template <class ELFT, class RelTy> void RelocationScanner::scanOne(RelTy *&i) {
   if (sym.isUndefined() && symIndex != 0 &&
       maybeReportUndefined(cast<Undefined>(sym), *sec, offset))
     return;
-
-  const uint8_t *relocatedAddr = sec->rawData.begin() + offset;
-  RelExpr expr = target->getRelExpr(type, sym, relocatedAddr);
-
-  // Ignore R_*_NONE and other marker relocations.
-  if (expr == R_NONE)
-    return;
-
-  // Read an addend.
-  int64_t addend = computeAddend<ELFT>(rel, expr, sym.isLocal());
 
   if (config->emachine == EM_PPC64) {
     // We can separate the small code model relocations into 2 categories:
