@@ -57,18 +57,19 @@ define void @test1_neg(ptr %a, ptr readnone %a_end, ptr %b.i64) {
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    [[B:%.*]] = load i64, ptr [[B_I64:%.*]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = inttoptr i64 [[B]] to ptr
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[A_ADDR_03:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[BB:%.*]] ], [ [[A]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[B_ADDR_02:%.*]] = phi ptr [ [[ADD:%.*]], [[BB]] ], [ [[TMP0]], [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[PTRCMP:%.*]] = icmp ult ptr [[B_ADDR_02]], [[A_END]]
+; CHECK-NEXT:    [[B_ADDR_02:%.*]] = phi i64 [ [[ADD_INT:%.*]], [[BB]] ], [ [[B]], [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP:%.*]] = inttoptr i64 [[B_ADDR_02]] to ptr
+; CHECK-NEXT:    [[PTRCMP:%.*]] = icmp ult ptr [[TMP]], [[A_END]]
 ; CHECK-NEXT:    br i1 [[PTRCMP]], label [[FOR_END]], label [[BB]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[I1:%.*]] = load float, ptr [[A]], align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[I1]], 4.200000e+01
 ; CHECK-NEXT:    store float [[MUL_I]], ptr [[A_ADDR_03]], align 4
-; CHECK-NEXT:    [[ADD]] = getelementptr inbounds float, ptr [[A]], i64 1
+; CHECK-NEXT:    [[ADD:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
+; CHECK-NEXT:    [[ADD_INT]] = ptrtoint ptr [[ADD]] to i64
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds float, ptr [[A_ADDR_03]], i64 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[INCDEC_PTR]], [[A_END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END]]
