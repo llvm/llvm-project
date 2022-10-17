@@ -1295,7 +1295,8 @@ namespace detail {
 /// always be a reference, to avoid returning a reference to a temporary.
 template <typename EltTy, typename FirstTy> class first_or_second_type {
 public:
-  using type = std::conditional_t<std::is_reference<EltTy>::value, FirstTy,
+  using type =
+      typename std::conditional_t<std::is_reference<EltTy>::value, FirstTy,
                                   std::remove_reference_t<FirstTy>>;
 };
 } // end namespace detail
