@@ -965,7 +965,7 @@ void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
     adjustSplitStackFunctionPrologues<ELFT>(buf, bufEnd);
 
   if (flags & SHF_ALLOC) {
-    relocateAlloc(buf, bufEnd);
+    target->relocateAlloc(*this, buf);
     return;
   }
 
@@ -979,133 +979,6 @@ void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
     sec->relocateNonAlloc<ELFT>(buf, rels.rels);
   else
     sec->relocateNonAlloc<ELFT>(buf, rels.relas);
-}
-
-void InputSectionBase::relocateAlloc(uint8_t *buf, uint8_t *bufEnd) {
-  assert(flags & SHF_ALLOC);
-  const unsigned bits = config->wordsize * 8;
-  const TargetInfo &target = *elf::target;
-  uint64_t lastPPCRelaxedRelocOff = UINT64_C(-1);
-  AArch64Relaxer aarch64relaxer(relocations);
-  for (size_t i = 0, size = relocations.size(); i != size; ++i) {
-    const Relocation &rel = relocations[i];
-    if (rel.expr == R_NONE)
-      continue;
-    uint64_t offset = rel.offset;
-    uint8_t *bufLoc = buf + offset;
-
-    uint64_t secAddr = getOutputSection()->addr;
-    if (auto *sec = dyn_cast<InputSection>(this))
-      secAddr += sec->outSecOff;
-    const uint64_t addrLoc = secAddr + offset;
-    const uint64_t targetVA =
-        SignExtend64(getRelocTargetVA(file, rel.type, rel.addend, addrLoc,
-                                      *rel.sym, rel.expr),
-                     bits);
-    switch (rel.expr) {
-    case R_RELAX_HINT:
-      continue;
-    case R_RELAX_GOT_PC:
-    case R_RELAX_GOT_PC_NOPIC:
-      target.relaxGot(bufLoc, rel, targetVA);
-      break;
-    case R_AARCH64_GOT_PAGE_PC:
-      if (i + 1 < size && aarch64relaxer.tryRelaxAdrpLdr(
-                              rel, relocations[i + 1], secAddr, buf)) {
-        ++i;
-        continue;
-      }
-      target.relocate(bufLoc, rel, targetVA);
-      break;
-    case R_AARCH64_PAGE_PC:
-      if (i + 1 < size && aarch64relaxer.tryRelaxAdrpAdd(
-                              rel, relocations[i + 1], secAddr, buf)) {
-        ++i;
-        continue;
-      }
-      target.relocate(bufLoc, rel, targetVA);
-      break;
-    case R_PPC64_RELAX_GOT_PC: {
-      // The R_PPC64_PCREL_OPT relocation must appear immediately after
-      // R_PPC64_GOT_PCREL34 in the relocations table at the same offset.
-      // We can only relax R_PPC64_PCREL_OPT if we have also relaxed
-      // the associated R_PPC64_GOT_PCREL34 since only the latter has an
-      // associated symbol. So save the offset when relaxing R_PPC64_GOT_PCREL34
-      // and only relax the other if the saved offset matches.
-      if (rel.type == R_PPC64_GOT_PCREL34)
-        lastPPCRelaxedRelocOff = offset;
-      if (rel.type == R_PPC64_PCREL_OPT && offset != lastPPCRelaxedRelocOff)
-        break;
-      target.relaxGot(bufLoc, rel, targetVA);
-      break;
-    }
-    case R_PPC64_RELAX_TOC:
-      // rel.sym refers to the STT_SECTION symbol associated to the .toc input
-      // section. If an R_PPC64_TOC16_LO (.toc + addend) references the TOC
-      // entry, there may be R_PPC64_TOC16_HA not paired with
-      // R_PPC64_TOC16_LO_DS. Don't relax. This loses some relaxation
-      // opportunities but is safe.
-      if (ppc64noTocRelax.count({rel.sym, rel.addend}) ||
-          !tryRelaxPPC64TocIndirection(rel, bufLoc))
-        target.relocate(bufLoc, rel, targetVA);
-      break;
-    case R_RELAX_TLS_IE_TO_LE:
-      target.relaxTlsIeToLe(bufLoc, rel, targetVA);
-      break;
-    case R_RELAX_TLS_LD_TO_LE:
-    case R_RELAX_TLS_LD_TO_LE_ABS:
-      target.relaxTlsLdToLe(bufLoc, rel, targetVA);
-      break;
-    case R_RELAX_TLS_GD_TO_LE:
-    case R_RELAX_TLS_GD_TO_LE_NEG:
-      target.relaxTlsGdToLe(bufLoc, rel, targetVA);
-      break;
-    case R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
-    case R_RELAX_TLS_GD_TO_IE:
-    case R_RELAX_TLS_GD_TO_IE_ABS:
-    case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
-    case R_RELAX_TLS_GD_TO_IE_GOTPLT:
-      target.relaxTlsGdToIe(bufLoc, rel, targetVA);
-      break;
-    case R_PPC64_CALL:
-      // If this is a call to __tls_get_addr, it may be part of a TLS
-      // sequence that has been relaxed and turned into a nop. In this
-      // case, we don't want to handle it as a call.
-      if (read32(bufLoc) == 0x60000000) // nop
-        break;
-
-      // Patch a nop (0x60000000) to a ld.
-      if (rel.sym->needsTocRestore) {
-        // gcc/gfortran 5.4, 6.3 and earlier versions do not add nop for
-        // recursive calls even if the function is preemptible. This is not
-        // wrong in the common case where the function is not preempted at
-        // runtime. Just ignore.
-        if ((bufLoc + 8 > bufEnd || read32(bufLoc + 4) != 0x60000000) &&
-            rel.sym->file != file) {
-          // Use substr(6) to remove the "__plt_" prefix.
-          errorOrWarn(getErrorLocation(bufLoc) + "call to " +
-                      lld::toString(*rel.sym).substr(6) +
-                      " lacks nop, can't restore toc");
-          break;
-        }
-        write32(bufLoc + 4, 0xe8410018); // ld %r2, 24(%r1)
-      }
-      target.relocate(bufLoc, rel, targetVA);
-      break;
-    default:
-      target.relocate(bufLoc, rel, targetVA);
-      break;
-    }
-  }
-
-  // Apply jumpInstrMods.  jumpInstrMods are created when the opcode of
-  // a jmp insn must be modified to shrink the jmp insn or to flip the jmp
-  // insn.  This is primarily used to relax and optimize jumps created with
-  // basic block sections.
-  if (jumpInstrMod) {
-    target.applyJumpInstrMod(buf + jumpInstrMod->offset, jumpInstrMod->original,
-                             jumpInstrMod->size);
-  }
 }
 
 // For each function-defining prologue, find any calls to __morestack,
