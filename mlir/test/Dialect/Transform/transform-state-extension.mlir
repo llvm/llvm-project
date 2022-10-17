@@ -44,3 +44,13 @@ module {
     test_check_if_test_extension_present %arg0
   }
 }
+
+// -----
+
+module {
+  transform.sequence failures(suppress) {
+  ^bb0(%arg0: !pdl.operation):
+    // expected-error @below {{TestTransformStateExtension missing}}
+    test_remap_operand_to_self %arg0
+  }
+}
