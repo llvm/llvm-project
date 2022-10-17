@@ -1616,6 +1616,9 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
     return false;
 
   switch (MI.getOpcode()) {
+  case RISCV::PseudoCCMOVGPR:
+    // Operands 4 and 5 are commutable.
+    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 4, 5);
   case CASE_VFMA_SPLATS(FMADD):
   case CASE_VFMA_SPLATS(FMSUB):
   case CASE_VFMA_SPLATS(FMACC):
@@ -1761,6 +1764,15 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   };
 
   switch (MI.getOpcode()) {
+  case RISCV::PseudoCCMOVGPR: {
+    // CCMOV can be commuted by inverting the condition.
+    auto CC = static_cast<RISCVCC::CondCode>(MI.getOperand(3).getImm());
+    CC = RISCVCC::getOppositeBranchCondition(CC);
+    auto &WorkingMI = cloneIfNew(MI);
+    WorkingMI.getOperand(3).setImm(CC);
+    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI*/ false,
+                                                   OpIdx1, OpIdx2);
+  }
   case CASE_VFMA_SPLATS(FMACC):
   case CASE_VFMA_SPLATS(FMADD):
   case CASE_VFMA_SPLATS(FMSAC):
