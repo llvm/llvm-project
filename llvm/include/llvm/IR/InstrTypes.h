@@ -2378,9 +2378,9 @@ public:
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
-  /// getNumArgOperands - Return the number of funcletpad arguments.
+  /// arg_size - Return the number of funcletpad arguments.
   ///
-  unsigned getNumArgOperands() const { return getNumOperands() - 1; }
+  unsigned arg_size() const { return getNumOperands() - 1; }
 
   /// Convenience accessors
 
