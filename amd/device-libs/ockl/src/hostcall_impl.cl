@@ -100,9 +100,7 @@ static uint
 optimizationBarrierHack(uint in_val)
 {
     uint out_val;
-    __asm__ volatile("; ockl readfirstlane hoisting hack %0"
-                     : "=v"(out_val)
-                     : "0"(in_val));
+    __asm__ volatile("" : "=v"(out_val) : "0"(in_val));
     return out_val;
 }
 

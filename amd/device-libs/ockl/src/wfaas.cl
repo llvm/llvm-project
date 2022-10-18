@@ -21,8 +21,7 @@ ATTR
 static int optimizationBarrierHack(int in_val)
 {
     int out_val;
-    __asm__ volatile ("; ockl ballot hoisting hack %0" :
-                      "=v"(out_val) : "0"(in_val));
+    __asm__ volatile ("" : "=v"(out_val) : "0"(in_val));
     return out_val;
 }
 

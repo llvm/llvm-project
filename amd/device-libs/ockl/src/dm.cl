@@ -177,9 +177,9 @@ typedef struct heap_s {
 
 // Inhibit control flow optimizations
 #define O0(X) X = o0(X)
-__attribute__((overloadable)) static int o0(int x) { int y; __asm__ volatile("; O0 %0" : "=v"(y) : "0"(x)); return y; }
-__attribute__((overloadable)) static uint o0(uint x) { uint y; __asm__ volatile("; O0 %0" : "=v"(y) : "0"(x)); return y; }
-__attribute__((overloadable)) static ulong o0(ulong x) { ulong y; __asm__ volatile("; O0 %0" : "=v"(y) : "0"(x)); return y; }
+__attribute__((overloadable)) static int o0(int x) { int y; __asm__ volatile("" : "=v"(y) : "0"(x)); return y; }
+__attribute__((overloadable)) static uint o0(uint x) { uint y; __asm__ volatile("" : "=v"(y) : "0"(x)); return y; }
+__attribute__((overloadable)) static ulong o0(ulong x) { ulong y; __asm__ volatile("" : "=v"(y) : "0"(x)); return y; }
 
 // Atomics wrappers
 #define AL(P, O) __opencl_atomic_load(P, O, memory_scope_device)
