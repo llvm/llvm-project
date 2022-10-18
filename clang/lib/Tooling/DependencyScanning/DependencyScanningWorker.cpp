@@ -396,8 +396,8 @@ bool DependencyScanningWorker::computeDependencies(
     ModifiedCommandLine = CommandLine;
     ModifiedCommandLine->emplace_back(*ModuleName);
 
-    auto OverlayFS = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
-        std::move(BaseFS));
+    auto OverlayFS =
+        llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
     auto InMemoryFS =
         llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
     InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
