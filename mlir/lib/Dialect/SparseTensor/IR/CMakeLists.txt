@@ -14,5 +14,5 @@ add_mlir_dialect_library(MLIRSparseTensorDialect
   MLIRIR
   MLIRInferTypeOpInterface
   MLIRSupport
-  MLIRSparseTensorRuntime
+  MLIRSparseTensorEnums
   )
