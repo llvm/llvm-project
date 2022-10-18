@@ -1,4 +1,4 @@
-; RUN: opt -S -objc-arc < %s | FileCheck %s
+; RUN: opt -S -passes=objc-arc < %s | FileCheck %s
 ; rdar://9503416
 
 ; Detect loop boundaries and don't move retains and releases

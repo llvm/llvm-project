@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=i686-unknown-windows-msvc -objc-arc-contract -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=i686-unknown-windows-msvc -passes=objc-arc-contract -S -o - %s | FileCheck %s
 
 declare void @f()
 declare i32 @__CxxFrameHandler3(...)

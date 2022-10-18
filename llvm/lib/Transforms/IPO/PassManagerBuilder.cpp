@@ -83,7 +83,7 @@ cl::opt<bool> EnableUnrollAndJam("enable-unroll-and-jam", cl::init(false),
                                  cl::Hidden,
                                  cl::desc("Enable Unroll And Jam Pass"));
 
-cl::opt<bool> EnableLoopFlatten("enable-loop-flatten", cl::init(true),
+cl::opt<bool> EnableLoopFlatten("enable-loop-flatten", cl::init(false),
                                 cl::Hidden,
                                 cl::desc("Enable the LoopFlatten Pass"));
 
