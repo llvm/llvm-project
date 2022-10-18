@@ -6616,7 +6616,7 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
   case Instruction::Xor:
   case Instruction::GetElementPtr: {
     unsigned Opcode = ShuffleOrOp == Instruction::GetElementPtr
-                          ? Instruction::Add
+                          ? static_cast<unsigned>(Instruction::Add)
                           : ShuffleOrOp;
     auto GetScalarCost = [=](unsigned Idx) {
       auto *VI = dyn_cast<Instruction>(VL[Idx]);
