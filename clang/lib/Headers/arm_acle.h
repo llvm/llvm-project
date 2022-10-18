@@ -722,17 +722,15 @@ __arm_st64bv0(void *__addr, data512_t __value) {
 #define __arm_wsrf64(sysreg, v) __arm_wsr64(sysreg, __builtin_bit_cast(uint64_t, v))
 
 /* Memory Tagging Extensions (MTE) Intrinsics */
-#if defined(__ARM_FEATURE_MEMORY_TAGGING) && __ARM_FEATURE_MEMORY_TAGGING
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
 #define __arm_mte_create_random_tag(__ptr, __mask)  __builtin_arm_irg(__ptr, __mask)
 #define __arm_mte_increment_tag(__ptr, __tag_offset)  __builtin_arm_addg(__ptr, __tag_offset)
 #define __arm_mte_exclude_tag(__ptr, __excluded)  __builtin_arm_gmi(__ptr, __excluded)
 #define __arm_mte_get_tag(__ptr) __builtin_arm_ldg(__ptr)
 #define __arm_mte_set_tag(__ptr) __builtin_arm_stg(__ptr)
 #define __arm_mte_ptrdiff(__ptra, __ptrb) __builtin_arm_subp(__ptra, __ptrb)
-#endif
 
 /* Memory Operations Intrinsics */
-#if defined(__ARM_FEATURE_MOPS) && __ARM_FEATURE_MOPS && defined(__ARM_FEATURE_MEMORY_TAGGING) && __ARM_FEATURE_MEMORY_TAGGING
 #define __arm_mops_memset_tag(__tagged_address, __value, __size)    \
   __builtin_arm_mops_memset_tag(__tagged_address, __value, __size)
 #endif
