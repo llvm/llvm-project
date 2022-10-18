@@ -24,13 +24,11 @@ namespace pmr {
 
 // [mem.res.class]
 
-_LIBCPP_DIAGNOSTIC_PUSH
-_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables") // TODO: move destructor into the dylib
 class _LIBCPP_TYPE_VIS memory_resource {
   static const size_t __max_align = alignof(max_align_t);
 
 public:
-  virtual ~memory_resource() = default;
+  virtual ~memory_resource();
 
   [[using __gnu__: __returns_nonnull__, __alloc_size__(2), __alloc_align__(3)]] _LIBCPP_HIDE_FROM_ABI void*
   allocate(size_t __bytes, size_t __align = __max_align) {
@@ -49,7 +47,6 @@ private:
   virtual void do_deallocate(void*, size_t, size_t)               = 0;
   virtual bool do_is_equal(memory_resource const&) const noexcept = 0;
 };
-_LIBCPP_DIAGNOSTIC_POP
 
 // [mem.res.eq]
 
