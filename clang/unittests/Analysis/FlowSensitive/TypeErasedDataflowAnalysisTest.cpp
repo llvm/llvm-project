@@ -17,6 +17,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
+#include "clang/Analysis/FlowSensitive/DebugSupport.h"
 #include "clang/Analysis/FlowSensitive/NoopAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
@@ -166,7 +167,7 @@ public:
     auto CS = Elt->getAs<CFGStmt>();
     if (!CS)
       return;
-    auto S = CS->getStmt();
+    const auto *S = CS->getStmt();
     if (auto *C = dyn_cast<CallExpr>(S)) {
       if (auto *F = dyn_cast<FunctionDecl>(C->getCalleeDecl())) {
         E.CalledFunctions.insert(F->getNameInfo().getAsString());
@@ -310,7 +311,7 @@ TEST_F(NoreturnDestructorTest, ConditionalOperatorNestedBranchReturns) {
 }
 
 // Models an analysis that uses flow conditions.
-class SpecialBoolAnalysis
+class SpecialBoolAnalysis final
     : public DataflowAnalysis<SpecialBoolAnalysis, NoopLattice> {
 public:
   explicit SpecialBoolAnalysis(ASTContext &Context)
@@ -322,7 +323,7 @@ public:
     auto CS = Elt->getAs<CFGStmt>();
     if (!CS)
       return;
-    auto S = CS->getStmt();
+    const auto *S = CS->getStmt();
     auto SpecialBoolRecordDecl = recordDecl(hasName("SpecialBool"));
     auto HasSpecialBoolType = hasType(SpecialBoolRecordDecl);
 
@@ -352,7 +353,7 @@ public:
 
   bool compareEquivalent(QualType Type, const Value &Val1,
                          const Environment &Env1, const Value &Val2,
-                         const Environment &Env2) final {
+                         const Environment &Env2) override {
     const auto *Decl = Type->getAsCXXRecordDecl();
     if (Decl == nullptr || Decl->getIdentifier() == nullptr ||
         Decl->getName() != "SpecialBool")
@@ -373,7 +374,7 @@ public:
   // Always returns `true` to accept the `MergedVal`.
   bool merge(QualType Type, const Value &Val1, const Environment &Env1,
              const Value &Val2, const Environment &Env2, Value &MergedVal,
-             Environment &MergedEnv) final {
+             Environment &MergedEnv) override {
     const auto *Decl = Type->getAsCXXRecordDecl();
     if (Decl == nullptr || Decl->getIdentifier() == nullptr ||
         Decl->getName() != "SpecialBool")
@@ -461,16 +462,15 @@ TEST_F(JoinFlowConditionsTest, JoinDistinctButProvablyEquivalentValues) {
         EXPECT_FALSE(Env1.flowConditionImplies(*GetFooValue(Env1)));
         EXPECT_TRUE(Env2.flowConditionImplies(*GetFooValue(Env2)));
         EXPECT_TRUE(Env3.flowConditionImplies(*GetFooValue(Env3)));
-        EXPECT_TRUE(Env4.flowConditionImplies(*GetFooValue(Env3)));
+        EXPECT_TRUE(Env4.flowConditionImplies(*GetFooValue(Env4)));
       });
 }
 
-class OptionalIntAnalysis
+class OptionalIntAnalysis final
     : public DataflowAnalysis<OptionalIntAnalysis, NoopLattice> {
 public:
-  explicit OptionalIntAnalysis(ASTContext &Context, BoolValue &HasValueTop)
-      : DataflowAnalysis<OptionalIntAnalysis, NoopLattice>(Context),
-        HasValueTop(HasValueTop) {}
+  explicit OptionalIntAnalysis(ASTContext &Context)
+      : DataflowAnalysis<OptionalIntAnalysis, NoopLattice>(Context) {}
 
   static NoopLattice initialElement() { return {}; }
 
@@ -478,22 +478,23 @@ public:
     auto CS = Elt->getAs<CFGStmt>();
     if (!CS)
       return;
-    auto S = CS->getStmt();
+    const Stmt *S = CS->getStmt();
     auto OptionalIntRecordDecl = recordDecl(hasName("OptionalInt"));
     auto HasOptionalIntType = hasType(OptionalIntRecordDecl);
 
+    SmallVector<BoundNodes, 1> Matches = match(
+        stmt(anyOf(cxxConstructExpr(HasOptionalIntType).bind("construct"),
+                   cxxOperatorCallExpr(
+                       callee(cxxMethodDecl(ofClass(OptionalIntRecordDecl))))
+                       .bind("operator"))),
+        *S, getASTContext());
     if (const auto *E = selectFirst<CXXConstructExpr>(
-            "call", match(cxxConstructExpr(HasOptionalIntType).bind("call"), *S,
-                          getASTContext()))) {
+            "construct", Matches)) {
       auto &ConstructorVal = *Env.createValue(E->getType());
       ConstructorVal.setProperty("has_value", Env.getBoolLiteralValue(false));
       Env.setValue(*Env.getStorageLocation(*E, SkipPast::None), ConstructorVal);
-    } else if (const auto *E = selectFirst<CXXOperatorCallExpr>(
-                   "call",
-                   match(cxxOperatorCallExpr(callee(cxxMethodDecl(ofClass(
-                                                 OptionalIntRecordDecl))))
-                             .bind("call"),
-                         *S, getASTContext()))) {
+    } else if (const auto *E =
+                   selectFirst<CXXOperatorCallExpr>("operator", Matches)) {
       assert(E->getNumArgs() > 0);
       auto *Object = E->getArg(0);
       assert(Object != nullptr);
@@ -510,18 +511,22 @@ public:
 
   bool compareEquivalent(QualType Type, const Value &Val1,
                          const Environment &Env1, const Value &Val2,
-                         const Environment &Env2) final {
+                         const Environment &Env2) override {
     // Nothing to say about a value that does not model an `OptionalInt`.
     if (!Type->isRecordType() ||
         Type->getAsCXXRecordDecl()->getQualifiedNameAsString() != "OptionalInt")
       return false;
 
-    return Val1.getProperty("has_value") == Val2.getProperty("has_value");
+    auto *Prop1  = Val1.getProperty("has_value");
+    auto *Prop2 = Val2.getProperty("has_value");
+    return Prop1 == Prop2 ||
+           (Prop1 != nullptr && Prop2 != nullptr && isa<TopBoolValue>(Prop1) &&
+            isa<TopBoolValue>(Prop2));
   }
 
   bool merge(QualType Type, const Value &Val1, const Environment &Env1,
              const Value &Val2, const Environment &Env2, Value &MergedVal,
-             Environment &MergedEnv) final {
+             Environment &MergedEnv) override {
     // Nothing to say about a value that does not model an `OptionalInt`.
     if (!Type->isRecordType() ||
         Type->getAsCXXRecordDecl()->getQualifiedNameAsString() != "OptionalInt")
@@ -538,11 +543,9 @@ public:
     if (HasValue1 == HasValue2)
       MergedVal.setProperty("has_value", *HasValue1);
     else
-      MergedVal.setProperty("has_value", HasValueTop);
+      MergedVal.setProperty("has_value", MergedEnv.makeTopBoolValue());
     return true;
   }
-
-  BoolValue &HasValueTop;
 };
 
 class WideningTest : public Test {
@@ -561,11 +564,8 @@ protected:
         checkDataflow<OptionalIntAnalysis>(
             AnalysisInputs<OptionalIntAnalysis>(
                 Code, ast_matchers::hasName("target"),
-                [this](ASTContext &Context, Environment &Env) {
-                  assert(HasValueTop == nullptr);
-                  HasValueTop =
-                      &Env.takeOwnership(std::make_unique<AtomicBoolValue>());
-                  return OptionalIntAnalysis(Context, *HasValueTop);
+                [](ASTContext &Context, Environment &Env) {
+                  return OptionalIntAnalysis(Context);
                 })
                 .withASTBuildArgs({"-fsyntax-only", "-std=c++17"})
                 .withASTBuildVirtualMappedFiles(std::move(FilesContents)),
@@ -576,8 +576,6 @@ protected:
                                            &AO) { Match(Results, AO.ASTCtx); }),
         llvm::Succeeded());
   }
-
-  BoolValue *HasValueTop = nullptr;
 };
 
 TEST_F(WideningTest, JoinDistinctValuesWithDistinctProperties) {
@@ -597,8 +595,8 @@ TEST_F(WideningTest, JoinDistinctValuesWithDistinctProperties) {
   )";
   runDataflow(
       Code,
-      [this](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
-             ASTContext &ASTCtx) {
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2", "p3"));
         const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
         const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
@@ -615,7 +613,8 @@ TEST_F(WideningTest, JoinDistinctValuesWithDistinctProperties) {
                   &Env1.getBoolLiteralValue(false));
         EXPECT_EQ(GetFooValue(Env2)->getProperty("has_value"),
                   &Env2.getBoolLiteralValue(true));
-        EXPECT_EQ(GetFooValue(Env3)->getProperty("has_value"), HasValueTop);
+        EXPECT_TRUE(
+            isa<TopBoolValue>(GetFooValue(Env3)->getProperty("has_value")));
       });
 }
 
@@ -1162,4 +1161,394 @@ TEST_F(FlowConditionTest, PointerToBoolImplicitCast) {
       });
 }
 
+class TopAnalysis final : public DataflowAnalysis<TopAnalysis, NoopLattice> {
+public:
+  explicit TopAnalysis(ASTContext &Context)
+      : DataflowAnalysis<TopAnalysis, NoopLattice>(Context) {}
+
+  static NoopLattice initialElement() { return {}; }
+
+  void transfer(const CFGElement *Elt, NoopLattice &, Environment &Env) {
+    auto CS = Elt->getAs<CFGStmt>();
+    if (!CS)
+      return;
+    const Stmt *S = CS->getStmt();
+    SmallVector<BoundNodes, 1> Matches =
+        match(callExpr(callee(functionDecl(hasName("makeTop")))).bind("top"),
+              *S, getASTContext());
+    if (const auto *E = selectFirst<CallExpr>("top", Matches)) {
+      auto &Loc = Env.createStorageLocation(*E);
+      Env.setValue(Loc, Env.makeTopBoolValue());
+      Env.setStorageLocation(*E, Loc);
+    }
+  }
+
+  bool compareEquivalent(QualType Type, const Value &Val1,
+                         const Environment &Env1, const Value &Val2,
+                         const Environment &Env2) override {
+    // Changes to a sound approximation, which allows us to test whether we can
+    // (soundly) converge for some loops.
+    return false;
+  }
+};
+
+class TopTest : public Test {
+protected:
+  template <typename Matcher>
+  void runDataflow(llvm::StringRef Code, Matcher VerifyResults) {
+    ASSERT_THAT_ERROR(
+        checkDataflow<TopAnalysis>(
+            AnalysisInputs<TopAnalysis>(
+                Code, ast_matchers::hasName("target"),
+                [](ASTContext &Context, Environment &Env) {
+                  return TopAnalysis(Context);
+                })
+                .withASTBuildArgs({"-fsyntax-only", "-std=c++17"}),
+            VerifyResults),
+        llvm::Succeeded());
+  }
+};
+
+// Tests that when Top is unused it remains Top.
+TEST_F(TopTest, UnusedTopInitializer) {
+  std::string Code = R"(
+    bool makeTop();
+
+    void target() {
+      bool Foo = makeTop();
+      /*[[p1]]*/
+      (void)0;
+      /*[[p2]]*/
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         const AnalysisOutputs &AO) {
+        ASSERT_THAT(Results.keys(),
+                    UnorderedElementsAre("p1", "p2"));
+        const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
+        const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
+
+        const ValueDecl *FooDecl = findValueDecl(AO.ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+
+        auto GetFooValue = [FooDecl](const Environment &Env) {
+          return Env.getValue(*FooDecl, SkipPast::None);
+        };
+
+        Value *FooVal1 = GetFooValue(Env1);
+        ASSERT_THAT(FooVal1, NotNull());
+        EXPECT_TRUE(isa<TopBoolValue>(FooVal1))
+            << debugString(FooVal1->getKind());
+
+        Value *FooVal2 = GetFooValue(Env2);
+        ASSERT_THAT(FooVal2, NotNull());
+        EXPECT_TRUE(isa<TopBoolValue>(FooVal2))
+            << debugString(FooVal2->getKind());
+
+        EXPECT_EQ(FooVal1, FooVal2);
+      });
+}
+
+// Tests that when Top is unused it remains Top. Like above, but uses the
+// assignment form rather than initialization, which uses Top as an lvalue that
+// is *not* in an rvalue position.
+TEST_F(TopTest, UnusedTopAssignment) {
+  std::string Code = R"(
+    bool makeTop();
+
+    void target() {
+      bool Foo;
+      Foo = makeTop();
+      /*[[p1]]*/
+      (void)0;
+      /*[[p2]]*/
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         const AnalysisOutputs &AO) {
+        ASSERT_THAT(Results.keys(),
+                    UnorderedElementsAre("p1", "p2"));
+        const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
+        const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
+
+        const ValueDecl *FooDecl = findValueDecl(AO.ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+
+        auto GetFooValue = [FooDecl](const Environment &Env) {
+          return Env.getValue(*FooDecl, SkipPast::None);
+        };
+
+        Value *FooVal1 = GetFooValue(Env1);
+        ASSERT_THAT(FooVal1, NotNull());
+        EXPECT_TRUE(isa<TopBoolValue>(FooVal1))
+            << debugString(FooVal1->getKind());
+
+        Value *FooVal2 = GetFooValue(Env2);
+        ASSERT_THAT(FooVal2, NotNull());
+        EXPECT_TRUE(isa<TopBoolValue>(FooVal2))
+            << debugString(FooVal2->getKind());
+
+        EXPECT_EQ(FooVal1, FooVal2);
+      });
+}
+
+TEST_F(TopTest, UnusedTopJoinsToTop) {
+  std::string Code = R"(
+    bool makeTop();
+
+    void target(bool Cond, bool F) {
+      bool Foo = makeTop();
+      // Force a new CFG block.
+      if (F) return;
+      (void)0;
+      /*[[p1]]*/
+
+      bool Zab1;
+      bool Zab2;
+      if (Cond) {
+        Zab1 = true;
+      } else {
+        Zab2 = true;
+      }
+      (void)0;
+      /*[[p2]]*/
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         const AnalysisOutputs &AO) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2"));
+        const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
+        const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
+
+        const ValueDecl *FooDecl = findValueDecl(AO.ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        auto GetFooValue = [FooDecl](const Environment &Env) {
+          return Env.getValue(*FooDecl, SkipPast::None);
+        };
+
+        Value *FooVal1 = GetFooValue(Env1);
+        ASSERT_THAT(FooVal1, NotNull());
+        EXPECT_TRUE(isa<TopBoolValue>(FooVal1))
+            << debugString(FooVal1->getKind());
+
+        Value *FooVal2 = GetFooValue(Env2);
+        ASSERT_THAT(FooVal2, NotNull());
+        EXPECT_TRUE(isa<TopBoolValue>(FooVal2))
+            << debugString(FooVal2->getKind());
+      });
+}
+
+TEST_F(TopTest, TopUsedBeforeBranchJoinsToSameAtomicBool) {
+  std::string Code = R"(
+    bool makeTop();
+
+    void target(bool Cond, bool F) {
+      bool Foo = makeTop();
+      /*[[p0]]*/
+
+      // Use `Top`.
+      bool Bar = Foo;
+      // Force a new CFG block.
+      if (F) return;
+      (void)0;
+      /*[[p1]]*/
+
+      bool Zab1;
+      bool Zab2;
+      if (Cond) {
+        Zab1 = true;
+      } else {
+        Zab2 = true;
+      }
+      (void)0;
+      /*[[p2]]*/
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         const AnalysisOutputs &AO) {
+        ASSERT_THAT(Results.keys(),
+                    UnorderedElementsAre("p0", "p1", "p2"));
+        const Environment &Env0 = getEnvironmentAtAnnotation(Results, "p0");
+        const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
+        const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
+
+        const ValueDecl *FooDecl = findValueDecl(AO.ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        auto GetFooValue = [FooDecl](const Environment &Env) {
+          return Env.getValue(*FooDecl, SkipPast::None);
+        };
+
+        Value *FooVal0 = GetFooValue(Env0);
+        ASSERT_THAT(FooVal0, NotNull());
+        EXPECT_TRUE(isa<TopBoolValue>(FooVal0))
+            << debugString(FooVal0->getKind());
+
+        Value *FooVal1 = GetFooValue(Env1);
+        ASSERT_THAT(FooVal1, NotNull());
+        EXPECT_TRUE(isa<AtomicBoolValue>(FooVal1))
+            << debugString(FooVal1->getKind());
+
+        Value *FooVal2 = GetFooValue(Env2);
+        ASSERT_THAT(FooVal2, NotNull());
+        EXPECT_TRUE(isa<AtomicBoolValue>(FooVal2))
+            << debugString(FooVal2->getKind());
+
+        EXPECT_EQ(FooVal2, FooVal1);
+      });
+}
+
+TEST_F(TopTest, TopUsedInBothBranchesJoinsToAtomic) {
+  std::string Code = R"(
+    bool makeTop();
+
+    void target(bool Cond, bool F) {
+      bool Foo = makeTop();
+      // Force a new CFG block.
+      if (F) return;
+      (void)0;
+      /*[[p1]]*/
+
+      bool Zab1;
+      bool Zab2;
+      if (Cond) {
+        Zab1 = Foo;
+      } else {
+        Zab2 = Foo;
+      }
+      (void)0;
+      /*[[p2]]*/
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         const AnalysisOutputs &AO) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2"));
+        const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
+        const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
+
+        const ValueDecl *FooDecl = findValueDecl(AO.ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        auto GetFooValue = [FooDecl](const Environment &Env) {
+          return Env.getValue(*FooDecl, SkipPast::None);
+        };
+
+        Value *FooVal1 = GetFooValue(Env1);
+        ASSERT_THAT(FooVal1, NotNull());
+        EXPECT_TRUE(isa<TopBoolValue>(FooVal1))
+            << debugString(FooVal1->getKind());
+
+        Value *FooVal2 = GetFooValue(Env2);
+        ASSERT_THAT(FooVal2, NotNull());
+        EXPECT_TRUE(isa<AtomicBoolValue>(FooVal2))
+            << debugString(FooVal2->getKind());
+      });
+}
+
+TEST_F(TopTest, TopUsedInBothBranchesWithoutPrecisionLoss) {
+  std::string Code = R"(
+    bool makeTop();
+
+    void target(bool Cond, bool F) {
+      bool Foo = makeTop();
+      // Force a new CFG block.
+      if (F) return;
+      (void)0;
+
+      bool Bar;
+      if (Cond) {
+        Bar = Foo;
+      } else {
+        Bar = Foo;
+      }
+      (void)0;
+      /*[[p]]*/
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         const AnalysisOutputs &AO) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *FooDecl = findValueDecl(AO.ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        const ValueDecl *BarDecl = findValueDecl(AO.ASTCtx, "Bar");
+        ASSERT_THAT(BarDecl, NotNull());
+
+        auto *FooVal =
+            dyn_cast_or_null<BoolValue>(Env.getValue(*FooDecl, SkipPast::None));
+        ASSERT_THAT(FooVal, NotNull());
+
+        auto *BarVal =
+            dyn_cast_or_null<BoolValue>(Env.getValue(*BarDecl, SkipPast::None));
+        ASSERT_THAT(BarVal, NotNull());
+
+        EXPECT_TRUE(Env.flowConditionImplies(Env.makeIff(*FooVal, *BarVal)));
+      });
+}
+
+TEST_F(TopTest, TopUnusedBeforeLoopHeadJoinsToTop) {
+  std::string Code = R"(
+    bool makeTop();
+
+    void target(bool Cond, bool F) {
+      bool Foo = makeTop();
+      // Force a new CFG block.
+      if (F) return;
+      (void)0;
+      /*[[p1]]*/
+
+      while (Cond) {
+        // Use `Foo`.
+        bool Zab = Foo;
+        Zab = false;
+        Foo = makeTop();
+      }
+      (void)0;
+      /*[[p2]]*/
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         const AnalysisOutputs &AO) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p1", "p2"));
+        const Environment &Env1 = getEnvironmentAtAnnotation(Results, "p1");
+        const Environment &Env2 = getEnvironmentAtAnnotation(Results, "p2");
+
+        const ValueDecl *FooDecl = findValueDecl(AO.ASTCtx, "Foo");
+        ASSERT_THAT(FooDecl, NotNull());
+
+        auto GetFooValue = [FooDecl](const Environment &Env) {
+          return Env.getValue(*FooDecl, SkipPast::None);
+        };
+
+        Value *FooVal1 = GetFooValue(Env1);
+        ASSERT_THAT(FooVal1, NotNull());
+        EXPECT_TRUE(isa<TopBoolValue>(FooVal1))
+            << debugString(FooVal1->getKind());
+
+        Value *FooVal2 = GetFooValue(Env2);
+        ASSERT_THAT(FooVal2, NotNull());
+        EXPECT_TRUE(isa<TopBoolValue>(FooVal2))
+            << debugString(FooVal2->getKind());
+
+      });
+}
 } // namespace

@@ -74,7 +74,7 @@ struct TestEmulateWideIntPass
             });
 
     RewritePatternSet patterns(ctx);
-    arith::populateWideIntEmulationPatterns(typeConverter, patterns);
+    arith::populateArithWideIntEmulationPatterns(typeConverter, patterns);
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       signalPassFailure();
   }

@@ -270,35 +270,9 @@ public:
             builder.createIntegerConstant(loc, idxTy, *len));
       } else if (Fortran::semantics::IsAssumedLengthCharacter(sym) ||
                  ba.getCharLenExpr()) {
-        // Read length from fir.box (explicit expr cannot safely be re-evaluated
-        // here).
-        auto readLength = [&]() {
-          fir::BoxValue boxLoad =
-              builder.create<fir::LoadOp>(loc, fir::getBase(args.valueInTuple))
-                  .getResult();
-          return fir::factory::readCharLen(builder, loc, boxLoad);
-        };
-        if (Fortran::semantics::IsOptional(sym)) {
-          // It is not safe to unconditionally read boxes of optionals in case
-          // they are absents. According to 15.5.2.12 3 (9), it is illegal to
-          // inquire the length of absent optional, even if non deferred, so
-          // it's fine to use undefOp in this case.
-          auto isPresent = builder.create<fir::IsPresentOp>(
-              loc, builder.getI1Type(), fir::getBase(args.valueInTuple));
-          mlir::Value len =
-              builder.genIfOp(loc, {idxTy}, isPresent, true)
-                  .genThen([&]() {
-                    builder.create<fir::ResultOp>(loc, readLength());
-                  })
-                  .genElse([&]() {
-                    auto undef = builder.create<fir::UndefOp>(loc, idxTy);
-                    builder.create<fir::ResultOp>(loc, undef.getResult());
-                  })
-                  .getResults()[0];
-          nonDeferredLenParams.push_back(len);
-        } else {
-          nonDeferredLenParams.push_back(readLength());
-        }
+        nonDeferredLenParams.push_back(
+            Fortran::lower::getAssumedCharAllocatableOrPointerLen(
+                builder, loc, sym, args.valueInTuple));
       }
     } else if (isDerivedWithLenParameters(sym)) {
       TODO(loc, "host associated derived type allocatable or pointer with "

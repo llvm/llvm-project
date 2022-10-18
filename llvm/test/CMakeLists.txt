@@ -10,7 +10,6 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_ZLIB
   LLVM_ENABLE_ZSTD
   LLVM_ENABLE_LIBXML2
-  LLVM_INCLUDE_GO_TESTS
   LLVM_LINK_LLVM_DYLIB
   LLVM_TOOL_LTO_BUILD
   LLVM_USE_INTEL_JITEVENTS
@@ -78,6 +77,7 @@ set(LLVM_TEST_DEPENDS
           llvm-cxxdump
           llvm-cxxfilt
           llvm-cxxmap
+          llvm-debuginfo-analyzer
           llvm-debuginfod-find
           llvm-diff
           llvm-dis

@@ -11,12 +11,16 @@
 #define _LIBCPP___CHRONO_OSTREAM_H
 
 #include <__chrono/day.h>
+#include <__chrono/duration.h>
 #include <__chrono/month.h>
 #include <__chrono/statically_widen.h>
+#include <__chrono/weekday.h>
 #include <__chrono/year.h>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__format/format_functions.h>
 #include <ostream>
+#include <ratio>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -27,6 +31,71 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
 
 namespace chrono {
+
+// Depending on the type the return is a const _CharT* or a basic_string<_CharT>
+template <class _CharT, class _Period>
+_LIBCPP_HIDE_FROM_ABI auto __units_suffix() {
+  // TODO FMT LWG issue the suffixes are always char and not STATICALLY-WIDEN'ed.
+  if constexpr (same_as<typename _Period::type, atto>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "as");
+  else if constexpr (same_as<typename _Period::type, femto>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "fs");
+  else if constexpr (same_as<typename _Period::type, pico>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "ps");
+  else if constexpr (same_as<typename _Period::type, nano>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "ns");
+  else if constexpr (same_as<typename _Period::type, micro>)
+#  ifndef _LIBCPP_HAS_NO_UNICODE
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "\u00b5s");
+#  else
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "us");
+#  endif
+  else if constexpr (same_as<typename _Period::type, milli>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "ms");
+  else if constexpr (same_as<typename _Period::type, centi>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "cs");
+  else if constexpr (same_as<typename _Period::type, deci>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "ds");
+  else if constexpr (same_as<typename _Period::type, ratio<1>>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "s");
+  else if constexpr (same_as<typename _Period::type, deca>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "das");
+  else if constexpr (same_as<typename _Period::type, hecto>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "hs");
+  else if constexpr (same_as<typename _Period::type, kilo>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "ks");
+  else if constexpr (same_as<typename _Period::type, mega>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "Ms");
+  else if constexpr (same_as<typename _Period::type, giga>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "Gs");
+  else if constexpr (same_as<typename _Period::type, tera>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "Ts");
+  else if constexpr (same_as<typename _Period::type, peta>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "Ps");
+  else if constexpr (same_as<typename _Period::type, exa>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "Es");
+  else if constexpr (same_as<typename _Period::type, ratio<60>>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "min");
+  else if constexpr (same_as<typename _Period::type, ratio<3600>>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "h");
+  else if constexpr (same_as<typename _Period::type, ratio<86400>>)
+    return _LIBCPP_STATICALLY_WIDEN(_CharT, "d");
+  else if constexpr (_Period::den == 1)
+    return std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "[{}]s"), _Period::num);
+  else
+    return std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "[{}/{}]s"), _Period::num, _Period::den);
+}
+
+template <class _CharT, class _Traits, class _Rep, class _Period>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const duration<_Rep, _Period>& __d) {
+  basic_ostringstream<_CharT, _Traits> __s;
+  __s.flags(__os.flags());
+  __s.imbue(__os.getloc());
+  __s.precision(__os.precision());
+  __s << __d.count() << chrono::__units_suffix<_CharT, _Period>();
+  return __os << __s.str();
+}
 
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT basic_ostream<_CharT, _Traits>&
@@ -56,6 +125,15 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT basic_ostream<_CharT, _Traits>
 operator<<(basic_ostream<_CharT, _Traits>& __os, const year& __y) {
   return __os << (__y.ok() ? std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "{:%Y}"), __y)
                            : std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "{:%Y} is not a valid year"), __y));
+}
+
+template <class _CharT, class _Traits>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const weekday& __wd) {
+  return __os << (__wd.ok() ? std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%a}"), __wd)
+                            : std::format(__os.getloc(), // TODO FMT Standard mandated locale isn't used.
+                                          _LIBCPP_STATICALLY_WIDEN(_CharT, "{} is not a valid weekday"),
+                                          static_cast<unsigned>(__wd.c_encoding())));
 }
 
 } // namespace chrono

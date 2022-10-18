@@ -132,6 +132,9 @@ if shutil.which('xz') != None:
 if config.lldb_system_debugserver:
     config.available_features.add('system-debugserver')
 
+if config.have_lldb_server:
+    config.available_features.add('lldb-server')
+
 # NetBSD permits setting dbregs either if one is root
 # or if user_set_dbregs is enabled
 can_set_dbregs = True

@@ -125,14 +125,12 @@ struct LinalgOpTilingInterface
     // specified could lead to out of bounds accesses.
     Location loc = op->getLoc();
     LinalgOp linalgOp = cast<LinalgOp>(op);
-    SmallVector<Value> valuesToTile = linalgOp.getInputAndOutputOperands();
+    SmallVector<Value> valuesToTile = linalgOp->getOperands();
     SmallVector<Value, 4> tiledOperands = makeTiledShapes(
         b, loc, linalgOp, valuesToTile, offsets, sizes, {}, true);
 
-    SmallVector<Type> resultTensorTypes = llvm::to_vector(llvm::map_range(
-        linalgOp.getOutputTensorOperands(), [&](OpOperand *opOperand) {
-          return tiledOperands[opOperand->getOperandNumber()].getType();
-        }));
+    SmallVector<Type> resultTensorTypes =
+        getTensorOutputTypes(linalgOp, tiledOperands);
 
     Operation *tiledOp =
         linalgOp.clone(b, loc, resultTensorTypes, tiledOperands);
@@ -222,23 +220,23 @@ struct LinalgOpTilingInterface
       return op->emitOpError("expected operation to have buffer semantics");
 
     SmallVector<Value> indexedValues;
-    indexedValues.reserve(linalgOp.getNumInputsAndOutputs());
+    indexedValues.reserve(linalgOp->getNumOperands());
     Location linalgOpLoc = op->getLoc();
     /// Load the data corresponding to the block arguments that
     /// represent input operands.
-    for (OpOperand *operand : linalgOp.getInputAndOutputOperands()) {
-      if (!linalgOp.payloadUsesValueFromOperand(operand)) {
+    for (OpOperand &operand : linalgOp->getOpOperands()) {
+      if (!linalgOp.payloadUsesValueFromOperand(&operand)) {
         indexedValues.push_back(nullptr);
         continue;
       }
-      if (linalgOp.isScalar(operand)) {
-        indexedValues.push_back(operand->get());
+      if (linalgOp.isScalar(&operand)) {
+        indexedValues.push_back(operand.get());
         continue;
       }
       SmallVector<Value> indices = getIndicesForAccess(
-          builder, linalgOpLoc, linalgOp.getMatchingIndexingMap(operand), ivs);
+          builder, linalgOpLoc, linalgOp.getMatchingIndexingMap(&operand), ivs);
       Value load =
-          builder.create<memref::LoadOp>(linalgOpLoc, operand->get(), indices);
+          builder.create<memref::LoadOp>(linalgOpLoc, operand.get(), indices);
       indexedValues.push_back(load);
     }
 

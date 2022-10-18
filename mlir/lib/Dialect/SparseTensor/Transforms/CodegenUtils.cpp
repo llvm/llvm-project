@@ -392,23 +392,23 @@ DimLevelType mlir::sparse_tensor::dimLevelTypeEncoding(
     SparseTensorEncodingAttr::DimLevelType dlt) {
   switch (dlt) {
   case SparseTensorEncodingAttr::DimLevelType::Dense:
-    return DimLevelType::kDense;
+    return DimLevelType::Dense;
   case SparseTensorEncodingAttr::DimLevelType::Compressed:
-    return DimLevelType::kCompressed;
+    return DimLevelType::Compressed;
   case SparseTensorEncodingAttr::DimLevelType::CompressedNu:
-    return DimLevelType::kCompressedNu;
+    return DimLevelType::CompressedNu;
   case SparseTensorEncodingAttr::DimLevelType::CompressedNo:
-    return DimLevelType::kCompressedNo;
+    return DimLevelType::CompressedNo;
   case SparseTensorEncodingAttr::DimLevelType::CompressedNuNo:
-    return DimLevelType::kCompressedNuNo;
+    return DimLevelType::CompressedNuNo;
   case SparseTensorEncodingAttr::DimLevelType::Singleton:
-    return DimLevelType::kSingleton;
+    return DimLevelType::Singleton;
   case SparseTensorEncodingAttr::DimLevelType::SingletonNu:
-    return DimLevelType::kSingletonNu;
+    return DimLevelType::SingletonNu;
   case SparseTensorEncodingAttr::DimLevelType::SingletonNo:
-    return DimLevelType::kSingletonNo;
+    return DimLevelType::SingletonNo;
   case SparseTensorEncodingAttr::DimLevelType::SingletonNuNo:
-    return DimLevelType::kSingletonNuNo;
+    return DimLevelType::SingletonNuNo;
   }
   llvm_unreachable("Unknown SparseTensorEncodingAttr::DimLevelType");
 }
@@ -582,4 +582,20 @@ func::CallOp mlir::sparse_tensor::createFuncCall(
 
 Type mlir::sparse_tensor::getOpaquePointerType(OpBuilder &builder) {
   return LLVM::LLVMPointerType::get(builder.getI8Type());
+}
+
+Value mlir::sparse_tensor::genAlloca(OpBuilder &builder, Location loc,
+                                     unsigned sz, Type tp) {
+  return genAlloca(builder, loc, constantIndex(builder, loc, sz), tp);
+}
+
+Value mlir::sparse_tensor::genAlloca(OpBuilder &builder, Location loc, Value sz,
+                                     Type tp) {
+  auto memTp = MemRefType::get({ShapedType::kDynamicSize}, tp);
+  return builder.create<memref::AllocaOp>(loc, memTp, ValueRange{sz});
+}
+
+Value mlir::sparse_tensor::genAllocaScalar(OpBuilder &builder, Location loc,
+                                           Type tp) {
+  return builder.create<memref::AllocaOp>(loc, MemRefType::get({}, tp));
 }

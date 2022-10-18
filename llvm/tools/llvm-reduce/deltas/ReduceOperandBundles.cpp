@@ -104,6 +104,6 @@ static void extractOperandBundesFromModule(Oracle &O, Module &Program) {
 }
 
 void llvm::reduceOperandBundesDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing OperandBundes...\n";
-  runDeltaPass(Test, extractOperandBundesFromModule);
+  runDeltaPass(Test, extractOperandBundesFromModule,
+               "Reducing Operand Bundles");
 }

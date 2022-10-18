@@ -219,8 +219,7 @@ define i8 @sel_shift_bool_i8(i1 %t) {
 ; CHECK-LABEL: sel_shift_bool_i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    seqz a0, a0
-; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    neg a0, a0
 ; CHECK-NEXT:    andi a0, a0, -128
 ; CHECK-NEXT:    ret
   %shl = select i1 %t, i8 128, i8 0

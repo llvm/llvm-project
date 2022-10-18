@@ -2602,7 +2602,7 @@ static bool isSupportedByOpenMPIRBuilder(const OMPSimdDirective &S) {
   for (OMPClause *C : S.clauses()) {
     // Currently only order, simdlen and safelen clauses are supported
     if (!(isa<OMPSimdlenClause>(C) || isa<OMPSafelenClause>(C) ||
-          isa<OMPOrderClause>(C)))
+          isa<OMPOrderClause>(C) || isa<OMPAlignedClause>(C)))
       return false;
   }
 
@@ -2628,6 +2628,36 @@ static bool isSupportedByOpenMPIRBuilder(const OMPSimdDirective &S) {
   }
   return true;
 }
+static llvm::MapVector<llvm::Value *, llvm::Value *>
+GetAlignedMapping(const OMPSimdDirective &S, CodeGenFunction &CGF) {
+  llvm::MapVector<llvm::Value *, llvm::Value *> AlignedVars;
+  for (const auto *Clause : S.getClausesOfKind<OMPAlignedClause>()) {
+    llvm::APInt ClauseAlignment(64, 0);
+    if (const Expr *AlignmentExpr = Clause->getAlignment()) {
+      auto *AlignmentCI =
+          cast<llvm::ConstantInt>(CGF.EmitScalarExpr(AlignmentExpr));
+      ClauseAlignment = AlignmentCI->getValue();
+    }
+    for (const Expr *E : Clause->varlists()) {
+      llvm::APInt Alignment(ClauseAlignment);
+      if (Alignment == 0) {
+        // OpenMP [2.8.1, Description]
+        // If no optional parameter is specified, implementation-defined default
+        // alignments for SIMD instructions on the target platforms are assumed.
+        Alignment =
+            CGF.getContext()
+                .toCharUnitsFromBits(CGF.getContext().getOpenMPDefaultSimdAlign(
+                    E->getType()->getPointeeType()))
+                .getQuantity();
+      }
+      assert((Alignment == 0 || Alignment.isPowerOf2()) &&
+             "alignment is not power of 2");
+      llvm::Value *PtrValue = CGF.EmitScalarExpr(E);
+      AlignedVars[PtrValue] = CGF.Builder.getInt64(Alignment.getSExtValue());
+    }
+  }
+  return AlignedVars;
+}
 
 void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
   bool UseOMPIRBuilder =
@@ -2637,6 +2667,8 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
                                                           PrePostActionTy &) {
       // Use the OpenMPIRBuilder if enabled.
       if (UseOMPIRBuilder) {
+        llvm::MapVector<llvm::Value *, llvm::Value *> AlignedVars =
+            GetAlignedMapping(S, CGF);
         // Emit the associated statement and get its loop representation.
         const Stmt *Inner = S.getRawStmt();
         llvm::CanonicalLoopInfo *CLI =
@@ -2669,7 +2701,8 @@ void CodeGenFunction::EmitOMPSimdDirective(const OMPSimdDirective &S) {
         }
         // Add simd metadata to the collapsed loop. Do not generate
         // another loop for if clause. Support for if clause is done earlier.
-        OMPBuilder.applySimd(CLI, /*IfCond*/ nullptr, Order, Simdlen, Safelen);
+        OMPBuilder.applySimd(CLI, AlignedVars,
+                             /*IfCond*/ nullptr, Order, Simdlen, Safelen);
         return;
       }
     };

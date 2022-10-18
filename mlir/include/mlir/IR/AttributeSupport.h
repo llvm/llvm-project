@@ -182,7 +182,7 @@ public:
   /// The use of this method is in general discouraged in favor of
   /// 'get<T, Args>(ctx, args)'.
   template <typename T, typename... Args>
-  static typename std::enable_if_t<
+  static std::enable_if_t<
       !std::is_same<typename T::ImplType, AttributeStorage>::value, T>
   getWithTypeID(MLIRContext *ctx, TypeID typeID, Args &&...args) {
 #ifndef NDEBUG
@@ -207,7 +207,7 @@ public:
   /// The use of this method is in general discouraged in favor of
   /// 'get<T, Args>(ctx, args)'.
   template <typename T>
-  static typename std::enable_if_t<
+  static std::enable_if_t<
       std::is_same<typename T::ImplType, AttributeStorage>::value, T>
   getWithTypeID(MLIRContext *ctx, TypeID typeID) {
 #ifndef NDEBUG
@@ -239,7 +239,7 @@ public:
   /// The use of this method is in general discouraged in favor of
   /// 'registerAttribute<T>(ctx)'.
   template <typename T>
-  static typename std::enable_if_t<
+  static std::enable_if_t<
       !std::is_same<typename T::ImplType, AttributeStorage>::value>
   registerAttribute(MLIRContext *ctx, TypeID typeID) {
     ctx->getAttributeUniquer()
@@ -249,7 +249,7 @@ public:
   /// The use of this method is in general discouraged in favor of
   /// 'registerAttribute<T>(ctx)'.
   template <typename T>
-  static typename std::enable_if_t<
+  static std::enable_if_t<
       std::is_same<typename T::ImplType, AttributeStorage>::value>
   registerAttribute(MLIRContext *ctx, TypeID typeID) {
     ctx->getAttributeUniquer()

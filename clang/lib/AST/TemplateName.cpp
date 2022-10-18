@@ -35,31 +35,49 @@ using namespace clang;
 
 TemplateArgument
 SubstTemplateTemplateParmPackStorage::getArgumentPack() const {
-  return TemplateArgument(llvm::makeArrayRef(Arguments, size()));
+  return TemplateArgument(llvm::makeArrayRef(Arguments, Bits.Data));
+}
+
+TemplateTemplateParmDecl *
+SubstTemplateTemplateParmPackStorage::getParameterPack() const {
+  return cast<TemplateTemplateParmDecl>(
+      getReplacedTemplateParameterList(getAssociatedDecl())
+          ->asArray()[Bits.Index]);
+}
+
+TemplateTemplateParmDecl *
+SubstTemplateTemplateParmStorage::getParameter() const {
+  return cast<TemplateTemplateParmDecl>(
+      getReplacedTemplateParameterList(getAssociatedDecl())
+          ->asArray()[Bits.Index]);
 }
 
 void SubstTemplateTemplateParmStorage::Profile(llvm::FoldingSetNodeID &ID) {
-  Profile(ID, Parameter, Replacement);
+  Profile(ID, Replacement, getAssociatedDecl(), getIndex(), getPackIndex());
 }
 
 void SubstTemplateTemplateParmStorage::Profile(llvm::FoldingSetNodeID &ID,
-                                           TemplateTemplateParmDecl *parameter,
-                                               TemplateName replacement) {
-  ID.AddPointer(parameter);
-  ID.AddPointer(replacement.getAsVoidPointer());
+                                               TemplateName Replacement,
+                                               Decl *AssociatedDecl,
+                                               unsigned Index,
+                                               Optional<unsigned> PackIndex) {
+  Replacement.Profile(ID);
+  ID.AddPointer(AssociatedDecl);
+  ID.AddInteger(Index);
+  ID.AddInteger(PackIndex ? *PackIndex + 1 : 0);
 }
 
 void SubstTemplateTemplateParmPackStorage::Profile(llvm::FoldingSetNodeID &ID,
                                                    ASTContext &Context) {
-  Profile(ID, Context, Parameter, getArgumentPack());
+  Profile(ID, Context, getArgumentPack(), getAssociatedDecl(), getIndex());
 }
 
-void SubstTemplateTemplateParmPackStorage::Profile(llvm::FoldingSetNodeID &ID,
-                                                   ASTContext &Context,
-                                           TemplateTemplateParmDecl *Parameter,
-                                             const TemplateArgument &ArgPack) {
-  ID.AddPointer(Parameter);
+void SubstTemplateTemplateParmPackStorage::Profile(
+    llvm::FoldingSetNodeID &ID, ASTContext &Context,
+    const TemplateArgument &ArgPack, Decl *AssociatedDecl, unsigned Index) {
   ArgPack.Profile(ID, Context);
+  ID.AddPointer(AssociatedDecl);
+  ID.AddInteger(Index);
 }
 
 TemplateName::TemplateName(void *Ptr) {
@@ -304,7 +322,7 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
   } else {
     assert(getKind() == TemplateName::OverloadedTemplate);
     OverloadedTemplateStorage *OTS = getAsOverloadedTemplate();
-    (*OTS->begin())->printName(OS);
+    (*OTS->begin())->printName(OS, Policy);
   }
 }
 

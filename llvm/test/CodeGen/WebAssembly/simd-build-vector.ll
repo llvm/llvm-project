@@ -97,8 +97,17 @@ define <16 x i8> @swizzle_one_i8x16(<16 x i8> %src, <16 x i8> %mask) {
 ; CHECK-LABEL: swizzle_one_i8x16:
 ; CHECK:         .functype swizzle_one_i8x16 (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i8x16.swizzle $push0=, $0, $1
-; CHECK-NEXT:    return $pop0
+; CHECK-NEXT:    global.get $push5=, __stack_pointer
+; CHECK-NEXT:    i32.const $push6=, 16
+; CHECK-NEXT:    i32.sub $push8=, $pop5, $pop6
+; CHECK-NEXT:    local.tee $push7=, $2=, $pop8
+; CHECK-NEXT:    v128.store 0($pop7), $0
+; CHECK-NEXT:    i8x16.extract_lane_u $push0=, $1, 0
+; CHECK-NEXT:    i32.const $push1=, 15
+; CHECK-NEXT:    i32.and $push2=, $pop0, $pop1
+; CHECK-NEXT:    i32.or $push3=, $2, $pop2
+; CHECK-NEXT:    v128.load8_splat $push4=, 0($pop3)
+; CHECK-NEXT:    return $pop4
   %m0 = extractelement <16 x i8> %mask, i32 0
   %s0 = extractelement <16 x i8> %src, i8 %m0
   %v0 = insertelement <16 x i8> undef, i8 %s0, i32 0
@@ -109,8 +118,107 @@ define <16 x i8> @swizzle_all_i8x16(<16 x i8> %src, <16 x i8> %mask) {
 ; CHECK-LABEL: swizzle_all_i8x16:
 ; CHECK:         .functype swizzle_all_i8x16 (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i8x16.swizzle $push0=, $0, $1
-; CHECK-NEXT:    return $pop0
+; CHECK-NEXT:    global.get $push80=, __stack_pointer
+; CHECK-NEXT:    i32.const $push81=, 16
+; CHECK-NEXT:    i32.sub $push98=, $pop80, $pop81
+; CHECK-NEXT:    local.tee $push97=, $2=, $pop98
+; CHECK-NEXT:    v128.store 0($pop97), $0
+; CHECK-NEXT:    i8x16.extract_lane_u $push61=, $1, 0
+; CHECK-NEXT:    i32.const $push1=, 15
+; CHECK-NEXT:    i32.and $push62=, $pop61, $pop1
+; CHECK-NEXT:    i32.or $push63=, $2, $pop62
+; CHECK-NEXT:    v128.load8_splat $push64=, 0($pop63)
+; CHECK-NEXT:    i8x16.extract_lane_u $push57=, $1, 1
+; CHECK-NEXT:    i32.const $push96=, 15
+; CHECK-NEXT:    i32.and $push58=, $pop57, $pop96
+; CHECK-NEXT:    i32.or $push59=, $2, $pop58
+; CHECK-NEXT:    i32.load8_u $push60=, 0($pop59)
+; CHECK-NEXT:    i8x16.replace_lane $push65=, $pop64, 1, $pop60
+; CHECK-NEXT:    i8x16.extract_lane_u $push53=, $1, 2
+; CHECK-NEXT:    i32.const $push95=, 15
+; CHECK-NEXT:    i32.and $push54=, $pop53, $pop95
+; CHECK-NEXT:    i32.or $push55=, $2, $pop54
+; CHECK-NEXT:    i32.load8_u $push56=, 0($pop55)
+; CHECK-NEXT:    i8x16.replace_lane $push66=, $pop65, 2, $pop56
+; CHECK-NEXT:    i8x16.extract_lane_u $push49=, $1, 3
+; CHECK-NEXT:    i32.const $push94=, 15
+; CHECK-NEXT:    i32.and $push50=, $pop49, $pop94
+; CHECK-NEXT:    i32.or $push51=, $2, $pop50
+; CHECK-NEXT:    i32.load8_u $push52=, 0($pop51)
+; CHECK-NEXT:    i8x16.replace_lane $push67=, $pop66, 3, $pop52
+; CHECK-NEXT:    i8x16.extract_lane_u $push45=, $1, 4
+; CHECK-NEXT:    i32.const $push93=, 15
+; CHECK-NEXT:    i32.and $push46=, $pop45, $pop93
+; CHECK-NEXT:    i32.or $push47=, $2, $pop46
+; CHECK-NEXT:    i32.load8_u $push48=, 0($pop47)
+; CHECK-NEXT:    i8x16.replace_lane $push68=, $pop67, 4, $pop48
+; CHECK-NEXT:    i8x16.extract_lane_u $push41=, $1, 5
+; CHECK-NEXT:    i32.const $push92=, 15
+; CHECK-NEXT:    i32.and $push42=, $pop41, $pop92
+; CHECK-NEXT:    i32.or $push43=, $2, $pop42
+; CHECK-NEXT:    i32.load8_u $push44=, 0($pop43)
+; CHECK-NEXT:    i8x16.replace_lane $push69=, $pop68, 5, $pop44
+; CHECK-NEXT:    i8x16.extract_lane_u $push37=, $1, 6
+; CHECK-NEXT:    i32.const $push91=, 15
+; CHECK-NEXT:    i32.and $push38=, $pop37, $pop91
+; CHECK-NEXT:    i32.or $push39=, $2, $pop38
+; CHECK-NEXT:    i32.load8_u $push40=, 0($pop39)
+; CHECK-NEXT:    i8x16.replace_lane $push70=, $pop69, 6, $pop40
+; CHECK-NEXT:    i8x16.extract_lane_u $push33=, $1, 7
+; CHECK-NEXT:    i32.const $push90=, 15
+; CHECK-NEXT:    i32.and $push34=, $pop33, $pop90
+; CHECK-NEXT:    i32.or $push35=, $2, $pop34
+; CHECK-NEXT:    i32.load8_u $push36=, 0($pop35)
+; CHECK-NEXT:    i8x16.replace_lane $push71=, $pop70, 7, $pop36
+; CHECK-NEXT:    i8x16.extract_lane_u $push29=, $1, 8
+; CHECK-NEXT:    i32.const $push89=, 15
+; CHECK-NEXT:    i32.and $push30=, $pop29, $pop89
+; CHECK-NEXT:    i32.or $push31=, $2, $pop30
+; CHECK-NEXT:    i32.load8_u $push32=, 0($pop31)
+; CHECK-NEXT:    i8x16.replace_lane $push72=, $pop71, 8, $pop32
+; CHECK-NEXT:    i8x16.extract_lane_u $push25=, $1, 9
+; CHECK-NEXT:    i32.const $push88=, 15
+; CHECK-NEXT:    i32.and $push26=, $pop25, $pop88
+; CHECK-NEXT:    i32.or $push27=, $2, $pop26
+; CHECK-NEXT:    i32.load8_u $push28=, 0($pop27)
+; CHECK-NEXT:    i8x16.replace_lane $push73=, $pop72, 9, $pop28
+; CHECK-NEXT:    i8x16.extract_lane_u $push21=, $1, 10
+; CHECK-NEXT:    i32.const $push87=, 15
+; CHECK-NEXT:    i32.and $push22=, $pop21, $pop87
+; CHECK-NEXT:    i32.or $push23=, $2, $pop22
+; CHECK-NEXT:    i32.load8_u $push24=, 0($pop23)
+; CHECK-NEXT:    i8x16.replace_lane $push74=, $pop73, 10, $pop24
+; CHECK-NEXT:    i8x16.extract_lane_u $push17=, $1, 11
+; CHECK-NEXT:    i32.const $push86=, 15
+; CHECK-NEXT:    i32.and $push18=, $pop17, $pop86
+; CHECK-NEXT:    i32.or $push19=, $2, $pop18
+; CHECK-NEXT:    i32.load8_u $push20=, 0($pop19)
+; CHECK-NEXT:    i8x16.replace_lane $push75=, $pop74, 11, $pop20
+; CHECK-NEXT:    i8x16.extract_lane_u $push13=, $1, 12
+; CHECK-NEXT:    i32.const $push85=, 15
+; CHECK-NEXT:    i32.and $push14=, $pop13, $pop85
+; CHECK-NEXT:    i32.or $push15=, $2, $pop14
+; CHECK-NEXT:    i32.load8_u $push16=, 0($pop15)
+; CHECK-NEXT:    i8x16.replace_lane $push76=, $pop75, 12, $pop16
+; CHECK-NEXT:    i8x16.extract_lane_u $push9=, $1, 13
+; CHECK-NEXT:    i32.const $push84=, 15
+; CHECK-NEXT:    i32.and $push10=, $pop9, $pop84
+; CHECK-NEXT:    i32.or $push11=, $2, $pop10
+; CHECK-NEXT:    i32.load8_u $push12=, 0($pop11)
+; CHECK-NEXT:    i8x16.replace_lane $push77=, $pop76, 13, $pop12
+; CHECK-NEXT:    i8x16.extract_lane_u $push5=, $1, 14
+; CHECK-NEXT:    i32.const $push83=, 15
+; CHECK-NEXT:    i32.and $push6=, $pop5, $pop83
+; CHECK-NEXT:    i32.or $push7=, $2, $pop6
+; CHECK-NEXT:    i32.load8_u $push8=, 0($pop7)
+; CHECK-NEXT:    i8x16.replace_lane $push78=, $pop77, 14, $pop8
+; CHECK-NEXT:    i8x16.extract_lane_u $push0=, $1, 15
+; CHECK-NEXT:    i32.const $push82=, 15
+; CHECK-NEXT:    i32.and $push2=, $pop0, $pop82
+; CHECK-NEXT:    i32.or $push3=, $2, $pop2
+; CHECK-NEXT:    i32.load8_u $push4=, 0($pop3)
+; CHECK-NEXT:    i8x16.replace_lane $push79=, $pop78, 15, $pop4
+; CHECK-NEXT:    return $pop79
   %m0 = extractelement <16 x i8> %mask, i32 0
   %s0 = extractelement <16 x i8> %src, i8 %m0
   %v0 = insertelement <16 x i8> undef, i8 %s0, i32 0
@@ -210,14 +318,25 @@ define <16 x i8> @mashup_swizzle_i8x16(<16 x i8> %src, <16 x i8> %mask, i8 %spla
 ; CHECK-LABEL: mashup_swizzle_i8x16:
 ; CHECK:         .functype mashup_swizzle_i8x16 (v128, v128, i32) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i8x16.swizzle $push0=, $0, $1
-; CHECK-NEXT:    i8x16.replace_lane $push1=, $pop0, 3, $2
-; CHECK-NEXT:    i32.const $push2=, 42
-; CHECK-NEXT:    i8x16.replace_lane $push3=, $pop1, 4, $pop2
-; CHECK-NEXT:    i8x16.replace_lane $push4=, $pop3, 12, $2
-; CHECK-NEXT:    i32.const $push6=, 42
-; CHECK-NEXT:    i8x16.replace_lane $push5=, $pop4, 14, $pop6
-; CHECK-NEXT:    return $pop5
+; CHECK-NEXT:    global.get $push12=, __stack_pointer
+; CHECK-NEXT:    i32.const $push13=, 16
+; CHECK-NEXT:    i32.sub $push16=, $pop12, $pop13
+; CHECK-NEXT:    local.tee $push15=, $3=, $pop16
+; CHECK-NEXT:    v128.store 0($pop15), $0
+; CHECK-NEXT:    i8x16.extract_lane_u $push7=, $1, 7
+; CHECK-NEXT:    i32.const $push1=, 15
+; CHECK-NEXT:    i32.and $push8=, $pop7, $pop1
+; CHECK-NEXT:    i32.or $push9=, $3, $pop8
+; CHECK-NEXT:    i8x16.extract_lane_u $push0=, $1, 0
+; CHECK-NEXT:    i32.const $push14=, 15
+; CHECK-NEXT:    i32.and $push2=, $pop0, $pop14
+; CHECK-NEXT:    i32.or $push3=, $3, $pop2
+; CHECK-NEXT:    v128.const $push4=, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 0
+; CHECK-NEXT:    v128.load8_lane $push5=, 0($pop3), $pop4, 0
+; CHECK-NEXT:    i8x16.replace_lane $push6=, $pop5, 3, $2
+; CHECK-NEXT:    v128.load8_lane $push10=, 0($pop9), $pop6, 7
+; CHECK-NEXT:    i8x16.replace_lane $push11=, $pop10, 12, $2
+; CHECK-NEXT:    return $pop11
   %m0 = extractelement <16 x i8> %mask, i32 0
   %s0 = extractelement <16 x i8> %src, i8 %m0
   %v0 = insertelement <16 x i8> undef, i8 %s0, i32 0

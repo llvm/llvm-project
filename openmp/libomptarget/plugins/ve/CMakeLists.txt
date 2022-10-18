@@ -37,7 +37,6 @@ if(${LIBOMPTARGET_DEP_VEO_FOUND})
     ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
     ${additional_libs}
     "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports -Wl,-z,defs"
-    "-Wl,--undefined-version"
 
     NO_INSTALL_RPATH
   )
@@ -56,8 +55,7 @@ if(${LIBOMPTARGET_DEP_VEO_FOUND})
     elf_common
     ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
     ${additional_libs}
-    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports -Wl,-z,defs"
-    "-Wl,--undefined-version")
+    "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports -Wl,-z,defs")
 
   # Report to the parent scope that we are building a plugin.
   set(LIBOMPTARGET_SYSTEM_TARGETS

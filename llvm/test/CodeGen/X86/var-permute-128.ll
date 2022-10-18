@@ -129,7 +129,7 @@ define <4 x i32> @var_shuffle_v4i32(<4 x i32> %v, <4 x i32> %indices) nounwind {
 define <8 x i16> @var_shuffle_v8i16(<8 x i16> %v, <8 x i16> %indices) nounwind {
 ; SSE3-LABEL: var_shuffle_v8i16:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    movd %xmm1, %eax
+; SSE3-NEXT:    pextrw $0, %xmm1, %eax
 ; SSE3-NEXT:    pextrw $1, %xmm1, %ecx
 ; SSE3-NEXT:    pextrw $2, %xmm1, %edx
 ; SSE3-NEXT:    pextrw $3, %xmm1, %esi

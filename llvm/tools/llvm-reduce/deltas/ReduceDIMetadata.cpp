@@ -96,7 +96,5 @@ static void extractDIMetadataFromModule(Oracle &O, Module &Program) {
 }
 
 void llvm::reduceDIMetadataDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing DIMetadata...\n";
-  runDeltaPass(Test, extractDIMetadataFromModule);
-  outs() << "----------------------------\n";
+  runDeltaPass(Test, extractDIMetadataFromModule, "Reducing DIMetadata");
 }

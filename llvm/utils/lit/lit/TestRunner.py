@@ -1174,6 +1174,7 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
             ('%/p', sourcedir.replace('\\', '/')),
             ('%/t', tmpBase.replace('\\', '/') + '.tmp'),
             ('%/T', tmpDir.replace('\\', '/')),
+            ('%/et',tmpName.replace('\\', '\\\\\\\\\\\\\\\\')),
             ])
 
     # "%{/[STpst]:regex_replacement}" should be normalized like "%/[STpst]" but we're

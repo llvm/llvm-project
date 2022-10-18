@@ -356,7 +356,7 @@ public:
   using RangeBaseT::RangeBaseT;
 
   template <typename Arg,
-            typename = typename std::enable_if_t<
+            typename = std::enable_if_t<
                 std::is_constructible<ArrayRef<Value>, Arg>::value &&
                 !std::is_convertible<Arg, Value>::value>>
   ValueRange(Arg &&arg) : ValueRange(ArrayRef<Value>(std::forward<Arg>(arg))) {}

@@ -1326,7 +1326,6 @@ define i64 @select_cc_i1_i64(i1 zeroext %0, i1 zeroext %1, i64 %2, i64 %3) {
 ; CHECK-LABEL: select_cc_i1_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor %s0, %s0, %s1
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s2, %s3, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -1515,7 +1514,6 @@ define i64 @select_cc_i1_u64(i1 zeroext %0, i1 zeroext %1, i64 %2, i64 %3) {
 ; CHECK-LABEL: select_cc_i1_u64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor %s0, %s0, %s1
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s2, %s3, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -1704,7 +1702,6 @@ define i128 @select_cc_i1_i128(i1 zeroext %0, i1 zeroext %1, i128 %2, i128 %3) {
 ; CHECK-LABEL: select_cc_i1_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor %s0, %s0, %s1
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s2, %s4, %s0
 ; CHECK-NEXT:    cmov.w.ne %s3, %s5, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2
@@ -1921,7 +1918,6 @@ define i128 @select_cc_i1_u128(i1 zeroext %0, i1 zeroext %1, i128 %2, i128 %3) {
 ; CHECK-LABEL: select_cc_i1_u128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor %s0, %s0, %s1
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s2, %s4, %s0
 ; CHECK-NEXT:    cmov.w.ne %s3, %s5, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2
@@ -2138,7 +2134,6 @@ define float @select_cc_i1_float(i1 zeroext %0, i1 zeroext %1, float %2, float %
 ; CHECK-LABEL: select_cc_i1_float:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor %s0, %s0, %s1
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s2, %s3, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -2327,7 +2322,6 @@ define double @select_cc_i1_double(i1 zeroext %0, i1 zeroext %1, double %2, doub
 ; CHECK-LABEL: select_cc_i1_double:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor %s0, %s0, %s1
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s2, %s3, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -2516,7 +2510,6 @@ define fp128 @select_cc_i1_quad(i1 zeroext %0, i1 zeroext %1, fp128 %2, fp128 %3
 ; CHECK-LABEL: select_cc_i1_quad:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor %s0, %s0, %s1
-; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    cmov.w.ne %s2, %s4, %s0
 ; CHECK-NEXT:    cmov.w.ne %s3, %s5, %s0
 ; CHECK-NEXT:    or %s0, 0, %s2

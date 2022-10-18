@@ -101,10 +101,10 @@ inline static void inline_memset(char *dst, unsigned char value, size_t count) {
     return;
   }
   if (count >= 448 && value == 0 && hasZva())
-    return splat_set<Align<_64, Arg::_1>::Then<Loop<Zva64, _64>>>(dst, 0,
+    return splat_set<Align<_64, Arg::P1>::Then<Loop<Zva64, _64>>>(dst, 0,
                                                                   count);
   else
-    return splat_set<Align<_16, Arg::_1>::Then<Loop<_64>>>(dst, value, count);
+    return splat_set<Align<_16, Arg::P1>::Then<Loop<_64>>>(dst, value, count);
 #else
   /////////////////////////////////////////////////////////////////////////////
   // Default

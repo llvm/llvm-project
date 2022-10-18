@@ -31,7 +31,6 @@ add_llvm_tool(opt
   AnalysisWrappers.cpp
   BreakpointPrinter.cpp
   NewPMDriver.cpp
-  PrintSCC.cpp
   opt.cpp
 
   DEPENDS

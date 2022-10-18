@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify
 
-namespace dr2565 { // dr252: 16
+namespace dr2565 { // dr2565: 16
   template<typename T>
     concept C = requires (typename T::type x) {
       x + 1;

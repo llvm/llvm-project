@@ -1009,7 +1009,7 @@ void SSANameState::printValueID(Value value, bool printResultNo,
 
   // If this is an operation result, collect the head lookup value of the result
   // group and the result number of 'result' within that group.
-  if (OpResult result = value.dyn_cast<OpResult>())
+  if (OpResult result = dyn_cast<OpResult>(value))
     getResultIDAndNumber(result, lookupValue, resultNo);
 
   auto it = valueIDs.find(lookupValue);

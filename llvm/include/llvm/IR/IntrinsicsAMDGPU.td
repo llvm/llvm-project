@@ -1991,6 +1991,7 @@ def int_amdgcn_image_bvh_intersect_ray :
 
 // llvm.amdgcn.permlane64 <src0>
 def int_amdgcn_permlane64 :
+  ClangBuiltin<"__builtin_amdgcn_permlane64">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn]>;
 

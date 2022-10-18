@@ -396,8 +396,9 @@ bool Sema::CheckConstraintSatisfaction(
   // has no access to the MultiLevelTemplateArgumentList, so this has to happen
   // here.
   llvm::SmallVector<TemplateArgument, 4> FlattenedArgs;
-  for (ArrayRef<TemplateArgument> List : TemplateArgsLists)
-    FlattenedArgs.insert(FlattenedArgs.end(), List.begin(), List.end());
+  for (auto List : TemplateArgsLists)
+    FlattenedArgs.insert(FlattenedArgs.end(), List.Args.begin(),
+                         List.Args.end());
 
   llvm::FoldingSetNodeID ID;
   ConstraintSatisfaction::Profile(ID, Context, Template, FlattenedArgs);
@@ -452,7 +453,7 @@ bool Sema::SetupConstraintScope(
     // the list of current template arguments to the list so that they also can
     // be picked out of the map.
     if (auto *SpecArgs = FD->getTemplateSpecializationArgs()) {
-      MultiLevelTemplateArgumentList JustTemplArgs(*SpecArgs);
+      MultiLevelTemplateArgumentList JustTemplArgs(FD, SpecArgs->asArray());
       if (addInstantiatedParametersToScope(
               FD, PrimaryTemplate->getTemplatedDecl(), Scope, JustTemplArgs))
         return true;
@@ -1103,6 +1104,18 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
   // - The normal form of an expression (E) is the normal form of E.
   // [...]
   E = E->IgnoreParenImpCasts();
+
+  // C++2a [temp.param]p4:
+  //     [...] If T is not a pack, then E is E', otherwise E is (E' && ...).
+  //
+  // Using the pattern suffices because the partial ordering rules guarantee
+  // the template paramaters are equivalent.
+  if (auto *FoldE = dyn_cast<const CXXFoldExpr>(E)) {
+    assert(FoldE->isRightFold() && FoldE->getOperator() == BO_LAnd);
+    assert(E->IgnoreParenImpCasts() == E);
+    E = FoldE->getPattern();
+  }
+
   if (LogicalBinOp BO = E) {
     auto LHS = fromConstraintExpr(S, D, BO.getLHS());
     if (!LHS)

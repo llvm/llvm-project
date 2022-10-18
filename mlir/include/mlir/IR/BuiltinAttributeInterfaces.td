@@ -338,13 +338,13 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr"> {
 
     template <typename T>
     using DerivedAttrValueCheckT =
-        typename std::enable_if_t<std::is_base_of<Attribute, T>::value &&
-                                  !std::is_same<Attribute, T>::value>;
+        std::enable_if_t<std::is_base_of<Attribute, T>::value &&
+                         !std::is_same<Attribute, T>::value>;
     template <typename T, typename ResultT>
     using DefaultValueCheckT =
-        typename std::enable_if_t<std::is_same<Attribute, T>::value ||
-                                  !std::is_base_of<Attribute, T>::value,
-                                  ResultT>;
+        std::enable_if_t<std::is_same<Attribute, T>::value ||
+                             !std::is_base_of<Attribute, T>::value,
+                         ResultT>;
 
     /// Return the splat value for this attribute. This asserts that the
     /// attribute corresponds to a splat.

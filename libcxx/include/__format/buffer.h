@@ -14,6 +14,7 @@
 #include <__algorithm/fill_n.h>
 #include <__algorithm/max.h>
 #include <__algorithm/min.h>
+#include <__algorithm/ranges_copy_n.h>
 #include <__algorithm/transform.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__config>
@@ -275,10 +276,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit __writer_iterator(_OutIt __out_it)
       : __out_it_{_VSTD::move(__out_it)} {}
 
-  _LIBCPP_HIDE_FROM_ABI _OutIt __out_it() { return __out_it_; }
+  _LIBCPP_HIDE_FROM_ABI _OutIt __out_it() && { return std::move(__out_it_); }
 
   _LIBCPP_HIDE_FROM_ABI void __flush(_CharT* __ptr, size_t __n) {
-    __out_it_ = _VSTD::copy_n(__ptr, __n, _VSTD::move(__out_it_));
+    __out_it_ = std::ranges::copy_n(__ptr, __n, std::move(__out_it_)).out;
   }
 
 private:

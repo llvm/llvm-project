@@ -1411,6 +1411,13 @@ class XLForm_1<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
   let Inst{31}    = 0;
 }
 
+// XL-Form for unary alias for CRNOR (CRNOT)
+class XLForm_1s<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
+                InstrItinClass itin, list<dag> pattern>
+    : XLForm_1<opcode, xo, OOL, IOL, asmstr, itin, pattern> {
+  let CRB = CRA;
+}
+
 class XLForm_1_np<bits<6> opcode, bits<10> xo, dag OOL, dag IOL, string asmstr,
                   InstrItinClass itin, list<dag> pattern>
   : XLForm_1<opcode, xo, OOL, IOL, asmstr, itin, pattern> {

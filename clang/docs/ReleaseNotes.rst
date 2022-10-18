@@ -248,6 +248,10 @@ Bug Fixes
   not satisfied in the event of an instantiation failures in a requires expression's
   parameter list. We previously handled this correctly in a constraint evaluation
   context, but not in a requires clause evaluated as a boolean.
+- Address the thread identification problems in coroutines.
+  `Issue 47177 <https://github.com/llvm/llvm-project/issues/47177>`_
+  `Issue 47179 <https://github.com/llvm/llvm-project/issues/47179>`_
+- Fix a crash upon stray coloncolon token in C2x mode.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -307,6 +311,13 @@ Improvements to Clang's diagnostics
   function definition without a prototype which is preceded by a static
   declaration of the function with a prototype. Fixes
   `Issue 58181 <https://github.com/llvm/llvm-project/issues/58181>`_.
+- Copy-elided initialization of lock scopes is now handled differently in
+  ``-Wthread-safety-analysis``: annotations on the move constructor are no
+  longer taken into account, in favor of annotations on the function returning
+  the lock scope by value. This could result in new warnings if code depended
+  on the previous undocumented behavior. As a side effect of this change,
+  constructor calls outside of initializer expressions are no longer ignored,
+  which can result in new warnings (or make existing warnings disappear).
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -445,6 +456,32 @@ C2x Feature Support
     typeof(Val) OtherVal; // type is '__attribute__((address_space(1))) const _Atomic int'
     typeof_unqual(Val) OtherValUnqual; // type is 'int'
 
+- Implemented `WG14 N3042 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3042.htm>`_,
+  Introduce the nullptr constant. This introduces a new type ``nullptr_t``,
+  declared in ``<stddef.h>`` which represents the type of the null pointer named
+  constant, ``nullptr``. This constant is implicitly convertible to any pointer
+  type and represents a type-safe null value.
+
+  Note, there are some known incompatibilities with this same feature in C++.
+  The following examples were discovered during implementation and are subject
+  to change depending on how national body comments are resolved by WG14 (C
+  status is based on standard requirements, not necessarily implementation
+  behavior):
+
+  .. code-block:: c
+
+    nullptr_t null_val;
+    (nullptr_t)nullptr;       // Rejected in C, accepted in C++, Clang accepts
+    (void)(1 ? nullptr : 0);  // Rejected in C, accepted in C++, Clang rejects
+    (void)(1 ? null_val : 0); // Rejected in C, accepted in C++, Clang rejects
+    bool b1 = nullptr;        // Accepted in C, rejected in C++, Clang rejects
+    b1 = null_val;            // Accepted in C, rejected in C++, Clang rejects
+    null_val = 0;             // Rejected in C, accepted in C++, Clang rejects
+
+    void func(nullptr_t);
+    func(0);                  // Rejected in C, accepted in C++, Clang rejects
+
+
 C++ Language Changes in Clang
 -----------------------------
 - Implemented DR692, DR1395 and DR1432. Use the ``-fclang-abi-compat=15`` option
@@ -497,6 +534,9 @@ C++20 Feature Support
   which removes the requirement for the ``typename`` keyword in certain contexts.
 - Implemented The Equality Operator You Are Looking For (`P2468 <http://wg21.link/p2468r2>`_).
 
+- Implemented `P2113R0: Proposed resolution for 2019 comment CA 112 <https://wg21.link/P2113R0>`_
+  ([temp.func.order]p6.2.1 is not implemented, matching GCC).
+
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -516,6 +556,12 @@ OpenCL C Language Changes in Clang
 
 ABI Changes in Clang
 --------------------
+
+- GCC doesn't pack non-POD members in packed structs unless the packed
+  attribute is also specified on the member. Clang historically did perform
+  such packing. Clang now matches the gcc behavior (except on Darwin and PS4).
+  You can switch back to the old ABI behavior with the flag:
+  ``-fclang-abi-compat=15.0``.
 
 OpenMP Support in Clang
 -----------------------
@@ -559,6 +605,9 @@ Arm and AArch64 Support in Clang
 
 Floating Point Support in Clang
 -------------------------------
+- The driver option ``-menable-unsafe-fp-math`` has been removed. To enable
+  unsafe floating-point optimizations use ``-funsafe-math-optimizations`` or
+  ``-ffast-math`` instead.
 
 Internal API Changes
 --------------------

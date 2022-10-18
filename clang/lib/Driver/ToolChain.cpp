@@ -809,6 +809,9 @@ void ToolChain::addClangTargetOptions(
     const ArgList &DriverArgs, ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadKind) const {}
 
+void ToolChain::addClangCC1ASTargetOptions(const ArgList &Args,
+                                           ArgStringList &CC1ASArgs) const {}
+
 void ToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {}
 
 void ToolChain::addProfileRTLibs(const llvm::opt::ArgList &Args,

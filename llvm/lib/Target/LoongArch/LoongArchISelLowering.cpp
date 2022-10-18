@@ -2007,6 +2007,10 @@ getIntrinsicForMaskedAtomicRMWBinOp(unsigned GRLen,
       return Intrinsic::loongarch_masked_atomicrmw_sub_i64;
     case AtomicRMWInst::Nand:
       return Intrinsic::loongarch_masked_atomicrmw_nand_i64;
+    case AtomicRMWInst::UMax:
+      return Intrinsic::loongarch_masked_atomicrmw_umax_i64;
+    case AtomicRMWInst::UMin:
+      return Intrinsic::loongarch_masked_atomicrmw_umin_i64;
       // TODO: support other AtomicRMWInst.
     }
   }

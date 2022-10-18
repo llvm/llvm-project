@@ -88,26 +88,22 @@ public:
 
   template <typename U>
   bool isa() const {
-    assert(*this && "isa<> used on a null type.");
-    return U::classof(*this);
+    return llvm::isa<U>(*this);
   }
 
-  template <typename First, typename Second, typename... Rest>
-  bool isa() const {
-    return isa<First>() || isa<Second, Rest...>();
-  }
   template <typename U>
   U dyn_cast() const {
-    return isa<U>() ? U(impl) : U(nullptr);
+    return llvm::dyn_cast<U>(*this);
   }
+
   template <typename U>
   U dyn_cast_or_null() const {
-    return (*this && isa<U>()) ? U(impl) : U(nullptr);
+    return llvm::dyn_cast_if_present<U>(*this);
   }
+
   template <typename U>
   U cast() const {
-    assert(isa<U>());
-    return U(impl);
+    return llvm::cast<U>(*this);
   }
 
   explicit operator bool() const { return impl; }
@@ -558,6 +554,31 @@ public:
   static inline mlir::OpResult getFromVoidPointer(void *pointer) {
     return reinterpret_cast<mlir::detail::OpResultImpl *>(pointer);
   }
+};
+
+/// Add support for llvm style casts. We provide a cast between To and From if
+/// From is mlir::Value or derives from it.
+template <typename To, typename From>
+struct CastInfo<
+    To, From,
+    std::enable_if_t<std::is_same_v<mlir::Value, std::remove_const_t<From>> ||
+                     std::is_base_of_v<mlir::Value, From>>>
+    : NullableValueCastFailed<To>,
+      DefaultDoCastIfPossible<To, From, CastInfo<To, From>> {
+  /// Arguments are taken as mlir::Value here and not as `From`, because
+  /// when casting from an intermediate type of the hierarchy to one of its
+  /// children, the val.getKind() inside T::classof will use the static
+  /// getKind() of the parent instead of the non-static ValueImpl::getKind()
+  /// that returns the dynamic type. This means that T::classof would end up
+  /// comparing the static Kind of the children to the static Kind of its
+  /// parent, making it impossible to downcast from the parent to the child.
+  static inline bool isPossible(mlir::Value ty) {
+    /// Return a constant true instead of a dynamic true when casting to self or
+    /// up the hierarchy.
+    return std::is_same_v<To, std::remove_const_t<From>> ||
+           std::is_base_of_v<To, From> || To::classof(ty);
+  }
+  static inline To doCast(mlir::Value value) { return To(value.getImpl()); }
 };
 
 } // namespace llvm

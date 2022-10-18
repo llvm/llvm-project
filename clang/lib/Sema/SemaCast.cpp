@@ -2985,6 +2985,37 @@ void CastOperation::CheckCStyleCast() {
     return;
   }
 
+  // C2x 6.5.4p4:
+  //   The type nullptr_t shall not be converted to any type other than void,
+  //   bool, or a pointer type. No type other than nullptr_t shall be converted
+  //   to nullptr_t.
+  if (SrcType->isNullPtrType()) {
+    // FIXME: 6.3.2.4p2 says that nullptr_t can be converted to itself, but
+    // 6.5.4p4 is a constraint check and nullptr_t is not void, bool, or a
+    // pointer type. We're not going to diagnose that as a constraint violation.
+    if (!DestType->isVoidType() && !DestType->isBooleanType() &&
+        !DestType->isPointerType() && !DestType->isNullPtrType()) {
+      Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_nullptr_cast)
+          << /*nullptr to type*/ 0 << DestType;
+      SrcExpr = ExprError();
+      return;
+    }
+    if (!DestType->isNullPtrType()) {
+      // Implicitly cast from the null pointer type to the type of the
+      // destination.
+      CastKind CK = DestType->isPointerType() ? CK_NullToPointer : CK_BitCast;
+      SrcExpr = ImplicitCastExpr::Create(Self.Context, DestType, CK,
+                                         SrcExpr.get(), nullptr, VK_PRValue,
+                                         Self.CurFPFeatureOverrides());
+    }
+  }
+  if (DestType->isNullPtrType() && !SrcType->isNullPtrType()) {
+    Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_nullptr_cast)
+        << /*type to nullptr*/ 1 << SrcType;
+    SrcExpr = ExprError();
+    return;
+  }
+
   if (DestType->isExtVectorType()) {
     SrcExpr = Self.CheckExtVectorCast(OpRange, DestType, SrcExpr.get(), Kind);
     return;

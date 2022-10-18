@@ -189,12 +189,6 @@ set(CLANG_SPAWN_CC1 OFF CACHE BOOL
 
 option(CLANG_DEFAULT_PIE_ON_LINUX "Default to -fPIE and -pie on linux-gnu" ON)
 
-# TODO: verify the values against LangStandards.def?
-set(CLANG_DEFAULT_STD_C "" CACHE STRING
-  "Default standard to use for C/ObjC code (IDENT from LangStandards.def, empty for platform default)")
-set(CLANG_DEFAULT_STD_CXX "" CACHE STRING
-  "Default standard to use for C++/ObjC++ code (IDENT from LangStandards.def, empty for platform default)")
-
 set(CLANG_DEFAULT_LINKER "" CACHE STRING
   "Default linker to use (linker name or absolute path, empty for platform default)")
 

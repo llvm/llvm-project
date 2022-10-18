@@ -132,7 +132,7 @@ define i1 @gep_decomp_i80(ptr %a) {
 ; CHECK:       then:
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i80 1973801615886922022913
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[GEP_1]], null
-; CHECK-NEXT:    ret i1 [[C_1]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -342,6 +342,56 @@ define i1 @gep_decomp_large_index_63_bits(ptr %a) {
 entry:
   %gep.1 = getelementptr inbounds i64, ptr %a, i64 9223372036854775804
   %gep.2 = getelementptr inbounds i64, ptr %a, i64 9223372036854775805
+  %ne = icmp ne ptr %gep.1, %gep.2
+  call void @llvm.assume(i1 %ne)
+  %cmp.ule = icmp ule ptr %gep.1, %gep.2
+  %cmp.uge = icmp uge ptr %gep.1, %gep.2
+  %res = xor i1 %cmp.ule, %cmp.ule
+  ret i1 %res
+}
+
+define i1 @gep_decomp_large_index_63_bits_chained_overflow(ptr %a) {
+; CHECK-LABEL: @gep_decomp_large_index_63_bits_chained_overflow(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 9223372036854775804
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds ptr, ptr [[A]], i64 1152921504606846976
+; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds i64, ptr [[GEP_2]], i64 1152921504606846976
+; CHECK-NEXT:    [[NE:%.*]] = icmp ne ptr [[GEP_1]], [[GEP_3]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
+; CHECK-NEXT:    [[CMP_ULE:%.*]] = icmp ule ptr [[GEP_1]], [[GEP_3]]
+; CHECK-NEXT:    [[CMP_UGE:%.*]] = icmp uge ptr [[GEP_1]], [[GEP_3]]
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 true, true
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %gep.1 = getelementptr inbounds i64, ptr %a, i64 9223372036854775804
+  %gep.2 = getelementptr inbounds ptr, ptr %a, i64 1152921504606846976
+  %gep.3 = getelementptr inbounds i64, ptr %gep.2, i64 1152921504606846976
+  %ne = icmp ne ptr %gep.1, %gep.3
+  call void @llvm.assume(i1 %ne)
+  %cmp.ule = icmp ule ptr %gep.1, %gep.3
+  %cmp.uge = icmp uge ptr %gep.1, %gep.3
+  %res = xor i1 %cmp.ule, %cmp.ule
+  ret i1 %res
+}
+
+%struct = type { [128 x i64], [2 x i32] }
+
+define i1 @gep_decomp_large_index_63_bits_overflow_struct(ptr %a) {
+; CHECK-LABEL: @gep_decomp_large_index_63_bits_overflow_struct(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 9223372036854775804
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds [[STRUCT:%.*]], ptr [[A]], i64 8937376004704240, i32 1, i32 1
+; CHECK-NEXT:    [[NE:%.*]] = icmp ne ptr [[GEP_1]], [[GEP_2]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
+; CHECK-NEXT:    [[CMP_ULE:%.*]] = icmp ule ptr [[GEP_1]], [[GEP_2]]
+; CHECK-NEXT:    [[CMP_UGE:%.*]] = icmp uge ptr [[GEP_1]], [[GEP_2]]
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 false, false
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %gep.1 = getelementptr inbounds i64, ptr %a, i64 9223372036854775804
+  %gep.2 = getelementptr inbounds %struct, ptr %a, i64 8937376004704240, i32 1, i32 1
   %ne = icmp ne ptr %gep.1, %gep.2
   call void @llvm.assume(i1 %ne)
   %cmp.ule = icmp ule ptr %gep.1, %gep.2

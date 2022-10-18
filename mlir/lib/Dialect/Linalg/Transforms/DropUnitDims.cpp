@@ -377,21 +377,21 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
     SmallVector<ArrayAttr> reassociationMaps;
     SmallVector<Type> newInputOutputTypes;
     bool doCanonicalization = false;
-    for (OpOperand *opOperand : genericOp.getInputAndOutputOperands()) {
-      auto replacementInfo = replaceUnitExtents(genericOp, opOperand, context);
+    for (OpOperand &opOperand : genericOp->getOpOperands()) {
+      auto replacementInfo = replaceUnitExtents(genericOp, &opOperand, context);
       if (replacementInfo) {
         reassociationMaps.push_back(replacementInfo->reassociation);
         newIndexingMaps.push_back(replacementInfo->indexMap);
         newInputOutputTypes.push_back(replacementInfo->type);
         doCanonicalization |=
-            replacementInfo->type != opOperand->get().getType();
+            replacementInfo->type != opOperand.get().getType();
       } else {
         // If replaceUnitExtents cannot handle this case, maintain the same
         // type, indexing map, and create a set of mappings representing an
         // identity matrix.
-        newInputOutputTypes.push_back(opOperand->get().getType());
-        newIndexingMaps.push_back(genericOp.getMatchingIndexingMap(opOperand));
-        int64_t origRank = genericOp.getRank(opOperand);
+        newInputOutputTypes.push_back(opOperand.get().getType());
+        newIndexingMaps.push_back(genericOp.getMatchingIndexingMap(&opOperand));
+        int64_t origRank = genericOp.getRank(&opOperand);
         auto maps = llvm::to_vector<8>(llvm::map_range(
             llvm::seq<int64_t>(0, origRank), [&](int64_t dim) -> Attribute {
               return AffineMapAttr::get(

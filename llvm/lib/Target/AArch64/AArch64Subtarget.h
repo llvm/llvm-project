@@ -300,6 +300,14 @@ public:
   unsigned classifyGlobalFunctionReference(const GlobalValue *GV,
                                            const TargetMachine &TM) const;
 
+  /// This function is design to compatible with the function def in other
+  /// targets and escape build error about the virtual function def in base
+  /// class TargetSubtargetInfo. Updeate me if AArch64 target need to use it.
+  unsigned char
+  classifyGlobalFunctionReference(const GlobalValue *GV) const override {
+    return 0;
+  }
+
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;
 
@@ -360,9 +368,14 @@ public:
   }
 
   bool useSVEForFixedLengthVectors() const {
+    if (forceStreamingCompatibleSVE())
+      return true;
+
     // Prefer NEON unless larger SVE registers are available.
     return hasSVE() && getMinSVEVectorSizeInBits() >= 256;
   }
+
+  bool forceStreamingCompatibleSVE() const;
 
   unsigned getVScaleForTuning() const { return VScaleForTuning; }
 

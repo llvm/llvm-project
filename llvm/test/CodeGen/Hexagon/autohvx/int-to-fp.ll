@@ -19,9 +19,9 @@ define void @s8f16_0(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:     v1:0.h = vunpack(v0.b)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v2.h = vsplat(r7)
+; CHECK-NEXT:     v3.h = vsplat(r7)
 ; CHECK-NEXT:     r3:2 = combine(#31,#5)
-; CHECK-NEXT:     v3.h = vabs(v0.h)
+; CHECK-NEXT:     v2.h = vabs(v0.h)
 ; CHECK-NEXT:     v4.h = vabs(v1.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -31,60 +31,60 @@ define void @s8f16_0(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r5 = ##32768
-; CHECK-NEXT:     v5.uh = vcl0(v3.uh)
+; CHECK-NEXT:     v5.uh = vcl0(v2.uh)
 ; CHECK-NEXT:     q0 = vcmp.gt(v9.h,v0.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v10.h = vsplat(r5)
 ; CHECK-NEXT:     r4 = #10
 ; CHECK-NEXT:     v6.uh = vcl0(v4.uh)
-; CHECK-NEXT:     v5.h = vadd(v5.h,v2.h)
+; CHECK-NEXT:     v5.h = vadd(v5.h,v3.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v27 = vmux(q0,v10,v9)
-; CHECK-NEXT:     v6.h = vadd(v6.h,v2.h)
+; CHECK-NEXT:     v6.h = vadd(v6.h,v3.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v3.h = vasl(v3.h,v5.h)
+; CHECK-NEXT:     v2.h = vasl(v2.h,v5.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v4.h = vasl(v4.h,v6.h)
-; CHECK-NEXT:     v13 = vand(v3,v8)
-; CHECK-NEXT:     v11.h = vadd(v3.h,v7.h)
+; CHECK-NEXT:     v13 = vand(v2,v8)
+; CHECK-NEXT:     v11.h = vadd(v2.h,v7.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v14.h = vadd(v4.h,v7.h)
 ; CHECK-NEXT:     q2 = vcmp.eq(v13.h,v9.h)
 ; CHECK-NEXT:     v8 = vand(v4,v8)
-; CHECK-NEXT:     q1 = vcmp.gt(v3.uh,v11.uh)
+; CHECK-NEXT:     q1 = vcmp.gt(v2.uh,v11.uh)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v11.uh = vlsr(v11.uh,r2)
-; CHECK-NEXT:     v13 = vmux(q2,v9,v2)
+; CHECK-NEXT:     v13 = vmux(q2,v9,v3)
 ; CHECK-NEXT:     q2 = vcmp.eq(v8.h,v9.h)
 ; CHECK-NEXT:     q3 = vcmp.gt(v4.uh,v14.uh)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v20.uh = vlsr(v14.uh,r2)
-; CHECK-NEXT:     v22 = vmux(q2,v9,v2)
-; CHECK-NEXT:     v21 = vmux(q1,v2,v9)
-; CHECK-NEXT:     v2 = vmux(q3,v2,v9)
+; CHECK-NEXT:     v22 = vmux(q2,v9,v3)
+; CHECK-NEXT:     v21 = vmux(q1,v3,v9)
+; CHECK-NEXT:     v3 = vmux(q3,v3,v9)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v19.uh = vlsr(v4.uh,r2)
 ; CHECK-NEXT:     v13.h = vadd(v11.h,v13.h)
 ; CHECK-NEXT:     v24.h = vadd(v20.h,v22.h)
-; CHECK-NEXT:     v2.h = vadd(v2.h,v7.h)
+; CHECK-NEXT:     v3.h = vadd(v3.h,v7.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v12.uh = vlsr(v3.uh,r2)
+; CHECK-NEXT:     v12.uh = vlsr(v2.uh,r2)
 ; CHECK-NEXT:     v23.h = vadd(v21.h,v7.h)
-; CHECK-NEXT:     v2.h = vsub(v2.h,v6.h)
+; CHECK-NEXT:     v3.h = vsub(v3.h,v6.h)
 ; CHECK-NEXT:     q3 = vcmp.gt(v9.h,v1.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v11.uh = vlsr(v11.uh,r7)
-; CHECK-NEXT:     v3.h = vsub(v23.h,v5.h)
+; CHECK-NEXT:     v2.h = vsub(v23.h,v5.h)
 ; CHECK-NEXT:     q1 = vcmp.eq(v12.h,v11.h)
 ; CHECK-NEXT:     q2 = vcmp.eq(v19.h,v20.h)
 ; CHECK-NEXT:    }
@@ -102,22 +102,22 @@ define void @s8f16_0(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:     v5 = vor(v27,v5)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v3.h = vasl(v3.h,r4)
+; CHECK-NEXT:     v2.h = vasl(v2.h,r4)
 ; CHECK-NEXT:     v4 = vmux(q2,v26,v4)
 ; CHECK-NEXT:     q2 = vcmp.eq(v1.h,v9.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v2.h = vasl(v2.h,r4)
+; CHECK-NEXT:     v3.h = vasl(v3.h,r4)
 ; CHECK-NEXT:     v4 = vor(v28,v4)
-; CHECK-NEXT:     v29 = vor(v5,v3)
+; CHECK-NEXT:     v29 = vor(v5,v2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v2 = vor(v4,v2)
+; CHECK-NEXT:     v3 = vor(v4,v3)
 ; CHECK-NEXT:     v31 = vmux(q3,v9,v29)
 ; CHECK-NEXT:     vmem(r1+#0) = v31.new
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v30 = vmux(q2,v9,v2)
+; CHECK-NEXT:     v30 = vmux(q2,v9,v3)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:     vmem(r1+#1) = v30.new
 ; CHECK-NEXT:    }
@@ -832,9 +832,9 @@ define void @s16f32_0(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:     v1:0.w = vunpack(v0.h)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v3 = vsplat(r0)
+; CHECK-NEXT:     v4 = vsplat(r0)
 ; CHECK-NEXT:     r7 = #512
-; CHECK-NEXT:     v4.w = vabs(v0.w)
+; CHECK-NEXT:     v3.w = vabs(v0.w)
 ; CHECK-NEXT:     v6.w = vabs(v1.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -846,60 +846,60 @@ define void @s16f32_0(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v13 = vsplat(r5)
 ; CHECK-NEXT:     r6 = ##-2147483648
-; CHECK-NEXT:     v7.uw = vcl0(v4.uw)
+; CHECK-NEXT:     v7.uw = vcl0(v3.uw)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v10 = vsplat(r6)
 ; CHECK-NEXT:     v8.uw = vcl0(v6.uw)
 ; CHECK-NEXT:     q0 = vcmp.gt(v2.w,v0.w)
-; CHECK-NEXT:     v7.w = vadd(v7.w,v3.w)
+; CHECK-NEXT:     v7.w = vadd(v7.w,v4.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r4 = #23
-; CHECK-NEXT:     v8.w = vadd(v8.w,v3.w)
+; CHECK-NEXT:     v8.w = vadd(v8.w,v4.w)
 ; CHECK-NEXT:     v27 = vmux(q0,v10,v2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v4.w = vasl(v4.w,v7.w)
+; CHECK-NEXT:     v3.w = vasl(v3.w,v7.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v6.w = vasl(v6.w,v8.w)
-; CHECK-NEXT:     v11.w = vadd(v4.w,v5.w)
-; CHECK-NEXT:     v12 = vand(v4,v9)
+; CHECK-NEXT:     v11.w = vadd(v3.w,v5.w)
+; CHECK-NEXT:     v12 = vand(v3,v9)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v5.w = vadd(v6.w,v5.w)
 ; CHECK-NEXT:     v9 = vand(v6,v9)
 ; CHECK-NEXT:     q1 = vcmp.eq(v12.w,v2.w)
-; CHECK-NEXT:     q2 = vcmp.gt(v4.uw,v11.uw)
+; CHECK-NEXT:     q2 = vcmp.gt(v3.uw,v11.uw)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v22.uw = vlsr(v11.uw,r2)
 ; CHECK-NEXT:     q3 = vcmp.eq(v9.w,v2.w)
-; CHECK-NEXT:     v23 = vmux(q1,v2,v3)
-; CHECK-NEXT:     v14 = vmux(q2,v3,v2)
+; CHECK-NEXT:     v23 = vmux(q1,v2,v4)
+; CHECK-NEXT:     v14 = vmux(q2,v4,v2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v24.uw = vlsr(v5.uw,r2)
 ; CHECK-NEXT:     v11.w = vadd(v22.w,v23.w)
 ; CHECK-NEXT:     q2 = vcmp.gt(v6.uw,v5.uw)
-; CHECK-NEXT:     v25 = vmux(q3,v2,v3)
+; CHECK-NEXT:     v25 = vmux(q3,v2,v4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v21.uw = vlsr(v4.uw,r2)
+; CHECK-NEXT:     v21.uw = vlsr(v3.uw,r2)
 ; CHECK-NEXT:     v5.w = vadd(v24.w,v25.w)
-; CHECK-NEXT:     v3 = vmux(q2,v3,v2)
+; CHECK-NEXT:     v4 = vmux(q2,v4,v2)
 ; CHECK-NEXT:     v7.w = vsub(v14.w,v7.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v6.uw = vlsr(v6.uw,r2)
-; CHECK-NEXT:     v3.w = vsub(v3.w,v8.w)
+; CHECK-NEXT:     v4.w = vsub(v4.w,v8.w)
 ; CHECK-NEXT:     q3 = vcmp.eq(v21.w,v22.w)
 ; CHECK-NEXT:     v7.w = vadd(v7.w,v13.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v4.uw = vlsr(v22.uw,r0)
-; CHECK-NEXT:     v3.w = vadd(v3.w,v13.w)
+; CHECK-NEXT:     v3.uw = vlsr(v22.uw,r0)
+; CHECK-NEXT:     v4.w = vadd(v4.w,v13.w)
 ; CHECK-NEXT:     q2 = vcmp.eq(v6.w,v24.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -907,13 +907,13 @@ define void @s16f32_0(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v5.uw = vlsr(v5.uw,r0)
-; CHECK-NEXT:     v4 = vmux(q3,v11,v4)
+; CHECK-NEXT:     v3 = vmux(q3,v11,v3)
 ; CHECK-NEXT:     q3 = vcmp.gt(v2.w,v1.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v26.uw = vlsr(v24.uw,r0)
 ; CHECK-NEXT:     v28 = vmux(q3,v10,v2)
-; CHECK-NEXT:     v4 = vor(v27,v4)
+; CHECK-NEXT:     v3 = vor(v27,v3)
 ; CHECK-NEXT:     q3 = vcmp.eq(v0.w,v2.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -922,17 +922,17 @@ define void @s16f32_0(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:     q2 = vcmp.eq(v1.w,v2.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v3.w = vasl(v3.w,r4)
+; CHECK-NEXT:     v4.w = vasl(v4.w,r4)
 ; CHECK-NEXT:     v5 = vor(v28,v5)
-; CHECK-NEXT:     v29 = vor(v4,v7)
+; CHECK-NEXT:     v29 = vor(v3,v7)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v3 = vor(v5,v3)
+; CHECK-NEXT:     v4 = vor(v5,v4)
 ; CHECK-NEXT:     v31 = vmux(q3,v2,v29)
 ; CHECK-NEXT:     vmem(r1+#0) = v31.new
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v30 = vmux(q2,v2,v3)
+; CHECK-NEXT:     v30 = vmux(q2,v2,v4)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:     vmem(r1+#1) = v30.new
 ; CHECK-NEXT:    }
@@ -1949,69 +1949,69 @@ define void @u8f32_2(ptr %a0, ptr %a1) #0 {
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r6 = #1
-; CHECK-NEXT:     r2 = #255
+; CHECK-NEXT:     r3 = #512
 ; CHECK-NEXT:     v1:0.uh = vunpack(v0.ub)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1 = vsplat(r6)
-; CHECK-NEXT:     v29 = vsplat(r2)
-; CHECK-NEXT:     r3 = #512
-; CHECK-NEXT:     v2 = vxor(v2,v2)
+; CHECK-NEXT:     v2 = vsplat(r6)
+; CHECK-NEXT:     v4 = vsplat(r3)
+; CHECK-NEXT:     r2 = #255
+; CHECK-NEXT:     v3 = vxor(v3,v3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v3 = vsplat(r3)
 ; CHECK-NEXT:     r5:4 = combine(##159,#8)
-; CHECK-NEXT:     v5:4.uw = vunpack(v0.uh)
+; CHECK-NEXT:     v1:0.uw = vunpack(v0.uh)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     v1 = vsplat(r2)
 ; CHECK-NEXT:     v7 = vsplat(r5)
-; CHECK-NEXT:     q3 = vcmp.eq(v4.w,v2.w)
+; CHECK-NEXT:     q3 = vcmp.eq(v0.w,v3.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v5.uw = vcl0(v4.uw)
+; CHECK-NEXT:     v5.uw = vcl0(v0.uw)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v5.w = vadd(v5.w,v1.w)
+; CHECK-NEXT:     v5.w = vadd(v5.w,v2.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v6.w = vasl(v4.w,v5.w)
+; CHECK-NEXT:     v6.w = vasl(v0.w,v5.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0.w = vadd(v6.w,v29.w)
-; CHECK-NEXT:     v3 = vand(v6,v3)
+; CHECK-NEXT:     v1.w = vadd(v6.w,v1.w)
+; CHECK-NEXT:     v4 = vand(v6,v4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v6.uw = vlsr(v6.uw,r4)
-; CHECK-NEXT:     q0 = vcmp.gt(v6.uw,v0.uw)
-; CHECK-NEXT:     q1 = vcmp.eq(v3.w,v2.w)
+; CHECK-NEXT:     q0 = vcmp.gt(v6.uw,v1.uw)
+; CHECK-NEXT:     q1 = vcmp.eq(v4.w,v3.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r4 = #23
-; CHECK-NEXT:     v0.uw = vlsr(v0.uw,r4)
-; CHECK-NEXT:     v3 = vmux(q1,v2,v1)
-; CHECK-NEXT:     v1 = vmux(q0,v1,v2)
+; CHECK-NEXT:     v1.uw = vlsr(v1.uw,r4)
+; CHECK-NEXT:     v4 = vmux(q1,v3,v2)
+; CHECK-NEXT:     v2 = vmux(q0,v2,v3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1.w = vsub(v1.w,v5.w)
-; CHECK-NEXT:     v3.w = vadd(v0.w,v3.w)
-; CHECK-NEXT:     q2 = vcmp.eq(v6.w,v0.w)
+; CHECK-NEXT:     v2.w = vsub(v2.w,v5.w)
+; CHECK-NEXT:     v4.w = vadd(v1.w,v4.w)
+; CHECK-NEXT:     q2 = vcmp.eq(v6.w,v1.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v30.uw = vlsr(v0.uw,r6)
-; CHECK-NEXT:     v1.w = vadd(v1.w,v7.w)
+; CHECK-NEXT:     v29.uw = vlsr(v1.uw,r6)
+; CHECK-NEXT:     v2.w = vadd(v2.w,v7.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v31.uw = vlsr(v3.uw,r6)
+; CHECK-NEXT:     v30.uw = vlsr(v4.uw,r6)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1.w = vasl(v1.w,r4)
-; CHECK-NEXT:     v0 = vmux(q2,v31,v30)
+; CHECK-NEXT:     v2.w = vasl(v2.w,r4)
+; CHECK-NEXT:     v1 = vmux(q2,v30,v29)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0 = vor(v0,v1)
+; CHECK-NEXT:     v31 = vor(v1,v2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0 = vmux(q3,v2,v0)
+; CHECK-NEXT:     v0 = vmux(q3,v3,v31)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:     vmem(r1+#0) = v0.new
 ; CHECK-NEXT:    }

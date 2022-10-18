@@ -24,6 +24,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__memory/destruct_n.h>
 #include <__memory/unique_ptr.h>
+#include <__utility/move.h>
 #include <climits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

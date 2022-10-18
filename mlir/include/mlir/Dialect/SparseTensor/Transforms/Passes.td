@@ -28,7 +28,11 @@ def SparseTensorRewrite : Pass<"sparse-tensor-rewrite", "ModuleOp"> {
   ];
   let options = [
     Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
-           "true", "Enable runtime library for manipulating sparse tensors">
+           "true", "Enable runtime library for manipulating sparse tensors">,
+    Option<"enableForeach", "enable-foreach", "bool",
+           "true", "Enable rewriting rules for the foreach operator">,
+    Option<"enableConvert", "enable-convert", "bool",
+           "true", "Enable rewriting rules for the convert operator">,
   ];
 }
 

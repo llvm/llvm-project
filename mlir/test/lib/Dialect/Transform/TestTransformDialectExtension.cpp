@@ -188,10 +188,8 @@ mlir::test::TestCheckIfTestExtensionPresentOp::apply(
 DiagnosedSilenceableFailure mlir::test::TestRemapOperandPayloadToSelfOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   auto *extension = state.getExtension<TestTransformStateExtension>();
-  if (!extension) {
-    emitError() << "TestTransformStateExtension missing";
-    return DiagnosedSilenceableFailure::definiteFailure();
-  }
+  if (!extension)
+    return emitDefiniteFailure("TestTransformStateExtension missing");
 
   if (failed(extension->updateMapping(state.getPayloadOps(getOperand()).front(),
                                       getOperation())))
@@ -325,6 +323,26 @@ DiagnosedSilenceableFailure mlir::transform::TestDialectOpType::checkPayload(
     }
   }
 
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestReportNumberOfTrackedHandlesNestedUnder::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getTarget(), effects);
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestReportNumberOfTrackedHandlesNestedUnder::apply(
+    transform::TransformResults &results, transform::TransformState &state) {
+  int64_t count = 0;
+  for (Operation *op : state.getPayloadOps(getTarget())) {
+    op->walk([&](Operation *nested) {
+      SmallVector<Value> handles;
+      (void)state.getHandlesForPayloadOp(nested, handles);
+      count += handles.size();
+    });
+  }
+  emitRemark() << count << " handles nested under";
   return DiagnosedSilenceableFailure::success();
 }
 

@@ -500,19 +500,21 @@ void ReorderData::runOnFunctions(BinaryContext &BC) {
                << Section->getName() << " falling back to splitting "
                << "instead of in-place reordering.\n";
 
-      // Copy original section to <section name>.cold.
-      BinarySection &Cold = BC.registerSection(
-          std::string(Section->getName()) + ".cold", *Section);
+      // Rename sections.
+      BinarySection &Hot =
+          BC.registerSection(Section->getName() + ".hot", *Section);
+      Hot.setOutputName(Section->getName());
+      Section->setOutputName(".bolt.org" + Section->getName());
 
       // Reorder contents of original section.
-      setSectionOrder(BC, *Section, Order.begin(), SplitPoint);
+      setSectionOrder(BC, Hot, Order.begin(), SplitPoint);
 
       // This keeps the original data from thinking it has been moved.
       for (std::pair<const uint64_t, BinaryData *> &Entry :
            BC.getBinaryDataForSection(*Section)) {
         if (!Entry.second->isMoved()) {
-          Entry.second->setSection(Cold);
-          Entry.second->setOutputSection(Cold);
+          Entry.second->setSection(*Section);
+          Entry.second->setOutputSection(*Section);
         }
       }
     } else {

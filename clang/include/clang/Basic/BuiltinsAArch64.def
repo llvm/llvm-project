@@ -59,22 +59,22 @@ TARGET_BUILTIN(__builtin_arm_crc32d, "UiUiWUi", "nc", "crc")
 TARGET_BUILTIN(__builtin_arm_crc32cd, "UiUiWUi", "nc", "crc")
 
 // Memory Tagging Extensions (MTE)
-BUILTIN(__builtin_arm_irg, "v*v*Ui", "t")
-BUILTIN(__builtin_arm_addg, "v*v*Ui", "t")
-BUILTIN(__builtin_arm_gmi, "Uiv*Ui", "t")
-BUILTIN(__builtin_arm_ldg, "v*v*", "t")
-BUILTIN(__builtin_arm_stg, "vv*", "t")
-BUILTIN(__builtin_arm_subp, "Uiv*v*", "t")
+TARGET_BUILTIN(__builtin_arm_irg, "v*v*Ui", "t", "mte")
+TARGET_BUILTIN(__builtin_arm_addg, "v*v*Ui", "t", "mte")
+TARGET_BUILTIN(__builtin_arm_gmi, "Uiv*Ui", "t", "mte")
+TARGET_BUILTIN(__builtin_arm_ldg, "v*v*", "t", "mte")
+TARGET_BUILTIN(__builtin_arm_stg, "vv*", "t", "mte")
+TARGET_BUILTIN(__builtin_arm_subp, "Uiv*v*", "t", "mte")
 
 // Memory Operations
-BUILTIN(__builtin_arm_mops_memset_tag, "v*v*iz", "")
+TARGET_BUILTIN(__builtin_arm_mops_memset_tag, "v*v*iz", "", "mte,mops")
 
 // Memory barrier
 BUILTIN(__builtin_arm_dmb, "vUi", "nc")
 BUILTIN(__builtin_arm_dsb, "vUi", "nc")
 BUILTIN(__builtin_arm_isb, "vUi", "nc")
 
-BUILTIN(__builtin_arm_jcvt, "Zid", "nc")
+TARGET_BUILTIN(__builtin_arm_jcvt, "Zid", "nc", "v8.3a")
 
 // Prefetch
 BUILTIN(__builtin_arm_prefetch, "vvC*UiUiUiUi", "nc")
@@ -107,24 +107,24 @@ BUILTIN(__builtin_arm_tcancel, "vWUIi", "n")
 BUILTIN(__builtin_arm_ttest, "WUi", "nc")
 
 // Armv8.5-A FP rounding intrinsics
-BUILTIN(__builtin_arm_rint32zf, "ff", "")
-BUILTIN(__builtin_arm_rint32z, "dd", "")
-BUILTIN(__builtin_arm_rint64zf, "ff", "")
-BUILTIN(__builtin_arm_rint64z, "dd", "")
-BUILTIN(__builtin_arm_rint32xf, "ff", "")
-BUILTIN(__builtin_arm_rint32x, "dd", "")
-BUILTIN(__builtin_arm_rint64xf, "ff", "")
-BUILTIN(__builtin_arm_rint64x, "dd", "")
+TARGET_BUILTIN(__builtin_arm_rint32zf, "ff", "", "v8.5a")
+TARGET_BUILTIN(__builtin_arm_rint32z, "dd", "", "v8.5a")
+TARGET_BUILTIN(__builtin_arm_rint64zf, "ff", "", "v8.5a")
+TARGET_BUILTIN(__builtin_arm_rint64z, "dd", "", "v8.5a")
+TARGET_BUILTIN(__builtin_arm_rint32xf, "ff", "", "v8.5a")
+TARGET_BUILTIN(__builtin_arm_rint32x, "dd", "", "v8.5a")
+TARGET_BUILTIN(__builtin_arm_rint64xf, "ff", "", "v8.5a")
+TARGET_BUILTIN(__builtin_arm_rint64x, "dd", "", "v8.5a")
 
 // Armv8.5-A Random number generation intrinsics
-BUILTIN(__builtin_arm_rndr,   "iWUi*", "n")
-BUILTIN(__builtin_arm_rndrrs, "iWUi*", "n")
+TARGET_BUILTIN(__builtin_arm_rndr,   "iWUi*", "n", "rand")
+TARGET_BUILTIN(__builtin_arm_rndrrs, "iWUi*", "n", "rand")
 
 // Armv8.7-A load/store 64-byte intrinsics
-BUILTIN(__builtin_arm_ld64b, "vvC*WUi*", "n")
-BUILTIN(__builtin_arm_st64b, "vv*WUiC*", "n")
-BUILTIN(__builtin_arm_st64bv, "WUiv*WUiC*", "n")
-BUILTIN(__builtin_arm_st64bv0, "WUiv*WUiC*", "n")
+TARGET_BUILTIN(__builtin_arm_ld64b, "vvC*WUi*", "n", "ls64")
+TARGET_BUILTIN(__builtin_arm_st64b, "vv*WUiC*", "n", "ls64")
+TARGET_BUILTIN(__builtin_arm_st64bv, "WUiv*WUiC*", "n", "ls64")
+TARGET_BUILTIN(__builtin_arm_st64bv0, "WUiv*WUiC*", "n", "ls64")
 
 TARGET_HEADER_BUILTIN(_BitScanForward, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanReverse, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
