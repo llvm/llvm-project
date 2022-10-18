@@ -229,13 +229,8 @@ define <4 x double> @vrgather_shuffle_vx_v4f64(<4 x double> %x) {
 define <4 x half> @shuffle_v8f16_to_vslidedown_1(<8 x half> %x) {
 ; CHECK-LABEL: shuffle_v8f16_to_vslidedown_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 3, e16, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 4
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v9, v8, 3
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    ret
 entry:
   %s = shufflevector <8 x half> %x, <8 x half> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 4>
@@ -245,13 +240,8 @@ entry:
 define <4 x half> @shuffle_v8f16_to_vslidedown_3(<8 x half> %x) {
 ; CHECK-LABEL: shuffle_v8f16_to_vslidedown_3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 3
-; CHECK-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 4
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 3
 ; CHECK-NEXT:    ret
 entry:
   %s = shufflevector <8 x half> %x, <8 x half> poison, <4 x i32> <i32 3, i32 4, i32 5, i32 6>
@@ -261,13 +251,8 @@ entry:
 define <2 x float> @shuffle_v4f32_to_vslidedown(<4 x float> %x) {
 ; CHECK-LABEL: shuffle_v4f32_to_vslidedown:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 2
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    ret
 entry:
   %s = shufflevector <4 x float> %x, <4 x float> poison, <2 x i32> <i32 1, i32 2>
