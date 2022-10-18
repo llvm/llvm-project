@@ -1071,9 +1071,9 @@ public:
                                        constantIndex(rewriter, loc, i));
     rewriter.create<memref::StoreOp>(loc, adaptor.getValue(), vref);
     SmallString<12> name{"lexInsert", primaryTypeFunctionSuffix(elemTp)};
-    replaceOpWithFuncCall(rewriter, op, name, {},
-                          {adaptor.getTensor(), mref, vref},
-                          EmitCInterface::On);
+    createFuncCall(rewriter, loc, name, {}, {adaptor.getTensor(), mref, vref},
+                   EmitCInterface::On);
+    rewriter.replaceOp(op, adaptor.getTensor());
     return success();
   }
 };
@@ -1149,9 +1149,10 @@ public:
       rewriter.create<memref::StoreOp>(loc, adaptor.getIndices()[i], mref,
                                        constantIndex(rewriter, loc, i));
     SmallString<12> name{"expInsert", primaryTypeFunctionSuffix(elemTp)};
-    replaceOpWithFuncCall(rewriter, op, name, {},
-                          {tensor, mref, values, filled, added, count},
-                          EmitCInterface::On);
+    createFuncCall(rewriter, loc, name, {},
+                   {tensor, mref, values, filled, added, count},
+                   EmitCInterface::On);
+    rewriter.replaceOp(op, adaptor.getTensor());
     // Deallocate the buffers on exit of the loop nest.
     Operation *parent = op;
     for (; isa<scf::ForOp>(parent->getParentOp()) ||
