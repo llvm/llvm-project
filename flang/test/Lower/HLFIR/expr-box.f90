@@ -3,6 +3,6 @@
 
 subroutine foo(x)
   integer :: x(:)
-  ! CHECK: not yet implemented: lower expr to HLFIR box
+  ! CHECK: not yet implemented: generate fir.declare for box
   print *, x 
 end subroutine

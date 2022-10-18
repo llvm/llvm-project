@@ -2887,12 +2887,16 @@ private:
     // is not something that fits well with equivalence lowering.
     for (const Fortran::lower::pft::Variable &altResult :
          deferredFuncResultList) {
-      if (std::optional<Fortran::lower::CalleeInterface::PassedEntity>
-              passedResult = callee.getPassedResult())
-        addSymbol(altResult.getSymbol(), resultArg.getAddr());
       Fortran::lower::StatementContext stmtCtx;
-      Fortran::lower::mapSymbolAttributes(*this, altResult, localSymbols,
-                                          stmtCtx, primaryFuncResultStorage);
+      if (std::optional<Fortran::lower::CalleeInterface::PassedEntity>
+              passedResult = callee.getPassedResult()) {
+        addSymbol(altResult.getSymbol(), resultArg.getAddr());
+        Fortran::lower::mapSymbolAttributes(*this, altResult, localSymbols,
+                                            stmtCtx);
+      } else {
+        Fortran::lower::mapSymbolAttributes(*this, altResult, localSymbols,
+                                            stmtCtx, primaryFuncResultStorage);
+      }
     }
 
     // If this is a host procedure with host associations, then create the tuple
