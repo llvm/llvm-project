@@ -17,6 +17,7 @@
 include "mlir/Dialect/Linalg/IR/LinalgBase.td"
 include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
@@ -279,7 +280,7 @@ def MapOp : LinalgStructuredBase_Op<"map", [
       int64_t getNumOperands = this->getNumOperands();
       return {getNumOperands - 1, getNumOperands};
     }
-    linalg::OpOperandVector getOpOperandsMatchingBBargs() {
+    OpOperandVector getOpOperandsMatchingBBargs() {
       return getInputOperands();
     }
 
