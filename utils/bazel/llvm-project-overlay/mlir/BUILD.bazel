@@ -2086,6 +2086,7 @@ cc_library(
         ":InferTypeOpInterface",
         ":SparseTensorAttrDefsIncGen",
         ":SparseTensorOpsIncGen",
+        ":SparseTensorRuntime",
         "//llvm:Support",
     ],
 )
