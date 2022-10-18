@@ -2132,6 +2132,7 @@ public:
         break;
       }
       case 'J': {
+        m_dumper_options.json = true;
         m_dumper_options.pretty_print_json = true;
         break;
       }
@@ -2198,8 +2199,7 @@ protected:
     llvm::Optional<StreamFile> out_file;
     if (m_options.m_output_file) {
       out_file.emplace(m_options.m_output_file->GetPath().c_str(),
-                       File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate,
-                       lldb::eFilePermissionsFileDefault);
+                       File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate);
     }
 
     m_options.m_dumper_options.forwards = true;
@@ -2395,8 +2395,7 @@ protected:
     llvm::Optional<StreamFile> out_file;
     if (m_options.m_output_file) {
       out_file.emplace(m_options.m_output_file->GetPath().c_str(),
-                       File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate,
-                       lldb::eFilePermissionsFileDefault);
+                       File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate);
     }
 
     if (m_options.m_continue && !m_last_id) {

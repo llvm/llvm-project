@@ -10,8 +10,20 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
       self.expect("thread trace dump function-calls 2",
         error=True, substrs=['error: no thread with index: "2"'])
 
-      # We don't support yet JSON
-      self.expect("thread trace dump function-calls 1 -j", substrs=['[]'])
+      self.expect("thread trace dump function-calls 1 -j",
+        substrs=['[{"tracedSegments":[{"firstInstructionId":"1","lastInstructionId":"22"}]}]'])
+
+      self.expect("thread trace dump function-calls 1 -J",
+        substrs=['''[
+  {
+    "tracedSegments": [
+      {
+        "firstInstructionId": "1",
+        "lastInstructionId": "22"
+      }
+    ]
+  }
+]'''])
 
       # We test first some code without function call
       self.expect("thread trace dump function-calls 1",
@@ -34,6 +46,26 @@ m.out`foo() + 65 at multi_thread.cpp:12:21 to 12:21  [4, 19524]
 [call tree #1]
 <tracing errors>  [19532, 19532]'''])
 
+      self.expect("thread trace dump function-calls 2 -J",
+        substrs=['''[
+  {
+    "tracedSegments": [
+      {
+        "firstInstructionId": "4",
+        "lastInstructionId": "19524"
+      }
+    ]
+  },
+  {
+    "tracedSegments": [
+      {
+        "firstInstructionId": "19532",
+        "lastInstructionId": "19532"
+      }
+    ]
+  }
+]'''])
+
       self.expect("thread trace dump function-calls 3",
         substrs=['''thread #3: tid = 3497497
 
@@ -42,6 +74,26 @@ m.out`bar() + 30 at multi_thread.cpp:19:3 to 20:6  [5, 61831]
 
 [call tree #1]
 <tracing errors>  [61834, 61834]'''])
+
+      self.expect("thread trace dump function-calls 3 -J",
+        substrs=['''[
+  {
+    "tracedSegments": [
+      {
+        "firstInstructionId": "5",
+        "lastInstructionId": "61831"
+      }
+    ]
+  },
+  {
+    "tracedSegments": [
+      {
+        "firstInstructionId": "61834",
+        "lastInstructionId": "61834"
+      }
+    ]
+  }
+]'''])
 
     def testInlineFunctionCalls(self):
       self.expect("file " + os.path.join(self.getSourceDir(), "inline-function", "a.out"))
@@ -58,6 +110,42 @@ a.out`main + 8 at inline.cpp:15:7 to 16:14  [1, 5]
   a.out`foo(int) + 49 at inline.cpp:9:15 to 12:1  [22, 26]
 a.out`main + 25 at inline.cpp:16:14 to 16:14  [27, 27]'''])
 
+      self.expect("thread trace dump function-calls -J",
+        substrs=['''[
+  {
+    "tracedSegments": [
+      {
+        "firstInstructionId": "1",
+        "lastInstructionId": "5",
+        "nestedCall": {
+          "tracedSegments": [
+            {
+              "firstInstructionId": "6",
+              "lastInstructionId": "13",
+              "nestedCall": {
+                "tracedSegments": [
+                  {
+                    "firstInstructionId": "14",
+                    "lastInstructionId": "21"
+                  }
+                ]
+              }
+            },
+            {
+              "firstInstructionId": "22",
+              "lastInstructionId": "26"
+            }
+          ]
+        }
+      },
+      {
+        "firstInstructionId": "27",
+        "lastInstructionId": "27"
+      }
+    ]
+  }
+]'''])
+
     def testIncompleteInlineFunctionCalls(self):
       self.expect("file " + os.path.join(self.getSourceDir(), "inline-function", "a.out"))
       self.expect("b 4") # we'll trace from the middle of the inline method
@@ -72,6 +160,38 @@ a.out`main
     a.out`foo(int) + 36 [inlined] mult(int, int) + 14 at inline.cpp:4:5 to 5:10  [1, 5]
   a.out`foo(int) + 49 at inline.cpp:9:15 to 12:1  [6, 10]
 a.out`main + 25 at inline.cpp:16:14 to 16:14  [11, 11]'''])
+
+      self.expect("thread trace dump function-calls -J",
+        substrs=['''[
+  {
+    "untracedPrefixSegment": {
+      "nestedCall": {
+        "untracedPrefixSegment": {
+          "nestedCall": {
+            "tracedSegments": [
+              {
+                "firstInstructionId": "1",
+                "lastInstructionId": "5"
+              }
+            ]
+          }
+        },
+        "tracedSegments": [
+          {
+            "firstInstructionId": "6",
+            "lastInstructionId": "10"
+          }
+        ]
+      }
+    },
+    "tracedSegments": [
+      {
+        "firstInstructionId": "11",
+        "lastInstructionId": "11"
+      }
+    ]
+  }
+]'''])
 
     def testMultifileFunctionCalls(self):
       # This test is extremely important because it first calls the method foo() which requires going through the dynamic linking.
@@ -107,3 +227,99 @@ a.out`main + 55 at main.cpp:14 to 16:0  [21, 25]
         libbar.so`bar() at bar.cpp:1 to 4:0  [32, 40]
     libfoo.so`foo() + 13 at foo.cpp:4 to 6:0  [41, 48]
 a.out`main + 68 at main.cpp:16 to 16:0  [49, 51]'''])
+
+      self.expect("thread trace dump function-calls -J",
+        substrs=['''[
+  {
+    "tracedSegments": [
+      {
+        "firstInstructionId": "1",
+        "lastInstructionId": "1",
+        "nestedCall": {
+          "tracedSegments": [
+            {
+              "firstInstructionId": "3",
+              "lastInstructionId": "5",
+              "nestedCall": {
+                "tracedSegments": [
+                  {
+                    "firstInstructionId": "6",
+                    "lastInstructionId": "7"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  {
+    "tracedSegments": [
+      {
+        "firstInstructionId": "8",
+        "lastInstructionId": "8"
+      }
+    ]
+  },
+  {
+    "tracedSegments": [
+      {
+        "firstInstructionId": "10",
+        "lastInstructionId": "14",
+        "nestedCall": {
+          "tracedSegments": [
+            {
+              "firstInstructionId": "16",
+              "lastInstructionId": "20"
+            }
+          ]
+        }
+      },
+      {
+        "firstInstructionId": "21",
+        "lastInstructionId": "25",
+        "nestedCall": {
+          "tracedSegments": [
+            {
+              "firstInstructionId": "26",
+              "lastInstructionId": "26",
+              "nestedCall": {
+                "tracedSegments": [
+                  {
+                    "firstInstructionId": "27",
+                    "lastInstructionId": "30",
+                    "nestedCall": {
+                      "tracedSegments": [
+                        {
+                          "firstInstructionId": "31",
+                          "lastInstructionId": "31",
+                          "nestedCall": {
+                            "tracedSegments": [
+                              {
+                                "firstInstructionId": "32",
+                                "lastInstructionId": "40"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "firstInstructionId": "41",
+                    "lastInstructionId": "48"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      {
+        "firstInstructionId": "49",
+        "lastInstructionId": "51"
+      }
+    ]
+  }
+]'''])

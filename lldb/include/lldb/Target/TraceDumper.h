@@ -92,10 +92,10 @@ public:
   ///   In terms of implementation details, as segment can be represented with
   ///   the beginning and ending instruction IDs from the instruction trace.
   ///
-  ///  UntracedSegment:
+  ///  UntracedPrefixSegment:
   ///   It might happen that we didn't trace the beginning of a function and we
   ///   saw it for the first time as part of a return. As a way to signal these
-  ///   cases, we have a placeholder UntracedSegment class that completes the
+  ///   cases, we have a placeholder UntracedPrefixSegment class that completes the
   ///   callgraph.
   ///
   ///  Example:
@@ -119,7 +119,7 @@ public:
   ///
   ///   Notice that we changed the instruction ids because this is a new trace.
   ///   Here, in order to have a somewhat complete tree with good traversal
-  ///   capabilities, we can create an UntracedSegment to signal the portion of
+  ///   capabilities, we can create an UntracedPrefixSegment to signal the portion of
   ///   main() that we didn't trace. We don't know if this segment was in fact
   ///   multiple segments with many function calls. We'll never know. The
   ///   resulting tree looks like the following:
@@ -131,7 +131,7 @@ public:
   ///   And in pseudo-code:
   ///
   ///     FunctionCall [
-  ///       UntracedSegment {
+  ///       UntracedPrefixSegment {
   ///         symbol: main()
   ///         nestedCall: FunctionCall [ # this untraced segment has a nested
   ///         call
@@ -289,20 +289,20 @@ public:
       FunctionCall &m_owning_call;
     };
 
-    class UntracedSegment {
+    class UntracedPrefixSegment {
     public:
       /// Note: Untraced segments can only exist if have also seen a traced
       /// segment of the same function call. Thus, we can use those traced
       /// segments if we want symbol information and such.
 
-      UntracedSegment(FunctionCallUP &&nested_call)
+      UntracedPrefixSegment(FunctionCallUP &&nested_call)
           : m_nested_call(std::move(nested_call)) {}
 
       const FunctionCall &GetNestedCall() const;
 
     private:
-      UntracedSegment(const UntracedSegment &) = delete;
-      UntracedSegment &operator=(UntracedSegment const &);
+      UntracedPrefixSegment(const UntracedPrefixSegment &) = delete;
+      UntracedPrefixSegment &operator=(UntracedPrefixSegment const &);
       FunctionCallUP m_nested_call;
     };
 
@@ -346,11 +346,11 @@ public:
 
     /// Create an untraced segment for this call that jumps to the provided
     /// nested call.
-    void SetUntracedSegment(FunctionCallUP &&nested_call);
+    void SetUntracedPrefixSegment(FunctionCallUP &&nested_call);
 
     /// \return
-    ///   A optional to the untraced segment of this call.
-    const llvm::Optional<UntracedSegment> &GetUntracedSegment() const;
+    ///   A optional to the untraced prefix segment of this call.
+    const llvm::Optional<UntracedPrefixSegment> &GetUntracedPrefixSegment() const;
 
     /// \return
     ///   A pointer to the parent call. It may be \b nullptr.
@@ -360,7 +360,7 @@ public:
 
   private:
     /// An optional untraced segment that precedes all the traced segments.
-    llvm::Optional<UntracedSegment> m_untraced_segment;
+    llvm::Optional<UntracedPrefixSegment> m_untraced_prefix_segment;
     /// The traced segments in order. We used a deque to prevent moving these
     /// objects when appending to the list, which would happen with vector.
     std::deque<TracedSegment> m_traced_segments;
@@ -384,8 +384,8 @@ public:
     virtual void TraceItem(const TraceItem &item) = 0;
 
     /// Dump a function call forest.
-    virtual void FunctionCallForest(const std::vector<FunctionCallUP> &forest) {
-    }
+    virtual void
+    FunctionCallForest(const std::vector<FunctionCallUP> &forest) = 0;
   };
 
   /// Create a instruction dumper for the cursor.
