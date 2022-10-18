@@ -14,6 +14,7 @@
 #include <__chrono/duration.h>
 #include <__chrono/month.h>
 #include <__chrono/statically_widen.h>
+#include <__chrono/weekday.h>
 #include <__chrono/year.h>
 #include <__concepts/same_as.h>
 #include <__config>
@@ -124,6 +125,15 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT basic_ostream<_CharT, _Traits>
 operator<<(basic_ostream<_CharT, _Traits>& __os, const year& __y) {
   return __os << (__y.ok() ? std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "{:%Y}"), __y)
                            : std::format(_LIBCPP_STATICALLY_WIDEN(_CharT, "{:%Y} is not a valid year"), __y));
+}
+
+template <class _CharT, class _Traits>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_AVAILABILITY_FORMAT basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const weekday& __wd) {
+  return __os << (__wd.ok() ? std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%a}"), __wd)
+                            : std::format(__os.getloc(), // TODO FMT Standard mandated locale isn't used.
+                                          _LIBCPP_STATICALLY_WIDEN(_CharT, "{} is not a valid weekday"),
+                                          static_cast<unsigned>(__wd.c_encoding())));
 }
 
 } // namespace chrono
