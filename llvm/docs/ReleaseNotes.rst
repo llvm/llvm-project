@@ -12,7 +12,6 @@ LLVM |release| Release Notes
      Release notes for previous releases can be found on
      `the Download Page <https://releases.llvm.org/download.html>`_.
 
-* The LoopFlatten pass is now enabled by default.
 
 Introduction
 ============
