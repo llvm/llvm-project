@@ -1,4 +1,4 @@
-//===- Enums.h - Enums shared with the runtime ------------------*- C++ -*-===//
+//===- Enums.h - Enums for the SparseTensor dialect -------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,25 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Typedefs and enums for the lightweight runtime support library for
-// sparse tensor manipulations.  These are required to be public so that
-// they can be shared with `Transforms/SparseTensorConversion.cpp`, since
-// they define the arguments to the public functions declared later on.
+// Typedefs and enums shared between MLIR code for manipulating the
+// IR, and the lightweight runtime support library for sparse tensor
+// manipulations.  That is, all the enums are used to define the API
+// of the runtime library and hence are also needed when generating
+// calls into the runtime library.  Moveover, the `DimLevelType` enum
+// is also used as the internal IR encoding of dimension level types,
+// to avoid code duplication (e.g., for the predicates).
 //
 // This file also defines x-macros <https://en.wikipedia.org/wiki/X_Macro>
 // so that we can generate variations of the public functions for each
 // supported primary- and/or overhead-type.
 //
-// This file is part of the lightweight runtime support library for sparse
-// tensor manipulations.  The functionality of the support library is meant
-// to simplify benchmarking, testing, and debugging MLIR code operating on
-// sparse tensors.  However, the provided functionality is **not** part of
-// core MLIR itself.
+// Because this file defines a library which is a dependency of the
+// runtime library itself, this file must not depend on any MLIR internals
+// (e.g., operators, attributes, ArrayRefs, etc) lest the runtime library
+// inherit those dependencies.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_EXECUTIONENGINE_SPARSETENSOR_ENUMS_H
-#define MLIR_EXECUTIONENGINE_SPARSETENSOR_ENUMS_H
+#ifndef MLIR_DIALECT_SPARSETENSOR_IR_ENUMS_H
+#define MLIR_DIALECT_SPARSETENSOR_IR_ENUMS_H
 
 // NOTE: Client code will need to include "mlir/ExecutionEngine/Float16bits.h"
 // if they want to use the `MLIR_SPARSETENSOR_FOREVERY_V` macro.
@@ -128,9 +130,14 @@ enum class Action : uint32_t {
   kToIterator = 6,
 };
 
-/// This enum mimics `SparseTensorEncodingAttr::DimLevelType` for
-/// breaking dependency cycles.  `SparseTensorEncodingAttr::DimLevelType`
-/// is the source of truth and this enum should be kept consistent with it.
+/// This enum defines all the sparse representations supportable by
+/// the SparseTensor dialect.  We use a lightweight encoding to encode
+/// both the "format" per se (dense, compressed, singleton) as well as
+/// the "properties" (ordered, unique).  The encoding is chosen for
+/// performance of the runtime library, and thus may change in future
+/// versions; consequently, client code should use the predicate functions
+/// defined below, rather than relying on knowledge about the particular
+/// binary encoding.
 enum class DimLevelType : uint8_t {
   Dense = 4,           // 0b001_00
   Compressed = 8,      // 0b010_00
@@ -218,4 +225,4 @@ static_assert((isUniqueDLT(DimLevelType::Dense) &&
 } // namespace sparse_tensor
 } // namespace mlir
 
-#endif // MLIR_EXECUTIONENGINE_SPARSETENSOR_ENUMS_H
+#endif // MLIR_DIALECT_SPARSETENSOR_IR_ENUMS_H
