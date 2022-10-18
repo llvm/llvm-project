@@ -1902,7 +1902,7 @@ defm finite_math_only : BoolFOption<"finite-math-only",
   NegFlag<SetFalse>>;
 defm signed_zeros : BoolFOption<"signed-zeros",
   LangOpts<"NoSignedZero">, DefaultFalse,
-  NegFlag<SetTrue, [CC1Option], "Allow optimizations that ignore the sign of floating point zeros",
+  NegFlag<SetTrue, [CC1Option, FC1Option, FlangOption], "Allow optimizations that ignore the sign of floating point zeros",
             [cl_no_signed_zeros.KeyPath, funsafe_math_optimizations.KeyPath]>,
   PosFlag<SetFalse>>;
 def fhonor_nans : Flag<["-"], "fhonor-nans">, Group<f_Group>;

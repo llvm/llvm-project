@@ -714,6 +714,12 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.ApproxFunc = true;
   }
 
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_fno_signed_zeros)) {
+    diags.Report(diagUnimplemented) << a->getOption().getName();
+    opts.NoSignedZeros = true;
+  }
+
   return true;
 }
 
