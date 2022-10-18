@@ -111,6 +111,43 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     OS << "\t.seh_pac_sign_lr\n";
   }
 
+  void emitARM64WinCFISaveAnyRegI(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_any_reg\tx" << Reg << ", " << Offset << "\n";
+  }
+  void emitARM64WinCFISaveAnyRegIP(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_any_reg_p\tx" << Reg << ", " << Offset << "\n";
+  }
+  void emitARM64WinCFISaveAnyRegD(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_any_reg\td" << Reg << ", " << Offset << "\n";
+  }
+  void emitARM64WinCFISaveAnyRegDP(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_any_reg_p\td" << Reg << ", " << Offset << "\n";
+  }
+  void emitARM64WinCFISaveAnyRegQ(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_any_reg\tq" << Reg << ", " << Offset << "\n";
+  }
+  void emitARM64WinCFISaveAnyRegQP(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_any_reg_p\tq" << Reg << ", " << Offset << "\n";
+  }
+  void emitARM64WinCFISaveAnyRegIX(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_any_reg_x\tx" << Reg << ", " << Offset << "\n";
+  }
+  void emitARM64WinCFISaveAnyRegIPX(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_any_reg_px\tx" << Reg << ", " << Offset << "\n";
+  }
+  void emitARM64WinCFISaveAnyRegDX(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_any_reg_x\td" << Reg << ", " << Offset << "\n";
+  }
+  void emitARM64WinCFISaveAnyRegDPX(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_any_reg_px\td" << Reg << ", " << Offset << "\n";
+  }
+  void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_any_reg_x\tq" << Reg << ", " << Offset << "\n";
+  }
+  void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) override {
+    OS << "\t.seh_save_any_reg_px\tq" << Reg << ", " << Offset << "\n";
+  }
+
 public:
   AArch64TargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
 };
