@@ -1,0 +1,12 @@
+// RUN: cir-tool %s | cir-tool | FileCheck %s
+// XFAIL: *
+
+module  {
+  cir.func @structs() {
+    %0 = cir.alloca !cir.ptr<!cir.struct<"S", i8, i16, i32>>, cir.ptr <!cir.ptr<!cir.struct<"S", i8, i16, i32>>>, ["s", init]
+    cir.return
+  }
+}
+
+// CHECK: cir.func @structs() {
+// CHECK-NEXT:     %0 = cir.alloca !cir.ptr<!cir.struct<"S", i8, i16, i32>>, cir.ptr <!cir.ptr<!cir.struct<"S", i8, i16, i32>>>, ["s", init]
