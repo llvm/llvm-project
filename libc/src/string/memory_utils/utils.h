@@ -9,19 +9,8 @@
 #ifndef LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
 #define LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
 
-#include "src/__support/architectures.h"
-
-// Cache line sizes for ARM: These values are not strictly correct since
-// cache line sizes depend on implementations, not architectures.  There
-// are even implementations with cache line sizes configurable at boot
-// time.
-#if defined(LLVM_LIBC_ARCH_AARCH64) || defined(LLVM_LIBC_ARCH_X86)
-#define LLVM_LIBC_CACHELINE_SIZE 64
-#elif defined(LLVM_LIBC_ARCH_ARM)
-#define LLVM_LIBC_CACHELINE_SIZE 32
-#else
-#error "Unsupported platform for memory functions."
-#endif
+#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/type_traits.h"
 
 #include <stddef.h> // size_t
 #include <stdint.h> // intptr_t / uintptr_t
@@ -62,29 +51,43 @@ static constexpr size_t ge_power2(size_t value) {
   return is_power2_or_zero(value) ? value : 1ULL << (log2(value) + 1);
 }
 
-template <size_t alignment> intptr_t offset_from_last_aligned(const void *ptr) {
+// Returns the number of bytes to substract from ptr to get to the previous
+// multiple of alignment. If ptr is already aligned returns 0.
+template <size_t alignment> uintptr_t distance_to_align_down(const void *ptr) {
   static_assert(is_power2(alignment), "alignment must be a power of 2");
   return reinterpret_cast<uintptr_t>(ptr) & (alignment - 1U);
 }
 
-template <size_t alignment> intptr_t offset_to_next_aligned(const void *ptr) {
+// Returns the number of bytes to add to ptr to get to the next multiple of
+// alignment. If ptr is already aligned returns 0.
+template <size_t alignment> uintptr_t distance_to_align_up(const void *ptr) {
   static_assert(is_power2(alignment), "alignment must be a power of 2");
   // The logic is not straightforward and involves unsigned modulo arithmetic
   // but the generated code is as fast as it can be.
   return -reinterpret_cast<uintptr_t>(ptr) & (alignment - 1U);
 }
 
-// Returns the offset from `ptr` to the next cache line.
-static inline intptr_t offset_to_next_cache_line(const void *ptr) {
-  return offset_to_next_aligned<LLVM_LIBC_CACHELINE_SIZE>(ptr);
+// Returns the number of bytes to add to ptr to get to the next multiple of
+// alignment. If ptr is already aligned returns alignment.
+template <size_t alignment>
+uintptr_t distance_to_next_aligned(const void *ptr) {
+  return alignment - distance_to_align_down<alignment>(ptr);
 }
 
+// Returns the same pointer but notifies the compiler that it is aligned.
 template <size_t alignment, typename T> static T *assume_aligned(T *ptr) {
   return reinterpret_cast<T *>(__builtin_assume_aligned(ptr, alignment));
 }
+
 #if defined __has_builtin
 #if __has_builtin(__builtin_memcpy_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
+#endif
+#endif
+
+#if defined __has_builtin
+#if __has_builtin(__builtin_memset_inline)
+#define LLVM_LIBC_HAS_BUILTIN_MEMSET_INLINE
 #endif
 #endif
 
@@ -103,28 +106,21 @@ static inline void memcpy_inline(void *__restrict dst,
 using Ptr = char *;        // Pointer to raw data.
 using CPtr = const char *; // Const pointer to raw data.
 
-// Loads bytes from memory (possibly unaligned) and materializes them as type.
+// Loads bytes from memory (possibly unaligned) and materializes them as
+// type.
 template <typename T> static inline T load(CPtr ptr) {
   T Out;
   memcpy_inline<sizeof(T)>(&Out, ptr);
   return Out;
 }
 
-// Stores a value of type T in memory (possibly unaligned)
+// Stores a value of type T in memory (possibly unaligned).
 template <typename T> static inline void store(Ptr ptr, T value) {
   memcpy_inline<sizeof(T)>(ptr, &value);
 }
 
-// For an operation like memset that operates on a pointer and a count, advances
-// the pointer by offset bytes and decrease count by the same amount.
-static inline void adjust(ptrdiff_t offset, Ptr &ptr, size_t &count) {
-  ptr += offset;
-  count -= offset;
-}
-
-// For an operation like memcpy or memcmp that operates on two pointers and a
-// count, advances the pointers by offset bytes and decrease count by the same
-// amount.
+// Advances the pointers p1 and p2 by offset bytes and decrease count by the
+// same amount.
 template <typename T1, typename T2>
 static inline void adjust(ptrdiff_t offset, T1 *__restrict &p1,
                           T2 *__restrict &p2, size_t &count) {
@@ -133,31 +129,37 @@ static inline void adjust(ptrdiff_t offset, T1 *__restrict &p1,
   count -= offset;
 }
 
-// For an operation like memset that operates on a pointer and a count, advances
-// the pointer so it is aligned to SIZE bytes and decrease count by the same
-// amount.
+// Advances p1 and p2 so p1 gets aligned to the next SIZE bytes boundary
+// and decrease count by the same amount.
 // We make sure the compiler knows about the adjusted pointer alignment.
-template <size_t SIZE> void align(Ptr &ptr, size_t &count) {
-  adjust(offset_to_next_aligned<SIZE>(ptr), ptr, count);
-  ptr = assume_aligned<SIZE>(ptr);
+template <size_t SIZE, typename T1, typename T2>
+void align_p1_to_next_boundary(T1 *__restrict &p1, T2 *__restrict &p2,
+                               size_t &count) {
+  adjust(distance_to_next_aligned<SIZE>(p1), p1, p2, count);
+  p1 = assume_aligned<SIZE>(p1);
 }
 
-// For an operation like memcpy or memcmp that operates on two pointers and a
-// count, advances the pointers so one of them gets aligned to SIZE bytes and
-// decrease count by the same amount.
-// We make sure the compiler knows about the adjusted pointer alignment.
-enum class Arg { _1, _2, Dst = _1, Src = _2, Lhs = _1, Rhs = _2 };
+// Same as align_p1_to_next_boundary above but with a single pointer instead.
+template <size_t SIZE, typename T1>
+void align_to_next_boundary(T1 *&p1, size_t &count) {
+  CPtr dummy;
+  align_p1_to_next_boundary<SIZE>(p1, dummy, count);
+}
+
+// An enum class that discriminates between the first and second pointer.
+enum class Arg { P1, P2, Dst = P1, Src = P2 };
+
+// Same as align_p1_to_next_boundary but allows for aligning p2 instead of p1.
+// Precondition: &p1 != &p2
 template <size_t SIZE, Arg AlignOn, typename T1, typename T2>
-void align(T1 *__restrict &p1, T2 *__restrict &p2, size_t &count) {
-  if constexpr (AlignOn == Arg::_1) {
-    adjust(offset_to_next_aligned<SIZE>(p1), p1, p2, count);
-    p1 = assume_aligned<SIZE>(p1);
-  } else if constexpr (AlignOn == Arg::_2) {
-    adjust(offset_to_next_aligned<SIZE>(p2), p1, p2, count);
-    p2 = assume_aligned<SIZE>(p2);
-  } else {
-    deferred_static_assert("AlignOn must be either Arg::_1 or Arg::_2");
-  }
+void align_to_next_boundary(T1 *__restrict &p1, T2 *__restrict &p2,
+                            size_t &count) {
+  if constexpr (AlignOn == Arg::P1)
+    align_p1_to_next_boundary<SIZE>(p1, p2, count);
+  else if constexpr (AlignOn == Arg::P2)
+    align_p1_to_next_boundary<SIZE>(p2, p1, count); // swapping p1 and p2.
+  else
+    deferred_static_assert("AlignOn must be either Arg::P1 or Arg::P2");
 }
 
 } // namespace __llvm_libc
