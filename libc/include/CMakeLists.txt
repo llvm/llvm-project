@@ -136,6 +136,7 @@ add_gen_header(
     .llvm-libc-macros.signal_macros
     .llvm-libc-types.struct_sigaction
     .llvm-libc-types.__sighandler_t
+    .llvm-libc-types.stack_t
     .llvm-libc-types.sigset_t
     .llvm-libc-types.pid_t
 )

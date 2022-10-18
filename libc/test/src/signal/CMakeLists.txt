@@ -115,3 +115,17 @@ add_libc_unittest(
     libc.src.signal.sigprocmask
     libc.test.errno_setter_matcher
 )
+
+add_libc_unittest(
+  sigaltstack_test
+  SUITE
+    libc_signal_unittests
+  SRCS
+    sigaltstack_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.signal
+    libc.src.signal.raise
+    libc.src.signal.sigaltstack
+    libc.src.signal.sigaction
+)

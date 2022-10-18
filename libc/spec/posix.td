@@ -65,6 +65,11 @@ def StructTermiosPtr : PtrType<StructTermios>;
 def ConstStructTermiosPtr : ConstType<StructTermiosPtr>;
 def TcFlagT : NamedType<"tcflag_t">;
 
+def StackT : NamedType<"stack_t">;
+def StackTPtr : PtrType<StackT>;
+def RestrictedStackTPtr : RestrictedPtrType<StackT>;
+def ConstRestrictedStackTPtr : ConstType<RestrictedStackTPtr>;
+
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
   RestrictedPtrType RestrictedCharPtr = RestrictedPtrType<CharType>;
@@ -273,6 +278,7 @@ def POSIX : StandardSpec<"POSIX"> {
       [
         SigInfoType,
         SigSetType,
+        StackT,
         StructSigaction,
         UnionSigVal,
         PidT,
@@ -291,6 +297,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<IntType>,
            ArgSpec<ConstRestrictedStructSigactionPtr>,
            ArgSpec<RestrictedStructSigactionPtr>]
+        >,
+        FunctionSpec<
+          "sigaltstack",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstRestrictedStackTPtr>, ArgSpec<RestrictedStackTPtr>]
         >,
         FunctionSpec<
           "sigdelset",
