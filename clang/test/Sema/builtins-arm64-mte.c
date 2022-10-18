@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple arm64-arm-eabi %s -target-feature +mte -fsyntax-only -verify
 // RUN: %clang_cc1 -triple arm64-arm-eabi %s -target-feature +mte -x c++ -fsyntax-only -verify
-// RUN: %clang_cc1 -triple arm64-arm-eabi %s -DNO_MTE -x c++ -S -emit-llvm  -verify
+// RUN: %clang_cc1 -triple arm64-arm-eabi %s -DNO_MTE -x c++ -S -emit-llvm -verify -o -
 #include <stddef.h>
 #include <arm_acle.h>
 
