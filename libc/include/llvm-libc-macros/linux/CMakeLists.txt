@@ -69,3 +69,9 @@ add_header(
   HDR
     signal-macros.h
 )
+
+add_header(
+  termios_macros
+  HDR
+    termios-macros.h
+)
