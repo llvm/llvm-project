@@ -461,8 +461,6 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
         result.SetStatus(eReturnStatusFailed);
       }
     }
-  } else {
-    error_stream.Printf("error: unknown error\n");
   }
 
   return (success != eExpressionSetupError &&
