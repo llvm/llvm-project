@@ -10,9 +10,13 @@ define half @roundeven_f16(half %h) {
 ; SSE2:       ## %bb.0: ## %entry
 ; SSE2-NEXT:    pushq %rax
 ; SSE2-NEXT:    .cfi_def_cfa_offset 16
+; SSE2-NEXT:    pextrw $0, %xmm0, %eax
+; SSE2-NEXT:    movzwl %ax, %edi
 ; SSE2-NEXT:    callq ___extendhfsf2
 ; SSE2-NEXT:    callq _roundevenf
 ; SSE2-NEXT:    callq ___truncsfhf2
+; SSE2-NEXT:    ## kill: def $ax killed $ax def $eax
+; SSE2-NEXT:    pinsrw $0, %eax, %xmm0
 ; SSE2-NEXT:    popq %rax
 ; SSE2-NEXT:    retq
 ;
@@ -20,9 +24,13 @@ define half @roundeven_f16(half %h) {
 ; SSE41:       ## %bb.0: ## %entry
 ; SSE41-NEXT:    pushq %rax
 ; SSE41-NEXT:    .cfi_def_cfa_offset 16
+; SSE41-NEXT:    pextrw $0, %xmm0, %eax
+; SSE41-NEXT:    movzwl %ax, %edi
 ; SSE41-NEXT:    callq ___extendhfsf2
 ; SSE41-NEXT:    roundss $8, %xmm0, %xmm0
 ; SSE41-NEXT:    callq ___truncsfhf2
+; SSE41-NEXT:    ## kill: def $ax killed $ax def $eax
+; SSE41-NEXT:    pinsrw $0, %eax, %xmm0
 ; SSE41-NEXT:    popq %rax
 ; SSE41-NEXT:    retq
 ;
@@ -30,9 +38,13 @@ define half @roundeven_f16(half %h) {
 ; AVX1:       ## %bb.0: ## %entry
 ; AVX1-NEXT:    pushq %rax
 ; AVX1-NEXT:    .cfi_def_cfa_offset 16
+; AVX1-NEXT:    vpextrw $0, %xmm0, %eax
+; AVX1-NEXT:    movzwl %ax, %edi
 ; AVX1-NEXT:    callq ___extendhfsf2
 ; AVX1-NEXT:    vroundss $8, %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    callq ___truncsfhf2
+; AVX1-NEXT:    ## kill: def $ax killed $ax def $eax
+; AVX1-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; AVX1-NEXT:    popq %rax
 ; AVX1-NEXT:    retq
 ;

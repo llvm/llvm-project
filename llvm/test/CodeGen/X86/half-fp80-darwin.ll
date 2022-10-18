@@ -8,9 +8,9 @@ define void @extendhfxf(ptr %outptr, ptr %inptr) nounwind {
 ; CHECK-SOFT-NEXT:    pushq %rbx
 ; CHECK-SOFT-NEXT:    subq $16, %rsp
 ; CHECK-SOFT-NEXT:    movq %rdi, %rbx
-; CHECK-SOFT-NEXT:    pinsrw $0, (%rsi), %xmm0
+; CHECK-SOFT-NEXT:    movzwl (%rsi), %edi
 ; CHECK-SOFT-NEXT:    callq ___extendhfsf2
-; CHECK-SOFT-NEXT:    movd %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-SOFT-NEXT:    movss %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-SOFT-NEXT:    flds {{[0-9]+}}(%rsp)
 ; CHECK-SOFT-NEXT:    fstpt (%rbx)
 ; CHECK-SOFT-NEXT:    addq $16, %rsp
