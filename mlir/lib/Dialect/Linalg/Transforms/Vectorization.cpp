@@ -232,6 +232,12 @@ static Value buildVectorWrite(OpBuilder &b, Value value,
   return Value();
 }
 
+// Custom vectorization precondition function type. This is intented to be used
+// with CustomVectorizationHook. Returns success if the correpsonding custom
+// hook can vectorize the op.
+using CustomVectorizationPrecondition =
+    std::function<LogicalResult(Operation *)>;
+
 // Custom vectorization function type. Produce a vector form of Operation*
 // assuming all its vectorized operands are already in the BlockAndValueMapping.
 // Return nullptr if the Operation cannot be vectorized.
@@ -298,6 +304,69 @@ static VectorizationResult vectorizeLinalgIndex(OpBuilder &b, Operation *op,
   auto transposeOp =
       b.create<vector::TransposeOp>(loc, broadCastOp, transposition);
   return VectorizationResult{VectorizationStatus::NewOp, transposeOp};
+}
+
+/// Helper function to check if the tensor.extract can be vectorized by the
+/// custom hook vectorizeTensorExtract.
+static LogicalResult tensorExtractVectorizationPrecondition(Operation *op) {
+  tensor::ExtractOp extractOp = dyn_cast<tensor::ExtractOp>(op);
+  if (!extractOp)
+    return failure();
+
+  // Currently only supports extraction with an 1-D index.
+  if (extractOp.getIndices().size() != 1)
+    return failure();
+
+  if (!VectorType::isValidElementType(extractOp.getIndices()[0].getType()))
+    return failure();
+
+  if (llvm::any_of(extractOp->getResultTypes(), [](Type type) {
+        return !VectorType::isValidElementType(type);
+      })) {
+    return failure();
+  }
+
+  return success();
+}
+
+/// Helper function to vectorize the tensor.extract operations. Returns
+/// VectorizationStatus::NewOp to signal the vectorization algorithm that it
+/// should map the produced operations. This function is meant to be used as a
+/// CustomVectorizationHook.
+static VectorizationResult
+vectorizeTensorExtract(OpBuilder &b, Operation *op, LinalgOp linalgOp,
+                       const BlockAndValueMapping &bvm) {
+  tensor::ExtractOp extractOp = dyn_cast<tensor::ExtractOp>(op);
+  if (!extractOp)
+    return VectorizationResult{VectorizationStatus::Failure, nullptr};
+  auto loc = extractOp.getLoc();
+
+  // Currently only supports extraction with an 1-D index. Checked in the
+  // tensorExtractVectorizationPrecondition.
+  assert(extractOp.getIndices().size() == 1);
+
+  auto indexVec = bvm.lookup(extractOp.getIndices()[0]);
+  // Compute the static loop sizes of the extract op.
+  auto targetShape = linalgOp.computeStaticLoopSizes();
+
+  SmallVector<Value> gatherIndices;
+  gatherIndices.push_back(b.create<arith::ConstantIndexOp>(loc, 0));
+
+  auto maskConstantOp = b.create<arith::ConstantOp>(
+      loc,
+      DenseIntElementsAttr::get(VectorType::get(targetShape, b.getI1Type()),
+                                /*value=*/true));
+
+  auto resultType =
+      VectorType::get(targetShape, extractOp.getResult().getType());
+  auto passThruConstantOp =
+      b.create<arith::ConstantOp>(loc, b.getZeroAttr(resultType));
+
+  auto gatherOp = b.create<vector::GatherOp>(
+      loc, resultType, extractOp.getTensor(), gatherIndices, indexVec,
+      maskConstantOp, passThruConstantOp);
+
+  return VectorizationResult{VectorizationStatus::NewOp, gatherOp};
 }
 
 /// Emit reduction operations if the shapes of the value to reduce is different
@@ -515,6 +584,14 @@ vectorizeAsLinalgGeneric(OpBuilder &b, LinalgOp linalgOp,
   };
   hooks.push_back(vectorizeIndex);
 
+  // 4c. Register CustomVectorizationHook for extractOp.
+  CustomVectorizationHook vectorizeExtract =
+      [&](Operation *op,
+          const BlockAndValueMapping &bvm) -> VectorizationResult {
+    return vectorizeTensorExtract(b, op, linalgOp, bvm);
+  };
+  hooks.push_back(vectorizeExtract);
+
   // 5. Iteratively call `vectorizeOneOp` to each op in the slice.
   for (Operation &op : block->getOperations()) {
     VectorizationResult result = vectorizeOneOp(b, linalgOp, &op, bvm, hooks);
@@ -552,9 +629,20 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
   return success();
 }
 
-static LogicalResult vectorizeStaticLinalgOpPrecondition(linalg::LinalgOp op) {
+static LogicalResult vectorizeStaticLinalgOpPrecondition(
+    linalg::LinalgOp op,
+    ArrayRef<CustomVectorizationPrecondition> customPreconditions) {
+
   // All types in the body should be a supported element type for VectorType.
   for (Operation &innerOp : op->getRegion(0).front()) {
+    // Check if any custom hook can vectorize the inner op.
+    if (llvm::any_of(
+            customPreconditions,
+            [&](const CustomVectorizationPrecondition &customPrecondition) {
+              return succeeded(customPrecondition(&innerOp));
+            })) {
+      continue;
+    }
     if (llvm::any_of(innerOp.getOperandTypes(), [](Type type) {
           return !VectorType::isValidElementType(type);
         })) {
@@ -566,16 +654,8 @@ static LogicalResult vectorizeStaticLinalgOpPrecondition(linalg::LinalgOp op) {
       return failure();
     }
   }
-  if (isElementwise(op)) {
-    // Some operations in the body cannot be vectorized.
-    for (Operation &payloadOp : *op.getBlock()) {
-      if (isa<tensor::ExtractOp>(payloadOp)) {
-        LDBG("precondition failed: `tensor.extract` not vectorizable");
-        return failure();
-      }
-    }
+  if (isElementwise(op))
     return success();
-  }
   // TODO: isaConvolutionOpInterface that can also infer from generic features.
   // But we will still need stride/dilation attributes that will be annoying to
   // reverse-engineer...
@@ -601,7 +681,13 @@ LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(LinalgOp linalgOp) {
     LDBG("precondition failed: dynamic shape");
     return failure();
   }
-  return vectorizeStaticLinalgOpPrecondition(linalgOp);
+
+  SmallVector<CustomVectorizationPrecondition> customPreconditions;
+
+  // Register CustomVectorizationPrecondition for extractOp.
+  customPreconditions.push_back(tensorExtractVectorizationPrecondition);
+
+  return vectorizeStaticLinalgOpPrecondition(linalgOp, customPreconditions);
 }
 
 LogicalResult mlir::linalg::vectorize(RewriterBase &rewriter,
