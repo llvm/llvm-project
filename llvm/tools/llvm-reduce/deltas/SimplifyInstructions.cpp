@@ -45,6 +45,5 @@ static void extractInstrFromModule(Oracle &O, Module &Program) {
 }
 
 void llvm::simplifyInstructionsDeltaPass(TestRunner &Test) {
-  outs() << "*** Simplifying Instructions...\n";
-  runDeltaPass(Test, extractInstrFromModule);
+  runDeltaPass(Test, extractInstrFromModule, "Simplifying Instructions");
 }

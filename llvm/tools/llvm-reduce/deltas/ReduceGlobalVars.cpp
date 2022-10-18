@@ -59,6 +59,5 @@ static void extractGVsFromModule(Oracle &O, Module &Program) {
 }
 
 void llvm::reduceGlobalsDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing GVs...\n";
-  runDeltaPass(Test, extractGVsFromModule);
+  runDeltaPass(Test, extractGVsFromModule, "Reducing GlobalVariables");
 }
