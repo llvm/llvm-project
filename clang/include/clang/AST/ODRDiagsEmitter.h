@@ -62,8 +62,10 @@ public:
 private:
   using DeclHashes = llvm::SmallVector<std::pair<const Decl *, unsigned>, 4>;
 
-  // Used with err_module_odr_violation_mismatch_decl and
-  // note_module_odr_violation_mismatch_decl
+  // Used with err_module_odr_violation_mismatch_decl,
+  // note_module_odr_violation_mismatch_decl,
+  // err_module_odr_violation_mismatch_decl_unknown,
+  // and note_module_odr_violation_mismatch_decl_unknown
   // This list should be the same Decl's as in ODRHash::isSubDeclToBeProcessed
   enum ODRMismatchDecl {
     EndOfClass,
@@ -78,6 +80,7 @@ private:
     Var,
     Friend,
     FunctionTemplate,
+    ObjCMethod,
     Other
   };
 
@@ -136,6 +139,15 @@ private:
                                     const ObjCProtocolList &SecondProtocols,
                                     const ObjCContainerDecl *SecondContainer,
                                     StringRef SecondModule) const;
+
+  /// Check if Objective-C methods are the same and diagnose if different.
+  ///
+  /// Returns true if found a mismatch and diagnosed it.
+  bool diagnoseSubMismatchObjCMethod(const NamedDecl *FirstObjCContainer,
+                                     StringRef FirstModule,
+                                     StringRef SecondModule,
+                                     const ObjCMethodDecl *FirstMethod,
+                                     const ObjCMethodDecl *SecondMethod) const;
 
 private:
   DiagnosticsEngine &Diags;
