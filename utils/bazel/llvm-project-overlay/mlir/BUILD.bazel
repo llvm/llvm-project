@@ -2112,6 +2112,7 @@ cc_library(
         ":LinalgDialect",
         ":MathDialect",
         ":SparseTensorDialect",
+        ":SparseTensorEnums",
         "//llvm:Support",
     ],
 )

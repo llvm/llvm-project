@@ -37,29 +37,37 @@ SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
 // Dimension level types.
 //
 
-// Cannot be constexpr, because `getRank` isn't constexpr.  However,
-// for some strange reason, the wrapper functions below don't trigger
-// the same [-Winvalid-constexpr] warning (despite this function not
-// being constexpr).
-inline DimLevelType getDimLevelType(RankedTensorType type, uint64_t d) {
-  assert(d < static_cast<uint64_t>(type.getRank()));
-  if (auto enc = getSparseTensorEncoding(type))
-    return enc.getDimLevelType()[d];
+// MSVC does not allow this function to be constexpr, because
+// `SparseTensorEncodingAttr::operator bool` isn't declared constexpr.
+// And therefore all functions calling it cannot be constexpr either.
+// TODO: since Clang does allow these to be constexpr, perhaps we should
+// define a macro to abstract over `inline` vs `constexpr` annotations.
+inline DimLevelType getDimLevelType(const SparseTensorEncodingAttr &enc,
+                                    uint64_t d) {
+  if (enc) {
+    auto types = enc.getDimLevelType();
+    assert(d < types.size() && "Dimension out of bounds");
+    return types[d];
+  }
   return DimLevelType::Dense; // unannotated tensor is dense
 }
 
+inline DimLevelType getDimLevelType(RankedTensorType type, uint64_t d) {
+  return getDimLevelType(getSparseTensorEncoding(type), d);
+}
+
 /// Convenience function to test for dense dimension (0 <= d < rank).
-constexpr bool isDenseDim(RankedTensorType type, uint64_t d) {
+inline bool isDenseDim(RankedTensorType type, uint64_t d) {
   return isDenseDLT(getDimLevelType(type, d));
 }
 
 /// Convenience function to test for compressed dimension (0 <= d < rank).
-constexpr bool isCompressedDim(RankedTensorType type, uint64_t d) {
+inline bool isCompressedDim(RankedTensorType type, uint64_t d) {
   return isCompressedDLT(getDimLevelType(type, d));
 }
 
 /// Convenience function to test for singleton dimension (0 <= d < rank).
-constexpr bool isSingletonDim(RankedTensorType type, uint64_t d) {
+inline bool isSingletonDim(RankedTensorType type, uint64_t d) {
   return isSingletonDLT(getDimLevelType(type, d));
 }
 
@@ -69,13 +77,13 @@ constexpr bool isSingletonDim(RankedTensorType type, uint64_t d) {
 
 /// Convenience function to test for ordered property in the
 /// given dimension (0 <= d < rank).
-constexpr bool isOrderedDim(RankedTensorType type, uint64_t d) {
+inline bool isOrderedDim(RankedTensorType type, uint64_t d) {
   return isOrderedDLT(getDimLevelType(type, d));
 }
 
 /// Convenience function to test for unique property in the
 /// given dimension (0 <= d < rank).
-constexpr bool isUniqueDim(RankedTensorType type, uint64_t d) {
+inline bool isUniqueDim(RankedTensorType type, uint64_t d) {
   return isUniqueDLT(getDimLevelType(type, d));
 }
 
