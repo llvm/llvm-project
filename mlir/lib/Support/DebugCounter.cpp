@@ -62,9 +62,9 @@ void DebugCounter::addCounter(StringRef actionTag, int64_t countToSkip,
 }
 
 // Register a counter with the specified name.
-FailureOr<bool> DebugCounter::shouldExecute(StringRef tag,
-                                            StringRef description) {
-  auto counterIt = counters.find(tag);
+FailureOr<bool> DebugCounter::execute(llvm::function_ref<void()> transform,
+                                      const DebugActionBase &action) {
+  auto counterIt = counters.find(action.getTag());
   if (counterIt == counters.end())
     return true;
 

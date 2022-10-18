@@ -10,9 +10,6 @@
 #include "mlir/Support/TypeID.h"
 #include "gmock/gmock.h"
 
-// DebugActionManager is only enabled in DEBUG mode.
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-
 using namespace mlir;
 
 namespace {
@@ -30,6 +27,8 @@ struct OtherSimpleAction : DebugAction<OtherSimpleAction> {
 };
 struct ParametricAction : DebugAction<ParametricAction, bool> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ParametricAction)
+  ParametricAction(bool executeParam) : executeParam(executeParam) {}
+  bool executeParam;
   static StringRef getTag() { return "param-action"; }
   static StringRef getDescription() { return "param-action-description"; }
 };
@@ -40,21 +39,25 @@ TEST(DebugActionTest, GenericHandler) {
   // A generic handler that always executes the simple action, but not the
   // parametric action.
   struct GenericHandler : DebugActionManager::GenericHandler {
-    FailureOr<bool> shouldExecute(StringRef tag, StringRef desc) final {
-      if (tag == SimpleAction::getTag()) {
+    FailureOr<bool> execute(llvm::function_ref<void()> transform,
+                            const DebugActionBase &action) final {
+      StringRef desc = action.getDescription();
+      if (isa<SimpleAction>(action)) {
         EXPECT_EQ(desc, SimpleAction::getDescription());
+        transform();
         return true;
       }
 
-      EXPECT_EQ(tag, ParametricAction::getTag());
+      EXPECT_TRUE(isa<ParametricAction>(action));
       EXPECT_EQ(desc, ParametricAction::getDescription());
       return false;
     }
   };
   manager.registerActionHandler<GenericHandler>();
 
-  EXPECT_TRUE(manager.shouldExecute<SimpleAction>());
-  EXPECT_FALSE(manager.shouldExecute<ParametricAction>(true));
+  auto noOp = []() { return; };
+  EXPECT_TRUE(manager.execute<SimpleAction>(noOp));
+  EXPECT_FALSE(manager.execute<ParametricAction>(noOp, true));
 }
 
 TEST(DebugActionTest, ActionSpecificHandler) {
@@ -62,17 +65,25 @@ TEST(DebugActionTest, ActionSpecificHandler) {
 
   // Handler that simply uses the input as the decider.
   struct ActionSpecificHandler : ParametricAction::Handler {
-    FailureOr<bool> shouldExecute(bool shouldExecuteParam) final {
-      return shouldExecuteParam;
+    FailureOr<bool> execute(llvm::function_ref<void()> transform,
+                            const ParametricAction &action) final {
+      if (action.executeParam)
+        transform();
+      return action.executeParam;
     }
   };
   manager.registerActionHandler<ActionSpecificHandler>();
 
-  EXPECT_TRUE(manager.shouldExecute<ParametricAction>(true));
-  EXPECT_FALSE(manager.shouldExecute<ParametricAction>(false));
+  int count = 0;
+  auto incCount = [&]() { count++; };
+  EXPECT_TRUE(manager.execute<ParametricAction>(incCount, true));
+  EXPECT_EQ(count, 1);
+  EXPECT_FALSE(manager.execute<ParametricAction>(incCount, false));
+  EXPECT_EQ(count, 1);
 
   // There is no handler for the simple action, so it is always executed.
-  EXPECT_TRUE(manager.shouldExecute<SimpleAction>());
+  EXPECT_TRUE(manager.execute<SimpleAction>(incCount));
+  EXPECT_EQ(count, 2);
 }
 
 TEST(DebugActionTest, DebugCounterHandler) {
@@ -80,17 +91,24 @@ TEST(DebugActionTest, DebugCounterHandler) {
 
   // Handler that uses the number of action executions as the decider.
   struct DebugCounterHandler : SimpleAction::Handler {
-    FailureOr<bool> shouldExecute() final { return numExecutions++ < 3; }
+    FailureOr<bool> execute(llvm::function_ref<void()> transform,
+                            const SimpleAction &action) final {
+      bool shouldExecute = numExecutions++ < 3;
+      if (shouldExecute)
+        transform();
+      return shouldExecute;
+    }
     unsigned numExecutions = 0;
   };
   manager.registerActionHandler<DebugCounterHandler>();
 
   // Check that the action is executed 3 times, but no more after.
-  EXPECT_TRUE(manager.shouldExecute<SimpleAction>());
-  EXPECT_TRUE(manager.shouldExecute<SimpleAction>());
-  EXPECT_TRUE(manager.shouldExecute<SimpleAction>());
-  EXPECT_FALSE(manager.shouldExecute<SimpleAction>());
-  EXPECT_FALSE(manager.shouldExecute<SimpleAction>());
+  auto noOp = []() { return; };
+  EXPECT_TRUE(manager.execute<SimpleAction>(noOp));
+  EXPECT_TRUE(manager.execute<SimpleAction>(noOp));
+  EXPECT_TRUE(manager.execute<SimpleAction>(noOp));
+  EXPECT_FALSE(manager.execute<SimpleAction>(noOp));
+  EXPECT_FALSE(manager.execute<SimpleAction>(noOp));
 }
 
 TEST(DebugActionTest, NonOverlappingActionSpecificHandlers) {
@@ -98,17 +116,24 @@ TEST(DebugActionTest, NonOverlappingActionSpecificHandlers) {
 
   // One handler returns true and another returns false
   struct SimpleActionHandler : SimpleAction::Handler {
-    FailureOr<bool> shouldExecute() final { return true; }
+    FailureOr<bool> execute(llvm::function_ref<void()> transform,
+                            const SimpleAction &action) final {
+      transform();
+      return true;
+    }
   };
   struct OtherSimpleActionHandler : OtherSimpleAction::Handler {
-    FailureOr<bool> shouldExecute() final { return false; }
+    FailureOr<bool> execute(llvm::function_ref<void()> transform,
+                            const OtherSimpleAction &action) final {
+      transform();
+      return false;
+    }
   };
   manager.registerActionHandler<SimpleActionHandler>();
   manager.registerActionHandler<OtherSimpleActionHandler>();
-  EXPECT_TRUE(manager.shouldExecute<SimpleAction>());
-  EXPECT_FALSE(manager.shouldExecute<OtherSimpleAction>());
+  auto noOp = []() { return; };
+  EXPECT_TRUE(manager.execute<SimpleAction>(noOp));
+  EXPECT_FALSE(manager.execute<OtherSimpleAction>(noOp));
 }
 
 } // namespace
-
-#endif

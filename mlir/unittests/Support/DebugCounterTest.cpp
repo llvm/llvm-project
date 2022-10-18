@@ -12,9 +12,6 @@
 
 using namespace mlir;
 
-// DebugActionManager is only enabled in DEBUG mode.
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-
 namespace {
 
 struct CounterAction : public DebugAction<CounterAction> {
@@ -31,16 +28,16 @@ TEST(DebugCounterTest, CounterTest) {
   DebugActionManager manager;
   manager.registerActionHandler(std::move(counter));
 
+  auto noOp = []() { return; };
+
   // The first execution is skipped.
-  EXPECT_FALSE(manager.shouldExecute<CounterAction>());
+  EXPECT_FALSE(manager.execute<CounterAction>(noOp));
 
   // The counter stops after 3 successful executions.
-  EXPECT_TRUE(manager.shouldExecute<CounterAction>());
-  EXPECT_TRUE(manager.shouldExecute<CounterAction>());
-  EXPECT_TRUE(manager.shouldExecute<CounterAction>());
-  EXPECT_FALSE(manager.shouldExecute<CounterAction>());
+  EXPECT_TRUE(manager.execute<CounterAction>(noOp));
+  EXPECT_TRUE(manager.execute<CounterAction>(noOp));
+  EXPECT_TRUE(manager.execute<CounterAction>(noOp));
+  EXPECT_FALSE(manager.execute<CounterAction>(noOp));
 }
 
 } // namespace
-
-#endif

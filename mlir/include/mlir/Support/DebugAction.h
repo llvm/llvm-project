@@ -8,9 +8,7 @@
 //
 // This file contains definitions for the debug action framework. This framework
 // allows for external entities to control certain actions taken by the compiler
-// by registering handler functions. A debug action handler provides the
-// internal implementation for the various queries on a debug action, such as
-// whether it should execute or not.
+// by registering handler functions.
 //
 //===----------------------------------------------------------------------===//
 
@@ -28,6 +26,34 @@
 #include <type_traits>
 
 namespace mlir {
+
+/// This class represents the base class of a debug action.
+class DebugActionBase {
+public:
+  virtual ~DebugActionBase() = default;
+
+  /// Return the unique action id of this action, use for casting
+  /// functionality.
+  TypeID getActionID() const { return actionID; }
+
+  StringRef getTag() const { return tag; }
+
+  StringRef getDescription() const { return desc; }
+
+  virtual void print(raw_ostream &os) const {
+    os << "Action \"" << tag << "\" : " << desc << "\n";
+  }
+
+protected:
+  DebugActionBase(TypeID actionID, StringRef tag, StringRef desc)
+      : actionID(actionID), tag(tag), desc(desc) {}
+
+  /// The type of the derived action class. This allows for detecting the
+  /// specific handler of a given action type.
+  TypeID actionID;
+  StringRef tag;
+  StringRef desc;
+};
 
 //===----------------------------------------------------------------------===//
 // DebugActionManager
@@ -74,11 +100,11 @@ public:
   public:
     GenericHandler() : HandlerBase(TypeID::get<GenericHandler>()) {}
 
-    /// This hook allows for controlling whether an action should execute or
-    /// not. It should return failure if the handler could not process the
-    /// action, passing it to the next registered handler.
-    virtual FailureOr<bool> shouldExecute(StringRef actionTag,
-                                          StringRef description) {
+    /// This hook allows for controlling the execution of an action. It should
+    /// return failure if the handler could not process the action, or whether
+    /// the `transform` was executed or not.
+    virtual FailureOr<bool> execute(function_ref<void()> transform,
+                                    const DebugActionBase &action) {
       return failure();
     }
 
@@ -90,10 +116,7 @@ public:
 
   /// Register the given action handler with the manager.
   void registerActionHandler(std::unique_ptr<HandlerBase> handler) {
-    // The manager is always disabled if built without debug.
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     actionHandlers.emplace_back(std::move(handler));
-#endif
   }
   template <typename T>
   void registerActionHandler() {
@@ -104,31 +127,35 @@ public:
   // Action Queries
   //===--------------------------------------------------------------------===//
 
-  /// Returns true if the given action type should be executed, false otherwise.
-  /// `Args` are a set of parameters used by handlers of `ActionType` to
-  /// determine if the action should be executed.
+  /// Dispatch an action represented by the `transform` callback. If no handler
+  /// is found, the `transform` callback is invoked directly.
+  /// Return true if the action was executed, false otherwise.
   template <typename ActionType, typename... Args>
-  bool shouldExecute(Args &&...args) {
-    // The manager is always disabled if built without debug.
-#if !LLVM_ENABLE_ABI_BREAKING_CHECKS
-    return true;
-#else
-    // Invoke the `shouldExecute` method on the provided handler.
-    auto shouldExecuteFn = [&](auto *handler, auto &&...handlerParams) {
-      return handler->shouldExecute(
-          std::forward<decltype(handlerParams)>(handlerParams)...);
+  bool execute(function_ref<void()> transform, Args &&...args) {
+    if (actionHandlers.empty()) {
+      transform();
+      return true;
+    }
+
+    // Invoke the `execute` method on the provided handler.
+    auto executeFn = [&](auto *handler, auto &&...handlerParams) {
+      return handler->execute(
+          transform,
+          ActionType(std::forward<decltype(handlerParams)>(handlerParams)...));
     };
     FailureOr<bool> result = dispatchToHandler<ActionType, bool>(
-        shouldExecuteFn, std::forward<Args>(args)...);
+        executeFn, std::forward<Args>(args)...);
+    // no handler found, execute the transform directly.
+    if (failed(result)) {
+      transform();
+      return true;
+    }
 
-    // If the action wasn't handled, execute the action by default.
-    return succeeded(result) ? *result : true;
-#endif
+    // Return the result of the handler.
+    return *result;
   }
 
 private:
-// The manager is always disabled if built without debug.
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
   //===--------------------------------------------------------------------===//
   // Query to Handler Dispatch
   //===--------------------------------------------------------------------===//
@@ -145,16 +172,13 @@ private:
                   "cannot execute action with the given set of parameters");
 
     // Process any generic or action specific handlers.
-    // TODO: We currently just pick the first handler that gives us a result,
-    // but in the future we may want to employ a reduction over all of the
-    // values returned.
-    for (std::unique_ptr<HandlerBase> &it : llvm::reverse(actionHandlers)) {
+    // The first handler that gives us a result is the one that we will return.
+    for (std::unique_ptr<HandlerBase> &it : reverse(actionHandlers)) {
       FailureOr<ResultT> result = failure();
       if (auto *handler = dyn_cast<typename ActionType::Handler>(&*it)) {
         result = handlerCallback(handler, std::forward<Args>(args)...);
       } else if (auto *genericHandler = dyn_cast<GenericHandler>(&*it)) {
-        result = handlerCallback(genericHandler, ActionType::getTag(),
-                                 ActionType::getDescription());
+        result = handlerCallback(genericHandler, std::forward<Args>(args)...);
       }
 
       // If the handler succeeded, return the result. Otherwise, try a new
@@ -167,7 +191,6 @@ private:
 
   /// The set of action handlers that have been registered with the manager.
   SmallVector<std::unique_ptr<HandlerBase>> actionHandlers;
-#endif
 };
 
 //===----------------------------------------------------------------------===//
@@ -191,17 +214,27 @@ private:
 /// instances of this action. The parameters to its query methods map 1-1 to the
 /// types on the action type.
 template <typename Derived, typename... ParameterTs>
-class DebugAction {
+class DebugAction : public DebugActionBase {
 public:
+  DebugAction()
+      : DebugActionBase(TypeID::get<Derived>(), Derived::getTag(),
+                        Derived::getDescription()) {}
+
+  /// Provide classof to allow casting between action types.
+  static bool classof(const DebugActionBase *action) {
+    return action->getActionID() == TypeID::get<Derived>();
+  }
+
   class Handler : public DebugActionManager::HandlerBase {
   public:
     Handler() : HandlerBase(TypeID::get<Derived>()) {}
 
-    /// This hook allows for controlling whether an action should execute or
-    /// not. `parameters` correspond to the set of values provided by the
+    /// This hook allows for controlling the execution of an action.
+    /// `parameters` correspond to the set of values provided by the
     /// action as context. It should return failure if the handler could not
     /// process the action, passing it to the next registered handler.
-    virtual FailureOr<bool> shouldExecute(ParameterTs... parameters) {
+    virtual FailureOr<bool> execute(function_ref<void()> transform,
+                                    const Derived &action) {
       return failure();
     }
 
