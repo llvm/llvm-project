@@ -133,11 +133,10 @@ declare i32 @llvm.experimental.constrained.fptoui.i32.f64(double, metadata)
 define i32 @fcvt_wu_d_multiple_use(double %x, i32* %y) nounwind {
 ; CHECKIFD-LABEL: fcvt_wu_d_multiple_use:
 ; CHECKIFD:       # %bb.0:
-; CHECKIFD-NEXT:    fcvt.wu.d a1, fa0, rtz
-; CHECKIFD-NEXT:    li a0, 1
-; CHECKIFD-NEXT:    beqz a1, .LBB4_2
+; CHECKIFD-NEXT:    fcvt.wu.d a0, fa0, rtz
+; CHECKIFD-NEXT:    bnez a0, .LBB4_2
 ; CHECKIFD-NEXT:  # %bb.1:
-; CHECKIFD-NEXT:    mv a0, a1
+; CHECKIFD-NEXT:    li a0, 1
 ; CHECKIFD-NEXT:  .LBB4_2:
 ; CHECKIFD-NEXT:    ret
 ;
@@ -146,11 +145,9 @@ define i32 @fcvt_wu_d_multiple_use(double %x, i32* %y) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    call __fixunsdfsi@plt
-; RV32I-NEXT:    mv a1, a0
-; RV32I-NEXT:    li a0, 1
-; RV32I-NEXT:    beqz a1, .LBB4_2
+; RV32I-NEXT:    bnez a0, .LBB4_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a0, a1
+; RV32I-NEXT:    li a0, 1
 ; RV32I-NEXT:  .LBB4_2:
 ; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-NEXT:    addi sp, sp, 16
@@ -161,11 +158,9 @@ define i32 @fcvt_wu_d_multiple_use(double %x, i32* %y) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    call __fixunsdfsi@plt
-; RV64I-NEXT:    mv a1, a0
-; RV64I-NEXT:    li a0, 1
-; RV64I-NEXT:    beqz a1, .LBB4_2
+; RV64I-NEXT:    bnez a0, .LBB4_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a0, a1
+; RV64I-NEXT:    li a0, 1
 ; RV64I-NEXT:  .LBB4_2:
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
