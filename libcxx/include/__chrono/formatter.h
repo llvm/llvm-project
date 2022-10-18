@@ -12,10 +12,16 @@
 
 #include <__chrono/convert_to_tm.h>
 #include <__chrono/day.h>
+#include <__chrono/duration.h>
+#include <__chrono/hh_mm_ss.h>
 #include <__chrono/month.h>
+#include <__chrono/ostream.h>
 #include <__chrono/parser_std_format_spec.h>
 #include <__chrono/statically_widen.h>
+#include <__chrono/time_point.h>
+#include <__chrono/weekday.h>
 #include <__chrono/year.h>
+#include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__format/concepts.h>
@@ -59,6 +65,47 @@ namespace __formatter {
 ///      [tab:time.format.spec].
 ///
 /// When no chrono-specs are provided it uses the stream formatter.
+
+// For tiny ratios it's not possible to convert a duration to a hh_mm_ss. This
+// fails compile-time due to the limited precision of the ratio (64-bit is too
+// small). Therefore a duration uses its own conversion.
+template <class _CharT, class _Tp>
+  requires(chrono::__is_duration<_Tp>::value)
+_LIBCPP_HIDE_FROM_ABI void __format_sub_seconds(const _Tp& __value, basic_stringstream<_CharT>& __sstr) {
+  __sstr << std::use_facet<numpunct<_CharT>>(__sstr.getloc()).decimal_point();
+
+  auto __fraction = __value - chrono::duration_cast<chrono::seconds>(__value);
+  if constexpr (chrono::treat_as_floating_point_v<typename _Tp::rep>)
+    // When the floating-point value has digits itself they are ignored based
+    // on the wording in [tab:time.format.spec]
+    //   If the precision of the input cannot be exactly represented with
+    //   seconds, then the format is a decimal floating-point number with a
+    //   fixed format and a precision matching that of the precision of the
+    //   input (or to a microseconds precision if the conversion to
+    //   floating-point decimal seconds cannot be made within 18 fractional
+    //   digits).
+    //
+    // This matches the behaviour of MSVC STL, fmtlib interprets this
+    // differently and uses 3 decimals.
+    // https://godbolt.org/z/6dsbnW8ba
+    std::format_to(std::ostreambuf_iterator<_CharT>{__sstr},
+                   _LIBCPP_STATICALLY_WIDEN(_CharT, "{:0{}.0f}"),
+                   __fraction.count(),
+                   chrono::hh_mm_ss<_Tp>::fractional_width);
+  else
+    std::format_to(std::ostreambuf_iterator<_CharT>{__sstr},
+                   _LIBCPP_STATICALLY_WIDEN(_CharT, "{:0{}}"),
+                   __fraction.count(),
+                   chrono::hh_mm_ss<_Tp>::fractional_width);
+}
+
+template <class _Tp>
+consteval bool __use_fraction() {
+  if constexpr (chrono::__is_duration<_Tp>::value)
+    return chrono::hh_mm_ss<_Tp>::fractional_width;
+  else
+    return false;
+}
 
 template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI void __format_year(int __year, basic_stringstream<_CharT>& __sstr) {
@@ -119,32 +166,73 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
           __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), __s, __it + 1);
       } break;
 
-      // Unlike time_put and strftime the formatting library requires %Y
-      //
-      // [tab:time.format.spec]
-      //   The year as a decimal number. If the result is less than four digits
-      //   it is left-padded with 0 to four digits.
-      //
-      // This means years in the range (-1000, 1000) need manual formatting.
-      // It's unclear whether %EY needs the same treatment. For example the
-      // Japanese EY contains the era name and year. This is zero-padded to 2
-      // digits in time_put (note that older glibc versions didn't do
-      // padding.) However most eras won't reach 100 years, let alone 1000.
-      // So padding to 4 digits seems unwanted for Japanese.
-      //
-      // The same applies to %Ex since that too depends on the era.
-      //
-      // %x the locale's date representation is currently doesn't handle the
-      // zero-padding too.
-      //
-      // The 4 digits can be implemented better at a later time. On POSIX
-      // systems the required information can be extracted by nl_langinfo
-      // https://man7.org/linux/man-pages/man3/nl_langinfo.3.html
-      //
-      // Note since year < -1000 is expected to be rare it uses the more
-      // expensive year routine.
-      //
-      // TODO FMT evaluate the comment above.
+      case _CharT('j'):
+        if constexpr (chrono::__is_duration<_Tp>::value)
+          // Converting a duration where the period has a small ratio to days
+          // may fail to compile. This due to loss of precision in the
+          // conversion. In order to avoid that issue convert to seconds as
+          // an intemediate step.
+          __sstr << chrono::duration_cast<chrono::days>(chrono::duration_cast<chrono::seconds>(__value)).count();
+        else
+          __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), __s, __it + 1);
+        break;
+
+      case _CharT('q'):
+        if constexpr (chrono::__is_duration<_Tp>::value) {
+          __sstr << chrono::__units_suffix<_CharT, typename _Tp::period>();
+          break;
+        }
+        __builtin_unreachable();
+
+      case _CharT('Q'):
+        // TODO FMT Determine the proper ideas
+        // - Should it honour the precision?
+        // - Shoult it honour the locale setting for the separators?
+        // The wording for Q doesn't use the word locale and the effect of
+        // precision is unspecified.
+        //
+        // MSVC STL ignores precision but uses separator
+        // FMT honours precision and has a bug for separator
+        // https://godbolt.org/z/78b7sMxns
+        if constexpr (chrono::__is_duration<_Tp>::value) {
+          __sstr << format(_LIBCPP_STATICALLY_WIDEN(_CharT, "{}"), __value.count());
+          break;
+        }
+        __builtin_unreachable();
+
+      case _CharT('S'):
+      case _CharT('T'):
+        __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), __s, __it + 1);
+        if constexpr (__use_fraction<_Tp>())
+          __formatter::__format_sub_seconds(__value, __sstr);
+        break;
+
+        // Unlike time_put and strftime the formatting library requires %Y
+        //
+        // [tab:time.format.spec]
+        //   The year as a decimal number. If the result is less than four digits
+        //   it is left-padded with 0 to four digits.
+        //
+        // This means years in the range (-1000, 1000) need manual formatting.
+        // It's unclear whether %EY needs the same treatment. For example the
+        // Japanese EY contains the era name and year. This is zero-padded to 2
+        // digits in time_put (note that older glibc versions didn't do
+        // padding.) However most eras won't reach 100 years, let alone 1000.
+        // So padding to 4 digits seems unwanted for Japanese.
+        //
+        // The same applies to %Ex since that too depends on the era.
+        //
+        // %x the locale's date representation is currently doesn't handle the
+        // zero-padding too.
+        //
+        // The 4 digits can be implemented better at a later time. On POSIX
+        // systems the required information can be extracted by nl_langinfo
+        // https://man7.org/linux/man-pages/man3/nl_langinfo.3.html
+        //
+        // Note since year < -1000 is expected to be rare it uses the more
+        // expensive year routine.
+        //
+        // TODO FMT evaluate the comment above.
 
 #  if defined(__GLIBC__) || defined(_AIX)
       case _CharT('y'):
@@ -162,6 +250,18 @@ _LIBCPP_HIDE_FROM_ABI void __format_chrono_using_chrono_specs(
       } break;
 
       case _CharT('O'):
+        if constexpr (__use_fraction<_Tp>()) {
+          // Handle OS using the normal representation for the non-fractional
+          // part. There seems to be no locale information regarding how the
+          // fractional part should be formatted.
+          if (*(__it + 1) == 'S') {
+            ++__it;
+            __facet.put({__sstr}, __sstr, _CharT(' '), std::addressof(__t), __s, __it + 1);
+            __formatter::__format_sub_seconds(__value, __sstr);
+            break;
+          }
+        }
+        [[fallthrough]];
       case _CharT('E'):
         ++__it;
         [[fallthrough]];
@@ -183,6 +283,22 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool __month_name_ok(const _Tp& __value) {
     return __value.ok();
   else if constexpr (same_as<_Tp, chrono::year>)
     return true;
+  else if constexpr (same_as<_Tp, chrono::weekday>)
+    return true;
+  else
+    static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
+}
+
+template <class _Tp>
+_LIBCPP_HIDE_FROM_ABI constexpr bool __weekday_name_ok(const _Tp& __value) {
+  if constexpr (same_as<_Tp, chrono::day>)
+    return true;
+  else if constexpr (same_as<_Tp, chrono::month>)
+    return __value.ok();
+  else if constexpr (same_as<_Tp, chrono::year>)
+    return true;
+  else if constexpr (same_as<_Tp, chrono::weekday>)
+    return __value.ok();
   else
     static_assert(sizeof(_Tp) == 0, "Add the missing type specialization");
 }
@@ -207,10 +323,22 @@ __format_chrono(const _Tp& __value,
   if (__chrono_specs.empty())
     __sstr << __value;
   else {
-    if (__specs.__chrono_.__month_name_ && !__formatter::__month_name_ok(__value))
-      std::__throw_format_error("formatting a month name from an invalid month number");
+    if constexpr (chrono::__is_duration<_Tp>::value) {
+      if (__value < __value.zero())
+        __sstr << _CharT('-');
+      __formatter::__format_chrono_using_chrono_specs(chrono::abs(__value), __sstr, __chrono_specs);
+      // TODO FMT When keeping the precision it will truncate the string.
+      // Note that the behaviour what the precision does isn't specified.
+      __specs.__precision_ = -1;
+    } else {
+      if (__specs.__chrono_.__weekday_name_ && !__formatter::__weekday_name_ok(__value))
+        std::__throw_format_error("formatting a weekday name needs a valid weekday");
 
-    __formatter::__format_chrono_using_chrono_specs(__value, __sstr, __chrono_specs);
+      if (__specs.__chrono_.__month_name_ && !__formatter::__month_name_ok(__value))
+        std::__throw_format_error("formatting a month name from an invalid month number");
+
+      __formatter::__format_chrono_using_chrono_specs(__value, __sstr, __chrono_specs);
+    }
   }
 
   // TODO FMT Use the stringstream's view after P0408R7 has been implemented.
@@ -236,6 +364,28 @@ public:
   }
 
   __format_spec::__parser_chrono<_CharT> __parser_;
+};
+
+template <class _Rep, class _Period, __fmt_char_type _CharT>
+struct formatter<chrono::duration<_Rep, _Period>, _CharT> : public __formatter_chrono<_CharT> {
+public:
+  using _Base = __formatter_chrono<_CharT>;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr auto parse(basic_format_parse_context<_CharT>& __parse_ctx)
+      -> decltype(__parse_ctx.begin()) {
+    // [time.format]/1
+    // Giving a precision specification in the chrono-format-spec is valid only
+    // for std::chrono::duration types where the representation type Rep is a
+    // floating-point type. For all other Rep types, an exception of type
+    // format_error is thrown if the chrono-format-spec contains a precision
+    // specification.
+    //
+    // Note this doesn't refer to chrono::treat_as_floating_point_v<_Rep>.
+    if constexpr (std::floating_point<_Rep>)
+      return _Base::__parse(__parse_ctx, __format_spec::__fields_chrono_fractional, __format_spec::__flags::__duration);
+    else
+      return _Base::__parse(__parse_ctx, __format_spec::__fields_chrono, __format_spec::__flags::__duration);
+  }
 };
 
 template <__fmt_char_type _CharT>
@@ -271,6 +421,18 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto parse(basic_format_parse_context<_CharT>& __parse_ctx)
       -> decltype(__parse_ctx.begin()) {
     return _Base::__parse(__parse_ctx, __format_spec::__fields_chrono, __format_spec::__flags::__year);
+  }
+};
+
+template <__fmt_char_type _CharT>
+struct _LIBCPP_TEMPLATE_VIS _LIBCPP_AVAILABILITY_FORMAT formatter<chrono::weekday, _CharT>
+    : public __formatter_chrono<_CharT> {
+public:
+  using _Base = __formatter_chrono<_CharT>;
+
+  _LIBCPP_HIDE_FROM_ABI constexpr auto parse(basic_format_parse_context<_CharT>& __parse_ctx)
+      -> decltype(__parse_ctx.begin()) {
+    return _Base::__parse(__parse_ctx, __format_spec::__fields_chrono, __format_spec::__flags::__weekday);
   }
 };
 

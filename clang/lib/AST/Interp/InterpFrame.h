@@ -32,8 +32,13 @@ public:
   InterpFrame *Caller;
 
   /// Creates a new frame for a method call.
-  InterpFrame(InterpState &S, Function *Func, InterpFrame *Caller,
+  InterpFrame(InterpState &S, const Function *Func, InterpFrame *Caller,
               CodePtr RetPC, Pointer &&This);
+
+  /// Creates a new frame with the values that make sense.
+  /// I.e., the caller is the current frame of S,
+  /// and the This() pointer is the current Pointer on the top of S's stack,
+  InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC);
 
   /// Destroys the frame, killing all live pointers to stack slots.
   ~InterpFrame();
@@ -57,7 +62,7 @@ public:
   const FunctionDecl *getCallee() const override;
 
   /// Returns the current function.
-  Function *getFunction() const { return Func; }
+  const Function *getFunction() const { return Func; }
 
   /// Returns the offset on the stack at which the frame starts.
   size_t getFrameOffset() const { return FrameOffset; }
@@ -131,7 +136,7 @@ private:
   /// Reference to the interpreter state.
   InterpState &S;
   /// Reference to the function being executed.
-  Function *Func;
+  const Function *Func;
   /// Current object pointer for methods.
   Pointer This;
   /// Return address.

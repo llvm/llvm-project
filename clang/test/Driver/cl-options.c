@@ -43,23 +43,23 @@
 // EXTERNAL_I: "-isystem" "path"
 
 // RUN: %clang_cl /fp:fast /fp:except -### -- %s 2>&1 | FileCheck -check-prefix=fpexcept %s
-// fpexcept-NOT: -menable-unsafe-fp-math
+// fpexcept-NOT: -funsafe-math-optimizations
 // fpexcept: -ffp-exception-behavior=strict
 
 // RUN: %clang_cl /fp:fast /fp:except /fp:except- -### -- %s 2>&1 | FileCheck -check-prefix=fpexcept_ %s
-// fpexcept_: -menable-unsafe-fp-math
+// fpexcept_: -funsafe-math-optimizations
 // fpexcept_: -ffp-exception-behavior=ignore
 
 // RUN: %clang_cl /fp:precise /fp:fast -### -- %s 2>&1 | FileCheck -check-prefix=fpfast %s
-// fpfast: -menable-unsafe-fp-math
+// fpfast: -funsafe-math-optimizations
 // fpfast: -ffast-math
 
 // RUN: %clang_cl /fp:fast /fp:precise -### -- %s 2>&1 | FileCheck -check-prefix=fpprecise %s
-// fpprecise-NOT: -menable-unsafe-fp-math
+// fpprecise-NOT: -funsafe-math-optimizations
 // fpprecise-NOT: -ffast-math
 
 // RUN: %clang_cl /fp:fast /fp:strict -### -- %s 2>&1 | FileCheck -check-prefix=fpstrict %s
-// fpstrict-NOT: -menable-unsafe-fp-math
+// fpstrict-NOT: -funsafe-math-optimizations
 // fpstrict-NOT: -ffast-math
 // fpstrict: -ffp-contract=off
 

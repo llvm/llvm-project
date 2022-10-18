@@ -410,12 +410,11 @@ TypeBasedAAResult::getModRefBehavior(const CallBase *Call,
   if (!EnableTBAA)
     return AAResultBase::getModRefBehavior(Call, AAQI);
 
-  // If this is an "immutable" type, we can assume the call doesn't write
-  // to memory.
+  // If this is an "immutable" type, the access is not observable.
   if (const MDNode *M = Call->getMetadata(LLVMContext::MD_tbaa))
     if ((!isStructPathTBAA(M) && TBAANode(M).isTypeImmutable()) ||
         (isStructPathTBAA(M) && TBAAStructTagNode(M).isTypeImmutable()))
-      return FunctionModRefBehavior::readOnly();
+      return FunctionModRefBehavior::none();
 
   return AAResultBase::getModRefBehavior(Call, AAQI);
 }

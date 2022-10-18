@@ -333,7 +333,7 @@ private:
   NOINLINE TransferBatch *populateFreeList(CacheT *C, uptr ClassId,
                                            RegionInfo *Region) {
     const uptr Size = getSizeByClassId(ClassId);
-    const u32 MaxCount = TransferBatch::getMaxCached(Size);
+    const u16 MaxCount = TransferBatch::getMaxCached(Size);
 
     const uptr RegionBeg = Region->RegionBeg;
     const uptr MappedUser = Region->MappedUser;
@@ -392,7 +392,8 @@ private:
                                       CompactPtrBase, ShuffleArray[I])));
       if (UNLIKELY(!B))
         return nullptr;
-      const u32 N = Min(MaxCount, NumberOfBlocks - I);
+      // `MaxCount` is u16 so the result will also fit in u16.
+      const u16 N = static_cast<u16>(Min<u32>(MaxCount, NumberOfBlocks - I));
       B->setFromArray(&ShuffleArray[I], N);
       Region->FreeList.push_back(B);
       I += N;
@@ -473,7 +474,7 @@ private:
     };
     auto SkipRegion = [](UNUSED uptr RegionIndex) { return false; };
     releaseFreeMemoryToOS(Region->FreeList, Region->AllocatedUser, 1U,
-                          BlockSize, &Recorder, DecompactPtr, SkipRegion);
+                          BlockSize, Recorder, DecompactPtr, SkipRegion);
 
     if (Recorder.getReleasedRangesCount() > 0) {
       Region->ReleaseInfo.PushedBlocksAtLastRelease =

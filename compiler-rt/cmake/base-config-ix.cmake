@@ -215,17 +215,21 @@ macro(test_targets)
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "sparc")
       test_target_arch(sparc "" "-m32")
       test_target_arch(sparcv9 "" "-m64")
-    elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "mipsel|mips64el")
-      # Gcc doesn't accept -m32/-m64 so we do the next best thing and use
-      # -mips32r2/-mips64r2. We don't use -mips1/-mips3 because we want to match
-      # clang's default CPU's. In the 64-bit case, we must also specify the ABI
-      # since the default ABI differs between gcc and clang.
-      # FIXME: Ideally, we would build the N32 library too.
-      test_target_arch(mipsel "" "-mips32r2" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
-      test_target_arch(mips64el "" "-mips64r2" "-mabi=64")
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "mips")
-      test_target_arch(mips "" "-mips32r2" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
-      test_target_arch(mips64 "" "-mips64r2" "-mabi=64")
+      # FIXME: Ideally, we would build the N32 library too.
+      if("${COMPILER_RT_MIPS_EL}" AND ("${COMPILER_RT_MIPS32R6}" OR "${COMPILER_RT_MIPS64R6}"))
+        test_target_arch(mipsel "" "-mips32r6" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
+        test_target_arch(mips64el "" "-mips64r6" "-mabi=64")
+      elseif("${COMPILER_RT_MIPS_EL}")
+        test_target_arch(mipsel "" "-mips32r2" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
+        test_target_arch(mips64el "" "-mips64r2" "-mabi=64")
+      elseif("${COMPILER_RT_MIPS32R6}" OR "${COMPILER_RT_MIPS64R6}")
+        test_target_arch(mips "" "-mips32r6" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
+        test_target_arch(mips64 "" "-mips64r6" "-mabi=64")
+      else()
+        test_target_arch(mips "" "-mips32r2" "-mabi=32" "-D_LARGEFILE_SOURCE" "-D_FILE_OFFSET_BITS=64")
+        test_target_arch(mips64 "" "-mips64r2" "-mabi=64")
+      endif()
     elseif("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "arm")
       if(WIN32)
         test_target_arch(arm "" "" "")

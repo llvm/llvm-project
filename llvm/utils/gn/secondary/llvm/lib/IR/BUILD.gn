@@ -1,5 +1,3 @@
-import("//llvm/utils/TableGen/tablegen.gni")
-
 static_library("IR") {
   output_name = "LLVMCore"
   public_deps = [

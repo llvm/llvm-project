@@ -1,4 +1,4 @@
-; RUN: opt -S -objc-arc < %s | FileCheck %s
+; RUN: opt -S -passes=objc-arc < %s | FileCheck %s
 
 declare i8* @llvm.objc.retain(i8*)
 declare void @llvm.objc.release(i8*)

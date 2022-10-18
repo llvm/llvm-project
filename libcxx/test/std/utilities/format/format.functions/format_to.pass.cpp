@@ -29,6 +29,7 @@
 #include "format_tests.h"
 #include "string_literal.h"
 #include "test_format_string.h"
+#include "test_iterators.h"
 
 auto test =
     []<class CharT, class... Args>(
@@ -52,10 +53,10 @@ auto test =
       {
         assert(expected.size() < 4096 && "Update the size of the buffer.");
         CharT out[4096];
-        CharT* it = std::format_to(out, fmt, std::forward<Args>(args)...);
-        assert(std::distance(out, it) == int(expected.size()));
+        cpp20_output_iterator<CharT*> it = std::format_to(cpp20_output_iterator{out}, fmt, std::forward<Args>(args)...);
+        assert(std::distance(out, base(it)) == int(expected.size()));
         // Convert to std::string since output contains '\0' for boolean tests.
-        assert(std::basic_string<CharT>(out, it) == expected);
+        assert(std::basic_string<CharT>(out, base(it)) == expected);
       }
     };
 

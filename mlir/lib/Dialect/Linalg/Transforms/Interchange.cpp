@@ -67,8 +67,8 @@ mlir::linalg::interchangeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
 
   // 2. Compute the interchanged indexing maps.
   SmallVector<AffineMap> newIndexingMaps;
-  for (OpOperand *opOperand : genericOp.getInputAndOutputOperands()) {
-    AffineMap m = genericOp.getMatchingIndexingMap(opOperand);
+  for (OpOperand &opOperand : genericOp->getOpOperands()) {
+    AffineMap m = genericOp.getMatchingIndexingMap(&opOperand);
     if (!permutationMap.isEmpty())
       m = m.compose(permutationMap);
     newIndexingMaps.push_back(m);

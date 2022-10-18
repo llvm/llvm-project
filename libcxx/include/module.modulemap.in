@@ -316,8 +316,14 @@ module std [system] {
       module ranges_adjacent_find            { private header "__algorithm/ranges_adjacent_find.h" }
       module ranges_all_of                   { private header "__algorithm/ranges_all_of.h" }
       module ranges_any_of                   { private header "__algorithm/ranges_any_of.h" }
-      module ranges_binary_search            { private header "__algorithm/ranges_binary_search.h" }
-      module ranges_clamp                    { private header "__algorithm/ranges_clamp.h" }
+      module ranges_binary_search {
+        private header "__algorithm/ranges_binary_search.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_clamp {
+        private header "__algorithm/ranges_clamp.h"
+        export functional.__functional.ranges_operations
+      }
       module ranges_copy                     { private header "__algorithm/ranges_copy.h" }
       module ranges_copy_backward            { private header "__algorithm/ranges_copy_backward.h" }
       module ranges_copy_if                  { private header "__algorithm/ranges_copy_if.h" }
@@ -325,7 +331,10 @@ module std [system] {
       module ranges_count                    { private header "__algorithm/ranges_count.h" }
       module ranges_count_if                 { private header "__algorithm/ranges_count_if.h" }
       module ranges_equal                    { private header "__algorithm/ranges_equal.h" }
-      module ranges_equal_range              { private header "__algorithm/ranges_equal_range.h" }
+      module ranges_equal_range {
+        private header "__algorithm/ranges_equal_range.h"
+        export functional.__functional.ranges_operations
+      }
       module ranges_fill                     { private header "__algorithm/ranges_fill.h" }
       module ranges_fill_n                   { private header "__algorithm/ranges_fill_n.h" }
       module ranges_find                     { private header "__algorithm/ranges_find.h" }
@@ -337,39 +346,105 @@ module std [system] {
       module ranges_for_each_n               { private header "__algorithm/ranges_for_each_n.h" }
       module ranges_generate                 { private header "__algorithm/ranges_generate.h" }
       module ranges_generate_n               { private header "__algorithm/ranges_generate_n.h" }
-      module ranges_includes                 { private header "__algorithm/ranges_includes.h" }
-      module ranges_inplace_merge            { private header "__algorithm/ranges_inplace_merge.h" }
-      module ranges_is_heap                  { private header "__algorithm/ranges_is_heap.h" }
-      module ranges_is_heap_until            { private header "__algorithm/ranges_is_heap_until.h" }
+      module ranges_includes {
+        private header "__algorithm/ranges_includes.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_inplace_merge {
+        private header "__algorithm/ranges_inplace_merge.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_is_heap {
+        private header "__algorithm/ranges_is_heap.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_is_heap_until {
+        private header "__algorithm/ranges_is_heap_until.h"
+        export functional.__functional.ranges_operations
+      }
       module ranges_is_partitioned           { private header "__algorithm/ranges_is_partitioned.h" }
       module ranges_is_permutation           { private header "__algorithm/ranges_is_permutation.h" }
-      module ranges_is_sorted                { private header "__algorithm/ranges_is_sorted.h" }
-      module ranges_is_sorted_until          { private header "__algorithm/ranges_is_sorted_until.h" }
+      module ranges_is_sorted {
+        private header "__algorithm/ranges_is_sorted.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_is_sorted_until {
+        private header "__algorithm/ranges_is_sorted_until.h"
+        export functional.__functional.ranges_operations
+      }
       module ranges_iterator_concept         { private header "__algorithm/ranges_iterator_concept.h" }
-      module ranges_lexicographical_compare  { private header "__algorithm/ranges_lexicographical_compare.h" }
-      module ranges_lower_bound              { private header "__algorithm/ranges_lower_bound.h" }
-      module ranges_make_heap                { private header "__algorithm/ranges_make_heap.h" }
-      module ranges_max                      { private header "__algorithm/ranges_max.h" }
-      module ranges_max_element              { private header "__algorithm/ranges_max_element.h" }
+      module ranges_lexicographical_compare {
+        private header "__algorithm/ranges_lexicographical_compare.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_lower_bound {
+        private header "__algorithm/ranges_lower_bound.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_make_heap {
+        private header "__algorithm/ranges_make_heap.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_max {
+        private header "__algorithm/ranges_max.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_max_element {
+        private header "__algorithm/ranges_max_element.h"
+        export functional.__functional.ranges_operations
+      }
       module ranges_merge                    { private header "__algorithm/ranges_merge.h" }
-      module ranges_min                      { private header "__algorithm/ranges_min.h" }
-      module ranges_min_element              { private header "__algorithm/ranges_min_element.h" }
-      module ranges_minmax                   { private header "__algorithm/ranges_minmax.h" }
-      module ranges_minmax_element           { private header "__algorithm/ranges_minmax_element.h" }
+      module ranges_min {
+        private header "__algorithm/ranges_min.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_min_element {
+        private header "__algorithm/ranges_min_element.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_minmax {
+        private header "__algorithm/ranges_minmax.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_minmax_element {
+        private header "__algorithm/ranges_minmax_element.h"
+        export functional.__functional.ranges_operations
+      }
       module ranges_mismatch                 { private header "__algorithm/ranges_mismatch.h" }
       module ranges_move                     { private header "__algorithm/ranges_move.h" }
       module ranges_move_backward            { private header "__algorithm/ranges_move_backward.h" }
-      module ranges_next_permutation         { private header "__algorithm/ranges_next_permutation.h" }
+      module ranges_next_permutation {
+        private header "__algorithm/ranges_next_permutation.h"
+        export functional.__functional.ranges_operations
+      }
       module ranges_none_of                  { private header "__algorithm/ranges_none_of.h" }
-      module ranges_nth_element              { private header "__algorithm/ranges_nth_element.h" }
-      module ranges_partial_sort             { private header "__algorithm/ranges_partial_sort.h" }
-      module ranges_partial_sort_copy        { private header "__algorithm/ranges_partial_sort_copy.h" }
+      module ranges_nth_element {
+        private header "__algorithm/ranges_nth_element.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_partial_sort {
+        private header "__algorithm/ranges_partial_sort.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_partial_sort_copy {
+        private header "__algorithm/ranges_partial_sort_copy.h"
+        export functional.__functional.ranges_operations
+      }
       module ranges_partition                { private header "__algorithm/ranges_partition.h" }
       module ranges_partition_copy           { private header "__algorithm/ranges_partition_copy.h" }
       module ranges_partition_point          { private header "__algorithm/ranges_partition_point.h" }
-      module ranges_pop_heap                 { private header "__algorithm/ranges_pop_heap.h" }
-      module ranges_prev_permutation         { private header "__algorithm/ranges_prev_permutation.h" }
-      module ranges_push_heap                { private header "__algorithm/ranges_push_heap.h" }
+      module ranges_pop_heap {
+        private header "__algorithm/ranges_pop_heap.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_prev_permutation {
+        private header "__algorithm/ranges_prev_permutation.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_push_heap {
+        private header "__algorithm/ranges_push_heap.h"
+        export functional.__functional.ranges_operations
+      }
       module ranges_remove                   { private header "__algorithm/ranges_remove.h" }
       module ranges_remove_copy              { private header "__algorithm/ranges_remove_copy.h" }
       module ranges_remove_copy_if           { private header "__algorithm/ranges_remove_copy_if.h" }
@@ -387,13 +462,28 @@ module std [system] {
       module ranges_search_n                 { private header "__algorithm/ranges_search_n.h" }
       module ranges_set_difference           { private header "__algorithm/ranges_set_difference.h" }
       module ranges_set_intersection         { private header "__algorithm/ranges_set_intersection.h" }
-      module ranges_set_symmetric_difference { private header "__algorithm/ranges_set_symmetric_difference.h" }
-      module ranges_set_union                { private header "__algorithm/ranges_set_union.h" }
+      module ranges_set_symmetric_difference {
+        private header "__algorithm/ranges_set_symmetric_difference.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_set_union {
+         private header "__algorithm/ranges_set_union.h"
+        export functional.__functional.ranges_operations
+      }
       module ranges_shuffle                  { private header "__algorithm/ranges_shuffle.h" }
-      module ranges_sort                     { private header "__algorithm/ranges_sort.h" }
-      module ranges_sort_heap                { private header "__algorithm/ranges_sort_heap.h" }
+      module ranges_sort {
+        private header "__algorithm/ranges_sort.h"
+        export functional.__functional.ranges_operations
+      }
+      module ranges_sort_heap {
+        private header "__algorithm/ranges_sort_heap.h"
+        export functional.__functional.ranges_operations
+      }
       module ranges_stable_partition         { private header "__algorithm/ranges_stable_partition.h" }
-      module ranges_stable_sort              { private header "__algorithm/ranges_stable_sort.h" }
+      module ranges_stable_sort {
+        private header "__algorithm/ranges_stable_sort.h"
+        export functional.__functional.ranges_operations
+      }
       module ranges_swap_ranges              { private header "__algorithm/ranges_swap_ranges.h" }
       module ranges_transform                { private header "__algorithm/ranges_transform.h" }
       module uniform_random_bit_generator_adaptor {
@@ -401,7 +491,10 @@ module std [system] {
       }
       module ranges_unique                   { private header "__algorithm/ranges_unique.h" }
       module ranges_unique_copy              { private header "__algorithm/ranges_unique_copy.h" }
-      module ranges_upper_bound              { private header "__algorithm/ranges_upper_bound.h" }
+      module ranges_upper_bound {
+        private header "__algorithm/ranges_upper_bound.h"
+        export functional.__functional.ranges_operations
+      }
       module remove                          { private header "__algorithm/remove.h" }
       module remove_copy                     { private header "__algorithm/remove_copy.h" }
       module remove_copy_if                  { private header "__algorithm/remove_copy_if.h" }
@@ -798,7 +891,10 @@ module std [system] {
       module iter_swap             { private header "__iterator/iter_swap.h" }
       module iterator              { private header "__iterator/iterator.h" }
       module iterator_traits       { private header "__iterator/iterator_traits.h" }
-      module mergeable             { private header "__iterator/mergeable.h" }
+      module mergeable {
+        private header "__iterator/mergeable.h"
+        export functional.__functional.ranges_operations
+      }
       module move_iterator         { private header "__iterator/move_iterator.h" }
       module move_sentinel         { private header "__iterator/move_sentinel.h" }
       module next                  { private header "__iterator/next.h" }
@@ -814,7 +910,10 @@ module std [system] {
       module reverse_access        { private header "__iterator/reverse_access.h" }
       module reverse_iterator      { private header "__iterator/reverse_iterator.h" }
       module size                  { private header "__iterator/size.h" }
-      module sortable              { private header "__iterator/sortable.h" }
+      module sortable {
+        private header "__iterator/sortable.h"
+        export functional.__functional.ranges_operations
+      }
       module unreachable_sentinel  { private header "__iterator/unreachable_sentinel.h" }
       module wrap_iter             { private header "__iterator/wrap_iter.h" }
     }
@@ -1021,6 +1120,7 @@ module std [system] {
       module dangling               { private header "__ranges/dangling.h" }
       module data                   { private header "__ranges/data.h" }
       module drop_view              { private header "__ranges/drop_view.h" }
+      module drop_while_view        { private header "__ranges/drop_while_view.h" }
       module empty                  { private header "__ranges/empty.h" }
       module empty_view             { private header "__ranges/empty_view.h" }
       module enable_borrowed_range  { private header "__ranges/enable_borrowed_range.h" }

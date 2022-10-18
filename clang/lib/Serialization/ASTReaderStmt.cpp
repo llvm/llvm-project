@@ -2118,8 +2118,10 @@ void ASTStmtReader::VisitSizeOfPackExpr(SizeOfPackExpr *E) {
 void ASTStmtReader::VisitSubstNonTypeTemplateParmExpr(
                                               SubstNonTypeTemplateParmExpr *E) {
   VisitExpr(E);
-  E->ParamAndRef.setPointer(readDeclAs<NonTypeTemplateParmDecl>());
-  E->ParamAndRef.setInt(Record.readInt());
+  E->AssociatedDeclAndRef.setPointer(readDeclAs<Decl>());
+  E->AssociatedDeclAndRef.setInt(Record.readInt());
+  E->Index = Record.readInt();
+  E->PackIndex = Record.readInt();
   E->SubstNonTypeTemplateParmExprBits.NameLoc = readSourceLocation();
   E->Replacement = Record.readSubExpr();
 }
@@ -2127,7 +2129,8 @@ void ASTStmtReader::VisitSubstNonTypeTemplateParmExpr(
 void ASTStmtReader::VisitSubstNonTypeTemplateParmPackExpr(
                                           SubstNonTypeTemplateParmPackExpr *E) {
   VisitExpr(E);
-  E->Param = readDeclAs<NonTypeTemplateParmDecl>();
+  E->AssociatedDecl = readDeclAs<Decl>();
+  E->Index = Record.readInt();
   TemplateArgument ArgPack = Record.readTemplateArgument();
   if (ArgPack.getKind() != TemplateArgument::Pack)
     return;

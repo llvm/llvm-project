@@ -194,7 +194,7 @@ DecomposeLinalgOp::createPeeledGenericOp(GenericOp genericOp,
   }
 
   /// Create the peeled generic op with an empty body.
-  SmallVector<Value> outsOperands = genericOp.getOutputOperands();
+  SmallVector<Value> outsOperands = genericOp.getOutputs();
   outsOperands.append(newInitValues.begin(), newInitValues.end());
   SmallVector<Type> resultTypes = llvm::to_vector(genericOp.getResultTypes());
   resultTypes.append(newResultTypes.begin(), newResultTypes.end());
@@ -212,9 +212,7 @@ DecomposeLinalgOp::createResidualGenericOp(GenericOp genericOp,
                                            PatternRewriter &rewriter) const {
   /// Append all results from the peeledGenericOps as `ins` operand for the
   /// residual generic op.
-  SmallVector<Value> residualGenericOpOperands = llvm::to_vector(
-      llvm::map_range(genericOp.getInputOperands(),
-                      [](OpOperand *operand) { return operand->get(); }));
+  SmallVector<Value> residualGenericOpOperands = genericOp.getInputs();
   unsigned origNumResults = genericOp.getNumResults();
   unsigned peeledGenericOpNumResults = peeledGenericOp.getNumResults();
   SmallVector<Value> extraIns;

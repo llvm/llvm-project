@@ -2,6 +2,21 @@ add_custom_target(unistd-integration-tests)
 add_dependencies(libc-integration-tests unistd-integration-tests)
 
 add_integration_test(
+  getcwd_test
+  SUITE
+    unistd-integration-tests
+  SRCS
+    getcwd_test.cpp
+  LOADER
+    libc.loader.linux.crt1
+  DEPENDS
+    libc.include.errno
+    libc.src.__support.CPP.string_view
+    libc.src.stdlib.getenv
+    libc.src.unistd.getcwd
+)
+
+add_integration_test(
   fork_test
   SUITE
     unistd-integration-tests

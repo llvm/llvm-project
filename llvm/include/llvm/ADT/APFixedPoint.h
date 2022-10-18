@@ -214,7 +214,7 @@ public:
     APSInt ExtVal =
         (getLsbWeight() > 0) ? Val.extend(getWidth() + getLsbWeight()) : Val;
     if (Val < 0 && Val != -Val) // Cover the case when we have the min val
-      return -(-ExtVal.relativeShl(getLsbWeight()));
+      return -((-ExtVal).relativeShl(getLsbWeight()));
     return ExtVal.relativeShl(getLsbWeight());
   }
 

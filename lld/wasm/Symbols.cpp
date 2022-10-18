@@ -15,7 +15,7 @@
 #include "OutputSegment.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
-#include "lld/Common/Strings.h"
+#include "llvm/Demangle/Demangle.h"
 
 #define DEBUG_TYPE "lld"
 
@@ -34,8 +34,9 @@ std::string maybeDemangleSymbol(StringRef name) {
   // `main` in the case where we need to pass it arguments.
   if (name == "__main_argc_argv")
     return "main";
-
-  return demangle(name, config->demangle);
+  if (wasm::config->demangle)
+    return demangle(name.str());
+  return name.str();
 }
 
 std::string toString(wasm::Symbol::Kind kind) {
@@ -83,8 +84,11 @@ DefinedData *WasmSym::dsoHandle;
 DefinedData *WasmSym::dataEnd;
 DefinedData *WasmSym::globalBase;
 DefinedData *WasmSym::heapBase;
+DefinedData *WasmSym::heapEnd;
 DefinedData *WasmSym::initMemoryFlag;
 GlobalSymbol *WasmSym::stackPointer;
+DefinedData *WasmSym::stackLow;
+DefinedData *WasmSym::stackHigh;
 GlobalSymbol *WasmSym::tlsBase;
 GlobalSymbol *WasmSym::tlsSize;
 GlobalSymbol *WasmSym::tlsAlign;

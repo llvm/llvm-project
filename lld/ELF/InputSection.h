@@ -195,7 +195,6 @@ public:
   // relocations, assuming that Buf points to this section's copy in
   // the mmap'ed output buffer.
   template <class ELFT> void relocate(uint8_t *buf, uint8_t *bufEnd);
-  void relocateAlloc(uint8_t *buf, uint8_t *bufEnd);
   static uint64_t getRelocTargetVA(const InputFile *File, RelType Type,
                                    int64_t A, uint64_t P, const Symbol &Sym,
                                    RelExpr Expr);
@@ -422,10 +421,6 @@ inline bool isDebugSection(const InputSectionBase &sec) {
   return (sec.flags & llvm::ELF::SHF_ALLOC) == 0 &&
          sec.name.startswith(".debug");
 }
-
-// The list of all input sections.
-extern SmallVector<InputSectionBase *, 0> inputSections;
-extern SmallVector<EhInputSection *, 0> ehInputSections;
 
 // The set of TOC entries (.toc + addend) for which we should not apply
 // toc-indirect to toc-relative relaxation. const Symbol * refers to the

@@ -784,6 +784,11 @@ void CompilerInvocation::setDefaultPredefinitions() {
           Fortran::common::LanguageFeature::OpenMP)) {
     fortranOptions.predefinitions.emplace_back("_OPENMP", "201511");
   }
+  llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
+  if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
+    fortranOptions.predefinitions.emplace_back("__x86_64__", "1");
+    fortranOptions.predefinitions.emplace_back("__x86_64", "1");
+  }
 }
 
 void CompilerInvocation::setFortranOpts() {
@@ -837,7 +842,7 @@ void CompilerInvocation::setFortranOpts() {
 
 void CompilerInvocation::setSemanticsOpts(
     Fortran::parser::AllCookedSources &allCookedSources) {
-  const auto &fortranOptions = getFortranOpts();
+  auto &fortranOptions = getFortranOpts();
 
   semanticsContext = std::make_unique<semantics::SemanticsContext>(
       getDefaultKinds(), fortranOptions.features, allCookedSources);
@@ -851,8 +856,7 @@ void CompilerInvocation::setSemanticsOpts(
 
   llvm::Triple targetTriple{llvm::Triple(this->targetOpts.triple)};
   // FIXME: Handle real(3) ?
-  if (targetTriple.getArch() != llvm::Triple::ArchType::x86 &&
-      targetTriple.getArch() != llvm::Triple::ArchType::x86_64) {
+  if (targetTriple.getArch() != llvm::Triple::ArchType::x86_64) {
     semanticsContext->targetCharacteristics().DisableType(
         Fortran::common::TypeCategory::Real, /*kind=*/10);
   }

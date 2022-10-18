@@ -46,6 +46,7 @@ add_llvm_component_library(LLVMAnalysis
   BranchProbabilityInfo.cpp
   CFG.cpp
   CFGPrinter.cpp
+  CFGSCCPrinter.cpp
   CFLAndersAliasAnalysis.cpp
   CFLSteensAliasAnalysis.cpp
   CGSCCPassManager.cpp

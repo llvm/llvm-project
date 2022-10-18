@@ -129,12 +129,19 @@ APValue Pointer::toAPValue() const {
     }
   }
 
+  // We assemble the LValuePath starting from the innermost pointer to the
+  // outermost one. SO in a.b.c, the first element in Path will refer to
+  // the field 'c', while later code expects it to refer to 'a'.
+  // Just invert the order of the elements.
+  std::reverse(Path.begin(), Path.end());
+
   return APValue(Base, Offset, Path, IsOnePastEnd, IsNullPtr);
 }
 
 bool Pointer::isInitialized() const {
   assert(Pointee && "Cannot check if null pointer was initialized");
   Descriptor *Desc = getFieldDesc();
+  assert(Desc);
   if (Desc->isPrimitiveArray()) {
     if (Pointee->IsStatic)
       return true;
@@ -155,6 +162,7 @@ void Pointer::initialize() const {
   assert(Pointee && "Cannot initialize null pointer");
   Descriptor *Desc = getFieldDesc();
 
+  assert(Desc);
   if (Desc->isArray()) {
     if (Desc->isPrimitiveArray() && !Pointee->IsStatic) {
       // Primitive array initializer.

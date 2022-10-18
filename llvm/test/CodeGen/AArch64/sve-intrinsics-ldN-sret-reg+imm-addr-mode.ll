@@ -173,7 +173,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3.nxv48
 ; CHECK-LABEL: ld3.nxv48i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #3
-; CHECK-NEXT:    ld3b { z0.b, z1.b, z2.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld3b { z0.b - z2.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 3
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
@@ -185,7 +185,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3.nxv48
 ; CHECK-LABEL: ld3.nxv48i8_lower_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #-24
-; CHECK-NEXT:    ld3b { z0.b, z1.b, z2.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld3b { z0.b - z2.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 -24
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
@@ -197,7 +197,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3.nxv48
 ; CHECK-LABEL: ld3.nxv48i8_upper_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #21
-; CHECK-NEXT:    ld3b { z0.b, z1.b, z2.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld3b { z0.b - z2.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 21
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
@@ -209,7 +209,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3.nxv48
 ; CHECK-LABEL: ld3.nxv48i8_not_multiple_of_3_01:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #4
-; CHECK-NEXT:    ld3b { z0.b, z1.b, z2.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld3b { z0.b - z2.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 4
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
@@ -221,7 +221,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3.nxv48
 ; CHECK-LABEL: ld3.nxv48i8_not_multiple_of_3_02:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #5
-; CHECK-NEXT:    ld3b { z0.b, z1.b, z2.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld3b { z0.b - z2.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 5
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
@@ -233,7 +233,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3.nxv48
 ; CHECK-LABEL: ld3.nxv48i8_outside_lower_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #-27
-; CHECK-NEXT:    ld3b { z0.b, z1.b, z2.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld3b { z0.b - z2.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 -27
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
@@ -245,7 +245,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3.nxv48
 ; CHECK-LABEL: ld3.nxv48i8_outside_upper_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #24
-; CHECK-NEXT:    ld3b { z0.b, z1.b, z2.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld3b { z0.b - z2.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 24
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
@@ -258,7 +258,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @ld3.nxv24
 ; CHECK-LABEL: ld3.nxv24i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    addvl x8, x0, #21
-; CHECK-NEXT:    ld3h { z0.h, z1.h, z2.h }, p0/z, [x8]
+; CHECK-NEXT:    ld3h { z0.h - z2.h }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x i16>, <vscale x 8 x i16>* %addr, i64 21
   %base_ptr = bitcast <vscale x 8 x i16>* %base to i16 *
@@ -270,7 +270,7 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @ld3.nx
 ; CHECK-LABEL: ld3.nxv24f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    addvl x8, x0, #21
-; CHECK-NEXT:    ld3h { z0.h, z1.h, z2.h }, p0/z, [x8]
+; CHECK-NEXT:    ld3h { z0.h - z2.h }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x half>, <vscale x 8 x half>* %addr, i64 21
   %base_ptr = bitcast <vscale x 8 x half>* %base to half *
@@ -282,7 +282,7 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @
 ; CHECK-LABEL: ld3.nxv24bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    addvl x8, x0, #-24
-; CHECK-NEXT:    ld3h { z0.h, z1.h, z2.h }, p0/z, [x8]
+; CHECK-NEXT:    ld3h { z0.h - z2.h }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* %addr, i64 -24
   %base_ptr = bitcast <vscale x 8 x bfloat>* %base to bfloat *
@@ -295,7 +295,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @ld3.nxv12
 ; CHECK-LABEL: ld3.nxv12i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    addvl x8, x0, #21
-; CHECK-NEXT:    ld3w { z0.s, z1.s, z2.s }, p0/z, [x8]
+; CHECK-NEXT:    ld3w { z0.s - z2.s }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %addr, i64 21
   %base_ptr = bitcast <vscale x 4 x i32>* %base to i32 *
@@ -307,7 +307,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @ld3
 ; CHECK-LABEL: ld3.nxv12f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    addvl x8, x0, #-24
-; CHECK-NEXT:    ld3w { z0.s, z1.s, z2.s }, p0/z, [x8]
+; CHECK-NEXT:    ld3w { z0.s - z2.s }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 4 x float>, <vscale x 4 x float>* %addr, i64 -24
   %base_ptr = bitcast <vscale x 4 x float>* %base to float *
@@ -320,7 +320,7 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @ld3.nxv6i
 ; CHECK-LABEL: ld3.nxv6i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    addvl x8, x0, #21
-; CHECK-NEXT:    ld3d { z0.d, z1.d, z2.d }, p0/z, [x8]
+; CHECK-NEXT:    ld3d { z0.d - z2.d }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 2 x i64>, <vscale x 2 x i64>* %addr, i64 21
   %base_ptr = bitcast <vscale x 2 x i64>* %base to i64 *
@@ -332,7 +332,7 @@ define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @
 ; CHECK-LABEL: ld3.nxv6f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    addvl x8, x0, #-24
-; CHECK-NEXT:    ld3d { z0.d, z1.d, z2.d }, p0/z, [x8]
+; CHECK-NEXT:    ld3d { z0.d - z2.d }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 2 x double>, <vscale x 2 x double>* %addr, i64 -24
   %base_ptr = bitcast <vscale x 2 x double>* %base to double *
@@ -345,7 +345,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-LABEL: ld4.nxv64i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #4
-; CHECK-NEXT:    ld4b { z0.b, z1.b, z2.b, z3.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 4
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
@@ -357,7 +357,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-LABEL: ld4.nxv64i8_lower_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #-32
-; CHECK-NEXT:    ld4b { z0.b, z1.b, z2.b, z3.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 -32
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
@@ -369,7 +369,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-LABEL: ld4.nxv64i8_upper_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #28
-; CHECK-NEXT:    ld4b { z0.b, z1.b, z2.b, z3.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 28
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
@@ -381,7 +381,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-LABEL: ld4.nxv64i8_not_multiple_of_4_01:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #5
-; CHECK-NEXT:    ld4b { z0.b, z1.b, z2.b, z3.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 5
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
@@ -393,7 +393,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-LABEL: ld4.nxv64i8_not_multiple_of_4_02:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #6
-; CHECK-NEXT:    ld4b { z0.b, z1.b, z2.b, z3.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 6
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
@@ -405,7 +405,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-LABEL: ld4.nxv64i8_not_multiple_of_4_03:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #7
-; CHECK-NEXT:    ld4b { z0.b, z1.b, z2.b, z3.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 7
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
@@ -420,7 +420,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    mov x9, #-576
 ; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    mul x8, x8, x9
-; CHECK-NEXT:    ld4b { z0.b, z1.b, z2.b, z3.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
 ; FIXME: optimize OFFSET computation so that xOFFSET = (mul (RDVL #4) #9)
 ; xM = -9 * 2^6
@@ -439,7 +439,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    mov w9, #512
 ; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    mul x8, x8, x9
-; CHECK-NEXT:    ld4b { z0.b, z1.b, z2.b, z3.b }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0, x8]
 ; CHECK-NEXT:    ret
 ; FIXME: optimize OFFSET computation so that xOFFSET = (mul (RDVL #16) #2)
 ; xM = 2^9
@@ -456,7 +456,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 ; CHECK-LABEL: ld4.nxv32i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    addvl x8, x0, #8
-; CHECK-NEXT:    ld4h { z0.h, z1.h, z2.h, z3.h }, p0/z, [x8]
+; CHECK-NEXT:    ld4h { z0.h - z3.h }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x i16>, <vscale x 8 x i16>* %addr, i64 8
   %base_ptr = bitcast <vscale x 8 x i16>* %base to i16 *
@@ -468,7 +468,7 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale 
 ; CHECK-LABEL: ld4.nxv32f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    addvl x8, x0, #28
-; CHECK-NEXT:    ld4h { z0.h, z1.h, z2.h, z3.h }, p0/z, [x8]
+; CHECK-NEXT:    ld4h { z0.h - z3.h }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x half>, <vscale x 8 x half>* %addr, i64 28
   %base_ptr = bitcast <vscale x 8 x half>* %base to half *
@@ -480,7 +480,7 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <v
 ; CHECK-LABEL: ld4.nxv32bf16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    addvl x8, x0, #-32
-; CHECK-NEXT:    ld4h { z0.h, z1.h, z2.h, z3.h }, p0/z, [x8]
+; CHECK-NEXT:    ld4h { z0.h - z3.h }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* %addr, i64 -32
   %base_ptr = bitcast <vscale x 8 x bfloat>* %base to bfloat *
@@ -493,7 +493,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 ; CHECK-LABEL: ld4.nxv16i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    addvl x8, x0, #28
-; CHECK-NEXT:    ld4w { z0.s, z1.s, z2.s, z3.s }, p0/z, [x8]
+; CHECK-NEXT:    ld4w { z0.s - z3.s }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %addr, i64 28
   %base_ptr = bitcast <vscale x 4 x i32>* %base to i32 *
@@ -505,7 +505,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
 ; CHECK-LABEL: ld4.nxv16f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    addvl x8, x0, #-32
-; CHECK-NEXT:    ld4w { z0.s, z1.s, z2.s, z3.s }, p0/z, [x8]
+; CHECK-NEXT:    ld4w { z0.s - z3.s }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 4 x float>, <vscale x 4 x float>* %addr, i64 -32
   %base_ptr = bitcast <vscale x 4 x float>* %base to float *
@@ -518,7 +518,7 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2
 ; CHECK-LABEL: ld4.nxv8i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    addvl x8, x0, #28
-; CHECK-NEXT:    ld4d { z0.d, z1.d, z2.d, z3.d }, p0/z, [x8]
+; CHECK-NEXT:    ld4d { z0.d - z3.d }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 2 x i64>, <vscale x 2 x i64>* %addr, i64 28
   %base_ptr = bitcast <vscale x 2 x i64>* %base to i64 *
@@ -530,7 +530,7 @@ define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <v
 ; CHECK-LABEL: ld4.nxv8f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    addvl x8, x0, #-32
-; CHECK-NEXT:    ld4d { z0.d, z1.d, z2.d, z3.d }, p0/z, [x8]
+; CHECK-NEXT:    ld4d { z0.d - z3.d }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 2 x double>, <vscale x 2 x double>* %addr, i64 -32
   %base_ptr = bitcast <vscale x 2 x double>* %base to double *

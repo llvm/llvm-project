@@ -37,8 +37,7 @@ target_link_libraries(omptarget.rtl.rpc
   absl::synchronization
   ${OPENMP_PTHREAD_LIB}
   omp
-  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../../exports"
-  "-Wl,--undefined-version")
+  "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../../exports")
 
 # Report to the parent scope that we are building a plugin for RPC.
 set(LIBOMPTARGET_SYSTEM_TARGETS "${LIBOMPTARGET_SYSTEM_TARGETS} rpc" PARENT_SCOPE)

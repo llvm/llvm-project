@@ -427,14 +427,14 @@ namespace internal {
 
 template <Arg arg> struct ArgSelector {};
 
-template <> struct ArgSelector<Arg::_1> {
+template <> struct ArgSelector<Arg::P1> {
   template <typename T1, typename T2>
   static T1 *__restrict &Select(T1 *__restrict &p1ref, T2 *__restrict &) {
     return p1ref;
   }
 };
 
-template <> struct ArgSelector<Arg::_2> {
+template <> struct ArgSelector<Arg::P2> {
   template <typename T1, typename T2>
   static T2 *__restrict &Select(T1 *__restrict &, T2 *__restrict &p2ref) {
     return p2ref;
@@ -451,7 +451,7 @@ template <Arg arg, size_t Alignment> struct Align {
   static void bump(T1 *__restrict &p1ref, T2 *__restrict &p2ref, size_t &size,
                    int additional_bumps = 0) {
     auto &aligned_ptr = ArgSelector<arg>::Select(p1ref, p2ref);
-    auto offset = offset_to_next_aligned<Alignment>(aligned_ptr);
+    auto offset = distance_to_align_up<Alignment>(aligned_ptr);
     adjust(offset + additional_bumps * Alignment, p1ref, p2ref, size);
     aligned_ptr = assume_aligned<Alignment>(aligned_ptr);
   }
@@ -467,7 +467,7 @@ template <Arg arg, size_t Alignment> struct Align {
 //
 // e.g. A 16-byte Destination Aligned 32-byte Loop Copy can be written as:
 // copy<Align<_16, Arg::Dst>::Then<Loop<_32>>>(dst, src, count);
-template <typename AlignmentT, Arg AlignOn = Arg::_1> struct Align {
+template <typename AlignmentT, Arg AlignOn = Arg::P1> struct Align {
 private:
   static constexpr size_t ALIGNMENT = AlignmentT::SIZE;
   static_assert(ALIGNMENT > 1, "Alignment must be more than 1");
@@ -556,7 +556,7 @@ public:
     static void splat_set(char *dst, const unsigned char value, size_t size) {
       AlignmentT::splat_set(dst, value);
       char *dummy = nullptr;
-      internal::Align<Arg::_1, ALIGNMENT>::bump(dst, dummy, size);
+      internal::Align<Arg::P1, ALIGNMENT>::bump(dst, dummy, size);
       NextT::splat_set(dst, value, size);
     }
   };

@@ -19,6 +19,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -4255,6 +4256,8 @@ static void emitFrameOffsetAdj(MachineBasicBlock &MBB,
     break;
   case AArch64::ADDVL_XXI:
   case AArch64::ADDPL_XXI:
+  case AArch64::ADDSVL_XXI:
+  case AArch64::ADDSPL_XXI:
     MaxEncoding = 31;
     ShiftSize = 0;
     if (Offset < 0) {
@@ -4269,9 +4272,9 @@ static void emitFrameOffsetAdj(MachineBasicBlock &MBB,
 
   // `Offset` can be in bytes or in "scalable bytes".
   int VScale = 1;
-  if (Opc == AArch64::ADDVL_XXI)
+  if (Opc == AArch64::ADDVL_XXI || Opc == AArch64::ADDSVL_XXI)
     VScale = 16;
-  else if (Opc == AArch64::ADDPL_XXI)
+  else if (Opc == AArch64::ADDPL_XXI || Opc == AArch64::ADDSPL_XXI)
     VScale = 2;
 
   // FIXME: If the offset won't fit in 24-bits, compute the offset into a
@@ -4368,6 +4371,14 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
                            bool NeedsWinCFI, bool *HasWinCFI,
                            bool EmitCFAOffset, StackOffset CFAOffset,
                            unsigned FrameReg) {
+  // If a function is marked as arm_locally_streaming, then the runtime value of
+  // vscale in the prologue/epilogue is different the runtime value of vscale
+  // in the function's body. To avoid having to consider multiple vscales,
+  // we can use `addsvl` to allocate any scalable stack-slots, which under
+  // most circumstances will be only locals, not callee-save slots.
+  const Function &F = MBB.getParent()->getFunction();
+  bool UseSVL = F.hasFnAttribute("aarch64_pstate_sm_body");
+
   int64_t Bytes, NumPredicateVectors, NumDataVectors;
   AArch64InstrInfo::decomposeStackOffsetForFrameOffsets(
       Offset, Bytes, NumPredicateVectors, NumDataVectors);
@@ -4398,8 +4409,9 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
 
   if (NumDataVectors) {
     emitFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, NumDataVectors,
-                       AArch64::ADDVL_XXI, TII, Flag, NeedsWinCFI, nullptr,
-                       EmitCFAOffset, CFAOffset, FrameReg);
+                       UseSVL ? AArch64::ADDSVL_XXI : AArch64::ADDVL_XXI,
+                       TII, Flag, NeedsWinCFI, nullptr, EmitCFAOffset,
+                       CFAOffset, FrameReg);
     CFAOffset += StackOffset::getScalable(-NumDataVectors * 16);
     SrcReg = DestReg;
   }
@@ -4407,8 +4419,9 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
   if (NumPredicateVectors) {
     assert(DestReg != AArch64::SP && "Unaligned access to SP");
     emitFrameOffsetAdj(MBB, MBBI, DL, DestReg, SrcReg, NumPredicateVectors,
-                       AArch64::ADDPL_XXI, TII, Flag, NeedsWinCFI, nullptr,
-                       EmitCFAOffset, CFAOffset, FrameReg);
+                       UseSVL ? AArch64::ADDSPL_XXI : AArch64::ADDPL_XXI,
+                       TII, Flag, NeedsWinCFI, nullptr, EmitCFAOffset,
+                       CFAOffset, FrameReg);
   }
 }
 

@@ -4100,7 +4100,7 @@ public:
     return llvm::makeArrayRef(getTrailingObjects<BindingDecl *>(), NumBindings);
   }
 
-  void printName(raw_ostream &os) const override;
+  void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Decomposition; }
@@ -4213,7 +4213,8 @@ private:
 
 public:
   /// Print this UUID in a human-readable format.
-  void printName(llvm::raw_ostream &OS) const override;
+  void printName(llvm::raw_ostream &OS,
+                 const PrintingPolicy &Policy) const override;
 
   /// Get the decomposed parts of this declaration.
   Parts getParts() const { return PartVal; }
@@ -4266,7 +4267,8 @@ class UnnamedGlobalConstantDecl : public ValueDecl,
 
 public:
   /// Print this in a human-readable format.
-  void printName(llvm::raw_ostream &OS) const override;
+  void printName(llvm::raw_ostream &OS,
+                 const PrintingPolicy &Policy) const override;
 
   const APValue &getValue() const { return Value; }
 

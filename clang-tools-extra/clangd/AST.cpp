@@ -730,8 +730,8 @@ const TemplateTypeParmType *getUnderylingPackType(const ParmVarDecl *Param) {
   if (const auto *SubstType = dyn_cast<SubstTemplateTypeParmType>(PlainType)) {
     const auto *ReplacedParameter = SubstType->getReplacedParameter();
     if (ReplacedParameter->isParameterPack()) {
-      return dyn_cast<TemplateTypeParmType>(
-          ReplacedParameter->getCanonicalTypeUnqualified()->getTypePtr());
+      return ReplacedParameter->getTypeForDecl()
+          ->castAs<TemplateTypeParmType>();
     }
   }
   return nullptr;

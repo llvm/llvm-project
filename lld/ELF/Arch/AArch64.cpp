@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "OutputSections.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -48,12 +49,22 @@ public:
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
-  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
-  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
-                      uint64_t val) const override;
+  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+
+private:
+  void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsGdToIe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  void relaxTlsIeToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+};
+
+struct AArch64Relaxer {
+  bool safeToRelaxAdrpLdr = false;
+
+  AArch64Relaxer(ArrayRef<Relocation> relocs);
+  bool tryRelaxAdrpAdd(const Relocation &adrpRel, const Relocation &addRel,
+                       uint64_t secAddr, uint8_t *buf) const;
+  bool tryRelaxAdrpLdr(const Relocation &adrpRel, const Relocation &ldrRel,
+                       uint64_t secAddr, uint8_t *buf) const;
 };
 } // namespace
 
@@ -588,10 +599,8 @@ void AArch64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
 }
 
 AArch64Relaxer::AArch64Relaxer(ArrayRef<Relocation> relocs) {
-  if (!config->relax || config->emachine != EM_AARCH64) {
-    safeToRelaxAdrpLdr = false;
+  if (!config->relax)
     return;
-  }
   // Check if R_AARCH64_ADR_GOT_PAGE and R_AARCH64_LD64_GOT_LO12_NC
   // always appear in pairs.
   size_t i = 0;
@@ -732,6 +741,49 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
   target->relocate(buf + addRel.offset, addRel, SignExtend64(sym.getVA(), 64));
   tryRelaxAdrpAdd(adrpSymRel, addRel, secAddr, buf);
   return true;
+}
+
+void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr;
+  if (auto *s = dyn_cast<InputSection>(&sec))
+    secAddr += s->outSecOff;
+  AArch64Relaxer relaxer(sec.relocations);
+  for (size_t i = 0, size = sec.relocations.size(); i != size; ++i) {
+    const Relocation &rel = sec.relocations[i];
+    uint8_t *loc = buf + rel.offset;
+    const uint64_t val =
+        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
+                             secAddr + rel.offset, *rel.sym, rel.expr);
+    switch (rel.expr) {
+    case R_AARCH64_GOT_PAGE_PC:
+      if (i + 1 < size &&
+          relaxer.tryRelaxAdrpLdr(rel, sec.relocations[i + 1], secAddr, buf)) {
+        ++i;
+        continue;
+      }
+      break;
+    case R_AARCH64_PAGE_PC:
+      if (i + 1 < size &&
+          relaxer.tryRelaxAdrpAdd(rel, sec.relocations[i + 1], secAddr, buf)) {
+        ++i;
+        continue;
+      }
+      break;
+    case R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
+    case R_RELAX_TLS_GD_TO_IE_ABS:
+      relaxTlsGdToIe(loc, rel, val);
+      continue;
+    case R_RELAX_TLS_GD_TO_LE:
+      relaxTlsGdToLe(loc, rel, val);
+      continue;
+    case R_RELAX_TLS_IE_TO_LE:
+      relaxTlsIeToLe(loc, rel, val);
+      continue;
+    default:
+      break;
+    }
+    relocate(loc, rel, val);
+  }
 }
 
 // AArch64 may use security features in variant PLT sequences. These are:

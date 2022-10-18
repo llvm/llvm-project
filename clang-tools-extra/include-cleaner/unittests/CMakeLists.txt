@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_custom_target(ClangIncludeCleanerUnitTests)
 add_unittest(ClangIncludeCleanerUnitTests ClangIncludeCleanerTests
+  RecordTest.cpp
   WalkASTTest.cpp
 )
 

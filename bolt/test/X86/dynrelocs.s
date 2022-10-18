@@ -23,8 +23,6 @@
 # one it just created.
 
 # REQUIRES: system-linux
-# Currently XFAIL as we do not support it.
-# XFAIL: *
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux \
 # RUN:   %s -o %t.o

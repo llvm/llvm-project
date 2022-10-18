@@ -798,66 +798,6 @@ DWARFDebugInfoEntry::GetParentDeclContextDIE(
   return DWARFDIE();
 }
 
-const char *DWARFDebugInfoEntry::GetQualifiedName(DWARFUnit *cu,
-                                                  std::string &storage) const {
-  DWARFAttributes attributes;
-  GetAttributes(cu, attributes, Recurse::yes);
-  return GetQualifiedName(cu, attributes, storage);
-}
-
-const char *
-DWARFDebugInfoEntry::GetQualifiedName(DWARFUnit *cu,
-                                      const DWARFAttributes &attributes,
-                                      std::string &storage) const {
-
-  const char *name = GetName(cu);
-
-  if (name) {
-    DWARFDIE parent_decl_ctx_die = GetParentDeclContextDIE(cu);
-    storage.clear();
-    // TODO: change this to get the correct decl context parent....
-    while (parent_decl_ctx_die) {
-      const dw_tag_t parent_tag = parent_decl_ctx_die.Tag();
-      switch (parent_tag) {
-      case DW_TAG_namespace: {
-        const char *namespace_name = parent_decl_ctx_die.GetName();
-        if (namespace_name) {
-          storage.insert(0, "::");
-          storage.insert(0, namespace_name);
-        } else {
-          storage.insert(0, "(anonymous namespace)::");
-        }
-        parent_decl_ctx_die = parent_decl_ctx_die.GetParentDeclContextDIE();
-      } break;
-
-      case DW_TAG_class_type:
-      case DW_TAG_structure_type:
-      case DW_TAG_union_type: {
-        const char *class_union_struct_name = parent_decl_ctx_die.GetName();
-
-        if (class_union_struct_name) {
-          storage.insert(0, "::");
-          storage.insert(0, class_union_struct_name);
-        }
-        parent_decl_ctx_die = parent_decl_ctx_die.GetParentDeclContextDIE();
-      } break;
-
-      default:
-        parent_decl_ctx_die.Clear();
-        break;
-      }
-    }
-
-    if (storage.empty())
-      storage.append("::");
-
-    storage.append(name);
-  }
-  if (storage.empty())
-    return nullptr;
-  return storage.c_str();
-}
-
 lldb::offset_t DWARFDebugInfoEntry::GetFirstAttributeOffset() const {
   return GetOffset() + llvm::getULEB128Size(m_abbr_idx);
 }

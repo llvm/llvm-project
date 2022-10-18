@@ -33,6 +33,19 @@ TEST_F(DataflowAnalysisContextTest,
 }
 
 TEST_F(DataflowAnalysisContextTest,
+       CreateTopBoolValueReturnsDistinctValues) {
+  auto &X = Context.createTopBoolValue();
+  auto &Y = Context.createTopBoolValue();
+  EXPECT_NE(&X, &Y);
+}
+
+TEST_F(DataflowAnalysisContextTest, DistinctTopsNotEquivalent) {
+  auto &X = Context.createTopBoolValue();
+  auto &Y = Context.createTopBoolValue();
+  EXPECT_FALSE(Context.equivalentBoolValues(X, Y));
+}
+
+TEST_F(DataflowAnalysisContextTest,
        GetOrCreateConjunctionReturnsSameExprGivenSameArgs) {
   auto &X = Context.createAtomicBoolValue();
   auto &XAndX = Context.getOrCreateConjunction(X, X);

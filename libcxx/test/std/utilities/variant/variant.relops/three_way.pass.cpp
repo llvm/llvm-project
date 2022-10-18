@@ -12,7 +12,7 @@
 
 // template <class... Types> class variant;
 
-// template<class... Types>
+// template <class... Types> requires (three_way_comparable<Types> && ...)
 //   constexpr std::common_comparison_category_t<
 //     std::compare_three_way_result_t<Types>...>
 //   operator<=>(const variant<Types...>& t, const variant<Types...>& u);
@@ -170,15 +170,11 @@ static_assert(!has_three_way_op<std::variant<int, HasSimpleOrdering>>);
 static_assert(!three_way_comparable<HasSimpleOrdering>);
 static_assert(!three_way_comparable<std::variant<int, HasSimpleOrdering>>);
 
-static_assert( has_three_way_op<HasOnlySpaceship>);
-static_assert( has_three_way_op<std::variant<int, HasOnlySpaceship>>);
+static_assert(has_three_way_op<HasOnlySpaceship>);
+static_assert(!has_three_way_op<std::variant<int, HasOnlySpaceship>>);
 
-// variants containing types with unavailable operator== still exist but will
-// generate a compilation error if their operator== is invoked, so the variant
-// type here participates when asked for operator== and operator<=> even though
-// it would actually fail.
 static_assert(!three_way_comparable<HasOnlySpaceship>);
-static_assert( three_way_comparable<std::variant<int, HasOnlySpaceship>>);
+static_assert(!three_way_comparable<std::variant<int, HasOnlySpaceship>>);
 
 static_assert( has_three_way_op<HasFullOrdering>);
 static_assert( has_three_way_op<std::variant<int, HasFullOrdering>>);

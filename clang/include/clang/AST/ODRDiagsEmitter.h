@@ -11,6 +11,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 
@@ -44,6 +45,16 @@ public:
                    const CXXRecordDecl *SecondRecord,
                    const struct CXXRecordDecl::DefinitionData *SecondDD) const;
 
+  /// Diagnose ODR mismatch between 2 ObjCProtocolDecl.
+  ///
+  /// Returns true if found a mismatch and diagnosed it.
+  /// To compare 2 declarations with merged and identical definition data
+  /// you need to provide pre-merge definition data in \p SecondDD.
+  bool diagnoseMismatch(
+      const ObjCProtocolDecl *FirstProtocol,
+      const ObjCProtocolDecl *SecondProtocol,
+      const struct ObjCProtocolDecl::DefinitionData *SecondDD) const;
+
   /// Get the best name we know for the module that owns the given
   /// declaration, or an empty string if the declaration is not from a module.
   static std::string getOwningModuleNameForDiagnostic(const Decl *D);
@@ -51,9 +62,11 @@ public:
 private:
   using DeclHashes = llvm::SmallVector<std::pair<const Decl *, unsigned>, 4>;
 
-  // Used with err_module_odr_violation_mismatch_decl and
-  // note_module_odr_violation_mismatch_decl
-  // This list should be the same Decl's as in ODRHash::isDeclToBeProcessed
+  // Used with err_module_odr_violation_mismatch_decl,
+  // note_module_odr_violation_mismatch_decl,
+  // err_module_odr_violation_mismatch_decl_unknown,
+  // and note_module_odr_violation_mismatch_decl_unknown
+  // This list should be the same Decl's as in ODRHash::isSubDeclToBeProcessed
   enum ODRMismatchDecl {
     EndOfClass,
     PublicSpecifer,
@@ -67,6 +80,7 @@ private:
     Var,
     Friend,
     FunctionTemplate,
+    ObjCMethod,
     Other
   };
 
@@ -115,6 +129,25 @@ private:
                               StringRef FirstModule, StringRef SecondModule,
                               const VarDecl *FirstVD,
                               const VarDecl *SecondVD) const;
+
+  /// Check if protocol lists are the same and diagnose if they are different.
+  ///
+  /// Returns true if found a mismatch and diagnosed it.
+  bool diagnoseSubMismatchProtocols(const ObjCProtocolList &FirstProtocols,
+                                    const ObjCContainerDecl *FirstContainer,
+                                    StringRef FirstModule,
+                                    const ObjCProtocolList &SecondProtocols,
+                                    const ObjCContainerDecl *SecondContainer,
+                                    StringRef SecondModule) const;
+
+  /// Check if Objective-C methods are the same and diagnose if different.
+  ///
+  /// Returns true if found a mismatch and diagnosed it.
+  bool diagnoseSubMismatchObjCMethod(const NamedDecl *FirstObjCContainer,
+                                     StringRef FirstModule,
+                                     StringRef SecondModule,
+                                     const ObjCMethodDecl *FirstMethod,
+                                     const ObjCMethodDecl *SecondMethod) const;
 
 private:
   DiagnosticsEngine &Diags;

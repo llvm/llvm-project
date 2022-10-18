@@ -222,7 +222,7 @@ void MainLoopPosix::RunImpl::ProcessEvents() {
 }
 #endif
 
-MainLoopPosix::MainLoopPosix() {
+MainLoopPosix::MainLoopPosix() : m_triggering(false) {
   Status error = m_trigger_pipe.CreateNew(/*child_process_inherit=*/false);
   assert(error.Success());
   const int trigger_pipe_fd = m_trigger_pipe.GetReadFileDescriptor();
@@ -371,6 +371,7 @@ Status MainLoopPosix::Run() {
 
     impl.ProcessEvents();
 
+    m_triggering = false;
     ProcessPendingCallbacks();
   }
   return Status();
@@ -395,6 +396,9 @@ void MainLoopPosix::ProcessSignal(int signo) {
 }
 
 void MainLoopPosix::TriggerPendingCallbacks() {
+  if (m_triggering.exchange(true))
+    return;
+
   char c = '.';
   size_t bytes_written;
   Status error = m_trigger_pipe.Write(&c, 1, bytes_written);

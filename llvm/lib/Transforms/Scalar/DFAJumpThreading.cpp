@@ -724,7 +724,7 @@ private:
 
     // Make DeterminatorBB the first element in Path.
     PathType Path = TPath.getPath();
-    auto ItDet = std::find(Path.begin(), Path.end(), DeterminatorBB);
+    auto ItDet = llvm::find(Path, DeterminatorBB);
     std::rotate(Path.begin(), ItDet, Path.end());
 
     bool IsDetBBSeen = false;
@@ -798,7 +798,7 @@ private:
 
       // Otherwise update Metrics for all blocks that will be cloned. If any
       // block is already cloned and would be reused, don't double count it.
-      auto DetIt = std::find(PathBBs.begin(), PathBBs.end(), Determinator);
+      auto DetIt = llvm::find(PathBBs, Determinator);
       for (auto BBIt = DetIt; BBIt != PathBBs.end(); BBIt++) {
         BB = *BBIt;
         VisitedBB = getClonedBB(BB, NextState, DuplicateMap);
@@ -943,7 +943,7 @@ private:
     if (PathBBs.front() == Determinator)
       PathBBs.pop_front();
 
-    auto DetIt = std::find(PathBBs.begin(), PathBBs.end(), Determinator);
+    auto DetIt = llvm::find(PathBBs, Determinator);
     auto Prev = std::prev(DetIt);
     BasicBlock *PrevBB = *Prev;
     for (auto BBIt = DetIt; BBIt != PathBBs.end(); BBIt++) {

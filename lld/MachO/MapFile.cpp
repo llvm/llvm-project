@@ -154,10 +154,10 @@ void macho::writeMapFile() {
   DenseMap<Symbol *, std::string> liveSymbolStrings =
       getSymbolStrings(liveSymbols);
   os << "# Symbols:\n";
-  os << "# Address\t    File  Name\n";
-  for (Symbol *sym : liveSymbols) {
+  os << "# Address\tSize    \tFile  Name\n";
+  for (Defined *sym : liveSymbols) {
     assert(sym->isLive());
-    os << format("0x%08llX\t[%3u] %s\n", sym->getVA(),
+    os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(), sym->size,
                  readerToFileOrdinal[sym->getFile()],
                  liveSymbolStrings[sym].c_str());
   }
@@ -166,10 +166,11 @@ void macho::writeMapFile() {
     DenseMap<Symbol *, std::string> deadSymbolStrings =
         getSymbolStrings(deadSymbols);
     os << "# Dead Stripped Symbols:\n";
-    os << "# Address\t    File  Name\n";
-    for (Symbol *sym : deadSymbols) {
+    os << "#        \tSize    \tFile  Name\n";
+    for (Defined *sym : deadSymbols) {
       assert(!sym->isLive());
-      os << format("<<dead>>\t[%3u] %s\n", readerToFileOrdinal[sym->getFile()],
+      os << format("<<dead>>\t0x%08llX\t[%3u] %s\n", sym->size,
+                   readerToFileOrdinal[sym->getFile()],
                    deadSymbolStrings[sym].c_str());
     }
   }

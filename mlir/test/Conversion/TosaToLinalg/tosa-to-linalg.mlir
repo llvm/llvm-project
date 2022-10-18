@@ -777,6 +777,26 @@ func.func @reduce_float_dyn(%arg0: tensor<?x5x4xf32>) -> () {
 
 // -----
 
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0) -> ()>
+
+// CHECK-LABEL: @reduce_float_dyn_rank_1
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]: tensor<?xf32>
+func.func @reduce_float_dyn_rank_1(%arg0: tensor<?xf32>) -> () {
+  // CHECK-DAG: %[[INIT:.+]] = tensor.empty() : tensor<f32>
+  // CHECK-DAG: %[[CST0:.+]] = arith.constant 0.0
+  // CHECK: %[[FILL:.+]] = linalg.fill ins(%[[CST0]]{{.*}}outs(%[[INIT]]
+  // CHECK: %[[GENERIC:.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP1]]], iterator_types = ["reduction"]} ins(%[[ARG0]] : tensor<?xf32>) outs(%[[FILL]] : tensor<f32>)
+  // CHECK: ^bb0(%[[ARG1:.*]]: f32, %[[ARG2:.*]]: f32)
+  // CHECK:   %[[RES:.+]] = arith.addf %[[ARG1]], %[[ARG2]] : f32
+  // CHECK:   linalg.yield %[[RES]] : f32
+  // CHECK: tensor.expand_shape %[[GENERIC]] {{\[}}] : tensor<f32> into tensor<1xf32>
+  %0 = "tosa.reduce_sum"(%arg0) {axis = 0 : i64} : (tensor<?xf32>) -> tensor<1xf32>
+  return
+}
+
+// -----
+
 // CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 // CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 

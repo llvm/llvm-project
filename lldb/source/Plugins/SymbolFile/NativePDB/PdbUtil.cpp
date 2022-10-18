@@ -1104,6 +1104,11 @@ size_t lldb_private::npdb::GetSizeOfType(PdbTypeSymId id,
     return GetSizeOfTypeInternal<ClassRecord>(cvt);
   case LF_UNION:
     return GetSizeOfTypeInternal<UnionRecord>(cvt);
+  case LF_BITFIELD: {
+    BitFieldRecord record;
+    llvm::cantFail(TypeDeserializer::deserializeAs<BitFieldRecord>(cvt, record));
+    return GetSizeOfType({record.Type}, tpi);
+  }
   default:
     break;
   }

@@ -1,5 +1,7 @@
-add_header_library(
+add_object_library(
   test
+  SRCS
+    test.cpp
   HDRS
     test.h
   DEPENDS

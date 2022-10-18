@@ -143,7 +143,12 @@ TEST(CPlusPlusLanguage, ContainsPath) {
   CPlusPlusLanguage::MethodName reference_3(ConstString("int func01()"));
   CPlusPlusLanguage::MethodName 
       reference_4(ConstString("bar::baz::operator bool()"));
-  
+  CPlusPlusLanguage::MethodName reference_5(
+      ConstString("bar::baz::operator bool<int, Type<double>>()"));
+  CPlusPlusLanguage::MethodName reference_6(ConstString(
+      "bar::baz::operator<<<Type<double>, Type<std::vector<double>>>()"));
+
+  EXPECT_TRUE(reference_1.ContainsPath(""));
   EXPECT_TRUE(reference_1.ContainsPath("func01"));
   EXPECT_TRUE(reference_1.ContainsPath("bar::func01"));
   EXPECT_TRUE(reference_1.ContainsPath("foo::bar::func01"));
@@ -153,17 +158,35 @@ TEST(CPlusPlusLanguage, ContainsPath) {
   EXPECT_FALSE(reference_1.ContainsPath("::foo::baz::func01"));
   EXPECT_FALSE(reference_1.ContainsPath("foo::bar::baz::func01"));
   
+  EXPECT_TRUE(reference_2.ContainsPath(""));
   EXPECT_TRUE(reference_2.ContainsPath("foofoo::bar::func01"));
   EXPECT_FALSE(reference_2.ContainsPath("foo::bar::func01"));
   
+  EXPECT_TRUE(reference_3.ContainsPath(""));
   EXPECT_TRUE(reference_3.ContainsPath("func01"));
   EXPECT_FALSE(reference_3.ContainsPath("func"));
   EXPECT_FALSE(reference_3.ContainsPath("bar::func01"));
 
+  EXPECT_TRUE(reference_4.ContainsPath(""));
+  EXPECT_TRUE(reference_4.ContainsPath("operator"));
   EXPECT_TRUE(reference_4.ContainsPath("operator bool"));
   EXPECT_TRUE(reference_4.ContainsPath("baz::operator bool"));
   EXPECT_TRUE(reference_4.ContainsPath("bar::baz::operator bool"));
   EXPECT_FALSE(reference_4.ContainsPath("az::operator bool"));
+
+  EXPECT_TRUE(reference_5.ContainsPath(""));
+  EXPECT_TRUE(reference_5.ContainsPath("operator"));
+  EXPECT_TRUE(reference_5.ContainsPath("operator bool"));
+  EXPECT_TRUE(reference_5.ContainsPath("operator bool<int, Type<double>>"));
+  EXPECT_FALSE(reference_5.ContainsPath("operator bool<int, double>"));
+  EXPECT_FALSE(reference_5.ContainsPath("operator bool<int, Type<int>>"));
+
+  EXPECT_TRUE(reference_6.ContainsPath(""));
+  EXPECT_TRUE(reference_6.ContainsPath("operator"));
+  EXPECT_TRUE(reference_6.ContainsPath("operator<<"));
+  EXPECT_TRUE(reference_6.ContainsPath(
+      "bar::baz::operator<<<Type<double>, Type<std::vector<double>>>()"));
+  EXPECT_FALSE(reference_6.ContainsPath("operator<<<Type<double>>"));
 }
 
 TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {

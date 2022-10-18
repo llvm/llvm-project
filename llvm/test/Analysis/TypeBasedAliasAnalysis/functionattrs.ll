@@ -21,8 +21,8 @@ define void @test0_no(i32* %p) nounwind {
   ret void
 }
 
-; Add the readonly attribute, since there's just a call to a function which 
-; TBAA says doesn't modify any memory.
+; Add the readnone attribute, since there's just a call to a function which
+; TBAA says only accesses constant memory.
 
 ; CHECK: define void @test1_yes(i32* nocapture %p) #2 {
 define void @test1_yes(i32* %p) nounwind {
@@ -74,7 +74,7 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1) nounwind
 
 ; CHECK: attributes #0 = { mustprogress nofree norecurse nosync nounwind readnone willreturn }
 ; CHECK: attributes #1 = { argmemonly mustprogress nofree norecurse nosync nounwind willreturn writeonly }
-; CHECK: attributes #2 = { nofree nounwind readonly }
+; CHECK: attributes #2 = { nofree nosync nounwind readnone }
 ; CHECK: attributes #3 = { nounwind }
 ; CHECK: attributes #4 = { mustprogress nofree nosync nounwind readnone willreturn }
 ; CHECK: attributes #5 = { argmemonly mustprogress nofree nosync nounwind willreturn }

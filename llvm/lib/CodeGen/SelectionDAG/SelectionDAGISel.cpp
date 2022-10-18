@@ -1193,11 +1193,11 @@ static void mapWasmLandingPadIndex(MachineBasicBlock *MBB,
   // In case of single catch (...), we don't emit LSDA, so we don't need
   // this information.
   bool IsSingleCatchAllClause =
-      CPI->getNumArgOperands() == 1 &&
+      CPI->arg_size() == 1 &&
       cast<Constant>(CPI->getArgOperand(0))->isNullValue();
   // cathchpads for longjmp use an empty type list, e.g. catchpad within %0 []
   // and they don't need LSDA info
-  bool IsCatchLongjmp = CPI->getNumArgOperands() == 0;
+  bool IsCatchLongjmp = CPI->arg_size() == 0;
   if (!IsSingleCatchAllClause && !IsCatchLongjmp) {
     // Create a mapping from landing pad label to landing pad index.
     bool IntrFound = false;
@@ -1969,7 +1969,7 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
 
   while (i != e) {
     unsigned Flags = cast<ConstantSDNode>(InOps[i])->getZExtValue();
-    if (!InlineAsm::isMemKind(Flags)) {
+    if (!InlineAsm::isMemKind(Flags) && !InlineAsm::isFuncKind(Flags)) {
       // Just skip over this operand, copying the operands verbatim.
       Ops.insert(Ops.end(), InOps.begin()+i,
                  InOps.begin()+i+InlineAsm::getNumOperandRegisters(Flags) + 1);
@@ -1998,7 +1998,9 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
 
       // Add this to the output node.
       unsigned NewFlags =
-        InlineAsm::getFlagWord(InlineAsm::Kind_Mem, SelOps.size());
+          InlineAsm::isMemKind(Flags)
+              ? InlineAsm::getFlagWord(InlineAsm::Kind_Mem, SelOps.size())
+              : InlineAsm::getFlagWord(InlineAsm::Kind_Func, SelOps.size());
       NewFlags = InlineAsm::getFlagWordForMem(NewFlags, ConstraintID);
       Ops.push_back(CurDAG->getTargetConstant(NewFlags, DL, MVT::i32));
       llvm::append_range(Ops, SelOps);

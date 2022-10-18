@@ -895,3 +895,28 @@ transform.with_pdl_patterns {
     transform.cast %2 : !transform.op<"test.some_op"> to !pdl.operation
   }
 }
+
+// -----
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = pdl_match @some in %arg1 : (!pdl.operation) -> !pdl.operation
+    // here, the handles nested under are {%arg0, %arg1, %0}
+    // expected-remark @below {{3 handles nested under}}
+    transform.test_report_number_of_tracked_handles_nested_under %arg1
+    // expected-remark @below {{erased}}
+    transform.test_emit_remark_and_erase_operand %0, "erased"
+    // here, the handles nested under are only {%arg0, %arg1}
+    // expected-remark @below {{2 handles nested under}}
+    transform.test_report_number_of_tracked_handles_nested_under %arg1
+  }
+
+  pdl.pattern @some : benefit(1) {
+    %0 = pdl.operation "test.some_op"
+    pdl.rewrite %0 with "transform.dialect"
+  }
+}
+
+"test.some_op"() : () -> ()

@@ -801,7 +801,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   if ((!SoftFloat && !SoftFloatABI) || ABI == "aapcs-vfp" || ABI == "aapcs16")
     Builder.defineMacro("__ARM_PCS_VFP", "1");
 
-  if (SoftFloat)
+  if (SoftFloat || (SoftFloatABI && !FPU))
     Builder.defineMacro("__SOFTFP__");
 
   // ACLE position independent code macros.

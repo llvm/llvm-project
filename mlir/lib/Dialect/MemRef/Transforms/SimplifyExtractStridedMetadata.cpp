@@ -39,7 +39,7 @@ namespace {
 /// baseBuffer, baseOffset, baseSizes, baseStrides =
 ///     extract_strided_metadata(memref)
 /// strides#i = baseStrides#i * subSizes#i
-/// offset = baseOffset + sum(subOffset#i * strides#i)
+/// offset = baseOffset + sum(subOffset#i * baseStrides#i)
 /// sizes = subSizes
 /// \endverbatim
 ///
@@ -59,16 +59,12 @@ public:
     // Build a plain extract_strided_metadata(memref) from
     // extract_strided_metadata(subview(memref)).
     Location origLoc = op.getLoc();
-    IndexType indexType = rewriter.getIndexType();
     Value source = subview.getSource();
     auto sourceType = source.getType().cast<MemRefType>();
     unsigned sourceRank = sourceType.getRank();
-    SmallVector<Type> sizeStrideTypes(sourceRank, indexType);
 
     auto newExtractStridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(
-            origLoc, op.getBaseBuffer().getType(), indexType, sizeStrideTypes,
-            sizeStrideTypes, source);
+        rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
 
     SmallVector<int64_t> sourceStrides;
     int64_t sourceOffset;
@@ -87,8 +83,8 @@ public:
     auto origStrides = newExtractStridedMetadata.getStrides();
 
     // Hold the affine symbols and values for the computation of the offset.
-    SmallVector<OpFoldResult> values(3 * sourceRank + 1);
-    SmallVector<AffineExpr> symbols(3 * sourceRank + 1);
+    SmallVector<OpFoldResult> values(2 * sourceRank + 1);
+    SmallVector<AffineExpr> symbols(2 * sourceRank + 1);
 
     detail::bindSymbolsList(rewriter.getContext(), symbols);
     AffineExpr expr = symbols.front();
@@ -109,14 +105,11 @@ public:
           rewriter, origLoc, s0 * s1, {subStrides[i], origStride}));
 
       // Build up the computation of the offset.
-      unsigned baseIdxForDim = 1 + 3 * i;
+      unsigned baseIdxForDim = 1 + 2 * i;
       unsigned subOffsetForDim = baseIdxForDim;
-      unsigned subStrideForDim = baseIdxForDim + 1;
-      unsigned origStrideForDim = baseIdxForDim + 2;
-      expr = expr + symbols[subOffsetForDim] * symbols[subStrideForDim] *
-                        symbols[origStrideForDim];
+      unsigned origStrideForDim = baseIdxForDim + 1;
+      expr = expr + symbols[subOffsetForDim] * symbols[origStrideForDim];
       values[subOffsetForDim] = subOffsets[i];
-      values[subStrideForDim] = subStrides[i];
       values[origStrideForDim] = origStride;
     }
 
@@ -486,16 +479,12 @@ public:
     // Build a plain extract_strided_metadata(memref) from
     // extract_strided_metadata(reassociative_reshape_like(memref)).
     Location origLoc = op.getLoc();
-    IndexType indexType = rewriter.getIndexType();
     Value source = reshape.getSrc();
     auto sourceType = source.getType().cast<MemRefType>();
     unsigned sourceRank = sourceType.getRank();
-    SmallVector<Type> sizeStrideTypes(sourceRank, indexType);
 
     auto newExtractStridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(
-            origLoc, op.getBaseBuffer().getType(), indexType, sizeStrideTypes,
-            sizeStrideTypes, source);
+        rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
 
     // Collect statically known information.
     SmallVector<int64_t> strides;
@@ -726,6 +715,34 @@ class RewriteExtractAlignedPointerAsIndexOfViewLikeOp
     return success();
   }
 };
+
+/// Replace `base, offset =
+///            extract_strided_metadata(extract_strided_metadata(src)#0)`
+/// With
+/// ```
+/// base, ... = extract_strided_metadata(src)
+/// offset = 0
+/// ```
+class ExtractStridedMetadataOpExtractStridedMetadataFolder
+    : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult
+  matchAndRewrite(memref::ExtractStridedMetadataOp extractStridedMetadataOp,
+                  PatternRewriter &rewriter) const override {
+    auto sourceExtractStridedMetadataOp =
+        extractStridedMetadataOp.getSource()
+            .getDefiningOp<memref::ExtractStridedMetadataOp>();
+    if (!sourceExtractStridedMetadataOp)
+      return failure();
+    Location loc = extractStridedMetadataOp.getLoc();
+    rewriter.replaceOp(extractStridedMetadataOp,
+                       {sourceExtractStridedMetadataOp.getBaseBuffer(),
+                        getValueOrCreateConstantIndexOp(
+                            rewriter, loc, rewriter.getIndexAttr(0))});
+    return success();
+  }
+};
 } // namespace
 
 void memref::populateSimplifyExtractStridedMetadataOpPatterns(
@@ -739,7 +756,8 @@ void memref::populateSimplifyExtractStridedMetadataOpPatterns(
            ForwardStaticMetadata,
            ExtractStridedMetadataOpAllocFolder<memref::AllocOp>,
            ExtractStridedMetadataOpAllocFolder<memref::AllocaOp>,
-           RewriteExtractAlignedPointerAsIndexOfViewLikeOp>(
+           RewriteExtractAlignedPointerAsIndexOfViewLikeOp,
+           ExtractStridedMetadataOpExtractStridedMetadataFolder>(
           patterns.getContext());
 }
 

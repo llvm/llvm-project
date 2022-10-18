@@ -6,13 +6,12 @@
 struct ext2_super_block{
   unsigned char s_uuid[8]; // expected-note {{declared here}}
 };
-void* ext2_statfs (struct ext2_super_block *es,int a)
-{
-	 return (void *)es->s_uuid + sizeof(int); // no-warning
+
+void* ext2_statfs (struct ext2_super_block *es,int a) {
+  return (void *)es->s_uuid + sizeof(int); // no-warning
 }
-void* broken (struct ext2_super_block *es,int a)
-{
-	 return (void *)es->s_uuid + 80; // expected-warning {{refers past the end of the array}}
+void* broken (struct ext2_super_block *es,int a) {
+  return (void *)es->s_uuid + 9; // expected-warning {{the pointer incremented by 9 refers past the end of the array}}
 }
 
 // Test case reduced from PR11594

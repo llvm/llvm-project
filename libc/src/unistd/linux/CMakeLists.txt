@@ -160,6 +160,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getcwd
+  SRCS
+    getcwd.cpp
+  HDRS
+    ../getcwd.h
+  DEPENDS
+    libc.include.errno
+    libc.include.stdlib
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   geteuid
   SRCS
     geteuid.cpp

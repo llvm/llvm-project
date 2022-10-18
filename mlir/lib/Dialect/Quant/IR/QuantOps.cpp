@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Quant/QuantOps.h"
+#include "QuantDialectBytecode.h"
 #include "TypeDetail.h"
 
 #include "mlir/Dialect/Quant/QuantTypes.h"
@@ -32,6 +33,7 @@ void QuantizationDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Quant/QuantOps.cpp.inc"
       >();
+  addBytecodeInterface(this);
 }
 
 OpFoldResult StorageCastOp::fold(ArrayRef<Attribute> operands) {

@@ -335,8 +335,8 @@ def ReadVIWALUX       : SchedRead;
 // 11.3. Vector Integer Extension
 def ReadVExtV         : SchedRead;
 // 11.4. Vector Integer Arithmetic with Carry or Borrow Instructions
-def ReadVIALUCV       : SchedRead;
-def ReadVIALUCX       : SchedRead;
+def ReadVICALUV       : SchedRead;
+def ReadVICALUX       : SchedRead;
 // 11.6. Vector Single-Width Bit Shift Instructions
 def ReadVShiftV       : SchedRead;
 def ReadVShiftX       : SchedRead;
@@ -754,8 +754,8 @@ def : ReadAdvance<ReadVIALUX, 0>;
 def : ReadAdvance<ReadVIWALUV, 0>;
 def : ReadAdvance<ReadVIWALUX, 0>;
 def : ReadAdvance<ReadVExtV, 0>;
-def : ReadAdvance<ReadVIALUCV, 0>;
-def : ReadAdvance<ReadVIALUCX, 0>;
+def : ReadAdvance<ReadVICALUV, 0>;
+def : ReadAdvance<ReadVICALUX, 0>;
 def : ReadAdvance<ReadVShiftV, 0>;
 def : ReadAdvance<ReadVShiftX, 0>;
 def : ReadAdvance<ReadVNShiftV, 0>;

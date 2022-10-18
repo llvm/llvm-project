@@ -61,7 +61,7 @@ def loopPipeline():
   # CHECK-LABEL: TEST: loopPipeline
   # CHECK: = transform.loop.pipeline %
   # CHECK-DAG: iteration_interval = 3
-  # CHECK-DAG: read_latency = 10
+  # (read_latency has default value and is not printed)
 
 
 @run

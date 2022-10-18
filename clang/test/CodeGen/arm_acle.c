@@ -124,7 +124,7 @@ void test_sevl(void) {
   __sevl();
 }
 
-#if __ARM_32BIT_STATE
+#ifdef __ARM_32BIT_STATE
 // AArch32-LABEL: @test_dbg(
 // AArch32-NEXT:  entry:
 // AArch32-NEXT:    call void @llvm.arm.dbg(i32 0)
@@ -1646,7 +1646,7 @@ void test_wsrf64(double v) {
 #endif
 }
 
-#ifdef __ARM_64BIT_STATE
+#if defined(__ARM_64BIT_STATE) && defined(__ARM_FEATURE_JCVT)
 // AArch6483-LABEL: @test_jcvt(
 // AArch6483-NEXT:  entry:
 // AArch6483-NEXT:    [[TMP0:%.*]] = call i32 @llvm.aarch64.fjcvtzs(double [[V:%.*]])
@@ -1658,7 +1658,7 @@ int32_t test_jcvt(double v) {
 #endif
 
 
-#if __ARM_64BIT_STATE && defined(__ARM_FEATURE_RNG)
+#if defined(__ARM_64BIT_STATE) && defined(__ARM_FEATURE_RNG)
 
 // AArch6485-LABEL: @test_rndr(
 // AArch6485-NEXT:  entry:

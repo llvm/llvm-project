@@ -68,17 +68,17 @@ public:
     if (!outputType || !outputType.hasStaticShape())
       return failure();
 
-    if (!llvm::all_of(genericOp.getInputOperands(), [](OpOperand *operand) {
-          return operand->get().getType().isa<ShapedType>();
+    if (!llvm::all_of(genericOp.getInputs(), [](Value input) {
+          return input.getType().isa<ShapedType>();
         }))
       return failure();
 
     // Make sure all element types are the same.
-    auto getOperandElementType = [](OpOperand *operand) {
-      return operand->get().getType().cast<ShapedType>().getElementType();
+    auto getOperandElementType = [](Value value) {
+      return value.getType().cast<ShapedType>().getElementType();
     };
-    if (!llvm::all_equal(llvm::map_range(genericOp.getInputAndOutputOperands(),
-                                         getOperandElementType)))
+    if (!llvm::all_equal(
+            llvm::map_range(genericOp->getOperands(), getOperandElementType)))
       return failure();
 
     // We can only handle the case where we have int/float elements.
@@ -114,15 +114,15 @@ public:
     // All inputs should be constants.
     int numInputs = genericOp.getNumInputs();
     SmallVector<DenseIntOrFPElementsAttr> inputValues(numInputs);
-    for (const auto &operand : llvm::enumerate(genericOp.getInputOperands())) {
-      if (!matchPattern(operand.value()->get(),
-                        m_Constant(&inputValues[operand.index()])))
+    for (const auto &en : llvm::enumerate(genericOp.getInputOperands())) {
+      if (!matchPattern(en.value()->get(),
+                        m_Constant(&inputValues[en.index()])))
         return failure();
     }
 
     // Identified this as a potential candidate for folding. Now check the
     // policy to see whether we are allowed to proceed.
-    for (auto *operand : genericOp.getInputOperands()) {
+    for (OpOperand *operand : genericOp.getInputOperands()) {
       if (!controlFn(operand))
         return failure();
     }
@@ -171,8 +171,8 @@ public:
     APIntOrFloatArray computeFnInputs;
 
     auto inputShapes = llvm::to_vector<4>(
-        llvm::map_range(genericOp.getInputOperands(), [](OpOperand *operand) {
-          return operand->get().getType().cast<ShapedType>().getShape();
+        llvm::map_range(genericOp.getInputs(), [](Value value) {
+          return value.getType().cast<ShapedType>().getShape();
         }));
 
     // Given a `linearIndex`, remap it to a linear index to access linalg op

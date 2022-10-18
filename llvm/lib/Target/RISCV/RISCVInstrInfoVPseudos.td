@@ -2496,62 +2496,62 @@ multiclass VPseudoVMRG_VM_XM_IM {
 
 multiclass VPseudoVCALU_VM_XM_IM {
   defm "" : VPseudoBinaryV_VM,
-            Sched<[WriteVICALUV, ReadVIALUCV, ReadVIALUCV, ReadVMask]>;
+            Sched<[WriteVICALUV, ReadVICALUV, ReadVICALUV, ReadVMask]>;
   defm "" : VPseudoBinaryV_XM,
-            Sched<[WriteVICALUX, ReadVIALUCV, ReadVIALUCX, ReadVMask]>;
+            Sched<[WriteVICALUX, ReadVICALUV, ReadVICALUX, ReadVMask]>;
   defm "" : VPseudoBinaryV_IM,
-            Sched<[WriteVICALUI, ReadVIALUCV, ReadVMask]>;
+            Sched<[WriteVICALUI, ReadVICALUV, ReadVMask]>;
   // Tied versions to allow codegen control over the tail elements
   defm "" : VPseudoTiedBinaryV_VM,
-            Sched<[WriteVICALUV, ReadVIALUCV, ReadVIALUCV, ReadVMask]>;
+            Sched<[WriteVICALUV, ReadVICALUV, ReadVICALUV, ReadVMask]>;
   defm "" : VPseudoTiedBinaryV_XM,
-            Sched<[WriteVICALUX, ReadVIALUCV, ReadVIALUCX, ReadVMask]>;
+            Sched<[WriteVICALUX, ReadVICALUV, ReadVICALUX, ReadVMask]>;
   defm "" : VPseudoTiedBinaryV_IM,
-            Sched<[WriteVICALUI, ReadVIALUCV, ReadVMask]>;
+            Sched<[WriteVICALUI, ReadVICALUV, ReadVMask]>;
 }
 
 multiclass VPseudoVCALU_VM_XM {
   defm "" : VPseudoBinaryV_VM,
-            Sched<[WriteVICALUV, ReadVIALUCV, ReadVIALUCV, ReadVMask]>;
+            Sched<[WriteVICALUV, ReadVICALUV, ReadVICALUV, ReadVMask]>;
   defm "" : VPseudoBinaryV_XM,
-            Sched<[WriteVICALUX, ReadVIALUCV, ReadVIALUCX, ReadVMask]>;
+            Sched<[WriteVICALUX, ReadVICALUV, ReadVICALUX, ReadVMask]>;
   // Tied versions to allow codegen control over the tail elements
   defm "" : VPseudoTiedBinaryV_VM,
-            Sched<[WriteVICALUV, ReadVIALUCV, ReadVIALUCV, ReadVMask]>;
+            Sched<[WriteVICALUV, ReadVICALUV, ReadVICALUV, ReadVMask]>;
   defm "" : VPseudoTiedBinaryV_XM,
-            Sched<[WriteVICALUX, ReadVIALUCV, ReadVIALUCX, ReadVMask]>;
+            Sched<[WriteVICALUX, ReadVICALUV, ReadVICALUX, ReadVMask]>;
 }
 
 multiclass VPseudoVCALUM_VM_XM_IM<string Constraint> {
   defm "" : VPseudoBinaryV_VM</*CarryOut=*/1, /*CarryIn=*/1, Constraint>,
-            Sched<[WriteVICALUV, ReadVIALUCV, ReadVIALUCV, ReadVMask]>;
+            Sched<[WriteVICALUV, ReadVICALUV, ReadVICALUV, ReadVMask]>;
   defm "" : VPseudoBinaryV_XM</*CarryOut=*/1, /*CarryIn=*/1, Constraint>,
-            Sched<[WriteVICALUX, ReadVIALUCV, ReadVIALUCX, ReadVMask]>;
+            Sched<[WriteVICALUX, ReadVICALUV, ReadVICALUX, ReadVMask]>;
   defm "" : VPseudoBinaryV_IM</*CarryOut=*/1, /*CarryIn=*/1, Constraint>,
-            Sched<[WriteVICALUI, ReadVIALUCV, ReadVMask]>;
+            Sched<[WriteVICALUI, ReadVICALUV, ReadVMask]>;
 }
 
 multiclass VPseudoVCALUM_VM_XM<string Constraint> {
   defm "" : VPseudoBinaryV_VM</*CarryOut=*/1, /*CarryIn=*/1, Constraint>,
-            Sched<[WriteVICALUV, ReadVIALUCV, ReadVIALUCV, ReadVMask]>;
+            Sched<[WriteVICALUV, ReadVICALUV, ReadVICALUV, ReadVMask]>;
   defm "" : VPseudoBinaryV_XM</*CarryOut=*/1, /*CarryIn=*/1, Constraint>,
-            Sched<[WriteVICALUX, ReadVIALUCV, ReadVIALUCX, ReadVMask]>;
+            Sched<[WriteVICALUX, ReadVICALUV, ReadVICALUX, ReadVMask]>;
 }
 
 multiclass VPseudoVCALUM_V_X_I<string Constraint> {
   defm "" : VPseudoBinaryV_VM</*CarryOut=*/1, /*CarryIn=*/0, Constraint>,
-            Sched<[WriteVICALUV, ReadVIALUCV, ReadVIALUCV]>;
+            Sched<[WriteVICALUV, ReadVICALUV, ReadVICALUV]>;
   defm "" : VPseudoBinaryV_XM</*CarryOut=*/1, /*CarryIn=*/0, Constraint>,
-            Sched<[WriteVICALUX, ReadVIALUCV, ReadVIALUCX]>;
+            Sched<[WriteVICALUX, ReadVICALUV, ReadVICALUX]>;
   defm "" : VPseudoBinaryV_IM</*CarryOut=*/1, /*CarryIn=*/0, Constraint>,
-            Sched<[WriteVICALUI, ReadVIALUCV]>;
+            Sched<[WriteVICALUI, ReadVICALUV]>;
 }
 
 multiclass VPseudoVCALUM_V_X<string Constraint> {
   defm "" : VPseudoBinaryV_VM</*CarryOut=*/1, /*CarryIn=*/0, Constraint>,
-            Sched<[WriteVICALUV, ReadVIALUCV, ReadVIALUCV]>;
+            Sched<[WriteVICALUV, ReadVICALUV, ReadVICALUV]>;
   defm "" : VPseudoBinaryV_XM</*CarryOut=*/1, /*CarryIn=*/0, Constraint>,
-            Sched<[WriteVICALUX, ReadVIALUCV, ReadVIALUCX]>;
+            Sched<[WriteVICALUX, ReadVICALUV, ReadVICALUX]>;
 }
 
 multiclass VPseudoVNCLP_WV_WX_WI {

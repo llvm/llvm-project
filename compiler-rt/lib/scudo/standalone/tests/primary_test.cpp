@@ -145,7 +145,7 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, BasicPrimary) {
 
 struct SmallRegionsConfig {
   using SizeClassMap = scudo::DefaultSizeClassMap;
-  static const scudo::uptr PrimaryRegionSizeLog = 20U;
+  static const scudo::uptr PrimaryRegionSizeLog = 21U;
   static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
   static const bool MaySupportMemoryTagging = false;
@@ -176,7 +176,7 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
       AllocationFailed = true;
       break;
     }
-    for (scudo::u32 J = 0; J < B->getCount(); J++)
+    for (scudo::u16 J = 0; J < B->getCount(); J++)
       memset(Allocator.decompactPtr(ClassId, B->get(J)), 'B', Size);
     Batches.push_back(B);
   }

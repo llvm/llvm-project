@@ -64,20 +64,22 @@ def Vector_CombiningKindAttr : EnumAttr<Vector_Dialect, CombiningKind, "kind"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-def IteratorType : I32EnumAttr<"IteratorType", "Iterator type", [
+def Vector_IteratorType : I32EnumAttr<"IteratorType", "Iterator type", [
   I32EnumAttrCase<"parallel", 0>,
   I32EnumAttrCase<"reduction", 1>
-  ]> {
+]> {
     let genSpecializedAttr = 0;
     let cppNamespace = "::mlir::vector";
 }
 
-def IteratorTypeEnum : EnumAttr<Vector_Dialect, IteratorType, "iterator_type"> {
-  let assemblyFormat = "`<` $value `>`";
+def Vector_IteratorTypeEnum
+    : EnumAttr<Vector_Dialect, Vector_IteratorType, "iterator_type"> {
+    let assemblyFormat = "`<` $value `>`";
 }
 
-def IteratorTypeArrayAttr : TypedArrayAttrBase<IteratorTypeEnum,
-    "Iterator type should be an enum.">;
+def Vector_IteratorTypeArrayAttr
+    : TypedArrayAttrBase<Vector_IteratorTypeEnum,
+                         "Iterator type should be an enum.">;
 
 // TODO: Add an attribute to specify a different algebra with operators other
 // than the current set: {*, +}.
@@ -92,7 +94,7 @@ def Vector_ContractionOp :
     Arguments<(ins AnyVector:$lhs, AnyVector:$rhs, AnyType:$acc,
                Variadic<VectorOf<[I1]>>:$masks,
                ArrayAttr:$indexing_maps,
-               IteratorTypeArrayAttr:$iterator_types,
+               Vector_IteratorTypeArrayAttr:$iterator_types,
                DefaultValuedAttr<Vector_CombiningKindAttr,
                                  "CombiningKind::ADD">:$kind)>,
     Results<(outs AnyType)> {
@@ -112,22 +114,23 @@ def Vector_ContractionOp :
     An iterator type attribute list must be specified, where each element of
     the list represents an iterator with one of the following types:
 
-    *) "reduction": reduction dimensions are present in the lhs and rhs
-                    arguments but not in the output (and accumulator
-                    argument). These are the dimensions along which the vector
-                    contraction op computes the sum of products, and
-                    contracting dimension pair dimension sizes must match
-                    between lhs/rhs.
-    *) "parallel": Batch dimensions are iterator type "parallel", and
-                   are non-contracting dimensions present in the lhs, rhs and
-                   output. The lhs/rhs co-iterate along the batch dimensions,
-                   which should be expressed in their indexing maps.
+    *   "reduction": reduction dimensions are present in the lhs and rhs
+        arguments but not in the output (and accumulator
+        argument). These are the dimensions along which the vector
+        contraction op computes the sum of products, and
+        contracting dimension pair dimension sizes must match
+        between lhs/rhs.
 
-                   Free dimensions are iterator type "parallel", and are
-                   non-contraction, non-batch dimensions accessed by either the
-                   lhs or rhs (but not both). The lhs and rhs free dimensions
-                   are unrelated to each other and do not co-iterate, which
-                   should be expressed in their indexing maps.
+    *   "parallel": Batch dimensions are iterator type "parallel", and
+        are non-contracting dimensions present in the lhs, rhs and
+        output. The lhs/rhs co-iterate along the batch dimensions,
+        which should be expressed in their indexing maps.
+
+        Free dimensions are iterator type "parallel", and are
+        non-contraction, non-batch dimensions accessed by either the
+        lhs or rhs (but not both). The lhs and rhs free dimensions
+        are unrelated to each other and do not co-iterate, which
+        should be expressed in their indexing maps.
 
     An indexing map attribute list must be specified with an entry for lhs, rhs
     and acc arguments. An indexing map attribute specifies a mapping from each

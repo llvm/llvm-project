@@ -3,7 +3,7 @@
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
 
 // CHECK: @[[CB:.+]] = external constant { float, double }
-cbuffer A : register(b0, space1) {
+cbuffer A : register(b0, space2) {
   float a;
   double b;
 }
@@ -21,3 +21,8 @@ float foo() {
 // CHECK: load double, ptr getelementptr inbounds ({ float, double }, ptr @[[TB]], i32 0, i32 1), align 8
   return a + b + c*d;
 }
+
+// CHECK: !hlsl.cbufs = !{![[CBMD:[0-9]+]]}
+// CHECK: !hlsl.srvs = !{![[TBMD:[0-9]+]]}
+// CHECK: ![[CBMD]] = !{ptr @[[CB]], !"A.cb.ty", i32 0, i32 13, i32 0, i32 2}
+// CHECK: ![[TBMD]] = !{ptr @[[TB]], !"A.tb.ty", i32 0, i32 15, i32 2, i32 1}

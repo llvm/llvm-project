@@ -76,7 +76,5 @@ static void extractMetadataFromModule(Oracle &O, Module &Program) {
 }
 
 void llvm::reduceMetadataDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing Metadata...\n";
-  runDeltaPass(Test, extractMetadataFromModule);
-  outs() << "----------------------------\n";
+  runDeltaPass(Test, extractMetadataFromModule, "Reducing Metadata");
 }
