@@ -112,7 +112,7 @@ This affects both matchers and AST dump output in results.
 <span class="mono">traverse()</span> matcher is used to set the mode:
 <pre>
 Finder->addMatcher(traverse(TK_IgnoreUnlessSpelledInSource,
-  returnStmt(hasReturnArgument(integerLiteral(equals(0))))
+  returnStmt(hasReturnValue(integerLiteral(equals(0))))
   ), this);
 </pre>
 </p>
