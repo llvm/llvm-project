@@ -41,7 +41,7 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
 
   AliasResult getAlias(Type type, raw_ostream &os) const final {
     if (auto structType = type.dyn_cast<StructType>()) {
-      os << structType.getTypeName();
+      os << "ty_" << structType.getTypeName();
       return AliasResult::OverridableAlias;
     }
 
