@@ -745,7 +745,7 @@ struct EmulateWideIntPass final
             opLegalCallback);
 
     RewritePatternSet patterns(ctx);
-    arith::populateWideIntEmulationPatterns(typeConverter, patterns);
+    arith::populateArithWideIntEmulationPatterns(typeConverter, patterns);
 
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       signalPassFailure();
@@ -817,7 +817,7 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
   });
 }
 
-void arith::populateWideIntEmulationPatterns(
+void arith::populateArithWideIntEmulationPatterns(
     WideIntEmulationConverter &typeConverter, RewritePatternSet &patterns) {
   // Populate `func.*` conversion patterns.
   populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,

@@ -1,5 +1,3 @@
-import("//llvm/utils/TableGen/tablegen.gni")
-
 static_library("OpenMP") {
   output_name = "LLVMFrontendOpenMP"
   deps = [

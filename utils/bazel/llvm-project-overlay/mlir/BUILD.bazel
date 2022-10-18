@@ -294,10 +294,11 @@ cc_library(
     srcs = glob([
         "lib/IR/*.cpp",
         "lib/IR/*.h",
-    ]) + ["include/mlir/Bytecode/BytecodeImplementation.h"],
+    ]),
     hdrs = glob([
         "include/mlir/IR/*.h",
     ]) + [
+        "include/mlir/Bytecode/BytecodeImplementation.h",
         "include/mlir/Interfaces/CallInterfaces.h",
         "include/mlir/Interfaces/CastInterfaces.h",
         "include/mlir/Interfaces/SideEffectInterfaces.h",
@@ -3505,24 +3506,6 @@ gentbl_cc_library(
     deps = [":LLVMOpsTdFiles"],
 )
 
-gentbl_cc_library(
-    name = "LLVMDialectAttributesIncGen",
-    strip_include_prefix = "include",
-    tbl_outs = [
-        (
-            ["--gen-attrdef-decls"],
-            "include/mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.h.inc",
-        ),
-        (
-            ["--gen-attrdef-defs"],
-            "include/mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc",
-        ),
-    ],
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/LLVMIR/LLVMAttrDefs.td",
-    deps = [":LLVMOpsTdFiles"],
-)
-
 cc_library(
     name = "LLVMDialect",
     srcs = glob(
@@ -3560,7 +3543,6 @@ cc_library(
         ":DataLayoutInterfaces",
         ":IR",
         ":InferTypeOpInterface",
-        ":LLVMDialectAttributesIncGen",
         ":LLVMDialectInterfaceIncGen",
         ":LLVMIntrinsicOpsIncGen",
         ":LLVMOpsIncGen",
@@ -3860,6 +3842,7 @@ cc_library(
 td_library(
     name = "LLVMOpsTdFiles",
     srcs = [
+        "include/mlir/Dialect/LLVMIR/LLVMAttrDefs.td",
         "include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.td",
         "include/mlir/Dialect/LLVMIR/LLVMOpBase.td",
         "include/mlir/Dialect/LLVMIR/LLVMOps.td",
@@ -4225,6 +4208,14 @@ gentbl_cc_library(
         (
             ["-gen-enum-defs"],
             "include/mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc",
+        ),
+        (
+            ["--gen-attrdef-decls", "-attrdefs-dialect=llvm"],
+            "include/mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.h.inc",
+        ),
+        (
+            ["--gen-attrdef-defs", "-attrdefs-dialect=llvm"],
+            "include/mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
@@ -7406,6 +7397,8 @@ gentbl_cc_library(
 cc_library(
     name = "QuantOps",
     srcs = [
+        "lib/Dialect/Quant/IR/QuantDialectBytecode.h",
+        "lib/Dialect/Quant/IR/QuantDialectBytecode.cpp",
         "lib/Dialect/Quant/IR/QuantOps.cpp",
         "lib/Dialect/Quant/IR/QuantTypes.cpp",
         "lib/Dialect/Quant/IR/TypeDetail.h",
@@ -7428,6 +7421,7 @@ cc_library(
         ":Pass",
         ":QuantOpsIncGen",
         ":SideEffectInterfaces",
+        ":Support",
         ":TransformUtils",
         "//llvm:Support",
     ],

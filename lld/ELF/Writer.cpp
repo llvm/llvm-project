@@ -121,9 +121,9 @@ static void removeEmptyPTLoad(SmallVector<PhdrEntry *, 0> &phdrs) {
 
 void elf::copySectionsIntoPartitions() {
   SmallVector<InputSectionBase *, 0> newSections;
-  const size_t ehSize = ehInputSections.size();
+  const size_t ehSize = ctx.ehInputSections.size();
   for (unsigned part = 2; part != partitions.size() + 1; ++part) {
-    for (InputSectionBase *s : inputSections) {
+    for (InputSectionBase *s : ctx.inputSections) {
       if (!(s->flags & SHF_ALLOC) || !s->isLive() || s->type != SHT_NOTE)
         continue;
       auto *copy = make<InputSection>(cast<InputSection>(*s));
@@ -131,15 +131,15 @@ void elf::copySectionsIntoPartitions() {
       newSections.push_back(copy);
     }
     for (size_t i = 0; i != ehSize; ++i) {
-      assert(ehInputSections[i]->isLive());
-      auto *copy = make<EhInputSection>(*ehInputSections[i]);
+      assert(ctx.ehInputSections[i]->isLive());
+      auto *copy = make<EhInputSection>(*ctx.ehInputSections[i]);
       copy->partition = part;
-      ehInputSections.push_back(copy);
+      ctx.ehInputSections.push_back(copy);
     }
   }
 
-  inputSections.insert(inputSections.end(), newSections.begin(),
-                       newSections.end());
+  ctx.inputSections.insert(ctx.inputSections.end(), newSections.begin(),
+                           newSections.end());
 }
 
 static Defined *addOptionalRegular(StringRef name, SectionBase *sec,
@@ -273,11 +273,11 @@ template <class ELFT> void elf::createSyntheticSections() {
     for (size_t i = 1; i <= partitions.size(); ++i) {
       InputSection *sec = createInterpSection();
       sec->partition = i;
-      inputSections.push_back(sec);
+      ctx.inputSections.push_back(sec);
     }
   }
 
-  auto add = [](SyntheticSection &sec) { inputSections.push_back(&sec); };
+  auto add = [](SyntheticSection &sec) { ctx.inputSections.push_back(&sec); };
 
   in.shStrTab = std::make_unique<StringTableSection>(".shstrtab", false);
 
@@ -321,7 +321,7 @@ template <class ELFT> void elf::createSyntheticSections() {
   for (Partition &part : partitions) {
     auto add = [&](SyntheticSection &sec) {
       sec.partition = part.getNumber();
-      inputSections.push_back(&sec);
+      ctx.inputSections.push_back(&sec);
     };
 
     if (!part.name.empty()) {
@@ -1202,7 +1202,7 @@ static void maybeShuffle(DenseMap<const InputSectionBase *, int> &order) {
   if (config->shuffleSections.empty())
     return;
 
-  SmallVector<InputSectionBase *, 0> matched, sections = inputSections;
+  SmallVector<InputSectionBase *, 0> matched, sections = ctx.inputSections;
   matched.reserve(sections.size());
   for (const auto &patAndSeed : config->shuffleSections) {
     matched.clear();
@@ -1793,23 +1793,23 @@ static void removeUnusedSyntheticSections() {
   // All input synthetic sections that can be empty are placed after
   // all regular ones. Reverse iterate to find the first synthetic section
   // after a non-synthetic one which will be our starting point.
-  auto start = std::find_if(inputSections.rbegin(), inputSections.rend(),
-                            [](InputSectionBase *s) {
-                              return !isa<SyntheticSection>(s);
-                            })
-                   .base();
+  auto start =
+      std::find_if(
+          ctx.inputSections.rbegin(), ctx.inputSections.rend(),
+          [](InputSectionBase *s) { return !isa<SyntheticSection>(s); })
+          .base();
 
-  // Remove unused synthetic sections from inputSections;
+  // Remove unused synthetic sections from ctx.inputSections;
   DenseSet<InputSectionBase *> unused;
   auto end =
-      std::remove_if(start, inputSections.end(), [&](InputSectionBase *s) {
+      std::remove_if(start, ctx.inputSections.end(), [&](InputSectionBase *s) {
         auto *sec = cast<SyntheticSection>(s);
         if (sec->getParent() && sec->isNeeded())
           return false;
         unused.insert(sec);
         return true;
       });
-  inputSections.erase(end, inputSections.end());
+  ctx.inputSections.erase(end, ctx.inputSections.end());
 
   // Remove unused synthetic sections from the corresponding input section
   // description and orphanSections.

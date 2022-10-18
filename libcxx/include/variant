@@ -165,7 +165,7 @@ namespace std {
   template <class... Types>
   constexpr bool operator>=(const variant<Types...>&, const variant<Types...>&);
 
-  template <class... Types>
+  template <class... Types> requires (three_way_comparable<Types> && ...)
   constexpr common_comparison_category_t<compare_three_way_result_t<Types>...>
     operator<=>(const variant<Types...>&, const variant<Types...>&);           // since C++20
 
@@ -1638,7 +1638,7 @@ constexpr bool operator==(const variant<_Types...>& __lhs,
 
 #  if _LIBCPP_STD_VER > 17
 
-template <class... _Types>
+template <class... _Types> requires (three_way_comparable<_Types> && ...)
 _LIBCPP_HIDE_FROM_ABI constexpr common_comparison_category_t<compare_three_way_result_t<_Types>...>
 operator<=>(const variant<_Types...>& __lhs, const variant<_Types...>& __rhs) {
   using __variant_detail::__visitation::__variant;

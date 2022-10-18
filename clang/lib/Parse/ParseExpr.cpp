@@ -1003,7 +1003,12 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     break;
 
   case tok::kw_nullptr:
-    Diag(Tok, diag::warn_cxx98_compat_nullptr);
+    if (getLangOpts().CPlusPlus)
+      Diag(Tok, diag::warn_cxx98_compat_nullptr);
+    else
+      Diag(Tok, getLangOpts().C2x ? diag::warn_c17_compat_nullptr
+                                  : diag::ext_c_nullptr);
+
     Res = Actions.ActOnCXXNullPtrLiteral(ConsumeToken());
     break;
 

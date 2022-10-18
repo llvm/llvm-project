@@ -22,7 +22,17 @@ define i64 @get_pstatesm_streaming() nounwind "aarch64_pstate_sm_enabled" {
 define i64 @get_pstatesm_locally_streaming() nounwind "aarch64_pstate_sm_body" {
 ; CHECK-LABEL: get_pstatesm_locally_streaming:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-64]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov w0, #1
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #64 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %pstate = call i64 @llvm.aarch64.sme.get.pstatesm()
   ret i64 %pstate

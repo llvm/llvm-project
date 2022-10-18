@@ -779,7 +779,7 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
     }
 
   } else if (const auto *CPI = dyn_cast<CatchPadInst>(FirstI)) {
-    for (unsigned I = CPI->getNumArgOperands(); I != 0; --I) {
+    for (unsigned I = CPI->arg_size(); I != 0; --I) {
       Value *TypeInfo = CPI->getArgOperand(I - 1)->stripPointerCasts();
       addCatchTypeInfo(LandingPad, dyn_cast<GlobalValue>(TypeInfo));
     }

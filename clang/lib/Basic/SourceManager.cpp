@@ -2126,10 +2126,11 @@ std::pair<bool, bool> SourceManager::isInTheSameTranslationUnit(
       // doesn't matter as these are never mixed in macro expansion.
       unsigned LParent = I->second.ParentFID.ID;
       unsigned RParent = Parent.ID;
-      assert((LOffs.second != ROffs.second) || (LParent == 0 || RParent == 0) ||
-             isInSameSLocAddrSpace(getComposedLoc(I->second.ParentFID, 0),
-                                   getComposedLoc(Parent, 0), nullptr) &&
-                 "Mixed local/loaded FileIDs with same include location?");
+      assert(((LOffs.second != ROffs.second) ||
+              (LParent == 0 || RParent == 0) ||
+              isInSameSLocAddrSpace(getComposedLoc(I->second.ParentFID, 0),
+                                    getComposedLoc(Parent, 0), nullptr)) &&
+             "Mixed local/loaded FileIDs with same include location?");
       IsBeforeInTUCache.setCommonLoc(LOffs.first, LOffs.second, ROffs.second,
                                      LParent < RParent);
       return std::make_pair(

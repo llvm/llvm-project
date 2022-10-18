@@ -536,6 +536,23 @@ def StdC : StandardSpec<"stdc"> {
                ArgSpec<ConstCharPtr>]
           >,
           FunctionSpec<
+              "fputc",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>,
+               ArgSpec<FILEPtr>]
+          >,
+          FunctionSpec<
+              "putc",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>,
+               ArgSpec<FILEPtr>]
+          >,
+          FunctionSpec<
+              "putchar",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>]
+          >,
+          FunctionSpec<
               "fputs",
               RetValSpec<IntType>,
               [ArgSpec<ConstCharRestrictedPtr>,

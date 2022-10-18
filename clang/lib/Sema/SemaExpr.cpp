@@ -8724,6 +8724,12 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
     return ResTy;
   }
 
+  // C2x 6.5.15p7:
+  //   ... if both the second and third operands have nullptr_t type, the
+  //   result also has that type.
+  if (LHSTy->isNullPtrType() && Context.hasSameType(LHSTy, RHSTy))
+    return ResTy;
+
   // C99 6.5.15p6 - "if one operand is a null pointer constant, the result has
   // the type of the other operand."
   if (!checkConditionalNullPointer(*this, RHS, LHSTy)) return LHSTy;
@@ -9981,6 +9987,24 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
       return Incompatible;
   }
 
+  // This check seems unnatural, however it is necessary to ensure the proper
+  // conversion of functions/arrays. If the conversion were done for all
+  // DeclExpr's (created by ActOnIdExpression), it would mess up the unary
+  // expressions that suppress this implicit conversion (&, sizeof). This needs
+  // to happen before we check for null pointer conversions because C does not
+  // undergo the same implicit conversions as C++ does above (by the calls to
+  // TryImplicitConversion() and PerformImplicitConversion()) which insert the
+  // lvalue to rvalue cast before checking for null pointer constraints. This
+  // addresses code like: nullptr_t val; int *ptr; ptr = val;
+  //
+  // Suppress this for references: C++ 8.5.3p5.
+  if (!LHSType->isReferenceType()) {
+    // FIXME: We potentially allocate here even if ConvertRHS is false.
+    RHS = DefaultFunctionArrayLvalueConversion(RHS.get(), Diagnose);
+    if (RHS.isInvalid())
+      return Incompatible;
+  }
+
   // C99 6.5.16.1p1: the left operand is a pointer and the right is
   // a null pointer constant.
   if ((LHSType->isPointerType() || LHSType->isObjCObjectPointerType() ||
@@ -10005,18 +10029,6 @@ Sema::CheckSingleAssignmentConstraints(QualType LHSType, ExprResult &CallerRHS,
     return Compatible;
   }
 
-  // This check seems unnatural, however it is necessary to ensure the proper
-  // conversion of functions/arrays. If the conversion were done for all
-  // DeclExpr's (created by ActOnIdExpression), it would mess up the unary
-  // expressions that suppress this implicit conversion (&, sizeof).
-  //
-  // Suppress this for references: C++ 8.5.3p5.
-  if (!LHSType->isReferenceType()) {
-    // FIXME: We potentially allocate here even if ConvertRHS is false.
-    RHS = DefaultFunctionArrayLvalueConversion(RHS.get(), Diagnose);
-    if (RHS.isInvalid())
-      return Incompatible;
-  }
   CastKind Kind;
   Sema::AssignConvertType result =
     CheckAssignmentConstraints(LHSType, RHS, Kind, ConvertRHS);
@@ -12571,34 +12583,54 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     return computeResultTy();
   }
 
-  if (getLangOpts().CPlusPlus) {
-    // C++ [expr.eq]p4:
-    //   Two operands of type std::nullptr_t or one operand of type
-    //   std::nullptr_t and the other a null pointer constant compare equal.
-    if (!IsOrdered && LHSIsNull && RHSIsNull) {
-      if (LHSType->isNullPtrType()) {
-        RHS = ImpCastExprToType(RHS.get(), LHSType, CK_NullToPointer);
-        return computeResultTy();
-      }
-      if (RHSType->isNullPtrType()) {
-        LHS = ImpCastExprToType(LHS.get(), RHSType, CK_NullToPointer);
-        return computeResultTy();
-      }
-    }
 
-    // Comparison of Objective-C pointers and block pointers against nullptr_t.
-    // These aren't covered by the composite pointer type rules.
-    if (!IsOrdered && RHSType->isNullPtrType() &&
-        (LHSType->isObjCObjectPointerType() || LHSType->isBlockPointerType())) {
+  // C++ [expr.eq]p4:
+  //   Two operands of type std::nullptr_t or one operand of type
+  //   std::nullptr_t and the other a null pointer constant compare
+  //   equal.
+  // C2x 6.5.9p5:
+  //   If both operands have type nullptr_t or one operand has type nullptr_t
+  //   and the other is a null pointer constant, they compare equal.
+  if (!IsOrdered && LHSIsNull && RHSIsNull) {
+    if (LHSType->isNullPtrType()) {
       RHS = ImpCastExprToType(RHS.get(), LHSType, CK_NullToPointer);
       return computeResultTy();
     }
-    if (!IsOrdered && LHSType->isNullPtrType() &&
-        (RHSType->isObjCObjectPointerType() || RHSType->isBlockPointerType())) {
+    if (RHSType->isNullPtrType()) {
       LHS = ImpCastExprToType(LHS.get(), RHSType, CK_NullToPointer);
       return computeResultTy();
     }
+  }
 
+  if (!getLangOpts().CPlusPlus && !IsOrdered && (LHSIsNull || RHSIsNull)) {
+    // C2x 6.5.9p6:
+    //   Otherwise, at least one operand is a pointer. If one is a pointer and
+    //   the other is a null pointer constant, the null pointer constant is
+    //   converted to the type of the pointer.
+    if (LHSIsNull && RHSType->isPointerType()) {
+      LHS = ImpCastExprToType(LHS.get(), RHSType, CK_NullToPointer);
+      return computeResultTy();
+    }
+    if (RHSIsNull && LHSType->isPointerType()) {
+      RHS = ImpCastExprToType(RHS.get(), LHSType, CK_NullToPointer);
+      return computeResultTy();
+    }
+  }
+
+  // Comparison of Objective-C pointers and block pointers against nullptr_t.
+  // These aren't covered by the composite pointer type rules.
+  if (!IsOrdered && RHSType->isNullPtrType() &&
+      (LHSType->isObjCObjectPointerType() || LHSType->isBlockPointerType())) {
+    RHS = ImpCastExprToType(RHS.get(), LHSType, CK_NullToPointer);
+    return computeResultTy();
+  }
+  if (!IsOrdered && LHSType->isNullPtrType() &&
+      (RHSType->isObjCObjectPointerType() || RHSType->isBlockPointerType())) {
+    LHS = ImpCastExprToType(LHS.get(), RHSType, CK_NullToPointer);
+    return computeResultTy();
+  }
+
+  if (getLangOpts().CPlusPlus) {
     if (IsRelational &&
         ((LHSType->isNullPtrType() && RHSType->isPointerType()) ||
          (RHSType->isNullPtrType() && LHSType->isPointerType()))) {

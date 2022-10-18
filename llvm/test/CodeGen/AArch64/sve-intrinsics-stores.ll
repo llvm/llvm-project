@@ -154,7 +154,7 @@ define void @st3b_i8(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 1
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
-; CHECK-NEXT:    st3b { z0.b, z1.b, z2.b }, p0, [x0]
+; CHECK-NEXT:    st3b { z0.b - z2.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st3.nxv16i8(<vscale x 16 x i8> %v0,
                                           <vscale x 16 x i8> %v1,
@@ -174,7 +174,7 @@ define void @st3h_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale x 
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
-; CHECK-NEXT:    st3h { z0.h, z1.h, z2.h }, p0, [x0]
+; CHECK-NEXT:    st3h { z0.h - z2.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st3.nxv8i16(<vscale x 8 x i16> %v0,
                                           <vscale x 8 x i16> %v1,
@@ -190,7 +190,7 @@ define void @st3h_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale 
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
-; CHECK-NEXT:    st3h { z0.h, z1.h, z2.h }, p0, [x0]
+; CHECK-NEXT:    st3h { z0.h - z2.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st3.nxv8f16(<vscale x 8 x half> %v0,
                                           <vscale x 8 x half> %v1,
@@ -206,7 +206,7 @@ define void @st3h_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vs
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
-; CHECK-NEXT:    st3h { z0.h, z1.h, z2.h }, p0, [x0]
+; CHECK-NEXT:    st3h { z0.h - z2.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st3.nxv8bf16(<vscale x 8 x bfloat> %v0,
                                           <vscale x 8 x bfloat> %v1,
@@ -226,7 +226,7 @@ define void @st3w_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale x 
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
-; CHECK-NEXT:    st3w { z0.s, z1.s, z2.s }, p0, [x0]
+; CHECK-NEXT:    st3w { z0.s - z2.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st3.nxv4i32(<vscale x 4 x i32> %v0,
                                           <vscale x 4 x i32> %v1,
@@ -242,7 +242,7 @@ define void @st3w_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscal
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
-; CHECK-NEXT:    st3w { z0.s, z1.s, z2.s }, p0, [x0]
+; CHECK-NEXT:    st3w { z0.s - z2.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st3.nxv4f32(<vscale x 4 x float> %v0,
                                           <vscale x 4 x float> %v1,
@@ -262,7 +262,7 @@ define void @st3d_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale x 
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
-; CHECK-NEXT:    st3d { z0.d, z1.d, z2.d }, p0, [x0]
+; CHECK-NEXT:    st3d { z0.d - z2.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st3.nxv2i64(<vscale x 2 x i64> %v0,
                                           <vscale x 2 x i64> %v1,
@@ -278,7 +278,7 @@ define void @st3d_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vsc
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
-; CHECK-NEXT:    st3d { z0.d, z1.d, z2.d }, p0, [x0]
+; CHECK-NEXT:    st3d { z0.d - z2.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st3.nxv2f64(<vscale x 2 x double> %v0,
                                           <vscale x 2 x double> %v1,
@@ -294,7 +294,7 @@ define void @st3d_ptr(<vscale x 2 x i8*> %v0, <vscale x 2 x i8*> %v1, <vscale x 
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2 def $z0_z1_z2
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2 def $z0_z1_z2
-; CHECK-NEXT:    st3d { z0.d, z1.d, z2.d }, p0, [x0]
+; CHECK-NEXT:    st3d { z0.d - z2.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st3.nxv2p0i8(<vscale x 2 x i8*> %v0,
                                            <vscale x 2 x i8*> %v1,
@@ -315,7 +315,7 @@ define void @st4b_i8(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, <vscale x 1
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    st4b { z0.b, z1.b, z2.b, z3.b }, p0, [x0]
+; CHECK-NEXT:    st4b { z0.b - z3.b }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st4.nxv16i8(<vscale x 16 x i8> %v0,
                                           <vscale x 16 x i8> %v1,
@@ -337,7 +337,7 @@ define void @st4h_i16(<vscale x 8 x i16> %v0, <vscale x 8 x i16> %v1, <vscale x 
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    st4h { z0.h, z1.h, z2.h, z3.h }, p0, [x0]
+; CHECK-NEXT:    st4h { z0.h - z3.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st4.nxv8i16(<vscale x 8 x i16> %v0,
                                           <vscale x 8 x i16> %v1,
@@ -355,7 +355,7 @@ define void @st4h_f16(<vscale x 8 x half> %v0, <vscale x 8 x half> %v1, <vscale 
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    st4h { z0.h, z1.h, z2.h, z3.h }, p0, [x0]
+; CHECK-NEXT:    st4h { z0.h - z3.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st4.nxv8f16(<vscale x 8 x half> %v0,
                                           <vscale x 8 x half> %v1,
@@ -373,7 +373,7 @@ define void @st4h_bf16(<vscale x 8 x bfloat> %v0, <vscale x 8 x bfloat> %v1, <vs
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    st4h { z0.h, z1.h, z2.h, z3.h }, p0, [x0]
+; CHECK-NEXT:    st4h { z0.h - z3.h }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st4.nxv8bf16(<vscale x 8 x bfloat> %v0,
                                           <vscale x 8 x bfloat> %v1,
@@ -395,7 +395,7 @@ define void @st4w_i32(<vscale x 4 x i32> %v0, <vscale x 4 x i32> %v1, <vscale x 
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    st4w { z0.s, z1.s, z2.s, z3.s }, p0, [x0]
+; CHECK-NEXT:    st4w { z0.s - z3.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st4.nxv4i32(<vscale x 4 x i32> %v0,
                                           <vscale x 4 x i32> %v1,
@@ -413,7 +413,7 @@ define void @st4w_f32(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1, <vscal
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    st4w { z0.s, z1.s, z2.s, z3.s }, p0, [x0]
+; CHECK-NEXT:    st4w { z0.s - z3.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st4.nxv4f32(<vscale x 4 x float> %v0,
                                           <vscale x 4 x float> %v1,
@@ -435,7 +435,7 @@ define void @st4d_i64(<vscale x 2 x i64> %v0, <vscale x 2 x i64> %v1, <vscale x 
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    st4d { z0.d, z1.d, z2.d, z3.d }, p0, [x0]
+; CHECK-NEXT:    st4d { z0.d - z3.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st4.nxv2i64(<vscale x 2 x i64> %v0,
                                           <vscale x 2 x i64> %v1,
@@ -453,7 +453,7 @@ define void @st4d_f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vsc
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    st4d { z0.d, z1.d, z2.d, z3.d }, p0, [x0]
+; CHECK-NEXT:    st4d { z0.d - z3.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st4.nxv2f64(<vscale x 2 x double> %v0,
                                           <vscale x 2 x double> %v1,
@@ -471,7 +471,7 @@ define void @st4d_ptr(<vscale x 2 x i8*> %v0, <vscale x 2 x i8*> %v1, <vscale x 
 ; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    st4d { z0.d, z1.d, z2.d, z3.d }, p0, [x0]
+; CHECK-NEXT:    st4d { z0.d - z3.d }, p0, [x0]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sve.st4.nxv2p0i8(<vscale x 2 x i8*> %v0,
                                            <vscale x 2 x i8*> %v1,

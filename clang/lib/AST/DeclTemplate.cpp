@@ -1532,9 +1532,10 @@ TemplateParamObjectDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
   return TPOD;
 }
 
-void TemplateParamObjectDecl::printName(llvm::raw_ostream &OS) const {
+void TemplateParamObjectDecl::printName(llvm::raw_ostream &OS,
+                                        const PrintingPolicy &Policy) const {
   OS << "<template param ";
-  printAsExpr(OS);
+  printAsExpr(OS, Policy);
   OS << ">";
 }
 
@@ -1555,4 +1556,57 @@ void TemplateParamObjectDecl::printAsInit(llvm::raw_ostream &OS) const {
 void TemplateParamObjectDecl::printAsInit(llvm::raw_ostream &OS,
                                           const PrintingPolicy &Policy) const {
   getValue().printPretty(OS, Policy, getType(), &getASTContext());
+}
+
+TemplateParameterList *clang::getReplacedTemplateParameterList(Decl *D) {
+  switch (D->getKind()) {
+  case Decl::Kind::ClassTemplate:
+    return cast<ClassTemplateDecl>(D)->getTemplateParameters();
+  case Decl::Kind::ClassTemplateSpecialization: {
+    const auto *CTSD = cast<ClassTemplateSpecializationDecl>(D);
+    auto P = CTSD->getSpecializedTemplateOrPartial();
+    if (const auto *CTPSD =
+            P.dyn_cast<ClassTemplatePartialSpecializationDecl *>())
+      return CTPSD->getTemplateParameters();
+    return cast<ClassTemplateDecl *>(P)->getTemplateParameters();
+  }
+  case Decl::Kind::ClassTemplatePartialSpecialization:
+    return cast<ClassTemplatePartialSpecializationDecl>(D)
+        ->getTemplateParameters();
+  case Decl::Kind::TypeAliasTemplate:
+    return cast<TypeAliasTemplateDecl>(D)->getTemplateParameters();
+  case Decl::Kind::BuiltinTemplate:
+    return cast<BuiltinTemplateDecl>(D)->getTemplateParameters();
+  case Decl::Kind::CXXDeductionGuide:
+  case Decl::Kind::CXXConversion:
+  case Decl::Kind::CXXConstructor:
+  case Decl::Kind::CXXDestructor:
+  case Decl::Kind::CXXMethod:
+  case Decl::Kind::Function:
+    return cast<FunctionDecl>(D)
+        ->getTemplateSpecializationInfo()
+        ->getTemplate()
+        ->getTemplateParameters();
+  case Decl::Kind::FunctionTemplate:
+    return cast<FunctionTemplateDecl>(D)->getTemplateParameters();
+  case Decl::Kind::VarTemplate:
+    return cast<VarTemplateDecl>(D)->getTemplateParameters();
+  case Decl::Kind::VarTemplateSpecialization: {
+    const auto *VTSD = cast<VarTemplateSpecializationDecl>(D);
+    auto P = VTSD->getSpecializedTemplateOrPartial();
+    if (const auto *VTPSD =
+            P.dyn_cast<VarTemplatePartialSpecializationDecl *>())
+      return VTPSD->getTemplateParameters();
+    return cast<VarTemplateDecl *>(P)->getTemplateParameters();
+  }
+  case Decl::Kind::VarTemplatePartialSpecialization:
+    return cast<VarTemplatePartialSpecializationDecl>(D)
+        ->getTemplateParameters();
+  case Decl::Kind::TemplateTemplateParm:
+    return cast<TemplateTemplateParmDecl>(D)->getTemplateParameters();
+  case Decl::Kind::Concept:
+    return cast<ConceptDecl>(D)->getTemplateParameters();
+  default:
+    llvm_unreachable("Unhandled templated declaration kind");
+  }
 }

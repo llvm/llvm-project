@@ -910,10 +910,10 @@ Optional<unsigned> Merger::buildTensorExp(linalg::GenericOp op, Value v) {
     // argument is considered a tensor, indexed by the implicit loop
     // bounds. This includes rank-0 tensor arguments.
     if (arg.getOwner()->getParentOp() == op) {
-      OpOperand *t = op.getInputAndOutputOperands()[argN];
-      if (!op.isScalar(t))
+      OpOperand &t = op->getOpOperand(argN);
+      if (!op.isScalar(&t))
         return addExp(kTensor, argN);
-      v = t->get(); // get scalar value
+      v = t.get(); // get scalar value
     }
     // Any other argument (marked as scalar argument for the generic op
     // or belonging to an enveloping op) is considered invariant.

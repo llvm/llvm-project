@@ -215,6 +215,10 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
     getRegionBuilder() {
       return nullptr;
     }
+    std::pair<int64_t, int64_t> getOutputsPositionRange() {
+      int64_t getNumOperands = this->getNumOperands();
+      return {getNumOperands - getOutputs().size(), getNumOperands};
+    }
   }];
 
   let hasCanonicalizer = 1;
@@ -271,11 +275,10 @@ def MapOp : LinalgStructuredBase_Op<"map", [
     }
 
     // Implement functions necessary for DestinationStyleOpInterface.
-    unsigned getNumInputs() {
-      return this->getOperation()->getNumOperands() - getNumOutputs();
-    };
-    unsigned getNumOutputs() { return 1; };
-    mlir::ValueRange getOutputs() { return getOperands().take_back(1); }
+    std::pair<int64_t, int64_t> getOutputsPositionRange() {
+      int64_t getNumOperands = this->getNumOperands();
+      return {getNumOperands - 1, getNumOperands};
+    }
     linalg::OpOperandVector getOpOperandsMatchingBBargs() {
       return getInputOperands();
     }
@@ -341,13 +344,13 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
     }
 
     // Implement functions necessary for DestinationStyleOpInterface.
-    mlir::ValueRange getOutputs() { return getInits(); }
-    unsigned getNumInputs() { return getInputs().size(); };
-    unsigned getNumOutputs() { return getInits().size(); };
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
                               mlir::ArrayRef<mlir::NamedAttribute>)>
     getRegionBuilder() {
       return nullptr;
+    }
+    std::pair<int64_t, int64_t> getOutputsPositionRange() {
+      return {getInits().size(), getNumOperands()};
     }
   }];
 

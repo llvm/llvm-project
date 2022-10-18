@@ -734,28 +734,29 @@ genHTML(const NamespaceInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
   llvm::SmallString<64> BasePath = I.getRelativeFilePath("");
 
   std::vector<std::unique_ptr<TagNode>> ChildNamespaces =
-      genReferencesBlock(I.ChildNamespaces, "Namespaces", BasePath);
+      genReferencesBlock(I.Children.Namespaces, "Namespaces", BasePath);
   AppendVector(std::move(ChildNamespaces), Out);
   std::vector<std::unique_ptr<TagNode>> ChildRecords =
-      genReferencesBlock(I.ChildRecords, "Records", BasePath);
+      genReferencesBlock(I.Children.Records, "Records", BasePath);
   AppendVector(std::move(ChildRecords), Out);
 
   std::vector<std::unique_ptr<TagNode>> ChildFunctions =
-      genFunctionsBlock(I.ChildFunctions, CDCtx, BasePath);
+      genFunctionsBlock(I.Children.Functions, CDCtx, BasePath);
   AppendVector(std::move(ChildFunctions), Out);
   std::vector<std::unique_ptr<TagNode>> ChildEnums =
-      genEnumsBlock(I.ChildEnums, CDCtx);
+      genEnumsBlock(I.Children.Enums, CDCtx);
   AppendVector(std::move(ChildEnums), Out);
 
-  if (!I.ChildNamespaces.empty())
+  if (!I.Children.Namespaces.empty())
     InfoIndex.Children.emplace_back("Namespaces", "Namespaces");
-  if (!I.ChildRecords.empty())
+  if (!I.Children.Records.empty())
     InfoIndex.Children.emplace_back("Records", "Records");
-  if (!I.ChildFunctions.empty())
+  if (!I.Children.Functions.empty())
     InfoIndex.Children.emplace_back(
-        genInfoIndexItem(I.ChildFunctions, "Functions"));
-  if (!I.ChildEnums.empty())
-    InfoIndex.Children.emplace_back(genInfoIndexItem(I.ChildEnums, "Enums"));
+        genInfoIndexItem(I.Children.Functions, "Functions"));
+  if (!I.Children.Enums.empty())
+    InfoIndex.Children.emplace_back(
+        genInfoIndexItem(I.Children.Enums, "Enums"));
 
   return Out;
 }
@@ -802,27 +803,35 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
       genRecordMembersBlock(I.Members, I.Path);
   AppendVector(std::move(Members), Out);
   std::vector<std::unique_ptr<TagNode>> ChildRecords =
-      genReferencesBlock(I.ChildRecords, "Records", I.Path);
+      genReferencesBlock(I.Children.Records, "Records", I.Path);
   AppendVector(std::move(ChildRecords), Out);
 
   std::vector<std::unique_ptr<TagNode>> ChildFunctions =
-      genFunctionsBlock(I.ChildFunctions, CDCtx, I.Path);
+      genFunctionsBlock(I.Children.Functions, CDCtx, I.Path);
   AppendVector(std::move(ChildFunctions), Out);
   std::vector<std::unique_ptr<TagNode>> ChildEnums =
-      genEnumsBlock(I.ChildEnums, CDCtx);
+      genEnumsBlock(I.Children.Enums, CDCtx);
   AppendVector(std::move(ChildEnums), Out);
 
   if (!I.Members.empty())
     InfoIndex.Children.emplace_back("Members", "Members");
-  if (!I.ChildRecords.empty())
+  if (!I.Children.Records.empty())
     InfoIndex.Children.emplace_back("Records", "Records");
-  if (!I.ChildFunctions.empty())
+  if (!I.Children.Functions.empty())
     InfoIndex.Children.emplace_back(
-        genInfoIndexItem(I.ChildFunctions, "Functions"));
-  if (!I.ChildEnums.empty())
-    InfoIndex.Children.emplace_back(genInfoIndexItem(I.ChildEnums, "Enums"));
+        genInfoIndexItem(I.Children.Functions, "Functions"));
+  if (!I.Children.Enums.empty())
+    InfoIndex.Children.emplace_back(
+        genInfoIndexItem(I.Children.Enums, "Enums"));
 
   return Out;
+}
+
+static std::vector<std::unique_ptr<TagNode>>
+genHTML(const TypedefInfo &I, const ClangDocContext &CDCtx,
+        std::string &InfoTitle) {
+  // TODO support typedefs in HTML.
+  return {};
 }
 
 /// Generator for HTML documentation.
@@ -858,6 +867,10 @@ llvm::Error HTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
     MainContentNodes =
         genHTML(*static_cast<clang::doc::FunctionInfo *>(I), CDCtx, "");
     break;
+  case InfoType::IT_typedef:
+    MainContentNodes =
+        genHTML(*static_cast<clang::doc::TypedefInfo *>(I), CDCtx, InfoTitle);
+    break;
   case InfoType::IT_default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "unexpected info type");
@@ -882,6 +895,8 @@ static std::string getRefType(InfoType IT) {
     return "function";
   case InfoType::IT_enum:
     return "enum";
+  case InfoType::IT_typedef:
+    return "typedef";
   }
   llvm_unreachable("Unknown InfoType");
 }

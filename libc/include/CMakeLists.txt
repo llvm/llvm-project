@@ -220,6 +220,8 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.mode_t
+    .llvm-libc-types.pid_t
+    .llvm-libc-types.posix_spawnattr_t
     .llvm-libc-types.posix_spawn_file_actions_t
 )
 

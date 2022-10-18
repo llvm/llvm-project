@@ -246,6 +246,19 @@ bool RISCVTargetInfo::initFeatureMap(
   return TargetInfo::initFeatureMap(Features, Diags, CPU, ImpliedFeatures);
 }
 
+Optional<std::pair<unsigned, unsigned>>
+RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
+  if (LangOpts.VScaleMin || LangOpts.VScaleMax)
+    return std::pair<unsigned, unsigned>(
+        LangOpts.VScaleMin ? LangOpts.VScaleMin : 1, LangOpts.VScaleMax);
+
+  if (hasFeature("v"))
+    // Minimum VLEN=128, Maximum VLEN=64k, and RISCV::RVVBitsPerBlock is 64.
+    return std::pair<unsigned, unsigned>(2, 1024);
+
+  return None;
+}
+
 /// Return true if has this feature, need to sync with handleTargetFeatures.
 bool RISCVTargetInfo::hasFeature(StringRef Feature) const {
   bool Is64Bit = getTriple().getArch() == llvm::Triple::riscv64;

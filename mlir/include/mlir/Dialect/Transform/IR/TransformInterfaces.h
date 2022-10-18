@@ -181,6 +181,99 @@ private:
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 };
 
+class DiagnosedDefiniteFailure;
+
+DiagnosedDefiniteFailure emitDefiniteFailure(Location loc,
+                                             const Twine &message = {});
+
+/// A compatibility class connecting `InFlightDiagnostic` to
+/// `DiagnosedSilenceableFailure` while providing an interface similar to the
+/// former. Implicitly convertible to `DiagnosticSilenceableFailure` in definite
+/// failure state and to `LogicalResult` failure. Reports the error on
+/// conversion or on destruction. Instances of this class can be created by
+/// `emitDefiniteFailure()`.
+class DiagnosedDefiniteFailure {
+  friend DiagnosedDefiniteFailure emitDefiniteFailure(Location loc,
+                                                      const Twine &message);
+
+public:
+  /// Only move-constructible because it carries an in-flight diagnostic.
+  DiagnosedDefiniteFailure(DiagnosedDefiniteFailure &&) = default;
+
+  /// Forward the message to the diagnostic.
+  template <typename T>
+  DiagnosedDefiniteFailure &operator<<(T &&value) & {
+    diag << std::forward<T>(value);
+    return *this;
+  }
+  template <typename T>
+  DiagnosedDefiniteFailure &&operator<<(T &&value) && {
+    return std::move(this->operator<<(std::forward<T>(value)));
+  }
+
+  /// Attaches a note to the error.
+  Diagnostic &attachNote(Optional<Location> loc = llvm::None) {
+    return diag.attachNote(loc);
+  }
+
+  /// Implicit conversion to DiagnosedSilenceableFailure in the definite failure
+  /// state. Reports the error.
+  operator DiagnosedSilenceableFailure() {
+    diag.report();
+    return DiagnosedSilenceableFailure::definiteFailure();
+  }
+
+  /// Implicit conversion to LogicalResult in the failure state. Reports the
+  /// error.
+  operator LogicalResult() {
+    diag.report();
+    return failure();
+  }
+
+private:
+  /// Constructs a definite failure at the given location with the given
+  /// message.
+  explicit DiagnosedDefiniteFailure(Location loc, const Twine &message)
+      : diag(emitError(loc, message)) {}
+
+  /// Copy-construction and any assignment is disallowed to prevent repeated
+  /// error reporting.
+  DiagnosedDefiniteFailure(const DiagnosedDefiniteFailure &) = delete;
+  DiagnosedDefiniteFailure &
+  operator=(const DiagnosedDefiniteFailure &) = delete;
+  DiagnosedDefiniteFailure &operator=(DiagnosedDefiniteFailure &&) = delete;
+
+  /// The error message.
+  InFlightDiagnostic diag;
+};
+
+/// Emits a definite failure with the given message. The returned object allows
+/// for last-minute modification to the error message, such as attaching notes
+/// and completing the message. It will be reported when the object is
+/// destructed or converted.
+inline DiagnosedDefiniteFailure emitDefiniteFailure(Location loc,
+                                                    const Twine &message) {
+  return DiagnosedDefiniteFailure(loc, message);
+}
+inline DiagnosedDefiniteFailure emitDefiniteFailure(Operation *op,
+                                                    const Twine &message = {}) {
+  return emitDefiniteFailure(op->getLoc(), message);
+}
+
+/// Emits a silenceable failure with the given message. A silenceable failure
+/// must be either suppressed or converted into a definite failure and reported
+/// to the user.
+inline DiagnosedSilenceableFailure
+emitSilenceableFailure(Location loc, const Twine &message = {}) {
+  Diagnostic diag(loc, DiagnosticSeverity::Error);
+  diag << message;
+  return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+}
+inline DiagnosedSilenceableFailure
+emitSilenceableFailure(Operation *op, const Twine &message = {}) {
+  return emitSilenceableFailure(op->getLoc(), message);
+}
+
 namespace transform {
 
 class TransformOpInterface;

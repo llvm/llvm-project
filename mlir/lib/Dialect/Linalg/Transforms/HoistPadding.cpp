@@ -111,7 +111,7 @@ private:
 static bool isOnlyUsedAsInputOfLinalgOp(tensor::PadOp padOp) {
   for (OpOperand &use : padOp.getResult().getUses()) {
     auto linalgUser = dyn_cast<linalg::LinalgOp>(use.getOwner());
-    if (!linalgUser || !linalgUser.isInputTensor(&use)) {
+    if (!linalgUser || !linalgUser.isInput(&use)) {
       LLVM_DEBUG(DBGS() << "Found a use of " << *(padOp)
                         << "\nthat is not an input tensor of a LinalgOp, "
                         << "cannot hoist\n"

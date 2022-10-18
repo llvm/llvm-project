@@ -39,13 +39,9 @@ int TestRunner::run(StringRef Filename) {
     for (int i = 0; i < 3; ++i)
       Redirects.push_back(Empty);
   }
-
-  outs().changeColor(raw_ostream::YELLOW);
-
   int Result =
       sys::ExecuteAndWait(TestName, ProgramArgs, /*Env=*/None, Redirects,
                           /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg);
-  outs().resetColor();
 
   if (Result < 0) {
     Error E = make_error<StringError>("Error running interesting-ness test: " +

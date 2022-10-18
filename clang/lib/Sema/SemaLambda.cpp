@@ -916,11 +916,11 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   SourceLocation EndLoc;
   SmallVector<ParmVarDecl *, 8> Params;
 
-  assert(ParamInfo.getDeclSpec().getStorageClassSpec() ==
-             DeclSpec::SCS_unspecified ||
-         ParamInfo.getDeclSpec().getStorageClassSpec() ==
-                 DeclSpec::SCS_static &&
-             "Unexpected storage specifier");
+  assert(
+      (ParamInfo.getDeclSpec().getStorageClassSpec() ==
+           DeclSpec::SCS_unspecified ||
+       ParamInfo.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static) &&
+      "Unexpected storage specifier");
   bool IsLambdaStatic =
       ParamInfo.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static;
 

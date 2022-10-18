@@ -28,6 +28,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <memory>
 #include <tuple>
@@ -44,6 +45,85 @@ static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
       return Env.makeIff(*LHSValue, *RHSValue);
 
   return Env.makeAtomicBoolValue();
+}
+
+// Functionally updates `V` such that any instances of `TopBool` are replaced
+// with fresh atomic bools. Note: This implementation assumes that `B` is a
+// tree; if `B` is a DAG, it will lose any sharing between subvalues that was
+// present in the original .
+static BoolValue &unpackValue(BoolValue &V, Environment &Env);
+
+template <typename Derived, typename M>
+BoolValue &unpackBinaryBoolValue(Environment &Env, BoolValue &B, M build) {
+  auto &V = *cast<Derived>(&B);
+  BoolValue &Left = V.getLeftSubValue();
+  BoolValue &Right = V.getRightSubValue();
+  BoolValue &ULeft = unpackValue(Left, Env);
+  BoolValue &URight = unpackValue(Right, Env);
+
+  if (&ULeft == &Left && &URight == &Right)
+    return V;
+
+  return (Env.*build)(ULeft, URight);
+}
+
+static BoolValue &unpackValue(BoolValue &V, Environment &Env) {
+  switch (V.getKind()) {
+  case Value::Kind::Integer:
+  case Value::Kind::Reference:
+  case Value::Kind::Pointer:
+  case Value::Kind::Struct:
+    llvm_unreachable("BoolValue cannot have any of these kinds.");
+
+  case Value::Kind::AtomicBool:
+    return V;
+
+  case Value::Kind::TopBool:
+    // Unpack `TopBool` into a fresh atomic bool.
+    return Env.makeAtomicBoolValue();
+
+  case Value::Kind::Negation: {
+    auto &N = *cast<NegationValue>(&V);
+    BoolValue &Sub = N.getSubVal();
+    BoolValue &USub = unpackValue(Sub, Env);
+
+    if (&USub == &Sub)
+      return V;
+    return Env.makeNot(USub);
+  }
+  case Value::Kind::Conjunction:
+    return unpackBinaryBoolValue<ConjunctionValue>(Env, V,
+                                                   &Environment::makeAnd);
+  case Value::Kind::Disjunction:
+    return unpackBinaryBoolValue<DisjunctionValue>(Env, V,
+                                                   &Environment::makeOr);
+  case Value::Kind::Implication:
+    return unpackBinaryBoolValue<ImplicationValue>(
+        Env, V, &Environment::makeImplication);
+  case Value::Kind::Biconditional:
+    return unpackBinaryBoolValue<BiconditionalValue>(Env, V,
+                                                     &Environment::makeIff);
+  }
+  llvm_unreachable("All reachable cases in switch return");
+}
+
+// Unpacks the value (if any) associated with `E` and updates `E` to the new
+// value, if any unpacking occured.
+static Value *maybeUnpackLValueExpr(const Expr &E, Environment &Env) {
+  auto *Loc = Env.getStorageLocation(E, SkipPast::Reference);
+  if (Loc == nullptr)
+    return nullptr;
+  auto *Val = Env.getValue(*Loc);
+
+  auto *B = dyn_cast_or_null<BoolValue>(Val);
+  if (B == nullptr)
+    return Val;
+
+  auto &UnpackedVal = unpackValue(*B, Env);
+  if (&UnpackedVal == Val)
+    return Val;
+  Env.setValue(*Loc, UnpackedVal);
+  return &UnpackedVal;
 }
 
 class TransferVisitor : public ConstStmtVisitor<TransferVisitor> {
@@ -222,7 +302,9 @@ public:
     }
 
     case CK_LValueToRValue: {
-      auto *SubExprVal = Env.getValue(*SubExpr, SkipPast::Reference);
+      // When an L-value is used as an R-value, it may result in sharing, so we
+      // need to unpack any nested `Top`s.
+      auto *SubExprVal = maybeUnpackLValueExpr(*SubExpr, Env);
       if (SubExprVal == nullptr)
         break;
 

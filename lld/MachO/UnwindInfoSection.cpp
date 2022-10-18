@@ -418,12 +418,10 @@ static bool canFoldEncoding(compact_unwind_encoding_t encoding) {
   // of the unwind info's unwind address, two functions that have identical
   // unwind info can't be folded if it's using this encoding since both
   // entries need unique addresses.
-  static_assert(static_cast<uint32_t>(UNWIND_X86_64_MODE_MASK) ==
-                static_cast<uint32_t>(UNWIND_X86_MODE_MASK));
   static_assert(static_cast<uint32_t>(UNWIND_X86_64_MODE_STACK_IND) ==
                 static_cast<uint32_t>(UNWIND_X86_MODE_STACK_IND));
   if ((target->cpuType == CPU_TYPE_X86_64 || target->cpuType == CPU_TYPE_X86) &&
-      (encoding & UNWIND_X86_64_MODE_MASK) == UNWIND_X86_64_MODE_STACK_IND) {
+      (encoding & UNWIND_MODE_MASK) == UNWIND_X86_64_MODE_STACK_IND) {
     // FIXME: Consider passing in the two function addresses and getting
     // their two stack sizes off the `subq` and only returning false if they're
     // actually different.

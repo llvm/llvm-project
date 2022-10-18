@@ -39,6 +39,8 @@ public:
   bool VisitEnumDecl(const EnumDecl *D);
   bool VisitCXXMethodDecl(const CXXMethodDecl *D);
   bool VisitFunctionDecl(const FunctionDecl *D);
+  bool VisitTypedefDecl(const TypedefDecl *D);
+  bool VisitTypeAliasDecl(const TypeAliasDecl *D);
 
 private:
   template <typename T> bool mapDecl(const T *D);

@@ -48,7 +48,7 @@ class BinarySection {
 
   BinaryContext &BC;           // Owning BinaryContext
   std::string Name;            // Section name
-  const SectionRef Section;    // SectionRef (may be null)
+  const SectionRef Section;    // SectionRef for input binary sections.
   StringRef Contents;          // Input section contents
   const uint64_t Address;      // Address of section in input binary (may be 0)
   const uint64_t Size;         // Input section size
@@ -144,14 +144,14 @@ class BinarySection {
 
 public:
   /// Copy a section.
-  explicit BinarySection(BinaryContext &BC, StringRef Name,
+  explicit BinarySection(BinaryContext &BC, const Twine &Name,
                          const BinarySection &Section)
-      : BC(BC), Name(Name), Section(Section.getSectionRef()),
+      : BC(BC), Name(Name.str()), Section(SectionRef()),
         Contents(Section.getContents()), Address(Section.getAddress()),
         Size(Section.getSize()), Alignment(Section.getAlignment()),
         ELFType(Section.getELFType()), ELFFlags(Section.getELFFlags()),
         Relocations(Section.Relocations),
-        PendingRelocations(Section.PendingRelocations), OutputName(Name),
+        PendingRelocations(Section.PendingRelocations), OutputName(Name.str()),
         SectionNumber(++Count) {}
 
   BinarySection(BinaryContext &BC, SectionRef Section)
@@ -172,12 +172,13 @@ public:
   }
 
   // TODO: pass Data as StringRef/ArrayRef? use StringRef::copy method.
-  BinarySection(BinaryContext &BC, StringRef Name, uint8_t *Data, uint64_t Size,
-                unsigned Alignment, unsigned ELFType, unsigned ELFFlags)
-      : BC(BC), Name(Name),
+  BinarySection(BinaryContext &BC, const Twine &Name, uint8_t *Data,
+                uint64_t Size, unsigned Alignment, unsigned ELFType,
+                unsigned ELFFlags)
+      : BC(BC), Name(Name.str()),
         Contents(reinterpret_cast<const char *>(Data), Data ? Size : 0),
         Address(0), Size(Size), Alignment(Alignment), ELFType(ELFType),
-        ELFFlags(ELFFlags), IsFinalized(true), OutputName(Name),
+        ELFFlags(ELFFlags), IsFinalized(true), OutputName(Name.str()),
         OutputSize(Size), OutputContents(Contents), SectionNumber(++Count) {
     assert(Alignment > 0 && "section alignment must be > 0");
   }
@@ -221,9 +222,9 @@ public:
       return hasSectionRef() > Other.hasSectionRef();
 
     // Compare allocatable input sections by their address.
-    if (getAddress() != Other.getAddress())
+    if (hasSectionRef() && getAddress() != Other.getAddress())
       return getAddress() < Other.getAddress();
-    if (getAddress() && getSize() != Other.getSize())
+    if (hasSectionRef() && getAddress() && getSize() != Other.getSize())
       return getSize() < Other.getSize();
 
     // Code before data.
@@ -435,6 +436,7 @@ public:
     return SectionID;
   }
   bool hasValidSectionID() const { return SectionID != -1u; }
+  bool hasValidIndex() { return Index != 0; }
   uint32_t getIndex() const { return Index; }
 
   // mutation
@@ -445,12 +447,12 @@ public:
     SectionID = ID;
   }
   void setIndex(uint32_t I) { Index = I; }
-  void setOutputName(StringRef Name) { OutputName = std::string(Name); }
+  void setOutputName(const Twine &Name) { OutputName = Name.str(); }
   void setAnonymous(bool Flag) { IsAnonymous = Flag; }
 
-  /// Emit the section as data, possibly with relocations. Use name \p NewName
-  //  for the section during emission if non-empty.
-  void emitAsData(MCStreamer &Streamer, StringRef NewName = StringRef()) const;
+  /// Emit the section as data, possibly with relocations.
+  /// Use name \p SectionName for the section during the emission.
+  void emitAsData(MCStreamer &Streamer, const Twine &SectionName) const;
 
   using SymbolResolverFuncTy = llvm::function_ref<uint64_t(const MCSymbol *)>;
 
@@ -458,6 +460,13 @@ public:
   /// that were not emitted via MCStreamer.
   void flushPendingRelocations(raw_pwrite_stream &OS,
                                SymbolResolverFuncTy Resolver);
+
+  /// Change contents of the section.
+  void updateContents(const uint8_t *Data, size_t NewSize) {
+    OutputContents = StringRef(reinterpret_cast<const char *>(Data), NewSize);
+    OutputSize = NewSize;
+    IsFinalized = true;
+  }
 
   /// Reorder the contents of this section according to /p Order.  If
   /// /p Inplace is true, the entire contents of the section is reordered,

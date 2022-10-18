@@ -33,6 +33,10 @@ struct AllocateStmt;
 struct DeallocateStmt;
 } // namespace parser
 
+namespace semantics {
+class Symbol;
+} // namespace semantics
+
 namespace lower {
 struct SymbolBox;
 
@@ -74,6 +78,12 @@ bool isWholeAllocatable(const SomeExpr &expr);
 
 /// Is \p expr a reference to an entity with the POINTER attribute?
 bool isWholePointer(const SomeExpr &expr);
+
+/// Read the length from \p box for an assumed length character allocatable or
+/// pointer dummy argument given by \p sym.
+mlir::Value getAssumedCharAllocatableOrPointerLen(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const Fortran::semantics::Symbol &sym, mlir::Value box);
 
 } // namespace lower
 } // namespace Fortran

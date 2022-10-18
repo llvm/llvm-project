@@ -1466,17 +1466,31 @@ void AArch64InstPrinter::printVectorList(const MCInst *MI, unsigned OpNum,
     Reg = MRI.getMatchingSuperReg(Reg, AArch64::dsub, &FPR128RC);
   }
 
-  for (unsigned i = 0; i < NumRegs; ++i, Reg = getNextVectorRegister(Reg)) {
-    if (MRI.getRegClass(AArch64::ZPRRegClassID).contains(Reg))
-      printRegName(O, Reg);
-    else
-      printRegName(O, Reg, AArch64::vreg);
+  if (MRI.getRegClass(AArch64::ZPRRegClassID).contains(Reg) && NumRegs > 1 &&
+      // Do not print the range when the last register is lower than the first.
+      // Because it is a wrap-around register.
+      Reg < getNextVectorRegister(Reg, NumRegs - 1)) {
+    printRegName(O, Reg);
     O << LayoutSuffix;
-
-    if (i + 1 != NumRegs)
-      O << ", ";
+    if (NumRegs > 1) {
+      // Set of two sve registers should be separated by ','
+      StringRef split_char = NumRegs == 2 ? ", " : " - ";
+      O << split_char;
+      printRegName(O, (getNextVectorRegister(Reg, NumRegs - 1)));
+      O << LayoutSuffix;
+    }
+  } else {
+    for (unsigned i = 0; i < NumRegs; ++i, Reg = getNextVectorRegister(Reg)) {
+      // wrap-around sve register
+      if (MRI.getRegClass(AArch64::ZPRRegClassID).contains(Reg))
+        printRegName(O, Reg);
+      else
+        printRegName(O, Reg, AArch64::vreg);
+      O << LayoutSuffix;
+      if (i + 1 != NumRegs)
+        O << ", ";
+    }
   }
-
   O << " }";
 }
 

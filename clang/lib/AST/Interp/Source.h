@@ -91,12 +91,12 @@ public:
   virtual ~SourceMapper() {}
 
   /// Returns source information for a given PC in a function.
-  virtual SourceInfo getSource(Function *F, CodePtr PC) const = 0;
+  virtual SourceInfo getSource(const Function *F, CodePtr PC) const = 0;
 
   /// Returns the expression if an opcode belongs to one, null otherwise.
-  const Expr *getExpr(Function *F, CodePtr PC) const;
+  const Expr *getExpr(const Function *F, CodePtr PC) const;
   /// Returns the location from which an opcode originates.
-  SourceLocation getLocation(Function *F, CodePtr PC) const;
+  SourceLocation getLocation(const Function *F, CodePtr PC) const;
 };
 
 } // namespace interp

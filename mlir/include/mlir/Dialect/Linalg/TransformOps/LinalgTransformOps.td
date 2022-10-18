@@ -71,9 +71,8 @@ def FuseIntoContainingOp :
   let description = [{Fuse a producer into a containing operation.}];
 
   let summary = [{
-    Fuses the `producer_op` into the `containing_op`. Only producers with a
-    single result are supported at the moment. Returns a handle to the fused
-    ops.
+    Fuses the `producer_op` into the `containing_op`.
+    Returns a handle to the fused ops.
 
     The producer is typically a slice of a tileable op (i.e., implements
     TilingInterface). In that case, this transform computes the accessed
@@ -98,8 +97,10 @@ def FuseIntoContainingOp :
     This is the case when tiling fails or when no producer op could be found
     among the remaining producers that has at least one use within the
     containing op. I.e., "producers" that are not consumed within the containing
-    op are rejected by this operation. This operation reads and frees the
-    producer handle. It reads the containing op handle.
+    op are rejected by this operation.
+
+    This operation reads and frees the producer handle.
+    This operation reads the containing op handle.
   }];
 
   let arguments = (ins Arg<PDL_Operation, "",

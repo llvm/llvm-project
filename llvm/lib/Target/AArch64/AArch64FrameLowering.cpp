@@ -1496,15 +1496,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // function, including the funclet.
   int64_t NumBytes = IsFunclet ? getWinEHFuncletFrameSize(MF)
                                : MFI.getStackSize();
-
-  // Alignment is required for the parent frame, not the funclet
-  const bool NeedsRealignment =
-      NumBytes && !IsFunclet && RegInfo->hasStackRealignment(MF);
-  int64_t RealignmentPadding =
-      NeedsRealignment ? MFI.getMaxAlign().value() - 16 : 0;
-
-  if (!AFI->hasStackFrame() &&
-      !windowsRequiresStackProbe(MF, NumBytes + RealignmentPadding)) {
+  if (!AFI->hasStackFrame() && !windowsRequiresStackProbe(MF, NumBytes)) {
     assert(!HasFP && "unexpected function without stack frame but with FP");
     assert(!SVEStackSize &&
            "unexpected function without stack frame but with SVE objects");
@@ -1646,6 +1638,14 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   if (EmitCFI)
     emitCalleeSavedGPRLocations(MBB, MBBI);
 
+  // Alignment is required for the parent frame, not the funclet
+  const bool NeedsRealignment =
+      NumBytes && !IsFunclet && RegInfo->hasStackRealignment(MF);
+  int64_t RealignmentPadding =
+      (NeedsRealignment && MFI.getMaxAlign() > Align(16))
+          ? MFI.getMaxAlign().value() - 16
+          : 0;
+
   if (windowsRequiresStackProbe(MF, NumBytes + RealignmentPadding)) {
     uint64_t NumWords = (NumBytes + RealignmentPadding) >> 4;
     if (NeedsWinCFI) {
@@ -1740,7 +1740,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     }
     NumBytes = 0;
 
-    if (NeedsRealignment) {
+    if (RealignmentPadding > 0) {
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), AArch64::X15)
           .addReg(AArch64::SP)
           .addImm(RealignmentPadding)

@@ -442,7 +442,7 @@ void ClampOp::getCanonicalizationPatterns(RewritePatternSet &results,
 //===----------------------------------------------------------------------===//
 
 template <typename IntFolder, typename FloatFolder>
-DenseElementsAttr BinaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
+DenseElementsAttr binaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
                                RankedTensorType returnTy) {
   if (rhs && lhs && rhs.isSplat() && lhs.isSplat()) {
     auto lETy = lhs.getType().cast<ShapedType>().getElementType();
@@ -504,7 +504,7 @@ OpFoldResult AddOp::fold(ArrayRef<Attribute> operands) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return BinaryFolder<std::plus<APInt>, std::plus<APFloat>>(lhsAttr, rhsAttr,
+  return binaryFolder<std::plus<APInt>, std::plus<APFloat>>(lhsAttr, rhsAttr,
                                                             lhsTy);
 }
 
@@ -543,7 +543,7 @@ OpFoldResult DivOp::fold(ArrayRef<Attribute> operands) {
 }
 
 namespace {
-DenseElementsAttr MulBinaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
+DenseElementsAttr mulBinaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs,
                                   RankedTensorType ty, int32_t shift) {
   if (rhs && lhs && rhs.isSplat() && lhs.isSplat()) {
     if (ty.getElementType().isa<IntegerType>()) {
@@ -626,7 +626,7 @@ OpFoldResult MulOp::fold(ArrayRef<Attribute> operands) {
       return lhs;
   }
 
-  return MulBinaryFolder(lhsAttr, rhsAttr, lhsTy, getShift());
+  return mulBinaryFolder(lhsAttr, rhsAttr, lhsTy, getShift());
 }
 
 OpFoldResult SubOp::fold(ArrayRef<Attribute> operands) {
@@ -655,14 +655,14 @@ OpFoldResult SubOp::fold(ArrayRef<Attribute> operands) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return BinaryFolder<std::minus<APInt>, std::minus<APFloat>>(lhsAttr, rhsAttr,
+  return binaryFolder<std::minus<APInt>, std::minus<APFloat>>(lhsAttr, rhsAttr,
                                                               lhsTy);
 }
 
 namespace {
 template <typename Cmp>
 struct ComparisonFold {
-  ComparisonFold() {}
+  ComparisonFold() = default;
   APInt operator()(const APInt &l, const APInt &r) {
     return APInt(1, Cmp()(l, r));
   }
@@ -673,13 +673,17 @@ struct ComparisonFold {
 };
 
 struct APIntFoldGreater {
-  APIntFoldGreater() {}
-  APInt operator()(APInt l, APInt r) { return APInt(1, l.sgt(r)); }
+  APIntFoldGreater() = default;
+  APInt operator()(const APInt &l, const APInt &r) {
+    return APInt(1, l.sgt(r));
+  }
 };
 
 struct APIntFoldGreaterEqual {
-  APIntFoldGreaterEqual() {}
-  APInt operator()(APInt l, APInt r) { return APInt(1, l.sge(r)); }
+  APIntFoldGreaterEqual() = default;
+  APInt operator()(const APInt &l, const APInt &r) {
+    return APInt(1, l.sge(r));
+  }
 };
 } // namespace
 
@@ -691,7 +695,7 @@ OpFoldResult GreaterOp::fold(ArrayRef<Attribute> operands) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return BinaryFolder<APIntFoldGreater, ComparisonFold<std::greater<APFloat>>>(
+  return binaryFolder<APIntFoldGreater, ComparisonFold<std::greater<APFloat>>>(
       lhsAttr, rhsAttr, resultTy);
 }
 
@@ -703,7 +707,7 @@ OpFoldResult GreaterEqualOp::fold(ArrayRef<Attribute> operands) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return BinaryFolder<APIntFoldGreaterEqual,
+  return binaryFolder<APIntFoldGreaterEqual,
                       ComparisonFold<std::greater_equal<APFloat>>>(
       lhsAttr, rhsAttr, resultTy);
 }
@@ -726,7 +730,7 @@ OpFoldResult EqualOp::fold(ArrayRef<Attribute> operands) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return BinaryFolder<ComparisonFold<std::equal_to<APInt>>,
+  return binaryFolder<ComparisonFold<std::equal_to<APInt>>,
                       ComparisonFold<std::equal_to<APFloat>>>(lhsAttr, rhsAttr,
                                                               resultTy);
 }

@@ -48,6 +48,7 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
   OS << "frame size: " << getFrameSize() << "\n";
   OS << "arg size:   " << getArgSize() << "\n";
   OS << "rvo:        " << hasRVO() << "\n";
+  OS << "this arg:   " << hasThisPointer() << "\n";
 
   auto PrintName = [&OS](const char *Name) {
     OS << Name;

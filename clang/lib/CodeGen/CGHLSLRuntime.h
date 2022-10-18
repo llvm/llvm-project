@@ -22,6 +22,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/HLSL/HLSLResource.h"
 
 #include <vector>
 
@@ -35,6 +36,7 @@ namespace clang {
 class VarDecl;
 class ParmVarDecl;
 class HLSLBufferDecl;
+class HLSLResourceBindingAttr;
 class CallExpr;
 class Type;
 class DeclContext;
@@ -47,13 +49,20 @@ class CodeGenModule;
 
 class CGHLSLRuntime {
 public:
+  struct BufferResBinding {
+    // The ID like 2 in register(b2, space1).
+    llvm::Optional<unsigned> Reg;
+    // The Space like 1 is register(b2, space1).
+    // Default value is 0.
+    unsigned Space;
+    BufferResBinding(HLSLResourceBindingAttr *Attr);
+  };
   struct Buffer {
     Buffer(const HLSLBufferDecl *D);
     llvm::StringRef Name;
     // IsCBuffer - Whether the buffer is a cbuffer (and not a tbuffer).
     bool IsCBuffer;
-    llvm::Optional<unsigned> Reg;
-    unsigned Space;
+    BufferResBinding Binding;
     // Global variable and offset for each constant.
     std::vector<std::pair<llvm::GlobalVariable *, unsigned>> Constants;
     llvm::StructType *LayoutStruct = nullptr;
@@ -82,6 +91,11 @@ public:
   void setHLSLFunctionAttributes(llvm::Function *, const FunctionDecl *);
 
 private:
+  void addBufferResourceAnnotation(llvm::GlobalVariable *GV,
+                                   llvm::StringRef TyName,
+                                   hlsl::ResourceClass RC,
+                                   llvm::hlsl::ResourceKind RK,
+                                   BufferResBinding &Binding);
   void addConstant(VarDecl *D, Buffer &CB);
   void addBufferDecls(const DeclContext *DC, Buffer &CB);
   llvm::SmallVector<Buffer> Buffers;

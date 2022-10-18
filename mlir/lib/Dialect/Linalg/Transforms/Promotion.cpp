@@ -145,15 +145,15 @@ LinalgOpInstancePromotionOptions::LinalgOpInstancePromotionOptions(
   assert(linalgOp.hasBufferSemantics() && "revisit usage of shaped operand");
   auto vUseFullTileBuffers =
       options.useFullTileBuffers.value_or(llvm::SmallBitVector());
-  vUseFullTileBuffers.resize(linalgOp.getNumInputsAndOutputs(),
+  vUseFullTileBuffers.resize(linalgOp->getNumOperands(),
                              options.useFullTileBuffersDefault);
 
-  for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
-    int64_t operandNumber = opOperand->getOperandNumber();
+  for (OpOperand &opOperand : linalgOp->getOpOperands()) {
+    int64_t operandNumber = opOperand.getOperandNumber();
     if (options.operandsToPromote &&
         !options.operandsToPromote->count(operandNumber))
       continue;
-    Operation *op = opOperand->get().getDefiningOp();
+    Operation *op = opOperand.get().getDefiningOp();
     if (auto sv = dyn_cast_or_null<memref::SubViewOp>(op)) {
       subViews[operandNumber] = sv;
       useFullTileBuffers[sv] = vUseFullTileBuffers[operandNumber];
@@ -326,13 +326,13 @@ promoteSubViews(ImplicitLocOpBuilder &b, LinalgOp op,
   // operands are not views. This is to support cases such as FillOp taking
   // extra scalars etc.  Keep a reference to output buffers;
   SmallVector<Value, 8> opViews;
-  opViews.reserve(op.getNumInputsAndOutputs());
+  opViews.reserve(op->getNumOperands());
   SmallVector<std::pair<Value, Value>, 8> writebackViews;
   writebackViews.reserve(promotedBuffersAndViews->size());
-  for (OpOperand *opOperand : op.getInputAndOutputOperands()) {
-    int64_t operandNumber = opOperand->getOperandNumber();
+  for (OpOperand &opOperand : op->getOpOperands()) {
+    int64_t operandNumber = opOperand.getOperandNumber();
     if (options.subViews.count(operandNumber) != 0) {
-      if (options.useFullTileBuffers[opOperand->get()])
+      if (options.useFullTileBuffers[opOperand.get()])
         opViews.push_back(
             (*promotedBuffersAndViews)[operandNumber].fullLocalView);
       else
@@ -340,10 +340,10 @@ promoteSubViews(ImplicitLocOpBuilder &b, LinalgOp op,
             (*promotedBuffersAndViews)[operandNumber].partialLocalView);
       if (operandNumber >= op.getNumInputs())
         writebackViews.emplace_back(std::make_pair(
-            opOperand->get(),
+            opOperand.get(),
             (*promotedBuffersAndViews)[operandNumber].partialLocalView));
     } else {
-      opViews.push_back(opOperand->get());
+      opViews.push_back(opOperand.get());
     }
   }
   op->setOperands(0, opViews.size(), opViews);
@@ -371,12 +371,12 @@ mlir::linalg::promoteSubviewsPrecondition(Operation *op,
   if (!linalgOp || !linalgOp.hasBufferSemantics())
     return failure();
   // Check that at least one of the requested operands is indeed a subview.
-  for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
+  for (OpOperand &opOperand : linalgOp->getOpOperands()) {
     auto sv =
-        isa_and_nonnull<memref::SubViewOp>(opOperand->get().getDefiningOp());
+        isa_and_nonnull<memref::SubViewOp>(opOperand.get().getDefiningOp());
     if (sv) {
       if (!options.operandsToPromote ||
-          options.operandsToPromote->count(opOperand->getOperandNumber()))
+          options.operandsToPromote->count(opOperand.getOperandNumber()))
         return success();
     }
   }

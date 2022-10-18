@@ -508,6 +508,8 @@ void MachORewriteInstance::emitAndLink() {
       static_cast<MCObjectStreamer *>(Streamer.get())->getAssembler());
 
   BC->EFMM.reset(new ExecutableFileMemoryManager(*BC, /*AllowStubs*/ false));
+  BC->EFMM->setOrgSecPrefix(getOrgSecPrefix());
+  BC->EFMM->setNewSecPrefix(getNewSecPrefix());
 
   RTDyld.reset(new decltype(RTDyld)::element_type(*BC->EFMM, Resolver));
   RTDyld->setProcessAllSections(true);

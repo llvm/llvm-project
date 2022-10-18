@@ -276,6 +276,12 @@ void CheckIntPartMax(const FixedPointSemantics &Sema, uint64_t Expected) {
                                     APSInt::getUnsigned(Expected)) == 0);
 }
 
+void CheckIntPartRes(const FixedPointSemantics &Sema, int64_t Representation,
+                     uint64_t Result) {
+  APFixedPoint Val(Representation, Sema);
+  ASSERT_EQ(Val.getIntPart().getZExtValue(), Result) ;
+}
+
 TEST(FixedPoint, getIntPart) {
   // Normal values
   CheckIntPart(getSAccumSema(), 2);
@@ -359,6 +365,12 @@ TEST(FixedPoint, getIntPart) {
   CheckIntPartMax(getPadUSFractSema(), 0);
   CheckIntPartMax(getPadUFractSema(), 0);
   CheckIntPartMax(getPadULFractSema(), 0);
+
+  // Rounded Towards Zero
+  CheckIntPartRes(getSFractSema(), -127, 0);
+  CheckIntPartRes(getFractSema(), -32767, 0);
+  CheckIntPartRes(getLFractSema(), -2147483647, 0);
+  CheckIntPartRes(getS16Neg18(), -32768, 0);
 }
 
 TEST(FixedPoint, compare) {

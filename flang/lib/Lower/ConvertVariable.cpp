@@ -1351,7 +1351,9 @@ void Fortran::lower::mapSymbolAttributes(
               lowerExplicitCharLen(converter, loc, ba, symMap, stmtCtx))
         nonDeferredLenParams.push_back(len);
       else if (Fortran::semantics::IsAssumedLengthCharacter(sym))
-        TODO(loc, "assumed length character allocatable");
+        nonDeferredLenParams.push_back(
+            Fortran::lower::getAssumedCharAllocatableOrPointerLen(
+                builder, loc, sym, boxAlloc));
     } else if (const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType()) {
       if (const Fortran::semantics::DerivedTypeSpec *derived =
               declTy->AsDerived())

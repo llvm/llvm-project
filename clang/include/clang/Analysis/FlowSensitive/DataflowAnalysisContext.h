@@ -153,6 +153,18 @@ public:
     return takeOwnership(std::make_unique<AtomicBoolValue>());
   }
 
+  /// Creates a Top value for booleans. Each instance is unique and can be
+  /// assigned a distinct truth value during solving.
+  ///
+  /// FIXME: `Top iff Top` is true when both Tops are identical (by pointer
+  /// equality), but not when they are distinct values. We should improve the
+  /// implementation so that `Top iff Top` has a consistent meaning, regardless
+  /// of the identity of `Top`. Moreover, I think the meaning should be
+  /// `false`.
+  TopBoolValue &createTopBoolValue() {
+    return takeOwnership(std::make_unique<TopBoolValue>());
+  }
+
   /// Returns a boolean value that represents the conjunction of `LHS` and
   /// `RHS`. Subsequent calls with the same arguments, regardless of their
   /// order, will return the same result. If the given boolean values represent

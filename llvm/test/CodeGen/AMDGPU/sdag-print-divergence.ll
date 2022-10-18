@@ -7,7 +7,7 @@
 ; GCN: Initial selection DAG: %bb.0 'test_sdag_dump:entry'
 ; GCN: SelectionDAG has 10 nodes:
 
-; GCN-DEFAULT:  t0: ch = EntryToken
+; GCN-DEFAULT:  t0: ch,glue = EntryToken
 ; GCN-DEFAULT:  t2: f32,ch = CopyFromReg t0, Register:f32 %0
 ; GCN-DEFAULT:      t5: f32 = fadd t2, t2
 ; GCN-DEFAULT:      t4: f32,ch = CopyFromReg # D:1 t0, Register:f32 %1
@@ -15,7 +15,7 @@
 ; GCN-DEFAULT:  t8: ch,glue = CopyToReg # D:1 t0, Register:f32 $vgpr0, t6
 ; GCN-DEFAULT:  t9: ch = RETURN_TO_EPILOG # D:1 t8, Register:f32 $vgpr0, t8:1
 
-; GCN-VERBOSE:  t0: ch = EntryToken # D:0
+; GCN-VERBOSE:  t0: ch,glue = EntryToken # D:0
 ; GCN-VERBOSE:  t2: f32,ch = CopyFromReg [ORD=1] # D:0 t0, Register:f32 %0 # D:0
 ; GCN-VERBOSE:      t5: f32 = fadd [ORD=2] # D:0 t2, t2
 ; GCN-VERBOSE:      t4: f32,ch = CopyFromReg [ORD=1] # D:1 t0, Register:f32 %1 # D:0

@@ -1464,14 +1464,27 @@ void TypePrinter::printSubstTemplateTypeParmPackBefore(
                                         const SubstTemplateTypeParmPackType *T,
                                         raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
-  printTemplateTypeParmBefore(T->getReplacedParameter(), OS);
+  if (const TemplateTypeParmDecl *D = T->getReplacedParameter()) {
+    if (D && D->isImplicit()) {
+      if (auto *TC = D->getTypeConstraint()) {
+        TC->print(OS, Policy);
+        OS << ' ';
+      }
+      OS << "auto";
+    } else if (IdentifierInfo *Id = D->getIdentifier())
+      OS << (Policy.CleanUglifiedParameters ? Id->deuglifiedName()
+                                            : Id->getName());
+    else
+      OS << "type-parameter-" << D->getDepth() << '-' << D->getIndex();
+
+    spaceBeforePlaceHolder(OS);
+  }
 }
 
 void TypePrinter::printSubstTemplateTypeParmPackAfter(
                                         const SubstTemplateTypeParmPackType *T,
                                         raw_ostream &OS) {
   IncludeStrongLifetimeRAII Strong(Policy);
-  printTemplateTypeParmAfter(T->getReplacedParameter(), OS);
 }
 
 void TypePrinter::printTemplateId(const TemplateSpecializationType *T,

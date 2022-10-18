@@ -4090,8 +4090,7 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     Out << " within ";
     writeOperand(FPI->getParentPad(), /*PrintType=*/false);
     Out << " [";
-    for (unsigned Op = 0, NumOps = FPI->getNumArgOperands(); Op < NumOps;
-         ++Op) {
+    for (unsigned Op = 0, NumOps = FPI->arg_size(); Op < NumOps; ++Op) {
       if (Op > 0)
         Out << ", ";
       writeOperand(FPI->getArgOperand(Op), /*PrintType=*/true);

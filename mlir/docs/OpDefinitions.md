@@ -273,6 +273,9 @@ C++ default value. For example, a float default value should be specified as
 like `"0.5f"`, and an integer array default value should be specified as like
 `"{1, 2, 3}"`.
 
+The generated operation printing function will not print default-valued
+attributes when the attribute value is equal to the default.
+
 #### Confining attributes
 
 `ConfinedAttr` is provided as a general mechanism to help modelling further

@@ -1630,6 +1630,7 @@ cc_library(
         "//llvm:Coverage",
         "//llvm:DebugInfoDWARF",
         "//llvm:Demangle",
+        "//llvm:FrontendHLSL",
         "//llvm:FrontendOpenMP",
         "//llvm:IPO",
         "//llvm:IRReader",

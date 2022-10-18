@@ -4785,21 +4785,22 @@ QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
 
 /// Retrieve a substitution-result type.
 QualType
-ASTContext::getSubstTemplateTypeParmType(const TemplateTypeParmType *Parm,
-                                         QualType Replacement,
+ASTContext::getSubstTemplateTypeParmType(QualType Replacement,
+                                         Decl *AssociatedDecl, unsigned Index,
                                          Optional<unsigned> PackIndex) const {
   llvm::FoldingSetNodeID ID;
-  SubstTemplateTypeParmType::Profile(ID, Parm, Replacement, PackIndex);
+  SubstTemplateTypeParmType::Profile(ID, Replacement, AssociatedDecl, Index,
+                                     PackIndex);
   void *InsertPos = nullptr;
-  SubstTemplateTypeParmType *SubstParm
-    = SubstTemplateTypeParmTypes.FindNodeOrInsertPos(ID, InsertPos);
+  SubstTemplateTypeParmType *SubstParm =
+      SubstTemplateTypeParmTypes.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!SubstParm) {
     void *Mem = Allocate(SubstTemplateTypeParmType::totalSizeToAlloc<QualType>(
                              !Replacement.isCanonical()),
                          TypeAlignment);
-    SubstParm =
-        new (Mem) SubstTemplateTypeParmType(Parm, Replacement, PackIndex);
+    SubstParm = new (Mem) SubstTemplateTypeParmType(Replacement, AssociatedDecl,
+                                                    Index, PackIndex);
     Types.push_back(SubstParm);
     SubstTemplateTypeParmTypes.InsertNode(SubstParm, InsertPos);
   }
@@ -4809,33 +4810,30 @@ ASTContext::getSubstTemplateTypeParmType(const TemplateTypeParmType *Parm,
 
 /// Retrieve a
 QualType ASTContext::getSubstTemplateTypeParmPackType(
-                                          const TemplateTypeParmType *Parm,
-                                              const TemplateArgument &ArgPack) {
+    Decl *AssociatedDecl, unsigned Index, const TemplateArgument &ArgPack) {
 #ifndef NDEBUG
   for (const auto &P : ArgPack.pack_elements()) {
-    assert(P.getKind() == TemplateArgument::Type &&"Pack contains a non-type");
+    assert(P.getKind() == TemplateArgument::Type && "Pack contains a non-type");
     assert(P.getAsType().isCanonical() && "Pack contains non-canonical type");
   }
 #endif
 
   llvm::FoldingSetNodeID ID;
-  SubstTemplateTypeParmPackType::Profile(ID, Parm, ArgPack);
+  SubstTemplateTypeParmPackType::Profile(ID, AssociatedDecl, Index, ArgPack);
   void *InsertPos = nullptr;
-  if (SubstTemplateTypeParmPackType *SubstParm
-        = SubstTemplateTypeParmPackTypes.FindNodeOrInsertPos(ID, InsertPos))
+  if (SubstTemplateTypeParmPackType *SubstParm =
+          SubstTemplateTypeParmPackTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(SubstParm, 0);
 
   QualType Canon;
-  if (!Parm->isCanonicalUnqualified()) {
-    Canon = getCanonicalType(QualType(Parm, 0));
-    Canon = getSubstTemplateTypeParmPackType(cast<TemplateTypeParmType>(Canon),
-                                             ArgPack);
+  if (!AssociatedDecl->isCanonicalDecl()) {
+    Canon = getSubstTemplateTypeParmPackType(AssociatedDecl->getCanonicalDecl(),
+                                             Index, ArgPack);
     SubstTemplateTypeParmPackTypes.FindNodeOrInsertPos(ID, InsertPos);
   }
 
-  auto *SubstParm
-    = new (*this, TypeAlignment) SubstTemplateTypeParmPackType(Parm, Canon,
-                                                               ArgPack);
+  auto *SubstParm = new (*this, TypeAlignment)
+      SubstTemplateTypeParmPackType(Canon, AssociatedDecl, Index, ArgPack);
   Types.push_back(SubstParm);
   SubstTemplateTypeParmPackTypes.InsertNode(SubstParm, InsertPos);
   return QualType(SubstParm, 0);
@@ -6241,13 +6239,13 @@ ASTContext::getCanonicalTemplateName(const TemplateName &Name) const {
   }
 
   case TemplateName::SubstTemplateTemplateParmPack: {
-    SubstTemplateTemplateParmPackStorage *subst
-                                  = Name.getAsSubstTemplateTemplateParmPack();
-    TemplateTemplateParmDecl *canonParameter
-      = getCanonicalTemplateTemplateParmDecl(subst->getParameterPack());
-    TemplateArgument canonArgPack
-      = getCanonicalTemplateArgument(subst->getArgumentPack());
-    return getSubstTemplateTemplateParmPack(canonParameter, canonArgPack);
+    SubstTemplateTemplateParmPackStorage *subst =
+        Name.getAsSubstTemplateTemplateParmPack();
+    TemplateArgument canonArgPack =
+        getCanonicalTemplateArgument(subst->getArgumentPack());
+    return getSubstTemplateTemplateParmPack(
+        canonArgPack, subst->getAssociatedDecl()->getCanonicalDecl(),
+        subst->getIndex());
   }
   }
 
@@ -9250,17 +9248,20 @@ ASTContext::getDependentTemplateName(NestedNameSpecifier *NNS,
 }
 
 TemplateName
-ASTContext::getSubstTemplateTemplateParm(TemplateTemplateParmDecl *param,
-                                         TemplateName replacement) const {
+ASTContext::getSubstTemplateTemplateParm(TemplateName Replacement,
+                                         Decl *AssociatedDecl, unsigned Index,
+                                         Optional<unsigned> PackIndex) const {
   llvm::FoldingSetNodeID ID;
-  SubstTemplateTemplateParmStorage::Profile(ID, param, replacement);
+  SubstTemplateTemplateParmStorage::Profile(ID, Replacement, AssociatedDecl,
+                                            Index, PackIndex);
 
   void *insertPos = nullptr;
   SubstTemplateTemplateParmStorage *subst
     = SubstTemplateTemplateParms.FindNodeOrInsertPos(ID, insertPos);
 
   if (!subst) {
-    subst = new (*this) SubstTemplateTemplateParmStorage(param, replacement);
+    subst = new (*this) SubstTemplateTemplateParmStorage(
+        Replacement, AssociatedDecl, Index, PackIndex);
     SubstTemplateTemplateParms.InsertNode(subst, insertPos);
   }
 
@@ -9268,20 +9269,21 @@ ASTContext::getSubstTemplateTemplateParm(TemplateTemplateParmDecl *param,
 }
 
 TemplateName
-ASTContext::getSubstTemplateTemplateParmPack(TemplateTemplateParmDecl *Param,
-                                       const TemplateArgument &ArgPack) const {
+ASTContext::getSubstTemplateTemplateParmPack(const TemplateArgument &ArgPack,
+                                             Decl *AssociatedDecl,
+                                             unsigned Index) const {
   auto &Self = const_cast<ASTContext &>(*this);
   llvm::FoldingSetNodeID ID;
-  SubstTemplateTemplateParmPackStorage::Profile(ID, Self, Param, ArgPack);
+  SubstTemplateTemplateParmPackStorage::Profile(ID, Self, ArgPack,
+                                                AssociatedDecl, Index);
 
   void *InsertPos = nullptr;
   SubstTemplateTemplateParmPackStorage *Subst
     = SubstTemplateTemplateParmPacks.FindNodeOrInsertPos(ID, InsertPos);
 
   if (!Subst) {
-    Subst = new (*this) SubstTemplateTemplateParmPackStorage(Param,
-                                                           ArgPack.pack_size(),
-                                                         ArgPack.pack_begin());
+    Subst = new (*this) SubstTemplateTemplateParmPackStorage(
+        ArgPack.pack_elements(), AssociatedDecl, Index);
     SubstTemplateTemplateParmPacks.InsertNode(Subst, InsertPos);
   }
 
@@ -12931,14 +12933,18 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
   case Type::SubstTemplateTypeParm: {
     const auto *SX = cast<SubstTemplateTypeParmType>(X),
                *SY = cast<SubstTemplateTypeParmType>(Y);
-    const TemplateTypeParmType *PX = SX->getReplacedParameter();
-    if (PX != SY->getReplacedParameter())
+    Decl *CD =
+        ::getCommonDecl(SX->getAssociatedDecl(), SY->getAssociatedDecl());
+    if (!CD)
+      return QualType();
+    unsigned Index = SX->getIndex();
+    if (Index != SY->getIndex())
       return QualType();
     auto PackIndex = SX->getPackIndex();
     if (PackIndex != SY->getPackIndex())
       return QualType();
-    return Ctx.getSubstTemplateTypeParmType(
-        PX, Ctx.getQualifiedType(Underlying), PackIndex);
+    return Ctx.getSubstTemplateTypeParmType(Ctx.getQualifiedType(Underlying),
+                                            CD, Index, PackIndex);
   }
   case Type::ObjCTypeParam:
     // FIXME: Try to merge these.

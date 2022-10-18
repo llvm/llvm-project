@@ -291,5 +291,5 @@ def SysUtsNameAPI : PublicAPI<"sys/utsname.h"> {
 }
 
 def SpawnAPI : PublicAPI<"spawn.h"> {
-  let Types = ["mode_t", "posix_spawn_file_actions_t"];
+  let Types = ["mode_t", "pid_t", "posix_spawnattr_t", "posix_spawn_file_actions_t"];
 }

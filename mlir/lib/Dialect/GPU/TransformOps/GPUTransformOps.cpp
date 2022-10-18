@@ -324,8 +324,7 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
     if (transformOp.has_value()) {
       return transformOp->emitSilenceableError() << message;
     }
-    foreachThreadOp->emitError() << message;
-    return DiagnosedSilenceableFailure::definiteFailure();
+    return emitDefiniteFailure(foreachThreadOp, message);
   };
 
   if (foreachThreadOp.getNumResults() > 0)

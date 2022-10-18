@@ -372,6 +372,12 @@ public:
     return Vals.back().get();
   }
 
+  // Creates an instance of the Top boolean value.
+  BoolValue *top() {
+    Vals.push_back(std::make_unique<TopBoolValue>());
+    return Vals.back().get();
+  }
+
   // Creates a boolean conjunction value.
   BoolValue *conj(BoolValue *LeftSubVal, BoolValue *RightSubVal) {
     Vals.push_back(

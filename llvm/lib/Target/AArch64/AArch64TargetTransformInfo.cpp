@@ -1853,6 +1853,12 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     { ISD::BITCAST, MVT::nxv2i16, MVT::nxv2f16, 0 },
     { ISD::BITCAST, MVT::nxv4i16, MVT::nxv4f16, 0 },
     { ISD::BITCAST, MVT::nxv2i32, MVT::nxv2f32, 0 },
+
+    // Zero extends from nxvmi1 to nxvmiN.
+    { ISD::ZERO_EXTEND, MVT::nxv2i64, MVT::nxv2i1, 1 },
+    { ISD::ZERO_EXTEND, MVT::nxv4i32, MVT::nxv4i1, 1 },
+    { ISD::ZERO_EXTEND, MVT::nxv8i16, MVT::nxv8i1, 1 },
+    { ISD::ZERO_EXTEND, MVT::nxv16i8, MVT::nxv16i1, 1 },
   };
 
   if (const auto *Entry = ConvertCostTableLookup(ConversionTbl, ISD,
