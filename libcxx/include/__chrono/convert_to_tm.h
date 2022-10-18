@@ -53,7 +53,7 @@ _LIBCPP_HIDE_FROM_ABI _Tm __convert_to_tm(const _ChronoT& __value) {
     __result.tm_mon = static_cast<unsigned>(__value) - 1;
   else if constexpr (same_as<_ChronoT, chrono::year>)
     __result.tm_year = static_cast<int>(__value) - 1900;
-  else if constexpr (same_as<_ChronoCalendarTimePoint, chrono::weekday>)
+  else if constexpr (same_as<_ChronoT, chrono::weekday>)
     __result.tm_wday = __value.c_encoding();
   else
     static_assert(sizeof(_ChronoT) == 0, "Add the missing type specialization");
