@@ -101,9 +101,9 @@ static bool CC_Sparc_Assign_Ret_Split_64(unsigned &ValNo, MVT &ValVT,
 }
 
 // Allocate a full-sized argument for the 64-bit ABI.
-static bool CC_Sparc64_Full(unsigned &ValNo, MVT &ValVT,
-                            MVT &LocVT, CCValAssign::LocInfo &LocInfo,
-                            ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+static bool Analyze_CC_Sparc64_Full(bool IsReturn, unsigned &ValNo, MVT &ValVT,
+                                    MVT &LocVT, CCValAssign::LocInfo &LocInfo,
+                                    ISD::ArgFlagsTy &ArgFlags, CCState &State) {
   assert((LocVT == MVT::f32 || LocVT == MVT::f128
           || LocVT.getSizeInBits() == 64) &&
          "Can't handle non-64 bits locations");
@@ -133,6 +133,11 @@ static bool CC_Sparc64_Full(unsigned &ValNo, MVT &ValVT,
     return true;
   }
 
+  // Bail out if this is a return CC and we run out of registers to place
+  // values into.
+  if (IsReturn)
+    return false;
+
   // This argument goes on the stack in an 8-byte slot.
   // When passing floats, LocVT is smaller than 8 bytes. Adjust the offset to
   // the right-aligned float. The first 4 bytes of the stack slot are undefined.
@@ -146,9 +151,9 @@ static bool CC_Sparc64_Full(unsigned &ValNo, MVT &ValVT,
 // Allocate a half-sized argument for the 64-bit ABI.
 //
 // This is used when passing { float, int } structs by value in registers.
-static bool CC_Sparc64_Half(unsigned &ValNo, MVT &ValVT,
-                            MVT &LocVT, CCValAssign::LocInfo &LocInfo,
-                            ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+static bool Analyze_CC_Sparc64_Half(bool IsReturn, unsigned &ValNo, MVT &ValVT,
+                                    MVT &LocVT, CCValAssign::LocInfo &LocInfo,
+                                    ISD::ArgFlagsTy &ArgFlags, CCState &State) {
   assert(LocVT.getSizeInBits() == 32 && "Can't handle non-32 bits locations");
   unsigned Offset = State.AllocateStack(4, Align(4));
 
@@ -174,8 +179,41 @@ static bool CC_Sparc64_Half(unsigned &ValNo, MVT &ValVT,
     return true;
   }
 
+  // Bail out if this is a return CC and we run out of registers to place
+  // values into.
+  if (IsReturn)
+    return false;
+
   State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset, LocVT, LocInfo));
   return true;
+}
+
+static bool CC_Sparc64_Full(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                            CCValAssign::LocInfo &LocInfo,
+                            ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  return Analyze_CC_Sparc64_Full(false, ValNo, ValVT, LocVT, LocInfo, ArgFlags,
+                                 State);
+}
+
+static bool CC_Sparc64_Half(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                            CCValAssign::LocInfo &LocInfo,
+                            ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  return Analyze_CC_Sparc64_Half(false, ValNo, ValVT, LocVT, LocInfo, ArgFlags,
+                                 State);
+}
+
+static bool RetCC_Sparc64_Full(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                               CCValAssign::LocInfo &LocInfo,
+                               ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  return Analyze_CC_Sparc64_Full(true, ValNo, ValVT, LocVT, LocInfo, ArgFlags,
+                                 State);
+}
+
+static bool RetCC_Sparc64_Half(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                               CCValAssign::LocInfo &LocInfo,
+                               ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  return Analyze_CC_Sparc64_Half(true, ValNo, ValVT, LocVT, LocInfo, ArgFlags,
+                                 State);
 }
 
 #include "SparcGenCallingConv.inc"
@@ -189,6 +227,15 @@ static unsigned toCallerWindow(unsigned Reg) {
   if (Reg >= SP::I0 && Reg <= SP::I7)
     return Reg - SP::I0 + SP::O0;
   return Reg;
+}
+
+bool SparcTargetLowering::CanLowerReturn(
+    CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
+  return CCInfo.CheckReturn(Outs, Subtarget->is64Bit() ? RetCC_Sparc64
+                                                       : RetCC_Sparc32);
 }
 
 SDValue
@@ -1030,6 +1077,7 @@ SparcTargetLowering::LowerCall_32(TargetLowering::CallLoweringInfo &CLI,
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
+    assert(RVLocs[i].isRegLoc() && "Can only return in registers!");
     if (RVLocs[i].getLocVT() == MVT::v2i32) {
       SDValue Vec = DAG.getNode(ISD::UNDEF, dl, MVT::v2i32);
       SDValue Lo = DAG.getCopyFromReg(
@@ -1344,6 +1392,7 @@ SparcTargetLowering::LowerCall_64(TargetLowering::CallLoweringInfo &CLI,
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
     CCValAssign &VA = RVLocs[i];
+    assert(VA.isRegLoc() && "Can only return in registers!");
     unsigned Reg = toCallerWindow(VA.getLocReg());
 
     // When returning 'inreg {i32, i32 }', two consecutive i32 arguments can
