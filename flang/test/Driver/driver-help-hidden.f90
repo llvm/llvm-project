@@ -22,6 +22,7 @@
 ! CHECK-NEXT: -E        Only run the preprocessor
 ! CHECK-NEXT: -falternative-parameter-statement
 ! CHECK-NEXT: Enable the old style PARAMETER statement
+! CHECK-NEXT: -fapprox-func          Allow certain math function calls to be replaced with an approximately equivalent calculation
 ! CHECK-NEXT: -fbackslash            Specify that backslash in string introduces an escape character
 ! CHECK-NEXT: -fcolor-diagnostics    Enable colors in diagnostics
 ! CHECK-NEXT: -fconvert=<value>      Set endian conversion of data for unformatted files

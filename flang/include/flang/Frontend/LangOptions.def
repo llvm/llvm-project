@@ -25,6 +25,8 @@ ENUM_LANGOPT(FPContractMode, FPModeKind, 2, FPM_Off) ///< FP Contract Mode (off/
 LANGOPT(NoHonorInfs, 1, false)
 /// Permit floating point optimization without regard to NaN
 LANGOPT(NoHonorNaNs, 1, false)
+/// Allow math functions to be replaced with an approximately equivalent calculation
+LANGOPT(ApproxFunc, 1, false)
 
 #undef LANGOPT
 #undef ENUM_LANGOPT

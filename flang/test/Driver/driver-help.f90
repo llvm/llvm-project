@@ -22,6 +22,7 @@
 ! HELP-NEXT: -E                     Only run the preprocessor
 ! HELP-NEXT: -falternative-parameter-statement
 ! HELP-NEXT: Enable the old style PARAMETER statement
+! HELP-NEXT: -fapprox-func          Allow certain math function calls to be replaced with an approximately equivalent calculation
 ! HELP-NEXT: -fbackslash            Specify that backslash in string introduces an escape character
 ! HELP-NEXT: -fcolor-diagnostics    Enable colors in diagnostics
 ! HELP-NEXT: -fconvert=<value>      Set endian conversion of data for unformatted files
@@ -79,6 +80,7 @@
 ! HELP-FC1-NEXT: -E                     Only run the preprocessor
 ! HELP-FC1-NEXT: -falternative-parameter-statement
 ! HELP-FC1-NEXT: Enable the old style PARAMETER statement
+! HELP-FC1-NEXT: -fapprox-func          Allow certain math function calls to be replaced with an approximately equivalent calculation
 ! HELP-FC1-NEXT: -fbackslash            Specify that backslash in string introduces an escape character
 ! HELP-FC1-NEXT: -fcolor-diagnostics     Enable colors in diagnostics
 ! HELP-FC1-NEXT: -fconvert=<value>      Set endian conversion of data for unformatted files
