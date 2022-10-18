@@ -1210,8 +1210,7 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
   BasicBlock *BB = PN.getParent();
   Align MaxAlign;
   uint64_t APWidth = DL.getIndexTypeSizeInBits(PN.getType());
-  APInt MaxSize(APWidth, 0);
-  bool HaveLoad = false;
+  Type *LoadType = nullptr;
   for (User *U : PN.users()) {
     LoadInst *LI = dyn_cast<LoadInst>(U);
     if (!LI || !LI->isSimple())
@@ -1223,20 +1222,26 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
     if (LI->getParent() != BB)
       return false;
 
+    if (LoadType) {
+      if (LoadType != LI->getType())
+        return false;
+    } else {
+      LoadType = LI->getType();
+    }
+
     // Ensure that there are no instructions between the PHI and the load that
     // could store.
     for (BasicBlock::iterator BBI(PN); &*BBI != LI; ++BBI)
       if (BBI->mayWriteToMemory())
         return false;
 
-    uint64_t Size = DL.getTypeStoreSize(LI->getType()).getFixedSize();
     MaxAlign = std::max(MaxAlign, LI->getAlign());
-    MaxSize = MaxSize.ult(Size) ? APInt(APWidth, Size) : MaxSize;
-    HaveLoad = true;
   }
 
-  if (!HaveLoad)
+  if (!LoadType)
     return false;
+
+  APInt LoadSize = APInt(APWidth, DL.getTypeStoreSize(LoadType).getFixedSize());
 
   // We can only transform this if it is safe to push the loads into the
   // predecessor blocks. The only thing to watch out for is that we can't put
@@ -1259,7 +1264,7 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
     // If this pointer is always safe to load, or if we can prove that there
     // is already a load in the block, then we can move the load to the pred
     // block.
-    if (isSafeToLoadUnconditionally(InVal, MaxAlign, MaxSize, DL, TI))
+    if (isSafeToLoadUnconditionally(InVal, MaxAlign, LoadSize, DL, TI))
       continue;
 
     return false;
