@@ -138,7 +138,13 @@ enum class Action : uint32_t {
 /// versions; consequently, client code should use the predicate functions
 /// defined below, rather than relying on knowledge about the particular
 /// binary encoding.
+///
+/// The `Undef` "format" is a special value used internally for cases
+/// where we need to store an undefined or indeterminate `DimLevelType`.
+/// It should not be used externally, since it does not indicate an
+/// actual/representable format.
 enum class DimLevelType : uint8_t {
+  Undef = 0,           // 0b000_00
   Dense = 4,           // 0b001_00
   Compressed = 8,      // 0b010_00
   CompressedNu = 9,    // 0b010_01
@@ -150,20 +156,39 @@ enum class DimLevelType : uint8_t {
   SingletonNuNo = 19,  // 0b100_11
 };
 
+/// Check that the `DimLevelType` contains a valid (possibly undefined) value.
+constexpr bool isValidDLT(DimLevelType dlt) {
+  const uint8_t formatBits = static_cast<uint8_t>(dlt) >> 2;
+  const uint8_t propertyBits = static_cast<uint8_t>(dlt) & 3;
+  // If undefined or dense, then must be unique and ordered.
+  // Otherwise, the format must be one of the known ones.
+  return (formatBits <= 1) ? (propertyBits == 0)
+                           : (formatBits == 2 || formatBits == 4);
+}
+
+/// Check if the `DimLevelType` is the special undefined value.
+constexpr bool isUndefDLT(DimLevelType dlt) {
+  return dlt == DimLevelType::Undef;
+}
+
 /// Check if the `DimLevelType` is dense.
 constexpr bool isDenseDLT(DimLevelType dlt) {
   return dlt == DimLevelType::Dense;
 }
 
+// We use the idiom `(dlt & ~3) == format` in order to only return true
+// for valid DLTs.  Whereas the `dlt & format` idiom is a bit faster but
+// can return false-positives on invalid DLTs.
+
 /// Check if the `DimLevelType` is compressed (regardless of properties).
 constexpr bool isCompressedDLT(DimLevelType dlt) {
-  return static_cast<uint8_t>(dlt) &
+  return (static_cast<uint8_t>(dlt) & ~3) ==
          static_cast<uint8_t>(DimLevelType::Compressed);
 }
 
 /// Check if the `DimLevelType` is singleton (regardless of properties).
 constexpr bool isSingletonDLT(DimLevelType dlt) {
-  return static_cast<uint8_t>(dlt) &
+  return (static_cast<uint8_t>(dlt) & ~3) ==
          static_cast<uint8_t>(DimLevelType::Singleton);
 }
 
@@ -178,6 +203,18 @@ constexpr bool isUniqueDLT(DimLevelType dlt) {
 }
 
 // Ensure the above predicates work as intended.
+static_assert((isValidDLT(DimLevelType::Undef) &&
+               isValidDLT(DimLevelType::Dense) &&
+               isValidDLT(DimLevelType::Compressed) &&
+               isValidDLT(DimLevelType::CompressedNu) &&
+               isValidDLT(DimLevelType::CompressedNo) &&
+               isValidDLT(DimLevelType::CompressedNuNo) &&
+               isValidDLT(DimLevelType::Singleton) &&
+               isValidDLT(DimLevelType::SingletonNu) &&
+               isValidDLT(DimLevelType::SingletonNo) &&
+               isValidDLT(DimLevelType::SingletonNuNo)),
+              "isValidDLT definition is broken");
+
 static_assert((!isCompressedDLT(DimLevelType::Dense) &&
                isCompressedDLT(DimLevelType::Compressed) &&
                isCompressedDLT(DimLevelType::CompressedNu) &&

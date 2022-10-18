@@ -143,6 +143,10 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
   printer << "<{ dimLevelType = [ ";
   for (unsigned i = 0, e = getDimLevelType().size(); i < e; i++) {
     switch (getDimLevelType()[i]) {
+    case DimLevelType::Undef:
+      // TODO: should probably raise an error instead of printing it...
+      printer << "\"undef\"";
+      break;
     case DimLevelType::Dense:
       printer << "\"dense\"";
       break;
