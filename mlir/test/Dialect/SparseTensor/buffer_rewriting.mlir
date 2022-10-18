@@ -22,7 +22,7 @@
 //       CHECK: memref.store %[[P2]], %[[A]]{{\[}}%[[C2]]]
 //       CHECK: return %[[M]] : memref<?xf64>
 func.func @sparse_push_back(%arg0: memref<?xindex>, %arg1: memref<?xf64>, %arg2: f64) -> memref<?xf64> {
-  %0 = sparse_tensor.push_back %arg0, %arg1, %arg2 {idx = 2 : index} : memref<?xindex>, memref<?xf64>, f64 to memref<?xf64>
+  %0 = sparse_tensor.push_back %arg0, %arg1, %arg2 {idx = 2 : index} : memref<?xindex>, memref<?xf64>, f64
   return %0 : memref<?xf64>
 }
 
@@ -40,7 +40,7 @@ func.func @sparse_push_back(%arg0: memref<?xindex>, %arg1: memref<?xf64>, %arg2:
 //       CHECK: memref.store %[[P2]], %[[A]]{{\[}}%[[C2]]]
 //       CHECK: return %[[B]] : memref<?xf64>
 func.func @sparse_push_back_inbound(%arg0: memref<?xindex>, %arg1: memref<?xf64>, %arg2: f64) -> memref<?xf64> {
-  %0 = sparse_tensor.push_back inbounds %arg0, %arg1, %arg2 {idx = 2 : index} : memref<?xindex>, memref<?xf64>, f64 to memref<?xf64>
+  %0 = sparse_tensor.push_back inbounds %arg0, %arg1, %arg2 {idx = 2 : index} : memref<?xindex>, memref<?xf64>, f64
   return %0 : memref<?xf64>
 }
 

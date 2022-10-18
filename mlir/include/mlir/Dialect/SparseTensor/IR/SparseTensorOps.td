@@ -238,7 +238,11 @@ def SparseTensor_InsertOp : SparseTensor_Op<"insert",
   let hasVerifier = 1;
 }
 
-def SparseTensor_PushBackOp : SparseTensor_Op<"push_back", []>,
+def SparseTensor_PushBackOp : SparseTensor_Op<"push_back",
+    [TypesMatchWith<"value type matches element type of inBuffer",
+                    "inBuffer", "value",
+                    "$_self.cast<ShapedType>().getElementType()">,
+     AllTypesMatch<["inBuffer", "outBuffer"]>]>,
     Arguments<(ins StridedMemRefRankOf<[Index], [1]>:$bufferSizes,
                StridedMemRefRankOf<[AnyType], [1]>:$inBuffer,
                AnyType:$value, IndexAttr:$idx, UnitAttr:$inbounds)>,
@@ -263,19 +267,18 @@ def SparseTensor_PushBackOp : SparseTensor_Op<"push_back", []>,
     Example:
 
     ```mlir
-    %r = sparse_tensor.push_back %bufferSizes, %buffer, %val {idx = 0 : index}
-      : memref<?xindex>, memref<?xf64>, f64 -> memref<?xf64>
+    %r = sparse_tensor.push_back %bufferSizes, %buffer, %val
+      {idx = 0 : index} : memref<?xindex>, memref<?xf64>, f64
     ```
 
     ```mlir
     %r = sparse_tensor.push_back inbounds %bufferSizes, %buffer, %val
-      {idx = 0 : index} : memref<?xindex>, memref<?xf64>, f64 -> memref<?xf64>
+      {idx = 0 : index} : memref<?xindex>, memref<?xf64>, f64
     ```
   }];
   let assemblyFormat = "(`inbounds` $inbounds^)? $bufferSizes `,` $inBuffer"
                        " `,` $value attr-dict `:` type($bufferSizes) `,`"
-                       " type($inBuffer) `,` type($value) `to`"
-                       " type($outBuffer)";
+                       " type($inBuffer) `,` type($value)";
 }
 
 def SparseTensor_ExpandOp : SparseTensor_Op<"expand", []>,
