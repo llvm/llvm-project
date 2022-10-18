@@ -57,8 +57,8 @@ namespace detail {
 ///    };
 /// ```
 ///
-/// * BaseType: A desired base type for the interface. This is a class that
-///             provides that provides specific functionality for the `ValueT`
+/// * BaseType: A desired base type for the interface. This is a class
+///             that provides specific functionality for the `ValueT`
 ///             value. For instance the specific `Op` that will wrap the
 ///             `Operation*` for an `OpInterface`.
 /// * BaseTrait: The base type for the interface trait. This is the base class
