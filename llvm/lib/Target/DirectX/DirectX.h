@@ -49,6 +49,14 @@ ModulePass *createDXILPrettyPrinterPass(raw_ostream &OS);
 /// Initializer for DXILPrettyPrinter.
 void initializeDXILPrettyPrinterPass(PassRegistry &);
 
+/// Initializer for dxil::ShaderFlagsAnalysisWrapper pass.
+void initializeShaderFlagsAnalysisWrapperPass(PassRegistry &);
+
+/// Initializer for DXContainerGlobals pass.
+void initializeDXContainerGlobalsPass(PassRegistry &);
+
+/// Pass for generating DXContainer part globals.
+ModulePass *createDXContainerGlobalsPass();
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_DIRECTX_DIRECTX_H

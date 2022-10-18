@@ -589,6 +589,18 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
           Args.MakeArgString(Twine(PluginOptPrefix) + "-debugger-tune=gdb"));
   }
 
+  if (IsOSAIX) {
+    // On AIX, clang assumes strict-dwarf is true if any debug option is
+    // specified, unless it is told explicitly not to assume so.
+    Arg *A = Args.getLastArg(options::OPT_g_Group);
+    bool EnableDebugInfo = A && !A->getOption().matches(options::OPT_g0) &&
+                           !A->getOption().matches(options::OPT_ggdb0);
+    if (EnableDebugInfo && Args.hasFlag(options::OPT_gstrict_dwarf,
+                                        options::OPT_gno_strict_dwarf, true))
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine(PluginOptPrefix) + "-strict-dwarf=true"));
+  }
+
   bool UseSeparateSections =
       isUseSeparateSections(ToolChain.getEffectiveTriple());
 

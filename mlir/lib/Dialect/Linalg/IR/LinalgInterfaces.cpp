@@ -462,14 +462,6 @@ LogicalResult mlir::linalg::detail::verifyFillInterface(Operation *op) {
 // StructuredOpInterface implementation
 //===----------------------------------------------------------------------===//
 
-OpOperandVector::operator SmallVector<Value>() {
-  SmallVector<Value> result;
-  result.reserve(this->size());
-  llvm::transform(*this, std::back_inserter(result),
-                  [](OpOperand *opOperand) { return opOperand->get(); });
-  return result;
-}
-
 /// Helper function that creates a memref::DimOp or tensor::DimOp depending on
 /// the type of `source`.
 static Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source,
@@ -768,57 +760,5 @@ LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
              << elementType << ")";
   }
 
-  return success();
-}
-
-LogicalResult
-mlir::linalg::detail::verifyDestinationStyleOpInterface(Operation *op) {
-  DestinationStyleOpInterface dstStyleOp =
-      cast<DestinationStyleOpInterface>(op);
-
-  SmallVector<OpOperand *> outputBufferOperands, outputTensorOperands;
-  for (OpOperand *operand : dstStyleOp.getOutputOperands()) {
-    Type type = operand->get().getType();
-    if (type.isa<MemRefType>())
-      outputBufferOperands.push_back(operand);
-    if (type.isa<RankedTensorType>())
-      outputTensorOperands.push_back(operand);
-  }
-
-  // Expect at least one output operand.
-  // This means an op that constructs a tensor out of indices cannot be a
-  // LinalgOp at the moment. For now this will have to be a special op until we
-  // have output shape operands that are not tensors.
-  int64_t numInputs = dstStyleOp.getNumInputs();
-  int64_t numOutputs = dstStyleOp.getNumOutputs();
-  if (numOutputs == 0)
-    return op->emitOpError("expected at least one output operand");
-  if (failed(OpTrait::impl::verifyNOperands(op, numInputs + numOutputs)))
-    return failure();
-  // Verify the number of results matches the number of output tensors.
-  if (op->getNumResults() != outputTensorOperands.size())
-    return op->emitOpError("expected the number of results (")
-           << op->getNumResults()
-           << ") to be equal to the number of output tensors ("
-           << outputTensorOperands.size() << ")";
-
-  // Simplifying assumption: either full tensor or full buffer mode.
-  // This allows simpler verification of output operands vs result types
-  // without premature tracking of which operand is what in mixed-mode.
-  // TODO: relax when mixed-mode needs to pass verification.
-  if (!outputBufferOperands.empty() && !outputTensorOperands.empty())
-    return op->emitOpError(
-        "expected output operands to all have tensor type or "
-        "all have buffer type");
-
-  for (OpOperand *opOperand : outputTensorOperands) {
-    OpResult result = dstStyleOp.getTiedOpResult(opOperand);
-    if (result.getType() != opOperand->get().getType())
-      return op->emitOpError("expected type of operand #")
-             << opOperand->getOperandNumber() << " ("
-             << opOperand->get().getType() << ")"
-             << " to match type of corresponding result (" << result.getType()
-             << ")";
-  }
   return success();
 }

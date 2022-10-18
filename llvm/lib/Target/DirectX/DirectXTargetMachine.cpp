@@ -43,6 +43,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeDXILOpLoweringLegacyPass(*PR);
   initializeDXILTranslateMetadataPass(*PR);
   initializeDXILResourceWrapperPass(*PR);
+  initializeShaderFlagsAnalysisWrapperPass(*PR);
 }
 
 class DXILTargetObjectFile : public TargetLoweringObjectFile {
@@ -126,6 +127,9 @@ bool DirectXTargetMachine::addPassesToEmitFile(
 
   if (TargetPassConfig::willCompleteCodeGenPipeline()) {
     PM.add(createDXILEmbedderPass());
+    // We embed the other DXContainer globals after embedding DXIL so that the
+    // globals don't pollute the DXIL.
+    PM.add(createDXContainerGlobalsPass());
   }
   switch (FileType) {
   case CGFT_AssemblyFile:

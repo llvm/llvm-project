@@ -173,6 +173,5 @@ static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
 }
 
 void llvm::reduceBasicBlocksDeltaPass(TestRunner &Test) {
-  errs() << "*** Reducing Basic Blocks...\n";
-  runDeltaPass(Test, extractBasicBlocksFromModule);
+  runDeltaPass(Test, extractBasicBlocksFromModule, "Reducing Basic Blocks");
 }

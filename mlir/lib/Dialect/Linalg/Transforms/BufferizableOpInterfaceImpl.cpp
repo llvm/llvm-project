@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Interfaces/DestinationStyleOpInterface.h"
 
 using namespace mlir;
 using namespace linalg;
@@ -115,7 +116,7 @@ struct LinalgOpInterface
 
   SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    auto genericOp = cast<linalg::DestinationStyleOpInterface>(op);
+    auto genericOp = cast<DestinationStyleOpInterface>(op);
 
     // The i-th "out" tensor may alias with the i-th OpResult.
     if (genericOp.isOutput(&opOperand))

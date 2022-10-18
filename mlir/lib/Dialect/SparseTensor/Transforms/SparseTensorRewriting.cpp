@@ -146,12 +146,13 @@ static RankedTensorType getUnorderedCOOFromType(RankedTensorType src) {
   // level should the COO has a unique level at the end. Ends by a unordered
   // unique singleton level.
   dims.push_back(SparseTensorEncodingAttr::DimLevelType::SingletonNo);
+  SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(src);
   // TODO: Maybe pick the bitwidth based on input/output tensors (probably the
   // largest one among them) in the original operation instead of using the
   // default value.
   auto enc = SparseTensorEncodingAttr::get(
-      ctx, dims, AffineMap::getMultiDimIdentityMap(rank, ctx), AffineMap(), 0,
-      0);
+      ctx, dims, AffineMap::getMultiDimIdentityMap(rank, ctx), AffineMap(),
+      encSrc.getPointerBitWidth(), encSrc.getIndexBitWidth());
   return RankedTensorType::get(src.getShape(), src.getElementType(), enc);
 }
 
@@ -611,11 +612,14 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
 // Methods that add patterns described in this file to a pattern list.
 //===---------------------------------------------------------------------===//
 void mlir::populateSparseTensorRewriting(RewritePatternSet &patterns,
-                                         bool enableRT) {
+                                         bool enableRT, bool enableForeach,
+                                         bool /*enableConvert*/) {
   patterns.add<FoldInvariantYield, FuseSparseMultiplyOverAdd,
                ReshapeRewriter<tensor::ExpandShapeOp>,
-               ReshapeRewriter<tensor::CollapseShapeOp>, ForeachRewriter>(
-      patterns.getContext());
+               ReshapeRewriter<tensor::CollapseShapeOp>>(patterns.getContext());
+  if (enableForeach)
+    patterns.add<ForeachRewriter>(patterns.getContext());
+
   // TODO: If RT not enabled, rewrite concatenate ops, etc here.
   if (!enableRT)
     patterns.add<ConcatenateRewriter, NewRewriter,

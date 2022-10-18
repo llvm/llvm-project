@@ -19,7 +19,7 @@ int main(int argc, char* argv[]) {
 #pragma omp for simd aligned(data : 0x8000)
   for(int x = 0; x < 1; x++)
     data[x] = data[x];
-  // CHECK: {{.*}}alignment-assumption-{{.*}}.cpp:[[@LINE-3]]:30: runtime error: assumption of 32768 byte alignment for pointer of type 'char *' failed
+  // CHECK: {{.*}}align-assume-{{.*}}.cpp:[[@LINE-3]]:30: runtime error: assumption of 32768 byte alignment for pointer of type 'char *' failed
   // CHECK: 0x{{.*}}: note: address is {{.*}} aligned, misalignment offset is {{.*}} byte
 
   free(ptr);
