@@ -3,7 +3,7 @@
 // RUN: mlir-opt %s -test-vector-warp-distribute=rewrite-warp-ops-to-scf-if -canonicalize | \
 // RUN: mlir-opt -convert-scf-to-cf -convert-cf-to-llvm -convert-vector-to-llvm -convert-arith-to-llvm \
 // RUN:  -gpu-kernel-outlining |\
-// RUN: mlir-opt -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-nvvm,reconcile-unrealized-casts,gpu-to-cubin)' |\
+// RUN: mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,reconcile-unrealized-casts,gpu-to-cubin))' |\
 // RUN: mlir-opt -gpu-to-llvm -reconcile-unrealized-casts |\
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_lib_dir/libmlir_cuda_runtime%shlibext \
@@ -16,7 +16,7 @@
 // RUN:   -test-vector-warp-distribute=rewrite-warp-ops-to-scf-if -canonicalize | \
 // RUN: mlir-opt -convert-scf-to-cf -convert-cf-to-llvm -convert-vector-to-llvm -convert-arith-to-llvm \
 // RUN:  -gpu-kernel-outlining |\
-// RUN: mlir-opt -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-nvvm,reconcile-unrealized-casts,gpu-to-cubin)' |\
+// RUN: mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,reconcile-unrealized-casts,gpu-to-cubin))' |\
 // RUN: mlir-opt -gpu-to-llvm -reconcile-unrealized-casts |\
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_lib_dir/libmlir_cuda_runtime%shlibext \
@@ -28,7 +28,7 @@
 // RUN:   -test-vector-warp-distribute=rewrite-warp-ops-to-scf-if -canonicalize | \
 // RUN: mlir-opt -convert-scf-to-cf -convert-cf-to-llvm -convert-vector-to-llvm -convert-arith-to-llvm \
 // RUN:  -gpu-kernel-outlining |\
-// RUN: mlir-opt -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-nvvm,reconcile-unrealized-casts,gpu-to-cubin)' |\
+// RUN: mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,reconcile-unrealized-casts,gpu-to-cubin))' |\
 // RUN: mlir-opt -gpu-to-llvm -reconcile-unrealized-casts |\
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_lib_dir/libmlir_cuda_runtime%shlibext \

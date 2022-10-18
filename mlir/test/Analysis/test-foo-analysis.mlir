@@ -1,4 +1,4 @@
-// RUN: mlir-opt -split-input-file -pass-pipeline='func.func(test-foo-analysis)' %s 2>&1 | FileCheck %s
+// RUN: mlir-opt -split-input-file -pass-pipeline='builtin.module(func.func(test-foo-analysis))' %s 2>&1 | FileCheck %s
 
 // CHECK-LABEL: function: @test_default_init
 func.func @test_default_init() -> () {

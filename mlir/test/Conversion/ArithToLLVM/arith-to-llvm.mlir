@@ -1,4 +1,4 @@
-// RUN: mlir-opt -pass-pipeline="func.func(convert-arith-to-llvm)" %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm))" %s -split-input-file | FileCheck %s
 
 // CHECK-LABEL: @vector_ops
 func.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) -> vector<4xf32> {

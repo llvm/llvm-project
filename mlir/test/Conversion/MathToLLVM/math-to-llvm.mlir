@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -pass-pipeline="func.func(convert-math-to-llvm)" | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -pass-pipeline="builtin.module(func.func(convert-math-to-llvm))" | FileCheck %s
 
 // CHECK-LABEL: @ops
 func.func @ops(%arg0: f32, %arg1: f32, %arg2: i32, %arg3: i32, %arg4: f64) {

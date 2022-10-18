@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -pass-pipeline="func.func(convert-vector-to-gpu{use-nvgpu=true})" | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -pass-pipeline="builtin.module(func.func(convert-vector-to-gpu{use-nvgpu=true}))" | FileCheck %s
 
 //#########################################################
 // INT8 row-row-row

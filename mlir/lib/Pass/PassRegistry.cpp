@@ -923,8 +923,10 @@ LogicalResult PassPipelineCLParser::addToPipeline(
           "' option can't be used with individual pass options");
     std::string errMsg;
     llvm::raw_string_ostream os(errMsg);
-    if (failed(parsePassPipeline(passPipeline, pm, os)))
+    FailureOr<OpPassManager> parsed = parsePassPipeline(passPipeline, os);
+    if (failed(parsed))
       return errorHandler(errMsg);
+    pm = std::move(*parsed);
     return success();
   }
 
