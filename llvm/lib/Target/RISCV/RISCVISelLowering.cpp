@@ -2878,6 +2878,54 @@ static SDValue lowerVECTOR_SHUFFLEAsVNSRL(const SDLoc &DL, MVT VT,
   return convertFromScalableVector(VT, Res, DAG, Subtarget);
 }
 
+// Lower the following shuffle to vslidedown.
+// t49: v8i8 = extract_subvector t13, Constant:i64<0>
+// t109: v8i8 = extract_subvector t12, Constant:i64<8>
+// t108: v8i8 = vector_shuffle<1,2,3,4,5,6,7,8> t49, t106
+static SDValue lowerVECTOR_SHUFFLEAsVSlidedown(const SDLoc &DL, MVT VT,
+                                               SDValue V1, SDValue V2,
+                                               ArrayRef<int> Mask,
+                                               const RISCVSubtarget &Subtarget,
+                                               SelectionDAG &DAG) {
+  // Both input must be extracts.
+  if (V1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+      V2.getOpcode() != ISD::EXTRACT_SUBVECTOR)
+    return SDValue();
+
+  // Extracting from the same source.
+  SDValue Src = V1.getOperand(0);
+  if (Src != V2.getOperand(0))
+    return SDValue();
+
+  // V1 must be started with 0.
+  // V1 and V2 are continuous.
+  if (V1.getConstantOperandVal(1) != 0 ||
+      VT.getVectorNumElements() != V2.getConstantOperandVal(1))
+    return SDValue();
+
+  // Do not handle -1 here. -1 can be handled by isElementRotate.
+  if (Mask[0] == -1)
+    return SDValue();
+
+  // Mask is also continuous.
+  for (unsigned i = 1; i != Mask.size(); ++i)
+    if (Mask[i - 1] + 1 != Mask[i])
+      return SDValue();
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  MVT SrcVT = Src.getSimpleValueType();
+  MVT ContainerVT = getContainerForFixedLengthVector(DAG, SrcVT, Subtarget);
+  auto [TrueMask, VL] = getDefaultVLOps(SrcVT, ContainerVT, DL, DAG, Subtarget);
+  SDValue Slidedown = DAG.getNode(
+      RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
+      convertToScalableVector(ContainerVT, Src, DAG, Subtarget),
+      DAG.getConstant(Mask[0], DL, XLenVT), TrueMask, VL);
+  return DAG.getNode(
+      ISD::EXTRACT_SUBVECTOR, DL, VT,
+      convertFromScalableVector(SrcVT, Slidedown, DAG, Subtarget),
+      DAG.getConstant(0, DL, XLenVT));
+}
+
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
@@ -2968,6 +3016,10 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   }
 
   ArrayRef<int> Mask = SVN->getMask();
+
+  if (SDValue V =
+          lowerVECTOR_SHUFFLEAsVSlidedown(DL, VT, V1, V2, Mask, Subtarget, DAG))
+    return V;
 
   // Lower rotations to a SLIDEDOWN and a SLIDEUP. One of the source vectors may
   // be undef which can be handled with a single SLIDEDOWN/UP.
