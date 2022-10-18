@@ -3581,16 +3581,11 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
                            TemplateArgumentListInfo &TemplateArgs) {
   ASTContext &Context = SemaRef.getASTContext();
 
-  TemplateParameterList *TPL = BTD->getTemplateParameters();
-
   // Wrap the type in substitution sugar.
   auto getSubstType = [&](QualType Replacement, unsigned IndexReplaced,
                           Optional<unsigned> PackIndexReplaced) {
-    QualType TTP = SemaRef.Context.getTemplateTypeParmType(
-        0, IndexReplaced, false,
-        cast<TemplateTypeParmDecl>(TPL->getParam(IndexReplaced)));
     return SemaRef.Context.getSubstTemplateTypeParmType(
-        cast<TemplateTypeParmType>(TTP), Replacement, PackIndexReplaced);
+        Replacement, BTD, IndexReplaced, PackIndexReplaced);
   };
 
   switch (BTD->getBuiltinTemplateKind()) {
@@ -3639,8 +3634,7 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
 
     // Wrap the template in substitution sugar.
     TemplateName TN = SemaRef.Context.getSubstTemplateTemplateParm(
-        cast<TemplateTemplateParmDecl>(TPL->getParam(0)),
-        Converted[0].getAsTemplate());
+        Converted[0].getAsTemplate(), BTD, 0, None);
 
     // The first template argument will be reused as the template decl that
     // our synthetic template arguments will be applied to.
@@ -3872,7 +3866,8 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
 
     // Only substitute for the innermost template argument list.
     MultiLevelTemplateArgumentList TemplateArgLists;
-    TemplateArgLists.addOuterTemplateArguments(&StackTemplateArgs);
+    TemplateArgLists.addOuterTemplateArguments(Template,
+                                               StackTemplateArgs.asArray());
     TemplateArgLists.addOuterRetainedLevels(
         AliasTemplate->getTemplateParameters()->getDepth());
 
@@ -3997,7 +3992,7 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
       InstantiatingTemplate Inst(*this, TemplateLoc, Decl);
       if (!Inst.isInvalid()) {
         MultiLevelTemplateArgumentList TemplateArgLists;
-        TemplateArgLists.addOuterTemplateArguments(Converted);
+        TemplateArgLists.addOuterTemplateArguments(Template, Converted);
         InstantiateAttrsForDecl(TemplateArgLists,
                                 ClassTemplate->getTemplatedDecl(), Decl);
       }
@@ -4876,7 +4871,7 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
       TemplateSpecializationType::anyDependentTemplateArguments(*TemplateArgs,
                                                                 Converted);
   MultiLevelTemplateArgumentList MLTAL;
-  MLTAL.addOuterTemplateArguments(Converted);
+  MLTAL.addOuterTemplateArguments(NamedConcept, Converted);
   LocalInstantiationScope Scope(*this);
   if (!AreArgsDependent &&
       CheckConstraintSatisfaction(
@@ -5286,8 +5281,8 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
     TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, Converted);
 
     // Only substitute for the innermost template argument list.
-    MultiLevelTemplateArgumentList TemplateArgLists;
-    TemplateArgLists.addOuterTemplateArguments(&TemplateArgs);
+    MultiLevelTemplateArgumentList TemplateArgLists(Template,
+                                                    TemplateArgs.asArray());
     for (unsigned i = 0, e = Param->getDepth(); i != e; ++i)
       TemplateArgLists.addOuterTemplateArguments(None);
 
@@ -5342,8 +5337,8 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
   TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, Converted);
 
   // Only substitute for the innermost template argument list.
-  MultiLevelTemplateArgumentList TemplateArgLists;
-  TemplateArgLists.addOuterTemplateArguments(&TemplateArgs);
+  MultiLevelTemplateArgumentList TemplateArgLists(Template,
+                                                  TemplateArgs.asArray());
   for (unsigned i = 0, e = Param->getDepth(); i != e; ++i)
     TemplateArgLists.addOuterTemplateArguments(None);
 
@@ -5395,8 +5390,8 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
   TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, Converted);
 
   // Only substitute for the innermost template argument list.
-  MultiLevelTemplateArgumentList TemplateArgLists;
-  TemplateArgLists.addOuterTemplateArguments(&TemplateArgs);
+  MultiLevelTemplateArgumentList TemplateArgLists(Template,
+                                                  TemplateArgs.asArray());
   for (unsigned i = 0, e = Param->getDepth(); i != e; ++i)
     TemplateArgLists.addOuterTemplateArguments(None);
 
@@ -5580,18 +5575,15 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param,
       TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack,
                                         Converted);
 
+      MultiLevelTemplateArgumentList MLTAL(Template, TemplateArgs.asArray());
       // If the parameter is a pack expansion, expand this slice of the pack.
       if (auto *PET = NTTPType->getAs<PackExpansionType>()) {
         Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(*this,
                                                            ArgumentPackIndex);
-        NTTPType = SubstType(PET->getPattern(),
-                             MultiLevelTemplateArgumentList(TemplateArgs),
-                             NTTP->getLocation(),
+        NTTPType = SubstType(PET->getPattern(), MLTAL, NTTP->getLocation(),
                              NTTP->getDeclName());
       } else {
-        NTTPType = SubstType(NTTPType,
-                             MultiLevelTemplateArgumentList(TemplateArgs),
-                             NTTP->getLocation(),
+        NTTPType = SubstType(NTTPType, MLTAL, NTTP->getLocation(),
                              NTTP->getDeclName());
       }
 
@@ -5734,15 +5726,15 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param,
   {
     // Set up a template instantiation context.
     LocalInstantiationScope Scope(*this);
-    InstantiatingTemplate Inst(*this, TemplateLoc, Template,
-                               TempParm, Converted,
-                               SourceRange(TemplateLoc, RAngleLoc));
+    InstantiatingTemplate Inst(*this, TemplateLoc, Template, TempParm,
+                               Converted, SourceRange(TemplateLoc, RAngleLoc));
     if (Inst.isInvalid())
       return true;
 
     TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, Converted);
-    Params = SubstTemplateParams(Params, CurContext,
-                                 MultiLevelTemplateArgumentList(TemplateArgs));
+    Params = SubstTemplateParams(
+        Params, CurContext,
+        MultiLevelTemplateArgumentList(Template, TemplateArgs.asArray()));
     if (!Params)
       return true;
   }
@@ -7660,10 +7652,10 @@ bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
 
     if (isTemplateTemplateParameterAtLeastAsSpecializedAs(Params, Template,
                                                           Arg.getLocation())) {
-      // C++2a[temp.func.order]p2
+      // P2113
+      // C++20[temp.func.order]p2
       //   [...] If both deductions succeed, the partial ordering selects the
-      //   more constrained template as described by the rules in
-      //   [temp.constr.order].
+      // more constrained template (if one exists) as determined below.
       SmallVector<const Expr *, 3> ParamsAC, TemplateAC;
       Params->getAssociatedConstraints(ParamsAC);
       // C++2a[temp.arg.template]p3
@@ -7872,7 +7864,8 @@ Sema::BuildExpressionFromIntegralTemplateArgument(const TemplateArgument &Arg,
 static bool MatchTemplateParameterKind(
     Sema &S, NamedDecl *New, const NamedDecl *NewInstFrom, NamedDecl *Old,
     const NamedDecl *OldInstFrom, bool Complain,
-    Sema::TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc) {
+    Sema::TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc,
+    bool PartialOrdering) {
   // Check the actual kind (type, non-type, template).
   if (Old->getKind() != New->getKind()) {
     if (Complain) {
@@ -7960,11 +7953,11 @@ static bool MatchTemplateParameterKind(
             (Kind == Sema::TPL_TemplateMatch
                  ? Sema::TPL_TemplateTemplateParmMatch
                  : Kind),
-            TemplateArgLoc))
+            TemplateArgLoc, PartialOrdering))
       return false;
   }
 
-  if (Kind != Sema::TPL_TemplateTemplateArgumentMatch &&
+  if (!PartialOrdering && Kind != Sema::TPL_TemplateTemplateArgumentMatch &&
       !isa<TemplateTemplateParmDecl>(Old)) {
     const Expr *NewC = nullptr, *OldC = nullptr;
 
@@ -8057,7 +8050,8 @@ void DiagnoseTemplateParameterListArityMismatch(Sema &S,
 bool Sema::TemplateParameterListsAreEqual(
     const NamedDecl *NewInstFrom, TemplateParameterList *New,
     const NamedDecl *OldInstFrom, TemplateParameterList *Old, bool Complain,
-    TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc) {
+    TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc,
+    bool PartialOrdering) {
   if (Old->size() != New->size() && Kind != TPL_TemplateTemplateArgumentMatch) {
     if (Complain)
       DiagnoseTemplateParameterListArityMismatch(*this, New, Old, Kind,
@@ -8089,7 +8083,7 @@ bool Sema::TemplateParameterListsAreEqual(
 
       if (!MatchTemplateParameterKind(*this, *NewParm, NewInstFrom, *OldParm,
                                       OldInstFrom, Complain, Kind,
-                                      TemplateArgLoc))
+                                      TemplateArgLoc, PartialOrdering))
         return false;
 
       ++NewParm;
@@ -8106,7 +8100,7 @@ bool Sema::TemplateParameterListsAreEqual(
     for (; NewParm != NewParmEnd; ++NewParm) {
       if (!MatchTemplateParameterKind(*this, *NewParm, NewInstFrom, *OldParm,
                                       OldInstFrom, Complain, Kind,
-                                      TemplateArgLoc))
+                                      TemplateArgLoc, PartialOrdering))
         return false;
     }
   }
@@ -8120,7 +8114,7 @@ bool Sema::TemplateParameterListsAreEqual(
     return false;
   }
 
-  if (Kind != TPL_TemplateTemplateArgumentMatch) {
+  if (!PartialOrdering && Kind != TPL_TemplateTemplateArgumentMatch) {
     const Expr *NewRC = New->getRequiresClause();
     const Expr *OldRC = Old->getRequiresClause();
 

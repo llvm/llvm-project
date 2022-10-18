@@ -412,7 +412,7 @@ void Patch843419Section::writeTo(uint8_t *buf) {
   write32le(buf, read32le(patchee->rawData.begin() + patcheeOffset));
 
   // Apply any relocation transferred from the original patchee section.
-  relocateAlloc(buf, buf + getSize());
+  target->relocateAlloc(*this, buf);
 
   // Return address is the next instruction after the one we have just copied.
   uint64_t s = getLDSTAddr() + 4;

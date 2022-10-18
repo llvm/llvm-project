@@ -2358,7 +2358,7 @@ FileCheck output:
             start = 0
             for substr in substrs:
                 index = output[start:].find(substr)
-                start = start + index if ordered and matching else 0
+                start = start + index + len(substr) if ordered and matching else 0
                 matched = index != -1
                 log_lines.append("{} sub string: \"{}\" ({})".format(
                         expecting_str, substr, found_str(matched)))

@@ -29,6 +29,5 @@ static void reduceUsingSimplifyCFG(Oracle &O, Module &Program) {
 }
 
 void llvm::reduceUsingSimplifyCFGDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing using SimplifyCFG...\n";
-  runDeltaPass(Test, reduceUsingSimplifyCFG);
+  runDeltaPass(Test, reduceUsingSimplifyCFG, "Reducing using SimplifyCFG");
 }

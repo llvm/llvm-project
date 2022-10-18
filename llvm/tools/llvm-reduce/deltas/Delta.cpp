@@ -235,10 +235,11 @@ SmallString<0> ProcessChunkFromSerializedBitcode(
 /// reduces the amount of chunks that are considered interesting by the
 /// given test. The number of chunks is determined by a preliminary run of the
 /// reduction pass where no change must be made to the module.
-void llvm::runDeltaPass(TestRunner &Test,
-                        ReductionFunc ExtractChunksFromModule) {
+void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
+                        StringRef Message) {
   assert(!verifyReducerWorkItem(Test.getProgram(), &errs()) &&
          "input module is broken before making changes");
+  errs() << "*** " << Message << "...\n";
 
   SmallString<128> CurrentFilepath;
   if (!isReduced(Test.getProgram(), Test, CurrentFilepath)) {
@@ -275,6 +276,7 @@ void llvm::runDeltaPass(TestRunner &Test,
   if (!Targets) {
     if (Verbose)
       errs() << "\nNothing to reduce\n";
+    errs() << "----------------------------\n";
     return;
   }
 
@@ -412,4 +414,5 @@ void llvm::runDeltaPass(TestRunner &Test,
     Test.setProgram(std::move(ReducedProgram));
   if (Verbose)
     errs() << "Couldn't increase anymore.\n";
+  errs() << "----------------------------\n";
 }

@@ -996,8 +996,9 @@ convertOmpSimdLoop(Operation &opInst, llvm::IRBuilderBase &builder,
   if (llvm::Optional<uint64_t> safelenVar = loop.getSafelen())
     safelen = builder.getInt64(safelenVar.value());
 
+  llvm::MapVector<llvm::Value *, llvm::Value *> alignedVars;
   ompBuilder->applySimd(
-      loopInfo,
+      loopInfo, alignedVars,
       loop.getIfExpr() ? moduleTranslation.lookupValue(loop.getIfExpr())
                        : nullptr,
       llvm::omp::OrderKind::OMP_ORDER_unknown, simdlen, safelen);

@@ -20,7 +20,7 @@
 // CHECK-NEXT:   }
 // CHECK:        Section {
 // CHECK:          Name: .xdata
-// CHECK:          RawDataSize: 56
+// CHECK:          RawDataSize: 92
 // CHECK:          RelocationCount: 1
 // CHECK:          Characteristics [
 // CHECK-NEXT:       ALIGN_4BYTES
@@ -41,7 +41,7 @@
 
 // CHECK-NEXT: Relocations [
 // CHECK-NEXT:   Section (4) .xdata {
-// CHECK-NEXT:     0x2C IMAGE_REL_ARM64_ADDR32NB __C_specific_handler
+// CHECK-NEXT:     0x50 IMAGE_REL_ARM64_ADDR32NB __C_specific_handler
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section (5) .pdata {
 // CHECK-NEXT:     0x0 IMAGE_REL_ARM64_ADDR32NB .text
@@ -54,8 +54,20 @@
 // CHECK-NEXT:     Function: func
 // CHECK-NEXT:     ExceptionRecord: .xdata
 // CHECK-NEXT:     ExceptionData {
-// CHECK-NEXT:       FunctionLength: 104
+// CHECK-NEXT:       FunctionLength: 152
 // CHECK:            Prologue [
+// CHECK-NEXT:         0xe76983            ; stp q9, q10, [sp, #-64]!
+// CHECK-NEXT:         0xe73d83            ; str q29, [sp, #-64]!
+// CHECK-NEXT:         0xe76243            ; stp d2, d3, [sp, #-64]!
+// CHECK-NEXT:         0xe73f43            ; str d31, [sp, #-64]!
+// CHECK-NEXT:         0xe77d03            ; stp x29, x30, [sp, #-64]!
+// CHECK-NEXT:         0xe73e03            ; str x30, [sp, #-64]!
+// CHECK-NEXT:         0xe74384            ; stp q3, q4, [sp, #64]
+// CHECK-NEXT:         0xe71e84            ; str q30, [sp, #64]
+// CHECK-NEXT:         0xe74444            ; stp d4, d5, [sp, #64]
+// CHECK-NEXT:         0xe71d48            ; str d29, [sp, #64]
+// CHECK-NEXT:         0xe74104            ; stp x1, x2, [sp, #64]
+// CHECK-NEXT:         0xe70008            ; str x0, [sp, #64]
 // CHECK-NEXT:         0xfc                ; pacibsp
 // CHECK-NEXT:         0xec                ; clear unwound to call
 // CHECK-NEXT:         0xea                ; context
@@ -83,8 +95,8 @@
 // CHECK-NEXT:       ]
 // CHECK-NEXT:       EpilogueScopes [
 // CHECK-NEXT:         EpilogueScope {
-// CHECK-NEXT:           StartOffset: 24
-// CHECK-NEXT:           EpilogueStartIndex: 32
+// CHECK-NEXT:           StartOffset: 36
+// CHECK-NEXT:           EpilogueStartIndex: 68
 // CHECK-NEXT:           Opcodes [
 // CHECK-NEXT:             0x01                ; add sp, #16
 // CHECK-NEXT:             0xe4                ; end
@@ -154,6 +166,30 @@ func:
     .seh_clear_unwound_to_call
     pacibsp
     .seh_pac_sign_lr
+    nop
+    .seh_save_any_reg x0, 64
+    nop
+    .seh_save_any_reg_p x1, 64
+    nop
+    .seh_save_any_reg d29, 64
+    nop
+    .seh_save_any_reg_p d4, 64
+    nop
+    .seh_save_any_reg q30, 64
+    nop
+    .seh_save_any_reg_p q3, 64
+    nop
+    .seh_save_any_reg_x lr, 64
+    nop
+    .seh_save_any_reg_px fp, 64
+    nop
+    .seh_save_any_reg_x d31, 64
+    nop
+    .seh_save_any_reg_px d2, 64
+    nop
+    .seh_save_any_reg_x q29, 64
+    nop
+    .seh_save_any_reg_px q9, 64
     .seh_endprologue
     nop
     .seh_startepilogue

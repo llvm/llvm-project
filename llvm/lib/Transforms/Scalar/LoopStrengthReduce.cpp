@@ -5947,7 +5947,7 @@ struct SCEVDbgValueBuilder {
   /// in the set of values referenced by the expression.
   void pushLocation(llvm::Value *V) {
     Expr.push_back(llvm::dwarf::DW_OP_LLVM_arg);
-    auto *It = std::find(LocationOps.begin(), LocationOps.end(), V);
+    auto *It = llvm::find(LocationOps, V);
     unsigned ArgIndex = 0;
     if (It != LocationOps.end()) {
       ArgIndex = std::distance(LocationOps.begin(), It);

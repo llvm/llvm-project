@@ -84,9 +84,7 @@ def testPad():
   # CHECK-DAG: padding_values = [4.200000e+01 : f32]
   # CHECK-DAG: padding_dimensions = [1]
   # CHECK-DAG: transpose_paddings = {{\[}}[1, 0]]
-  # CHECK-DAG: hoist_paddings = []
-  # CHECK-DAG: pack_paddings = []
-
+  # (hoist_paddings and pack_paddings have default values)
 
 @run
 def testScalarize():

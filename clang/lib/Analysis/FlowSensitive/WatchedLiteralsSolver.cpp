@@ -233,6 +233,11 @@ BooleanFormula buildBooleanFormula(const llvm::DenseSet<BoolValue *> &Vals) {
         UnprocessedSubVals.push(&B->getRightSubValue());
         break;
       }
+      case Value::Kind::TopBool:
+        // Nothing more to do. This `TopBool` instance has already been mapped
+        // to a fresh solver variable (`NextVar`, above) and is thereafter
+        // anonymous. The solver never sees `Top`.
+        break;
       case Value::Kind::AtomicBool: {
         Atomics[Var] = cast<AtomicBoolValue>(Val);
         break;

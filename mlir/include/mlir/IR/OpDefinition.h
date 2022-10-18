@@ -854,7 +854,7 @@ public:
   /// can use SFINAE to disable the methods for non-single region operations.
   template <typename OpT, typename T = void>
   using enable_if_single_region =
-      typename std::enable_if_t<OpT::template hasTrait<OneRegion>(), T>;
+      std::enable_if_t<OpT::template hasTrait<OneRegion>(), T>;
 
   template <typename OpT = ConcreteType>
   enable_if_single_region<OpT, Block::iterator> begin() {
@@ -957,7 +957,7 @@ struct SingleBlockImplicitTerminator {
 
     template <typename OpT, typename T = void>
     using enable_if_single_region =
-        typename std::enable_if_t<OpT::template hasTrait<OneRegion>(), T>;
+        std::enable_if_t<OpT::template hasTrait<OneRegion>(), T>;
 
     /// Insert the operation into the back of the body, before the terminator.
     template <typename OpT = ConcreteType>

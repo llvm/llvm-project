@@ -550,10 +550,15 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
                              m_ConstantInt(Index))))
     return false;
 
+  // Note: This handles the canonical fneg instruction and "fsub -0.0, X".
   Value *SrcVec;
-  if (!match(FNeg, m_FNeg(m_ExtractElt(m_Value(SrcVec), m_SpecificInt(Index)))))
+  Instruction *Extract;
+  if (!match(FNeg, m_FNeg(m_CombineAnd(
+                       m_Instruction(Extract),
+                       m_ExtractElt(m_Value(SrcVec), m_SpecificInt(Index))))))
     return false;
 
+  // TODO: We could handle this with a length-changing shuffle.
   if (SrcVec->getType() != VecTy)
     return false;
 
@@ -577,7 +582,6 @@ bool VectorCombine::foldInsExtFNeg(Instruction &I) {
   // If the extract has one use, it will be eliminated, so count it in the
   // original cost. If it has more than one use, ignore the cost because it will
   // be the same before/after.
-  Instruction *Extract = cast<Instruction>(FNeg->getOperand(0));
   if (Extract->hasOneUse())
     OldCost += TTI.getVectorInstrCost(*Extract, VecTy, Index);
 

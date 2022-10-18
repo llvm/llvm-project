@@ -131,6 +131,20 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   Tokens = annotate("delete[] *(ptr);");
   EXPECT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::star, TT_UnaryOperator);
+
+  Tokens = annotate("void f() { void (*fnptr)(char* foo); }");
+  EXPECT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_FunctionTypeLParen);
+  // FIXME: The star of a function pointer probably makes more sense as
+  // TT_PointerOrReference.
+  EXPECT_TOKEN(Tokens[7], tok::star, TT_UnaryOperator);
+  EXPECT_TOKEN(Tokens[12], tok::star, TT_PointerOrReference);
+
+  Tokens = annotate("void f() { void (*fnptr)(t* foo); }");
+  EXPECT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[6], tok::l_paren, TT_FunctionTypeLParen);
+  EXPECT_TOKEN(Tokens[7], tok::star, TT_UnaryOperator);
+  EXPECT_TOKEN(Tokens[12], tok::star, TT_PointerOrReference);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {

@@ -86,7 +86,7 @@
 // CHECK-FPM-FAST: "-cc1"
 // CHECK-FPM-FAST: "-menable-no-infs"
 // CHECK-FPM-FAST: "-menable-no-nans"
-// CHECK-FPM-FAST: "-menable-unsafe-fp-math"
+// CHECK-FPM-FAST: "-funsafe-math-optimizations"
 // CHECK-FPM-FAST: "-fno-signed-zeros"
 // CHECK-FPM-FAST: "-mreassociate"
 // CHECK-FPM-FAST: "-freciprocal-math"

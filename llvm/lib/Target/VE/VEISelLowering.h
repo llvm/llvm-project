@@ -24,6 +24,8 @@ namespace VEISD {
 enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
+  CMOV, // Select between two values using the result of comparison.
+
   CALL,                   // A call instruction.
   EH_SJLJ_LONGJMP,        // SjLj exception handling longjmp.
   EH_SJLJ_SETJMP,         // SjLj exception handling setjmp.
@@ -200,6 +202,7 @@ public:
   /// Custom DAGCombine {
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
+  SDValue combineSelect(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineTRUNCATE(SDNode *N, DAGCombinerInfo &DCI) const;
   /// } Custom DAGCombine
 

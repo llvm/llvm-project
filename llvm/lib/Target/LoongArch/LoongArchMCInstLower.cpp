@@ -48,10 +48,10 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     Kind = LoongArchMCExpr::VK_LoongArch_PCALA_LO12;
     break;
   case LoongArchII::MO_GOT_PC_HI:
-    Kind = LoongArchMCExpr::VK_LoongArch_GOT_HI20;
+    Kind = LoongArchMCExpr::VK_LoongArch_GOT_PC_HI20;
     break;
   case LoongArchII::MO_GOT_PC_LO:
-    Kind = LoongArchMCExpr::VK_LoongArch_GOT_LO12;
+    Kind = LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12;
     break;
   case LoongArchII::MO_LE_HI:
     Kind = LoongArchMCExpr::VK_LoongArch_TLS_LE_HI20;

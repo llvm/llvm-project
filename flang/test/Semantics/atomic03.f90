@@ -1,5 +1,4 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! XFAIL: *
 ! This test checks for semantic errors in atomic_cas subroutine calls based on
 ! the interface defined in section 16.9.22 of the Fortran 2018 standard.
 

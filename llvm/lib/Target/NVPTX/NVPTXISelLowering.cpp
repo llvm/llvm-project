@@ -564,9 +564,13 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
     setFP16OperationAction(Op, MVT::v2f16, Legal, Expand);
   }
 
-  // There's no neg.f16 instruction. Expand to (0-x).
-  setOperationAction(ISD::FNEG, MVT::f16, Expand);
-  setOperationAction(ISD::FNEG, MVT::v2f16, Expand);
+  // f16/f16x2 neg was introduced in PTX 60, SM_53.
+  const bool IsFP16FP16x2NegAvailable = STI.getSmVersion() >= 53 &&
+                                        STI.getPTXVersion() >= 60 &&
+                                        STI.allowFP16Math();
+  for (const auto &VT : {MVT::f16, MVT::v2f16})
+    setOperationAction(ISD::FNEG, VT,
+                       IsFP16FP16x2NegAvailable ? Legal : Expand);
 
   // (would be) Library functions.
 

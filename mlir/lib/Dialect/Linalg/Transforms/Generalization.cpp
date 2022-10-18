@@ -50,19 +50,19 @@ FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
   if (failed(generalizeNamedOpPrecondition(linalgOp)))
     return rewriter.notifyMatchFailure(linalgOp, "preconditions not met");
 
-  SmallVector<Value> inputOperands = linalgOp.getInputOperands();
-  SmallVector<Value> outputOperands = linalgOp.getOutputOperands();
+  SmallVector<Value> inputs = linalgOp.getInputOperands();
+  SmallVector<Value> outputs = linalgOp.getOutputOperands();
   SmallVector<AffineMap> indexingMaps = linalgOp.getIndexingMapsArray();
   SmallVector<StringRef> iterators = linalgOp.getIteratorTypesArray();
-  SmallVector<RankedTensorType> resultTypes = linalgOp.getOutputTensorTypes();
-  SmallVector<Type> types(resultTypes.begin(), resultTypes.end());
+  SmallVector<Type> resultTypes = linalgOp.hasTensorSemantics()
+                                      ? TypeRange(ValueRange(outputs))
+                                      : TypeRange{};
 
   // All named ops have a region attached that can be inlined.
   assert(linalgOp->getNumRegions() == 1 &&
          "expect named op to have one region attached");
-  GenericOp genericOp =
-      rewriter.create<GenericOp>(linalgOp.getLoc(), types, inputOperands,
-                                 outputOperands, indexingMaps, iterators);
+  GenericOp genericOp = rewriter.create<GenericOp>(
+      linalgOp.getLoc(), resultTypes, inputs, outputs, indexingMaps, iterators);
   rewriter.inlineRegionBefore(linalgOp->getRegion(0), genericOp.getRegion(),
                               genericOp.getRegion().begin());
   rewriter.replaceOp(linalgOp, genericOp->getResults());

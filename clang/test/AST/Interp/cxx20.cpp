@@ -60,3 +60,21 @@ constexpr int unInitLocal() {
 static_assert(unInitLocal() == 0, ""); // expected-error {{not an integral constant expression}} \
                                        // ref-error {{not an integral constant expression}} \
                                        // ref-note {{in call to 'unInitLocal()'}}
+
+/// TODO: The example above is correctly rejected by the new constexpr
+///   interpreter, but for the wrong reasons. We don't reject it because
+///   it is an uninitialized read, we reject it simply because
+///   the local variable does not have an initializer.
+///
+///   The code below should be accepted but is also being rejected
+///   right now.
+#if 0
+constexpr int initializedLocal() {
+  int a;
+  int b;
+
+  a = 20;
+  return a;
+}
+static_assert(initializedLocal() == 20);
+#endif

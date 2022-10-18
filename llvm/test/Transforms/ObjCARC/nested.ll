@@ -1,4 +1,4 @@
-; RUN: opt -objc-arc -S < %s | FileCheck %s
+; RUN: opt -passes=objc-arc -S < %s | FileCheck %s
 
 %struct.__objcFastEnumerationState = type { i64, i8**, i64*, [5 x i64] }
 

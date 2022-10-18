@@ -27,7 +27,7 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
   CmdArgs.push_back(types::getTypeName(Input.getType()));
 }
 
-void Flang::AddFortranDialectOptions(const ArgList &Args,
+void Flang::addFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
   Args.AddAllArgs(
       CmdArgs, {options::OPT_ffixed_form, options::OPT_ffree_form,
@@ -44,14 +44,14 @@ void Flang::AddFortranDialectOptions(const ArgList &Args,
                 options::OPT_fno_automatic});
 }
 
-void Flang::AddPreprocessingOptions(const ArgList &Args,
+void Flang::addPreprocessingOptions(const ArgList &Args,
                                     ArgStringList &CmdArgs) const {
   Args.AddAllArgs(CmdArgs,
                   {options::OPT_P, options::OPT_D, options::OPT_U,
                    options::OPT_I, options::OPT_cpp, options::OPT_nocpp});
 }
 
-void Flang::AddOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
+void Flang::forwardOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   Args.AddAllArgs(CmdArgs,
                   {options::OPT_module_dir, options::OPT_fdebug_module_writer,
                    options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
@@ -127,9 +127,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // Add preprocessing options like -I, -D, etc. if we are using the
   // preprocessor (i.e. skip when dealing with e.g. binary files).
   if (types::getPreprocessedType(InputType) != types::TY_INVALID)
-    AddPreprocessingOptions(Args, CmdArgs);
+    addPreprocessingOptions(Args, CmdArgs);
 
-  AddFortranDialectOptions(Args, CmdArgs);
+  addFortranDialectOptions(Args, CmdArgs);
 
   // Color diagnostics are parsed by the driver directly from argv and later
   // re-parsed to construct this job; claim any possible color diagnostic here
@@ -142,8 +142,8 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // -fPIC and related options.
   AddPicOptions(Args, CmdArgs);
 
-  // Add other compile options
-  AddOtherOptions(Args, CmdArgs);
+  // Handle options which are simply forwarded to -fc1.
+  forwardOptions(Args, CmdArgs);
 
   // Forward -Xflang arguments to -fc1
   Args.AddAllArgValues(CmdArgs, options::OPT_Xflang);

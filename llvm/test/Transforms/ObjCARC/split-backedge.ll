@@ -1,4 +1,4 @@
-; RUN: opt -S -objc-arc < %s | FileCheck %s
+; RUN: opt -S -passes=objc-arc < %s | FileCheck %s
 
 ; Handle a retain+release pair entirely contained within a split loop backedge.
 ; rdar://11256239

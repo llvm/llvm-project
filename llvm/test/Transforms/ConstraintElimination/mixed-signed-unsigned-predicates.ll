@@ -148,7 +148,7 @@ define i1 @test_add_nsw(i8 %start, i8 %low, i8 %high) {
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp uge i8 [[START_1]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_0:%.*]] = xor i1 [[F_0]], [[F_1]]
 ; CHECK-NEXT:    [[SC_1:%.*]] = icmp sgt i8 [[START]], [[HIGH]]
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[RES_0]], [[SC_1]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[RES_0]], false
 ; CHECK-NEXT:    [[SC_2:%.*]] = icmp sge i8 [[START_1]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[SC_2]]
 ; CHECK-NEXT:    [[START_2:%.*]] = add nuw i8 [[START]], 2

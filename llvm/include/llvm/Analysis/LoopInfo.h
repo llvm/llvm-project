@@ -583,7 +583,8 @@ public:
   ///
   bool makeLoopInvariant(Value *V, bool &Changed,
                          Instruction *InsertPt = nullptr,
-                         MemorySSAUpdater *MSSAU = nullptr) const;
+                         MemorySSAUpdater *MSSAU = nullptr,
+                         ScalarEvolution *SE = nullptr) const;
 
   /// If the given instruction is inside of the loop and it can be hoisted, do
   /// so to make it trivially loop-invariant.
@@ -597,7 +598,8 @@ public:
   ///
   bool makeLoopInvariant(Instruction *I, bool &Changed,
                          Instruction *InsertPt = nullptr,
-                         MemorySSAUpdater *MSSAU = nullptr) const;
+                         MemorySSAUpdater *MSSAU = nullptr,
+                         ScalarEvolution *SE = nullptr) const;
 
   /// Check to see if the loop has a canonical induction variable: an integer
   /// recurrence that starts at 0 and increments by one each time through the

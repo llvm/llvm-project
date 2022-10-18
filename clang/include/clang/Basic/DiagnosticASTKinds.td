@@ -621,11 +621,11 @@ def err_module_odr_violation_mismatch_decl : Error<
   "%select{definition in module '%2'|defined here}1 found "
   "%select{end of class|public access specifier|private access specifier|"
   "protected access specifier|static assert|field|method|type alias|typedef|"
-  "data member|friend declaration|function template}3">;
+  "data member|friend declaration|function template|method}3">;
 def note_module_odr_violation_mismatch_decl : Note<"but in '%0' found "
   "%select{end of class|public access specifier|private access specifier|"
   "protected access specifier|static assert|field|method|type alias|typedef|"
-  "data member|friend declaration|function template}1">;
+  "data member|friend declaration|function template|method}1">;
 
 def err_module_odr_violation_record : Error<
   "%q0 has different definitions in different modules; first difference is "
@@ -649,12 +649,6 @@ def err_module_odr_violation_record : Error<
     "is %select{not const|const}6|"
   "%select{method %5|constructor|destructor}4 "
     "is %select{not inline|inline}6|"
-  "%select{method %5|constructor|destructor}4 "
-    "that has %6 parameter%s6|"
-  "%select{method %5|constructor|destructor}4 "
-    "with %ordinal6 parameter of type %7%select{| decayed from %9}8|"
-  "%select{method %5|constructor|destructor}4 "
-    "with %ordinal6 parameter named %7|"
   "%select{method %5|constructor|destructor}4 "
     "with %ordinal6 parameter with%select{out|}7 a default argument|"
   "%select{method %5|constructor|destructor}4 "
@@ -706,12 +700,6 @@ def note_module_odr_violation_record : Note<"but in '%0' found "
     "is %select{not const|const}4|"
   "%select{method %3|constructor|destructor}2 "
     "is %select{not inline|inline}4|"
-  "%select{method %3|constructor|destructor}2 "
-    "that has %4 parameter%s4|"
-  "%select{method %3|constructor|destructor}2 "
-    "with %ordinal4 parameter of type %5%select{| decayed from %7}6|"
-  "%select{method %3|constructor|destructor}2 "
-    "with %ordinal4 parameter named %5|"
   "%select{method %3|constructor|destructor}2 "
     "with %ordinal4 parameter with%select{out|}5 a default argument|"
   "%select{method %3|constructor|destructor}2 "
@@ -848,17 +836,72 @@ def note_module_odr_violation_enum : Note<"but in '%0' found "
   "%ordinal2 element %3 has different initializer|"
   "}1">;
 
+def err_module_odr_violation_referenced_protocols : Error <
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "%4 referenced %plural{1:protocol|:protocols}4|"
+  "%ordinal4 referenced protocol with name %5"
+  "}3">;
+def note_module_odr_violation_referenced_protocols : Note <"but in '%0' found "
+  "%select{"
+  "%2 referenced %plural{1:protocol|:protocols}2|"
+  "%ordinal2 referenced protocol with different name %3"
+  "}1">;
+
+def err_module_odr_violation_objc_method : Error<
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "method %4 with return type %5|"
+  "%select{class|instance}5 method %4|"
+  "%select{no|'required'|'optional'}4 method control|"
+  "method %4 with %select{no designated initializer|designated initializer}5|"
+  "%select{regular|direct}5 method %4|"
+  "method %4"
+  "}3">;
+def note_module_odr_violation_objc_method : Note<"but in '%0' found "
+  "%select{"
+  "method %2 with different return type %3|"
+  "method %2 as %select{class|instance}3 method|"
+  "%select{no|'required'|'optional'}2 method control|"
+  "method %2 with %select{no designated initializer|designated initializer}3|"
+  "%select{regular|direct}3 method %2|"
+  "different method %2"
+  "}1">;
+
+def err_module_odr_violation_method_params : Error<
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "%select{method %5|constructor|destructor}4 "
+    "that has %6 parameter%s6|"
+  "%select{method %5|constructor|destructor}4 "
+    "with %ordinal6 parameter of type %7%select{| decayed from %9}8|"
+  "%select{method %5|constructor|destructor}4 "
+    "with %ordinal6 parameter named %7"
+  "}3">;
+def note_module_odr_violation_method_params : Note<"but in '%0' found "
+  "%select{"
+  "%select{method %3|constructor|destructor}2 "
+    "that has %4 parameter%s4|"
+  "%select{method %3|constructor|destructor}2 "
+    "with %ordinal4 parameter of type %5%select{| decayed from %7}6|"
+  "%select{method %3|constructor|destructor}2 "
+    "with %ordinal4 parameter named %5"
+  "}1">;
+
 def err_module_odr_violation_mismatch_decl_unknown : Error<
   "%q0 %select{with definition in module '%2'|defined here}1 has different "
   "definitions in different modules; first difference is this "
   "%select{||||static assert|field|method|type alias|typedef|data member|"
-  "friend declaration|function template|"
+  "friend declaration|function template|method|"
   "unexpected decl}3">;
 def note_module_odr_violation_mismatch_decl_unknown : Note<
   "but in '%0' found "
   "%select{||||different static assert|different field|different method|"
   "different type alias|different typedef|different data member|"
-  "different friend declaration|different function template|"
+  "different friend declaration|different function template|different method|"
   "another unexpected decl}1">;
 
 

@@ -112,14 +112,14 @@ struct BubbleUpExtractSliceOpPattern
       tileSizes[position] = sliceOp.getMixedSizes()[result.index()];
     }
 
-    SmallVector<Value> valuesToTile = linalgOp.getInputAndOutputOperands();
+    SmallVector<Value> valuesToTile = linalgOp->getOperands();
     SmallVector<Value> tiledOperands =
         makeTiledShapes(rewriter, linalgLoc, linalgOp, valuesToTile,
                         tileOffsets, tileSizes, sizeBounds,
                         /*omitPartialTileCheck=*/true);
 
     SmallVector<Type, 4> resultTensorTypes;
-    for (OpOperand *opOperand : linalgOp.getOutputTensorOperands())
+    for (OpOperand *opOperand : linalgOp.getOutputOperands())
       resultTensorTypes.push_back(
           tiledOperands[opOperand->getOperandNumber()].getType());
 

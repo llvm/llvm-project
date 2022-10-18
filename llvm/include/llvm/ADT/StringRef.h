@@ -253,22 +253,35 @@ namespace llvm {
     /// @{
 
     /// Check if this string starts with the given \p Prefix.
-    [[nodiscard]] bool startswith(StringRef Prefix) const {
+    [[nodiscard]] bool starts_with(StringRef Prefix) const {
       return Length >= Prefix.Length &&
              compareMemory(Data, Prefix.Data, Prefix.Length) == 0;
     }
+    [[nodiscard]] bool startswith(StringRef Prefix) const {
+      return starts_with(Prefix);
+    }
 
     /// Check if this string starts with the given \p Prefix, ignoring case.
-    [[nodiscard]] bool startswith_insensitive(StringRef Prefix) const;
+    [[nodiscard]] bool starts_with_insensitive(StringRef Prefix) const;
+    [[nodiscard]] bool startswith_insensitive(StringRef Prefix) const {
+      return starts_with_insensitive(Prefix);
+    }
 
     /// Check if this string ends with the given \p Suffix.
-    [[nodiscard]] bool endswith(StringRef Suffix) const {
+    [[nodiscard]] bool ends_with(StringRef Suffix) const {
       return Length >= Suffix.Length &&
-        compareMemory(end() - Suffix.Length, Suffix.Data, Suffix.Length) == 0;
+             compareMemory(end() - Suffix.Length, Suffix.Data, Suffix.Length) ==
+                 0;
+    }
+    [[nodiscard]] bool endswith(StringRef Suffix) const {
+      return ends_with(Suffix);
     }
 
     /// Check if this string ends with the given \p Suffix, ignoring case.
-    [[nodiscard]] bool endswith_insensitive(StringRef Suffix) const;
+    [[nodiscard]] bool ends_with_insensitive(StringRef Suffix) const;
+    [[nodiscard]] bool endswith_insensitive(StringRef Suffix) const {
+      return ends_with_insensitive(Suffix);
+    }
 
     /// @}
     /// @name String Searching
@@ -458,28 +471,23 @@ namespace llvm {
     /// If the string is invalid or if only a subset of the string is valid,
     /// this returns true to signify the error.  The string is considered
     /// erroneous if empty or if it overflows T.
-    template <typename T>
-    std::enable_if_t<std::numeric_limits<T>::is_signed, bool>
-    getAsInteger(unsigned Radix, T &Result) const {
-      long long LLVal;
-      if (getAsSignedInteger(*this, Radix, LLVal) ||
+    template <typename T> bool getAsInteger(unsigned Radix, T &Result) const {
+      if constexpr (std::numeric_limits<T>::is_signed) {
+        long long LLVal;
+        if (getAsSignedInteger(*this, Radix, LLVal) ||
             static_cast<T>(LLVal) != LLVal)
-        return true;
-      Result = LLVal;
-      return false;
-    }
-
-    template <typename T>
-    std::enable_if_t<!std::numeric_limits<T>::is_signed, bool>
-    getAsInteger(unsigned Radix, T &Result) const {
-      unsigned long long ULLVal;
-      // The additional cast to unsigned long long is required to avoid the
-      // Visual C++ warning C4805: '!=' : unsafe mix of type 'bool' and type
-      // 'unsigned __int64' when instantiating getAsInteger with T = bool.
-      if (getAsUnsignedInteger(*this, Radix, ULLVal) ||
-          static_cast<unsigned long long>(static_cast<T>(ULLVal)) != ULLVal)
-        return true;
-      Result = ULLVal;
+          return true;
+        Result = LLVal;
+      } else {
+        unsigned long long ULLVal;
+        // The additional cast to unsigned long long is required to avoid the
+        // Visual C++ warning C4805: '!=' : unsafe mix of type 'bool' and type
+        // 'unsigned __int64' when instantiating getAsInteger with T = bool.
+        if (getAsUnsignedInteger(*this, Radix, ULLVal) ||
+            static_cast<unsigned long long>(static_cast<T>(ULLVal)) != ULLVal)
+          return true;
+        Result = ULLVal;
+      }
       return false;
     }
 
@@ -492,25 +500,20 @@ namespace llvm {
     /// erroneous if empty or if it overflows T.
     /// The portion of the string representing the discovered numeric value
     /// is removed from the beginning of the string.
-    template <typename T>
-    std::enable_if_t<std::numeric_limits<T>::is_signed, bool>
-    consumeInteger(unsigned Radix, T &Result) {
-      long long LLVal;
-      if (consumeSignedInteger(*this, Radix, LLVal) ||
-          static_cast<long long>(static_cast<T>(LLVal)) != LLVal)
-        return true;
-      Result = LLVal;
-      return false;
-    }
-
-    template <typename T>
-    std::enable_if_t<!std::numeric_limits<T>::is_signed, bool>
-    consumeInteger(unsigned Radix, T &Result) {
-      unsigned long long ULLVal;
-      if (consumeUnsignedInteger(*this, Radix, ULLVal) ||
-          static_cast<unsigned long long>(static_cast<T>(ULLVal)) != ULLVal)
-        return true;
-      Result = ULLVal;
+    template <typename T> bool consumeInteger(unsigned Radix, T &Result) {
+      if constexpr (std::numeric_limits<T>::is_signed) {
+        long long LLVal;
+        if (consumeSignedInteger(*this, Radix, LLVal) ||
+            static_cast<long long>(static_cast<T>(LLVal)) != LLVal)
+          return true;
+        Result = LLVal;
+      } else {
+        unsigned long long ULLVal;
+        if (consumeUnsignedInteger(*this, Radix, ULLVal) ||
+            static_cast<unsigned long long>(static_cast<T>(ULLVal)) != ULLVal)
+          return true;
+        Result = ULLVal;
+      }
       return false;
     }
 
@@ -622,7 +625,7 @@ namespace llvm {
     /// Returns true if this StringRef has the given prefix and removes that
     /// prefix.
     bool consume_front(StringRef Prefix) {
-      if (!startswith(Prefix))
+      if (!starts_with(Prefix))
         return false;
 
       *this = drop_front(Prefix.size());
@@ -642,7 +645,7 @@ namespace llvm {
     /// Returns true if this StringRef has the given suffix and removes that
     /// suffix.
     bool consume_back(StringRef Suffix) {
-      if (!endswith(Suffix))
+      if (!ends_with(Suffix))
         return false;
 
       *this = drop_back(Suffix.size());

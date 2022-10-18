@@ -41,6 +41,6 @@ static void dropRegisterHintsFromFunctions(Oracle &O,
 }
 
 void llvm::reduceVirtualRegisterHintsDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing virtual register hints from functions...\n";
-  runDeltaPass(Test, dropRegisterHintsFromFunctions);
+  runDeltaPass(Test, dropRegisterHintsFromFunctions,
+               "Reducing virtual register hints from functions");
 }

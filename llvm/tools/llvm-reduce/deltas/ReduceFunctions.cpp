@@ -50,7 +50,5 @@ static void extractFunctionsFromModule(Oracle &O, Module &Program) {
 }
 
 void llvm::reduceFunctionsDeltaPass(TestRunner &Test) {
-  errs() << "*** Reducing Functions...\n";
-  runDeltaPass(Test, extractFunctionsFromModule);
-  errs() << "----------------------------\n";
+  runDeltaPass(Test, extractFunctionsFromModule, "Reducing Functions");
 }

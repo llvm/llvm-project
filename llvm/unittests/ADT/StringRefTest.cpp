@@ -356,20 +356,20 @@ TEST(StringRefTest, Trim) {
 
 TEST(StringRefTest, StartsWith) {
   StringRef Str("hello");
-  EXPECT_TRUE(Str.startswith(""));
-  EXPECT_TRUE(Str.startswith("he"));
-  EXPECT_FALSE(Str.startswith("helloworld"));
-  EXPECT_FALSE(Str.startswith("hi"));
+  EXPECT_TRUE(Str.starts_with(""));
+  EXPECT_TRUE(Str.starts_with("he"));
+  EXPECT_FALSE(Str.starts_with("helloworld"));
+  EXPECT_FALSE(Str.starts_with("hi"));
 }
 
 TEST(StringRefTest, StartsWithInsensitive) {
   StringRef Str("heLLo");
-  EXPECT_TRUE(Str.startswith_insensitive(""));
-  EXPECT_TRUE(Str.startswith_insensitive("he"));
-  EXPECT_TRUE(Str.startswith_insensitive("hell"));
-  EXPECT_TRUE(Str.startswith_insensitive("HELlo"));
-  EXPECT_FALSE(Str.startswith_insensitive("helloworld"));
-  EXPECT_FALSE(Str.startswith_insensitive("hi"));
+  EXPECT_TRUE(Str.starts_with_insensitive(""));
+  EXPECT_TRUE(Str.starts_with_insensitive("he"));
+  EXPECT_TRUE(Str.starts_with_insensitive("hell"));
+  EXPECT_TRUE(Str.starts_with_insensitive("HELlo"));
+  EXPECT_FALSE(Str.starts_with_insensitive("helloworld"));
+  EXPECT_FALSE(Str.starts_with_insensitive("hi"));
 }
 
 TEST(StringRefTest, ConsumeFront) {
@@ -408,21 +408,21 @@ TEST(StringRefTest, ConsumeFrontInsensitive) {
 
 TEST(StringRefTest, EndsWith) {
   StringRef Str("hello");
-  EXPECT_TRUE(Str.endswith(""));
-  EXPECT_TRUE(Str.endswith("lo"));
-  EXPECT_FALSE(Str.endswith("helloworld"));
-  EXPECT_FALSE(Str.endswith("worldhello"));
-  EXPECT_FALSE(Str.endswith("so"));
+  EXPECT_TRUE(Str.ends_with(""));
+  EXPECT_TRUE(Str.ends_with("lo"));
+  EXPECT_FALSE(Str.ends_with("helloworld"));
+  EXPECT_FALSE(Str.ends_with("worldhello"));
+  EXPECT_FALSE(Str.ends_with("so"));
 }
 
 TEST(StringRefTest, EndsWithInsensitive) {
   StringRef Str("heLLo");
-  EXPECT_TRUE(Str.endswith_insensitive(""));
-  EXPECT_TRUE(Str.endswith_insensitive("lo"));
-  EXPECT_TRUE(Str.endswith_insensitive("LO"));
-  EXPECT_TRUE(Str.endswith_insensitive("ELlo"));
-  EXPECT_FALSE(Str.endswith_insensitive("helloworld"));
-  EXPECT_FALSE(Str.endswith_insensitive("hi"));
+  EXPECT_TRUE(Str.ends_with_insensitive(""));
+  EXPECT_TRUE(Str.ends_with_insensitive("lo"));
+  EXPECT_TRUE(Str.ends_with_insensitive("LO"));
+  EXPECT_TRUE(Str.ends_with_insensitive("ELlo"));
+  EXPECT_FALSE(Str.ends_with_insensitive("helloworld"));
+  EXPECT_FALSE(Str.ends_with_insensitive("hi"));
 }
 
 TEST(StringRefTest, ConsumeBack) {

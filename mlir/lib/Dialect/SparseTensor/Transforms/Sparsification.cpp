@@ -194,14 +194,14 @@ static bool findAffine(Merger &merger, unsigned tensor, AffineExpr a,
 /// no annotations are found or inadmissible constructs occur.
 static bool findSparseAnnotations(Merger &merger, linalg::GenericOp op) {
   bool annotated = false;
-  for (OpOperand *t : op.getInputAndOutputOperands()) {
-    auto map = op.getMatchingIndexingMap(t);
-    auto enc = getSparseTensorEncoding(t->get().getType());
+  for (OpOperand &t : op->getOpOperands()) {
+    auto map = op.getMatchingIndexingMap(&t);
+    auto enc = getSparseTensorEncoding(t.get().getType());
     if (enc)
       annotated = true;
-    assert(map.getNumResults() == op.getRank(t));
+    assert(map.getNumResults() == op.getRank(&t));
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
-      unsigned tensor = t->getOperandNumber();
+      unsigned tensor = t.getOperandNumber();
       AffineExpr a = map.getResult(toOrigDim(enc, d));
       if (!findAffine(merger, tensor, a, toDimLevelFormat(enc, d)))
         return false; // inadmissible affine expression
@@ -291,13 +291,13 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
   std::vector<unsigned> inDegree(n, 0); // in-degree of each node.
   auto iteratorTypes = op.getIteratorTypesArray();
   // Iterate over the indexing maps of every tensor in the tensor expression.
-  for (OpOperand *t : op.getInputAndOutputOperands()) {
+  for (OpOperand &t : op->getOpOperands()) {
     // Skip tensor during cycle resolution.
-    if (t == skip)
+    if (&t == skip)
       continue;
     // Get map and encoding.
-    auto map = op.getMatchingIndexingMap(t);
-    auto enc = getSparseTensorEncoding(t->get().getType());
+    auto map = op.getMatchingIndexingMap(&t);
+    auto enc = getSparseTensorEncoding(t.get().getType());
     assert(map.getNumDims() == n);
     // Skip dense tensor constraints when not requested.
     if (!(mask & SortMask::kIncludeDense) && !enc)
@@ -314,7 +314,7 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
     // Push unrelated loops into sparse iteration space, so these
     // will be skipped more often.
     if (mask & SortMask::kIncludeUndef) {
-      unsigned tensor = t->getOperandNumber();
+      unsigned tensor = t.getOperandNumber();
       for (unsigned i = 0; i < n; i++)
         if (merger.isDimLevelType(tensor, i, DimLvlType::kCompressed) ||
             merger.isDimLevelType(tensor, i, DimLvlType::kSingleton)) {
@@ -534,16 +534,16 @@ static Value genOutputBuffer(CodeGen &codegen, OpBuilder &builder,
 static void genBuffers(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                        linalg::GenericOp op) {
   Location loc = op.getLoc();
-  assert(op.getNumInputsAndOutputs() == op.getNumInputs() + 1);
+  assert(op->getNumOperands() == op.getNumInputs() + 1);
   // For every tensor, find lower and upper bound on dimensions, set the
   // same bounds on loop indices, and obtain dense or sparse buffer(s).
   auto dynShape = {ShapedType::kDynamicSize};
   SmallVector<Value, 4> args;
-  for (OpOperand *t : op.getInputAndOutputOperands()) {
-    unsigned tensor = t->getOperandNumber();
-    auto shape = op.getShape(t);
-    auto map = op.getMatchingIndexingMap(t);
-    auto enc = getSparseTensorEncoding(t->get().getType());
+  for (OpOperand &t : op->getOpOperands()) {
+    unsigned tensor = t.getOperandNumber();
+    auto shape = op.getShape(&t);
+    auto map = op.getMatchingIndexingMap(&t);
+    auto enc = getSparseTensorEncoding(t.get().getType());
     // Scan all dimensions of current tensor.
     args.clear();
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
@@ -560,23 +560,23 @@ static void genBuffers(Merger &merger, CodeGen &codegen, OpBuilder &builder,
             MemRefType::get(dynShape, getIndexOverheadType(builder, enc));
         auto dim = builder.getIndexAttr(d);
         codegen.pointers[tensor][idx] =
-            builder.create<ToPointersOp>(loc, ptrTp, t->get(), dim);
+            builder.create<ToPointersOp>(loc, ptrTp, t.get(), dim);
         codegen.indices[tensor][idx] =
-            builder.create<ToIndicesOp>(loc, indTp, t->get(), dim);
+            builder.create<ToIndicesOp>(loc, indTp, t.get(), dim);
       } else if (merger.isDimLevelType(tensor, idx, DimLvlType::kSingleton)) {
         // Singleton dimension, fetch indices.
         auto indTp =
             MemRefType::get(dynShape, getIndexOverheadType(builder, enc));
         auto dim = builder.getIndexAttr(d);
         codegen.indices[tensor][idx] =
-            builder.create<ToIndicesOp>(loc, indTp, t->get(), dim);
+            builder.create<ToIndicesOp>(loc, indTp, t.get(), dim);
       } else {
         // Dense dimension, nothing to fetch.
         assert(merger.isDimLevelType(tensor, idx, DimLvlType::kDense));
       }
       // Find upper bound in current dimension.
       unsigned p = toOrigDim(enc, d);
-      Value up = linalg::createOrFoldDimOp(builder, loc, t->get(), p);
+      Value up = linalg::createOrFoldDimOp(builder, loc, t.get(), p);
       if (ShapedType::isDynamic(shape[p]))
         args.push_back(up);
       assert(codegen.highs[tensor][idx] == nullptr);
@@ -585,21 +585,21 @@ static void genBuffers(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     // Perform the required bufferization. Dense inputs materialize
     // from the input tensors. Dense outputs need special handling.
     // Sparse inputs use sparse primitives to obtain the values.
-    Type elementType = getElementTypeOrSelf(t->get().getType());
+    Type elementType = getElementTypeOrSelf(t.get().getType());
     if (!enc) {
       // Non-annotated dense tensors.
       auto denseTp = MemRefType::get(shape, elementType);
       if (tensor < op.getNumInputs())
         codegen.buffers[tensor] =
-            builder.create<bufferization::ToMemrefOp>(loc, denseTp, t->get());
+            builder.create<bufferization::ToMemrefOp>(loc, denseTp, t.get());
       else
         codegen.buffers[tensor] =
             genOutputBuffer(codegen, builder, op, denseTp, args);
-    } else if (t != codegen.sparseOut) {
+    } else if (&t != codegen.sparseOut) {
       // Annotated sparse tensors (not involved in output).
       auto sparseTp = MemRefType::get(dynShape, elementType);
       codegen.buffers[tensor] =
-          builder.create<ToValuesOp>(loc, sparseTp, t->get());
+          builder.create<ToValuesOp>(loc, sparseTp, t.get());
     }
   }
 }
@@ -845,15 +845,15 @@ static Value genTensorLoad(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     return val;
   }
   // Load during insertion.
-  OpOperand *t = op.getInputAndOutputOperands()[merger.exp(exp).tensor];
-  if (t == codegen.sparseOut) {
+  OpOperand &t = op->getOpOperand(merger.exp(exp).tensor);
+  if (&t == codegen.sparseOut) {
     if (codegen.redCustom != -1u)
-      return genInsertionLoadReduce(merger, codegen, builder, op, t);
-    return genInsertionLoad(codegen, builder, op, t);
+      return genInsertionLoadReduce(merger, codegen, builder, op, &t);
+    return genInsertionLoad(codegen, builder, op, &t);
   }
   // Actual load.
   SmallVector<Value, 4> args;
-  Value ptr = genSubscript(codegen, builder, op, t, args);
+  Value ptr = genSubscript(codegen, builder, op, &t, args);
   if (codegen.curVecLength > 1)
     return genVectorLoad(codegen, builder, ptr, args);
   return builder.create<memref::LoadOp>(op.getLoc(), ptr, args);
@@ -1093,9 +1093,9 @@ static void genInvariants(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   if (merger.exp(exp).kind == Kind::kTensor) {
     // Inspect tensor indices.
     bool atLevel = ldx == -1u;
-    OpOperand *t = op.getInputAndOutputOperands()[merger.exp(exp).tensor];
-    auto map = op.getMatchingIndexingMap(t);
-    auto enc = getSparseTensorEncoding(t->get().getType());
+    OpOperand &t = op->getOpOperand(merger.exp(exp).tensor);
+    auto map = op.getMatchingIndexingMap(&t);
+    auto enc = getSparseTensorEncoding(t.get().getType());
     for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
       AffineExpr a = map.getResult(toOrigDim(enc, d));
       if (!isInvariantAffine(codegen, a, ldx, atLevel))
@@ -1105,7 +1105,7 @@ static void genInvariants(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     if (!atLevel)
       return;
     OpOperand *lhs = op.getOutputOperand(0);
-    if (lhs == t) {
+    if (lhs == &t) {
       // Start or end a scalarized reduction
       if (atStart) {
         Kind kind = merger.exp(last).kind;
@@ -1288,9 +1288,9 @@ static bool isParallelFor(CodeGen &codegen, bool isOuter, bool isReduction,
 /// This prevents effective vectorization.
 static bool denseUnitStrides(Merger &merger, linalg::GenericOp op,
                              unsigned idx) {
-  for (OpOperand *t : op.getInputAndOutputOperands()) {
-    if (!getSparseTensorEncoding(t->get().getType())) {
-      auto map = op.getMatchingIndexingMap(t);
+  for (OpOperand &t : op->getOpOperands()) {
+    if (!getSparseTensorEncoding(t.get().getType())) {
+      auto map = op.getMatchingIndexingMap(&t);
       for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
         AffineExpr a = map.getResult(d);
         // Report non-unit stride if innermost index appears at an outer
@@ -1856,7 +1856,7 @@ public:
     // information for all tensors to loop indices in the kernel.
     if (op.getNumOutputs() != 1)
       return failure();
-    unsigned numTensors = op.getNumInputsAndOutputs();
+    unsigned numTensors = op->getNumOperands();
     unsigned numLoops = op.getNumLoops();
     Merger merger(numTensors, numLoops);
     if (!findSparseAnnotations(merger, op))

@@ -1808,6 +1808,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FMUL,    MVT::f64, Legal);
   }
 
+  setTargetDAGCombine(ISD::TRUNCATE);
   setTargetDAGCombine(ISD::VSELECT);
 
   if (Subtarget.useHVXOps())
@@ -1899,6 +1900,8 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::VASL:          return "HexagonISD::VASL";
   case HexagonISD::VASR:          return "HexagonISD::VASR";
   case HexagonISD::VLSR:          return "HexagonISD::VLSR";
+  case HexagonISD::MFSHL:         return "HexagonISD::MFSHL";
+  case HexagonISD::MFSHR:         return "HexagonISD::MFSHR";
   case HexagonISD::SSAT:          return "HexagonISD::SSAT";
   case HexagonISD::USAT:          return "HexagonISD::USAT";
   case HexagonISD::VEXTRACTW:     return "HexagonISD::VEXTRACTW";
@@ -2323,6 +2326,19 @@ HexagonTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG)
   return SDValue();
 }
 
+SDValue
+HexagonTargetLowering::getSplatValue(SDValue Op, SelectionDAG &DAG) const {
+  switch (Op.getOpcode()) {
+    case ISD::BUILD_VECTOR:
+      if (SDValue S = cast<BuildVectorSDNode>(Op)->getSplatValue())
+        return S;
+      break;
+    case ISD::SPLAT_VECTOR:
+      return Op.getOperand(0);
+  }
+  return SDValue();
+}
+
 // Create a Hexagon-specific node for shifting a vector by an integer.
 SDValue
 HexagonTargetLowering::getVectorShiftByInt(SDValue Op, SelectionDAG &DAG)
@@ -2342,18 +2358,8 @@ HexagonTargetLowering::getVectorShiftByInt(SDValue Op, SelectionDAG &DAG)
       llvm_unreachable("Unexpected shift opcode");
   }
 
-  SDValue Op0 = Op.getOperand(0);
-  SDValue Op1 = Op.getOperand(1);
-  const SDLoc &dl(Op);
-
-  switch (Op1.getOpcode()) {
-    case ISD::BUILD_VECTOR:
-      if (SDValue S = cast<BuildVectorSDNode>(Op1)->getSplatValue())
-        return DAG.getNode(NewOpc, dl, ty(Op), Op0, S);
-      break;
-    case ISD::SPLAT_VECTOR:
-      return DAG.getNode(NewOpc, dl, ty(Op), Op0, Op1.getOperand(0));
-  }
+  if (SDValue Sp = getSplatValue(Op.getOperand(1), DAG))
+    return DAG.getNode(NewOpc, SDLoc(Op), ty(Op), Op.getOperand(0), Sp);
   return SDValue();
 }
 
@@ -3395,6 +3401,19 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
         return VSel;
       }
     }
+  } else if (Opc == ISD::TRUNCATE) {
+    SDValue Op0 = Op.getOperand(0);
+    // fold (truncate (build pair x, y)) -> (truncate x) or x
+    if (Op0.getOpcode() == ISD::BUILD_PAIR) {
+      MVT TruncTy = ty(Op);
+      SDValue Elem0 = Op0.getOperand(0);
+      // if we match the low element of the pair, just return it.
+      if (ty(Elem0) == TruncTy)
+        return Elem0;
+      // otherwise, if the low part is still too large, apply the truncate.
+      if (ty(Elem0).bitsGT(TruncTy))
+        return DCI.DAG.getNode(ISD::TRUNCATE, dl, TruncTy, Elem0);
+    }
   }
 
   return SDValue();
@@ -3681,6 +3700,11 @@ bool HexagonTargetLowering::shouldReduceLoadWidth(SDNode *Load,
     return !GO || !HTM.getObjFileLowering()->isGlobalInSmallSection(GO, HTM);
   }
   return true;
+}
+
+void HexagonTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
+      SDNode *Node) const {
+  AdjustHvxInstrPostInstrSelection(MI, Node);
 }
 
 Value *HexagonTargetLowering::emitLoadLinked(IRBuilderBase &Builder,

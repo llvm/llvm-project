@@ -287,3 +287,38 @@ define void @fptr_test2c(ptr %p, ptr %f) {
   call void %f(ptr readonly %p) readonly
   ret void
 }
+
+define void @alloca_recphi() {
+; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone
+; CHECK-LABEL: define {{[^@]+}}@alloca_recphi
+; CHECK-SAME: () #[[ATTR14:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca [8 x i32], align 4
+; CHECK-NEXT:    [[A_END:%.*]] = getelementptr i32, ptr [[A]], i64 8
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[P_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[P_NEXT]] = getelementptr i32, ptr [[P]], i64 1
+; CHECK-NEXT:    [[C:%.*]] = icmp ne ptr [[P_NEXT]], [[A_END]]
+; CHECK-NEXT:    br i1 [[C]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = alloca [8 x i32]
+  %a.end = getelementptr i32, ptr %a, i64 8
+  br label %loop
+
+loop:
+  %p = phi ptr [ %a, %entry ], [ %p.next, %loop ]
+  store i32 0, ptr %p
+  load i32, ptr %p
+  %p.next = getelementptr i32, ptr %p, i64 1
+  %c = icmp ne ptr %p.next, %a.end
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}

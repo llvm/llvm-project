@@ -130,7 +130,7 @@ void test_P1361() {
 // In libc++ std:::ostringstream requires localization support.
 #ifndef TEST_HAS_NO_LOCALIZATION
 
-  assert_is_not_formattable<std::chrono::microseconds, CharT>();
+  assert_is_formattable<std::chrono::microseconds, CharT>();
 
   assert_is_not_formattable<std::chrono::sys_time<std::chrono::microseconds>, CharT>();
   //assert_is_formattable<std::chrono::utc_time<std::chrono::microseconds>, CharT>();
@@ -143,7 +143,7 @@ void test_P1361() {
   assert_is_formattable<std::chrono::month, CharT>();
   assert_is_formattable<std::chrono::year, CharT>();
 
-  assert_is_not_formattable<std::chrono::weekday, CharT>();
+  assert_is_formattable<std::chrono::weekday, CharT>();
   assert_is_not_formattable<std::chrono::weekday_indexed, CharT>();
   assert_is_not_formattable<std::chrono::weekday_last, CharT>();
 

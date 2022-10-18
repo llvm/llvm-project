@@ -275,7 +275,7 @@ func.func @self_copy(%arg0 : memref<2x3x?x4xf32>) {
 // -----
 
 // CHECK-LABEL: func @remove_deadargs_generic_basic
-//  CHECK-SAME: (%[[ARG0:.*]]: tensor<?xf32>) -> tensor<?xf32> { 
+//  CHECK-SAME: (%[[ARG0:.*]]: tensor<?xf32>) -> tensor<?xf32> {
 //       CHECK: %[[GENERIC_OP:.*]] = linalg.generic
 //  CHECK-SAME: ins(%[[ARG0]] : tensor<?xf32>)
 //  CHECK-SAME: outs({{.*}} : tensor<?xf32>) {
@@ -821,3 +821,28 @@ func.func @fold_multi_use_generic_op_with_consumer(%arg0 : tensor<?x?x?xf32>) ->
 //  CHECK-SAME:       outs(%[[INIT2]], %[[INIT1]] :
 //       CHECK:   %[[RETURN_CAST:.+]] = tensor.cast %[[GENERIC]]#0 : tensor<3x2x4xf32> to tensor<?x?x?xf32>
 //       CHECK:   return %[[RETURN_CAST]], %[[GENERIC]]#1
+
+// -----
+
+#map = affine_map<(d0) -> (d0)>
+func.func @identity_mixed(%arg0 : tensor<?xf32>, %arg1: memref<?xf32>) {
+  linalg.generic {
+    indexing_maps = [#map, #map],
+    iterator_types = ["parallel"]
+  } ins(%arg0 : tensor<?xf32>)
+    outs(%arg1 : memref<?xf32>) {
+  ^bb0(%arg2 : f32, %arg3 : f32):
+    linalg.yield %arg2 : f32
+  }
+  return
+}
+
+// There was a crash in EraseIdentityGenericOp for generic with mixed semantics.
+// For now, check generic remained unchanged.
+// CHECK-LABEL: func @identity_mixed
+//  CHECK-SAME:     (%[[ARG1:.*]]: tensor<?xf32>, %[[ARG2:.*]]: memref<?xf32>)
+//       CHECK:     linalg.generic {
+//  CHECK-SAME:    indexing_maps = [#map, #map],
+//  CHECK-SAME:    iterator_types = ["parallel"]
+//  CHECK-SAME:  } ins(%[[ARG1]] : tensor<?xf32>)
+//  CHECK-SAME:    outs(%[[ARG2]] : memref<?xf32>) {

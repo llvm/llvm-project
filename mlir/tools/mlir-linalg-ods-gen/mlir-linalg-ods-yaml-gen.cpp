@@ -563,6 +563,11 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
         return regionBuilder;
       }
 
+      std::pair<int64_t, int64_t> getOutputsPositionRange() {{
+        int64_t getNumOperands = this->getNumOperands();
+        return {{getNumOperands - 1, getNumOperands};
+      }
+
       // Generic methods.
       static unsigned getNumRegionArgs();
       std::string getLibraryCallName();
@@ -638,8 +643,8 @@ ArrayAttr {0}::getIndexingMaps() {{
   AffineMap tensorMap = AffineMap::getMultiDimIdentityMap(
     getNumParallelLoops(), context);
   SmallVector<AffineMap> indexingMaps;
-  for (OpOperand *opOperand : getInputAndOutputOperands())
-    indexingMaps.push_back(getRank(opOperand) == 0 ? scalarMap : tensorMap);
+  for (OpOperand &opOperand : getOperation()->getOpOperands())
+    indexingMaps.push_back(getRank(&opOperand) == 0 ? scalarMap : tensorMap);
   return Builder(getContext()).getAffineMapArrayAttr(indexingMaps);
 }
 )FMT";
@@ -654,10 +659,9 @@ LogicalResult {0}::fold(ArrayRef<Attribute>,
 }
 void {0}::getEffects(SmallVectorImpl<
     SideEffects::EffectInstance<MemoryEffects::Effect> >&effects) {{
-      SmallVector<Value> inputBuffers = getInputBufferOperands();
-      SmallVector<Value> outputBuffers = getOutputBufferOperands();
+      if (hasTensorSemantics()) return;
       getGenericEffectsImpl(effects,
-        getOperation()->getResults(), inputBuffers, outputBuffers);
+        getOperation()->getResults(), getInputOperands(), getOutputOperands());
 }
 )FMT";
 

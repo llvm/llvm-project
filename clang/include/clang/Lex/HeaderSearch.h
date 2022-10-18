@@ -249,6 +249,14 @@ class HeaderSearch {
   unsigned SystemDirIdx = 0;
   bool NoCurDirSearch = false;
 
+  /// Maps HeaderMap keys to SearchDir indices. When HeaderMaps are used
+  /// heavily, SearchDirs can start with thousands of HeaderMaps, so this Index
+  /// lets us avoid scanning them all to find a match.
+  llvm::StringMap<unsigned, llvm::BumpPtrAllocator> SearchDirHeaderMapIndex;
+
+  /// The index of the first SearchDir that isn't a header map.
+  unsigned FirstNonHeaderMapSearchDirIdx = 0;
+
   /// \#include prefixes for which the 'system header' property is
   /// overridden.
   ///
@@ -329,6 +337,10 @@ class HeaderSearch {
 
   /// Entity used to look up stored header file information.
   ExternalHeaderFileInfoSource *ExternalSource = nullptr;
+
+  /// Scan all of the header maps at the beginning of SearchDirs and
+  /// map their keys to the SearchDir index of their header map.
+  void indexInitialHeaderMaps();
 
 public:
   HeaderSearch(std::shared_ptr<HeaderSearchOptions> HSOpts,
@@ -801,6 +813,10 @@ public:
   }
 
   ConstSearchDirIterator search_dir_begin() const { return quoted_dir_begin(); }
+  ConstSearchDirIterator search_dir_nth(size_t n) const {
+    assert(n < SearchDirs.size());
+    return {*this, n};
+  }
   ConstSearchDirIterator search_dir_end() const { return system_dir_end(); }
   ConstSearchDirRange search_dir_range() const {
     return {search_dir_begin(), search_dir_end()};

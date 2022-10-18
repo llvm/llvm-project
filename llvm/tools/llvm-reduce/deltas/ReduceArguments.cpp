@@ -119,6 +119,5 @@ static void extractArgumentsFromModule(Oracle &O, Module &Program) {
 }
 
 void llvm::reduceArgumentsDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing Arguments...\n";
-  runDeltaPass(Test, extractArgumentsFromModule);
+  runDeltaPass(Test, extractArgumentsFromModule, "Reducing Arguments");
 }

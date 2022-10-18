@@ -2878,6 +2878,54 @@ static SDValue lowerVECTOR_SHUFFLEAsVNSRL(const SDLoc &DL, MVT VT,
   return convertFromScalableVector(VT, Res, DAG, Subtarget);
 }
 
+// Lower the following shuffle to vslidedown.
+// t49: v8i8 = extract_subvector t13, Constant:i64<0>
+// t109: v8i8 = extract_subvector t12, Constant:i64<8>
+// t108: v8i8 = vector_shuffle<1,2,3,4,5,6,7,8> t49, t106
+static SDValue lowerVECTOR_SHUFFLEAsVSlidedown(const SDLoc &DL, MVT VT,
+                                               SDValue V1, SDValue V2,
+                                               ArrayRef<int> Mask,
+                                               const RISCVSubtarget &Subtarget,
+                                               SelectionDAG &DAG) {
+  // Both input must be extracts.
+  if (V1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+      V2.getOpcode() != ISD::EXTRACT_SUBVECTOR)
+    return SDValue();
+
+  // Extracting from the same source.
+  SDValue Src = V1.getOperand(0);
+  if (Src != V2.getOperand(0))
+    return SDValue();
+
+  // V1 must be started with 0.
+  // V1 and V2 are continuous.
+  if (V1.getConstantOperandVal(1) != 0 ||
+      VT.getVectorNumElements() != V2.getConstantOperandVal(1))
+    return SDValue();
+
+  // Do not handle -1 here. -1 can be handled by isElementRotate.
+  if (Mask[0] == -1)
+    return SDValue();
+
+  // Mask is also continuous.
+  for (unsigned i = 1; i != Mask.size(); ++i)
+    if (Mask[i - 1] + 1 != Mask[i])
+      return SDValue();
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  MVT SrcVT = Src.getSimpleValueType();
+  MVT ContainerVT = getContainerForFixedLengthVector(DAG, SrcVT, Subtarget);
+  auto [TrueMask, VL] = getDefaultVLOps(SrcVT, ContainerVT, DL, DAG, Subtarget);
+  SDValue Slidedown = DAG.getNode(
+      RISCVISD::VSLIDEDOWN_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
+      convertToScalableVector(ContainerVT, Src, DAG, Subtarget),
+      DAG.getConstant(Mask[0], DL, XLenVT), TrueMask, VL);
+  return DAG.getNode(
+      ISD::EXTRACT_SUBVECTOR, DL, VT,
+      convertFromScalableVector(SrcVT, Slidedown, DAG, Subtarget),
+      DAG.getConstant(0, DL, XLenVT));
+}
+
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
@@ -2968,6 +3016,10 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   }
 
   ArrayRef<int> Mask = SVN->getMask();
+
+  if (SDValue V =
+          lowerVECTOR_SHUFFLEAsVSlidedown(DL, VT, V1, V2, Mask, Subtarget, DAG))
+    return V;
 
   // Lower rotations to a SLIDEDOWN and a SLIDEUP. One of the source vectors may
   // be undef which can be handled with a single SLIDEDOWN/UP.
@@ -4222,6 +4274,32 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::VSELECT, DL, VT, CondSplat, TrueV, FalseV);
   }
 
+  if (!Subtarget.hasShortForwardBranchOpt()) {
+    // (select c, -1, y) -> -c | y
+    if (isAllOnesConstant(TrueV)) {
+      SDValue Neg = DAG.getNegative(CondV, DL, VT);
+      return DAG.getNode(ISD::OR, DL, VT, Neg, FalseV);
+    }
+    // (select c, y, -1) -> (c-1) | y
+    if (isAllOnesConstant(FalseV)) {
+      SDValue Neg = DAG.getNode(ISD::ADD, DL, VT, CondV,
+                                DAG.getAllOnesConstant(DL, VT));
+      return DAG.getNode(ISD::OR, DL, VT, Neg, TrueV);
+    }
+
+    // (select c, 0, y) -> (c-1) & y
+    if (isNullConstant(TrueV)) {
+      SDValue Neg = DAG.getNode(ISD::ADD, DL, VT, CondV,
+                                DAG.getAllOnesConstant(DL, VT));
+      return DAG.getNode(ISD::AND, DL, VT, Neg, FalseV);
+    }
+    // (select c, y, 0) -> -c & y
+    if (isNullConstant(FalseV)) {
+      SDValue Neg = DAG.getNegative(CondV, DL, VT);
+      return DAG.getNode(ISD::AND, DL, VT, Neg, TrueV);
+    }
+  }
+
   // If the CondV is the output of a SETCC node which operates on XLenVT inputs,
   // then merge the SETCC node into the lowered RISCVISD::SELECT_CC to take
   // advantage of the integer compare+branch instructions. i.e.:
@@ -4270,6 +4348,15 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     }
 
     SDValue TargetCC = DAG.getCondCode(CCVal);
+
+    if (isa<ConstantSDNode>(TrueV) && !isa<ConstantSDNode>(FalseV)) {
+      // (select (setcc lhs, rhs, CC), constant, falsev)
+      // -> (select (setcc lhs, rhs, InverseCC), falsev, constant)
+      std::swap(TrueV, FalseV);
+      TargetCC =
+          DAG.getCondCode(ISD::getSetCCInverse(CCVal, LHS.getValueType()));
+    }
+
     SDValue Ops[] = {LHS, RHS, TargetCC, TrueV, FalseV};
     return DAG.getNode(RISCVISD::SELECT_CC, DL, VT, Ops);
   }
@@ -9426,9 +9513,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // (select (x in [0,1] != 0), (z ^ y), y ) -> (-x & z ) ^ y
     // (select (x in [0,1] == 0), y, (z | y) ) -> (-x & z ) | y
     // (select (x in [0,1] != 0), (z | y), y ) -> (-x & z ) | y
+    // NOTE: We only do this if the target does not have the short forward
+    // branch optimization.
     APInt Mask = APInt::getBitsSetFrom(LHS.getValueSizeInBits(), 1);
-    if (isNullConstant(RHS) && ISD::isIntEqualitySetCC(CCVal) &&
-        DAG.MaskedValueIsZero(LHS, Mask)) {
+    if (!Subtarget.hasShortForwardBranchOpt() && isNullConstant(RHS) &&
+        ISD::isIntEqualitySetCC(CCVal) && DAG.MaskedValueIsZero(LHS, Mask)) {
       unsigned Opcode;
       SDValue Src1, Src2;
       // true if FalseV is XOR or OR operator and one of its operands
@@ -9480,34 +9569,35 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return DAG.getNode(RISCVISD::SELECT_CC, DL, N->getValueType(0),
                          {LHS, RHS, CC, TrueV, FalseV});
 
-    // (select c, -1, y) -> -c | y
-    if (isAllOnesConstant(TrueV)) {
-      SDValue C = DAG.getSetCC(DL, VT, LHS, RHS, CCVal);
-      SDValue Neg = DAG.getNegative(C, DL, VT);
-      return DAG.getNode(ISD::OR, DL, VT, Neg, FalseV);
-    }
-    // (select c, y, -1) -> -!c | y
-    if (isAllOnesConstant(FalseV)) {
-      SDValue C = DAG.getSetCC(DL, VT, LHS, RHS,
-                               ISD::getSetCCInverse(CCVal, VT));
-      SDValue Neg = DAG.getNegative(C, DL, VT);
-      return DAG.getNode(ISD::OR, DL, VT, Neg, TrueV);
-    }
+    if (!Subtarget.hasShortForwardBranchOpt()) {
+      // (select c, -1, y) -> -c | y
+      if (isAllOnesConstant(TrueV)) {
+        SDValue C = DAG.getSetCC(DL, VT, LHS, RHS, CCVal);
+        SDValue Neg = DAG.getNegative(C, DL, VT);
+        return DAG.getNode(ISD::OR, DL, VT, Neg, FalseV);
+      }
+      // (select c, y, -1) -> -!c | y
+      if (isAllOnesConstant(FalseV)) {
+        SDValue C =
+            DAG.getSetCC(DL, VT, LHS, RHS, ISD::getSetCCInverse(CCVal, VT));
+        SDValue Neg = DAG.getNegative(C, DL, VT);
+        return DAG.getNode(ISD::OR, DL, VT, Neg, TrueV);
+      }
 
-    // (select c, 0, y) -> -!c & y
-    if (isNullConstant(TrueV)) {
-      SDValue C = DAG.getSetCC(DL, VT, LHS, RHS,
-                               ISD::getSetCCInverse(CCVal, VT));
-      SDValue Neg = DAG.getNegative(C, DL, VT);
-      return DAG.getNode(ISD::AND, DL, VT, Neg, FalseV);
+      // (select c, 0, y) -> -!c & y
+      if (isNullConstant(TrueV)) {
+        SDValue C =
+            DAG.getSetCC(DL, VT, LHS, RHS, ISD::getSetCCInverse(CCVal, VT));
+        SDValue Neg = DAG.getNegative(C, DL, VT);
+        return DAG.getNode(ISD::AND, DL, VT, Neg, FalseV);
+      }
+      // (select c, y, 0) -> -c & y
+      if (isNullConstant(FalseV)) {
+        SDValue C = DAG.getSetCC(DL, VT, LHS, RHS, CCVal);
+        SDValue Neg = DAG.getNegative(C, DL, VT);
+        return DAG.getNode(ISD::AND, DL, VT, Neg, TrueV);
+      }
     }
-    // (select c, y, 0) -> -c & y
-    if (isNullConstant(FalseV)) {
-      SDValue C = DAG.getSetCC(DL, VT, LHS, RHS, CCVal);
-      SDValue Neg = DAG.getNegative(C, DL, VT);
-      return DAG.getNode(ISD::AND, DL, VT, Neg, TrueV);
-    }
-
 
     return SDValue();
   }

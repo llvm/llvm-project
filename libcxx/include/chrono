@@ -207,7 +207,11 @@ template <class ToDuration, class Rep, class Period>
 template <class ToDuration, class Rep, class Period>
     constexpr ToDuration round(const duration<Rep, Period>& d);    // C++17
 
-// duration I/O is elsewhere
+// duration I/O
+template<class charT, class traits, class Rep, class Period>       // C++20
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os,
+               const duration<Rep, Period>& d);
 
 // time_point arithmetic (all constexpr in C++14)
 template <class Clock, class Duration1, class Rep2, class Period2>
@@ -371,6 +375,9 @@ constexpr weekday operator+(const weekday& x, const days&    y) noexcept;
 constexpr weekday operator+(const days&    x, const weekday& y) noexcept;
 constexpr weekday operator-(const weekday& x, const days&    y) noexcept;
 constexpr days    operator-(const weekday& x, const weekday& y) noexcept;
+template<class charT, class traits>
+  basic_ostream<charT, traits>&
+    operator<<(basic_ostream<charT, traits>& os, const weekday& wd);
 
 // 25.8.7, class weekday_indexed    // C++20
 
@@ -625,9 +632,12 @@ bool operator>=(const time_zone& x, const time_zone& y) noexcept;
 }  // chrono
 
 namespace std {
+  template<class Rep, class Period, class charT>
+    struct formatter<chrono::duration<Rep, Period>, charT>;                       // C++20
   template<class charT> struct formatter<chrono::day, charT>;                     // C++20
   template<class charT> struct formatter<chrono::month, charT>;                   // C++20
   template<class charT> struct formatter<chrono::year, charT>;                    // C++20
+  template<class charT> struct formatter<chrono::weekday, charT>;                 // C++20
 } // namespace std
 
 namespace chrono {

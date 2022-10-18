@@ -506,12 +506,12 @@ struct DeathSizeClassConfig {
   static const scudo::uptr MinSizeLog = 10;
   static const scudo::uptr MidSizeLog = 10;
   static const scudo::uptr MaxSizeLog = 13;
-  static const scudo::u32 MaxNumCachedHint = 4;
+  static const scudo::u16 MaxNumCachedHint = 4;
   static const scudo::uptr MaxBytesCachedLog = 12;
   static const scudo::uptr SizeDelta = 0;
 };
 
-static const scudo::uptr DeathRegionSizeLog = 20U;
+static const scudo::uptr DeathRegionSizeLog = 21U;
 struct DeathConfig {
   static const bool MaySupportMemoryTagging = false;
 

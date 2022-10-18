@@ -8408,9 +8408,10 @@ void ScalarEvolution::forgetBlockAndLoopDispositions(Value *V) {
   SmallPtrSet<const SCEV *, 8> Seen = {S};
   while (!Worklist.empty()) {
     const SCEV *Curr = Worklist.pop_back_val();
-    if (!LoopDispositions.erase(Curr) && !BlockDispositions.erase(S))
+    bool LoopDispoRemoved = LoopDispositions.erase(Curr);
+    bool BlockDispoRemoved = BlockDispositions.erase(Curr);
+    if (!LoopDispoRemoved && !BlockDispoRemoved)
       continue;
-
     auto Users = SCEVUsers.find(Curr);
     if (Users != SCEVUsers.end())
       for (const auto *User : Users->second)

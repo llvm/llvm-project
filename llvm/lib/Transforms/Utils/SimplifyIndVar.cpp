@@ -770,6 +770,7 @@ bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
 
   LLVM_DEBUG(dbgs() << "INDVARS: Eliminated identity: " << *UseInst << '\n');
 
+  SE->forgetValue(UseInst);
   UseInst->replaceAllUsesWith(IVOperand);
   ++NumElimIdentity;
   Changed = true;

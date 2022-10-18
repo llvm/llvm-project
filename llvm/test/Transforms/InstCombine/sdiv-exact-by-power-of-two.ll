@@ -107,3 +107,61 @@ define i8 @shl1_nsw_not_exact(i8 %x, i8 %y) {
   %div = sdiv i8 %x, %shl
   ret i8 %div
 }
+
+define i8 @prove_exact_with_high_mask(i8 %x, i8 %y) {
+; CHECK-LABEL: @prove_exact_with_high_mask(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[D:%.*]] = and i8 [[A]], -2
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %a = and i8 %x, -8
+  %d = sdiv i8 %a, 4
+  ret i8 %d
+}
+
+define i8 @prove_exact_with_high_mask_limit(i8 %x, i8 %y) {
+; CHECK-LABEL: @prove_exact_with_high_mask_limit(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %a = and i8 %x, -8
+  %d = sdiv i8 %a, 8
+  ret i8 %d
+}
+
+; negative test - not enough low zeros in dividend
+
+define i8 @not_prove_exact_with_high_mask(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_prove_exact_with_high_mask(
+; CHECK-NEXT:    [[A:%.*]] = and i8 [[X:%.*]], -8
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[A]], 16
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %a = and i8 %x, -8
+  %d = sdiv i8 %a, 16
+  ret i8 %d
+}
+
+define <2 x i8> @prove_exact_with_high_mask_splat_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @prove_exact_with_high_mask_splat_vec(
+; CHECK-NEXT:    [[A:%.*]] = shl <2 x i8> [[X:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i8> [[A]], <i8 3, i8 3>
+; CHECK-NEXT:    ret <2 x i8> [[D]]
+;
+  %a = shl <2 x i8> %x, <i8 3, i8 3>
+  %d = sdiv <2 x i8> %a, <i8 8, i8 8>
+  ret <2 x i8> %d
+}
+
+; TODO: Needs knownbits to handle arbitrary vector constants.
+
+define <2 x i8> @prove_exact_with_high_mask_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @prove_exact_with_high_mask_vec(
+; CHECK-NEXT:    [[A:%.*]] = shl <2 x i8> [[X:%.*]], <i8 3, i8 2>
+; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i8> [[A]], <i8 8, i8 4>
+; CHECK-NEXT:    ret <2 x i8> [[D]]
+;
+  %a = shl <2 x i8> %x, <i8 3, i8 2>
+  %d = sdiv <2 x i8> %a, <i8 8, i8 4>
+  ret <2 x i8> %d
+}

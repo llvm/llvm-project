@@ -68,6 +68,18 @@ public:
   virtual void emitARM64WinCFIContext() {}
   virtual void emitARM64WinCFIClearUnwoundToCall() {}
   virtual void emitARM64WinCFIPACSignLR() {}
+  virtual void emitARM64WinCFISaveAnyRegI(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegIP(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegD(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegDP(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegQ(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegQP(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegIX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegIPX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegDX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegDPX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) {}
 
 private:
   std::unique_ptr<AssemblerConstantPools> ConstantPools;
@@ -122,6 +134,18 @@ public:
   void emitARM64WinCFIContext() override;
   void emitARM64WinCFIClearUnwoundToCall() override;
   void emitARM64WinCFIPACSignLR() override;
+  void emitARM64WinCFISaveAnyRegI(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegIP(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegD(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegDP(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegQ(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegQP(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegIX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegIPX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegDX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegDPX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) override;
 
 private:
   void emitARM64WinUnwindCode(unsigned UnwindCode, int Reg, int Offset);

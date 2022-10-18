@@ -53,9 +53,11 @@ enum NodeType : unsigned {
   CP,          // Constant pool.
 
   COMBINE,
-  VASL,
+  VASL,        // Vector shifts by a scalar value
   VASR,
   VLSR,
+  MFSHL,       // Funnel shifts with the shift amount guaranteed to be
+  MFSHR,       // within the range of the bit width of the element.
 
   SSAT,        // Signed saturate.
   USAT,        // Unsigned saturate.
@@ -332,6 +334,9 @@ public:
   bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
                              EVT NewVT) const override;
 
+  void AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                     SDNode *Node) const override;
+
   // Handling of atomic RMW instructions.
   Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
                         AtomicOrdering Ord) const override;
@@ -372,6 +377,7 @@ private:
                           SelectionDAG &DAG) const;
   SDValue contractPredicate(SDValue Vec64, const SDLoc &dl,
                             SelectionDAG &DAG) const;
+  SDValue getSplatValue(SDValue Op, SelectionDAG &DAG) const;
   SDValue getVectorShiftByInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue appendUndef(SDValue Val, MVT ResTy, SelectionDAG &DAG) const;
 
@@ -433,6 +439,7 @@ private:
   bool allowsHvxMisalignedMemoryAccesses(MVT VecTy,
                                          MachineMemOperand::Flags Flags,
                                          bool *Fast) const;
+  void AdjustHvxInstrPostInstrSelection(MachineInstr &MI, SDNode *Node) const;
 
   bool isHvxSingleTy(MVT Ty) const;
   bool isHvxPairTy(MVT Ty) const;
@@ -496,6 +503,7 @@ private:
   SDValue LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxSelect(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxShift(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxFunnelShift(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxMaskedOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxFpExtend(SDValue Op, SelectionDAG &DAG) const;

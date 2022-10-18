@@ -521,6 +521,13 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   if (match(Op1, m_SpecificFP(-1.0)))
     return UnaryOperator::CreateFNegFMF(Op0, &I);
 
+  // With no-nans: X * 0.0 --> copysign(0.0, X)
+  if (I.hasNoNaNs() && match(Op1, m_PosZeroFP())) {
+    CallInst *CopySign = Builder.CreateIntrinsic(Intrinsic::copysign,
+                                                 {I.getType()}, {Op1, Op0}, &I);
+    return replaceInstUsesWith(I, CopySign);
+  }
+
   // -X * C --> X * -C
   Value *X, *Y;
   Constant *C;
@@ -1332,12 +1339,17 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
                               ConstantInt::getAllOnesValue(Ty));
   }
 
-  // If the sign bits of both operands are zero (i.e. we can prove they are
-  // unsigned inputs), turn this into a udiv.
-  APInt Mask(APInt::getSignMask(Ty->getScalarSizeInBits()));
-  if (MaskedValueIsZero(Op0, Mask, 0, &I)) {
-    if (MaskedValueIsZero(Op1, Mask, 0, &I)) {
-      // X sdiv Y -> X udiv Y, iff X and Y don't have sign bit set
+  KnownBits KnownDividend = computeKnownBits(Op0, 0, &I);
+  if (!I.isExact() &&
+      (match(Op1, m_Power2(Op1C)) || match(Op1, m_NegatedPower2(Op1C))) &&
+      KnownDividend.countMinTrailingZeros() >= Op1C->countTrailingZeros()) {
+    I.setIsExact();
+    return &I;
+  }
+
+  if (KnownDividend.isNonNegative()) {
+    // If both operands are unsigned, turn this into a udiv.
+    if (isKnownNonNegative(Op1, DL, 0, &AC, &I, &DT)) {
       auto *BO = BinaryOperator::CreateUDiv(Op0, Op1, I.getName());
       BO->setIsExact(I.isExact());
       return BO;

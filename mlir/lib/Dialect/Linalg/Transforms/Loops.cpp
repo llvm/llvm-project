@@ -131,7 +131,7 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
   assert(linalgOp.hasBufferSemantics() &&
          "expected linalg op with buffer semantics");
   SmallVector<Value> indexedValues;
-  indexedValues.reserve(linalgOp.getNumInputsAndOutputs());
+  indexedValues.reserve(linalgOp->getNumOperands());
 
   auto allIvsPlusDims = SmallVector<Value>(allIvs.begin(), allIvs.end());
 
@@ -161,7 +161,9 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
   // 3. Emit store.
   SmallVector<SmallVector<Value>, 8> indexing;
   SmallVector<Value> outputBuffers;
-  for (OpOperand *outputOperand : linalgOp.getOutputBufferOperands()) {
+  for (OpOperand *outputOperand : linalgOp.getOutputOperands()) {
+    if (!outputOperand->get().getType().isa<MemRefType>())
+      continue;
     indexing.push_back(makeCanonicalAffineApplies(
         b, loc, linalgOp.getMatchingIndexingMap(outputOperand),
         allIvsPlusDims));
