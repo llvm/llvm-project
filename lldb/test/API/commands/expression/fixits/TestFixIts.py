@@ -47,10 +47,11 @@ class ExprCommandWithFixits(TestBase):
         # The Fix-It changes "ptr.m" to "ptr->m".
         expr = "struct MyTy { int m; }; MyTy x; MyTy *ptr = &x; int m = ptr.m;"
         value = frame.EvaluateExpression(expr, top_level_options)
-        # A successfully parsed top-level expression will yield an error
-        # that there is 'no value'. If a parsing error would have happened we
-        # would get a different error kind, so let's check the error kind here.
-        self.assertEquals(value.GetError().GetCString(), "error: No value")
+        # A successfully parsed top-level expression will yield an
+        # unknown error . If a parsing error would have happened we
+        # would get a different error kind, so let's check the error
+        # kind here.
+        self.assertEquals(value.GetError().GetCString(), "unknown error")
 
         # Try with two errors:
         two_error_expression = "my_pointer.second->a"
@@ -170,7 +171,7 @@ class ExprCommandWithFixits(TestBase):
         multiple_runs_options.SetRetriesWithFixIts(2)
         value = frame.EvaluateExpression(two_runs_expr, multiple_runs_options)
         # This error signals success for top level expressions.
-        self.assertEquals(value.GetError().GetCString(), "error: No value")
+        self.assertEquals(value.GetError().GetCString(), "unknown error")
 
         # Test that the code above compiles to the right thing.
         self.expect_expr("test_X(1)", result_type="int", result_value="123")
