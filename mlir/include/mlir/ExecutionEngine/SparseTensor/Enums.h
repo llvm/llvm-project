@@ -26,7 +26,8 @@
 #ifndef MLIR_EXECUTIONENGINE_SPARSETENSOR_ENUMS_H
 #define MLIR_EXECUTIONENGINE_SPARSETENSOR_ENUMS_H
 
-#include "mlir/ExecutionEngine/Float16bits.h"
+// NOTE: Client code will need to include "mlir/ExecutionEngine/Float16bits.h"
+// if they want to use the `MLIR_SPARSETENSOR_FOREVERY_V` macro.
 
 #include <cinttypes>
 #include <complex>
