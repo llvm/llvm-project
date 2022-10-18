@@ -67,8 +67,8 @@ BinarySection::hash(const BinaryData &BD,
   return Hash;
 }
 
-void BinarySection::emitAsData(MCStreamer &Streamer, StringRef NewName) const {
-  StringRef SectionName = !NewName.empty() ? NewName : getName();
+void BinarySection::emitAsData(MCStreamer &Streamer,
+                               const Twine &SectionName) const {
   StringRef SectionContents = getContents();
   MCSectionELF *ELFSection =
       BC.Ctx->getELFSection(SectionName, getELFType(), getELFFlags());

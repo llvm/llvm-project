@@ -273,7 +273,7 @@ void AsmParserState::addDefinition(BlockArgument blockArg, SMLoc location) {
 
 void AsmParserState::addUses(Value value, ArrayRef<SMLoc> locations) {
   // Handle the case where the value is an operation result.
-  if (OpResult result = value.dyn_cast<OpResult>()) {
+  if (OpResult result = dyn_cast<OpResult>(value)) {
     // Check to see if a definition for the parent operation has been recorded.
     // If one hasn't, we treat the provided value as a placeholder value that
     // will be refined further later.

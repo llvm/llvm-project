@@ -34,6 +34,7 @@ template <class Emitter> class RecordScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
 template <class Emitter> class OptionScope;
+template <class Emitter> class ArrayIndexScope;
 
 /// Compilation context for expressions.
 template <class Emitter>
@@ -71,8 +72,11 @@ public:
   bool VisitBinaryOperator(const BinaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
+  bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *E);
+  bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E);
   bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E);
   bool VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E);
+  bool VisitCXXThisExpr(const CXXThisExpr *E);
   bool VisitUnaryOperator(const UnaryOperator *E);
   bool VisitDeclRefExpr(const DeclRefExpr *E);
   bool VisitImplicitValueInitExpr(const ImplicitValueInitExpr *E);
@@ -81,6 +85,10 @@ public:
   bool VisitInitListExpr(const InitListExpr *E);
   bool VisitConstantExpr(const ConstantExpr *E);
   bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E);
+  bool VisitMemberExpr(const MemberExpr *E);
+  bool VisitArrayInitIndexExpr(const ArrayInitIndexExpr *E);
+  bool VisitOpaqueValueExpr(const OpaqueValueExpr *E);
+  bool VisitAbstractConditionalOperator(const AbstractConditionalOperator *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -96,6 +104,10 @@ protected:
   /// Returns a record from a record or pointer type.
   Record *getRecord(QualType Ty);
   Record *getRecord(const RecordDecl *RD);
+
+  // Returns a function for the given FunctionDecl.
+  // If the function does not exist yet, it is compiled.
+  const Function *getFunction(const FunctionDecl *FD);
 
   /// Returns the size int bits of an integer.
   unsigned getIntWidth(QualType Ty) {
@@ -138,6 +150,8 @@ protected:
   bool visitInitializer(const Expr *E);
   /// Compiles an array initializer.
   bool visitArrayInitializer(const Expr *Initializer);
+  /// Compiles a record initializer.
+  bool visitRecordInitializer(const Expr *Initializer);
 
   /// Visits an expression and converts it to a boolean.
   bool visitBool(const Expr *E);
@@ -189,6 +203,7 @@ private:
   friend class RecordScope<Emitter>;
   friend class DeclScope<Emitter>;
   friend class OptionScope<Emitter>;
+  friend class ArrayIndexScope<Emitter>;
 
   /// Emits a zero initializer.
   bool visitZeroInitializer(PrimType T, const Expr *E);
@@ -217,19 +232,14 @@ private:
                       llvm::function_ref<bool(PrimType)> Indirect);
 
   /// Emits an APInt constant.
-  bool emitConst(PrimType T, unsigned NumBits, const llvm::APInt &Value,
-                 const Expr *E);
+  bool emitConst(PrimType T, const llvm::APInt &Value, const Expr *E);
 
   /// Emits an integer constant.
   template <typename T> bool emitConst(const Expr *E, T Value) {
     QualType Ty = E->getType();
-    unsigned NumBits = getIntWidth(Ty);
-    APInt WrappedValue(NumBits, Value, std::is_signed<T>::value);
-    return emitConst(*Ctx.classify(Ty), NumBits, WrappedValue, E);
+    APInt WrappedValue(getIntWidth(Ty), Value, std::is_signed<T>::value);
+    return emitConst(*Ctx.classify(Ty), WrappedValue, E);
   }
-
-  /// Returns a pointer to a variable declaration.
-  bool getPtrVarDecl(const VarDecl *VD, const Expr *E);
 
   /// Returns the index of a global.
   llvm::Optional<unsigned> getGlobalIdx(const VarDecl *VD);
@@ -250,7 +260,7 @@ protected:
   /// Current scope.
   VariableScope<Emitter> *VarScope = nullptr;
 
-  /// Current argument index.
+  /// Current argument index. Needed to emit ArrayInitIndexExpr.
   llvm::Optional<uint64_t> ArrayIndex;
 
   /// Flag indicating if return value is to be discarded.
@@ -350,6 +360,20 @@ public:
   void addExtended(const Scope::Local &Local) override {
     this->Parent->addLocal(Local);
   }
+};
+
+template <class Emitter> class ArrayIndexScope final {
+public:
+  ArrayIndexScope(ByteCodeExprGen<Emitter> *Ctx, uint64_t Index) : Ctx(Ctx) {
+    OldArrayIndex = Ctx->ArrayIndex;
+    Ctx->ArrayIndex = Index;
+  }
+
+  ~ArrayIndexScope() { Ctx->ArrayIndex = OldArrayIndex; }
+
+private:
+  ByteCodeExprGen<Emitter> *Ctx;
+  Optional<uint64_t> OldArrayIndex;
 };
 
 } // namespace interp

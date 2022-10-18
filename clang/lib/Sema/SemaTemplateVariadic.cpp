@@ -720,7 +720,7 @@ bool Sema::CheckParameterPacksForExpansion(
     } else if (const auto *STP =
                    P.dyn_cast<const SubstTemplateTypeParmPackType *>()) {
       NewPackSize = STP->getNumArgs();
-      ND = STP->getReplacedParameter()->getDecl();
+      ND = STP->getReplacedParameter();
     } else {
       const auto *SEP = P.get<const SubstNonTypeTemplateParmPackExpr *>();
       NewPackSize = SEP->getArgumentPack().pack_size();

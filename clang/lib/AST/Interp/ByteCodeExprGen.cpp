@@ -127,6 +127,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->Visit(SubExpr))
       return false;
 
+    // TODO: Emit this only if FromT != ToT.
     return this->emitCast(*FromT, *ToT, CE);
   }
 
@@ -144,10 +145,8 @@ bool ByteCodeExprGen<Emitter>::VisitIntegerLiteral(const IntegerLiteral *LE) {
   if (DiscardResult)
     return true;
 
-  auto Val = LE->getValue();
-  QualType LitTy = LE->getType();
-  if (Optional<PrimType> T = classify(LitTy))
-    return emitConst(*T, getIntWidth(LitTy), LE->getValue(), LE);
+  if (Optional<PrimType> T = classify(LE->getType()))
+    return emitConst(*T, LE->getValue(), LE);
   return this->bail(LE);
 }
 
@@ -211,10 +210,20 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
       return Discard(this->emitAdd(*T, BO));
     case BO_Mul:
       return Discard(this->emitMul(*T, BO));
+    case BO_Rem:
+      return Discard(this->emitRem(*T, BO));
+    case BO_Div:
+      return Discard(this->emitDiv(*T, BO));
     case BO_Assign:
       if (!this->emitStore(*T, BO))
         return false;
       return DiscardResult ? this->emitPopPtr(BO) : true;
+    case BO_And:
+      return Discard(this->emitBitAnd(*T, BO));
+    case BO_Or:
+      return Discard(this->emitBitOr(*T, BO));
+    case BO_LAnd:
+    case BO_LOr:
     default:
       return this->bail(BO);
     }
@@ -301,6 +310,76 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
   }
 
   return false;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
+  // 'Base.Member'
+  const Expr *Base = E->getBase();
+  const ValueDecl *Member = E->getMemberDecl();
+
+  if (!this->visit(Base))
+    return false;
+
+  // Base above gives us a pointer on the stack.
+  // TODO: Implement non-FieldDecl members.
+  if (const auto *FD = dyn_cast<FieldDecl>(Member)) {
+    const RecordDecl *RD = FD->getParent();
+    const Record *R = getRecord(RD);
+    const Record::Field *F = R->getField(FD);
+    // Leave a pointer to the field on the stack.
+    return this->emitGetPtrField(F->Offset, E);
+  }
+
+  return false;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitArrayInitIndexExpr(
+    const ArrayInitIndexExpr *E) {
+  // ArrayIndex might not be set if a ArrayInitIndexExpr is being evaluated
+  // stand-alone, e.g. via EvaluateAsInt().
+  if (!ArrayIndex)
+    return false;
+  QualType IndexType = E->getType();
+  APInt Value(getIntWidth(IndexType), *ArrayIndex);
+  return this->emitConst(classifyPrim(IndexType), Value, E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitOpaqueValueExpr(const OpaqueValueExpr *E) {
+  return this->visit(E->getSourceExpr());
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitAbstractConditionalOperator(
+    const AbstractConditionalOperator *E) {
+  const Expr *Condition = E->getCond();
+  const Expr *TrueExpr = E->getTrueExpr();
+  const Expr *FalseExpr = E->getFalseExpr();
+
+  LabelTy LabelEnd = this->getLabel();   // Label after the operator.
+  LabelTy LabelFalse = this->getLabel(); // Label for the false expr.
+
+  if (!this->visit(Condition))
+    return false;
+  if (!this->jumpFalse(LabelFalse))
+    return false;
+
+  if (!this->visit(TrueExpr))
+    return false;
+  if (!this->jump(LabelEnd))
+    return false;
+
+  this->emitLabel(LabelFalse);
+
+  if (!this->visit(FalseExpr))
+    return false;
+
+  this->fallthrough(LabelEnd);
+  this->emitLabel(LabelEnd);
+
+  return true;
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
@@ -488,8 +567,8 @@ bool ByteCodeExprGen<Emitter>::dereferenceVar(
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::emitConst(PrimType T, unsigned NumBits,
-                                         const APInt &Value, const Expr *E) {
+bool ByteCodeExprGen<Emitter>::emitConst(PrimType T, const APInt &Value,
+                                         const Expr *E) {
   switch (T) {
   case PT_Sint8:
     return this->emitConstSint8(Value.getSExtValue(), E);
@@ -571,9 +650,15 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
   if (const auto *InitList = dyn_cast<InitListExpr>(Initializer)) {
     unsigned ElementIndex = 0;
     for (const Expr *Init : InitList->inits()) {
-      QualType InitType = Init->getType();
-
-      if (InitType->isArrayType()) {
+      if (Optional<PrimType> T = classify(Init->getType())) {
+        // Visit the primitive element like normal.
+        if (!this->emitDupPtr(Init))
+          return false;
+        if (!this->visit(Init))
+          return false;
+        if (!this->emitInitElem(*T, ElementIndex, Init))
+          return false;
+      } else {
         // Advance the pointer currently on the stack to the given
         // dimension and narrow().
         if (!this->emitDupPtr(Init))
@@ -584,28 +669,140 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
           return false;
         if (!this->emitNarrowPtr(Init))
           return false;
-        if (!visitArrayInitializer(Init))
+
+        if (!visitInitializer(Init))
           return false;
+      }
         if (!this->emitPopPtr(Init))
           return false;
-      } else if (Optional<PrimType> T = classify(InitType)) {
-        // Visit the primitive element like normal.
-        if (!this->visit(Init))
-          return false;
-        if (!this->emitInitElem(*T, ElementIndex, Init))
-          return false;
-      } else {
-        assert(false && "Unhandled type in array initializer initlist");
-      }
 
       ++ElementIndex;
     }
+    return true;
+  } else if (const auto *DIE = dyn_cast<CXXDefaultInitExpr>(Initializer)) {
+    return this->visitInitializer(DIE->getExpr());
+  } else if (const auto *AILE = dyn_cast<ArrayInitLoopExpr>(Initializer)) {
+    // TODO: This compiles to quite a lot of bytecode if the array is larger.
+    //   Investigate compiling this to a loop, or at least try to use
+    //   the AILE's Common expr.
+    const Expr *SubExpr = AILE->getSubExpr();
+    size_t Size = AILE->getArraySize().getZExtValue();
+    Optional<PrimType> ElemT = classify(SubExpr->getType());
 
-  } else {
-    assert(false && "Unknown expression for array initialization");
+    // So, every iteration, we execute an assignment here
+    // where the LHS is on the stack (the target array)
+    // and the RHS is our SubExpr.
+    for (size_t I = 0; I != Size; ++I) {
+      ArrayIndexScope<Emitter> IndexScope(this, I);
+
+      if (!this->emitDupPtr(SubExpr)) // LHS
+        return false;
+
+      if (ElemT) {
+        if (!this->visit(SubExpr))
+          return false;
+        if (!this->emitInitElem(*ElemT, I, Initializer))
+          return false;
+      } else {
+        // Narrow to our array element and recurse into visitInitializer()
+        if (!this->emitConstUint64(I, SubExpr))
+          return false;
+
+        if (!this->emitAddOffsetUint64(SubExpr))
+          return false;
+
+        if (!this->emitNarrowPtr(SubExpr))
+          return false;
+
+        if (!visitInitializer(SubExpr))
+          return false;
+      }
+
+      if (!this->emitPopPtr(Initializer))
+        return false;
+    }
+    return true;
   }
 
-  return true;
+  assert(false && "Unknown expression for array initialization");
+  return false;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
+  Initializer = Initializer->IgnoreParenImpCasts();
+  assert(Initializer->getType()->isRecordType());
+
+  if (const auto CtorExpr = dyn_cast<CXXConstructExpr>(Initializer)) {
+    const Function *Func = getFunction(CtorExpr->getConstructor());
+
+    if (!Func || !Func->isConstexpr())
+      return false;
+
+    // The This pointer is already on the stack because this is an initializer,
+    // but we need to dup() so the call() below has its own copy.
+    if (!this->emitDupPtr(Initializer))
+      return false;
+
+    // Constructor arguments.
+    for (const auto *Arg : CtorExpr->arguments()) {
+      if (!this->visit(Arg))
+        return false;
+    }
+
+    return this->emitCallVoid(Func, Initializer);
+  } else if (const auto *InitList = dyn_cast<InitListExpr>(Initializer)) {
+    const Record *R = getRecord(InitList->getType());
+
+    unsigned InitIndex = 0;
+    for (const Expr *Init : InitList->inits()) {
+      const Record::Field *FieldToInit = R->getField(InitIndex);
+
+      if (!this->emitDupPtr(Initializer))
+        return false;
+
+      if (Optional<PrimType> T = classify(Init->getType())) {
+        if (!this->visit(Init))
+          return false;
+
+        if (!this->emitInitField(*T, FieldToInit->Offset, Initializer))
+          return false;
+      } else {
+        // Non-primitive case. Get a pointer to the field-to-initialize
+        // on the stack and recurse into visitInitializer().
+        if (!this->emitGetPtrField(FieldToInit->Offset, Init))
+          return false;
+
+        if (!this->visitInitializer(Init))
+          return false;
+
+        if (!this->emitPopPtr(Initializer))
+          return false;
+      }
+      ++InitIndex;
+    }
+
+    return true;
+  } else if (const CallExpr *CE = dyn_cast<CallExpr>(Initializer)) {
+    const Decl *Callee = CE->getCalleeDecl();
+    const Function *Func = getFunction(dyn_cast<FunctionDecl>(Callee));
+
+    if (!Func)
+      return false;
+
+    if (Func->hasRVO()) {
+      // RVO functions expect a pointer to initialize on the stack.
+      // Dup our existing pointer so it has its own copy to use.
+      if (!this->emitDupPtr(Initializer))
+        return false;
+
+      return this->visit(CE);
+    }
+  } else if (const auto *DIE = dyn_cast<CXXDefaultInitExpr>(Initializer)) {
+    return this->visitInitializer(DIE->getExpr());
+  }
+
+  return false;
 }
 
 template <class Emitter>
@@ -615,20 +812,11 @@ bool ByteCodeExprGen<Emitter>::visitInitializer(const Expr *Initializer) {
   if (InitializerType->isArrayType())
     return visitArrayInitializer(Initializer);
 
+  if (InitializerType->isRecordType())
+    return visitRecordInitializer(Initializer);
+
   // Otherwise, visit the expression like normal.
   return this->Visit(Initializer);
-}
-
-template <class Emitter>
-bool ByteCodeExprGen<Emitter>::getPtrVarDecl(const VarDecl *VD, const Expr *E) {
-  // Generate a pointer to the local, loading refs.
-  if (Optional<unsigned> Idx = getGlobalIdx(VD)) {
-    if (VD->getType()->isReferenceType())
-      return this->emitGetGlobalPtr(*Idx, E);
-    else
-      return this->emitGetPtrGlobal(*Idx, E);
-  }
-  return this->bail(VD);
 }
 
 template <class Emitter>
@@ -665,6 +853,23 @@ Record *ByteCodeExprGen<Emitter>::getRecord(QualType Ty) {
 template <class Emitter>
 Record *ByteCodeExprGen<Emitter>::getRecord(const RecordDecl *RD) {
   return P.getOrCreateRecord(RD);
+}
+
+template <class Emitter>
+const Function *ByteCodeExprGen<Emitter>::getFunction(const FunctionDecl *FD) {
+  assert(FD);
+  const Function *Func = P.getFunction(FD);
+
+  if (!Func) {
+    if (auto R = ByteCodeStmtGen<ByteCodeEmitter>(Ctx, P).compileFunc(FD))
+      Func = *R;
+    else {
+      llvm::consumeError(R.takeError());
+      return nullptr;
+    }
+  }
+
+  return Func;
 }
 
 template <class Emitter>
@@ -722,16 +927,9 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
 
   const Decl *Callee = E->getCalleeDecl();
   if (const auto *FuncDecl = dyn_cast_or_null<FunctionDecl>(Callee)) {
-    const Function *Func = P.getFunction(FuncDecl);
-
-    // Templated functions might not have been compiled yet, so do it now.
-    if (!Func) {
-      if (auto R =
-              ByteCodeStmtGen<ByteCodeEmitter>(Ctx, P).compileFunc(FuncDecl))
-        Func = *R;
-    }
-    assert(Func);
-
+    const Function *Func = getFunction(FuncDecl);
+    if (!Func)
+      return false;
     // If the function is being compiled right now, this is a recursive call.
     // In that case, the function can't be valid yet, even though it will be
     // later.
@@ -742,26 +940,45 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
 
     QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
     Optional<PrimType> T = classify(ReturnType);
-
-    if (T || ReturnType->isVoidType()) {
-      // Put arguments on the stack.
-      for (const auto *Arg : E->arguments()) {
-        if (!this->visit(Arg))
-          return false;
-      }
-
-      if (T)
-        return this->emitCall(*T, Func, E);
-      return this->emitCallVoid(Func, E);
-    } else {
-      assert(false && "Can't classify function return type");
+    // Put arguments on the stack.
+    for (const auto *Arg : E->arguments()) {
+      if (!this->visit(Arg))
+        return false;
     }
 
+    // Primitive return value, just call it.
+    if (T)
+      return this->emitCall(*T, Func, E);
+
+    // Void Return value, easy.
+    if (ReturnType->isVoidType())
+      return this->emitCallVoid(Func, E);
+
+    // Non-primitive return value with Return Value Optimization,
+    // we already have a pointer on the stack to write the result into.
+    if (Func->hasRVO())
+      return this->emitCallVoid(Func, E);
   } else {
     assert(false && "We don't support non-FunctionDecl callees right now.");
   }
 
   return false;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXMemberCallExpr(
+    const CXXMemberCallExpr *E) {
+  // Get a This pointer on the stack.
+  if (!this->visit(E->getImplicitObjectArgument()))
+    return false;
+
+  return VisitCallExpr(E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXDefaultInitExpr(
+    const CXXDefaultInitExpr *E) {
+  return this->visit(E->getExpr());
 }
 
 template <class Emitter>
@@ -786,6 +1003,11 @@ bool ByteCodeExprGen<Emitter>::VisitCXXNullPtrLiteralExpr(
     return true;
 
   return this->emitNullPtr(E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
+  return this->emitThis(E);
 }
 
 template <class Emitter>
@@ -827,6 +1049,11 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
           return DiscardResult ? this->emitPop(T, E) : true;
         });
   case UO_Not:    // ~x
+    if (!this->Visit(SubExpr))
+      return false;
+    if (Optional<PrimType> T = classify(E->getType()))
+      return this->emitComp(*T, E);
+    return false;
   case UO_Real:   // __real x
   case UO_Imag:   // __imag x
   case UO_Extension:
@@ -840,7 +1067,6 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   const auto *Decl = E->getDecl();
-  bool IsReference = Decl->getType()->isReferenceType();
   bool FoundDecl = false;
 
   if (auto It = Locals.find(Decl); It != Locals.end()) {
@@ -864,14 +1090,13 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(Decl)) {
     PrimType T = *classify(ECD->getType());
 
-    return this->emitConst(T, getIntWidth(ECD->getType()), ECD->getInitVal(),
-                           E);
+    return this->emitConst(T, ECD->getInitVal(), E);
   }
 
   // References are implemented using pointers, so when we get here,
   // we have a pointer to a pointer, which we need to de-reference once.
   if (FoundDecl) {
-    if (IsReference) {
+    if (Decl->getType()->isReferenceType()) {
       if (!this->emitLoadPopPtr(E))
         return false;
     }

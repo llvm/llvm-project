@@ -284,7 +284,6 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_TLS_GD_HI20:
     return R_TLSGD_PC;
   case R_RISCV_TLS_GOT_HI20:
-    config->hasTlsIe = true;
     return R_GOT_PC;
   case R_RISCV_TPREL_HI20:
   case R_RISCV_TPREL_LO12_I:

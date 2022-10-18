@@ -91,7 +91,7 @@ out_file.write('''\
     <th>Available in Clang?</th>
   </tr>''')
 
-latest_release = 13
+latest_release = 15
 
 def availability(issue):
   status = status_map.get(issue, 'unknown')
@@ -158,7 +158,10 @@ for dr in drs:
     # This refers to the old ("C++0x") concepts feature, which was not part
     # of any C++ International Standard or Technical Specification.
     continue
-  if dr.status in ('open', 'concurrency', 'drafting', 'review', 'extension'):
+  if dr.issue in (1432,2565):
+    row_style = ' class="open"'
+    avail, avail_style = availability(dr.issue)
+  elif dr.status in ('open', 'concurrency', 'drafting', 'review', 'extension'):
     # We may have to deal with these some day, but not yet.
     row_style = ' class="open"'
     if dr.status == 'extension':
@@ -182,7 +185,7 @@ for dr in drs:
   </tr>''' % (row_style, dr.issue, dr.issue, dr.issue, dr.status, dr.title, avail_style, avail))
 
 for status, num in sorted(count.items()):
-  print("%s: %s" % (status, num))
+  print("%s: %s" % (status, num), file=sys.stderr)
 
 out_file.write('''\
 </table>

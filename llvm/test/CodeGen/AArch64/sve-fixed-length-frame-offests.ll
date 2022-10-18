@@ -10,7 +10,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @foo(<8 x i64>* %a) #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       SelectionDAG has 14 nodes:
-; CHECK-NEXT:    t0: ch = EntryToken
+; CHECK-NEXT:    t0: ch,glue = EntryToken
 ; CHECK-NEXT:    t12: nxv2i1 = PTRUE_D TargetConstant:i32<31>
 ; CHECK-NEXT:    t2: i64,ch = CopyFromReg t0, Register:i64 %0
 ; CHECK-NEXT:    t18: nxv2i64,ch = LD1D_IMM<Mem:(volatile load (s512) from %ir.a)> t12, t2, TargetConstant:i64<0>, t0

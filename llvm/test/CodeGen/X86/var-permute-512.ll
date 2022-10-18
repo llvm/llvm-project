@@ -101,7 +101,7 @@ define <32 x i16> @var_shuffle_v32i16(<32 x i16> %v, <32 x i16> %indices) nounwi
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX512F-NEXT:    vextracti32x4 $2, %zmm1, %xmm3
 ; AVX512F-NEXT:    vextracti32x4 $3, %zmm1, %xmm4
-; AVX512F-NEXT:    vmovd %xmm4, %eax
+; AVX512F-NEXT:    vpextrw $0, %xmm4, %eax
 ; AVX512F-NEXT:    vmovaps %zmm0, (%rsp)
 ; AVX512F-NEXT:    andl $31, %eax
 ; AVX512F-NEXT:    movzwl (%rsp,%rax,2), %eax
@@ -127,7 +127,7 @@ define <32 x i16> @var_shuffle_v32i16(<32 x i16> %v, <32 x i16> %indices) nounwi
 ; AVX512F-NEXT:    vpextrw $7, %xmm4, %eax
 ; AVX512F-NEXT:    andl $31, %eax
 ; AVX512F-NEXT:    vpinsrw $7, (%rsp,%rax,2), %xmm0, %xmm0
-; AVX512F-NEXT:    vmovd %xmm3, %eax
+; AVX512F-NEXT:    vpextrw $0, %xmm3, %eax
 ; AVX512F-NEXT:    andl $31, %eax
 ; AVX512F-NEXT:    movzwl (%rsp,%rax,2), %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm4
@@ -152,7 +152,7 @@ define <32 x i16> @var_shuffle_v32i16(<32 x i16> %v, <32 x i16> %indices) nounwi
 ; AVX512F-NEXT:    vpextrw $7, %xmm3, %eax
 ; AVX512F-NEXT:    andl $31, %eax
 ; AVX512F-NEXT:    vpinsrw $7, (%rsp,%rax,2), %xmm4, %xmm3
-; AVX512F-NEXT:    vmovd %xmm2, %eax
+; AVX512F-NEXT:    vpextrw $0, %xmm2, %eax
 ; AVX512F-NEXT:    andl $31, %eax
 ; AVX512F-NEXT:    movzwl (%rsp,%rax,2), %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm4
@@ -180,7 +180,7 @@ define <32 x i16> @var_shuffle_v32i16(<32 x i16> %v, <32 x i16> %indices) nounwi
 ; AVX512F-NEXT:    andl $31, %eax
 ; AVX512F-NEXT:    movzwl (%rsp,%rax,2), %eax
 ; AVX512F-NEXT:    vpinsrw $7, %eax, %xmm4, %xmm2
-; AVX512F-NEXT:    vmovd %xmm1, %eax
+; AVX512F-NEXT:    vpextrw $0, %xmm1, %eax
 ; AVX512F-NEXT:    andl $31, %eax
 ; AVX512F-NEXT:    movzwl (%rsp,%rax,2), %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm4
@@ -330,7 +330,7 @@ define <64 x i8> @var_shuffle_v64i8(<64 x i8> %v, <64 x i8> %indices) nounwind {
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX512F-NEXT:    vextracti32x4 $2, %zmm1, %xmm3
 ; AVX512F-NEXT:    vextracti32x4 $3, %zmm1, %xmm4
-; AVX512F-NEXT:    vmovd %xmm4, %eax
+; AVX512F-NEXT:    vpextrb $0, %xmm4, %eax
 ; AVX512F-NEXT:    vmovaps %zmm0, (%rsp)
 ; AVX512F-NEXT:    andl $63, %eax
 ; AVX512F-NEXT:    movzbl (%rsp,%rax), %eax
@@ -380,7 +380,7 @@ define <64 x i8> @var_shuffle_v64i8(<64 x i8> %v, <64 x i8> %indices) nounwind {
 ; AVX512F-NEXT:    vpextrb $15, %xmm4, %eax
 ; AVX512F-NEXT:    andl $63, %eax
 ; AVX512F-NEXT:    vpinsrb $15, (%rsp,%rax), %xmm0, %xmm0
-; AVX512F-NEXT:    vmovd %xmm3, %eax
+; AVX512F-NEXT:    vpextrb $0, %xmm3, %eax
 ; AVX512F-NEXT:    andl $63, %eax
 ; AVX512F-NEXT:    movzbl (%rsp,%rax), %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm4
@@ -432,7 +432,7 @@ define <64 x i8> @var_shuffle_v64i8(<64 x i8> %v, <64 x i8> %indices) nounwind {
 ; AVX512F-NEXT:    andl $63, %eax
 ; AVX512F-NEXT:    movzbl (%rsp,%rax), %eax
 ; AVX512F-NEXT:    vpinsrb $15, %eax, %xmm4, %xmm3
-; AVX512F-NEXT:    vmovd %xmm2, %eax
+; AVX512F-NEXT:    vpextrb $0, %xmm2, %eax
 ; AVX512F-NEXT:    andl $63, %eax
 ; AVX512F-NEXT:    movzbl (%rsp,%rax), %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm4
@@ -485,7 +485,7 @@ define <64 x i8> @var_shuffle_v64i8(<64 x i8> %v, <64 x i8> %indices) nounwind {
 ; AVX512F-NEXT:    andl $63, %eax
 ; AVX512F-NEXT:    movzbl (%rsp,%rax), %eax
 ; AVX512F-NEXT:    vpinsrb $15, %eax, %xmm4, %xmm2
-; AVX512F-NEXT:    vmovd %xmm1, %eax
+; AVX512F-NEXT:    vpextrb $0, %xmm1, %eax
 ; AVX512F-NEXT:    andl $63, %eax
 ; AVX512F-NEXT:    movzbl (%rsp,%rax), %eax
 ; AVX512F-NEXT:    vmovd %eax, %xmm4
@@ -555,7 +555,7 @@ define <64 x i8> @var_shuffle_v64i8(<64 x i8> %v, <64 x i8> %indices) nounwind {
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX512BW-NEXT:    vextracti32x4 $2, %zmm1, %xmm3
 ; AVX512BW-NEXT:    vextracti32x4 $3, %zmm1, %xmm4
-; AVX512BW-NEXT:    vmovd %xmm4, %eax
+; AVX512BW-NEXT:    vpextrb $0, %xmm4, %eax
 ; AVX512BW-NEXT:    vmovaps %zmm0, (%rsp)
 ; AVX512BW-NEXT:    andl $63, %eax
 ; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
@@ -605,7 +605,7 @@ define <64 x i8> @var_shuffle_v64i8(<64 x i8> %v, <64 x i8> %indices) nounwind {
 ; AVX512BW-NEXT:    vpextrb $15, %xmm4, %eax
 ; AVX512BW-NEXT:    andl $63, %eax
 ; AVX512BW-NEXT:    vpinsrb $15, (%rsp,%rax), %xmm0, %xmm0
-; AVX512BW-NEXT:    vmovd %xmm3, %eax
+; AVX512BW-NEXT:    vpextrb $0, %xmm3, %eax
 ; AVX512BW-NEXT:    andl $63, %eax
 ; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
 ; AVX512BW-NEXT:    vmovd %eax, %xmm4
@@ -657,7 +657,7 @@ define <64 x i8> @var_shuffle_v64i8(<64 x i8> %v, <64 x i8> %indices) nounwind {
 ; AVX512BW-NEXT:    andl $63, %eax
 ; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
 ; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm4, %xmm3
-; AVX512BW-NEXT:    vmovd %xmm2, %eax
+; AVX512BW-NEXT:    vpextrb $0, %xmm2, %eax
 ; AVX512BW-NEXT:    andl $63, %eax
 ; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
 ; AVX512BW-NEXT:    vmovd %eax, %xmm4
@@ -710,7 +710,7 @@ define <64 x i8> @var_shuffle_v64i8(<64 x i8> %v, <64 x i8> %indices) nounwind {
 ; AVX512BW-NEXT:    andl $63, %eax
 ; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
 ; AVX512BW-NEXT:    vpinsrb $15, %eax, %xmm4, %xmm2
-; AVX512BW-NEXT:    vmovd %xmm1, %eax
+; AVX512BW-NEXT:    vpextrb $0, %xmm1, %eax
 ; AVX512BW-NEXT:    andl $63, %eax
 ; AVX512BW-NEXT:    movzbl (%rsp,%rax), %eax
 ; AVX512BW-NEXT:    vmovd %eax, %xmm4

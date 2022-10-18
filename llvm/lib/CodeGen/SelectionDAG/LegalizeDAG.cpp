@@ -1037,12 +1037,14 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS:
   case ISD::SETCC:
+  case ISD::SETCCCARRY:
   case ISD::VP_SETCC:
   case ISD::BR_CC: {
     unsigned Opc = Node->getOpcode();
     unsigned CCOperand = Opc == ISD::SELECT_CC                         ? 4
                          : Opc == ISD::STRICT_FSETCC                   ? 3
                          : Opc == ISD::STRICT_FSETCCS                  ? 3
+                         : Opc == ISD::SETCCCARRY                      ? 3
                          : (Opc == ISD::SETCC || Opc == ISD::VP_SETCC) ? 2
                                                                        : 1;
     unsigned CompareOperand = Opc == ISD::BR_CC            ? 2

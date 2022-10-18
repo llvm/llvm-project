@@ -253,4 +253,13 @@ def TestCopyPayloadOp
   let assemblyFormat = "$handle attr-dict";
 }
 
+def TestReportNumberOfTrackedHandlesNestedUnder
+  : Op<Transform_Dialect, "test_report_number_of_tracked_handles_nested_under",
+    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins PDL_Operation:$target);
+  let assemblyFormat = "$target attr-dict";
+  let cppNamespace = "::mlir::test";
+}
+
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD

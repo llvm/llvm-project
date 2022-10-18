@@ -28,8 +28,8 @@ std::unique_ptr<Pass> createConstantBufferizePass(uint64_t alignment = 0);
 /// Adds patterns to emulate wide Arith and Function ops over integer
 /// types into supported ones. This is done by splitting original power-of-two
 /// i2N integer types into two iN halves.
-void populateWideIntEmulationPatterns(WideIntEmulationConverter &typeConverter,
-                                      RewritePatternSet &patterns);
+void populateArithWideIntEmulationPatterns(
+    WideIntEmulationConverter &typeConverter, RewritePatternSet &patterns);
 
 /// Add patterns to expand Arith ceil/floor division ops.
 void populateCeilFloorDivExpandOpsPatterns(RewritePatternSet &patterns);

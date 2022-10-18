@@ -127,8 +127,8 @@ toMLIRSparseTensor(uint64_t rank, uint64_t nse, const uint64_t *shape,
   // Verify that the sparsity values are supported.
   // TODO: update this check to match what we actually support.
   for (uint64_t i = 0; i < rank; ++i)
-    if (sparsity[i] != DimLevelType::kDense &&
-        sparsity[i] != DimLevelType::kCompressed)
+    if (sparsity[i] != DimLevelType::Dense &&
+        sparsity[i] != DimLevelType::Compressed)
       MLIR_SPARSETENSOR_FATAL("unsupported dimension level type: %d\n",
                               static_cast<uint8_t>(sparsity[i]));
 #endif
@@ -626,13 +626,8 @@ void delSparseTensorReader(void *p) {
     index_type *indices = iref->data + iref->offset;                           \
     SparseTensorReader *stfile = static_cast<SparseTensorReader *>(p);         \
     index_type rank = stfile->getRank();                                       \
-    char *linePtr = stfile->readLine();                                        \
-    for (index_type r = 0; r < rank; ++r) {                                    \
-      uint64_t idx = strtoul(linePtr, &linePtr, 10);                           \
-      indices[r] = idx - 1;                                                    \
-    }                                                                          \
     V *value = vref->data + vref->offset;                                      \
-    *value = detail::readCOOValue<V>(&linePtr, stfile->isPattern());           \
+    *value = stfile->readCOOElement<V>(rank, indices);                         \
   }
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_GETNEXT)
 #undef IMPL_GETNEXT

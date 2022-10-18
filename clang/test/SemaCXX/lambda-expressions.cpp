@@ -121,7 +121,7 @@ namespace SpecialMembers {
   void g(P &p, Q &q, R &r) {
     // FIXME: The note attached to the second error here is just amazingly bad.
     auto pp = [p]{}; // expected-error {{deleted constructor}} expected-cxx14-error {{deleted copy constructor of '(lambda}}
-    // expected-cxx14-note@-1 {{copy constructor of '' is implicitly deleted because field '' has a deleted copy constructor}}
+    // expected-cxx14-note-re@-1 {{copy constructor of '(lambda at {{.*}})' is implicitly deleted because field '' has a deleted copy constructor}}
     auto qq = [q]{}; // expected-error {{deleted function}} expected-note {{because}}
 
     auto a = [r]{}; // expected-note 2{{here}}
@@ -306,16 +306,16 @@ namespace lambdas_in_NSDMIs {
   template<class T>
   struct L {
       T t{};
-      T t2 = ([](int a) { return [](int b) { return b; };})(t)(t);    
+      T t2 = ([](int a) { return [](int b) { return b; };})(t)(t);
   };
-  L<int> l; 
-  
+  L<int> l;
+
   namespace non_template {
     struct L {
       int t = 0;
-      int t2 = ([](int a) { return [](int b) { return b; };})(t)(t);    
+      int t2 = ([](int a) { return [](int b) { return b; };})(t)(t);
     };
-    L l; 
+    L l;
   }
 }
 
@@ -534,9 +534,9 @@ template <int N>
 class S {};
 
 void foo() {
-  const int num = 18; 
+  const int num = 18;
   auto outer = []() {
-    auto inner = [](S<num> &X) {};  
+    auto inner = [](S<num> &X) {};
   };
 }
 }
@@ -584,9 +584,9 @@ void foo1() {
 }
 
 namespace PR25627_dont_odr_use_local_consts {
-  
+
   template<int> struct X {};
-  
+
   void foo() {
     const int N = 10;
     (void) [] { X<N> x; };

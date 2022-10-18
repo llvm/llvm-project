@@ -580,9 +580,8 @@ define <2 x i32> @test_complex_type(<2 x i32>* %addr, i64 %in, i64* %bf ) {
 define i64 @test_truncated_shift(i64 %x, i64 %y) {
 ; CHECK-LABEL: test_truncated_shift:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    lsl w8, w1, #25
-; CHECK-NEXT:    lsr x8, x8, #25
-; CHECK-NEXT:    bfi x0, x8, #25, #5
+; CHECK-NEXT:    // kill: def $w1 killed $w1 killed $x1 def $x1
+; CHECK-NEXT:    bfi x0, x1, #25, #5
 ; CHECK-NEXT:    ret
 entry:
   %and = and i64 %x, -1040187393
@@ -590,4 +589,15 @@ entry:
   %and5 = and i64 %shl4, 1040187392
   %or = or i64 %and5, %and
   ret i64 %or
+}
+
+define i64 @test_and_extended_shift_with_imm(i64 %0) {
+; CHECK-LABEL: test_and_extended_shift_with_imm:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0 def $x0
+; CHECK-NEXT:    ubfiz x0, x0, #7, #8
+; CHECK-NEXT:    ret
+  %2 = shl i64 %0, 7
+  %3 = and i64 %2, 32640  ; #0x7f80
+  ret i64 %3
 }

@@ -59,6 +59,7 @@ void prefetch(void) {
   // CHECK: call {{.*}} @llvm.prefetch.p0(ptr null, i32 0, i32 3, i32 0)
 }
 
+__attribute__((target("v8.5a")))
 int32_t jcvt(double v) {
   //CHECK-LABEL: @jcvt(
   //CHECK: call i32 @llvm.aarch64.fjcvtzs
@@ -133,6 +134,7 @@ unsigned int clsll(uint64_t v) {
 // CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
 // CHECK-NEXT:    ret i32 [[TMP3]]
 //
+__attribute__((target("rand")))
 int rndr(uint64_t *__addr) {
   return __builtin_arm_rndr(__addr);
 }
@@ -146,6 +148,7 @@ int rndr(uint64_t *__addr) {
 // CHECK-NEXT:    [[TMP3:%.*]] = zext i1 [[TMP2]] to i32
 // CHECK-NEXT:    ret i32 [[TMP3]]
 //
+__attribute__((target("rand")))
 int rndrrs(uint64_t *__addr) {
   return __builtin_arm_rndrrs(__addr);
 }

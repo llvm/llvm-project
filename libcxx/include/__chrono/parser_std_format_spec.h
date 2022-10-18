@@ -29,6 +29,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __format_spec {
 
 // By not placing this constant in the formatter class it's not duplicated for char and wchar_t
+inline constexpr __fields __fields_chrono_fractional{
+    .__precision_ = true, .__locale_specific_form_ = true, .__type_ = false};
 inline constexpr __fields __fields_chrono{.__locale_specific_form_ = true, .__type_ = false};
 
 /// Flags available or required in a chrono type.

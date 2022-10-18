@@ -217,9 +217,9 @@ struct LlvmLibcTestAccessAlignedAccess : public LlvmLibcTestAccessBase {
     expected.Touch(Offset + Size - ParamType::SIZE, ParamType::SIZE);
 
     checkMaxAccess(expected, 3);
-    checkOperations<Align<AlignmentT, Arg::_1>::Then<HeadTail<ParamType>>, Size,
+    checkOperations<Align<AlignmentT, Arg::P1>::Then<HeadTail<ParamType>>, Size,
                     Offset>(expected);
-    checkOperations<Align<AlignmentT, Arg::_2>::Then<HeadTail<ParamType>>, Size,
+    checkOperations<Align<AlignmentT, Arg::P2>::Then<HeadTail<ParamType>>, Size,
                     Offset>(expected);
   }
 };

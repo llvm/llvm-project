@@ -66,7 +66,8 @@ static bool equivalentValues(QualType Type, Value *Val1,
                              const Environment &Env1, Value *Val2,
                              const Environment &Env2,
                              Environment::ValueModel &Model) {
-  return Val1 == Val2 || areEquivalentIndirectionValues(Val1, Val2) ||
+  return Val1 == Val2 || (isa<TopBoolValue>(Val1) && isa<TopBoolValue>(Val2)) ||
+         areEquivalentIndirectionValues(Val1, Val2) ||
          Model.compareEquivalent(Type, *Val1, Env1, *Val2, Env2);
 }
 
@@ -371,7 +372,8 @@ LatticeJoinEffect Environment::join(const Environment &Other,
       continue;
     assert(It->second != nullptr);
 
-    if (Val == It->second) {
+    if (Val == It->second ||
+        (isa<TopBoolValue>(Val) && isa<TopBoolValue>(It->second))) {
       JoinedEnv.LocToVal.insert({Loc, Val});
       continue;
     }

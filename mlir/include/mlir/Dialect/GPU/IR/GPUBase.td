@@ -96,15 +96,16 @@ def GPU_AsyncOpInterface : OpInterface<"AsyncOpInterface"> {
       }],
       "OperandRange", "getAsyncDependencies", (ins), [{}], [{
         ConcreteOp op = cast<ConcreteOp>(this->getOperation());
-        return op.asyncDependencies();
+        return op.getAsyncDependencies();
       }]
     >,
     InterfaceMethod<[{
-        Adds a new token to the list of async dependencies.
+        Adds a new token to the list of async dependencies if it is not already there.
       }],
       "void", "addAsyncDependency", (ins "Value":$token),
       [{}], [{
-        ::mlir::gpu::addAsyncDependency(this->getOperation(), token);
+        if (!::llvm::is_contained(this->getAsyncDependencies(), token))
+          ::mlir::gpu::addAsyncDependency(this->getOperation(), token);
       }]
     >,
     InterfaceMethod<[{

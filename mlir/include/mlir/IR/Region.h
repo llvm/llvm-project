@@ -340,17 +340,16 @@ public:
 
   RegionRange(MutableArrayRef<Region> regions = llvm::None);
 
-  template <typename Arg,
-            typename = typename std::enable_if_t<std::is_constructible<
-                ArrayRef<std::unique_ptr<Region>>, Arg>::value>>
+  template <typename Arg, typename = std::enable_if_t<std::is_constructible<
+                              ArrayRef<std::unique_ptr<Region>>, Arg>::value>>
   RegionRange(Arg &&arg)
       : RegionRange(ArrayRef<std::unique_ptr<Region>>(std::forward<Arg>(arg))) {
   }
   template <typename Arg>
   RegionRange(
       Arg &&arg,
-      typename std::enable_if_t<
-          std::is_constructible<ArrayRef<Region *>, Arg>::value> * = nullptr)
+      std::enable_if_t<std::is_constructible<ArrayRef<Region *>, Arg>::value>
+          * = nullptr)
       : RegionRange(ArrayRef<Region *>(std::forward<Arg>(arg))) {}
   RegionRange(ArrayRef<std::unique_ptr<Region>> regions);
   RegionRange(ArrayRef<Region *> regions);

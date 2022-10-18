@@ -128,8 +128,7 @@ define <vscale x 16 x i8> @test_lane1_16xi8(<vscale x 16 x i8> %a) {
 define <vscale x 16 x i8> @test_lanex_16xi8(<vscale x 16 x i8> %a, i32 %x) {
 ; CHECK-LABEL: test_lanex_16xi8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov w9, #30
 ; CHECK-NEXT:    index z2.b, #0, #1
 ; CHECK-NEXT:    ptrue p0.b
@@ -389,8 +388,7 @@ define <vscale x 4 x i1> @test_predicate_insert_4xi1_immediate (<vscale x 4 x i1
 define <vscale x 8 x i1> @test_predicate_insert_8xi1_immediate (<vscale x 8 x i1> %val, i32 %idx) {
 ; CHECK-LABEL: test_predicate_insert_8xi1_immediate:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    sxtw x8, w0
+; CHECK-NEXT:    mov w8, w0
 ; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    ptrue p1.h
@@ -427,8 +425,7 @@ define <vscale x 16 x i1> @test_predicate_insert_16xi1_immediate (<vscale x 16 x
 define <vscale x 2 x i1> @test_predicate_insert_2xi1(<vscale x 2 x i1> %val, i1 %elt, i32 %idx) {
 ; CHECK-LABEL: test_predicate_insert_2xi1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    mov w8, w1
 ; CHECK-NEXT:    index z1.d, #0, #1
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
@@ -446,8 +443,7 @@ define <vscale x 2 x i1> @test_predicate_insert_2xi1(<vscale x 2 x i1> %val, i1 
 define <vscale x 4 x i1> @test_predicate_insert_4xi1(<vscale x 4 x i1> %val, i1 %elt, i32 %idx) {
 ; CHECK-LABEL: test_predicate_insert_4xi1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    mov w8, w1
 ; CHECK-NEXT:    index z1.s, #0, #1
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    mov z0.s, w8
@@ -463,8 +459,7 @@ define <vscale x 4 x i1> @test_predicate_insert_4xi1(<vscale x 4 x i1> %val, i1 
 define <vscale x 8 x i1> @test_predicate_insert_8xi1(<vscale x 8 x i1> %val, i1 %elt, i32 %idx) {
 ; CHECK-LABEL: test_predicate_insert_8xi1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    mov w8, w1
 ; CHECK-NEXT:    index z1.h, #0, #1
 ; CHECK-NEXT:    ptrue p1.h
 ; CHECK-NEXT:    mov z0.h, w8
@@ -481,8 +476,7 @@ define <vscale x 8 x i1> @test_predicate_insert_8xi1(<vscale x 8 x i1> %val, i1 
 define <vscale x 16 x i1> @test_predicate_insert_16xi1(<vscale x 16 x i1> %val, i1 %elt, i32 %idx) {
 ; CHECK-LABEL: test_predicate_insert_16xi1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    mov w8, w1
 ; CHECK-NEXT:    index z1.b, #0, #1
 ; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    mov z0.b, w8
@@ -505,8 +499,7 @@ define <vscale x 32 x i1> @test_predicate_insert_32xi1(<vscale x 32 x i1> %val, 
 ; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    mov x8, #-1
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    sxtw x9, w1
+; CHECK-NEXT:    mov w9, w1
 ; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
 ; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    st1b { z0.b }, p1, [sp, #1, mul vl]

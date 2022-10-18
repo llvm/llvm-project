@@ -21,6 +21,7 @@
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Demangle/Demangle.h"
 
 using namespace llvm;
 using namespace llvm::object;
@@ -145,13 +146,12 @@ StringMap<SmallVector<Symbol *, 0>> &SymbolTable::getDemangledSyms() {
         StringRef name = sym->getName();
         size_t pos = name.find('@');
         if (pos == std::string::npos)
-          demangled = demangle(name, config->demangle);
+          demangled = demangle(name.str());
         else if (pos + 1 == name.size() || name[pos + 1] == '@')
-          demangled = demangle(name.substr(0, pos), config->demangle);
+          demangled = demangle(name.substr(0, pos).str());
         else
-          demangled = (demangle(name.substr(0, pos), config->demangle) +
-                       name.substr(pos))
-                          .str();
+          demangled =
+              (demangle(name.substr(0, pos).str()) + name.substr(pos)).str();
         (*demangledSyms)[demangled].push_back(sym);
       }
   }

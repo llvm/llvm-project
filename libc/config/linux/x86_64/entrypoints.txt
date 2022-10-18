@@ -152,6 +152,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.fchdir
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
+    libc.src.unistd.getcwd
     libc.src.unistd.geteuid
     libc.src.unistd.getpid
     libc.src.unistd.getppid
@@ -358,6 +359,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.ferror_unlocked
     libc.src.stdio.fflush
     libc.src.stdio.fopen
+    libc.src.stdio.fputc
     libc.src.stdio.fputs
     libc.src.stdio.fopencookie
     libc.src.stdio.fread
@@ -368,6 +370,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fwrite_unlocked
     libc.src.stdio.fprintf
     libc.src.stdio.printf
+    libc.src.stdio.putc
+    libc.src.stdio.putchar
     libc.src.stdio.puts
     libc.src.stdio.stderr
     libc.src.stdio.stdout
@@ -391,6 +395,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.signal
 
     # spawn.h entrypoints
+    libc.src.spawn.posix_spawn
     libc.src.spawn.posix_spawn_file_actions_addclose
     libc.src.spawn.posix_spawn_file_actions_adddup2
     libc.src.spawn.posix_spawn_file_actions_addopen

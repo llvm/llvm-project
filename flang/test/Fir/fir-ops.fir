@@ -850,3 +850,35 @@ func.func @embox_tdesc(%arg0: !fir.class<!fir.array<10x!fir.type<derived_poly{a:
   fir.store %4#1 to %0 : !fir.ref<i32>
   return
 }
+
+func.func @test_fortran_var_attrs() {
+  %0 = fir.alloca !fir.heap<f32> {fortran_attrs = #fir.var_attrs<allocatable>}
+  %1 = fir.alloca f32 {fortran_attrs = #fir.var_attrs<asynchronous>}
+  %2 = fir.alloca f32 {fortran_attrs = #fir.var_attrs<bind_c>}
+  %3 = fir.alloca f32 {fortran_attrs = #fir.var_attrs<contiguous>}
+  %4 = fir.alloca f32 {fortran_attrs = #fir.var_attrs<intent_in>}
+  %5 = fir.alloca f32 {fortran_attrs = #fir.var_attrs<intent_inout>}
+  %6 = fir.alloca f32 {fortran_attrs = #fir.var_attrs<intent_out>}
+  %7 = fir.alloca f32 {fortran_attrs = #fir.var_attrs<optional>}
+  %8 = fir.alloca f32 {fortran_attrs = #fir.var_attrs<parameter>}
+  %9 = fir.alloca !fir.ptr<f32> {fortran_attrs = #fir.var_attrs<pointer>}
+  %10 = fir.alloca f32 {fortran_attrs = #fir.var_attrs<target>}
+  %11 = fir.alloca f32 {fortran_attrs = #fir.var_attrs<value>}
+  %12 = fir.alloca f32 {fortran_attrs = #fir.var_attrs<volatile>}
+  %13 = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {fortran_attrs = #fir.var_attrs<pointer, contiguous, volatile>}
+  return
+  // CHECK: fir.alloca !fir.heap<f32> {fortran_attrs = #fir.var_attrs<allocatable>}
+  // CHECK: fir.alloca f32 {fortran_attrs = #fir.var_attrs<asynchronous>}
+  // CHECK: fir.alloca f32 {fortran_attrs = #fir.var_attrs<bind_c>}
+  // CHECK: fir.alloca f32 {fortran_attrs = #fir.var_attrs<contiguous>}
+  // CHECK: fir.alloca f32 {fortran_attrs = #fir.var_attrs<intent_in>}
+  // CHECK: fir.alloca f32 {fortran_attrs = #fir.var_attrs<intent_inout>}
+  // CHECK: fir.alloca f32 {fortran_attrs = #fir.var_attrs<intent_out>}
+  // CHECK: fir.alloca f32 {fortran_attrs = #fir.var_attrs<optional>}
+  // CHECK: fir.alloca f32 {fortran_attrs = #fir.var_attrs<parameter>}
+  // CHECK: fir.alloca !fir.ptr<f32> {fortran_attrs = #fir.var_attrs<pointer>}
+  // CHECK: fir.alloca f32 {fortran_attrs = #fir.var_attrs<target>}
+  // CHECK: fir.alloca f32 {fortran_attrs = #fir.var_attrs<value>}
+  // CHECK: fir.alloca f32 {fortran_attrs = #fir.var_attrs<volatile>}
+  // CHECK: fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>> {fortran_attrs = #fir.var_attrs<contiguous, pointer, volatile>}
+}

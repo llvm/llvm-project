@@ -1,6 +1,12 @@
 # This replicates part of the add_mlir_dialect cmake function from MLIR that
 # cannot be used her because it expects to be run inside MLIR directory which
 # is not the case for FIR.
+set(LLVM_TARGET_DEFINITIONS FIRAttr.td)
+mlir_tablegen(FIREnumAttr.h.inc -gen-enum-decls)
+mlir_tablegen(FIREnumAttr.cpp.inc -gen-enum-defs)
+mlir_tablegen(FIRAttr.h.inc --gen-attrdef-decls)
+mlir_tablegen(FIRAttr.cpp.inc -gen-attrdef-defs)
+
 set(LLVM_TARGET_DEFINITIONS FIROps.td)
 mlir_tablegen(FIROps.h.inc -gen-op-decls)
 mlir_tablegen(FIROps.cpp.inc -gen-op-defs)

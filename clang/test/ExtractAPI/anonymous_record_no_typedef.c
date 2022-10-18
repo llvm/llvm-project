@@ -128,13 +128,13 @@ struct Vehicle {
         "navigator": [
           {
             "kind": "identifier",
-            "spelling": "Vehicle::(anonymous)"
+            "spelling": "Vehicle::enum (unnamed)"
           }
         ],
-        "title": "Vehicle::(anonymous)"
+        "title": "Vehicle::enum (unnamed)"
       },
       "pathComponents": [
-        "Vehicle::(anonymous)"
+        "Vehicle::enum (unnamed)"
       ]
     },
     {
@@ -176,7 +176,7 @@ struct Vehicle {
         "title": "Bicycle"
       },
       "pathComponents": [
-        "Vehicle::(anonymous)",
+        "Vehicle::enum (unnamed)",
         "Bicycle"
       ]
     },
@@ -219,7 +219,7 @@ struct Vehicle {
         "title": "Car"
       },
       "pathComponents": [
-        "Vehicle::(anonymous)",
+        "Vehicle::enum (unnamed)",
         "Car"
       ]
     },

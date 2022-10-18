@@ -477,7 +477,7 @@ bool PdbAstBuilder::CompleteTagDecl(clang::TagDecl &tag) {
   // Visit all members of this class, then perform any finalization necessary
   // to complete the class.
   CompilerType ct = ToCompilerType(tag_qt);
-  UdtRecordCompleter completer(best_ti, ct, tag, *this, index,
+  UdtRecordCompleter completer(best_ti, ct, tag, *this, index, m_decl_to_status,
                                m_cxx_record_map);
   llvm::Error error =
       llvm::codeview::visitMemberRecordStream(field_list.Data, completer);

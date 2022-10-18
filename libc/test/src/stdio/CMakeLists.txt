@@ -121,6 +121,20 @@ add_libc_unittest(
     libc.src.stdio.puts
 )
 
+add_libc_unittest(
+  putc_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    putc_test.cpp
+  DEPENDS
+    libc.src.stdio.putc
+    libc.src.stdio.fclose
+    libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+)
+
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_libc_unittest(
     remove_test

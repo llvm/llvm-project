@@ -41,6 +41,7 @@ struct CoverageViewOptions {
   bool ExportSummaryOnly;
   bool SkipExpansions;
   bool SkipFunctions;
+  bool SkipBranches;
   OutputFormat Format;
   BranchOutputType ShowBranches;
   std::string ShowOutputDirectory;

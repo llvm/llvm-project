@@ -929,6 +929,9 @@ private:
         if (isBindC) {
           passBy = PassEntityBy::Value;
           prop = Property::Value;
+          if (type.isa<fir::SequenceType>())
+            fir::emitFatalError(
+                loc, "array with VALUE attribute is not interoperable");
           if (fir::isa_builtin_cptr_type(type)) {
             auto recTy = type.dyn_cast<fir::RecordType>();
             mlir::Type fieldTy = recTy.getTypeList()[0].second;

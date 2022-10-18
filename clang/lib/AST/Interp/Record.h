@@ -67,6 +67,7 @@ public:
   }
 
   unsigned getNumFields() const { return Fields.size(); }
+  const Field *getField(unsigned I) const { return &Fields[I]; }
   Field *getField(unsigned I) { return &Fields[I]; }
 
   using const_base_iter = BaseList::const_iterator;

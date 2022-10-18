@@ -16,7 +16,7 @@ import re
 import requests
 import sys
 import time
-from typing import *
+from typing import List, Optional
 
 class IssueSubscriber:
 
@@ -60,7 +60,7 @@ def phab_api_call(phab_token:str, url:str, args:dict) -> dict:
     return response.json()
 
 
-def phab_login_to_github_login(phab_token:str, repo:github.Repository.Repository, phab_login:str) -> str:
+def phab_login_to_github_login(phab_token:str, repo:github.Repository.Repository, phab_login:str) -> Optional[str]:
     """
     Tries to translate a Phabricator login to a github login by
     finding a commit made in Phabricator's Differential.
@@ -94,7 +94,7 @@ def phab_login_to_github_login(phab_token:str, repo:github.Repository.Repository
         return None
     return committer.login
 
-def phab_get_commit_approvers(phab_token:str, repo:github.Repository.Repository, commit:github.Commit.Commit) -> list:
+def phab_get_commit_approvers(phab_token:str, commit:github.Commit.Commit) -> list:
     args = { "corpus" : commit.commit.message }
     # API documentation: https://reviews.llvm.org/conduit/method/differential.parsecommitmessage/
     r = phab_api_call(phab_token, "https://reviews.llvm.org/api/differential.parsecommitmessage", args)
@@ -263,7 +263,7 @@ class ReleaseWorkflow:
         """
         reviewers = []
         for commit in pr.get_commits():
-            approvers = phab_get_commit_approvers(self.phab_token, self.repo, commit)
+            approvers = phab_get_commit_approvers(self.phab_token, commit)
             for a in approvers:
                 login = phab_login_to_github_login(self.phab_token, self.repo, a)
                 if not login:
@@ -334,7 +334,7 @@ class ReleaseWorkflow:
             head_branch = f'{owner}-{branch}'
             local_repo = Repo(self.llvm_project_dir)
             push_done = False
-            for i in range(0,5):
+            for _ in range(0,5):
                 try:
                     local_repo.git.fetch(f'https://github.com/{owner}/{repo_name}', f'{branch}:{branch}')
                     local_repo.git.push(self.push_url, f'{branch}:{head_branch}', force=True)
@@ -388,7 +388,7 @@ class ReleaseWorkflow:
         """
         for line in sys.stdin:
             line.rstrip()
-            m = re.search("/([a-z-]+)\s(.+)", line)
+            m = re.search(r"/([a-z-]+)\s(.+)", line)
             if not m:
                 continue
             command = m.group(1)

@@ -34,6 +34,8 @@ namespace objdump {
 
 void parseMachOOptions(const llvm::opt::InputArgList &InputArgs);
 
+enum class FunctionStartsMode { Addrs, Names, Both, None };
+
 // MachO specific options
 extern bool Bind;
 extern bool DataInCode;
@@ -45,7 +47,7 @@ extern bool DylibsUsed;
 extern bool ExportsTrie;
 extern bool FirstPrivateHeader;
 extern bool FullLeadingAddr;
-extern bool FunctionStarts;
+extern FunctionStartsMode FunctionStartsType;
 extern bool IndirectSymbols;
 extern bool InfoPlist;
 extern bool LazyBind;

@@ -1,14 +1,14 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 
 ;; Debug info:
-; CHECK:     OpName [[FOO:%.+]] "foo"
+; CHECK:     OpName %[[#FOO:]] "foo"
 
 ;; Types:
-; CHECK:     [[VOID:%.+]] = OpTypeVoid
-; CHECK:     [[FN:%.+]] = OpTypeFunction [[VOID]]
+; CHECK:     %[[#VOID:]] = OpTypeVoid
+; CHECK:     %[[#FN:]] = OpTypeFunction %[[#VOID]]
 
 ;; Functions:
-; CHECK:     [[FOO]] = OpFunction [[VOID]] None [[FN]]
+; CHECK:     %[[#FOO]] = OpFunction %[[#VOID]] None %[[#FN]]
 ; CHECK-NOT: OpFunctionParameter
 ;; NOTE: In 2.4, it isn't explicitly written that a function always has a least
 ;;       one block. In fact, 2.4.11 seems to imply that there are at least two

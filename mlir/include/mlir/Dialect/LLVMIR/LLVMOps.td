@@ -13,7 +13,9 @@
 #ifndef LLVMIR_OPS
 #define LLVMIR_OPS
 
+include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
@@ -21,6 +23,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
+def FMFnone     : I32BitEnumAttrCaseNone<"none">;
 def FMFnnan     : I32BitEnumAttrCaseBit<"nnan", 0>;
 def FMFninf     : I32BitEnumAttrCaseBit<"ninf", 1>;
 def FMFnsz      : I32BitEnumAttrCaseBit<"nsz", 2>;
@@ -34,22 +37,18 @@ def FMFfast     : I32BitEnumAttrCaseGroup<"fast",
 def FastmathFlags : I32BitEnumAttr<
     "FastmathFlags",
     "LLVM fastmath flags",
-    [FMFnnan, FMFninf, FMFnsz, FMFarcp, FMFcontract, FMFafn, FMFreassoc, FMFfast
-    ]> {
+    [FMFnone, FMFnnan, FMFninf, FMFnsz, FMFarcp, FMFcontract, FMFafn,
+     FMFreassoc, FMFfast]> {
   let separator = ", ";
   let cppNamespace = "::mlir::LLVM";
+  let genSpecializedAttr = 0;
   let printBitEnumPrimaryGroups = 1;
 }
 
-def LLVM_FMFAttr : DialectAttr<
-    LLVM_Dialect,
-    CPred<"$_self.isa<::mlir::LLVM::FMFAttr>()">,
-    "LLVM fastmath flags"> {
-  let storageType = "::mlir::LLVM::FMFAttr";
-  let returnType = "::mlir::LLVM::FastmathFlags";
-  let convertFromStorage = "$_self.getFlags()";
-  let constBuilderCall =
-          "::mlir::LLVM::FMFAttr::get($_builder.getContext(), $0)";
+// The "FastMath" flags associated with floating point LLVM instructions.
+def LLVM_FastmathFlagsAttr :
+    EnumAttr<LLVM_Dialect, FastmathFlags, "fastmath"> {
+  let assemblyFormat = "`<` $value `>`";
 }
 
 def LOptDisableUnroll : I32EnumAttrCase<"disable_unroll", 1>;
@@ -229,7 +228,8 @@ class LLVM_FloatArithmeticOp<string mnemonic, string instName,
                              list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<LLVM_AnyFloat, mnemonic, instName,
     !listconcat([DeclareOpInterfaceMethods<FastmathFlagsInterface>], traits)> {
-  dag fmfArg = (ins DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
+  dag fmfArg = (
+    ins DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
   let arguments = !con(commonArgs, fmfArg);
 }
 
@@ -239,7 +239,9 @@ class LLVM_UnaryFloatArithmeticOp<Type type, string mnemonic,
     LLVM_Op<mnemonic,
            !listconcat([Pure, SameOperandsAndResultType, DeclareOpInterfaceMethods<FastmathFlagsInterface>], traits)>,
     LLVM_Builder<"$res = builder.Create" # instName # "($operand);"> {
-  let arguments = (ins type:$operand, DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
+  let arguments = (
+    ins type:$operand,
+    DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
   let results = (outs type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "$operand custom<LLVMOpAttrs>(attr-dict) `:` type($res)";
@@ -354,7 +356,8 @@ def LLVM_FCmpOp : LLVM_ArithmeticCmpOp<"fcmp", [
   let arguments = (ins FCmpPredicate:$predicate,
                    LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$lhs,
                    LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$rhs,
-                   DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
+                   DefaultValuedAttr<LLVM_FastmathFlagsAttr,
+                                     "{}">:$fastmathFlags);
   let builders = [
     OpBuilder<(ins "FCmpPredicate":$predicate, "Value":$lhs, "Value":$rhs)>
   ];
@@ -747,7 +750,8 @@ def LLVM_CallOp : LLVM_Op<"call",
 
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
                        Variadic<LLVM_Type>,
-                       DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
+                       DefaultValuedAttr<LLVM_FastmathFlagsAttr,
+                                         "{}">:$fastmathFlags);
   let results = (outs Optional<LLVM_Type>:$result);
 
   let builders = [
@@ -815,8 +819,14 @@ def LLVM_ExtractValueOp : LLVM_Op<"extractvalue", [Pure]> {
   let hasFolder = 1;
   let hasVerifier = 1;
 
+  string llvmInstName = "ExtractValue";
   string llvmBuilder = [{
     $res = builder.CreateExtractValue($container, extractPosition($position));
+  }];
+  string mlirBuilder = [{
+    auto *evInst = cast<llvm::ExtractValueInst>(inst);
+    $res = $_builder.create<LLVM::ExtractValueOp>($_location,
+      $container, getPositionFromIndices(evInst->getIndices()));
   }];
 }
 
@@ -871,9 +881,15 @@ def LLVM_InsertValueOp : LLVM_Op<
 
   let hasVerifier = 1;
 
+  string llvmInstName = "InsertValue";
   string llvmBuilder = [{
     $res = builder.CreateInsertValue($container, $value,
                                      extractPosition($position));
+  }];
+  string mlirBuilder = [{
+    auto *ivInst = cast<llvm::InsertValueInst>(inst);
+    $res = $_builder.create<LLVM::InsertValueOp>($_location,
+      $container, $value, getPositionFromIndices(ivInst->getIndices()));
   }];
 }
 
@@ -902,8 +918,15 @@ def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector",
 
   let hasVerifier = 1;
 
+  string llvmInstName = "ShuffleVector";
   string llvmBuilder = [{
     $res = builder.CreateShuffleVector($v1, $v2, $mask);
+  }];
+  string mlirBuilder = [{
+    auto *svInst = cast<llvm::ShuffleVectorInst>(inst);
+    SmallVector<int32_t> mask(svInst->getShuffleMask());
+    $res = $_builder.create<LLVM::ShuffleVectorOp>(
+      $_location, $v1, $v2, mask);
   }];
 }
 
@@ -1002,7 +1025,7 @@ def LLVM_ReturnOp : LLVM_TerminatorOp<"return", [Pure]> {
   string llvmInstName = "Ret";
   string llvmBuilder = [{
     if ($_numOperands != 0)
-      builder.CreateRet($arg[0]);
+      builder.CreateRet($arg);
     else
       builder.CreateRetVoid();
   }];
@@ -1768,13 +1791,22 @@ def LLVM_AtomicRMWOp : LLVM_Op<"atomicrmw"> {
                    LLVM_PointerTo<LLVM_AtomicRMWType>:$ptr,
                    LLVM_AtomicRMWType:$val, AtomicOrdering:$ordering);
   let results = (outs LLVM_AtomicRMWType:$res);
-  let llvmBuilder = [{
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+  string llvmInstName = "AtomicRMW";
+  string llvmBuilder = [{
     $res = builder.CreateAtomicRMW(getLLVMAtomicBinOp($bin_op), $ptr, $val,
                                    llvm::MaybeAlign(),
                                    getLLVMAtomicOrdering($ordering));
   }];
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
+  string mlirBuilder = [{
+    auto *atomicInst = cast<llvm::AtomicRMWInst>(inst);
+    $res = $_builder.create<LLVM::AtomicRMWOp>($_location, $_resultType,
+        getLLVMAtomicBinOp(atomicInst->getOperation()), $ptr, $val,
+        getLLVMAtomicOrdering(atomicInst->getOrdering()));
+  }];
+  // Only $ptr and $val are llvm instruction operands.
+  list<int> llvmArgIndices = [-1, 0, 1, -1];
 }
 
 def LLVM_AtomicCmpXchgType : AnyTypeOf<[AnyInteger, LLVM_AnyPointer]>;
@@ -1797,13 +1829,21 @@ def LLVM_AtomicCmpXchgOp : LLVM_Op<"cmpxchg"> {
                    AtomicOrdering:$success_ordering,
                    AtomicOrdering:$failure_ordering);
   let results = (outs LLVM_AtomicCmpXchgResultType:$res);
-  let llvmBuilder = [{
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+  string llvmInstName = "AtomicCmpXchg";
+  string llvmBuilder = [{
     $res = builder.CreateAtomicCmpXchg($ptr, $cmp, $val, llvm::MaybeAlign(),
                    getLLVMAtomicOrdering($success_ordering),
                    getLLVMAtomicOrdering($failure_ordering));
   }];
-  let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
+  string mlirBuilder = [{
+    auto *cmpXchgInst = cast<llvm::AtomicCmpXchgInst>(inst);
+    $res = $_builder.create<LLVM::AtomicCmpXchgOp>(
+      $_location, $_resultType, $ptr, $cmp, $val,
+      getLLVMAtomicOrdering(cmpXchgInst->getSuccessOrdering()),
+      getLLVMAtomicOrdering(cmpXchgInst->getFailureOrdering()));
+  }];
 }
 
 def LLVM_FenceOp : LLVM_Op<"fence"> {

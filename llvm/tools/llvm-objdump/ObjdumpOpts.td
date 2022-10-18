@@ -134,7 +134,8 @@ def no_show_raw_insn : Flag<["--"], "no-show-raw-insn">,
 
 def no_leading_addr : Flag<["--"], "no-leading-addr">,
   HelpText<"When disassembling, do not print leading addresses for instructions or inline relocations">;
-def : Flag<["--"], "no-addresses">, Alias<no_leading_addr>;
+def : Flag<["--"], "no-addresses">, Alias<no_leading_addr>,
+  HelpText<"Alias for --no-leading-addr">;
 
 def raw_clang_ast : Flag<["--"], "raw-clang-ast">,
   HelpText<"Dump the raw binary contents of the clang AST section">;
@@ -304,10 +305,14 @@ def data_in_code : Flag<["--"], "data-in-code">,
   HelpText<"Print the data in code table for Mach-O objects (requires --macho)">,
   Group<grp_mach_o>;
 
-def function_starts : Flag<["--"], "function-starts">,
-  HelpText<"Print the function starts table for "
-           "Mach-O objects (requires --macho)">,
+def function_starts_EQ : Joined<["--"], "function-starts=">,
+  HelpText<"Print the function starts table for Mach-O objects. "
+           "Options: addrs (default), names, both (requires --macho)">,
+  Values<"addrs,names,both">,
   Group<grp_mach_o>;
+
+def : Flag<["--"], "function-starts">, Alias<function_starts_EQ>,
+  AliasArgs<["addrs"]>, Group<grp_mach_o>;
 
 def link_opt_hints : Flag<["--"], "link-opt-hints">,
   HelpText<"Print the linker optimization hints for "
