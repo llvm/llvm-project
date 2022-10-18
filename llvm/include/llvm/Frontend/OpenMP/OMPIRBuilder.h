@@ -617,13 +617,18 @@ public:
   /// to the cloned loop. The cloned loop is executed when ifCond is evaluated
   /// to false.
   ///
-  /// \param Loop    The loop to simd-ize.
-  /// \param IfCond  The value which corresponds to the if clause condition.
-  /// \param Order   The enum to map order clause
-  /// \param Simdlen The Simdlen length to apply to the simd loop.
-  /// \param Safelen The Safelen length to apply to the simd loop.
-  void applySimd(CanonicalLoopInfo *Loop, Value *IfCond, omp::OrderKind Order,
-                 ConstantInt *Simdlen, ConstantInt *Safelen);
+  /// \param Loop        The loop to simd-ize.
+  /// \param AlignedVars The map which containts pairs of the pointer
+  ///                    and its corresponding alignment.
+  /// \param IfCond      The value which corresponds to the if clause
+  ///                    condition.
+  /// \param Order       The enum to map order clause.
+  /// \param Simdlen     The Simdlen length to apply to the simd loop.
+  /// \param Safelen     The Safelen length to apply to the simd loop.
+  void applySimd(CanonicalLoopInfo *Loop,
+                 MapVector<Value *, Value *> AlignedVars, Value *IfCond,
+                 omp::OrderKind Order, ConstantInt *Simdlen,
+                 ConstantInt *Safelen);
 
   /// Generator for '#omp flush'
   ///
