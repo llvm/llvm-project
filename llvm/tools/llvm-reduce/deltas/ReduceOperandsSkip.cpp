@@ -222,6 +222,6 @@ static void extractOperandsFromModule(Oracle &O, Module &Program) {
 }
 
 void llvm::reduceOperandsSkipDeltaPass(TestRunner &Test) {
-  errs() << "*** Reducing operands by skipping over instructions ...\n";
-  runDeltaPass(Test, extractOperandsFromModule);
+  runDeltaPass(Test, extractOperandsFromModule,
+               "Reducing operands by skipping over instructions");
 }
