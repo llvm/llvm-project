@@ -292,21 +292,22 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ; RV32I-NEXT:    and a0, s2, a0
 ; RV32I-NEXT:    mv a1, s3
 ; RV32I-NEXT:    call __mulsi3@plt
-; RV32I-NEXT:    li a1, 32
-; RV32I-NEXT:    beqz s2, .LBB3_2
+; RV32I-NEXT:    bnez s2, .LBB3_3
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    srli a0, a0, 27
-; RV32I-NEXT:    add a0, s4, a0
-; RV32I-NEXT:    lbu a1, 0(a0)
+; RV32I-NEXT:    li a0, 32
+; RV32I-NEXT:    beqz s0, .LBB3_4
 ; RV32I-NEXT:  .LBB3_2:
-; RV32I-NEXT:    bnez s0, .LBB3_4
-; RV32I-NEXT:  # %bb.3:
-; RV32I-NEXT:    addi a0, a1, 32
-; RV32I-NEXT:    j .LBB3_5
-; RV32I-NEXT:  .LBB3_4:
 ; RV32I-NEXT:    srli a0, s1, 27
 ; RV32I-NEXT:    add a0, s4, a0
 ; RV32I-NEXT:    lbu a0, 0(a0)
+; RV32I-NEXT:    j .LBB3_5
+; RV32I-NEXT:  .LBB3_3:
+; RV32I-NEXT:    srli a0, a0, 27
+; RV32I-NEXT:    add a0, s4, a0
+; RV32I-NEXT:    lbu a0, 0(a0)
+; RV32I-NEXT:    bnez s0, .LBB3_2
+; RV32I-NEXT:  .LBB3_4:
+; RV32I-NEXT:    addi a0, a0, 32
 ; RV32I-NEXT:  .LBB3_5:
 ; RV32I-NEXT:    li a1, 0
 ; RV32I-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -347,28 +348,29 @@ define i64 @test_cttz_i64(i64 %a) nounwind {
 ; RV32M-NEXT:    addi a2, a2, 1329
 ; RV32M-NEXT:    lui a3, %hi(.LCPI3_0)
 ; RV32M-NEXT:    addi a3, a3, %lo(.LCPI3_0)
-; RV32M-NEXT:    li a4, 32
-; RV32M-NEXT:    beqz a1, .LBB3_2
+; RV32M-NEXT:    bnez a1, .LBB3_3
 ; RV32M-NEXT:  # %bb.1:
-; RV32M-NEXT:    neg a4, a1
-; RV32M-NEXT:    and a1, a1, a4
-; RV32M-NEXT:    mul a1, a1, a2
-; RV32M-NEXT:    srli a1, a1, 27
-; RV32M-NEXT:    add a1, a3, a1
-; RV32M-NEXT:    lbu a4, 0(a1)
+; RV32M-NEXT:    li a1, 32
+; RV32M-NEXT:    beqz a0, .LBB3_4
 ; RV32M-NEXT:  .LBB3_2:
-; RV32M-NEXT:    bnez a0, .LBB3_4
-; RV32M-NEXT:  # %bb.3:
-; RV32M-NEXT:    addi a0, a4, 32
-; RV32M-NEXT:    li a1, 0
-; RV32M-NEXT:    ret
-; RV32M-NEXT:  .LBB3_4:
 ; RV32M-NEXT:    neg a1, a0
 ; RV32M-NEXT:    and a0, a0, a1
 ; RV32M-NEXT:    mul a0, a0, a2
 ; RV32M-NEXT:    srli a0, a0, 27
 ; RV32M-NEXT:    add a0, a3, a0
 ; RV32M-NEXT:    lbu a0, 0(a0)
+; RV32M-NEXT:    li a1, 0
+; RV32M-NEXT:    ret
+; RV32M-NEXT:  .LBB3_3:
+; RV32M-NEXT:    neg a4, a1
+; RV32M-NEXT:    and a1, a1, a4
+; RV32M-NEXT:    mul a1, a1, a2
+; RV32M-NEXT:    srli a1, a1, 27
+; RV32M-NEXT:    add a1, a3, a1
+; RV32M-NEXT:    lbu a1, 0(a1)
+; RV32M-NEXT:    bnez a0, .LBB3_2
+; RV32M-NEXT:  .LBB3_4:
+; RV32M-NEXT:    addi a0, a1, 32
 ; RV32M-NEXT:    li a1, 0
 ; RV32M-NEXT:    ret
 ;
