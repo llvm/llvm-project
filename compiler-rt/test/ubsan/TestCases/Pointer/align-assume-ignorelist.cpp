@@ -11,7 +11,7 @@ int main(int argc, char* argv[]) {
   char *ptr = (char *)malloc(2);
 
   __builtin_assume_aligned(ptr + 1, 0x8000);
-  // CHECK: {{.*}}alignment-assumption-ignorelist.cpp:[[@LINE-1]]:32: runtime error: assumption of 32768 byte alignment for pointer of type 'char *' failed
+  // CHECK: {{.*}}align-assume-ignorelist.cpp:[[@LINE-1]]:32: runtime error: assumption of 32768 byte alignment for pointer of type 'char *' failed
   // CHECK: 0x{{.*}}: note: address is {{.*}} aligned, misalignment offset is {{.*}} byte
 
   free(ptr);
