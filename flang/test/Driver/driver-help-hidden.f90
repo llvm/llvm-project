@@ -45,6 +45,7 @@
 ! CHECK-NEXT: -fno-automatic         Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! CHECK-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
 ! CHECK-NEXT: -fno-integrated-as     Disable the integrated assembler
+! CHECK-NEXT: -fno-signed-zeros      Allow optimizations that ignore the sign of floating point zeros
 ! CHECK-NEXT: -fopenacc              Enable OpenACC
 ! CHECK-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
 ! CHECK-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
