@@ -1,5 +1,4 @@
 # Check whether boolean options are consistently normalized to ON/OFF.
-XFAIL:*
 RUN: llvm-config --assertion-mode 2>&1 | FileCheck --check-prefix=CHECK-ONOFF %s
 CHECK-ONOFF: {{ON|OFF}}
 CHECK-ONOFF-NOT: error:
