@@ -571,7 +571,7 @@ bool ODRDiagsEmitter::diagnoseMismatch(
   auto PopulateHashes = [](DeclHashes &Hashes, const RecordDecl *Record,
                            const DeclContext *DC) {
     for (const Decl *D : Record->decls()) {
-      if (!ODRHash::isDeclToBeProcessed(D, DC))
+      if (!ODRHash::isSubDeclToBeProcessed(D, DC))
         continue;
       Hashes.emplace_back(D, computeODRHash(D));
     }
@@ -1279,7 +1279,7 @@ bool ODRDiagsEmitter::diagnoseMismatch(const RecordDecl *FirstRecord,
   auto PopulateHashes = [](DeclHashes &Hashes, const RecordDecl *Record,
                            const DeclContext *DC) {
     for (const Decl *D : Record->decls()) {
-      if (!ODRHash::isDeclToBeProcessed(D, DC))
+      if (!ODRHash::isSubDeclToBeProcessed(D, DC))
         continue;
       Hashes.emplace_back(D, computeODRHash(D));
     }
@@ -1571,7 +1571,7 @@ bool ODRDiagsEmitter::diagnoseMismatch(const EnumDecl *FirstEnum,
     for (const Decl *D : Enum->decls()) {
       // Due to decl merging, the first EnumDecl is the parent of
       // Decls in both records.
-      if (!ODRHash::isDeclToBeProcessed(D, FirstEnum))
+      if (!ODRHash::isSubDeclToBeProcessed(D, FirstEnum))
         continue;
       assert(isa<EnumConstantDecl>(D) && "Unexpected Decl kind");
       Hashes.emplace_back(cast<EnumConstantDecl>(D), computeODRHash(D));

@@ -93,7 +93,7 @@ public:
   // Save booleans until the end to lower the size of data to process.
   void AddBoolean(bool value);
 
-  static bool isDeclToBeProcessed(const Decl* D, const DeclContext *Parent);
+  static bool isSubDeclToBeProcessed(const Decl *D, const DeclContext *Parent);
 
 private:
   void AddDeclarationNameImpl(DeclarationName Name);
