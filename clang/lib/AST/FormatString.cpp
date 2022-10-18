@@ -510,7 +510,7 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
       if (C.getCanonicalType(argTy).getUnqualifiedType() == WInt)
         return Match;
 
-      QualType PromoArg = argTy->isPromotableIntegerType()
+      QualType PromoArg = C.isPromotableIntegerType(argTy)
                               ? C.getPromotedIntegerType(argTy)
                               : argTy;
       PromoArg = C.getCanonicalType(PromoArg).getUnqualifiedType();

@@ -2471,9 +2471,6 @@ public:
   /// removing any typedefs, typeofs, etc., as well as any qualifiers.
   const Type *getUnqualifiedDesugaredType() const;
 
-  /// More type predicates useful for type checking/promotion
-  bool isPromotableIntegerType() const; // C99 6.3.1.1p2
-
   /// Return true if this is an integer type that is
   /// signed, according to C99 6.2.5p4 [char, signed char, short, int, long..],
   /// or an enum decl which has a signed representation.
