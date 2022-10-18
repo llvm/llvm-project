@@ -842,7 +842,7 @@ sizeof...($TemplateParameter[[Elements]]);
       enum class $Enum_decl[[Color]] { $EnumConstant_decl_readonly[[Black]] };
       namespace $Namespace_decl[[ns]] {
         using enum $Enum[[Color]];
-        $Enum[[Color]] $Variable_decl[[ModelT]] = $EnumConstant[[Black]];
+        $Enum[[Color]] $Variable_def[[ModelT]] = $EnumConstant[[Black]];
       }
       )cpp",
       // Issue 1096
