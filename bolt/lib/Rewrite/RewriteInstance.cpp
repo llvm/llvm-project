@@ -966,7 +966,19 @@ void RewriteInstance::discoverFileObjects() {
     if (Name.empty()) {
       UniqueName = "ANONYMOUS." + std::to_string(AnonymousId++);
     } else if (cantFail(Symbol.getFlags()) & SymbolRef::SF_Global) {
-      assert(!BC->getBinaryDataByName(Name) && "global name not unique");
+      if (const BinaryData *BD = BC->getBinaryDataByName(Name)) {
+        if (BD->getSize() == ELFSymbolRef(Symbol).getSize() &&
+            BD->getAddress() == Address) {
+          if (opts::Verbosity > 1)
+            errs() << "BOLT-WARNING: ignoring duplicate global symbol " << Name
+                   << "\n";
+          // Ignore duplicate entry - possibly a bug in the linker
+          continue;
+        }
+        errs() << "BOLT-ERROR: bad input binary, global symbol \"" << Name
+               << "\" is not unique\n";
+        exit(1);
+      }
       UniqueName = Name;
     } else {
       // If we have a local file name, we should create 2 variants for the
