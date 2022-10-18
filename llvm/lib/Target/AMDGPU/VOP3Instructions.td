@@ -140,11 +140,15 @@ defm V_LERP_U8 : VOP3Inst <"v_lerp_u8", VOP3_Profile<VOP_I32_I32_I32_I32>, int_a
 let SchedRW = [WriteDoubleAdd] in {
 let FPDPRounding = 1 in {
 defm V_FMA_F64 : VOP3Inst <"v_fma_f64", VOP3_Profile<VOP_F64_F64_F64_F64>, any_fma>;
+let SubtargetPredicate = isNotGFX12Plus in {
 defm V_ADD_F64 : VOP3Inst <"v_add_f64", VOP3_Profile<VOP_F64_F64_F64>, any_fadd>;
 defm V_MUL_F64 : VOP3Inst <"v_mul_f64", VOP3_Profile<VOP_F64_F64_F64>, fmul>;
+} // End SubtargetPredicate = isNotGFX12Plus
 } // End FPDPRounding = 1
+let SubtargetPredicate = isNotGFX12Plus in {
 defm V_MIN_F64 : VOP3Inst <"v_min_f64", VOP3_Profile<VOP_F64_F64_F64>, fminnum_like>;
 defm V_MAX_F64 : VOP3Inst <"v_max_f64", VOP3_Profile<VOP_F64_F64_F64>, fmaxnum_like>;
+} // End SubtargetPredicate = isNotGFX12Plus
 } // End SchedRW = [WriteDoubleAdd]
 
 let SchedRW = [WriteIntMul] in {
@@ -250,10 +254,13 @@ let SchedRW = [Write64Bit] in {
   } // End SubtargetPredicate = isGFX6GFX7
 
   let SubtargetPredicate = isGFX8Plus in {
-  defm V_LSHLREV_B64 : VOP3Inst <"v_lshlrev_b64", VOP3_Profile<VOP_I64_I32_I64>, clshl_rev_64>;
   defm V_LSHRREV_B64 : VOP3Inst <"v_lshrrev_b64", VOP3_Profile<VOP_I64_I32_I64>, clshr_rev_64>;
   defm V_ASHRREV_I64 : VOP3Inst <"v_ashrrev_i64", VOP3_Profile<VOP_I64_I32_I64>, cashr_rev_64>;
   } // End SubtargetPredicate = isGFX8Plus
+
+  let SubtargetPredicate = isGFX8GFX9GFX10GFX11 in {
+  defm V_LSHLREV_B64 : VOP3Inst <"v_lshlrev_b64", VOP3_Profile<VOP_I64_I32_I64>, clshl_rev_64>;
+  } // End SubtargetPredicate = isGFX8GFX9GFX10GFX11
 } // End SchedRW = [Write64Bit]
 } // End isReMaterializable = 1
 

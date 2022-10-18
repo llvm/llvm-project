@@ -1155,6 +1155,20 @@ def : VOPBinOpClampPat<uaddsat, V_ADD_U16_e64, i16>;
 def : VOPBinOpClampPat<usubsat, V_SUB_U16_e64, i16>;
 }
 
+let SubtargetPredicate = isGFX12Plus, isReMaterializable = 1 in {
+  let SchedRW = [WriteDoubleAdd], isCommutable = 1 in {
+    let FPDPRounding = 1 in {
+      defm V_ADD_F64_pseudo : VOP2Inst <"v_add_f64_pseudo", VOP_F64_F64_F64, any_fadd>;
+      defm V_MUL_F64_pseudo : VOP2Inst <"v_mul_f64_pseudo", VOP_F64_F64_F64, fmul>;
+    } // End FPDPRounding = 1
+    defm V_MIN_NUM_F64 : VOP2Inst <"v_min_num_f64", VOP_F64_F64_F64, fminnum_like>;
+    defm V_MAX_NUM_F64 : VOP2Inst <"v_max_num_f64", VOP_F64_F64_F64, fmaxnum_like>;
+  } // End SchedRW = [WriteDoubleAdd], isCommutable = 1
+  let SchedRW = [Write64Bit] in {
+    defm V_LSHLREV_B64_pseudo : VOP2Inst <"v_lshlrev_b64_pseudo", VOP_I64_I32_I64, clshl_rev_64>;
+  } // End SchedRW = [Write64Bit]
+} // End SubtargetPredicate = isGFX12Plus, isReMaterializable = 1
+
 //===----------------------------------------------------------------------===//
 // DPP Encodings
 //===----------------------------------------------------------------------===//
@@ -1424,13 +1438,18 @@ multiclass VOP2_Real_FULL_with_name<GFXGen Gen, bits<6> op, string opName,
   VOP2_Realtriple_e64_with_name<Gen, op, opName, asmName>,
   VOP2_Real_NO_VOP3_with_name<Gen, op, opName, asmName>;
 
-// GFX11 only
 multiclass VOP2_Real_NO_DPP_with_name<GFXGen Gen, bits<6> op, string opName,
                                       string asmName> {
   defm NAME : VOP2_Real_e32_with_name<Gen, op, opName, asmName>,
               VOP2_Real_e64_with_name<Gen, op, opName, asmName>;
   defvar ps = !cast<VOP2_Pseudo>(opName#"_e32");
   def Gen.Suffix#"_alias" : MnemonicAlias<ps.Mnemonic, asmName>, Requires<[Gen.AssemblerPredicate]>;
+}
+
+multiclass VOP2_Real_NO_DPP_with_alias<GFXGen Gen, bits<6> op, string alias> {
+  defm NAME : VOP2_Real_e32<Gen, op>,
+              VOP2_Real_e64<Gen, op>;
+  def Gen.Suffix#"_alias" : MnemonicAlias<alias, NAME>, Requires<[Gen.AssemblerPredicate]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1453,6 +1472,19 @@ multiclass VOP2_Real_FULL_t16_with_name_gfx12<bits<6> op, string opName,
   defm NAME : VOP2_Real_FULL_with_name<GFX12Gen, op, opName, asmName>;
   def _gfx12_2nd_alias : MnemonicAlias<alias, asmName>, Requires<[isGFX12Only]>;
 }
+
+multiclass VOP2_Real_NO_DPP_with_name_gfx12<bits<6> op, string opName,
+                                            string asmName> :
+  VOP2_Real_NO_DPP_with_name<GFX12Gen, op, opName, asmName>;
+
+multiclass VOP2_Real_NO_DPP_with_alias_gfx12<bits<6> op, string alias> :
+  VOP2_Real_NO_DPP_with_alias<GFX12Gen, op, alias>;
+
+defm V_ADD_F64     : VOP2_Real_NO_DPP_with_name_gfx12<0x002, "V_ADD_F64_pseudo", "v_add_f64">;
+defm V_MUL_F64     : VOP2_Real_NO_DPP_with_name_gfx12<0x006, "V_MUL_F64_pseudo", "v_mul_f64">;
+defm V_LSHLREV_B64 : VOP2_Real_NO_DPP_with_name_gfx12<0x01f, "V_LSHLREV_B64_pseudo", "v_lshlrev_b64">;
+defm V_MIN_NUM_F64 : VOP2_Real_NO_DPP_with_alias_gfx12<0x00d, "v_min_f64">;
+defm V_MAX_NUM_F64 : VOP2_Real_NO_DPP_with_alias_gfx12<0x00e, "v_max_f64">;
 
 defm V_CNDMASK_B32 : VOP2e_Real_gfx12<0x001, "V_CNDMASK_B32", "v_cndmask_b32">;
 defm V_ADD_CO_CI_U32 :

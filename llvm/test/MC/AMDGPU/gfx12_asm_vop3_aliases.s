@@ -35,3 +35,9 @@ v_mad_i64_i32 v[5:6], s12, v1, v2, v[3:4]
 
 v_mad_u64_u32 v[5:6], s12, v1, v2, v[3:4]
 // GFX12: v_mad_co_u64_u32 v[5:6], s12, v1, v2, v[3:4] ; encoding: [0x05,0x0c,0xfe,0xd6,0x01,0x05,0x0e,0x04]
+
+v_max_f64 v[5:6], s[2:3], s[4:5]
+// GFX12: v_max_num_f64_e64 v[5:6], s[2:3], s[4:5] ; encoding: [0x05,0x00,0x0e,0xd5,0x02,0x08,0x00,0x00]
+
+v_min_f64 v[5:6], s[2:3], s[4:5]
+// GFX12: v_min_num_f64_e64 v[5:6], s[2:3], s[4:5] ; encoding: [0x05,0x00,0x0d,0xd5,0x02,0x08,0x00,0x00]

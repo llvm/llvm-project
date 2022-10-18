@@ -376,9 +376,9 @@ define double @test_min_max_f64(double %a) #0 {
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX12-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX12-NEXT:    v_max_f64 v[0:1], v[0:1], 2.0
+; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], 2.0, v[0:1]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_min_f64 v[0:1], v[0:1], 4.0
+; GFX12-NEXT:    v_min_num_f64_e32 v[0:1], 4.0, v[0:1]
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %maxnum = call nnan double @llvm.maxnum.f64(double %a, double 2.0)
   %fmed = call nnan double @llvm.minnum.f64(double %maxnum, double 4.0)
