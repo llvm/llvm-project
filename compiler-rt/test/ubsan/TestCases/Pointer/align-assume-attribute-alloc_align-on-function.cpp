@@ -15,16 +15,12 @@ passthrough(char *x, unsigned long alignment) {
   return x;
 }
 
-unsigned long alignment;
-
 int main(int argc, char* argv[]) {
   char *ptr = (char *)malloc(2);
 
-  alignment = 0x8000;
-
-  passthrough(ptr + 1, alignment);
-  // CHECK: {{.*}}alignment-assumption-{{.*}}.cpp:[[@LINE-1]]:3: runtime error: assumption of 32768 byte alignment for pointer of type 'char *' failed
-  // CHECK: {{.*}}alignment-assumption-{{.*}}.cpp:[[@LINE-14]]:22: note: alignment assumption was specified here
+  passthrough(ptr + 1, 0x8000);
+  // CHECK: {{.*}}align-assume-{{.*}}.cpp:[[@LINE-1]]:3: runtime error: assumption of 32768 byte alignment for pointer of type 'char *' failed
+  // CHECK: {{.*}}align-assume-{{.*}}.cpp:[[@LINE-10]]:22: note: alignment assumption was specified here
   // CHECK: 0x{{.*}}: note: address is {{.*}} aligned, misalignment offset is {{.*}} byte
 
   free(ptr);
