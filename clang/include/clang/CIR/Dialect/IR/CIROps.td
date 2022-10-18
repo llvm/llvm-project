@@ -1124,9 +1124,9 @@ def StructElementAddr : CIR_Op<"struct_element_addr"> {
 
     Example:
     ```mlir
-    !22struct2EBar22 = type !cir.struct<"struct.Bar", i32, i8>
+    !ty_22struct2EBar22 = type !cir.struct<"struct.Bar", i32, i8>
     ...
-    %0 = cir.alloca !22struct2EBar22, cir.ptr <!22struct2EBar22>
+    %0 = cir.alloca !ty_22struct2EBar22, cir.ptr <!ty_22struct2EBar22>
     ...
     %1 = cir.struct_element_addr %0, "Bar.a"
     %2 = cir.load %1 : cir.ptr <int>, int

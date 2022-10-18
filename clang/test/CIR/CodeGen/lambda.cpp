@@ -5,7 +5,7 @@ void fn() {
   auto a = [](){};
 }
 
-//      CHECK: !22class2Eanon22 = !cir.struct<"class.anon", i8>
+//      CHECK: !ty_22class2Eanon22 = !cir.struct<"class.anon", i8>
 // CHECK-NEXT: module
 // CHECK-NEXT:   cir.func @_Z2fnv()
-// CHECK-NEXT:     %0 = cir.alloca !22class2Eanon22, cir.ptr <!22class2Eanon22>, ["a"]
+// CHECK-NEXT:     %0 = cir.alloca !ty_22class2Eanon22, cir.ptr <!ty_22class2Eanon22>, ["a"]
