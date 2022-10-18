@@ -9776,19 +9776,13 @@ static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
 
 /// We're allowed to use constraints partial ordering only if the candidates
 /// have the same parameter types:
-/// [temp.func.order]p6.2.2 [...] or if the function parameters that
-/// positionally correspond between the two templates are not of the same type,
-/// neither template is more specialized than the other.
 /// [over.match.best]p2.6
 /// F1 and F2 are non-template functions with the same parameter-type-lists,
 /// and F1 is more constrained than F2 [...]
-static bool canCompareFunctionConstraints(Sema &S,
+static bool sameFunctionParameterTypeLists(Sema &S,
                                           const OverloadCandidate &Cand1,
                                           const OverloadCandidate &Cand2) {
-  // FIXME: Per P2113R0 we also need to compare the template parameter lists
-  // when comparing template functions. 
-  if (Cand1.Function && Cand2.Function && Cand1.Function->hasPrototype() &&
-      Cand2.Function->hasPrototype()) {
+  if (Cand1.Function && Cand2.Function) {
     auto *PT1 = cast<FunctionProtoType>(Cand1.Function->getFunctionType());
     auto *PT2 = cast<FunctionProtoType>(Cand2.Function->getFunctionType());
     if (PT1->getNumParams() == PT2->getNumParams() &&
@@ -10031,15 +10025,14 @@ bool clang::isBetterOverloadCandidate(
             isa<CXXConversionDecl>(Cand1.Function) ? TPOC_Conversion
                                                    : TPOC_Call,
             Cand1.ExplicitCallArguments, Cand2.ExplicitCallArguments,
-            Cand1.isReversed() ^ Cand2.isReversed(),
-            canCompareFunctionConstraints(S, Cand1, Cand2)))
+            Cand1.isReversed() ^ Cand2.isReversed()))
       return BetterTemplate == Cand1.Function->getPrimaryTemplate();
   }
 
   //   -— F1 and F2 are non-template functions with the same
   //      parameter-type-lists, and F1 is more constrained than F2 [...],
   if (!Cand1IsSpecialization && !Cand2IsSpecialization &&
-      canCompareFunctionConstraints(S, Cand1, Cand2)) {
+      sameFunctionParameterTypeLists(S, Cand1, Cand2)) {
     Expr *RC1 = Cand1.Function->getTrailingRequiresClause();
     Expr *RC2 = Cand2.Function->getTrailingRequiresClause();
     if (RC1 && RC2) {
