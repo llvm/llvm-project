@@ -49,6 +49,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   // Helpers
   bool isCtorInitFromOwner(CallOp callOp,
                            const clang::CXXConstructorDecl *ctor);
+  bool isNonConstUseOfOwner(CallOp callOp, const clang::CXXMethodDecl *m);
 
   struct Options {
     enum : unsigned {
@@ -951,6 +952,16 @@ void LifetimeCheckPass::checkOperatorStar(CallOp callOp) {
   checkPointerDeref(addr, callOp.getLoc());
 }
 
+bool LifetimeCheckPass::isNonConstUseOfOwner(CallOp callOp,
+                                             const clang::CXXMethodDecl *m) {
+  if (m->isConst())
+    return false;
+  auto addr = callOp.getOperand(0);
+  if (owners.count(addr))
+    return true;
+  return false;
+}
+
 void LifetimeCheckPass::checkCall(CallOp callOp) {
   if (callOp.getNumOperands() == 0)
     return;
@@ -966,6 +977,15 @@ void LifetimeCheckPass::checkCall(CallOp callOp) {
     return checkMoveAssignment(callOp, methodDecl);
   if (isOperatorStar(methodDecl))
     return checkOperatorStar(callOp);
+
+  // For any other methods...
+
+  // Non-const member call to a Owner invalidates any of its users.
+  if (isNonConstUseOfOwner(callOp, methodDecl)) {
+    // auto addr = callOp.getOperand(0);
+    // TODO: kill(a')
+    llvm_unreachable("NYI");
+  }
 }
 
 void LifetimeCheckPass::checkOperation(Operation *op) {
