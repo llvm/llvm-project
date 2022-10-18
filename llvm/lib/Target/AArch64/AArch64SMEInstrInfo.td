@@ -229,18 +229,6 @@ def : Pat<(i64 (int_aarch64_sme_get_tpidr2)),
 def OBSCURE_COPY : Pseudo<(outs GPR64:$dst), (ins GPR64:$idx), []>, Sched<[]> { }
 def : Pat<(i64 (AArch64ObscureCopy (i64 GPR64:$idx))),
           (OBSCURE_COPY GPR64:$idx)>;
-
-//===----------------------------------------------------------------------===//
-// SVE2 instructions
-//===----------------------------------------------------------------------===//
-
-defm REVD_ZPmZ : sve2_int_perm_revd<"revd", AArch64revd_mt>;
-
-defm SCLAMP_ZZZ : sve2_clamp<"sclamp", 0b0, int_aarch64_sve_sclamp>;
-defm UCLAMP_ZZZ : sve2_clamp<"uclamp", 0b1, int_aarch64_sve_uclamp>;
-
-defm PSEL_PPPRI : sve2_int_perm_sel_p<"psel", int_aarch64_sve_psel>;
-
 } // End let Predicates = [HasSME]
 
 //===----------------------------------------------------------------------===//
