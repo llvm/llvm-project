@@ -46,16 +46,19 @@ TEST(LlvmLibcTermiosTest, GetAttrSmokeTest) {
   struct termios t;
   errno = 0;
   int fd = __llvm_libc::open("/dev/tty", O_RDONLY);
+  if (fd < 0)
+    return; // When /dev/tty is not available, no point continuing.
   ASSERT_EQ(errno, 0);
-  ASSERT_GT(fd, 0);
   ASSERT_THAT(__llvm_libc::tcgetattr(fd, &t), Succeeds(0));
   ASSERT_EQ(__llvm_libc::close(fd), 0);
 }
 
 TEST(LlvmLibcTermiosTest, TcGetSidSmokeTest) {
+  errno = 0;
   int fd = __llvm_libc::open("/dev/tty", O_RDONLY);
+  if (fd < 0)
+    return; // When /dev/tty is not available, no point continuing.
   ASSERT_EQ(errno, 0);
-  ASSERT_GT(fd, 0);
   ASSERT_GT(__llvm_libc::tcgetsid(fd), pid_t(0));
   ASSERT_EQ(__llvm_libc::close(fd), 0);
 }
