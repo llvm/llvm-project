@@ -13,14 +13,14 @@
 # CHECK:      Sections:
 # CHECK-NEXT: Idx  Name          Size           VMA           Type
 # CHECK-NEXT: 0    __text        {{[0-9a-f]+}}  [[#%x,TEXT:]] TEXT
-# CHECK-NEXT: 1    obj           {{[0-9a-f]+}}  [[#%x,DATA:]] DATA
+# CHECK-NEXT: 1    obj           {{[0-9a-f]+}}  [[#%x,DATA:]] TEXT
 # CHECK-NEXT: 2    __cstring     {{[0-9a-f]+}}  [[#%x,CSTR:]] DATA
 # CHECK-NEXT: 3    __common      {{[0-9a-f]+}}  [[#%x,BSS:]]  BSS
 
 # CHECK:      SYMBOL TABLE:
 # CHECK-DAG:  [[#%x,MAIN:]]    g     F __TEXT,__text _main
 # CHECK-DAG:  [[#%x,NUMBER:]]  g     O __DATA,__common _number
-# CHECK-DAG:  [[#%x,FOO:]]     g     O __TEXT,obj _foo
+# CHECK-DAG:  [[#%x,FOO:]]     g     F __TEXT,obj _foo
 # CHECK-DAG:  [[#%x,HIWORLD:]] g     O __TEXT,__cstring _hello_world
 # CHECK-DAG:  [[#%x,HIITSME:]] g     O __TEXT,__cstring _hello_its_me
 
@@ -59,17 +59,36 @@
 # STRIPPED-DAG:   <<dead>> 0x0000000F [  3] literal string: Hello, it's me
 # STRIPPED-DAG:   <<dead>> 0x00000001 [  1] _number
 
+# RUN: %lld --icf=all -map %t/icf-map %t/test.o %t/foo.o %t/c-string-literal.o -o %t/icf
+# RUN: FileCheck --check-prefix=ICF %s < %t/icf-map
+
+# ICF:     Symbols:
+# ICF-DAG: 0x[[#%X,FOO:]]  0x00000000  [  2] _foo
+# ICF-DAG: 0x[[#FOO]]      0x00000001  [  1] _bar
+
 #--- foo.s
-.section __TEXT,obj
+## ICF will only fold sections marked as pure_instructions
+.section __TEXT,obj,regular,pure_instructions
 .globl _foo
+.alt_entry _alt_foo
 _foo:
   nop
 
+.subsections_via_symbols
+
 #--- test.s
 .comm _number, 1
-.globl _main
+.globl _main, _bar
+.alt_entry _alt_bar
+
 _main:
   ret
+
+.section __TEXT,obj,regular,pure_instructions
+_bar:
+  nop
+
+.subsections_via_symbols
 
 #--- c-string-literal.s
 .globl _hello_world, _hello_its_me
@@ -81,3 +100,5 @@ _hello_world:
 
 _hello_its_me:
 .asciz "Hello, it's me"
+
+.subsections_via_symbols
