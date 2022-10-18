@@ -18,14 +18,13 @@ define i8 @test_pr58340(ptr %dst.1, ptr %dst.2) {
 ; CHECK-NEXT:    store i32 [[SEL_1]], ptr [[DST_1:%.*]], align 4
 ; CHECK-NEXT:    br label [[INNER_1_LATCH:%.*]]
 ; CHECK:       inner.2.header.preheader:
-; CHECK-NEXT:    [[SEL_1_LCSSA:%.*]] = phi i32 [ [[SEL_1_1:%.*]], [[MERGE_1:%.*]] ]
 ; CHECK-NEXT:    br label [[INNER_2_HEADER:%.*]]
 ; CHECK:       inner.1.latch:
-; CHECK-NEXT:    br i1 false, label [[MERGE_1]], label [[THEN_1:%.*]]
+; CHECK-NEXT:    br i1 false, label [[MERGE_1:%.*]], label [[THEN_1:%.*]]
 ; CHECK:       then.1:
 ; CHECK-NEXT:    br label [[MERGE_1]]
 ; CHECK:       merge.1:
-; CHECK-NEXT:    [[SEL_1_1]] = phi i32 [ 0, [[INNER_1_LATCH]] ], [ 2, [[THEN_1]] ]
+; CHECK-NEXT:    [[SEL_1_1:%.*]] = phi i32 [ 0, [[INNER_1_LATCH]] ], [ 2, [[THEN_1]] ]
 ; CHECK-NEXT:    store i32 [[SEL_1_1]], ptr [[DST_1]], align 4
 ; CHECK-NEXT:    br i1 false, label [[INNER_1_LATCH_1:%.*]], label [[INNER_2_HEADER_PREHEADER:%.*]]
 ; CHECK:       inner.1.latch.1:
@@ -33,14 +32,8 @@ define i8 @test_pr58340(ptr %dst.1, ptr %dst.2) {
 ; CHECK:       inner.2.header:
 ; CHECK-NEXT:    br label [[INNER_3:%.*]]
 ; CHECK:       inner.3:
-; CHECK-NEXT:    [[SEL_2:%.*]] = phi i64 [ [[SEL_1_EXT:%.*]], [[INNER_3]] ], [ 0, [[INNER_2_HEADER]] ]
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i32 [[SEL_1_LCSSA]], 1
-; CHECK-NEXT:    [[SEL_1_EXT]] = sext i32 [[SEL_1_LCSSA]] to i64
-; CHECK-NEXT:    br i1 [[C_1]], label [[INNER_3]], label [[INNER_2_LATCH:%.*]]
-; CHECK:       inner.2.latch:
-; CHECK-NEXT:    [[SEL_2_LCSSA:%.*]] = phi i64 [ [[SEL_2]], [[INNER_3]] ]
 ; CHECK-NEXT:    store i32 0, ptr [[DST_1]], align 4
-; CHECK-NEXT:    store i64 [[SEL_2_LCSSA]], ptr [[DST_2:%.*]], align 8
+; CHECK-NEXT:    store i64 0, ptr [[DST_2:%.*]], align 8
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    br label [[OUTER_HEADER]]
 ;
