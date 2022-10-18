@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -objc-arc-contract < %s
+; RUN: opt -disable-output -passes=objc-arc-contract < %s
 ; test that we don't crash on unreachable code
 %2 = type opaque
 
