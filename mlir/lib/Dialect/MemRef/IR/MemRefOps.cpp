@@ -1286,6 +1286,58 @@ void ExtractStridedMetadataOp::getAsmResultNames(
   }
 }
 
+/// Helper function to perform the replacement of all constant uses of `values`
+/// by a materialized constant extracted from `maybeConstants`.
+/// `values` and `maybeConstants` are expected to have the same size.
+template <typename Container>
+static bool replaceConstantUsesOf(OpBuilder &rewriter, Location loc,
+                                  Container values,
+                                  ArrayRef<int64_t> maybeConstants,
+                                  llvm::function_ref<bool(int64_t)> isDynamic) {
+  assert(values.size() == maybeConstants.size() &&
+         " expected values and maybeConstants of the same size");
+  bool atLeastOneReplacement = false;
+  for (auto [maybeConstant, result] : llvm::zip(maybeConstants, values)) {
+    // Don't materialize a constant if there are no uses: this would indice
+    // infinite loops in the driver.
+    if (isDynamic(maybeConstant) || result.use_empty())
+      continue;
+    Value constantVal =
+        rewriter.create<arith::ConstantIndexOp>(loc, maybeConstant);
+    for (Operation *op : llvm::make_early_inc_range(result.getUsers())) {
+      // updateRootInplace: lambda cannot capture structured bindings in C++17
+      // yet.
+      op->replaceUsesOfWith(result, constantVal);
+      atLeastOneReplacement = true;
+    }
+  }
+  return atLeastOneReplacement;
+}
+
+LogicalResult
+ExtractStridedMetadataOp::fold(ArrayRef<Attribute> cstOperands,
+                               SmallVectorImpl<OpFoldResult> &results) {
+  OpBuilder builder(*this);
+  auto memrefType = getSource().getType().cast<MemRefType>();
+  SmallVector<int64_t> strides;
+  int64_t offset;
+  LogicalResult res = getStridesAndOffset(memrefType, strides, offset);
+  (void)res;
+  assert(succeeded(res) && "must be a strided memref type");
+
+  bool atLeastOneReplacement = replaceConstantUsesOf(
+      builder, getLoc(), ArrayRef<TypedValue<IndexType>>(getOffset()),
+      ArrayRef<int64_t>(offset), ShapedType::isDynamicStrideOrOffset);
+  atLeastOneReplacement |=
+      replaceConstantUsesOf(builder, getLoc(), getSizes(),
+                            memrefType.getShape(), ShapedType::isDynamic);
+  atLeastOneReplacement |=
+      replaceConstantUsesOf(builder, getLoc(), getStrides(), strides,
+                            ShapedType::isDynamicStrideOrOffset);
+
+  return success(atLeastOneReplacement);
+}
+
 //===----------------------------------------------------------------------===//
 // GenericAtomicRMWOp
 //===----------------------------------------------------------------------===//
