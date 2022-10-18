@@ -64,7 +64,7 @@ private:
 
   // Used with err_module_odr_violation_mismatch_decl and
   // note_module_odr_violation_mismatch_decl
-  // This list should be the same Decl's as in ODRHash::isDeclToBeProcessed
+  // This list should be the same Decl's as in ODRHash::isSubDeclToBeProcessed
   enum ODRMismatchDecl {
     EndOfClass,
     PublicSpecifer,
