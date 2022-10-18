@@ -1916,8 +1916,17 @@ HexagonTargetLowering::LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getBitcast(ResTy, BS);
   }
 
+  MVT PairTy = typeJoin({ResTy, ResTy});
+
   assert(ElemTy == MVT::i32);
   SDValue S16 = DAG.getConstant(16, dl, MVT::i32);
+
+  auto LoVec = [&DAG,ResTy,dl] (SDValue Pair) {
+    return DAG.getTargetExtractSubreg(Hexagon::vsub_lo, dl, ResTy, Pair);
+  };
+  auto HiVec = [&DAG,ResTy,dl] (SDValue Pair) {
+    return DAG.getTargetExtractSubreg(Hexagon::vsub_hi, dl, ResTy, Pair);
+  };
 
   auto MulHS_V60 = [&](SDValue Vs, SDValue Vt) {
     // mulhs(Vs,Vt) =
@@ -1931,21 +1940,42 @@ HexagonTargetLowering::LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const {
     // so everything in [] can be shifted by 16 without loss of precision.
     //   = [Hi(Vs) *s Hi(Vt)*2^16 + Hi(Vs)*su Lo(Vt) + Lo(Vs)*Vt >> 16] >> 16
     //   = [Hi(Vs) *s Hi(Vt)*2^16 + Hi(Vs)*su Lo(Vt) + V6_vmpyewuh(Vs,Vt)] >> 16
-    // Denote Hi(Vs) = Vs':
-    //   = [Vs'*s Hi(Vt)*2^16 + Vs' *su Lo(Vt) + V6_vmpyewuh(Vt,Vs)] >> 16
-    //   = Vs'*s Hi(Vt) + (V6_vmpyiewuh(Vs',Vt) + V6_vmpyewuh(Vt,Vs)) >> 16
+    // The final additions need to make sure to properly maintain any
+    // carry-out bits.
+    //
+    //                Hi(Vt) Lo(Vt)
+    //                Hi(Vs) Lo(Vs)
+    //               --------------
+    //                Lo(Vt)*Lo(Vs)  | T0 = V6_vmpyewuh(Vt,Vs) does this,
+    //         Hi(Vt)*Lo(Vs)         |      + dropping the low 16 bits
+    //         Hi(Vs)*Lo(Vt)   | T2
+    //  Hi(Vt)*Hi(Vs)
+
     SDValue T0 = getInstr(Hexagon::V6_vmpyewuh, dl, ResTy, {Vt, Vs}, DAG);
-    // Get Vs':
-    SDValue S0 = getInstr(Hexagon::V6_vasrw, dl, ResTy, {Vs, S16}, DAG);
-    SDValue T1 = getInstr(Hexagon::V6_vmpyiewuh_acc, dl, ResTy,
-                          {T0, S0, Vt}, DAG);
-    // Shift by 16:
-    SDValue S2 = getInstr(Hexagon::V6_vasrw, dl, ResTy, {T1, S16}, DAG);
-    // Get Vs'*Hi(Vt):
-    SDValue T2 = getInstr(Hexagon::V6_vmpyiowh, dl, ResTy, {S0, Vt}, DAG);
+    // T1 = get Hi(Vs) into low halves.
+    SDValue T1 = getInstr(Hexagon::V6_vasrw, dl, ResTy, {Vs, S16}, DAG);
+    // P0 = interleaved T1.h*Vt.uh (full precision product)
+    SDValue P0 = getInstr(Hexagon::V6_vmpyhus, dl, PairTy, {T1, Vt}, DAG);
+    // T2 = T1.even(h) * Vt.even(uh), i.e. Hi(Vs)*Lo(Vt)
+    SDValue T2 = LoVec(P0);
+    // We need to add T0+T2, recording the carry-out, which will be 1<<16
+    // added to the final sum.
+    // P1 = interleaved even/odd 32-bit (unsigned) sums of 16-bit halves
+    SDValue P1 = getInstr(Hexagon::V6_vadduhw, dl, PairTy, {T0, T2}, DAG);
+    // P2 = interleaved even/odd 32-bit (signed) sums of 16-bit halves
+    SDValue P2 = getInstr(Hexagon::V6_vaddhw, dl, PairTy, {T0, T2}, DAG);
+    // T3 = full-precision(T0+T2) >> 16
+    // The low halves are added-unsigned, the high ones are added-signed.
+    SDValue T3 = getInstr(Hexagon::V6_vasrw_acc, dl, ResTy,
+                          {HiVec(P2), LoVec(P1), S16}, DAG);
+    SDValue T4 = getInstr(Hexagon::V6_vasrw, dl, ResTy, {Vt, S16}, DAG);
+    // P3 = interleaved Hi(Vt)*Hi(Vs) (full precision),
+    // which is now Lo(T1)*Lo(T4), so we want to keep the even product.
+    SDValue P3 = getInstr(Hexagon::V6_vmpyhv, dl, PairTy, {T1, T4}, DAG);
+    SDValue T5 = LoVec(P3);
     // Add:
-    SDValue T3 = DAG.getNode(ISD::ADD, dl, ResTy, {S2, T2});
-    return T3;
+    SDValue T6 = DAG.getNode(ISD::ADD, dl, ResTy, {T3, T5});
+    return T6;
   };
 
   auto MulHS_V62 = [&](SDValue Vs, SDValue Vt) {
@@ -1962,16 +1992,8 @@ HexagonTargetLowering::LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const {
     return MulHS_V60(Vs, Vt);
   }
 
-  // Unsigned mulhw. (Would expansion using signed mulhw be better?)
+  // Unsigned mulhw.
 
-  auto LoVec = [&DAG,ResTy,dl] (SDValue Pair) {
-    return DAG.getTargetExtractSubreg(Hexagon::vsub_lo, dl, ResTy, Pair);
-  };
-  auto HiVec = [&DAG,ResTy,dl] (SDValue Pair) {
-    return DAG.getTargetExtractSubreg(Hexagon::vsub_hi, dl, ResTy, Pair);
-  };
-
-  MVT PairTy = typeJoin({ResTy, ResTy});
   SDValue P = getInstr(Hexagon::V6_lvsplatw, dl, ResTy,
                        {DAG.getConstant(0x02020202, dl, MVT::i32)}, DAG);
   // Multiply-unsigned halfwords:
