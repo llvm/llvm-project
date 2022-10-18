@@ -166,6 +166,18 @@ namespace std::ranges {
   template<class T>
     inline constexpr bool enable_borrowed_range<drop_view<T>> = enable_borrowed_range<T>;
 
+  // [range.drop.while], drop while view
+  template<view V, class Pred>
+    requires input_range<V> && is_object_v<Pred> &&
+             indirect_unary_predicate<const Pred, iterator_t<V>>
+    class drop_while_view;
+
+  template<class T, class Pred>
+    inline constexpr bool enable_borrowed_range<drop_while_view<T, Pred>> =
+      enable_borrowed_range<T>;
+
+  namespace views { inline constexpr unspecified drop_while = unspecified; }
+
   // [range.transform], transform view
   template<input_range V, copy_constructible F>
     requires view<V> && is_object_v<F> &&
@@ -303,6 +315,7 @@ namespace std {
 #include <__ranges/dangling.h>
 #include <__ranges/data.h>
 #include <__ranges/drop_view.h>
+#include <__ranges/drop_while_view.h>
 #include <__ranges/empty.h>
 #include <__ranges/empty_view.h>
 #include <__ranges/enable_borrowed_range.h>

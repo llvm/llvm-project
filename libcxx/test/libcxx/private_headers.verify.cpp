@@ -512,6 +512,7 @@ END-SCRIPT
 #include <__ranges/dangling.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/dangling.h'}}
 #include <__ranges/data.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/data.h'}}
 #include <__ranges/drop_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/drop_view.h'}}
+#include <__ranges/drop_while_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/drop_while_view.h'}}
 #include <__ranges/empty.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/empty.h'}}
 #include <__ranges/empty_view.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/empty_view.h'}}
 #include <__ranges/enable_borrowed_range.h> // expected-error@*:* {{use of private header from outside its module: '__ranges/enable_borrowed_range.h'}}
