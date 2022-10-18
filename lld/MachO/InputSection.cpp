@@ -138,8 +138,10 @@ void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {
   copy->live = false;
   copy->wasCoalesced = true;
   copy->replacement = this;
-  for (auto &copySym : copy->symbols)
+  for (auto &copySym : copy->symbols) {
     copySym->wasIdenticalCodeFolded = true;
+    copySym->size = 0;
+  }
 
   symbols.insert(symbols.end(), copy->symbols.begin(), copy->symbols.end());
   copy->symbols.clear();
