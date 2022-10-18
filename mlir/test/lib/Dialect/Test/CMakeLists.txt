@@ -54,6 +54,7 @@ add_mlir_library(MLIRTestDialect
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
   MLIRDerivedAttributeOpInterface
+  MLIRDestinationStyleOpInterface
   MLIRDialect
   MLIRDLTIDialect
   MLIRFuncDialect

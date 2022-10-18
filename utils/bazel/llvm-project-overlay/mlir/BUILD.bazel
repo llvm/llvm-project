@@ -996,6 +996,13 @@ td_library(
 )
 
 td_library(
+    name = "DestinationStyleOpInterfaceTdFiles",
+    srcs = ["include/mlir/Interfaces/DestinationStyleOpInterface.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+td_library(
     name = "InferIntRangeInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/InferIntRangeInterface.td"],
     includes = ["include"],
@@ -5322,6 +5329,36 @@ cc_library(
 )
 
 gentbl_cc_library(
+    name = "DestinationStyleOpInterfaceIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Interfaces/DestinationStyleOpInterface.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Interfaces/DestinationStyleOpInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Interfaces/DestinationStyleOpInterface.td",
+    deps = [":DestinationStyleOpInterfaceTdFiles"],
+)
+
+cc_library(
+    name = "DestinationStyleOpInterface",
+    srcs = ["lib/Interfaces/DestinationStyleOpInterface.cpp"],
+    hdrs = ["include/mlir/Interfaces/DestinationStyleOpInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":DestinationStyleOpInterfaceIncGen",
+        ":IR",
+        "//llvm:Support",
+    ],
+)
+
+gentbl_cc_library(
     name = "InferIntRangeInterfaceIncGen",
     strip_include_prefix = "include",
     tbl_outs = [
@@ -7437,6 +7474,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":ControlFlowInterfacesTdFiles",
+        ":DestinationStyleOpInterfaceTdFiles",
         ":DialectUtilsTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
@@ -7571,6 +7609,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":CopyOpInterfaceTdFiles",
+        ":DestinationStyleOpInterface",
         ":LinalgOpsTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -7768,6 +7807,7 @@ cc_library(
         ":ComplexDialect",
         ":ControlFlowInterfaces",
         ":CopyOpInterface",
+        ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":FuncDialect",
         ":IR",
@@ -7925,6 +7965,7 @@ cc_library(
         ":BufferizationTransforms",
         ":ComplexDialect",
         ":ControlFlowDialect",
+        ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":FuncDialect",
         ":FuncTransforms",
