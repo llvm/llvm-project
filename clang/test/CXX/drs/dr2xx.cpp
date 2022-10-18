@@ -243,7 +243,7 @@ namespace dr222 { // dr222: dup 637
 
 // dr223: na
 
-namespace dr224 { // dr224: yes
+namespace dr224 { // dr224: 16
   namespace example1 {
     template <class T> class A {
       typedef int type;
