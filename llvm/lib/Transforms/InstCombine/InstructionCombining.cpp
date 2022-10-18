@@ -3133,9 +3133,9 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
     return visitUnconditionalBranchInst(BI);
 
   // Change br (not X), label True, label False to: br X, label False, True
+  Value *Cond = BI.getCondition();
   Value *X = nullptr;
-  if (match(&BI, m_Br(m_Not(m_Value(X)), m_BasicBlock(), m_BasicBlock())) &&
-      !isa<Constant>(X)) {
+  if (match(Cond, m_Not(m_Value(X))) && !isa<Constant>(X)) {
     // Swap Destinations and condition...
     BI.swapSuccessors();
     return replaceOperand(BI, 0, X);
@@ -3143,21 +3143,18 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
 
   // If the condition is irrelevant, remove the use so that other
   // transforms on the condition become more effective.
-  if (!isa<ConstantInt>(BI.getCondition()) &&
-      BI.getSuccessor(0) == BI.getSuccessor(1))
-    return replaceOperand(
-        BI, 0, ConstantInt::getFalse(BI.getCondition()->getType()));
+  if (!isa<ConstantInt>(Cond) && BI.getSuccessor(0) == BI.getSuccessor(1))
+    return replaceOperand(BI, 0, ConstantInt::getFalse(Cond->getType()));
 
   // Canonicalize, for example, fcmp_one -> fcmp_oeq.
   CmpInst::Predicate Pred;
-  if (match(&BI, m_Br(m_OneUse(m_FCmp(Pred, m_Value(), m_Value())),
-                      m_BasicBlock(), m_BasicBlock())) &&
+  if (match(Cond, m_OneUse(m_FCmp(Pred, m_Value(), m_Value()))) &&
       !isCanonicalPredicate(Pred)) {
     // Swap destinations and condition.
-    CmpInst *Cond = cast<CmpInst>(BI.getCondition());
-    Cond->setPredicate(CmpInst::getInversePredicate(Pred));
+    auto *Cmp = cast<CmpInst>(Cond);
+    Cmp->setPredicate(CmpInst::getInversePredicate(Pred));
     BI.swapSuccessors();
-    Worklist.push(Cond);
+    Worklist.push(Cmp);
     return &BI;
   }
 
