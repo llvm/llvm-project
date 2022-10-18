@@ -2,6 +2,14 @@
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void \
 // RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
+//
+// Do the same run, but now with parallelization.
+//
+// RUN: mlir-opt %s --sparse-compiler="parallelization-strategy=any-storage-any-loop" | \
+// RUN: mlir-cpu-runner -e entry -entry-point-result=void \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: FileCheck %s
+
 
 #CSR = #sparse_tensor.encoding<{
   dimLevelType = [ "dense", "compressed" ],
