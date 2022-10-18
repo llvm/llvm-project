@@ -35,12 +35,12 @@ int main(int, char**) {
   auto& P                      = R.getController();
   std::pmr::memory_resource& M = R;
   {
-    ASSERT_SAME_TYPE(decltype(M.deallocate(nullptr, 0, 0)), void);
-    ASSERT_SAME_TYPE(decltype(M.deallocate(nullptr, 0)), void);
+    ASSERT_SAME_TYPE(decltype(M.deallocate(std::declval<int*>(), 0, 0)), void);
+    ASSERT_SAME_TYPE(decltype(M.deallocate(std::declval<int*>(), 0)), void);
   }
   {
-    static_assert(!noexcept(M.deallocate(nullptr, 0, 0)));
-    static_assert(!noexcept(M.deallocate(nullptr, 0)));
+    static_assert(!noexcept(M.deallocate(std::declval<int*>(), 0, 0)));
+    static_assert(!noexcept(M.deallocate(std::declval<int*>(), 0)));
   }
   {
     int s   = 100;

@@ -37,11 +37,11 @@ int main(int, char**) {
   auto& P                      = R.getController();
   std::pmr::memory_resource& M = R;
   {
-    static_assert(std::is_same<decltype(M.allocate(0, 0)), void*>::value, "Must be void*");
+    static_assert(std::is_same<decltype(M.allocate(0, 1)), void*>::value, "Must be void*");
     static_assert(std::is_same<decltype(M.allocate(0)), void*>::value, "Must be void*");
   }
   {
-    static_assert(!noexcept(M.allocate(0, 0)), "Must not be noexcept.");
+    static_assert(!noexcept(M.allocate(0, 1)), "Must not be noexcept.");
     static_assert(!noexcept(M.allocate(0)), "Must not be noexcept.");
   }
   {
