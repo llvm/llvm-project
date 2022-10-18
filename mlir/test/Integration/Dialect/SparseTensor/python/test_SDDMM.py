@@ -140,24 +140,19 @@ def main():
         ir.AffineMap.get_permutation([0, 1]),
         ir.AffineMap.get_permutation([1, 0])
     ]
-    vec_strategy = ['none', 'dense-inner-loop']
     for level in levels:
       for ordering in orderings:
         for pwidth in [32]:
           for iwidth in [32]:
-            for vec in vec_strategy:
-              for e in [True]:
-                vl = 1 if vec == 0 else 16
-                attr = st.EncodingAttr.get(level, ordering, None, pwidth,
-                                           iwidth)
-                opt = (f'parallelization-strategy=none '
-                       f'vectorization-strategy={vec} '
-                       f'vl={vl} enable-simd-index32={e}')
-                compiler = sparse_compiler.SparseCompiler(
-                    options=opt, opt_level=0, shared_libs=[support_lib])
-                build_compile_and_run_SDDMMM(attr, compiler)
-                count = count + 1
-  # CHECK: Passed 16 tests
+            for e in [True]:
+              attr = st.EncodingAttr.get(level, ordering, None, pwidth,
+                                         iwidth)
+              opt = (f'parallelization-strategy=none')
+              compiler = sparse_compiler.SparseCompiler(
+                  options=opt, opt_level=0, shared_libs=[support_lib])
+              build_compile_and_run_SDDMMM(attr, compiler)
+              count = count + 1
+  # CHECK: Passed 8 tests
   print('Passed ', count, 'tests')
 
 

@@ -2153,7 +2153,6 @@ cc_library(
         ":Support",
         ":TensorDialect",
         ":Transforms",
-        ":VectorDialect",
         "//llvm:Support",
     ],
 )
