@@ -87,12 +87,13 @@ static void replaceOpcodesInModule(Oracle &O, Module &Mod) {
   for (Function &F : Mod) {
     for (BasicBlock &BB : F)
       for (Instruction &I : make_early_inc_range(BB)) {
-        if (O.shouldKeep())
-          continue;
 
         Instruction *Replacement =
             dyn_cast_or_null<Instruction>(reduceInstruction(Mod, I));
         if (Replacement && Replacement != &I) {
+          if (O.shouldKeep())
+            continue;
+
           if (isa<FPMathOperator>(Replacement))
             Replacement->copyFastMathFlags(&I);
 

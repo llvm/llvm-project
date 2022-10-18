@@ -34,8 +34,8 @@ extractOperandsFromModule(Oracle &O, Module &Program,
       }
 
       for (auto &Op : I.operands()) {
-        if (!O.shouldKeep()) {
-          if (Value *Reduced = ReduceValue(Op))
+        if (Value *Reduced = ReduceValue(Op)) {
+          if (!O.shouldKeep())
             Op.set(Reduced);
         }
       }
