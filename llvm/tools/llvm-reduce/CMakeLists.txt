@@ -54,6 +54,7 @@ add_llvm_tool(llvm-reduce
   deltas/ReduceUsingSimplifyCFG.cpp
   deltas/RunIRPasses.cpp
   deltas/SimplifyInstructions.cpp
+  deltas/StripDebugInfo.cpp
   llvm-reduce.cpp
 
   DEPENDS
