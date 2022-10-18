@@ -251,6 +251,7 @@ Bug Fixes
 - Address the thread identification problems in coroutines.
   `Issue 47177 <https://github.com/llvm/llvm-project/issues/47177>`_
   `Issue 47179 <https://github.com/llvm/llvm-project/issues/47179>`_
+- Fix a crash upon stray coloncolon token in C2x mode.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
