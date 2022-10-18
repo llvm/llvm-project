@@ -46,6 +46,9 @@ namespace fir {
 // fir::LLVMTypeConverter for converting to LLVM IR dialect types.
 #include "TypeConverter.h"
 
+using BindingTable = llvm::DenseMap<llvm::StringRef, unsigned>;
+using BindingTables = llvm::DenseMap<llvm::StringRef, BindingTable>;
+
 // TODO: This should really be recovered from the specified target.
 static constexpr unsigned defaultAlign = 8;
 
@@ -93,8 +96,10 @@ template <typename FromOp>
 class FIROpConversion : public mlir::ConvertOpToLLVMPattern<FromOp> {
 public:
   explicit FIROpConversion(fir::LLVMTypeConverter &lowering,
-                           const fir::FIRToLLVMPassOptions &options)
-      : mlir::ConvertOpToLLVMPattern<FromOp>(lowering), options(options) {}
+                           const fir::FIRToLLVMPassOptions &options,
+                           const BindingTables &bindingTables)
+      : mlir::ConvertOpToLLVMPattern<FromOp>(lowering), options(options),
+        bindingTables(bindingTables) {}
 
 protected:
   mlir::Type convertType(mlir::Type ty) const {
@@ -293,6 +298,7 @@ protected:
   }
 
   const fir::FIRToLLVMPassOptions &options;
+  const BindingTables &bindingTables;
 };
 
 /// FIR conversion pattern template
@@ -3293,8 +3299,9 @@ struct NegcOpConversion : public FIROpConversion<fir::NegcOp> {
 template <typename FromOp>
 struct MustBeDeadConversion : public FIROpConversion<FromOp> {
   explicit MustBeDeadConversion(fir::LLVMTypeConverter &lowering,
-                                const fir::FIRToLLVMPassOptions &options)
-      : FIROpConversion<FromOp>(lowering, options) {}
+                                const fir::FIRToLLVMPassOptions &options,
+                                const BindingTables &bindingTables)
+      : FIROpConversion<FromOp>(lowering, options, bindingTables) {}
   using OpAdaptor = typename FromOp::Adaptor;
 
   mlir::LogicalResult
@@ -3354,6 +3361,32 @@ public:
     if (mlir::failed(runPipeline(mathConvertionPM, mod)))
       return signalPassFailure();
 
+    // Reconstruct binding tables for dynamic dispatch. The binding tables
+    // are defined in FIR from semantics as fir.global operation with region
+    // initializer. Go through each bining tables and store the procedure name
+    // and binding index for later use by the fir.dispatch conversion pattern.
+    BindingTables bindingTables;
+    for (auto globalOp : mod.getOps<fir::GlobalOp>()) {
+      if (globalOp.getSymName().contains(".v.")) {
+        unsigned bindingIdx = 0;
+        BindingTable bindings;
+        for (auto addrOp : globalOp.getRegion().getOps<fir::AddrOfOp>()) {
+          if (fir::isa_char(fir::unwrapRefType(addrOp.getType()))) {
+            if (auto nameGlobal =
+                    mod.lookupSymbol<fir::GlobalOp>(addrOp.getSymbol())) {
+              auto stringLit = llvm::to_vector(
+                  nameGlobal.getRegion().getOps<fir::StringLitOp>())[0];
+              auto procName =
+                  stringLit.getValue().dyn_cast<mlir::StringAttr>().getValue();
+              bindings[procName] = bindingIdx;
+              ++bindingIdx;
+            }
+          }
+        }
+        bindingTables[globalOp.getSymName()] = bindings;
+      }
+    }
+
     auto *context = getModule().getContext();
     fir::LLVMTypeConverter typeConverter{getModule()};
     mlir::RewritePatternSet pattern(context);
@@ -3378,8 +3411,8 @@ public:
         SliceOpConversion, StoreOpConversion, StringLitOpConversion,
         SubcOpConversion, UnboxCharOpConversion, UnboxProcOpConversion,
         UndefOpConversion, UnreachableOpConversion, XArrayCoorOpConversion,
-        XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(typeConverter,
-                                                                  options);
+        XEmboxOpConversion, XReboxOpConversion, ZeroOpConversion>(
+        typeConverter, options, bindingTables);
     mlir::populateFuncToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateOpenMPToLLVMConversionPatterns(typeConverter, pattern);
     mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, pattern);
