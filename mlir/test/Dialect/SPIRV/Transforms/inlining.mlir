@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -pass-pipeline='spirv.module(inline{default-pipeline=''})' | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -pass-pipeline='builtin.module(spirv.module(inline{default-pipeline=''}))' | FileCheck %s
 
 spirv.module Logical GLSL450 {
   spirv.func @callee() "None" {

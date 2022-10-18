@@ -1,10 +1,10 @@
-// RUN: mlir-opt %s -mlir-disable-threading -pass-pipeline='builtin.module(test-module-pass,func.func(test-function-pass)),func.func(test-function-pass),func.func(cse,canonicalize)' -verify-each=false -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck %s
+// RUN: mlir-opt %s -mlir-disable-threading -pass-pipeline='builtin.module(builtin.module(test-module-pass,func.func(test-function-pass)),func.func(test-function-pass),func.func(cse,canonicalize))' -verify-each=false -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck %s
 // RUN: mlir-opt %s -mlir-disable-threading -test-textual-pm-nested-pipeline -verify-each=false -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck %s --check-prefix=TEXTUAL_CHECK
-// RUN: mlir-opt %s -mlir-disable-threading -pass-pipeline='builtin.module(test-module-pass),any(test-interface-pass),any(test-interface-pass),func.func(test-function-pass),any(canonicalize),func.func(cse)' -verify-each=false -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck %s --check-prefix=GENERIC_MERGE_CHECK
-// RUN: not mlir-opt %s -pass-pipeline='builtin.module(test-module-pass' 2>&1 | FileCheck --check-prefix=CHECK_ERROR_1 %s
+// RUN: mlir-opt %s -mlir-disable-threading -pass-pipeline='builtin.module(builtin.module(test-module-pass),any(test-interface-pass),any(test-interface-pass),func.func(test-function-pass),any(canonicalize),func.func(cse))' -verify-each=false -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck %s --check-prefix=GENERIC_MERGE_CHECK
+// RUN: not mlir-opt %s -pass-pipeline='any(builtin.module(test-module-pass)' 2>&1 | FileCheck --check-prefix=CHECK_ERROR_1 %s
 // RUN: not mlir-opt %s -pass-pipeline='builtin.module(test-module-pass))' 2>&1 | FileCheck --check-prefix=CHECK_ERROR_2 %s
-// RUN: not mlir-opt %s -pass-pipeline='builtin.module()(' 2>&1 | FileCheck --check-prefix=CHECK_ERROR_3 %s
-// RUN: not mlir-opt %s -pass-pipeline=',' 2>&1 | FileCheck --check-prefix=CHECK_ERROR_4 %s
+// RUN: not mlir-opt %s -pass-pipeline='any(builtin.module()()' 2>&1 | FileCheck --check-prefix=CHECK_ERROR_3 %s
+// RUN: not mlir-opt %s -pass-pipeline='any(,)' 2>&1 | FileCheck --check-prefix=CHECK_ERROR_4 %s
 // RUN: not mlir-opt %s -pass-pipeline='func.func(test-module-pass)' 2>&1 | FileCheck --check-prefix=CHECK_ERROR_5 %s
 
 // CHECK_ERROR_1: encountered unbalanced parentheses while parsing pipeline
@@ -15,6 +15,12 @@
 
 // RUN: not mlir-opt %s -pass-pipeline='' -cse 2>&1 | FileCheck --check-prefix=CHECK_ERROR_6 %s
 // CHECK_ERROR_6: '-pass-pipeline' option can't be used with individual pass options
+
+// RUN: not mlir-opt %s -pass-pipeline='wrong-op()' 2>&1 | FileCheck --check-prefix=CHECK_ERROR_7 %s
+// CHECK_ERROR_7: can't run 'wrong-op' pass manager on 'builtin.module' op
+
+// RUN: mlir-opt %s -pass-pipeline='any(cse)' -dump-pass-pipeline 2>&1 | FileCheck %s -check-prefix=CHECK_ROUNDTRIP
+// CHECK_ROUNDTRIP: any(cse)
 
 func.func @foo() {
   return

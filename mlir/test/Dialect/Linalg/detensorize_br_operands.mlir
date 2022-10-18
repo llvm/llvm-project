@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -allow-unregistered-dialect -pass-pipeline="func.func(linalg-detensorize)" | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -allow-unregistered-dialect -pass-pipeline="builtin.module(func.func(linalg-detensorize))" | FileCheck %s
 
 // TODO: Detensoring breaks if %arg0 or %arg1 are passed directly as tensors. Fix that.
 func.func @if_true_test(%arg0: i1, %arg1: i32) -> tensor<i32> attributes {} {

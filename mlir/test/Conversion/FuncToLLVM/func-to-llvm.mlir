@@ -1,5 +1,5 @@
-// RUN: mlir-opt -pass-pipeline="func.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts" %s -split-input-file | FileCheck %s
-// RUN: mlir-opt -pass-pipeline="func.func(convert-math-to-llvm,convert-arith-to-llvm{index-bitwidth=32}),convert-func-to-llvm{index-bitwidth=32},reconcile-unrealized-casts" %s -split-input-file | FileCheck --check-prefix=CHECK32 %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-math-to-llvm,convert-arith-to-llvm{index-bitwidth=32}),convert-func-to-llvm{index-bitwidth=32},reconcile-unrealized-casts)" %s -split-input-file | FileCheck --check-prefix=CHECK32 %s
 
 // CHECK-LABEL: func @empty() {
 // CHECK-NEXT:  llvm.return
