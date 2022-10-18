@@ -288,7 +288,7 @@ func.func @sparse_reconstruct_ins(%arg0: tensor<128xf32, #SparseVector>) -> tens
 // CHECK-LABEL: func @sparse_insert(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>,
 //  CHECK-SAME: %[[B:.*]]: index,
-//  CHECK-SAME: %[[C:.*]]: f32) {
+//  CHECK-SAME: %[[C:.*]]: f32) -> !llvm.ptr<i8> {
 //   CHECK-DAG: %[[M:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-DAG: %[[V:.*]] = memref.alloca() : memref<f32>
 //   CHECK-DAG: %[[MC:.*]] = memref.cast %[[M]] : memref<1xindex> to memref<?xindex>
@@ -296,12 +296,12 @@ func.func @sparse_reconstruct_ins(%arg0: tensor<128xf32, #SparseVector>) -> tens
 //   CHECK-DAG: memref.store %[[B]], %[[M]][%[[C0]]] : memref<1xindex>
 //   CHECK-DAG: memref.store %[[C]], %[[V]][] : memref<f32>
 //       CHECK: call @lexInsertF32(%[[A]], %[[MC]], %[[V]]) : (!llvm.ptr<i8>, memref<?xindex>, memref<f32>) -> ()
-//       CHECK: return
+//       CHECK: return %[[A]] : !llvm.ptr<i8>
 func.func @sparse_insert(%arg0: tensor<128xf32, #SparseVector>,
                          %arg1: index,
-                         %arg2: f32) {
-  sparse_tensor.insert %arg2 into %arg0[%arg1] : tensor<128xf32, #SparseVector>
-  return
+                         %arg2: f32) -> tensor<128xf32, #SparseVector> {
+  %0 = sparse_tensor.insert %arg2 into %arg0[%arg1] : tensor<128xf32, #SparseVector>
+  return %0 : tensor<128xf32, #SparseVector>
 }
 
 // CHECK-LABEL: func @sparse_expansion1()
@@ -359,7 +359,7 @@ func.func @sparse_expansion3(%arg0: index, %arg1: index) -> memref<?xindex> {
 //  CHECK-SAME: %[[C:.*2]]: memref<?xi1>,
 //  CHECK-SAME: %[[D:.*3]]: memref<?xindex>,
 //  CHECK-SAME: %[[E:.*4]]: index,
-//  CHECK-SAME: %[[F:.*5]]: index)
+//  CHECK-SAME: %[[F:.*5]]: index) -> !llvm.ptr<i8> {
 //   CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG: %[[X:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[Y:.*]] = memref.cast %[[X]] : memref<2xindex> to memref<?xindex>
@@ -368,16 +368,16 @@ func.func @sparse_expansion3(%arg0: index, %arg1: index) -> memref<?xindex> {
 //   CHECK-DAG: memref.dealloc %[[B]] : memref<?xf64>
 //   CHECK-DAG: memref.dealloc %[[C]] : memref<?xi1>
 //   CHECK-DAG: memref.dealloc %[[D]] : memref<?xindex>
-//       CHECK: return
+//       CHECK: return %[[A]] : !llvm.ptr<i8>
 func.func @sparse_compression(%tensor: tensor<8x8xf64, #CSR>,
                               %values: memref<?xf64>,
                               %filled: memref<?xi1>,
                               %added: memref<?xindex>,
                               %count: index,
-                              %i: index) {
-  sparse_tensor.compress %values, %filled, %added, %count into %tensor[%i]
+                              %i: index) -> tensor<8x8xf64, #CSR> {
+  %0 = sparse_tensor.compress %values, %filled, %added, %count into %tensor[%i]
     : memref<?xf64>, memref<?xi1>, memref<?xindex>, tensor<8x8xf64, #CSR>
-  return
+  return %0 : tensor<8x8xf64, #CSR>
 }
 
 // CHECK-LABEL: func @sparse_out1(
