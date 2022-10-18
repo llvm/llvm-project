@@ -43,6 +43,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRBufferizationDialect
   MLIRBufferizationTransforms
   MLIRComplexDialect
+  MLIRDestinationStyleOpInterface
   MLIRDialectUtils
   MLIRFuncDialect
   MLIRFuncToLLVM
