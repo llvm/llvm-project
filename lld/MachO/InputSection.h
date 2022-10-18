@@ -64,11 +64,12 @@ public:
 protected:
   InputSection(Kind kind, const Section &section, ArrayRef<uint8_t> data,
                uint32_t align)
-      : sectionKind(kind), align(align), data(data), section(section) {}
+      : sectionKind(kind), keepUnique(false), hasAltEntry(false), align(align),
+        data(data), section(section) {}
 
   InputSection(const InputSection &rhs)
-      : sectionKind(rhs.sectionKind), align(rhs.align), data(rhs.data),
-        section(rhs.section) {}
+      : sectionKind(rhs.sectionKind), keepUnique(false), hasAltEntry(false),
+        align(rhs.align), data(rhs.data), section(rhs.section) {}
 
   Kind sectionKind;
 
@@ -77,7 +78,10 @@ public:
   bool isFinal = false;
   // keep the address of the symbol(s) in this section unique in the final
   // binary ?
-  bool keepUnique = false;
+  bool keepUnique : 1;
+  // Does this section have symbols at offsets other than zero? (NOTE: only
+  // applies to ConcatInputSections.)
+  bool hasAltEntry : 1;
   uint32_t align = 1;
 
   OutputSection *parent = nullptr;
