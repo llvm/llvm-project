@@ -1050,18 +1050,31 @@ define amdgpu_kernel void @v_test_canonicalize_var_f64(ptr addrspace(1) %out) #1
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX11PLUS-LABEL: v_test_canonicalize_var_f64:
-; GFX11PLUS:       ; %bb.0:
-; GFX11PLUS-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX11PLUS-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11PLUS-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11PLUS-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
-; GFX11PLUS-NEXT:    s_waitcnt vmcnt(0)
-; GFX11PLUS-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX11PLUS-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11PLUS-NEXT:    s_nop 0
-; GFX11PLUS-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX11PLUS-NEXT:    s_endpgm
+; GFX11-LABEL: v_test_canonicalize_var_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX11-NEXT:    s_nop 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: v_test_canonicalize_var_f64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
+; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
+; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
   %val = load double, ptr addrspace(1) %out
   %canonicalized = call double @llvm.canonicalize.f64(double %val)
   store double %canonicalized, ptr addrspace(1) %out
@@ -1098,16 +1111,27 @@ define amdgpu_kernel void @s_test_canonicalize_var_f64(ptr addrspace(1) %out, do
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX11PLUS-LABEL: s_test_canonicalize_var_f64:
-; GFX11PLUS:       ; %bb.0:
-; GFX11PLUS-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX11PLUS-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11PLUS-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11PLUS-NEXT:    v_max_f64 v[0:1], s[2:3], s[2:3]
-; GFX11PLUS-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11PLUS-NEXT:    s_nop 0
-; GFX11PLUS-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX11PLUS-NEXT:    s_endpgm
+; GFX11-LABEL: s_test_canonicalize_var_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    v_max_f64 v[0:1], s[2:3], s[2:3]
+; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX11-NEXT:    s_nop 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: s_test_canonicalize_var_f64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    v_max_num_f64_e64 v[0:1], s[2:3], s[2:3]
+; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
   %canonicalized = call double @llvm.canonicalize.f64(double %val)
   store double %canonicalized, ptr addrspace(1) %out
   ret void
@@ -1137,18 +1161,31 @@ define amdgpu_kernel void @v_test_canonicalize_fabs_var_f64(ptr addrspace(1) %ou
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX11PLUS-LABEL: v_test_canonicalize_fabs_var_f64:
-; GFX11PLUS:       ; %bb.0:
-; GFX11PLUS-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX11PLUS-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11PLUS-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11PLUS-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
-; GFX11PLUS-NEXT:    s_waitcnt vmcnt(0)
-; GFX11PLUS-NEXT:    v_max_f64 v[0:1], |v[0:1]|, |v[0:1]|
-; GFX11PLUS-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11PLUS-NEXT:    s_nop 0
-; GFX11PLUS-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX11PLUS-NEXT:    s_endpgm
+; GFX11-LABEL: v_test_canonicalize_fabs_var_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_max_f64 v[0:1], |v[0:1]|, |v[0:1]|
+; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX11-NEXT:    s_nop 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: v_test_canonicalize_fabs_var_f64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
+; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    v_max_num_f64_e64 v[0:1], |v[0:1]|, |v[0:1]|
+; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
   %val = load double, ptr addrspace(1) %out
   %val.fabs = call double @llvm.fabs.f64(double %val)
   %canonicalized = call double @llvm.canonicalize.f64(double %val.fabs)
@@ -1180,18 +1217,31 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_fabs_var_f64(ptr addrspace(1
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX11PLUS-LABEL: v_test_canonicalize_fneg_fabs_var_f64:
-; GFX11PLUS:       ; %bb.0:
-; GFX11PLUS-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX11PLUS-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11PLUS-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11PLUS-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
-; GFX11PLUS-NEXT:    s_waitcnt vmcnt(0)
-; GFX11PLUS-NEXT:    v_max_f64 v[0:1], -|v[0:1]|, -|v[0:1]|
-; GFX11PLUS-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11PLUS-NEXT:    s_nop 0
-; GFX11PLUS-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX11PLUS-NEXT:    s_endpgm
+; GFX11-LABEL: v_test_canonicalize_fneg_fabs_var_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_max_f64 v[0:1], -|v[0:1]|, -|v[0:1]|
+; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX11-NEXT:    s_nop 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: v_test_canonicalize_fneg_fabs_var_f64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
+; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    v_max_num_f64_e64 v[0:1], -|v[0:1]|, -|v[0:1]|
+; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
   %val = load double, ptr addrspace(1) %out
   %val.fabs = call double @llvm.fabs.f64(double %val)
   %val.fabs.fneg = fneg double %val.fabs
@@ -1224,18 +1274,31 @@ define amdgpu_kernel void @v_test_canonicalize_fneg_var_f64(ptr addrspace(1) %ou
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX11PLUS-LABEL: v_test_canonicalize_fneg_var_f64:
-; GFX11PLUS:       ; %bb.0:
-; GFX11PLUS-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX11PLUS-NEXT:    v_mov_b32_e32 v2, 0
-; GFX11PLUS-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11PLUS-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
-; GFX11PLUS-NEXT:    s_waitcnt vmcnt(0)
-; GFX11PLUS-NEXT:    v_max_f64 v[0:1], -v[0:1], -v[0:1]
-; GFX11PLUS-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
-; GFX11PLUS-NEXT:    s_nop 0
-; GFX11PLUS-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX11PLUS-NEXT:    s_endpgm
+; GFX11-LABEL: v_test_canonicalize_fneg_var_f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_max_f64 v[0:1], -v[0:1], -v[0:1]
+; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX11-NEXT:    s_nop 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: v_test_canonicalize_fneg_var_f64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v2, 0
+; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
+; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    v_max_num_f64_e64 v[0:1], -v[0:1], -v[0:1]
+; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
   %val = load double, ptr addrspace(1) %out
   %val.fneg = fneg double %val
   %canonicalized = call double @llvm.canonicalize.f64(double %val.fneg)
@@ -1859,18 +1922,31 @@ define amdgpu_kernel void @test_canonicalize_value_f64_flush(ptr addrspace(1) %a
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX11PLUS-LABEL: test_canonicalize_value_f64_flush:
-; GFX11PLUS:       ; %bb.0:
-; GFX11PLUS-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX11PLUS-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
-; GFX11PLUS-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11PLUS-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
-; GFX11PLUS-NEXT:    s_waitcnt vmcnt(0)
-; GFX11PLUS-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX11PLUS-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
-; GFX11PLUS-NEXT:    s_nop 0
-; GFX11PLUS-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX11PLUS-NEXT:    s_endpgm
+; GFX11-LABEL: test_canonicalize_value_f64_flush:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
+; GFX11-NEXT:    s_nop 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: test_canonicalize_value_f64_flush:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
+; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
+; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds double, ptr addrspace(1) %arg, i32 %id
   %v = load double, ptr addrspace(1) %gep, align 8
@@ -2180,18 +2256,31 @@ define amdgpu_kernel void @test_canonicalize_value_f64_denorm(ptr addrspace(1) %
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX11PLUS-LABEL: test_canonicalize_value_f64_denorm:
-; GFX11PLUS:       ; %bb.0:
-; GFX11PLUS-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
-; GFX11PLUS-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
-; GFX11PLUS-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11PLUS-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
-; GFX11PLUS-NEXT:    s_waitcnt vmcnt(0)
-; GFX11PLUS-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX11PLUS-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
-; GFX11PLUS-NEXT:    s_nop 0
-; GFX11PLUS-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX11PLUS-NEXT:    s_endpgm
+; GFX11-LABEL: test_canonicalize_value_f64_denorm:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
+; GFX11-NEXT:    s_nop 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: test_canonicalize_value_f64_denorm:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    global_load_b64 v[0:1], v2, s[0:1]
+; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
+; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds double, ptr addrspace(1) %arg, i32 %id
   %v = load double, ptr addrspace(1) %gep, align 8
@@ -2504,20 +2593,35 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f64(ptr addrspace(1) %out) 
 ; GFX9-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
-; GFX11PLUS-LABEL: v_test_canonicalize_var_v2f64:
-; GFX11PLUS:       ; %bb.0:
-; GFX11PLUS-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
-; GFX11PLUS-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
-; GFX11PLUS-NEXT:    v_mov_b32_e32 v4, 0
-; GFX11PLUS-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11PLUS-NEXT:    global_load_b128 v[0:3], v0, s[0:1]
-; GFX11PLUS-NEXT:    s_waitcnt vmcnt(0)
-; GFX11PLUS-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX11PLUS-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX11PLUS-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
-; GFX11PLUS-NEXT:    s_nop 0
-; GFX11PLUS-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX11PLUS-NEXT:    s_endpgm
+; GFX11-LABEL: v_test_canonicalize_var_v2f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    global_load_b128 v[0:3], v0, s[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX11-NEXT:    s_nop 0
+; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: v_test_canonicalize_var_v2f64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; GFX12-NEXT:    v_mov_b32_e32 v4, 0
+; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX12-NEXT:    global_load_b128 v[0:3], v0, s[0:1]
+; GFX12-NEXT:    s_waitcnt vmcnt(0)
+; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
+; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
+; GFX12-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <2 x double>, ptr addrspace(1) %out, i32 %tid
   %val = load <2 x double>, ptr addrspace(1) %gep
@@ -2693,12 +2797,19 @@ define <2 x double> @v_test_canonicalize_v2f64(<2 x double> %arg) #1 {
 ; GFX9-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11PLUS-LABEL: v_test_canonicalize_v2f64:
-; GFX11PLUS:       ; %bb.0:
-; GFX11PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11PLUS-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX11PLUS-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX11PLUS-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: v_test_canonicalize_v2f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX11-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_test_canonicalize_v2f64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
+; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <2 x double> @llvm.canonicalize.v2f64(<2 x double> %arg)
   ret <2 x double> %canon
 }
@@ -2720,13 +2831,21 @@ define <3 x double> @v_test_canonicalize_v3f64(<3 x double> %arg) #1 {
 ; GFX9-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11PLUS-LABEL: v_test_canonicalize_v3f64:
-; GFX11PLUS:       ; %bb.0:
-; GFX11PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11PLUS-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX11PLUS-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX11PLUS-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
-; GFX11PLUS-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: v_test_canonicalize_v3f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX11-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX11-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_test_canonicalize_v3f64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
+; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
+; GFX12-NEXT:    v_max_num_f64_e32 v[4:5], v[4:5], v[4:5]
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <3 x double> @llvm.canonicalize.v3f64(<3 x double> %arg)
   ret <3 x double> %canon
 }
@@ -2750,14 +2869,23 @@ define <4 x double> @v_test_canonicalize_v4f64(<4 x double> %arg) #1 {
 ; GFX9-NEXT:    v_max_f64 v[6:7], v[6:7], v[6:7]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11PLUS-LABEL: v_test_canonicalize_v4f64:
-; GFX11PLUS:       ; %bb.0:
-; GFX11PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11PLUS-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
-; GFX11PLUS-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
-; GFX11PLUS-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
-; GFX11PLUS-NEXT:    v_max_f64 v[6:7], v[6:7], v[6:7]
-; GFX11PLUS-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: v_test_canonicalize_v4f64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
+; GFX11-NEXT:    v_max_f64 v[2:3], v[2:3], v[2:3]
+; GFX11-NEXT:    v_max_f64 v[4:5], v[4:5], v[4:5]
+; GFX11-NEXT:    v_max_f64 v[6:7], v[6:7], v[6:7]
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: v_test_canonicalize_v4f64:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
+; GFX12-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[2:3]
+; GFX12-NEXT:    v_max_num_f64_e32 v[4:5], v[4:5], v[4:5]
+; GFX12-NEXT:    v_max_num_f64_e32 v[6:7], v[6:7], v[6:7]
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %canon = call <4 x double> @llvm.canonicalize.v4f64(<4 x double> %arg)
   ret <4 x double> %canon
 }
