@@ -32,11 +32,13 @@ class _LIBCPP_TYPE_VIS memory_resource {
 public:
   virtual ~memory_resource() = default;
 
-  _LIBCPP_HIDE_FROM_ABI void* allocate(size_t __bytes, size_t __align = __max_align) {
+  [[using __gnu__: __returns_nonnull__, __alloc_size__(2), __alloc_align__(3)]] _LIBCPP_HIDE_FROM_ABI void*
+  allocate(size_t __bytes, size_t __align = __max_align) {
     return do_allocate(__bytes, __align);
   }
 
-  _LIBCPP_HIDE_FROM_ABI void deallocate(void* __p, size_t __bytes, size_t __align = __max_align) {
+  [[__gnu__::__nonnull__]] _LIBCPP_HIDE_FROM_ABI void
+  deallocate(void* __p, size_t __bytes, size_t __align = __max_align) {
     do_deallocate(__p, __bytes, __align);
   }
 
@@ -61,13 +63,10 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const memory_resource& __lhs, const
 
 // [mem.res.global]
 
-_LIBCPP_FUNC_VIS memory_resource* get_default_resource() noexcept;
-
-_LIBCPP_FUNC_VIS memory_resource* set_default_resource(memory_resource*) noexcept;
-
-_LIBCPP_FUNC_VIS memory_resource* new_delete_resource() noexcept;
-
-_LIBCPP_FUNC_VIS memory_resource* null_memory_resource() noexcept;
+[[__gnu__::__returns_nonnull__]] _LIBCPP_FUNC_VIS memory_resource* get_default_resource() noexcept;
+[[__gnu__::__returns_nonnull__]] _LIBCPP_FUNC_VIS memory_resource* set_default_resource(memory_resource*) noexcept;
+[[using __gnu__: __returns_nonnull__, __const__]] _LIBCPP_FUNC_VIS memory_resource* new_delete_resource() noexcept;
+[[using __gnu__: __returns_nonnull__, __const__]] _LIBCPP_FUNC_VIS memory_resource* null_memory_resource() noexcept;
 
 } // namespace pmr
 

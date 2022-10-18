@@ -55,12 +55,6 @@ void testAllocForSizeThrows() {
 
   // Test that allocating exactly the max size does not throw.
   size_t maxSize = Traits::max_size(a);
-  try {
-    a.allocate(maxSize);
-  } catch (...) {
-    assert(false);
-  }
-
   size_t sizeTypeMax = std::numeric_limits<std::size_t>::max();
   if (maxSize != sizeTypeMax) {
     // Test that allocating size_t(~0) throws bad alloc.
