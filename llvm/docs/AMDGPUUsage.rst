@@ -3974,7 +3974,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        ``COMPUTE_PGM_RSRC3``
                                                        configuration
                                                        register. See
-                                                       :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
+                                                       :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx12-table`.
      415:384 4 bytes COMPUTE_PGM_RSRC1               Compute Shader (CS)
                                                      program settings used by
                                                      CP to set up
@@ -3988,7 +3988,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      ``COMPUTE_PGM_RSRC2``
                                                      configuration
                                                      register. See
-                                                     :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
+                                                     :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
      458:448 7 bits  *See separate bits below.*      Enable the setup of the
                                                      SGPR user data registers
                                                      (see
@@ -4348,8 +4348,8 @@ The fields used by CP for code objects before V3 also match those specified in
 
 ..
 
-  .. table:: compute_pgm_rsrc2 for GFX6-GFX11
-     :name: amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table
+  .. table:: compute_pgm_rsrc2 for GFX6-GFX12
+     :name: amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table
 
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
@@ -4542,8 +4542,8 @@ The fields used by CP for code objects before V3 also match those specified in
 
 ..
 
-  .. table:: compute_pgm_rsrc3 for GFX10-GFX11
-     :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table
+  .. table:: compute_pgm_rsrc3 for GFX10-GFX12
+     :name: amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx12-table
 
      ======= ======= =============================== ===========================================================================
      Bits    Size    Field Name                      Description
@@ -4975,7 +4975,7 @@ There are different methods used for initializing flat scratch:
   specifies *Architected flat scratch*:
 
   If ENABLE_PRIVATE_SEGMENT is enabled in
-  :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table` then the FLAT_SCRATCH
+  :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table` then the FLAT_SCRATCH
   register pair will be initialized to the 64-bit address of the base of scratch
   backing memory being managed by SPI for the queue executing the kernel
   dispatch plus the value of the wave's Scratch Wavefront Offset for use as the
@@ -14868,63 +14868,63 @@ terminated by an ``.end_amdhsa_kernel`` directive.
      ======================================================== =================== ============ ===================
      Directive                                                Default             Supported On Description
      ======================================================== =================== ============ ===================
-     ``.amdhsa_group_segment_fixed_size``                     0                   GFX6-GFX11   Controls GROUP_SEGMENT_FIXED_SIZE in
+     ``.amdhsa_group_segment_fixed_size``                     0                   GFX6-GFX12   Controls GROUP_SEGMENT_FIXED_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-     ``.amdhsa_private_segment_fixed_size``                   0                   GFX6-GFX11   Controls PRIVATE_SEGMENT_FIXED_SIZE in
+     ``.amdhsa_private_segment_fixed_size``                   0                   GFX6-GFX12   Controls PRIVATE_SEGMENT_FIXED_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-     ``.amdhsa_kernarg_size``                                 0                   GFX6-GFX11   Controls KERNARG_SIZE in
+     ``.amdhsa_kernarg_size``                                 0                   GFX6-GFX12   Controls KERNARG_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-     ``.amdhsa_user_sgpr_count``                              0                   GFX6-GFX11   Controls USER_SGPR_COUNT in COMPUTE_PGM_RSRC2
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`
+     ``.amdhsa_user_sgpr_count``                              0                   GFX6-GFX12   Controls USER_SGPR_COUNT in COMPUTE_PGM_RSRC2
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`
      ``.amdhsa_user_sgpr_private_segment_buffer``             0                   GFX6-GFX10   Controls ENABLE_SGPR_PRIVATE_SEGMENT_BUFFER in
                                                                                   (except      :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                                                   GFX940)
-     ``.amdhsa_user_sgpr_dispatch_ptr``                       0                   GFX6-GFX11   Controls ENABLE_SGPR_DISPATCH_PTR in
+     ``.amdhsa_user_sgpr_dispatch_ptr``                       0                   GFX6-GFX12   Controls ENABLE_SGPR_DISPATCH_PTR in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-     ``.amdhsa_user_sgpr_queue_ptr``                          0                   GFX6-GFX11   Controls ENABLE_SGPR_QUEUE_PTR in
+     ``.amdhsa_user_sgpr_queue_ptr``                          0                   GFX6-GFX12   Controls ENABLE_SGPR_QUEUE_PTR in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-     ``.amdhsa_user_sgpr_kernarg_segment_ptr``                0                   GFX6-GFX11   Controls ENABLE_SGPR_KERNARG_SEGMENT_PTR in
+     ``.amdhsa_user_sgpr_kernarg_segment_ptr``                0                   GFX6-GFX12   Controls ENABLE_SGPR_KERNARG_SEGMENT_PTR in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-     ``.amdhsa_user_sgpr_dispatch_id``                        0                   GFX6-GFX11   Controls ENABLE_SGPR_DISPATCH_ID in
+     ``.amdhsa_user_sgpr_dispatch_id``                        0                   GFX6-GFX12   Controls ENABLE_SGPR_DISPATCH_ID in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_user_sgpr_flat_scratch_init``                  0                   GFX6-GFX10   Controls ENABLE_SGPR_FLAT_SCRATCH_INIT in
                                                                                   (except      :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                                                   GFX940)
-     ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX6-GFX11   Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
+     ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX6-GFX12   Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-     ``.amdhsa_wavefront_size32``                             Target              GFX10-GFX11  Controls ENABLE_WAVEFRONT_SIZE32 in
+     ``.amdhsa_wavefront_size32``                             Target              GFX10-GFX12  Controls ENABLE_WAVEFRONT_SIZE32 in
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                               Specific
                                                               (wavefrontsize64)
-     ``.amdhsa_uses_dynamic_stack``                           0                   GFX6-GFX11   Controls USES_DYNAMIC_STACK in
+     ``.amdhsa_uses_dynamic_stack``                           0                   GFX6-GFX12   Controls USES_DYNAMIC_STACK in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_PRIVATE_SEGMENT in
-                                                                                  (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
+                                                                                  (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
                                                                                   GFX940)
      ``.amdhsa_enable_private_segment``                       0                   GFX940,      Controls ENABLE_PRIVATE_SEGMENT in
-                                                                                  GFX11        :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
-     ``.amdhsa_system_sgpr_workgroup_id_x``                   1                   GFX6-GFX11   Controls ENABLE_SGPR_WORKGROUP_ID_X in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
-     ``.amdhsa_system_sgpr_workgroup_id_y``                   0                   GFX6-GFX11   Controls ENABLE_SGPR_WORKGROUP_ID_Y in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
-     ``.amdhsa_system_sgpr_workgroup_id_z``                   0                   GFX6-GFX11   Controls ENABLE_SGPR_WORKGROUP_ID_Z in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
-     ``.amdhsa_system_sgpr_workgroup_info``                   0                   GFX6-GFX11   Controls ENABLE_SGPR_WORKGROUP_INFO in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
-     ``.amdhsa_system_vgpr_workitem_id``                      0                   GFX6-GFX11   Controls ENABLE_VGPR_WORKITEM_ID in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
+                                                                                  GFX11-GFX12  :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+     ``.amdhsa_system_sgpr_workgroup_id_x``                   1                   GFX6-GFX12   Controls ENABLE_SGPR_WORKGROUP_ID_X in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+     ``.amdhsa_system_sgpr_workgroup_id_y``                   0                   GFX6-GFX12   Controls ENABLE_SGPR_WORKGROUP_ID_Y in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+     ``.amdhsa_system_sgpr_workgroup_id_z``                   0                   GFX6-GFX12   Controls ENABLE_SGPR_WORKGROUP_ID_Z in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+     ``.amdhsa_system_sgpr_workgroup_info``                   0                   GFX6-GFX12   Controls ENABLE_SGPR_WORKGROUP_INFO in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+     ``.amdhsa_system_vgpr_workitem_id``                      0                   GFX6-GFX12   Controls ENABLE_VGPR_WORKITEM_ID in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
                                                                                                Possible values are defined in
                                                                                                :ref:`amdgpu-amdhsa-system-vgpr-work-item-id-enumeration-values-table`.
-     ``.amdhsa_next_free_vgpr``                               Required            GFX6-GFX11   Maximum VGPR number explicitly referenced, plus one.
+     ``.amdhsa_next_free_vgpr``                               Required            GFX6-GFX12   Maximum VGPR number explicitly referenced, plus one.
                                                                                                Used to calculate GRANULATED_WORKITEM_VGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
-     ``.amdhsa_next_free_sgpr``                               Required            GFX6-GFX11   Maximum SGPR number explicitly referenced, plus one.
+     ``.amdhsa_next_free_sgpr``                               Required            GFX6-GFX12   Maximum SGPR number explicitly referenced, plus one.
                                                                                                Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_accum_offset``                                 Required            GFX90A,      Offset of a first AccVGPR in the unified register file.
                                                                                   GFX940       Used to calculate ACCUM_OFFSET in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
-     ``.amdhsa_reserve_vcc``                                  1                   GFX6-GFX11   Whether the kernel may use the special VCC SGPR.
+     ``.amdhsa_reserve_vcc``                                  1                   GFX6-GFX12   Whether the kernel may use the special VCC SGPR.
                                                                                                Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_reserve_flat_scratch``                         1                   GFX7-GFX10   Whether the kernel may use flat instructions to access
@@ -14935,19 +14935,19 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                               Feature                          Used to calculate GRANULATED_WAVEFRONT_SGPR_COUNT in
                                                               Specific                         :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
                                                               (xnack)
-     ``.amdhsa_float_round_mode_32``                          0                   GFX6-GFX11   Controls FLOAT_ROUND_MODE_32 in
+     ``.amdhsa_float_round_mode_32``                          0                   GFX6-GFX12   Controls FLOAT_ROUND_MODE_32 in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
                                                                                                Possible values are defined in
                                                                                                :ref:`amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table`.
-     ``.amdhsa_float_round_mode_16_64``                       0                   GFX6-GFX11   Controls FLOAT_ROUND_MODE_16_64 in
+     ``.amdhsa_float_round_mode_16_64``                       0                   GFX6-GFX12   Controls FLOAT_ROUND_MODE_16_64 in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
                                                                                                Possible values are defined in
                                                                                                :ref:`amdgpu-amdhsa-floating-point-rounding-mode-enumeration-values-table`.
-     ``.amdhsa_float_denorm_mode_32``                         0                   GFX6-GFX11   Controls FLOAT_DENORM_MODE_32 in
+     ``.amdhsa_float_denorm_mode_32``                         0                   GFX6-GFX12   Controls FLOAT_DENORM_MODE_32 in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
                                                                                                Possible values are defined in
                                                                                                :ref:`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
-     ``.amdhsa_float_denorm_mode_16_64``                      3                   GFX6-GFX11   Controls FLOAT_DENORM_MODE_16_64 in
+     ``.amdhsa_float_denorm_mode_16_64``                      3                   GFX6-GFX12   Controls FLOAT_DENORM_MODE_16_64 in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
                                                                                                Possible values are defined in
                                                                                                :ref:`amdgpu-amdhsa-floating-point-denorm-mode-enumeration-values-table`.
@@ -14957,36 +14957,36 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_round_robin_scheduling``                       0                   GFX12        Controls ENABLE_WG_RR_EN in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
-     ``.amdhsa_fp16_overflow``                                0                   GFX9-GFX11   Controls FP16_OVFL in
+     ``.amdhsa_fp16_overflow``                                0                   GFX9-GFX12   Controls FP16_OVFL in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
      ``.amdhsa_tg_split``                                     Target              GFX90A,      Controls TG_SPLIT in
                                                               Feature             GFX940,      :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx90a-table`.
-                                                              Specific            GFX11
+                                                              Specific            GFX11-GFX12
                                                               (tgsplit)
-     ``.amdhsa_workgroup_processor_mode``                     Target              GFX10-GFX11  Controls ENABLE_WGP_MODE in
+     ``.amdhsa_workgroup_processor_mode``                     Target              GFX10-GFX12  Controls ENABLE_WGP_MODE in
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
                                                               Specific
                                                               (cumode)
-     ``.amdhsa_memory_ordered``                               1                   GFX10-GFX11  Controls MEM_ORDERED in
+     ``.amdhsa_memory_ordered``                               1                   GFX10-GFX12  Controls MEM_ORDERED in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
-     ``.amdhsa_forward_progress``                             0                   GFX10-GFX11  Controls FWD_PROGRESS in
+     ``.amdhsa_forward_progress``                             0                   GFX10-GFX12  Controls FWD_PROGRESS in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc1-gfx6-gfx12-table`.
-     ``.amdhsa_shared_vgpr_count``                            0                   GFX10-GFX11  Controls SHARED_VGPR_COUNT in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx11-table`.
-     ``.amdhsa_exception_fp_ieee_invalid_op``                 0                   GFX6-GFX11   Controls ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
-     ``.amdhsa_exception_fp_denorm_src``                      0                   GFX6-GFX11   Controls ENABLE_EXCEPTION_FP_DENORMAL_SOURCE in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
-     ``.amdhsa_exception_fp_ieee_div_zero``                   0                   GFX6-GFX11   Controls ENABLE_EXCEPTION_IEEE_754_FP_DIVISION_BY_ZERO in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
-     ``.amdhsa_exception_fp_ieee_overflow``                   0                   GFX6-GFX11   Controls ENABLE_EXCEPTION_IEEE_754_FP_OVERFLOW in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
-     ``.amdhsa_exception_fp_ieee_underflow``                  0                   GFX6-GFX11   Controls ENABLE_EXCEPTION_IEEE_754_FP_UNDERFLOW in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
-     ``.amdhsa_exception_fp_ieee_inexact``                    0                   GFX6-GFX11   Controls ENABLE_EXCEPTION_IEEE_754_FP_INEXACT in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
-     ``.amdhsa_exception_int_div_zero``                       0                   GFX6-GFX11   Controls ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO in
-                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx11-table`.
+     ``.amdhsa_shared_vgpr_count``                            0                   GFX10-GFX12  Controls SHARED_VGPR_COUNT in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx10-gfx12-table`.
+     ``.amdhsa_exception_fp_ieee_invalid_op``                 0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_INVALID_OPERATION in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+     ``.amdhsa_exception_fp_denorm_src``                      0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_FP_DENORMAL_SOURCE in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+     ``.amdhsa_exception_fp_ieee_div_zero``                   0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_DIVISION_BY_ZERO in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+     ``.amdhsa_exception_fp_ieee_overflow``                   0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_OVERFLOW in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+     ``.amdhsa_exception_fp_ieee_underflow``                  0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_UNDERFLOW in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+     ``.amdhsa_exception_fp_ieee_inexact``                    0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_IEEE_754_FP_INEXACT in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
+     ``.amdhsa_exception_int_div_zero``                       0                   GFX6-GFX12   Controls ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO in
+                                                                                               :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx12-table`.
      ======================================================== =================== ============ ===================
 
 .amdgpu_metadata
