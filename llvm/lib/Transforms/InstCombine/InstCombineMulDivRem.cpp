@@ -521,6 +521,13 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
   if (match(Op1, m_SpecificFP(-1.0)))
     return UnaryOperator::CreateFNegFMF(Op0, &I);
 
+  // With no-nans: X * 0.0 --> copysign(0.0, X)
+  if (I.hasNoNaNs() && match(Op1, m_PosZeroFP())) {
+    CallInst *CopySign = Builder.CreateIntrinsic(Intrinsic::copysign,
+                                                 {I.getType()}, {Op1, Op0}, &I);
+    return replaceInstUsesWith(I, CopySign);
+  }
+
   // -X * C --> X * -C
   Value *X, *Y;
   Constant *C;
