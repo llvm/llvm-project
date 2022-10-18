@@ -13,6 +13,7 @@ group("unittests") {
     "DebugInfo/CodeView:DebugInfoCodeViewTests",
     "DebugInfo/DWARF:DebugInfoDWARFTests",
     "DebugInfo/GSYM:DebugInfoGSYMTests",
+    "DebugInfo/LogicalView:DebugInfoLogicalViewTests",
     "DebugInfo/MSF:DebugInfoMSFTests",
     "DebugInfo/PDB:DebugInfoPDBTests",
     "DebugInfo/Symbolizer:DebugInfoSymbolizerTests",

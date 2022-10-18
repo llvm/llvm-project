@@ -184,7 +184,7 @@ Status NativeRegisterContextLinux_ppc64le::ReadRegister(
     uint32_t fpr_offset = CalculateFprOffset(reg_info);
     assert(fpr_offset < sizeof m_fpr_ppc64le);
     uint8_t *src = (uint8_t *)&m_fpr_ppc64le + fpr_offset;
-    reg_value.SetFromMemoryData(reg_info, src, reg_info->byte_size,
+    reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
                                 eByteOrderLittle, error);
   } else if (IsVSX(reg)) {
     uint32_t vsx_offset = CalculateVsxOffset(reg_info);
@@ -207,7 +207,7 @@ Status NativeRegisterContextLinux_ppc64le::ReadRegister(
       dst += 8;
       src = (uint8_t *)&m_fpr_ppc64le + vsx_offset / 2;
       ::memcpy(dst, src, 8);
-      reg_value.SetFromMemoryData(reg_info, &value, reg_info->byte_size,
+      reg_value.SetFromMemoryData(*reg_info, &value, reg_info->byte_size,
                                   eByteOrderLittle, error);
     } else {
       error = ReadVMX();
@@ -217,7 +217,7 @@ Status NativeRegisterContextLinux_ppc64le::ReadRegister(
       // Get pointer to m_vmx_ppc64le variable and set the data from it.
       uint32_t vmx_offset = vsx_offset - sizeof(m_vsx_ppc64le) / 2;
       uint8_t *src = (uint8_t *)&m_vmx_ppc64le + vmx_offset;
-      reg_value.SetFromMemoryData(reg_info, src, reg_info->byte_size,
+      reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
                                   eByteOrderLittle, error);
     }
   } else if (IsVMX(reg)) {
@@ -229,7 +229,7 @@ Status NativeRegisterContextLinux_ppc64le::ReadRegister(
     uint32_t vmx_offset = CalculateVmxOffset(reg_info);
     assert(vmx_offset < sizeof m_vmx_ppc64le);
     uint8_t *src = (uint8_t *)&m_vmx_ppc64le + vmx_offset;
-    reg_value.SetFromMemoryData(reg_info, src, reg_info->byte_size,
+    reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
                                 eByteOrderLittle, error);
   } else if (IsGPR(reg)) {
     error = ReadGPR();
@@ -237,7 +237,7 @@ Status NativeRegisterContextLinux_ppc64le::ReadRegister(
       return error;
 
     uint8_t *src = (uint8_t *) &m_gpr_ppc64le + reg_info->byte_offset;
-    reg_value.SetFromMemoryData(reg_info, src, reg_info->byte_size,
+    reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
                                 eByteOrderLittle, error);
   } else {
     return Status("failed - register wasn't recognized to be a GPR, FPR, VSX "

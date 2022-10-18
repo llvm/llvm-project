@@ -168,14 +168,8 @@ def LLVM_UMulWithOverflowOp
 }
 
 
-def LLVM_AssumeOp : LLVM_Op<"intr.assume", []> {
+def LLVM_AssumeOp : LLVM_ZeroResultIntrOp<"assume", []> {
   let arguments = (ins LLVM_Type:$cond);
-  let llvmBuilder = [{
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
-    llvm::Function *fn =
-        llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::assume, {});
-    builder.CreateCall(fn, {$cond});
-  }];
 }
 
 
@@ -308,11 +302,14 @@ def LLVM_vector_reduce_fmul : LLVM_VectorReductionAcc<"fmul">;
 /// isVolatile - True if the load operation is marked as volatile.
 /// columns    - Number of columns in matrix (must be a constant)
 /// stride     - Space between columns
-def LLVM_MatrixColumnMajorLoadOp : LLVM_Op<"intr.matrix.column.major.load"> {
+def LLVM_MatrixColumnMajorLoadOp : LLVM_OneResultIntrOp<"matrix.column.major.load"> {
   let arguments = (ins LLVM_Type:$data, LLVM_Type:$stride, I1Attr:$isVolatile,
                    I32Attr:$rows, I32Attr:$columns);
   let results = (outs LLVM_AnyVector:$res);
   let builders = [LLVM_OneResultOpBuilder];
+  let assemblyFormat = "$data `,` `<` `stride` `=` $stride `>` attr-dict"
+    "`:` type($res) `from` type($data) `stride` type($stride)";
+
   string llvmBuilder = [{
     llvm::MatrixBuilder mb(builder);
     const llvm::DataLayout &dl =
@@ -324,8 +321,11 @@ def LLVM_MatrixColumnMajorLoadOp : LLVM_Op<"intr.matrix.column.major.load"> {
       ElemTy, $data, align, $stride, $isVolatile, $rows,
       $columns);
   }];
-  let assemblyFormat = "$data `,` `<` `stride` `=` $stride `>` attr-dict"
-    "`:` type($res) `from` type($data) `stride` type($stride)";
+  string mlirBuilder = [{
+    $res = $_builder.create<LLVM::MatrixColumnMajorLoadOp>(
+      $_location, $_resultType, $data, $stride,
+      $_int_attr($isVolatile), $_int_attr($rows), $_int_attr($columns));
+  }];
 }
 
 /// Create a column major, strided 2-D matrix store, as specified in the LLVM
@@ -336,11 +336,14 @@ def LLVM_MatrixColumnMajorLoadOp : LLVM_Op<"intr.matrix.column.major.load"> {
 /// rows       - Number of rows in matrix (must be a constant)
 /// columns    - Number of columns in matrix (must be a constant)
 /// stride     - Space between columns
-def LLVM_MatrixColumnMajorStoreOp : LLVM_Op<"intr.matrix.column.major.store"> {
+def LLVM_MatrixColumnMajorStoreOp : LLVM_ZeroResultIntrOp<"matrix.column.major.store"> {
   let arguments = (ins LLVM_AnyVector:$matrix, LLVM_Type:$data,
                    LLVM_Type:$stride, I1Attr:$isVolatile, I32Attr:$rows,
                    I32Attr:$columns);
   let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
+  let assemblyFormat = "$matrix `,` $data `,` `<` `stride` `=` $stride `>` "
+    "attr-dict`:` type($matrix) `to` type($data) `stride` type($stride)";
+
   string llvmBuilder = [{
     llvm::MatrixBuilder mb(builder);
     const llvm::DataLayout &dl =
@@ -352,39 +355,54 @@ def LLVM_MatrixColumnMajorStoreOp : LLVM_Op<"intr.matrix.column.major.store"> {
       $matrix, $data, align, $stride, $isVolatile,
       $rows, $columns);
   }];
-  let assemblyFormat = "$matrix `,` $data `,` `<` `stride` `=` $stride `>` "
-    "attr-dict`:` type($matrix) `to` type($data) `stride` type($stride)";
+  string mlirBuilder = [{
+    $_builder.create<LLVM::MatrixColumnMajorStoreOp>(
+      $_location, $matrix, $data, $stride,
+      $_int_attr($isVolatile), $_int_attr($rows), $_int_attr($columns));
+  }];
 }
 
 /// Create a llvm.matrix.multiply call, multiplying 2-D matrices LHS and RHS, as
 /// specified in the LLVM MatrixBuilder.
-def LLVM_MatrixMultiplyOp : LLVM_Op<"intr.matrix.multiply"> {
+def LLVM_MatrixMultiplyOp : LLVM_OneResultIntrOp<"matrix.multiply"> {
   let arguments = (ins LLVM_Type:$lhs, LLVM_Type:$rhs, I32Attr:$lhs_rows,
                    I32Attr:$lhs_columns, I32Attr:$rhs_columns);
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
+  let assemblyFormat = "$lhs `,` $rhs attr-dict "
+    "`:` `(` type($lhs) `,` type($rhs) `)` `->` type($res)";
+
   string llvmBuilder = [{
     llvm::MatrixBuilder mb(builder);
     $res = mb.CreateMatrixMultiply(
       $lhs, $rhs, $lhs_rows, $lhs_columns,
       $rhs_columns);
   }];
-  let assemblyFormat = "$lhs `,` $rhs attr-dict "
-    "`:` `(` type($lhs) `,` type($rhs) `)` `->` type($res)";
+  string mlirBuilder = [{
+    $res = $_builder.create<LLVM::MatrixMultiplyOp>(
+      $_location, $_resultType, $lhs, $rhs,
+      $_int_attr($lhs_rows), $_int_attr($lhs_columns), $_int_attr($rhs_columns));
+  }];
 }
 
 /// Create a llvm.matrix.transpose call, transposing a `rows` x `columns` 2-D
 /// `matrix`, as specified in the LLVM MatrixBuilder.
-def LLVM_MatrixTransposeOp : LLVM_Op<"intr.matrix.transpose"> {
+def LLVM_MatrixTransposeOp : LLVM_OneResultIntrOp<"matrix.transpose"> {
   let arguments = (ins LLVM_Type:$matrix, I32Attr:$rows, I32Attr:$columns);
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
+  let assemblyFormat = "$matrix attr-dict `:` type($matrix) `into` type($res)";
+
   string llvmBuilder = [{
     llvm::MatrixBuilder mb(builder);
     $res = mb.CreateMatrixTranspose(
       $matrix, $rows, $columns);
   }];
-  let assemblyFormat = "$matrix attr-dict `:` type($matrix) `into` type($res)";
+  string mlirBuilder = [{
+    $res = $_builder.create<LLVM::MatrixTransposeOp>(
+      $_location, $_resultType, $matrix,
+      $_int_attr($rows), $_int_attr($columns));
+  }];
 }
 
 //

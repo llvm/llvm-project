@@ -34,12 +34,12 @@ int car() { return 0; }
 #pragma omp declare target (bar)
 int caz() { return 0; }
 
-// DEVICE-DAG: define{{ protected | }}noundef i32 [[FOO:@.*foo.*]]()
-// DEVICE-DAG: define{{ protected | }}noundef i32 [[BAR:@.*bar.*]]()
-// DEVICE-DAG: define{{ protected | }}noundef i32 [[BAZ:@.*baz.*]]()
-// DEVICE-DAG: define{{ protected | }}noundef i32 [[DOO:@.*doo.*]]()
-// DEVICE-DAG: define{{ protected | }}noundef i32 [[CAR:@.*car.*]]()
-// DEVICE-DAG: define{{ protected | }}noundef i32 [[CAZ:@.*caz.*]]()
+// DEVICE-DAG: define hidden noundef i32 [[FOO:@.*foo.*]]()
+// DEVICE-DAG: define hidden noundef i32 [[BAR:@.*bar.*]]()
+// DEVICE-DAG: define hidden noundef i32 [[BAZ:@.*baz.*]]()
+// DEVICE-DAG: define hidden noundef i32 [[DOO:@.*doo.*]]()
+// DEVICE-DAG: define hidden noundef i32 [[CAR:@.*car.*]]()
+// DEVICE-DAG: define hidden noundef i32 [[CAZ:@.*caz.*]]()
 
 static int c = foo() + bar() + baz();
 #pragma omp declare target (c)

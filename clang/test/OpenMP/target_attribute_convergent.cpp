@@ -9,5 +9,5 @@ void foo() {}
 #pragma omp end declare target
 
 // CHECK: Function Attrs: {{.*}}convergent{{.*}}
-// CHECK: define protected void @_Z3foov() [[ATTRIBUTE_NUMBER:#[0-9]+]]
+// CHECK: define hidden void @_Z3foov() [[ATTRIBUTE_NUMBER:#[0-9]+]]
 // CHECK: attributes [[ATTRIBUTE_NUMBER]] = { {{.*}}convergent{{.*}} }

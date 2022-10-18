@@ -14680,7 +14680,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
       Method = cast<CXXMethodDecl>(Best->Function);
       FoundDecl = Best->FoundDecl;
       CheckUnresolvedMemberAccess(UnresExpr, Best->FoundDecl);
-      if (DiagnoseUseOfDecl(Best->FoundDecl, UnresExpr->getNameLoc()))
+      if (DiagnoseUseOfOverloadedDecl(Best->FoundDecl, UnresExpr->getNameLoc()))
         break;
       // If FoundDecl is different from Method (such as if one is a template
       // and the other a specialization), make sure DiagnoseUseOfDecl is
@@ -14689,7 +14689,7 @@ ExprResult Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
       // DiagnoseUseOfDecl to accept both the FoundDecl and the decl
       // being used.
       if (Method != FoundDecl.getDecl() &&
-                      DiagnoseUseOfDecl(Method, UnresExpr->getNameLoc()))
+          DiagnoseUseOfOverloadedDecl(Method, UnresExpr->getNameLoc()))
         break;
       Succeeded = true;
       break;
