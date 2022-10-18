@@ -72,7 +72,10 @@ void ODRHash::AddDeclarationNameImpl(DeclarationName Name) {
     AddBoolean(S.isUnarySelector());
     unsigned NumArgs = S.getNumArgs();
     ID.AddInteger(NumArgs);
-    for (unsigned i = 0; i < NumArgs; ++i) {
+    // Compare all selector slots. For selectors with arguments it means all arg
+    // slots. And if there are no arguments, compare the first-and-only slot.
+    unsigned SlotsToCheck = NumArgs > 0 ? NumArgs : 1;
+    for (unsigned i = 0; i < SlotsToCheck; ++i) {
       const IdentifierInfo *II = S.getIdentifierInfoForSlot(i);
       AddBoolean(II);
       if (II) {
@@ -347,6 +350,64 @@ public:
     Inherited::VisitCXXMethodDecl(D);
   }
 
+  void VisitObjCMethodDecl(const ObjCMethodDecl *Method) {
+    ID.AddInteger(Method->getDeclKind());
+    Hash.AddBoolean(Method->isInstanceMethod()); // false if class method
+    Hash.AddBoolean(Method->isPropertyAccessor());
+    Hash.AddBoolean(Method->isVariadic());
+    Hash.AddBoolean(Method->isSynthesizedAccessorStub());
+    Hash.AddBoolean(Method->isDefined());
+    Hash.AddBoolean(Method->isOverriding());
+    Hash.AddBoolean(Method->isDirectMethod());
+    Hash.AddBoolean(Method->isThisDeclarationADesignatedInitializer());
+    Hash.AddBoolean(Method->hasSkippedBody());
+
+    ID.AddInteger(Method->getImplementationControl());
+    ID.AddInteger(Method->getMethodFamily());
+    ImplicitParamDecl *Cmd = Method->getCmdDecl();
+    Hash.AddBoolean(Cmd);
+    if (Cmd)
+      ID.AddInteger(Cmd->getParameterKind());
+
+    ImplicitParamDecl *Self = Method->getSelfDecl();
+    Hash.AddBoolean(Self);
+    if (Self)
+      ID.AddInteger(Self->getParameterKind());
+
+    AddDecl(Method);
+
+    AddQualType(Method->getReturnType());
+    ID.AddInteger(Method->param_size());
+    for (auto Param : Method->parameters())
+      Hash.AddSubDecl(Param);
+
+    if (Method->hasBody()) {
+      const bool IsDefinition = Method->isThisDeclarationADefinition();
+      Hash.AddBoolean(IsDefinition);
+      if (IsDefinition) {
+        Stmt *Body = Method->getBody();
+        Hash.AddBoolean(Body);
+        if (Body)
+          AddStmt(Body);
+
+        // Filter out sub-Decls which will not be processed in order to get an
+        // accurate count of Decl's.
+        llvm::SmallVector<const Decl *, 16> Decls;
+        for (Decl *SubDecl : Method->decls())
+          if (ODRHash::isSubDeclToBeProcessed(SubDecl, Method))
+            Decls.push_back(SubDecl);
+
+        ID.AddInteger(Decls.size());
+        for (auto SubDecl : Decls)
+          Hash.AddSubDecl(SubDecl);
+      }
+    } else {
+      Hash.AddBoolean(false);
+    }
+
+    Inherited::VisitObjCMethodDecl(Method);
+  }
+
   void VisitTypedefNameDecl(const TypedefNameDecl *D) {
     AddQualType(D->getUnderlyingType());
 
@@ -460,6 +521,7 @@ bool ODRHash::isSubDeclToBeProcessed(const Decl *D, const DeclContext *Parent) {
     case Decl::TypeAlias:
     case Decl::Typedef:
     case Decl::Var:
+    case Decl::ObjCMethod:
       return true;
   }
 }

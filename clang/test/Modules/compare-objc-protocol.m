@@ -111,3 +111,134 @@ id<CompareProtocolOrder> compareProtocolOrder;
 // expected-error@first.h:* {{'CompareProtocolOrder' has different definitions in different modules; first difference is definition in module 'First.Hidden' found 1st referenced protocol with name 'CommonProtocol'}}
 // expected-note@second.h:* {{but in 'Second' found 1st referenced protocol with different name 'ExtraProtocol'}}
 #endif
+
+#if defined(FIRST)
+@protocol CompareMatchingMethods
+- (float)matchingMethod:(int)arg;
+@end
+
+@protocol CompareMethodPresence1
+- (void)presenceMethod1;
+@end
+@protocol CompareMethodPresence2
+@end
+
+@protocol CompareMethodName
+- (void)methodNameA;
+@end
+
+@protocol CompareMethodArgCount
+- (void)methodArgCount:(int)arg0 :(int)arg1;
+@end
+@protocol CompareMethodArgName
+- (void)methodArgName:(int)argNameA;
+@end
+@protocol CompareMethodArgType
+- (void)methodArgType:(int)argType;
+@end
+
+@protocol CompareMethodReturnType
+- (int)methodReturnType;
+@end
+
+@protocol CompareMethodOrder
+- (void)methodOrderFirst;
+- (void)methodOrderSecond;
+@end
+
+@protocol CompareMethodClassInstance
+- (void)methodClassInstance;
+@end
+
+@protocol CompareMethodRequirednessExplicit
+@optional
+- (void)methodRequiredness;
+@end
+@protocol CompareMethodRequirednessDefault
+// @required is default
+- (void)methodRequiredness;
+@end
+#elif defined(SECOND)
+@protocol CompareMatchingMethods
+- (float)matchingMethod:(int)arg;
+@end
+
+@protocol CompareMethodPresence1
+@end
+@protocol CompareMethodPresence2
+- (void)presenceMethod2;
+@end
+
+@protocol CompareMethodName
+- (void)methodNameB;
+@end
+
+@protocol CompareMethodArgCount
+- (void)methodArgCount:(int)arg0;
+@end
+@protocol CompareMethodArgName
+- (void)methodArgName:(int)argNameB;
+@end
+@protocol CompareMethodArgType
+- (void)methodArgType:(float)argType;
+@end
+
+@protocol CompareMethodReturnType
+- (float)methodReturnType;
+@end
+
+@protocol CompareMethodOrder
+- (void)methodOrderSecond;
+- (void)methodOrderFirst;
+@end
+
+@protocol CompareMethodClassInstance
++ (void)methodClassInstance;
+@end
+
+@protocol CompareMethodRequirednessExplicit
+@required
+- (void)methodRequiredness;
+@end
+@protocol CompareMethodRequirednessDefault
+@required
+- (void)methodRequiredness;
+@end
+#else
+id<CompareMatchingMethods> compareMatchingMethods; // no error
+id<CompareMethodPresence1> compareMethodPresence1;
+// expected-error@first.h:* {{'CompareMethodPresence1' has different definitions in different modules; first difference is definition in module 'First.Hidden' found method}}
+// expected-note@second.h:* {{but in 'Second' found end of class}}
+id<CompareMethodPresence2> compareMethodPresence2;
+// expected-error@first.h:* {{'CompareMethodPresence2' has different definitions in different modules; first difference is definition in module 'First.Hidden' found end of class}}
+// expected-note@second.h:* {{but in 'Second' found method}}
+id<CompareMethodName> compareMethodName;
+// expected-error@first.h:* {{'CompareMethodName' has different definitions in different modules; first difference is definition in module 'First.Hidden' found method 'methodNameA'}}
+// expected-note@second.h:* {{but in 'Second' found different method 'methodNameB'}}
+
+id<CompareMethodArgCount> compareMethodArgCount;
+// expected-error@first.h:* {{'CompareMethodArgCount' has different definitions in different modules; first difference is definition in module 'First.Hidden' found method 'methodArgCount::' that has 2 parameters}}
+// expected-note@second.h:* {{but in 'Second' found method 'methodArgCount:' that has 1 parameter}}
+id<CompareMethodArgName> compareMethodArgName;
+// expected-error@first.h:* {{'CompareMethodArgName' has different definitions in different modules; first difference is definition in module 'First.Hidden' found method 'methodArgName:' with 1st parameter named 'argNameA'}}
+// expected-note@second.h:* {{but in 'Second' found method 'methodArgName:' with 1st parameter named 'argNameB'}}
+id<CompareMethodArgType> compareMethodArgType;
+// expected-error@first.h:* {{'CompareMethodArgType' has different definitions in different modules; first difference is definition in module 'First.Hidden' found method 'methodArgType:' with 1st parameter of type 'int'}}
+// expected-note@second.h:* {{but in 'Second' found method 'methodArgType:' with 1st parameter of type 'float'}}
+
+id<CompareMethodReturnType> compareMethodReturnType;
+// expected-error@first.h:* {{'CompareMethodReturnType' has different definitions in different modules; first difference is definition in module 'First.Hidden' found method 'methodReturnType' with return type 'int'}}
+// expected-note@second.h:* {{but in 'Second' found method 'methodReturnType' with different return type 'float'}}
+
+id<CompareMethodOrder> compareMethodOrder;
+// expected-error@first.h:* {{'CompareMethodOrder' has different definitions in different modules; first difference is definition in module 'First.Hidden' found method 'methodOrderFirst'}}
+// expected-note@second.h:* {{but in 'Second' found different method 'methodOrderSecond'}}
+id<CompareMethodClassInstance> compareMethodClassInstance;
+// expected-error@first.h:* {{'CompareMethodClassInstance' has different definitions in different modules; first difference is definition in module 'First.Hidden' found instance method 'methodClassInstance'}}
+// expected-note@second.h:* {{but in 'Second' found method 'methodClassInstance' as class method}}
+
+id<CompareMethodRequirednessExplicit> compareMethodRequirednessExplicit;
+// expected-error@first.h:* {{'CompareMethodRequirednessExplicit' has different definitions in different modules; first difference is definition in module 'First.Hidden' found 'optional' method control}}
+// expected-note@second.h:* {{but in 'Second' found 'required' method control}}
+id<CompareMethodRequirednessDefault> compareMethodRequirednessDefault; // no error
+#endif
