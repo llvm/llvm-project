@@ -182,6 +182,20 @@ public:
       MachineBasicBlock::iterator II, const DebugLoc &DL, Register DestReg,
       int64_t Amount, MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
 
+  bool useMachineCombiner() const override { return true; }
+
+  void setSpecialOperandAttr(MachineInstr &OldMI1, MachineInstr &OldMI2,
+                             MachineInstr &NewMI1,
+                             MachineInstr &NewMI2) const override;
+  bool
+  getMachineCombinerPatterns(MachineInstr &Root,
+                             SmallVectorImpl<MachineCombinerPattern> &Patterns,
+                             bool DoRegPressureReduce) const override;
+
+  void
+  finalizeInsInstrs(MachineInstr &Root, MachineCombinerPattern &P,
+                    SmallVectorImpl<MachineInstr *> &InsInstrs) const override;
+
 protected:
   const RISCVSubtarget &STI;
 };
@@ -203,6 +217,10 @@ bool isFaultFirstLoad(const MachineInstr &MI);
 
 // Implemented in RISCVGenInstrInfo.inc
 int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIndex);
+
+// Return true if both input instructions have equal rounding mode. If at least
+// one of the instructions does not have rounding mode, false will be returned.
+bool hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2);
 
 // Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
 static constexpr int64_t VLMaxSentinel = -1LL;
