@@ -9,7 +9,10 @@ define i32 @add(i32 %a, i32 %b) {
 }
 
 ; CHECK: @dx.dxil = private constant [[BC_TYPE:\[[0-9]+ x i8\]]] c"BC\C0\DE{{[^"]+}}", section "DXIL", align 4
-; CHECK: @llvm.compiler.used = appending global [1 x ptr] [ptr @dx.dxil], section "llvm.metadata"
+
+; The dxil global should be the first here because we generate it before the
+; other globals. If it isn't the first here, that's probably a bug.
+; CHECK: @llvm.compiler.used = appending global {{\[[0-9]+ x ptr\]}} [ptr @dx.dxil
 
 ; This is using regex matches on some sizes, offsets and fields. These are all
 ; going to change as the DirectX backend continues to evolve and implement more
@@ -41,3 +44,6 @@ define i32 @add(i32 %a, i32 %b) {
 ; DXC-NEXT:       DXILMinorVersion: [[#]]
 ; DXC-NEXT:       DXILSize:        [[#SIZE - 32]]
 ; DXC-NEXT:       DXIL:            [ 0x42, 0x43, 0xC0, 0xDE,
+; DXC:      - Name:            SFI0
+; DXC-NEXT:   Size:            16
+; DXC-NOT:    Flags:
