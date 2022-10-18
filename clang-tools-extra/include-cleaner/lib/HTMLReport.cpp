@@ -25,7 +25,16 @@ namespace clang::include_cleaner {
 namespace {
 
 constexpr llvm::StringLiteral CSS = R"css(
-  pre { line-height: 1.5em; }
+  body { margin: 0; }
+  pre { line-height: 1.5em; counter-reset: line; margin: 0; }
+  pre .line { counter-increment: line; }
+  pre .line::before {
+    content: counter(line);
+    display: inline-block;
+    background-color: #eee; border-right: 1px solid #ccc;
+    text-align: right;
+    width: 3em; padding-right: 0.5em; margin-right: 0.5em;
+  }
   .ref { text-decoration: underline; color: #008; }
   .sel { position: relative; cursor: pointer; }
   #hover {
@@ -83,10 +92,12 @@ class Reporter {
   const SourceManager &SM;
   FileID File;
 
+  // Symbols that are referenced from the main file.
   struct Target {
     const NamedDecl *D;
   };
   std::vector<Target> Targets;
+  // Points within the main file that reference a Target.
   std::vector<std::pair</*Offset*/ unsigned, /*TargetIndex*/ unsigned>> Refs;
 
 public:
@@ -94,11 +105,17 @@ public:
       : OS(OS), Ctx(Ctx), SM(Ctx.getSourceManager()), File(File) {}
 
   void addRef(SourceLocation Loc, const NamedDecl &D) {
-    auto Coords = SM.getDecomposedLoc(SM.getFileLoc(Loc));
-    if (Coords.first != File)
-      llvm::errs() << "Ref location outside file!\n";
+    auto [File, Offset] = SM.getDecomposedLoc(SM.getFileLoc(Loc));
+    if (File != this->File) {
+      // Can get here e.g. if there's an #include inside a root Decl.
+      // FIXME: do something more useful than this.
+      llvm::errs() << "Ref location outside file! "
+                   << D.getQualifiedNameAsString() << " at "
+                   << Loc.printToString(SM) << "\n";
+      return;
+    }
     Targets.push_back({&D});
-    Refs.push_back({Coords.second, Targets.size() - 1});
+    Refs.push_back({Offset, Targets.size() - 1});
   }
 
   void write() {
@@ -154,11 +171,13 @@ private:
     llvm::sort(Refs);
     llvm::StringRef Code = SM.getBufferData(File);
 
-    OS << "<pre onclick='select(event)'>";
+    OS << "<pre onclick='select(event)' class='code'>";
+    OS << "<code class='line'>";
     auto Rest = llvm::makeArrayRef(Refs);
     unsigned End = 0;
     for (unsigned I = 0; I < Code.size(); ++I) {
-      if (End == I && I > 0) {
+      // Finish refs early at EOL to avoid dealing with splitting the span.
+      if (End && (End == I || Code[I] == '\n')) {
         OS << "</span>";
         End = 0;
       }
@@ -178,9 +197,12 @@ private:
         End = I + Lexer::MeasureTokenLength(SM.getComposedLoc(File, I), SM,
                                             Ctx.getLangOpts());
       }
-      escapeChar(Code[I]);
+      if (Code[I] == '\n')
+        OS << "</code>\n<code class='line'>";
+      else
+        escapeChar(Code[I]);
     }
-    OS << "</pre>\n";
+    OS << "</code></pre>\n";
   }
 };
 
