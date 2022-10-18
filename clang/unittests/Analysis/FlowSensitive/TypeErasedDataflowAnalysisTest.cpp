@@ -462,7 +462,7 @@ TEST_F(JoinFlowConditionsTest, JoinDistinctButProvablyEquivalentValues) {
         EXPECT_FALSE(Env1.flowConditionImplies(*GetFooValue(Env1)));
         EXPECT_TRUE(Env2.flowConditionImplies(*GetFooValue(Env2)));
         EXPECT_TRUE(Env3.flowConditionImplies(*GetFooValue(Env3)));
-        EXPECT_TRUE(Env4.flowConditionImplies(*GetFooValue(Env3)));
+        EXPECT_TRUE(Env4.flowConditionImplies(*GetFooValue(Env4)));
       });
 }
 
