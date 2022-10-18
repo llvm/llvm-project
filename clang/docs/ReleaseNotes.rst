@@ -534,6 +534,9 @@ C++20 Feature Support
   which removes the requirement for the ``typename`` keyword in certain contexts.
 - Implemented The Equality Operator You Are Looking For (`P2468 <http://wg21.link/p2468r2>`_).
 
+- Implemented `P2113R0: Proposed resolution for 2019 comment CA 112 <https://wg21.link/P2113R0>`_
+  ([temp.func.order]p6.2.1 is not implemented, matching GCC).
+
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
