@@ -2841,11 +2841,16 @@ below. If multiple flags are present, the last one is used.
   Clang supports a number of optimizations to reduce the size of debug
   information in the binary. They work based on the assumption that
   the debug type information can be spread out over multiple
-  compilation units.  For instance, Clang will not emit type
-  definitions for types that are not needed by a module and could be
-  replaced with a forward declaration.  Further, Clang will only emit
-  type info for a dynamic C++ class in the module that contains the
-  vtable for the class.
+  compilation units.  Specifically, the optimizations are:
+- will not emit type definitions for types that are not needed by a
+  module and could be replaced with a forward declaration.
+- will only emit type info for a dynamic C++ class in the module that
+  contains the vtable for the class.
+- will only emit type info for a C++ class (non-trivial, non-aggregate)
+  in the modules that contain a definition for one of its constructors.
+- will only emit type definitions for types that are the subject of explicit
+  template instantiation declarations in the presence of an explicit
+  instantiation definition for the type.
 
   The **-fstandalone-debug** option turns off these optimizations.
   This is useful when working with 3rd-party libraries that don't come
@@ -2857,19 +2862,6 @@ below. If multiple flags are present, the last one is used.
    On Darwin **-fstandalone-debug** is enabled by default. The
    **-fno-standalone-debug** option can be used to get to turn on the
    vtable-based optimization described above.
-
-.. option:: -fuse-ctor-homing
-
-   This optimization is similar to the optimizations that are enabled as part
-   of -fno-standalone-debug. Here, Clang only emits type info for a
-   non-trivial, non-aggregate C++ class in the modules that contain a
-   definition of one of its constructors. This relies on the additional
-   assumption that all classes that are not trivially constructible have a
-   non-trivial constructor that is used somewhere. The negation,
-   -fno-use-ctor-homing, ensures that constructor homing is not used.
-
-   This flag is not enabled by default, and needs to be used with -cc1 or
-   -Xclang.
 
 .. option:: -g
 
