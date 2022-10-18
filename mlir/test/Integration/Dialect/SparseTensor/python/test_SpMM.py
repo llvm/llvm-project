@@ -123,9 +123,7 @@ def main():
 
     vl = 1
     e = False
-    opt = (f'parallelization-strategy=none '
-           f'vectorization-strategy=none '
-           f'vl={vl} enable-simd-index32={e}')
+    opt = (f'parallelization-strategy=none')
     levels = [[st.DimLevelType.dense, st.DimLevelType.dense],
               [st.DimLevelType.dense, st.DimLevelType.compressed],
               [st.DimLevelType.compressed, st.DimLevelType.dense],
