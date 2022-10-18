@@ -417,6 +417,20 @@ static uint32_t ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
     case Win64EH::UOP_PACSignLR:
       Count += 1;
       break;
+    case Win64EH::UOP_SaveAnyRegI:
+    case Win64EH::UOP_SaveAnyRegIP:
+    case Win64EH::UOP_SaveAnyRegD:
+    case Win64EH::UOP_SaveAnyRegDP:
+    case Win64EH::UOP_SaveAnyRegQ:
+    case Win64EH::UOP_SaveAnyRegQP:
+    case Win64EH::UOP_SaveAnyRegIX:
+    case Win64EH::UOP_SaveAnyRegIPX:
+    case Win64EH::UOP_SaveAnyRegDX:
+    case Win64EH::UOP_SaveAnyRegDPX:
+    case Win64EH::UOP_SaveAnyRegQX:
+    case Win64EH::UOP_SaveAnyRegQPX:
+      Count += 3;
+      break;
     }
   }
   return Count;
@@ -587,6 +601,37 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer,
     b = 0xFC;
     streamer.emitInt8(b);
     break;
+  case Win64EH::UOP_SaveAnyRegI:
+  case Win64EH::UOP_SaveAnyRegIP:
+  case Win64EH::UOP_SaveAnyRegD:
+  case Win64EH::UOP_SaveAnyRegDP:
+  case Win64EH::UOP_SaveAnyRegQ:
+  case Win64EH::UOP_SaveAnyRegQP:
+  case Win64EH::UOP_SaveAnyRegIX:
+  case Win64EH::UOP_SaveAnyRegIPX:
+  case Win64EH::UOP_SaveAnyRegDX:
+  case Win64EH::UOP_SaveAnyRegDPX:
+  case Win64EH::UOP_SaveAnyRegQX:
+  case Win64EH::UOP_SaveAnyRegQPX: {
+    // This assumes the opcodes are listed in the enum in a particular order.
+    int Op = inst.Operation - Win64EH::UOP_SaveAnyRegI;
+    int Writeback = Op / 6;
+    int Paired = Op % 2;
+    int Mode = (Op / 2) % 3;
+    int Offset = inst.Offset >> 3;
+    if (Writeback || Paired || Mode == 2)
+      Offset >>= 1;
+    if (Writeback)
+      --Offset;
+    b = 0xE7;
+    streamer.emitInt8(b);
+    assert(inst.Register < 32);
+    b = inst.Register | (Writeback << 5) | (Paired << 6);
+    streamer.emitInt8(b);
+    b = Offset | (Mode << 6);
+    streamer.emitInt8(b);
+    break;
+  }
   }
 }
 

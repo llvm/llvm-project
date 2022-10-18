@@ -7652,10 +7652,10 @@ bool Sema::CheckTemplateTemplateArgument(TemplateTemplateParmDecl *Param,
 
     if (isTemplateTemplateParameterAtLeastAsSpecializedAs(Params, Template,
                                                           Arg.getLocation())) {
-      // C++2a[temp.func.order]p2
+      // P2113
+      // C++20[temp.func.order]p2
       //   [...] If both deductions succeed, the partial ordering selects the
-      //   more constrained template as described by the rules in
-      //   [temp.constr.order].
+      // more constrained template (if one exists) as determined below.
       SmallVector<const Expr *, 3> ParamsAC, TemplateAC;
       Params->getAssociatedConstraints(ParamsAC);
       // C++2a[temp.arg.template]p3
@@ -7864,7 +7864,8 @@ Sema::BuildExpressionFromIntegralTemplateArgument(const TemplateArgument &Arg,
 static bool MatchTemplateParameterKind(
     Sema &S, NamedDecl *New, const NamedDecl *NewInstFrom, NamedDecl *Old,
     const NamedDecl *OldInstFrom, bool Complain,
-    Sema::TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc) {
+    Sema::TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc,
+    bool PartialOrdering) {
   // Check the actual kind (type, non-type, template).
   if (Old->getKind() != New->getKind()) {
     if (Complain) {
@@ -7952,11 +7953,11 @@ static bool MatchTemplateParameterKind(
             (Kind == Sema::TPL_TemplateMatch
                  ? Sema::TPL_TemplateTemplateParmMatch
                  : Kind),
-            TemplateArgLoc))
+            TemplateArgLoc, PartialOrdering))
       return false;
   }
 
-  if (Kind != Sema::TPL_TemplateTemplateArgumentMatch &&
+  if (!PartialOrdering && Kind != Sema::TPL_TemplateTemplateArgumentMatch &&
       !isa<TemplateTemplateParmDecl>(Old)) {
     const Expr *NewC = nullptr, *OldC = nullptr;
 
@@ -8049,7 +8050,8 @@ void DiagnoseTemplateParameterListArityMismatch(Sema &S,
 bool Sema::TemplateParameterListsAreEqual(
     const NamedDecl *NewInstFrom, TemplateParameterList *New,
     const NamedDecl *OldInstFrom, TemplateParameterList *Old, bool Complain,
-    TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc) {
+    TemplateParameterListEqualKind Kind, SourceLocation TemplateArgLoc,
+    bool PartialOrdering) {
   if (Old->size() != New->size() && Kind != TPL_TemplateTemplateArgumentMatch) {
     if (Complain)
       DiagnoseTemplateParameterListArityMismatch(*this, New, Old, Kind,
@@ -8081,7 +8083,7 @@ bool Sema::TemplateParameterListsAreEqual(
 
       if (!MatchTemplateParameterKind(*this, *NewParm, NewInstFrom, *OldParm,
                                       OldInstFrom, Complain, Kind,
-                                      TemplateArgLoc))
+                                      TemplateArgLoc, PartialOrdering))
         return false;
 
       ++NewParm;
@@ -8098,7 +8100,7 @@ bool Sema::TemplateParameterListsAreEqual(
     for (; NewParm != NewParmEnd; ++NewParm) {
       if (!MatchTemplateParameterKind(*this, *NewParm, NewInstFrom, *OldParm,
                                       OldInstFrom, Complain, Kind,
-                                      TemplateArgLoc))
+                                      TemplateArgLoc, PartialOrdering))
         return false;
     }
   }
@@ -8112,7 +8114,7 @@ bool Sema::TemplateParameterListsAreEqual(
     return false;
   }
 
-  if (Kind != TPL_TemplateTemplateArgumentMatch) {
+  if (!PartialOrdering && Kind != TPL_TemplateTemplateArgumentMatch) {
     const Expr *NewRC = New->getRequiresClause();
     const Expr *OldRC = Old->getRequiresClause();
 

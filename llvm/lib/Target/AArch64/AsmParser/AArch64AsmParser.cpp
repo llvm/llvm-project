@@ -219,6 +219,7 @@ private:
   bool parseDirectiveSEHContext(SMLoc L);
   bool parseDirectiveSEHClearUnwoundToCall(SMLoc L);
   bool parseDirectiveSEHPACSignLR(SMLoc L);
+  bool parseDirectiveSEHSaveAnyReg(SMLoc L, bool Paired, bool Writeback);
 
   bool validateInstruction(MCInst &Inst, SMLoc &IDLoc,
                            SmallVectorImpl<SMLoc> &Loc);
@@ -6102,6 +6103,14 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
       parseDirectiveSEHClearUnwoundToCall(Loc);
     else if (IDVal == ".seh_pac_sign_lr")
       parseDirectiveSEHPACSignLR(Loc);
+    else if (IDVal == ".seh_save_any_reg")
+      parseDirectiveSEHSaveAnyReg(Loc, false, false);
+    else if (IDVal == ".seh_save_any_reg_p")
+      parseDirectiveSEHSaveAnyReg(Loc, true, false);
+    else if (IDVal == ".seh_save_any_reg_x")
+      parseDirectiveSEHSaveAnyReg(Loc, false, true);
+    else if (IDVal == ".seh_save_any_reg_px")
+      parseDirectiveSEHSaveAnyReg(Loc, true, true);
     else
       return true;
   } else
@@ -6782,6 +6791,84 @@ bool AArch64AsmParser::parseDirectiveSEHClearUnwoundToCall(SMLoc L) {
 /// ::= .seh_pac_sign_lr
 bool AArch64AsmParser::parseDirectiveSEHPACSignLR(SMLoc L) {
   getTargetStreamer().emitARM64WinCFIPACSignLR();
+  return false;
+}
+
+/// parseDirectiveSEHSaveAnyReg
+/// ::= .seh_save_any_reg
+/// ::= .seh_save_any_reg_p
+/// ::= .seh_save_any_reg_x
+/// ::= .seh_save_any_reg_px
+bool AArch64AsmParser::parseDirectiveSEHSaveAnyReg(SMLoc L, bool Paired,
+                                                   bool Writeback) {
+  unsigned Reg;
+  SMLoc Start, End;
+  int64_t Offset;
+  if (check(ParseRegister(Reg, Start, End), getLoc(), "expected register") ||
+      parseComma() || parseImmExpr(Offset))
+    return true;
+
+  if (Reg == AArch64::FP || Reg == AArch64::LR ||
+      (Reg >= AArch64::X0 && Reg <= AArch64::X28)) {
+    if (Offset < 0 || Offset % (Paired || Writeback ? 16 : 8))
+      return Error(L, "invalid save_any_reg offset");
+    unsigned EncodedReg;
+    if (Reg == AArch64::FP)
+      EncodedReg = 29;
+    else if (Reg == AArch64::LR)
+      EncodedReg = 30;
+    else
+      EncodedReg = Reg - AArch64::X0;
+    if (Paired) {
+      if (Reg == AArch64::LR)
+        return Error(Start, "lr cannot be paired with another register");
+      if (Writeback)
+        getTargetStreamer().emitARM64WinCFISaveAnyRegIPX(EncodedReg, Offset);
+      else
+        getTargetStreamer().emitARM64WinCFISaveAnyRegIP(EncodedReg, Offset);
+    } else {
+      if (Writeback)
+        getTargetStreamer().emitARM64WinCFISaveAnyRegIX(EncodedReg, Offset);
+      else
+        getTargetStreamer().emitARM64WinCFISaveAnyRegI(EncodedReg, Offset);
+    }
+  } else if (Reg >= AArch64::D0 && Reg <= AArch64::D31) {
+    unsigned EncodedReg = Reg - AArch64::D0;
+    if (Offset < 0 || Offset % (Paired || Writeback ? 16 : 8))
+      return Error(L, "invalid save_any_reg offset");
+    if (Paired) {
+      if (Reg == AArch64::D31)
+        return Error(Start, "d31 cannot be paired with another register");
+      if (Writeback)
+        getTargetStreamer().emitARM64WinCFISaveAnyRegDPX(EncodedReg, Offset);
+      else
+        getTargetStreamer().emitARM64WinCFISaveAnyRegDP(EncodedReg, Offset);
+    } else {
+      if (Writeback)
+        getTargetStreamer().emitARM64WinCFISaveAnyRegDX(EncodedReg, Offset);
+      else
+        getTargetStreamer().emitARM64WinCFISaveAnyRegD(EncodedReg, Offset);
+    }
+  } else if (Reg >= AArch64::Q0 && Reg <= AArch64::Q31) {
+    unsigned EncodedReg = Reg - AArch64::Q0;
+    if (Offset < 0 || Offset % 16)
+      return Error(L, "invalid save_any_reg offset");
+    if (Paired) {
+      if (Reg == AArch64::Q31)
+        return Error(Start, "q31 cannot be paired with another register");
+      if (Writeback)
+        getTargetStreamer().emitARM64WinCFISaveAnyRegQPX(EncodedReg, Offset);
+      else
+        getTargetStreamer().emitARM64WinCFISaveAnyRegQP(EncodedReg, Offset);
+    } else {
+      if (Writeback)
+        getTargetStreamer().emitARM64WinCFISaveAnyRegQX(EncodedReg, Offset);
+      else
+        getTargetStreamer().emitARM64WinCFISaveAnyRegQ(EncodedReg, Offset);
+    }
+  } else {
+    return Error(Start, "save_any_reg register must be x, q or d register");
+  }
   return false;
 }
 
