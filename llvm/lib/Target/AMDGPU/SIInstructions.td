@@ -1510,7 +1510,10 @@ class ClampPat<Instruction inst, ValueType vt> : GCNPat <
 >;
 
 def : ClampPat<V_MAX_F32_e64, f32>;
+let SubtargetPredicate = isNotGFX12Plus in
 def : ClampPat<V_MAX_F64_e64, f64>;
+let SubtargetPredicate = isGFX12Plus in
+def : ClampPat<V_MAX_NUM_F64_e64, f64>;
 let SubtargetPredicate = NotHasTrue16BitInsts in
 def : ClampPat<V_MAX_F16_e64, f16>;
 let SubtargetPredicate = HasTrue16BitInsts in
@@ -2572,10 +2575,12 @@ def : GCNPat<
 >;
 
 // TODO: Handle fneg like other types.
+let SubtargetPredicate = isNotGFX12Plus in {
 def : GCNPat<
   (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
   (V_MUL_F64_e64  0, CONST.FP64_ONE, $src_mods, $src)
 >;
+}
 } // End AddedComplexity = -5
 
 multiclass SelectCanonicalizeAsMax<
@@ -2591,7 +2596,13 @@ multiclass SelectCanonicalizeAsMax<
   def : GCNPat<
     (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
     (V_MAX_F64_e64  $src_mods, $src, $src_mods, $src)> {
-    let OtherPredicates = f64_preds;
+    let OtherPredicates = !listconcat(f64_preds, [isNotGFX12Plus]);
+  }
+
+  def : GCNPat<
+    (fcanonicalize (f64 (VOP3Mods f64:$src, i32:$src_mods))),
+    (V_MAX_NUM_F64_e64  $src_mods, $src, $src_mods, $src)> {
+    let OtherPredicates = !listconcat(f64_preds, [isGFX12Plus]);
   }
 
   def : GCNPat<

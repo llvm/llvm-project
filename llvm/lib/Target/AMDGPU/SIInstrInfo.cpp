@@ -6265,7 +6265,9 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
       break;
     case AMDGPU::S_LSHL_B64:
       if (ST.hasOnlyRevVALUShifts()) {
-        NewOpcode = AMDGPU::V_LSHLREV_B64_e64;
+        NewOpcode = ST.getGeneration() >= AMDGPUSubtarget::GFX12
+                        ? AMDGPU::V_LSHLREV_B64_pseudo_e64
+                        : AMDGPU::V_LSHLREV_B64_e64;
         swapOperands(Inst);
       }
       break;

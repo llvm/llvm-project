@@ -838,7 +838,7 @@ define amdgpu_kernel void @v_clamp_f64(double addrspace(1)* %out, double addrspa
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX12-NEXT:    global_load_b64 v[0:1], v2, s[2:3]
 ; GFX12-NEXT:    s_waitcnt vmcnt(0)
-; GFX12-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1] clamp
+; GFX12-NEXT:    v_max_num_f64_e64 v[0:1], v[0:1], v[0:1] clamp
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
@@ -917,7 +917,7 @@ define amdgpu_kernel void @v_clamp_neg_f64(double addrspace(1)* %out, double add
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX12-NEXT:    global_load_b64 v[0:1], v2, s[2:3]
 ; GFX12-NEXT:    s_waitcnt vmcnt(0)
-; GFX12-NEXT:    v_max_f64 v[0:1], -v[0:1], -v[0:1] clamp
+; GFX12-NEXT:    v_max_num_f64_e64 v[0:1], -v[0:1], -v[0:1] clamp
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
@@ -997,7 +997,7 @@ define amdgpu_kernel void @v_clamp_negabs_f64(double addrspace(1)* %out, double 
 ; GFX12-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX12-NEXT:    global_load_b64 v[0:1], v2, s[2:3]
 ; GFX12-NEXT:    s_waitcnt vmcnt(0)
-; GFX12-NEXT:    v_max_f64 v[0:1], -|v[0:1]|, -|v[0:1]| clamp
+; GFX12-NEXT:    v_max_num_f64_e64 v[0:1], -|v[0:1]|, -|v[0:1]| clamp
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
