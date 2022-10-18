@@ -30,17 +30,17 @@ public:
       Underlying[IX] = V;
     }
   }
-  inline const ValueType &operator[](const Enumeration Index) const {
+  const ValueType &operator[](Enumeration Index) const {
     auto IX = static_cast<const IndexType>(Index);
     assert(IX >= 0 && IX < Size && "Index is out of bounds.");
     return Underlying[IX];
   }
-  inline ValueType &operator[](const Enumeration Index) {
+  ValueType &operator[](Enumeration Index) {
     return const_cast<ValueType &>(
         static_cast<const EnumeratedArray<ValueType, Enumeration, LargestEnum,
                                           IndexType, Size> &>(*this)[Index]);
   }
-  inline IndexType size() { return Size; }
+  IndexType size() { return Size; }
 
 private:
   ValueType Underlying[Size];
