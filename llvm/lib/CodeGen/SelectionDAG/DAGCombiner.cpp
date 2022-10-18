@@ -3632,26 +3632,26 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
 
   // Hoist one-use addition by non-opaque constant:
   //   (x + C) - y  ->  (x - y) + C
-  if (N0.getOpcode() == ISD::ADD && N0.hasOneUse() && 
+  if (N0.getOpcode() == ISD::ADD && N0.hasOneUse() &&
       isConstantOrConstantVector(N0.getOperand(1), /*NoOpaques=*/true)) {
     SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0), N1);
     return DAG.getNode(ISD::ADD, DL, VT, Sub, N0.getOperand(1));
   }
   // y - (x + C)  ->  (y - x) - C
-  if (N1.getOpcode() == ISD::ADD && N1.hasOneUse() && 
+  if (N1.getOpcode() == ISD::ADD && N1.hasOneUse() &&
       isConstantOrConstantVector(N1.getOperand(1), /*NoOpaques=*/true)) {
     SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0, N1.getOperand(0));
     return DAG.getNode(ISD::SUB, DL, VT, Sub, N1.getOperand(1));
   }
   // (x - C) - y  ->  (x - y) - C
   // This is necessary because SUB(X,C) -> ADD(X,-C) doesn't work for vectors.
-  if (N0.getOpcode() == ISD::SUB && N0.hasOneUse() && 
+  if (N0.getOpcode() == ISD::SUB && N0.hasOneUse() &&
       isConstantOrConstantVector(N0.getOperand(1), /*NoOpaques=*/true)) {
     SDValue Sub = DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0), N1);
     return DAG.getNode(ISD::SUB, DL, VT, Sub, N0.getOperand(1));
   }
   // (C - x) - y  ->  C - (x + y)
-  if (N0.getOpcode() == ISD::SUB && N0.hasOneUse() && 
+  if (N0.getOpcode() == ISD::SUB && N0.hasOneUse() &&
       isConstantOrConstantVector(N0.getOperand(0), /*NoOpaques=*/true)) {
     SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0.getOperand(1), N1);
     return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(0), Add);
@@ -8880,11 +8880,6 @@ SDValue DAGCombiner::visitShiftByConstant(SDNode *N) {
     break;
   }
 
-  // We require the RHS of the binop to be a constant and not opaque as well.
-  ConstantSDNode *BinOpCst = getAsNonOpaqueConstant(LHS.getOperand(1));
-  if (!BinOpCst)
-    return SDValue();
-
   // FIXME: disable this unless the input to the binop is a shift by a constant
   // or is copy/select. Enable this in other cases when figure out it's exactly
   // profitable.
@@ -8902,16 +8897,17 @@ SDValue DAGCombiner::visitShiftByConstant(SDNode *N) {
   if (IsCopyOrSelect && N->hasOneUse())
     return SDValue();
 
-  // Fold the constants, shifting the binop RHS by the shift amount.
+  // Attempt to fold the constants, shifting the binop RHS by the shift amount.
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
-  SDValue NewRHS = DAG.getNode(N->getOpcode(), DL, VT, LHS.getOperand(1),
-                               N->getOperand(1));
-  assert(isa<ConstantSDNode>(NewRHS) && "Folding was not successful!");
+  if (SDValue NewRHS = DAG.FoldConstantArithmetic(
+          N->getOpcode(), DL, VT, {LHS.getOperand(1), N->getOperand(1)})) {
+    SDValue NewShift = DAG.getNode(N->getOpcode(), DL, VT, LHS.getOperand(0),
+                                   N->getOperand(1));
+    return DAG.getNode(LHS.getOpcode(), DL, VT, NewShift, NewRHS);
+  }
 
-  SDValue NewShift = DAG.getNode(N->getOpcode(), DL, VT, LHS.getOperand(0),
-                                 N->getOperand(1));
-  return DAG.getNode(LHS.getOpcode(), DL, VT, NewShift, NewRHS);
+  return SDValue();
 }
 
 SDValue DAGCombiner::distributeTruncateThroughAnd(SDNode *N) {

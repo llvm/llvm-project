@@ -4222,28 +4222,30 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::VSELECT, DL, VT, CondSplat, TrueV, FalseV);
   }
 
-  // (select c, -1, y) -> -c | y
-  if (isAllOnesConstant(TrueV)) {
-    SDValue Neg = DAG.getNegative(CondV, DL, VT);
-    return DAG.getNode(ISD::OR, DL, VT, Neg, FalseV);
-  }
-  // (select c, y, -1) -> (c-1) | y
-  if (isAllOnesConstant(FalseV)) {
-    SDValue Neg = DAG.getNode(ISD::ADD, DL, VT, CondV,
-                              DAG.getAllOnesConstant(DL, VT));
-    return DAG.getNode(ISD::OR, DL, VT, Neg, TrueV);
-  }
+  if (!Subtarget.hasShortForwardBranchOpt()) {
+    // (select c, -1, y) -> -c | y
+    if (isAllOnesConstant(TrueV)) {
+      SDValue Neg = DAG.getNegative(CondV, DL, VT);
+      return DAG.getNode(ISD::OR, DL, VT, Neg, FalseV);
+    }
+    // (select c, y, -1) -> (c-1) | y
+    if (isAllOnesConstant(FalseV)) {
+      SDValue Neg = DAG.getNode(ISD::ADD, DL, VT, CondV,
+                                DAG.getAllOnesConstant(DL, VT));
+      return DAG.getNode(ISD::OR, DL, VT, Neg, TrueV);
+    }
 
-  // (select c, 0, y) -> (c-1) & y
-  if (isNullConstant(TrueV)) {
-    SDValue Neg = DAG.getNode(ISD::ADD, DL, VT, CondV,
-                              DAG.getAllOnesConstant(DL, VT));
-    return DAG.getNode(ISD::AND, DL, VT, Neg, FalseV);
-  }
-  // (select c, y, 0) -> -c & y
-  if (isNullConstant(FalseV)) {
-    SDValue Neg = DAG.getNegative(CondV, DL, VT);
-    return DAG.getNode(ISD::AND, DL, VT, Neg, TrueV);
+    // (select c, 0, y) -> (c-1) & y
+    if (isNullConstant(TrueV)) {
+      SDValue Neg = DAG.getNode(ISD::ADD, DL, VT, CondV,
+                                DAG.getAllOnesConstant(DL, VT));
+      return DAG.getNode(ISD::AND, DL, VT, Neg, FalseV);
+    }
+    // (select c, y, 0) -> -c & y
+    if (isNullConstant(FalseV)) {
+      SDValue Neg = DAG.getNegative(CondV, DL, VT);
+      return DAG.getNode(ISD::AND, DL, VT, Neg, TrueV);
+    }
   }
 
   // If the CondV is the output of a SETCC node which operates on XLenVT inputs,
@@ -4294,6 +4296,15 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     }
 
     SDValue TargetCC = DAG.getCondCode(CCVal);
+
+    if (isa<ConstantSDNode>(TrueV) && !isa<ConstantSDNode>(FalseV)) {
+      // (select (setcc lhs, rhs, CC), constant, falsev)
+      // -> (select (setcc lhs, rhs, InverseCC), falsev, constant)
+      std::swap(TrueV, FalseV);
+      TargetCC =
+          DAG.getCondCode(ISD::getSetCCInverse(CCVal, LHS.getValueType()));
+    }
+
     SDValue Ops[] = {LHS, RHS, TargetCC, TrueV, FalseV};
     return DAG.getNode(RISCVISD::SELECT_CC, DL, VT, Ops);
   }
@@ -9450,9 +9461,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // (select (x in [0,1] != 0), (z ^ y), y ) -> (-x & z ) ^ y
     // (select (x in [0,1] == 0), y, (z | y) ) -> (-x & z ) | y
     // (select (x in [0,1] != 0), (z | y), y ) -> (-x & z ) | y
+    // NOTE: We only do this if the target does not have the short forward
+    // branch optimization.
     APInt Mask = APInt::getBitsSetFrom(LHS.getValueSizeInBits(), 1);
-    if (isNullConstant(RHS) && ISD::isIntEqualitySetCC(CCVal) &&
-        DAG.MaskedValueIsZero(LHS, Mask)) {
+    if (!Subtarget.hasShortForwardBranchOpt() && isNullConstant(RHS) &&
+        ISD::isIntEqualitySetCC(CCVal) && DAG.MaskedValueIsZero(LHS, Mask)) {
       unsigned Opcode;
       SDValue Src1, Src2;
       // true if FalseV is XOR or OR operator and one of its operands
@@ -9504,34 +9517,35 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return DAG.getNode(RISCVISD::SELECT_CC, DL, N->getValueType(0),
                          {LHS, RHS, CC, TrueV, FalseV});
 
-    // (select c, -1, y) -> -c | y
-    if (isAllOnesConstant(TrueV)) {
-      SDValue C = DAG.getSetCC(DL, VT, LHS, RHS, CCVal);
-      SDValue Neg = DAG.getNegative(C, DL, VT);
-      return DAG.getNode(ISD::OR, DL, VT, Neg, FalseV);
-    }
-    // (select c, y, -1) -> -!c | y
-    if (isAllOnesConstant(FalseV)) {
-      SDValue C = DAG.getSetCC(DL, VT, LHS, RHS,
-                               ISD::getSetCCInverse(CCVal, VT));
-      SDValue Neg = DAG.getNegative(C, DL, VT);
-      return DAG.getNode(ISD::OR, DL, VT, Neg, TrueV);
-    }
+    if (!Subtarget.hasShortForwardBranchOpt()) {
+      // (select c, -1, y) -> -c | y
+      if (isAllOnesConstant(TrueV)) {
+        SDValue C = DAG.getSetCC(DL, VT, LHS, RHS, CCVal);
+        SDValue Neg = DAG.getNegative(C, DL, VT);
+        return DAG.getNode(ISD::OR, DL, VT, Neg, FalseV);
+      }
+      // (select c, y, -1) -> -!c | y
+      if (isAllOnesConstant(FalseV)) {
+        SDValue C =
+            DAG.getSetCC(DL, VT, LHS, RHS, ISD::getSetCCInverse(CCVal, VT));
+        SDValue Neg = DAG.getNegative(C, DL, VT);
+        return DAG.getNode(ISD::OR, DL, VT, Neg, TrueV);
+      }
 
-    // (select c, 0, y) -> -!c & y
-    if (isNullConstant(TrueV)) {
-      SDValue C = DAG.getSetCC(DL, VT, LHS, RHS,
-                               ISD::getSetCCInverse(CCVal, VT));
-      SDValue Neg = DAG.getNegative(C, DL, VT);
-      return DAG.getNode(ISD::AND, DL, VT, Neg, FalseV);
+      // (select c, 0, y) -> -!c & y
+      if (isNullConstant(TrueV)) {
+        SDValue C =
+            DAG.getSetCC(DL, VT, LHS, RHS, ISD::getSetCCInverse(CCVal, VT));
+        SDValue Neg = DAG.getNegative(C, DL, VT);
+        return DAG.getNode(ISD::AND, DL, VT, Neg, FalseV);
+      }
+      // (select c, y, 0) -> -c & y
+      if (isNullConstant(FalseV)) {
+        SDValue C = DAG.getSetCC(DL, VT, LHS, RHS, CCVal);
+        SDValue Neg = DAG.getNegative(C, DL, VT);
+        return DAG.getNode(ISD::AND, DL, VT, Neg, TrueV);
+      }
     }
-    // (select c, y, 0) -> -c & y
-    if (isNullConstant(FalseV)) {
-      SDValue C = DAG.getSetCC(DL, VT, LHS, RHS, CCVal);
-      SDValue Neg = DAG.getNegative(C, DL, VT);
-      return DAG.getNode(ISD::AND, DL, VT, Neg, TrueV);
-    }
-
 
     return SDValue();
   }

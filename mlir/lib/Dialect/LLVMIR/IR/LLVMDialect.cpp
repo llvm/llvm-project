@@ -54,7 +54,8 @@ static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute, 8> filteredAttrs(
       llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
         if (attr.getName() == "fastmathFlags") {
-          auto defAttr = FMFAttr::get(attr.getValue().getContext(), {});
+          auto defAttr =
+              FastmathFlagsAttr::get(attr.getValue().getContext(), {});
           return defAttr != attr.getValue();
         }
         return true;
@@ -2563,7 +2564,7 @@ OpFoldResult LLVM::GEPOp::fold(ArrayRef<Attribute> operands) {
 //===----------------------------------------------------------------------===//
 
 void LLVMDialect::initialize() {
-  addAttributes<FMFAttr, LinkageAttr, CConvAttr, LoopOptionsAttr>();
+  addAttributes<FastmathFlagsAttr, LinkageAttr, CConvAttr, LoopOptionsAttr>();
 
   // clang-format off
   addTypes<LLVMVoidType,
@@ -2807,39 +2808,6 @@ Value mlir::LLVM::createGlobalString(Location loc, OpBuilder &builder,
 bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {
   return op->hasTrait<OpTrait::SymbolTable>() &&
          op->hasTrait<OpTrait::IsIsolatedFromAbove>();
-}
-
-void FMFAttr::print(AsmPrinter &printer) const {
-  printer << "<";
-  printer << stringifyFastmathFlags(this->getFlags());
-  printer << ">";
-}
-
-Attribute FMFAttr::parse(AsmParser &parser, Type type) {
-  if (failed(parser.parseLess()))
-    return {};
-
-  FastmathFlags flags = {};
-  if (failed(parser.parseOptionalGreater())) {
-    auto parseFlags = [&]() -> ParseResult {
-      StringRef elemName;
-      if (failed(parser.parseKeyword(&elemName)))
-        return failure();
-
-      auto elem = symbolizeFastmathFlags(elemName);
-      if (!elem)
-        return parser.emitError(parser.getNameLoc(), "Unknown fastmath flag: ")
-               << elemName;
-
-      flags = flags | *elem;
-      return success();
-    };
-    if (failed(parser.parseCommaSeparatedList(parseFlags)) ||
-        parser.parseGreater())
-      return {};
-  }
-
-  return FMFAttr::get(parser.getContext(), flags);
 }
 
 void LinkageAttr::print(AsmPrinter &printer) const {

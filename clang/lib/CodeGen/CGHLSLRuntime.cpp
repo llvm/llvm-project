@@ -17,7 +17,6 @@
 #include "CodeGenModule.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/TargetOptions.h"
-#include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -90,16 +89,16 @@ void layoutBuffer(CGHLSLRuntime::Buffer &Buf, const DataLayout &DL) {
 
 GlobalVariable *replaceBuffer(CGHLSLRuntime::Buffer &Buf) {
   // Create global variable for CB.
-  GlobalVariable *CBGV =
-      new GlobalVariable(Buf.LayoutStruct, /*isConstant*/ true,
-                         GlobalValue::LinkageTypes::ExternalLinkage, nullptr,
-                         Buf.Name + (Buf.IsCBuffer ? ".cb." : ".tb."),
-                         GlobalValue::NotThreadLocal);
+  GlobalVariable *CBGV = new GlobalVariable(
+      Buf.LayoutStruct, /*isConstant*/ true,
+      GlobalValue::LinkageTypes::ExternalLinkage, nullptr,
+      llvm::formatv("{0}{1}", Buf.Name, Buf.IsCBuffer ? ".cb." : ".tb."),
+      GlobalValue::NotThreadLocal);
 
   IRBuilder<> B(CBGV->getContext());
   Value *ZeroIdx = B.getInt32(0);
   // Replace Const use with CB use.
-  for (auto &[GV, Offset]: Buf.Constants) {
+  for (auto &[GV, Offset] : Buf.Constants) {
     Value *GEP =
         B.CreateGEP(Buf.LayoutStruct, CBGV, {ZeroIdx, B.getInt32(Offset)});
 
@@ -177,25 +176,101 @@ void CGHLSLRuntime::finishCodeGen() {
     layoutBuffer(Buf, DL);
     GlobalVariable *GV = replaceBuffer(Buf);
     M.getGlobalList().push_back(GV);
-    // FIXME: generate resource binding.
-    // See https://github.com/llvm/llvm-project/issues/57915.
+    hlsl::ResourceClass RC =
+        Buf.IsCBuffer ? hlsl::ResourceClass::CBuffer : hlsl::ResourceClass::SRV;
+    llvm::hlsl::ResourceKind RK = Buf.IsCBuffer
+                                      ? llvm::hlsl::ResourceKind::CBuffer
+                                      : llvm::hlsl::ResourceKind::TBuffer;
+    std::string TyName =
+        Buf.Name.str() + (Buf.IsCBuffer ? ".cb." : ".tb.") + "ty";
+    addBufferResourceAnnotation(GV, TyName, RC, RK, Buf.Binding);
   }
 }
 
-CGHLSLRuntime::Buffer::Buffer(const HLSLBufferDecl *D) {
-  Name = D->getName();
-  IsCBuffer = D->isCBuffer();
-  if (auto *Binding = D->getAttr<HLSLResourceBindingAttr>()) {
-    llvm::APInt RegInt(64, 0);
-    Binding->getSlot().substr(1).getAsInteger(10, RegInt);
-    Reg = RegInt.getLimitedValue();
+CGHLSLRuntime::Buffer::Buffer(const HLSLBufferDecl *D)
+    : Name(D->getName()), IsCBuffer(D->isCBuffer()),
+      Binding(D->getAttr<HLSLResourceBindingAttr>()) {}
 
-    llvm::APInt SpaceInt(64, 0);
-    Binding->getSpace().substr(5).getAsInteger(10, RegInt);
-    Space = SpaceInt.getLimitedValue();
-  } else {
-    Space = 0;
+void CGHLSLRuntime::addBufferResourceAnnotation(llvm::GlobalVariable *GV,
+                                                llvm::StringRef TyName,
+                                                hlsl::ResourceClass RC,
+                                                llvm::hlsl::ResourceKind RK,
+                                                BufferResBinding &Binding) {
+  uint32_t Counter = ResourceCounters[static_cast<uint32_t>(RC)]++;
+  llvm::Module &M = CGM.getModule();
+
+  NamedMDNode *ResourceMD = nullptr;
+  switch (RC) {
+  case hlsl::ResourceClass::UAV:
+    ResourceMD = M.getOrInsertNamedMetadata("hlsl.uavs");
+    break;
+  case hlsl::ResourceClass::SRV:
+    ResourceMD = M.getOrInsertNamedMetadata("hlsl.srvs");
+    break;
+  case hlsl::ResourceClass::CBuffer:
+    ResourceMD = M.getOrInsertNamedMetadata("hlsl.cbufs");
+    break;
+  default:
+    assert(false && "Unsupported buffer type!");
+    return;
   }
+
+  assert(ResourceMD != nullptr &&
+         "ResourceMD must have been set by the switch above.");
+
+  llvm::hlsl::FrontendResource Res(
+      GV, TyName, Counter, RK, Binding.Reg.value_or(UINT_MAX), Binding.Space);
+  ResourceMD->addOperand(Res.getMetadata());
+}
+
+static llvm::hlsl::ResourceKind
+castResourceShapeToResourceKind(HLSLResourceAttr::ResourceKind RK) {
+  switch (RK) {
+  case HLSLResourceAttr::ResourceKind::Texture1D:
+    return llvm::hlsl::ResourceKind::Texture1D;
+  case HLSLResourceAttr::ResourceKind::Texture2D:
+    return llvm::hlsl::ResourceKind::Texture2D;
+  case HLSLResourceAttr::ResourceKind::Texture2DMS:
+    return llvm::hlsl::ResourceKind::Texture2DMS;
+  case HLSLResourceAttr::ResourceKind::Texture3D:
+    return llvm::hlsl::ResourceKind::Texture3D;
+  case HLSLResourceAttr::ResourceKind::TextureCube:
+    return llvm::hlsl::ResourceKind::TextureCube;
+  case HLSLResourceAttr::ResourceKind::Texture1DArray:
+    return llvm::hlsl::ResourceKind::Texture1DArray;
+  case HLSLResourceAttr::ResourceKind::Texture2DArray:
+    return llvm::hlsl::ResourceKind::Texture2DArray;
+  case HLSLResourceAttr::ResourceKind::Texture2DMSArray:
+    return llvm::hlsl::ResourceKind::Texture2DMSArray;
+  case HLSLResourceAttr::ResourceKind::TextureCubeArray:
+    return llvm::hlsl::ResourceKind::TextureCubeArray;
+  case HLSLResourceAttr::ResourceKind::TypedBuffer:
+    return llvm::hlsl::ResourceKind::TypedBuffer;
+  case HLSLResourceAttr::ResourceKind::RawBuffer:
+    return llvm::hlsl::ResourceKind::RawBuffer;
+  case HLSLResourceAttr::ResourceKind::StructuredBuffer:
+    return llvm::hlsl::ResourceKind::StructuredBuffer;
+  case HLSLResourceAttr::ResourceKind::CBufferKind:
+    return llvm::hlsl::ResourceKind::CBuffer;
+  case HLSLResourceAttr::ResourceKind::SamplerKind:
+    return llvm::hlsl::ResourceKind::Sampler;
+  case HLSLResourceAttr::ResourceKind::TBuffer:
+    return llvm::hlsl::ResourceKind::TBuffer;
+  case HLSLResourceAttr::ResourceKind::RTAccelerationStructure:
+    return llvm::hlsl::ResourceKind::RTAccelerationStructure;
+  case HLSLResourceAttr::ResourceKind::FeedbackTexture2D:
+    return llvm::hlsl::ResourceKind::FeedbackTexture2D;
+  case HLSLResourceAttr::ResourceKind::FeedbackTexture2DArray:
+    return llvm::hlsl::ResourceKind::FeedbackTexture2DArray;
+  }
+  // Make sure to update HLSLResourceAttr::ResourceKind when add new Kind to
+  // hlsl::ResourceKind. Assume FeedbackTexture2DArray is the last enum for
+  // HLSLResourceAttr::ResourceKind.
+  static_assert(
+      static_cast<uint32_t>(
+          HLSLResourceAttr::ResourceKind::FeedbackTexture2DArray) ==
+      (static_cast<uint32_t>(llvm::hlsl::ResourceKind::NumEntries) - 2));
+  llvm_unreachable("all switch cases should be covered");
 }
 
 void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
@@ -210,26 +285,27 @@ void CGHLSLRuntime::annotateHLSLResource(const VarDecl *D, GlobalVariable *GV) {
     return;
 
   HLSLResourceAttr::ResourceClass RC = Attr->getResourceType();
-  uint32_t Counter = ResourceCounters[static_cast<uint32_t>(RC)]++;
+  llvm::hlsl::ResourceKind RK =
+      castResourceShapeToResourceKind(Attr->getResourceShape());
 
-  NamedMDNode *ResourceMD = nullptr;
-  switch (RC) {
-  case HLSLResourceAttr::ResourceClass::UAV:
-    ResourceMD = CGM.getModule().getOrInsertNamedMetadata("hlsl.uavs");
-    break;
-  default:
-    assert(false && "Unsupported buffer type!");
-    return;
-  }
-
-  assert(ResourceMD != nullptr &&
-         "ResourceMD must have been set by the switch above.");
-
-  auto &Ctx = CGM.getModule().getContext();
-  IRBuilder<> B(Ctx);
   QualType QT(Ty, 0);
-  llvm::hlsl::FrontendResource Res(GV, QT.getAsString(), Counter);
-  ResourceMD->addOperand(Res.getMetadata());
+  BufferResBinding Binding(D->getAttr<HLSLResourceBindingAttr>());
+  addBufferResourceAnnotation(
+      GV, QT.getAsString(), static_cast<hlsl::ResourceClass>(RC), RK, Binding);
+}
+
+CGHLSLRuntime::BufferResBinding::BufferResBinding(
+    HLSLResourceBindingAttr *Binding) {
+  if (Binding) {
+    llvm::APInt RegInt(64, 0);
+    Binding->getSlot().substr(1).getAsInteger(10, RegInt);
+    Reg = RegInt.getLimitedValue();
+    llvm::APInt SpaceInt(64, 0);
+    Binding->getSpace().substr(5).getAsInteger(10, SpaceInt);
+    Space = SpaceInt.getLimitedValue();
+  } else {
+    Space = 0;
+  }
 }
 
 void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(

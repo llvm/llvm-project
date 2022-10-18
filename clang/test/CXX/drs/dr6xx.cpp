@@ -1079,16 +1079,16 @@ namespace dr687 { // dr687 (9 c++20, but the issue is still considered open)
   }
 }
 
-namespace dr692 { // dr692: no
+namespace dr692 { // dr692: 16
   // Also see dr1395.
 
   namespace temp_func_order_example2 {
     template <typename... T> struct A1 {}; // expected-error 0-1{{C++11}}
     template <typename U, typename... T> struct A2 {}; // expected-error 0-1{{C++11}}
-    template <class T1, class... U> void e1(A1<T1, U...>) = delete; // expected-error 0-2{{C++11}}
-    template <class T1> void e1(A1<T1>);
-    template <class T1, class... U> void e2(A2<T1, U...>) = delete; // expected-error 0-2{{C++11}}
-    template <class T1> void e2(A2<T1>);
+    template <typename T1, typename... U> void e1(A1<T1, U...>) = delete; // expected-error 0-2{{C++11}}
+    template <typename T1> void e1(A1<T1>);
+    template <typename T1, typename... U> void e2(A2<T1, U...>) = delete; // expected-error 0-2{{C++11}}
+    template <typename T1> void e2(A2<T1>);
     template <typename T, typename U> void f(U, A1<U, T> *p = 0) = delete; // expected-note {{candidate}} expected-error 0-1{{C++11}}
     template <typename U> int &f(U, A1<U, U> *p = 0); // expected-note {{candidate}}
     template <typename T> void g(T, T = T()); // expected-note {{candidate}}

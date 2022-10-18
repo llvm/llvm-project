@@ -13,6 +13,7 @@
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/Pipe.h"
 #include "llvm/ADT/DenseMap.h"
+#include <atomic>
 #include <csignal>
 #include <list>
 #include <vector>
@@ -87,6 +88,7 @@ private:
   llvm::DenseMap<IOObject::WaitableHandle, Callback> m_read_fds;
   llvm::DenseMap<int, SignalInfo> m_signals;
   Pipe m_trigger_pipe;
+  std::atomic<bool> m_triggering;
 #if HAVE_SYS_EVENT_H
   int m_kqueue;
 #endif

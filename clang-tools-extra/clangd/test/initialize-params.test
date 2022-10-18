@@ -58,6 +58,7 @@
 # CHECK-NEXT:        "legend": {
 # CHECK-NEXT:          "tokenModifiers": [
 # CHECK-NEXT:            "declaration",
+# CHECK-NEXT:            "definition",
 # CHECK-NEXT:            "deprecated",
 # CHECK-NEXT:            "deduced",
 # CHECK-NEXT:            "readonly",

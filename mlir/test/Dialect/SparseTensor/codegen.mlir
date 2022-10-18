@@ -1,5 +1,7 @@
 // RUN: mlir-opt %s --sparse-tensor-codegen  --canonicalize --cse | FileCheck %s
 
+#SV = #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>
+
 #SparseVector = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed" ],
   indexBitWidth = 64,
@@ -383,10 +385,10 @@ func.func @sparse_compression(%tensor: tensor<8x8xf64, #CSR>,
                               %filled: memref<?xi1>,
                               %added: memref<?xindex>,
                               %count: index,
-                              %i: index) {
-  sparse_tensor.compress %values, %filled, %added, %count into %tensor[%i]
+                              %i: index) -> tensor<8x8xf64, #CSR> {
+  %0 = sparse_tensor.compress %values, %filled, %added, %count into %tensor[%i]
     : memref<?xf64>, memref<?xi1>, memref<?xindex>, tensor<8x8xf64, #CSR>
-  return
+  return %0 : tensor<8x8xf64, #CSR>
 }
 
 // CHECK-LABEL: func @sparse_compression_unordered(
@@ -420,8 +422,30 @@ func.func @sparse_compression_unordered(%tensor: tensor<8x8xf64, #UCSR>,
                                         %filled: memref<?xi1>,
                                         %added: memref<?xindex>,
                                         %count: index,
-                                        %i: index) {
-  sparse_tensor.compress %values, %filled, %added, %count into %tensor[%i]
+                                        %i: index) -> tensor<8x8xf64, #UCSR> {
+  %0 = sparse_tensor.compress %values, %filled, %added, %count into %tensor[%i]
     : memref<?xf64>, memref<?xi1>, memref<?xindex>, tensor<8x8xf64, #UCSR>
-  return
+  return %0 : tensor<8x8xf64, #UCSR>
+}
+
+// CHECK-LABEL: func @sparse_insert(
+//  CHECK-SAME: %[[A0:.*0]]: memref<1xindex>,
+//  CHECK-SAME: %[[A1:.*1]]: memref<3xindex>,
+//  CHECK-SAME: %[[A2:.*2]]: memref<?xindex>,
+//  CHECK-SAME: %[[A3:.*3]]: memref<?xindex>,
+//  CHECK-SAME: %[[A4:.*4]]: memref<?xf64>,
+//  CHECK-SAME: %[[A5:.*5]]: index,
+//  CHECK-SAME: %[[A6:.*6]]: f64)
+//   CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+//       CHECK: %[[T0:.*]] = sparse_tensor.push_back %[[A1]], %[[A2]], %[[C0]]
+//       CHECK: %[[T1:.*]] = sparse_tensor.push_back %[[A1]], %[[A3]], %[[A5]]
+//       CHECK: %[[T2:.*]] = sparse_tensor.push_back %[[A1]], %[[A4]], %[[A6]]
+//       CHECK: %[[T3:.*]] = memref.load %[[A1]][%[[C2]]] : memref<3xindex>
+//       CHECK: %[[T4:.*]] = sparse_tensor.push_back %[[A1]], %[[T0]], %[[T3]]
+//       CHECK: return %[[A0]], %[[A1]], %[[T4]], %[[T1]], %[[T2]] : memref<1xindex>, memref<3xindex>, memref<?xindex>, memref<?xindex>, memref<?xf64>
+func.func @sparse_insert(%arg0: tensor<128xf64, #SV>, %arg1: index, %arg2: f64) -> tensor<128xf64, #SV> {
+  %0 = sparse_tensor.insert %arg2 into %arg0[%arg1] : tensor<128xf64, #SV>
+  %1 = sparse_tensor.load %0 hasInserts : tensor<128xf64, #SV>
+  return %1 : tensor<128xf64, #SV>
 }

@@ -36,6 +36,27 @@ namespace dr1423 { // dr1423: 11
 #endif
 }
 
+namespace dr1432 { // dr1432: 16
+#if __cplusplus >= 201103L
+  template<typename T> T declval();
+
+  template <class... T>
+  struct common_type;
+
+  template <class T, class U>
+  struct common_type<T, U> {
+   typedef decltype(true ? declval<T>() : declval<U>()) type;
+  };
+
+  template <class T, class U, class... V>
+  struct common_type<T, U, V...> {
+   typedef typename common_type<typename common_type<T, U>::type, V...>::type type;
+  };
+
+  template struct common_type<int, double>;
+#endif
+}
+
 namespace dr1443 { // dr1443: yes
 struct A {
   int i;

@@ -1202,6 +1202,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_UMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
+      setOperationAction(ISD::ZERO_EXTEND, VT, Custom);
 
       setOperationAction(ISD::UMUL_LOHI, VT, Expand);
       setOperationAction(ISD::SMUL_LOHI, VT, Expand);
@@ -5527,6 +5528,26 @@ static SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) {
   return SDValue();
 }
 
+SDValue AArch64TargetLowering::LowerZERO_EXTEND(SDValue Op, SelectionDAG &DAG) const {
+  assert(Op->getOpcode() == ISD::ZERO_EXTEND && "Expected ZERO_EXTEND");
+
+  if (Op.getValueType().isFixedLengthVector())
+    return LowerFixedLengthVectorIntExtendToSVE(Op, DAG);
+
+  // Try to lower to VSELECT to allow zext to transform into
+  // a predicated instruction like add, sub or mul.
+  SDValue Value = Op->getOperand(0);
+  if (!Value->getValueType(0).isScalableVector() ||
+      Value->getValueType(0).getScalarType() != MVT::i1)
+    return SDValue();
+
+  SDLoc DL = SDLoc(Op);
+  EVT VT = Op->getValueType(0);
+  SDValue Ones = DAG.getConstant(1, DL, VT);
+  SDValue Zeros = DAG.getConstant(0, DL, VT);
+  return DAG.getNode(ISD::VSELECT, DL, VT, Value, Ones, Zeros);
+}
+
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
@@ -5739,8 +5760,9 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVSCALE(Op, DAG);
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
-  case ISD::ZERO_EXTEND:
     return LowerFixedLengthVectorIntExtendToSVE(Op, DAG);
+  case ISD::ZERO_EXTEND:
+    return LowerZERO_EXTEND(Op, DAG);
   case ISD::SIGN_EXTEND_INREG: {
     // Only custom lower when ExtraVT has a legal byte based element type.
     EVT ExtraVT = cast<VTSDNode>(Op.getOperand(1))->getVT();

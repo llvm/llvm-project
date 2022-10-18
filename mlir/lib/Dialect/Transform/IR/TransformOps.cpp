@@ -177,17 +177,16 @@ transform::AlternativesOp::apply(transform::TransformResults &results,
 
   for (Operation *original : originals) {
     if (original->isAncestor(getOperation())) {
-      InFlightDiagnostic diag =
-          emitError() << "scope must not contain the transforms being applied";
+      auto diag = emitDefiniteFailure()
+                  << "scope must not contain the transforms being applied";
       diag.attachNote(original->getLoc()) << "scope";
-      return DiagnosedSilenceableFailure::definiteFailure();
+      return diag;
     }
     if (!original->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
-      InFlightDiagnostic diag =
-          emitError()
-          << "only isolated-from-above ops can be alternative scopes";
+      auto diag = emitDefiniteFailure()
+                  << "only isolated-from-above ops can be alternative scopes";
       diag.attachNote(original->getLoc()) << "scope";
-      return DiagnosedSilenceableFailure(std::move(diag));
+      return diag;
     }
   }
 
@@ -523,8 +522,8 @@ transform::PDLMatchOp::apply(transform::TransformResults &results,
   for (Operation *root : state.getPayloadOps(getRoot())) {
     if (failed(extension->findAllMatches(
             getPatternName().getLeafReference().getValue(), root, targets))) {
-      emitOpError() << "could not find pattern '" << getPatternName() << "'";
-      return DiagnosedSilenceableFailure::definiteFailure();
+      emitDefiniteFailure()
+          << "could not find pattern '" << getPatternName() << "'";
     }
   }
   results.set(getResult().cast<OpResult>(), targets);

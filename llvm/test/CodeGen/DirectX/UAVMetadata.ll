@@ -13,15 +13,15 @@ target triple = "dxil-pc-shadermodel6.0-compute"
 ; PRINT-NEXT:; Name                                 Type  Format         Dim      ID      HLSL Bind  Count
 ; PRINT-NEXT:; ------------------------------ ---------- ------- ----------- ------- -------------- ------
 ; PRINT-NEXT:;                                       UAV     f16         buf      U0             u0     1
-; PRINT-NEXT:;                                       UAV     f32         buf      U1             u0     1
-; PRINT-NEXT:;                                       UAV     f64         buf      U2             u0     1
-; PRINT-NEXT:;                                       UAV      i1         buf      U3             u0     2
-; PRINT-NEXT:;                                       UAV    byte         r/w      U4             u0     1
-; PRINT-NEXT:;                                       UAV  struct         r/w      U5             u0     1
-; PRINT-NEXT:;                                       UAV     i32         buf      U6             u0     1
-; PRINT-NEXT:;                                       UAV  struct         r/w      U7             u0     1
-; PRINT-NEXT:;                                       UAV    byte         r/w      U8             u0     1
-; PRINT-NEXT:;                                       UAV     u64         buf      U9             u0     1
+; PRINT-NEXT:;                                       UAV     f32         buf      U1             u1     1
+; PRINT-NEXT:;                                       UAV     f64         buf      U2             u2     1
+; PRINT-NEXT:;                                       UAV      i1         buf      U3             u3     2
+; PRINT-NEXT:;                                       UAV    byte         r/w      U4             u5     1
+; PRINT-NEXT:;                                       UAV  struct         r/w      U5             u6     1
+; PRINT-NEXT:;                                       UAV     i32         buf      U6             u7     1
+; PRINT-NEXT:;                                       UAV  struct         r/w      U7             u8     1
+; PRINT-NEXT:;                                       UAV    byte         r/w      U8             u9     1
+; PRINT-NEXT:;                                       UAV     u64         buf      U9     u10,space2     1
 
 @Zero = local_unnamed_addr global %"class.hlsl::RWBuffer" zeroinitializer, align 4
 @One = local_unnamed_addr global %"class.hlsl::RWBuffer" zeroinitializer, align 4
@@ -37,16 +37,16 @@ target triple = "dxil-pc-shadermodel6.0-compute"
 
 !hlsl.uavs = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9}
 
-!0 = !{ptr @Zero, !"RWBuffer<half>", i32 0}
-!1 = !{ptr @One, !"Buffer<vector<float,4>>", i32 1}
-!2 = !{ptr @Two, !"Buffer<double>", i32 2}
-!3 = !{ptr @Three, !"Buffer<bool>", i32 3}
-!4 = !{ptr @Four, !"ByteAddressBuffer<int16_t>", i32 4}
-!5 = !{ptr @Five, !"StructuredBuffer<uint16_t>", i32 5}
-!6 = !{ptr @Six, !"RasterizerOrderedBuffer<int32_t>", i32 6}
-!7 = !{ptr @Seven, !"RasterizerOrderedStructuredBuffer<uint32_t>", i32 7}
-!8 = !{ptr @Eight, !"RasterizerOrderedByteAddressBuffer<int64_t>", i32 8}
-!9 = !{ptr @Nine, !"RWBuffer<uint64_t>", i32 9}
+!0 = !{ptr @Zero, !"RWBuffer<half>", i32 0, i32 10, i32 0, i32 0}
+!1 = !{ptr @One, !"Buffer<vector<float,4>>", i32 1, i32 10, i32 1, i32 0}
+!2 = !{ptr @Two, !"Buffer<double>", i32 2, i32 10, i32 2, i32 0}
+!3 = !{ptr @Three, !"Buffer<bool>", i32 3, i32 10, i32 3, i32 0}
+!4 = !{ptr @Four, !"ByteAddressBuffer<int16_t>", i32 4, i32 11, i32 5, i32 0}
+!5 = !{ptr @Five, !"StructuredBuffer<uint16_t>", i32 5, i32 12, i32 6, i32 0}
+!6 = !{ptr @Six, !"RasterizerOrderedBuffer<int32_t>", i32 6, i32 10, i32 7, i32 0}
+!7 = !{ptr @Seven, !"RasterizerOrderedStructuredBuffer<uint32_t>", i32 7, i32 12, i32 8, i32 0}
+!8 = !{ptr @Eight, !"RasterizerOrderedByteAddressBuffer<int64_t>", i32 8, i32 11, i32 9, i32 0}
+!9 = !{ptr @Nine, !"RWBuffer<uint64_t>", i32 9, i32 10, i32 10, i32 2}
 
 ; CHECK: !dx.resources = !{[[ResList:[!][0-9]+]]}
 
@@ -57,21 +57,21 @@ target triple = "dxil-pc-shadermodel6.0-compute"
 ; CHECK-SAME: [[Eight:[!][0-9]+]], [[Nine:[!][0-9]+]]}
 ; CHECK: [[Zero]] = !{i32 0, ptr @Zero, !"", i32 0, i32 0, i32 1, i32 10, i1 false, i1 false, i1 false, [[Half:[!][0-9]+]]}
 ; CHECK: [[Half]] = !{i32 0, i32 8}
-; CHECK: [[One]] = !{i32 1, ptr @One, !"", i32 0, i32 0, i32 1, i32 10, i1 false, i1 false, i1 false, [[Float:[!][0-9]+]]}
+; CHECK: [[One]] = !{i32 1, ptr @One, !"", i32 0, i32 1, i32 1, i32 10, i1 false, i1 false, i1 false, [[Float:[!][0-9]+]]}
 ; CHECK: [[Float]] = !{i32 0, i32 9}
-; CHECK: [[Two]] = !{i32 2, ptr @Two, !"", i32 0, i32 0, i32 1, i32 10, i1 false, i1 false, i1 false, [[Double:[!][0-9]+]]}
+; CHECK: [[Two]] = !{i32 2, ptr @Two, !"", i32 0, i32 2, i32 1, i32 10, i1 false, i1 false, i1 false, [[Double:[!][0-9]+]]}
 ; CHECK: [[Double]] = !{i32 0, i32 10}
-; CHECK: [[Three]] = !{i32 3, ptr @Three, !"", i32 0, i32 0, i32 2, i32 10, i1 false, i1 false, i1 false, [[Bool:[!][0-9]+]]}
+; CHECK: [[Three]] = !{i32 3, ptr @Three, !"", i32 0, i32 3, i32 2, i32 10, i1 false, i1 false, i1 false, [[Bool:[!][0-9]+]]}
 ; CHECK: [[Bool]] = !{i32 0, i32 1}
-; CHECK: [[Four]] = !{i32 4, ptr @Four, !"", i32 0, i32 0, i32 1, i32 11, i1 false, i1 false, i1 false, [[I16:[!][0-9]+]]}
+; CHECK: [[Four]] = !{i32 4, ptr @Four, !"", i32 0, i32 5, i32 1, i32 11, i1 false, i1 false, i1 false, [[I16:[!][0-9]+]]}
 ; CHECK: [[I16]] = !{i32 0, i32 2}
-; CHECK: [[Five]] = !{i32 5, ptr @Five, !"", i32 0, i32 0, i32 1, i32 12, i1 false, i1 false, i1 false, [[U16:[!][0-9]+]]}
+; CHECK: [[Five]] = !{i32 5, ptr @Five, !"", i32 0, i32 6, i32 1, i32 12, i1 false, i1 false, i1 false, [[U16:[!][0-9]+]]}
 ; CHECK: [[U16]] = !{i32 0, i32 3}
-; CHECK: [[Six]] = !{i32 6, ptr @Six, !"", i32 0, i32 0, i32 1, i32 10, i1 false, i1 false, i1 true, [[I32:[!][0-9]+]]}
+; CHECK: [[Six]] = !{i32 6, ptr @Six, !"", i32 0, i32 7, i32 1, i32 10, i1 false, i1 false, i1 true, [[I32:[!][0-9]+]]}
 ; CHECK: [[I32]] = !{i32 0, i32 4}
-; CHECK: [[Seven]] = !{i32 7, ptr @Seven, !"", i32 0, i32 0, i32 1, i32 12, i1 false, i1 false, i1 true, [[U32:[!][0-9]+]]}
+; CHECK: [[Seven]] = !{i32 7, ptr @Seven, !"", i32 0, i32 8, i32 1, i32 12, i1 false, i1 false, i1 true, [[U32:[!][0-9]+]]}
 ; CHECK: [[U32]] = !{i32 0, i32 5}
-; CHECK: [[Eight]] = !{i32 8, ptr @Eight, !"", i32 0, i32 0, i32 1, i32 11, i1 false, i1 false, i1 true, [[I64:[!][0-9]+]]}
+; CHECK: [[Eight]] = !{i32 8, ptr @Eight, !"", i32 0, i32 9, i32 1, i32 11, i1 false, i1 false, i1 true, [[I64:[!][0-9]+]]}
 ; CHECK: [[I64]] = !{i32 0, i32 6}
-; CHECK: [[Nine]] = !{i32 9, ptr @Nine, !"", i32 0, i32 0, i32 1, i32 10, i1 false, i1 false, i1 false, [[U64:[!][0-9]+]]}
+; CHECK: [[Nine]] = !{i32 9, ptr @Nine, !"", i32 2, i32 10, i32 1, i32 10, i1 false, i1 false, i1 false, [[U64:[!][0-9]+]]}
 ; CHECK: [[U64]] = !{i32 0, i32 7}

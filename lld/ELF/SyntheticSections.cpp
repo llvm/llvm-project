@@ -605,7 +605,7 @@ void EhFrameSection::writeTo(uint8_t *buf) {
   // in the output buffer, but relocateAlloc() still works because
   // getOffset() takes care of discontiguous section pieces.
   for (EhInputSection *s : sections)
-    s->relocateAlloc(buf, nullptr);
+    target->relocateAlloc(*s, buf);
 
   if (getPartition().ehFrameHdr && getPartition().ehFrameHdr->getParent())
     getPartition().ehFrameHdr->write();
@@ -682,7 +682,7 @@ void GotSection::writeTo(uint8_t *buf) {
   if (size == 0)
     return;
   target->writeGotHeader(buf);
-  relocateAlloc(buf, buf + size);
+  target->relocateAlloc(*this, buf);
 }
 
 static uint64_t getMipsPageAddr(uint64_t addr) {
@@ -3523,7 +3523,7 @@ void ARMExidxSyntheticSection::writeTo(uint8_t *buf) {
     assert(isec->getParent() != nullptr);
     if (InputSection *d = findExidxSection(isec)) {
       memcpy(buf + offset, d->rawData.data(), d->rawData.size());
-      d->relocateAlloc(buf + d->outSecOff, buf + d->outSecOff + d->getSize());
+      target->relocateAlloc(*d, buf + d->outSecOff);
       offset += d->getSize();
     } else {
       // A Linker generated CANTUNWIND section.

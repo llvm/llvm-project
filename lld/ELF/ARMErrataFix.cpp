@@ -182,7 +182,7 @@ void Patch657417Section::writeTo(uint8_t *buf) {
     write32le(buf, 0x9000f000);
   // If we have a relocation then apply it.
   if (!relocations.empty()) {
-    relocateAlloc(buf, buf + getSize());
+    target->relocateAlloc(*this, buf);
     return;
   }
 

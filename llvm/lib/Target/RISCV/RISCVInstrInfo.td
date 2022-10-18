@@ -1313,6 +1313,20 @@ def riscv_selectcc_frag : PatFrag<(ops node:$lhs, node:$rhs, node:$cc,
                                                   node:$falsev), [{}],
                                   IntCCtoRISCVCC>;
 
+let Predicates = [HasShortForwardBranchOpt],
+    Constraints = "$dst = $falsev", isCommutable = 1, Size = 8 in {
+// This instruction moves $truev to $dst when the condition is true. It will
+// be expanded to control flow in RISCVExpandPseudoInsts.
+def PseudoCCMOVGPR : Pseudo<(outs GPR:$dst),
+                            (ins GPR:$lhs, GPR:$rhs, ixlenimm:$cc,
+                             GPR:$falsev, GPR:$truev),
+                            [(set GPR:$dst,
+                              (riscv_selectcc_frag:$cc GPR:$lhs, GPR:$rhs,
+                                                       cond, GPR:$truev,
+                                                       GPR:$falsev))]>,
+                     Sched<[WriteSFB, ReadSFB, ReadSFB, ReadSFB, ReadSFB]>;
+}
+
 multiclass SelectCC_GPR_rrirr<RegisterClass valty> {
   let usesCustomInserter = 1 in
   def _Using_CC_GPR : Pseudo<(outs valty:$dst),
@@ -1329,6 +1343,7 @@ multiclass SelectCC_GPR_rrirr<RegisterClass valty> {
              (IntCCtoRISCVCC $cc), valty:$truev, valty:$falsev)>;
 }
 
+let Predicates = [NoShortForwardBranchOpt] in
 defm Select_GPR : SelectCC_GPR_rrirr<GPR>;
 
 class SelectCompressOpt<CondCode Cond>: Pat<(riscv_selectcc_frag:$select GPR:$lhs, simm12_no6:$Constant, Cond,

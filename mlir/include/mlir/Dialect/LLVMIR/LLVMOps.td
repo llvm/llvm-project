@@ -13,7 +13,9 @@
 #ifndef LLVMIR_OPS
 #define LLVMIR_OPS
 
+include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
@@ -21,6 +23,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
+def FMFnone     : I32BitEnumAttrCaseNone<"none">;
 def FMFnnan     : I32BitEnumAttrCaseBit<"nnan", 0>;
 def FMFninf     : I32BitEnumAttrCaseBit<"ninf", 1>;
 def FMFnsz      : I32BitEnumAttrCaseBit<"nsz", 2>;
@@ -34,22 +37,18 @@ def FMFfast     : I32BitEnumAttrCaseGroup<"fast",
 def FastmathFlags : I32BitEnumAttr<
     "FastmathFlags",
     "LLVM fastmath flags",
-    [FMFnnan, FMFninf, FMFnsz, FMFarcp, FMFcontract, FMFafn, FMFreassoc, FMFfast
-    ]> {
+    [FMFnone, FMFnnan, FMFninf, FMFnsz, FMFarcp, FMFcontract, FMFafn,
+     FMFreassoc, FMFfast]> {
   let separator = ", ";
   let cppNamespace = "::mlir::LLVM";
+  let genSpecializedAttr = 0;
   let printBitEnumPrimaryGroups = 1;
 }
 
-def LLVM_FMFAttr : DialectAttr<
-    LLVM_Dialect,
-    CPred<"$_self.isa<::mlir::LLVM::FMFAttr>()">,
-    "LLVM fastmath flags"> {
-  let storageType = "::mlir::LLVM::FMFAttr";
-  let returnType = "::mlir::LLVM::FastmathFlags";
-  let convertFromStorage = "$_self.getFlags()";
-  let constBuilderCall =
-          "::mlir::LLVM::FMFAttr::get($_builder.getContext(), $0)";
+// The "FastMath" flags associated with floating point LLVM instructions.
+def LLVM_FastmathFlagsAttr :
+    EnumAttr<LLVM_Dialect, FastmathFlags, "fastmath"> {
+  let assemblyFormat = "`<` $value `>`";
 }
 
 def LOptDisableUnroll : I32EnumAttrCase<"disable_unroll", 1>;
@@ -229,7 +228,8 @@ class LLVM_FloatArithmeticOp<string mnemonic, string instName,
                              list<Trait> traits = []> :
     LLVM_ArithmeticOpBase<LLVM_AnyFloat, mnemonic, instName,
     !listconcat([DeclareOpInterfaceMethods<FastmathFlagsInterface>], traits)> {
-  dag fmfArg = (ins DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
+  dag fmfArg = (
+    ins DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
   let arguments = !con(commonArgs, fmfArg);
 }
 
@@ -239,7 +239,9 @@ class LLVM_UnaryFloatArithmeticOp<Type type, string mnemonic,
     LLVM_Op<mnemonic,
            !listconcat([Pure, SameOperandsAndResultType, DeclareOpInterfaceMethods<FastmathFlagsInterface>], traits)>,
     LLVM_Builder<"$res = builder.Create" # instName # "($operand);"> {
-  let arguments = (ins type:$operand, DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
+  let arguments = (
+    ins type:$operand,
+    DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
   let results = (outs type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "$operand custom<LLVMOpAttrs>(attr-dict) `:` type($res)";
@@ -354,7 +356,8 @@ def LLVM_FCmpOp : LLVM_ArithmeticCmpOp<"fcmp", [
   let arguments = (ins FCmpPredicate:$predicate,
                    LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$lhs,
                    LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$rhs,
-                   DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
+                   DefaultValuedAttr<LLVM_FastmathFlagsAttr,
+                                     "{}">:$fastmathFlags);
   let builders = [
     OpBuilder<(ins "FCmpPredicate":$predicate, "Value":$lhs, "Value":$rhs)>
   ];
@@ -747,7 +750,8 @@ def LLVM_CallOp : LLVM_Op<"call",
 
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
                        Variadic<LLVM_Type>,
-                       DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
+                       DefaultValuedAttr<LLVM_FastmathFlagsAttr,
+                                         "{}">:$fastmathFlags);
   let results = (outs Optional<LLVM_Type>:$result);
 
   let builders = [
@@ -1021,7 +1025,7 @@ def LLVM_ReturnOp : LLVM_TerminatorOp<"return", [Pure]> {
   string llvmInstName = "Ret";
   string llvmBuilder = [{
     if ($_numOperands != 0)
-      builder.CreateRet($arg[0]);
+      builder.CreateRet($arg);
     else
       builder.CreateRetVoid();
   }];

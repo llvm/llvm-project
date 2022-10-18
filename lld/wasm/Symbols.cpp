@@ -84,6 +84,7 @@ DefinedData *WasmSym::dsoHandle;
 DefinedData *WasmSym::dataEnd;
 DefinedData *WasmSym::globalBase;
 DefinedData *WasmSym::heapBase;
+DefinedData *WasmSym::heapEnd;
 DefinedData *WasmSym::initMemoryFlag;
 GlobalSymbol *WasmSym::stackPointer;
 DefinedData *WasmSym::stackLow;

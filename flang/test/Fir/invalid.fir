@@ -802,3 +802,9 @@ func.func private @dispatch(%arg0: !fir.class<!fir.type<derived{a:i32,b:i32}>>, 
   fir.dispatch "proc1"(%arg0 : !fir.class<!fir.type<derived{a:i32,b:i32}>>) (%arg0, %arg1 : !fir.class<!fir.type<derived{a:i32,b:i32}>>, i32) {pass_arg_pos = 1 : i32}
   return
 }
+
+// -----
+func.func @test_fortran_var_attrs() {
+  // expected-error@+1 {{Unknown fortran variable attribute: volatypo}}
+  %0 = fir.alloca f32 {fortran_attrs = #fir.var_attrs<volatypo>}
+}

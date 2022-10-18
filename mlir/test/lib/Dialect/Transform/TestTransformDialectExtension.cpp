@@ -188,10 +188,8 @@ mlir::test::TestCheckIfTestExtensionPresentOp::apply(
 DiagnosedSilenceableFailure mlir::test::TestRemapOperandPayloadToSelfOp::apply(
     transform::TransformResults &results, transform::TransformState &state) {
   auto *extension = state.getExtension<TestTransformStateExtension>();
-  if (!extension) {
-    emitError() << "TestTransformStateExtension missing";
-    return DiagnosedSilenceableFailure::definiteFailure();
-  }
+  if (!extension)
+    return emitDefiniteFailure("TestTransformStateExtension missing");
 
   if (failed(extension->updateMapping(state.getPayloadOps(getOperand()).front(),
                                       getOperation())))

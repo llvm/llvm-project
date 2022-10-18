@@ -105,6 +105,10 @@ def WriteFST16        : SchedWrite;    // Floating point sp store
 def WriteFST32        : SchedWrite;    // Floating point sp store
 def WriteFST64        : SchedWrite;    // Floating point dp store
 
+// short forward branch for Bullet
+def WriteSFB        : SchedWrite;
+def ReadSFB         : SchedRead;
+
 /// Define scheduler resources associated with use operands.
 def ReadJmp         : SchedRead;
 def ReadJalr        : SchedRead;
@@ -226,6 +230,14 @@ def : ReadAdvance<ReadFMovI16ToF16, 0>;
 def : ReadAdvance<ReadFMovF16ToI16, 0>;
 def : ReadAdvance<ReadFSGNJ16, 0>;
 def : ReadAdvance<ReadFSqrt16, 0>;
+} // Unsupported = true
+}
+
+multiclass UnsupportedSchedSFB {
+let Unsupported = true in {
+def : WriteRes<WriteSFB, []>;
+
+def : ReadAdvance<ReadSFB, 0>;
 } // Unsupported = true
 }
 

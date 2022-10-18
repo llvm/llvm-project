@@ -2835,9 +2835,10 @@ def TestLinalgConvOp :
       return "";
     }
 
-    // To conform with interface requirement on operand naming.
-    mlir::ValueRange inputs() { return getInputs(); }
-    mlir::ValueRange outputs() { return getOutputs(); }
+    std::pair<int64_t, int64_t> getOutputsPositionRange() {
+      int64_t getNumOperands = this->getNumOperands();
+      return {getNumOperands - 1, getNumOperands};
+    }
   }];
 }
 
@@ -2894,9 +2895,10 @@ def TestLinalgFillOp :
       return "";
     }
 
-    // To conform with interface requirement on operand naming.
-    mlir::ValueRange inputs() { return getInputs(); }
-    mlir::ValueRange outputs() { return getOutputs(); }
+    std::pair<int64_t, int64_t> getOutputsPositionRange() {
+      int64_t getNumOperands = this->getNumOperands();
+      return {getNumOperands - 1, getNumOperands};
+    }
   }];
 }
 
@@ -2916,6 +2918,16 @@ def TestDefaultStrAttrHasValueOp : TEST_Op<"has_str_value"> {
 
 def : Pat<(TestDefaultStrAttrNoValueOp $value),
           (TestDefaultStrAttrHasValueOp ConstantStrAttr<StrAttr, "foo">)>;
+
+//===----------------------------------------------------------------------===//
+// Test Ops with Default-Valued Attributes and Differing Print Settings
+//===----------------------------------------------------------------------===//
+
+def TestDefaultAttrPrintOp : TEST_Op<"default_value_print"> {
+  let arguments = (ins DefaultValuedAttr<I32Attr, "0">:$value_with_default,
+                   I32:$operand);
+  let assemblyFormat = "attr-dict $operand";
+}
 
 //===----------------------------------------------------------------------===//
 // Test Ops with effects

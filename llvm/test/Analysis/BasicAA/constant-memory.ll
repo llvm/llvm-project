@@ -13,9 +13,9 @@ define void @basic(ptr %p) {
   ret void
 }
 
-; FIXME: This should be at least only Ref.
+; FIXME: This could be NoModRef
 ; CHECK-LABEL: Function: recphi
-; Both ModRef: Ptr: i32* %p	<->  call void @dummy()
+; CHECK: Just Ref: Ptr: i32* %p	<->  call void @dummy()
 define void @recphi() {
 entry:
   br label %loop
