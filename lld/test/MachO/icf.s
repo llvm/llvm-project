@@ -25,7 +25,7 @@
 # CHECK: [[#%x,DYLIB_REF_4:]]               l     F __TEXT,__text _dylib_ref_4
 # CHECK: [[#%x,ALT:]]                       l     F __TEXT,__text _alt
 # CHECK: [[#%x,WITH_ALT_ENTRY:]]            l     F __TEXT,__text _with_alt_entry
-# CHECK: [[#%x,WITH_ALT_ENTRY]]             l     F __TEXT,__text _no_alt_entry
+# CHECK: [[#%x,NO_ALT_ENTRY:]]              l     F __TEXT,__text _no_alt_entry
 # CHECK: [[#%x,DEFINED_REF_WITH_ADDEND_2:]] l     F __TEXT,__text _defined_ref_with_addend_1
 # CHECK: [[#%x,DEFINED_REF_WITH_ADDEND_2]]  l     F __TEXT,__text _defined_ref_with_addend_2
 # CHECK: [[#%x,DEFINED_REF_WITH_ADDEND_3:]] l     F __TEXT,__text _defined_ref_with_addend_3
@@ -74,7 +74,7 @@
 # CHECK: callq 0x[[#%x,DYLIB_REF_4]]               <_dylib_ref_4>
 # CHECK: callq 0x[[#%x,ALT]]                       <_alt>
 # CHECK: callq 0x[[#%x,WITH_ALT_ENTRY]]            <_with_alt_entry>
-# CHECK: callq 0x[[#%x,WITH_ALT_ENTRY]]            <_with_alt_entry>
+# CHECK: callq 0x[[#%x,NO_ALT_ENTRY]]              <_no_alt_entry>
 # CHECK: callq 0x[[#%x,DEFINED_REF_WITH_ADDEND_2]] <_defined_ref_with_addend_2>
 # CHECK: callq 0x[[#%x,DEFINED_REF_WITH_ADDEND_2]] <_defined_ref_with_addend_2>
 # CHECK: callq 0x[[#%x,DEFINED_REF_WITH_ADDEND_3]] <_defined_ref_with_addend_3>
@@ -161,8 +161,7 @@ _dylib_ref_4:
   mov ___nan + 1@GOTPCREL(%rip), %rax
   callq ___inf + 1
 
-## We can merge two sections even if one of them has an alt entry. Just make
-## sure we don't merge the alt entry symbol with a regular symbol.
+## Sections with alt entries cannot be merged.
 .alt_entry _alt
 _with_alt_entry:
   movq $3132, %rax
