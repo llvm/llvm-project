@@ -1897,9 +1897,24 @@ size_t SymbolFileNativePDB::ParseVariablesForBlock(PdbCompilandSymId block_id) {
     ProcSym proc(static_cast<SymbolRecordKind>(sym.kind()));
     cantFail(SymbolDeserializer::deserializeAs<ProcSym>(sym, proc));
     CVType signature = m_index->tpi().getType(proc.FunctionType);
-    ProcedureRecord sig;
-    cantFail(TypeDeserializer::deserializeAs<ProcedureRecord>(signature, sig));
-    params_remaining = sig.getParameterCount();
+    if (signature.kind() == LF_PROCEDURE) {
+      ProcedureRecord sig;
+      if (llvm::Error e = TypeDeserializer::deserializeAs<ProcedureRecord>(
+              signature, sig)) {
+        llvm::consumeError(std::move(e));
+        return 0;
+      }
+      params_remaining = sig.getParameterCount();
+    } else if (signature.kind() == LF_MFUNCTION) {
+      MemberFunctionRecord sig;
+      if (llvm::Error e = TypeDeserializer::deserializeAs<MemberFunctionRecord>(
+              signature, sig)) {
+        llvm::consumeError(std::move(e));
+        return 0;
+      }
+      params_remaining = sig.getParameterCount();
+    } else
+      return 0;
     break;
   }
   case S_BLOCK32:
