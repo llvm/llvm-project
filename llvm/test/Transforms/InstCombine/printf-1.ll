@@ -127,7 +127,7 @@ define void @test_simplify7() {
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-IPRINTF-LABEL: @test_simplify7(
-; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ...) @iprintf(ptr nonnull @percent_d, i32 187)
+; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ...) @iprintf(ptr noundef nonnull dereferenceable(1) @percent_d, i32 187)
 ; CHECK-IPRINTF-NEXT:    ret void
 ;
   call i32 (ptr, ...) @printf(ptr @percent_d, i32 187)
@@ -166,7 +166,7 @@ define i32 @test_no_simplify3() {
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
 ; CHECK-IPRINTF-LABEL: @test_no_simplify3(
-; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ...) @iprintf(ptr nonnull @h)
+; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ...) @iprintf(ptr noundef nonnull dereferenceable(1) @h)
 ; CHECK-IPRINTF-NEXT:    ret i32 [[TMP1]]
 ;
   %ret = call i32 (ptr, ...) @printf(ptr @h)
