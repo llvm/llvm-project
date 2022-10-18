@@ -2090,6 +2090,113 @@ public:
   }
 };
 
+static ThreadSP GetSingleThreadFromArgs(ExecutionContext &exe_ctx, Args &args,
+                                        CommandReturnObject &result) {
+  if (args.GetArgumentCount() == 0)
+    return exe_ctx.GetThreadSP();
+
+  const char *arg = args.GetArgumentAtIndex(0);
+  uint32_t thread_idx;
+
+  if (!llvm::to_integer(arg, thread_idx)) {
+    result.AppendErrorWithFormat("invalid thread specification: \"%s\"\n", arg);
+    return nullptr;
+  }
+  ThreadSP thread_sp =
+      exe_ctx.GetProcessRef().GetThreadList().FindThreadByIndexID(thread_idx);
+  if (!thread_sp)
+    result.AppendErrorWithFormat("no thread with index: \"%s\"\n", arg);
+  return thread_sp;
+}
+
+// CommandObjectTraceDumpFunctionCalls
+#define LLDB_OPTIONS_thread_trace_dump_function_calls
+#include "CommandOptions.inc"
+
+class CommandObjectTraceDumpFunctionCalls : public CommandObjectParsed {
+public:
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() { OptionParsingStarting(nullptr); }
+
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+      case 'j': {
+        m_json = true;
+        break;
+      }
+      case 'J': {
+        m_pretty_json = true;
+        break;
+      }
+      case 'F': {
+        m_output_file.emplace(option_arg);
+        break;
+      }
+      default:
+        llvm_unreachable("Unimplemented option");
+      }
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_json = false;
+      m_pretty_json = false;
+      m_output_file = llvm::None;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_thread_trace_dump_function_calls_options);
+    }
+
+    static const size_t kDefaultCount = 20;
+
+    // Instance variables to hold the values for command options.
+    bool m_json;
+    bool m_pretty_json;
+    llvm::Optional<FileSpec> m_output_file;
+  };
+
+  CommandObjectTraceDumpFunctionCalls(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "thread trace dump function-calls",
+            "Dump the traced function-calls for one thread. If no "
+            "thread is specified, the current thread is used.",
+            nullptr,
+            eCommandRequiresProcess | eCommandRequiresThread |
+                eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
+                eCommandProcessMustBePaused | eCommandProcessMustBeTraced) {
+    CommandArgumentData thread_arg{eArgTypeThreadIndex, eArgRepeatOptional};
+    m_arguments.push_back({thread_arg});
+  }
+
+  ~CommandObjectTraceDumpFunctionCalls() override = default;
+
+  Options *GetOptions() override { return &m_options; }
+
+protected:
+  bool DoExecute(Args &args, CommandReturnObject &result) override {
+    ThreadSP thread_sp = GetSingleThreadFromArgs(m_exe_ctx, args, result);
+    if (!thread_sp) {
+      result.AppendError("invalid thread\n");
+      return false;
+    }
+    result.AppendMessageWithFormatv(
+        "json = {0}, pretty_json = {1}, file = {2}, thread = {3}",
+        m_options.m_json, m_options.m_pretty_json, !!m_options.m_output_file,
+        thread_sp->GetID());
+    return true;
+  }
+
+  CommandOptions m_options;
+};
+
 // CommandObjectTraceDumpInstructions
 #define LLDB_OPTIONS_thread_trace_dump_instructions
 #include "CommandOptions.inc"
@@ -2238,28 +2345,8 @@ public:
   }
 
 protected:
-  ThreadSP GetThread(Args &args, CommandReturnObject &result) {
-    if (args.GetArgumentCount() == 0)
-      return m_exe_ctx.GetThreadSP();
-
-    const char *arg = args.GetArgumentAtIndex(0);
-    uint32_t thread_idx;
-
-    if (!llvm::to_integer(arg, thread_idx)) {
-      result.AppendErrorWithFormat("invalid thread specification: \"%s\"\n",
-                                   arg);
-      return nullptr;
-    }
-    ThreadSP thread_sp =
-        m_exe_ctx.GetProcessRef().GetThreadList().FindThreadByIndexID(
-            thread_idx);
-    if (!thread_sp)
-      result.AppendErrorWithFormat("no thread with index: \"%s\"\n", arg);
-    return thread_sp;
-  }
-
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    ThreadSP thread_sp = GetThread(args, result);
+    ThreadSP thread_sp = GetSingleThreadFromArgs(m_exe_ctx, args, result);
     if (!thread_sp) {
       result.AppendError("invalid thread\n");
       return false;
@@ -2401,6 +2488,9 @@ public:
     LoadSubCommand(
         "instructions",
         CommandObjectSP(new CommandObjectTraceDumpInstructions(interpreter)));
+    LoadSubCommand(
+        "function-calls",
+        CommandObjectSP(new CommandObjectTraceDumpFunctionCalls(interpreter)));
     LoadSubCommand(
         "info", CommandObjectSP(new CommandObjectTraceDumpInfo(interpreter)));
   }
