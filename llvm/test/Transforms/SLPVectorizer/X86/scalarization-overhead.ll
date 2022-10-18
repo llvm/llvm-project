@@ -6,14 +6,24 @@
 define i16 @D134605() {
 ; CHECK-LABEL: @D134605(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr poison, align 1
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <8 x i32> <i32 2, i32 2, i32 1, i32 1, i32 0, i32 0, i32 3, i32 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <8 x i16> [[SHUFFLE]], i32 6
-; CHECK-NEXT:    [[REASS_ADD:%.*]] = add i16 poison, [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[SHUFFLE]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = add i16 [[TMP2]], poison
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = add i16 [[OP_RDX]], poison
-; CHECK-NEXT:    [[REASS_MUL24:%.*]] = shl i16 [[OP_RDX1]], 2
+; CHECK-NEXT:    [[ARRAYIDX81:%.*]] = getelementptr inbounds [32 x i16], ptr poison, i16 0, i16 3
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX81]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr poison, align 1
+; CHECK-NEXT:    [[ARRAYIDX101:%.*]] = getelementptr inbounds [32 x i16], ptr poison, i16 0, i16 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[ARRAYIDX101]], align 1
+; CHECK-NEXT:    [[ARRAYIDX107:%.*]] = getelementptr inbounds [32 x i16], ptr poison, i16 0, i16 2
+; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[ARRAYIDX107]], align 1
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = add i16 poison, [[TMP0]]
+; CHECK-NEXT:    [[ADD116:%.*]] = add i16 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[ADD122:%.*]] = add i16 [[ADD116]], [[TMP2]]
+; CHECK-NEXT:    [[ADD124:%.*]] = add i16 [[ADD122]], [[TMP3]]
+; CHECK-NEXT:    [[ADD125:%.*]] = add i16 [[ADD124]], poison
+; CHECK-NEXT:    [[FACTOR2531:%.*]] = add i16 [[TMP3]], [[ADD125]]
+; CHECK-NEXT:    [[ADD14332:%.*]] = add i16 [[FACTOR2531]], [[TMP2]]
+; CHECK-NEXT:    [[ADD14933:%.*]] = add i16 [[ADD14332]], [[TMP1]]
+; CHECK-NEXT:    [[ADD15534:%.*]] = add i16 [[ADD14933]], [[TMP0]]
+; CHECK-NEXT:    [[ADD15935:%.*]] = add i16 [[ADD15534]], poison
+; CHECK-NEXT:    [[REASS_MUL24:%.*]] = shl i16 [[ADD15935]], 2
 ; CHECK-NEXT:    [[CALL:%.*]] = call i16 @check_i16(i16 noundef 1, i16 noundef [[REASS_MUL24]], i16 noundef 5120)
 ; CHECK-NEXT:    unreachable
 ;
