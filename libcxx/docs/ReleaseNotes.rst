@@ -44,6 +44,8 @@ Implemented Papers
 - P0591R4 - Utility functions to implement uses-allocator construction
 - P2291R3 - Add Constexpr Modifiers to Functions ``to_chars`` and
   ``from_chars`` for Integral Types in ``<charconv>`` Header
+- P0220R1 - Adopt Library Fundamentals V1 TS Components for C++17
+- P0482R6 - char8_t: A type for UTF-8 characters and strings
 
 Improvements and New Features
 -----------------------------
