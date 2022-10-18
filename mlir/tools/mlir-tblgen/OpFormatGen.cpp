@@ -1668,7 +1668,8 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
           tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
       body << "  {\n";
       body << "     ::mlir::Builder odsBuilder(getContext());\n";
-      body << "     Attribute attr = " << op.getGetterName(name) << "Attr();\n";
+      body << "     ::mlir::Attribute attr = " << op.getGetterName(name)
+           << "Attr();\n";
       body << "     if(attr && (attr == " << defaultValue << "))\n";
       body << "       elidedAttrs.push_back(\"" << name << "\");\n";
       body << "  }\n";
