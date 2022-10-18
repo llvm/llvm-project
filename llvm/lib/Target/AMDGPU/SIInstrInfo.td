@@ -1290,6 +1290,8 @@ def exp_tgt : NamedOperandU32<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
 
 def wait_vdst : NamedOperandU8<"WaitVDST", NamedMatchClass<"WaitVDST">>;
 def wait_exp : NamedOperandU8<"WaitEXP", NamedMatchClass<"WaitEXP">>;
+def wait_va_vdst : NamedOperandU8<"WaitVAVDST", NamedMatchClass<"WaitVAVDST">>;
+def wait_vm_vsrc : NamedOperandU8<"WaitVMVSRC", NamedMatchClass<"WaitVMVSRC">>;
 
 } // End OperandType = "OPERAND_IMMEDIATE"
 

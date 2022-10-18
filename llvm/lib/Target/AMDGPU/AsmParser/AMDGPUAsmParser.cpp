@@ -167,6 +167,8 @@ public:
     ImmTyEndpgm,
     ImmTyWaitVDST,
     ImmTyWaitEXP,
+    ImmTyWaitVAVDST,
+    ImmTyWaitVMVSRC,
   };
 
   // Immediate operand kind.
@@ -897,6 +899,8 @@ public:
   bool isEndpgm() const;
   bool isWaitVDST() const;
   bool isWaitEXP() const;
+  bool isWaitVAVDST() const;
+  bool isWaitVMVSRC() const;
 
   StringRef getExpressionAsToken() const {
     assert(isExpr());
@@ -1109,6 +1113,12 @@ public:
     case ImmTyEndpgm: OS << "Endpgm"; break;
     case ImmTyWaitVDST: OS << "WaitVDST"; break;
     case ImmTyWaitEXP: OS << "WaitEXP"; break;
+    case ImmTyWaitVAVDST:
+      OS << "WaitVAVDST";
+      break;
+    case ImmTyWaitVMVSRC:
+      OS << "WaitVMVSRC";
+      break;
     }
   }
 
@@ -1861,6 +1871,8 @@ public:
 
   AMDGPUOperand::Ptr defaultWaitVDST() const;
   AMDGPUOperand::Ptr defaultWaitEXP() const;
+  AMDGPUOperand::Ptr defaultWaitVAVDST() const;
+  AMDGPUOperand::Ptr defaultWaitVMVSRC() const;
   OperandMatchResultTy parseVOPD(OperandVector &Operands);
 };
 
@@ -8270,54 +8282,56 @@ static bool ConvertBoundCtrl(int64_t &BoundCtrl) {
 
 // Note: the order in this table matches the order of operands in AsmString.
 static const OptionalOperand AMDGPUOptionalOperandTable[] = {
-  {"offen",   AMDGPUOperand::ImmTyOffen, true, nullptr},
-  {"idxen",   AMDGPUOperand::ImmTyIdxen, true, nullptr},
-  {"addr64",  AMDGPUOperand::ImmTyAddr64, true, nullptr},
-  {"offset0", AMDGPUOperand::ImmTyOffset0, false, nullptr},
-  {"offset1", AMDGPUOperand::ImmTyOffset1, false, nullptr},
-  {"gds",     AMDGPUOperand::ImmTyGDS, true, nullptr},
-  {"lds",     AMDGPUOperand::ImmTyLDS, true, nullptr},
-  {"offset",  AMDGPUOperand::ImmTyOffset, false, nullptr},
-  {"inst_offset", AMDGPUOperand::ImmTyInstOffset, false, nullptr},
-  {"",        AMDGPUOperand::ImmTyCPol, false, nullptr},
-  {"th",      AMDGPUOperand::ImmTyTH, false, nullptr},
-  {"scope",   AMDGPUOperand::ImmTyScope, false, nullptr},
-  {"swz",     AMDGPUOperand::ImmTySWZ, true, nullptr},
-  {"tfe",     AMDGPUOperand::ImmTyTFE, true, nullptr},
-  {"d16",     AMDGPUOperand::ImmTyD16, true, nullptr},
-  {"high",    AMDGPUOperand::ImmTyHigh, true, nullptr},
-  {"clamp",   AMDGPUOperand::ImmTyClampSI, true, nullptr},
-  {"omod",    AMDGPUOperand::ImmTyOModSI, false, ConvertOmodMul},
-  {"unorm",   AMDGPUOperand::ImmTyUNorm, true, nullptr},
-  {"da",      AMDGPUOperand::ImmTyDA,    true, nullptr},
-  {"r128",    AMDGPUOperand::ImmTyR128A16,  true, nullptr},
-  {"a16",     AMDGPUOperand::ImmTyA16,  true, nullptr},
-  {"lwe",     AMDGPUOperand::ImmTyLWE,   true, nullptr},
-  {"nv",      AMDGPUOperand::ImmTyNV, true, nullptr},
-  {"d16",     AMDGPUOperand::ImmTyD16,   true, nullptr},
-  {"dmask",   AMDGPUOperand::ImmTyDMask, false, nullptr},
-  {"dim",     AMDGPUOperand::ImmTyDim,   false, nullptr},
-  {"dst_sel",    AMDGPUOperand::ImmTySdwaDstSel, false, nullptr},
-  {"src0_sel",   AMDGPUOperand::ImmTySdwaSrc0Sel, false, nullptr},
-  {"src1_sel",   AMDGPUOperand::ImmTySdwaSrc1Sel, false, nullptr},
-  {"dst_unused", AMDGPUOperand::ImmTySdwaDstUnused, false, nullptr},
-  {"compr", AMDGPUOperand::ImmTyExpCompr, true, nullptr },
-  {"vm", AMDGPUOperand::ImmTyExpVM, true, nullptr},
-  {"op_sel", AMDGPUOperand::ImmTyOpSel, false, nullptr},
-  {"op_sel_hi", AMDGPUOperand::ImmTyOpSelHi, false, nullptr},
-  {"neg_lo", AMDGPUOperand::ImmTyNegLo, false, nullptr},
-  {"neg_hi", AMDGPUOperand::ImmTyNegHi, false, nullptr},
-  {"dpp8",     AMDGPUOperand::ImmTyDPP8, false, nullptr},
-  {"dpp_ctrl", AMDGPUOperand::ImmTyDppCtrl, false, nullptr},
-  {"row_mask",   AMDGPUOperand::ImmTyDppRowMask, false, nullptr},
-  {"bank_mask",  AMDGPUOperand::ImmTyDppBankMask, false, nullptr},
-  {"bound_ctrl", AMDGPUOperand::ImmTyDppBoundCtrl, false, ConvertBoundCtrl},
-  {"fi",   AMDGPUOperand::ImmTyDppFi, false, nullptr},
-  {"blgp", AMDGPUOperand::ImmTyBLGP, false, nullptr},
-  {"cbsz", AMDGPUOperand::ImmTyCBSZ, false, nullptr},
-  {"abid", AMDGPUOperand::ImmTyABID, false, nullptr},
-  {"wait_vdst", AMDGPUOperand::ImmTyWaitVDST, false, nullptr},
-  {"wait_exp", AMDGPUOperand::ImmTyWaitEXP, false, nullptr}
+    {"offen", AMDGPUOperand::ImmTyOffen, true, nullptr},
+    {"idxen", AMDGPUOperand::ImmTyIdxen, true, nullptr},
+    {"addr64", AMDGPUOperand::ImmTyAddr64, true, nullptr},
+    {"offset0", AMDGPUOperand::ImmTyOffset0, false, nullptr},
+    {"offset1", AMDGPUOperand::ImmTyOffset1, false, nullptr},
+    {"gds", AMDGPUOperand::ImmTyGDS, true, nullptr},
+    {"lds", AMDGPUOperand::ImmTyLDS, true, nullptr},
+    {"offset", AMDGPUOperand::ImmTyOffset, false, nullptr},
+    {"inst_offset", AMDGPUOperand::ImmTyInstOffset, false, nullptr},
+    {"", AMDGPUOperand::ImmTyCPol, false, nullptr},
+    {"th", AMDGPUOperand::ImmTyTH, false, nullptr},
+    {"scope", AMDGPUOperand::ImmTyScope, false, nullptr},
+    {"swz", AMDGPUOperand::ImmTySWZ, true, nullptr},
+    {"tfe", AMDGPUOperand::ImmTyTFE, true, nullptr},
+    {"d16", AMDGPUOperand::ImmTyD16, true, nullptr},
+    {"high", AMDGPUOperand::ImmTyHigh, true, nullptr},
+    {"clamp", AMDGPUOperand::ImmTyClampSI, true, nullptr},
+    {"omod", AMDGPUOperand::ImmTyOModSI, false, ConvertOmodMul},
+    {"unorm", AMDGPUOperand::ImmTyUNorm, true, nullptr},
+    {"da", AMDGPUOperand::ImmTyDA, true, nullptr},
+    {"r128", AMDGPUOperand::ImmTyR128A16, true, nullptr},
+    {"a16", AMDGPUOperand::ImmTyA16, true, nullptr},
+    {"lwe", AMDGPUOperand::ImmTyLWE, true, nullptr},
+    {"nv", AMDGPUOperand::ImmTyNV, true, nullptr},
+    {"d16", AMDGPUOperand::ImmTyD16, true, nullptr},
+    {"dmask", AMDGPUOperand::ImmTyDMask, false, nullptr},
+    {"dim", AMDGPUOperand::ImmTyDim, false, nullptr},
+    {"dst_sel", AMDGPUOperand::ImmTySdwaDstSel, false, nullptr},
+    {"src0_sel", AMDGPUOperand::ImmTySdwaSrc0Sel, false, nullptr},
+    {"src1_sel", AMDGPUOperand::ImmTySdwaSrc1Sel, false, nullptr},
+    {"dst_unused", AMDGPUOperand::ImmTySdwaDstUnused, false, nullptr},
+    {"compr", AMDGPUOperand::ImmTyExpCompr, true, nullptr},
+    {"vm", AMDGPUOperand::ImmTyExpVM, true, nullptr},
+    {"op_sel", AMDGPUOperand::ImmTyOpSel, false, nullptr},
+    {"op_sel_hi", AMDGPUOperand::ImmTyOpSelHi, false, nullptr},
+    {"neg_lo", AMDGPUOperand::ImmTyNegLo, false, nullptr},
+    {"neg_hi", AMDGPUOperand::ImmTyNegHi, false, nullptr},
+    {"dpp8", AMDGPUOperand::ImmTyDPP8, false, nullptr},
+    {"dpp_ctrl", AMDGPUOperand::ImmTyDppCtrl, false, nullptr},
+    {"row_mask", AMDGPUOperand::ImmTyDppRowMask, false, nullptr},
+    {"bank_mask", AMDGPUOperand::ImmTyDppBankMask, false, nullptr},
+    {"bound_ctrl", AMDGPUOperand::ImmTyDppBoundCtrl, false, ConvertBoundCtrl},
+    {"fi", AMDGPUOperand::ImmTyDppFi, false, nullptr},
+    {"blgp", AMDGPUOperand::ImmTyBLGP, false, nullptr},
+    {"cbsz", AMDGPUOperand::ImmTyCBSZ, false, nullptr},
+    {"abid", AMDGPUOperand::ImmTyABID, false, nullptr},
+    {"wait_vdst", AMDGPUOperand::ImmTyWaitVDST, false, nullptr},
+    {"wait_exp", AMDGPUOperand::ImmTyWaitEXP, false, nullptr},
+    {"wait_va_vdst", AMDGPUOperand::ImmTyWaitVAVDST, false, nullptr},
+    {"wait_vm_vsrc", AMDGPUOperand::ImmTyWaitVMVSRC, false, nullptr},
 };
 
 void AMDGPUAsmParser::onBeginOfFile() {
@@ -9594,6 +9608,24 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultWaitVDST() const {
 
 bool AMDGPUOperand::isWaitVDST() const {
   return isImmTy(ImmTyWaitVDST) && isUInt<4>(getImm());
+}
+
+bool AMDGPUOperand::isWaitVAVDST() const {
+  return isImmTy(ImmTyWaitVAVDST) && isUInt<4>(getImm());
+}
+
+bool AMDGPUOperand::isWaitVMVSRC() const {
+  return isImmTy(ImmTyWaitVMVSRC) && isUInt<1>(getImm());
+}
+
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultWaitVAVDST() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(),
+                                  AMDGPUOperand::ImmTyWaitVAVDST);
+}
+
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultWaitVMVSRC() const {
+  return AMDGPUOperand::CreateImm(this, 0, SMLoc(),
+                                  AMDGPUOperand::ImmTyWaitVMVSRC);
 }
 
 //===----------------------------------------------------------------------===//
