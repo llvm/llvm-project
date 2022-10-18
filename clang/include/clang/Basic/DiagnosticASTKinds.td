@@ -848,6 +848,19 @@ def note_module_odr_violation_enum : Note<"but in '%0' found "
   "%ordinal2 element %3 has different initializer|"
   "}1">;
 
+def err_module_odr_violation_referenced_protocols : Error <
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "%4 referenced %plural{1:protocol|:protocols}4|"
+  "%ordinal4 referenced protocol with name %5"
+  "}3">;
+def note_module_odr_violation_referenced_protocols : Note <"but in '%0' found "
+  "%select{"
+  "%2 referenced %plural{1:protocol|:protocols}2|"
+  "%ordinal2 referenced protocol with different name %3"
+  "}1">;
+
 def err_module_odr_violation_mismatch_decl_unknown : Error<
   "%q0 %select{with definition in module '%2'|defined here}1 has different "
   "definitions in different modules; first difference is this "

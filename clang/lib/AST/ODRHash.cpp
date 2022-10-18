@@ -628,6 +628,31 @@ void ODRHash::AddEnumDecl(const EnumDecl *Enum) {
 
 }
 
+void ODRHash::AddObjCProtocolDecl(const ObjCProtocolDecl *P) {
+  AddDecl(P);
+
+  // Hash referenced protocols.
+  ID.AddInteger(P->getReferencedProtocols().size());
+  for (const ObjCProtocolDecl *RefP : P->protocols()) {
+    // Hash the name only as a referenced protocol can be a forward declaration.
+    AddDeclarationName(RefP->getDeclName());
+  }
+
+  // Filter out sub-Decls which will not be processed in order to get an
+  // accurate count of Decl's.
+  llvm::SmallVector<const Decl *, 16> Decls;
+  for (Decl *SubDecl : P->decls()) {
+    if (isDeclToBeProcessed(SubDecl, P)) {
+      Decls.push_back(SubDecl);
+    }
+  }
+
+  ID.AddInteger(Decls.size());
+  for (auto *SubDecl : Decls) {
+    AddSubDecl(SubDecl);
+  }
+}
+
 void ODRHash::AddDecl(const Decl *D) {
   assert(D && "Expecting non-null pointer.");
   D = D->getCanonicalDecl();

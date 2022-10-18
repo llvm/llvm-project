@@ -64,6 +64,10 @@ public:
   // more information than the AddDecl class.
   void AddEnumDecl(const EnumDecl *Enum);
 
+  // Use this for ODR checking ObjC protocols. This
+  // method compares more information than the AddDecl class.
+  void AddObjCProtocolDecl(const ObjCProtocolDecl *P);
+
   // Process SubDecls of the main Decl.  This method calls the DeclVisitor
   // while AddDecl does not.
   void AddSubDecl(const Decl *D);

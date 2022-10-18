@@ -828,6 +828,7 @@ void ASTDeclWriter::VisitObjCProtocolDecl(ObjCProtocolDecl *D) {
       Record.AddDeclRef(I);
     for (const auto &PL : D->protocol_locs())
       Record.AddSourceLocation(PL);
+    Record.push_back(D->getODRHash());
   }
 
   Code = serialization::DECL_OBJC_PROTOCOL;

@@ -11,6 +11,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 
@@ -43,6 +44,16 @@ public:
   diagnoseMismatch(const CXXRecordDecl *FirstRecord,
                    const CXXRecordDecl *SecondRecord,
                    const struct CXXRecordDecl::DefinitionData *SecondDD) const;
+
+  /// Diagnose ODR mismatch between 2 ObjCProtocolDecl.
+  ///
+  /// Returns true if found a mismatch and diagnosed it.
+  /// To compare 2 declarations with merged and identical definition data
+  /// you need to provide pre-merge definition data in \p SecondDD.
+  bool diagnoseMismatch(
+      const ObjCProtocolDecl *FirstProtocol,
+      const ObjCProtocolDecl *SecondProtocol,
+      const struct ObjCProtocolDecl::DefinitionData *SecondDD) const;
 
   /// Get the best name we know for the module that owns the given
   /// declaration, or an empty string if the declaration is not from a module.
@@ -115,6 +126,16 @@ private:
                               StringRef FirstModule, StringRef SecondModule,
                               const VarDecl *FirstVD,
                               const VarDecl *SecondVD) const;
+
+  /// Check if protocol lists are the same and diagnose if they are different.
+  ///
+  /// Returns true if found a mismatch and diagnosed it.
+  bool diagnoseSubMismatchProtocols(const ObjCProtocolList &FirstProtocols,
+                                    const ObjCContainerDecl *FirstContainer,
+                                    StringRef FirstModule,
+                                    const ObjCProtocolList &SecondProtocols,
+                                    const ObjCContainerDecl *SecondContainer,
+                                    StringRef SecondModule) const;
 
 private:
   DiagnosticsEngine &Diags;

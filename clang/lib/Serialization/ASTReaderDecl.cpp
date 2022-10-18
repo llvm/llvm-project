@@ -1328,18 +1328,23 @@ void ASTDeclReader::ReadObjCDefinitionData(
       ProtoLocs.push_back(readSourceLocation());
     Data.ReferencedProtocols.set(ProtoRefs.data(), NumProtoRefs,
                                  ProtoLocs.data(), Reader.getContext());
+    Data.ODRHash = Record.readInt();
+    Data.HasODRHash = true;
 }
 
-void ASTDeclReader::MergeDefinitionData(ObjCProtocolDecl *D,
-         struct ObjCProtocolDecl::DefinitionData &&NewDD) {
+void ASTDeclReader::MergeDefinitionData(
+    ObjCProtocolDecl *D, struct ObjCProtocolDecl::DefinitionData &&NewDD) {
   struct ObjCProtocolDecl::DefinitionData &DD = D->data();
-  if (DD.Definition != NewDD.Definition) {
-    Reader.MergedDeclContexts.insert(
-        std::make_pair(NewDD.Definition, DD.Definition));
-    Reader.mergeDefinitionVisibility(DD.Definition, NewDD.Definition);
-  }
+  if (DD.Definition == NewDD.Definition)
+    return;
 
-  // FIXME: odr checking?
+  Reader.MergedDeclContexts.insert(
+      std::make_pair(NewDD.Definition, DD.Definition));
+  Reader.mergeDefinitionVisibility(DD.Definition, NewDD.Definition);
+
+  if (D->getODRHash() != NewDD.ODRHash)
+    Reader.PendingObjCProtocolOdrMergeFailures[DD.Definition].push_back(
+        {NewDD.Definition, &NewDD});
 }
 
 void ASTDeclReader::VisitObjCProtocolDecl(ObjCProtocolDecl *PD) {
