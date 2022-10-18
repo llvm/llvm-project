@@ -96,6 +96,7 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
     nullPointerType, // for ASSOCIATED(NULL())
     exactKind, // a single explicit exactKindValue
     atomicIntKind, // atomic_int_kind from iso_fortran_env
+    sameAtom, // same type and kind as atom
 )
 
 struct TypePattern {
@@ -184,6 +185,8 @@ static constexpr TypePattern KINDChar{CharType, KindCode::effectiveKind};
 static constexpr TypePattern KINDLogical{LogicalType, KindCode::effectiveKind};
 
 static constexpr TypePattern AtomicInt{IntType, KindCode::atomicIntKind};
+static constexpr TypePattern SameAtom{
+    IntType | LogicalType, KindCode::sameAtom};
 
 // The default rank pattern for dummy arguments and function results is
 // "elemental".
@@ -1097,6 +1100,18 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
 
 static const IntrinsicInterface intrinsicSubroutine[]{
     {"abort", {}, {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"atomic_cas",
+        {{"atom", SameAtom, Rank::atom, Optionality::required,
+             common::Intent::InOut},
+            {"old", SameAtom, Rank::scalar, Optionality::required,
+                common::Intent::Out},
+            {"compare", SameAtom, Rank::scalar, Optionality::required,
+                common::Intent::In},
+            {"new", SameAtom, Rank::scalar, Optionality::required,
+                common::Intent::In},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
     {"atomic_fetch_or",
         {{"atom", AtomicInt, Rank::atom, Optionality::required,
              common::Intent::InOut},
@@ -1327,6 +1342,31 @@ static bool CheckMaxMinArgument(std::optional<parser::CharBlock> keyword,
     }
   }
   return true;
+}
+
+static bool CheckAtomicKind(const ActualArgument &arg,
+    const semantics::Scope *builtinsScope,
+    parser::ContextualMessages &messages) {
+  std::string atomicKindStr;
+  std::optional<DynamicType> type{arg.GetType()};
+
+  if (type->category() == TypeCategory::Integer) {
+    atomicKindStr = "atomic_int_kind";
+  } else if (type->category() == TypeCategory::Logical) {
+    atomicKindStr = "atomic_logical_kind";
+  } else {
+    common::die("atomic_int_kind or atomic_logical_kind from iso_fortran_env "
+                "must be used with IntType or LogicalType");
+  }
+
+  bool argOk = type->kind() ==
+      GetBuiltinKind(builtinsScope, ("__builtin_" + atomicKindStr).c_str());
+  if (!argOk) {
+    messages.Say(arg.sourceLocation(),
+        "Actual argument for 'atom=' must have kind=atomic_int_kind or atomic_logical_kind, but is '%s'"_err_en_US,
+        type->AsFortran());
+  }
+  return argOk;
 }
 
 // Intrinsic interface matching against the arguments of a particular
@@ -1569,6 +1609,21 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       break;
     case KindCode::exactKind:
       argOk = type->kind() == d.typePattern.exactKindValue;
+      break;
+    case KindCode::sameAtom:
+      if (!sameArg) {
+        sameArg = arg;
+        argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages);
+      } else {
+        argOk = type->IsTkCompatibleWith(sameArg->GetType().value());
+        if (!argOk) {
+          messages.Say(arg->sourceLocation(),
+              "Actual argument for '%s=' must have same type and kind as 'atom=', but is '%s'"_err_en_US,
+              d.keyword, type->AsFortran());
+        }
+      }
+      if (!argOk)
+        return std::nullopt;
       break;
     case KindCode::atomicIntKind:
       argOk = type->kind() ==
@@ -2555,6 +2610,8 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     }
   } else if (name == "associated") {
     return CheckAssociated(call, context);
+  } else if (name == "atomic_cas") {
+    return CheckForCoindexedObject(context, call.arguments[4], name, "stat");
   } else if (name == "atomic_fetch_or") {
     return CheckForCoindexedObject(context, call.arguments[3], name, "stat");
   } else if (name == "co_broadcast" || name == "co_max" || name == "co_min" ||
