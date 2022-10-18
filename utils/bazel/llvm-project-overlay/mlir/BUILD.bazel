@@ -2080,7 +2080,7 @@ gentbl_cc_library(
 # internals or else mlir_c_runner_utils will inherit that dependency.
 cc_library(
     name = "SparseTensorEnums",
-    hdrs = ["include/mlir/ExecutionEngine/SparseTensor/Enums.h"],
+    hdrs = ["include/mlir/Dialect/SparseTensor/IR/Enums.h"],
     includes = ["include"],
 )
 
