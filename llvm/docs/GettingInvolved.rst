@@ -272,9 +272,9 @@ don't find anyone present, chances are they happen to be off that day.
       `gcal <https://calendar.google.com/calendar/embed?src=c_pm6e7160iq7n5fcm1s6m3rjhh4%40group.calendar.google.com>`__
     - `GoogleMeet <https://meet.google.com/hhk-xpdj-gvx>`__
     - English, Romanian
-  * - Aaron Ballman
+  * - Aaron Ballman (he/him)
     - Clang internals; frontend attributes; clang-tidy; clang-query; AST matchers
-    - Monthly, 2nd Monday of the month at 10:00am Eastern, for 30 minutes.
+    - Monthly, 2nd Monday of the month at 10:00am Eastern and again at 2:00pm Eastern, for 30 minutes (will run longer as needed).
       `ics <https://calendar.google.com/calendar/ical/npgke5dug0uliud0qapptmps58%40group.calendar.google.com/public/basic.ics>`__
       `gcal <https://calendar.google.com/calendar/embed?src=npgke5dug0uliud0qapptmps58%40group.calendar.google.com>`__
     - `GoogleMeet <https://meet.google.com/xok-iqne-gmi>`__
