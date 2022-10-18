@@ -189,7 +189,7 @@ int main(int Argc, char **Argv) {
   if (OutputFilename == "-")
     Tester.getProgram().print(outs(), nullptr);
   else
-    writeOutput(Tester.getProgram(), "\nDone reducing! Reduced testcase: ");
+    writeOutput(Tester.getProgram(), "Done reducing! Reduced testcase: ");
 
   return 0;
 }
