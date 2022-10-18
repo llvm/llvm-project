@@ -3,6 +3,6 @@
 
 subroutine foo(x)
   integer :: x
-  ! CHECK: not yet implemented: lower expr to HLFIR address
+  ! CHECK: not yet implemented: generate fir.declare when lowering symbol
   read (*,*) x
 end subroutine
