@@ -4,69 +4,66 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/c-string-literal.s -o %t/c-string-literal.o
 
-# RUN: %lld -map %t/map %t/test.o %t/foo.o --time-trace -o %t/test-map
-# RUN: llvm-objdump --syms --section-headers %t/test-map > %t/objdump
+# RUN: %lld -map %t/map %t/test.o %t/foo.o %t/c-string-literal.o --time-trace -o %t/test
+# RUN: llvm-objdump --syms --section-headers %t/test > %t/objdump
 # RUN: cat %t/objdump %t/map > %t/out
 # RUN: FileCheck %s < %t/out
-# RUN: FileCheck %s --check-prefix=MAPFILE < %t/test-map.time-trace
+# RUN: FileCheck %s --check-prefix=MAPFILE < %t/test.time-trace
 
 # CHECK:      Sections:
 # CHECK-NEXT: Idx  Name          Size           VMA           Type
 # CHECK-NEXT: 0    __text        {{[0-9a-f]+}}  [[#%x,TEXT:]] TEXT
 # CHECK-NEXT: 1    obj           {{[0-9a-f]+}}  [[#%x,DATA:]] DATA
-# CHECK-NEXT: 2    __common      {{[0-9a-f]+}}  [[#%x,BSS:]]  BSS
+# CHECK-NEXT: 2    __cstring     {{[0-9a-f]+}}  [[#%x,CSTR:]] DATA
+# CHECK-NEXT: 3    __common      {{[0-9a-f]+}}  [[#%x,BSS:]]  BSS
 
-# CHECK: SYMBOL TABLE:
-# CHECK-NEXT: [[#%x,MAIN:]]   g     F __TEXT,__text _main
-# CHECK-NEXT: [[#%x,NUMBER:]] g     O __DATA,__common _number
-# CHECK-NEXT: [[#%x,FOO:]]    g     O __TEXT,obj _foo
-# CHECK-NEXT: [[#%x,HEADER:]] g     F __TEXT,__text __mh_execute_header
-# CHECK-NEXT: [[#%x,HEADER:]] *UND* dyld_stub_binder
+# CHECK:      SYMBOL TABLE:
+# CHECK-DAG:  [[#%x,MAIN:]]    g     F __TEXT,__text _main
+# CHECK-DAG:  [[#%x,NUMBER:]]  g     O __DATA,__common _number
+# CHECK-DAG:  [[#%x,FOO:]]     g     O __TEXT,obj _foo
+# CHECK-DAG:  [[#%x,HIWORLD:]] g     O __TEXT,__cstring _hello_world
+# CHECK-DAG:  [[#%x,HIITSME:]] g     O __TEXT,__cstring _hello_its_me
 
-# CHECK-NEXT: # Path: {{.*}}{{/|\\}}map-file.s.tmp/test-map
+# CHECK:      # Path: {{.*}}{{/|\\}}map-file.s.tmp/test
 # CHECK-NEXT: # Arch: x86_64
 # CHECK-NEXT: # Object files:
 # CHECK-NEXT: [  0] linker synthesized
 # CHECK-NEXT: [  1] {{.*}}{{/|\\}}map-file.s.tmp/test.o
 # CHECK-NEXT: [  2] {{.*}}{{/|\\}}map-file.s.tmp/foo.o
+# CHECK-NEXT: [  3] {{.*}}{{/|\\}}map-file.s.tmp/c-string-literal.o
 
 # CHECK-NEXT: # Sections:
 # CHECK-NEXT: # Address       Size              Segment  Section
-# CHECK-NEXT: 0x[[#%X,TEXT]]  0x{{[0-9a-f]+}}   __TEXT   __text
-# CHECK-NEXT: 0x[[#%X,DATA]]  0x{{[0-9a-f]+}}   __TEXT   obj
-# CHECK-NEXT: 0x[[#%X,BSS]]   0x{{[0-9a-f]+}}   __DATA   __common
+# CHECK-NEXT: 0x[[#%X,TEXT]]  0x{{[0-9A-F]+}}   __TEXT   __text
+# CHECK-NEXT: 0x[[#%X,DATA]]  0x{{[0-9A-F]+}}   __TEXT   obj
+# CHECK-NEXT: 0x[[#%X,CSTR]]  0x{{[0-9A-F]+}}   __TEXT   __cstring
+# CHECK-NEXT: 0x[[#%X,BSS]]   0x{{[0-9A-F]+}}   __DATA   __common
 
 # CHECK-NEXT: # Symbols:
 # CHECK-NEXT: # Address           Size        File   Name
-# CHECK-NEXT: 0x[[#%X,MAIN]]      0x00000001  [  1]  _main
-# CHECK-NEXT: 0x[[#%X,FOO]]       0x00000000  [  2]  _foo
-# CHECK-NEXT: 0x[[#%X,NUMBER]]    0x00000001  [  1]  _number
-
-# RUN: %lld -map %t/c-string-literal-map %t/c-string-literal.o -o %t/c-string-literal-out
-# RUN: FileCheck --check-prefix=CSTRING %s < %t/c-string-literal-map
-
-## C-string literals should be printed as "literal string: <C string literal>"
-# CSTRING-LABEL: Symbols:
-# CSTRING-DAG: _main
-# CSTRING-DAG: literal string: Hello world!\n
-# CSTRING-DAG: literal string: Hello, it's me
-
-# RUN: %lld -dead_strip -map %t/dead-c-string-literal-map %t/c-string-literal.o -o %t/dead-c-string-literal-out
-# RUN: FileCheck --check-prefix=DEADCSTRING %s < %t/dead-c-string-literal-map
-
-## C-string literals should be printed as "literal string: <C string literal>"
-# DEADCSTRING-LABEL: Symbols:
-# DEADCSTRING-DAG:   0x0000001D [  1] _main
-# DEADCSTRING-DAG:   0x0000000E [  1] literal string: Hello world!\n
-# DEADCSTRING-LABEL: Dead Stripped Symbols:
-# DEADCSTRING-DAG:   <<dead>> 0x0000000F [  1] literal string: Hello, it's me
+# CHECK-DAG:  0x[[#%X,MAIN]]      0x00000001  [  1]  _main
+# CHECK-DAG:  0x[[#%X,FOO]]       0x00000001  [  2]  _foo
+# CHECK-DAG:  0x[[#%X,HIWORLD]]   0x0000000E  [  3]  literal string: Hello world!\n
+# CHECK-DAG:  0x[[#%X,HIITSME]]   0x0000000F  [  3]  literal string: Hello, it's me
+# CHECK-DAG:  0x[[#%X,NUMBER]]    0x00000001  [  1]  _number
 
 # MAPFILE: "name":"Total Write map file"
+
+# RUN: %lld -dead_strip -map %t/stripped-map %t/test.o %t/foo.o %t/c-string-literal.o -o %t/stripped
+# RUN: FileCheck --check-prefix=STRIPPED %s < %t/stripped-map
+
+## C-string literals should be printed as "literal string: <C string literal>"
+# STRIPPED-LABEL: Dead Stripped Symbols:
+# STRIPPED-DAG:   <<dead>> 0x00000001 [  2] _foo
+# STRIPPED-DAG:   <<dead>> 0x0000000E [  3] literal string: Hello world!\n
+# STRIPPED-DAG:   <<dead>> 0x0000000F [  3] literal string: Hello, it's me
+# STRIPPED-DAG:   <<dead>> 0x00000001 [  1] _number
 
 #--- foo.s
 .section __TEXT,obj
 .globl _foo
 _foo:
+  nop
 
 #--- test.s
 .comm _number, 1
@@ -75,20 +72,12 @@ _main:
   ret
 
 #--- c-string-literal.s
-.section __TEXT,__cstring
-.globl _hello_world, _hello_its_me, _main
+.globl _hello_world, _hello_its_me
+
+.cstring
 
 _hello_world:
 .asciz "Hello world!\n"
 
 _hello_its_me:
 .asciz "Hello, it's me"
-
-.text
-_main:
-  movl $0x2000004, %eax # write() syscall
-  mov $1, %rdi # stdout
-  leaq _hello_world(%rip), %rsi
-  mov $13, %rdx # length of str
-  syscall
-  ret
