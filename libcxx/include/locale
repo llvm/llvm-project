@@ -553,7 +553,7 @@ __num_get<_CharT>::__stage2_float_loop(_CharT __ct, bool& __in_units, char& __ex
     char __x = __src[__f];
     if (__x == '-' || __x == '+')
     {
-        if (__a_end == __a || (__a_end[-1] & 0x5F) == (__exp & 0x7F))
+        if (__a_end == __a || (std::toupper(__a_end[-1]) == std::toupper(__exp)))
         {
             *__a_end++ = __x;
             return 0;
@@ -562,9 +562,9 @@ __num_get<_CharT>::__stage2_float_loop(_CharT __ct, bool& __in_units, char& __ex
     }
     if (__x == 'x' || __x == 'X')
         __exp = 'P';
-    else if ((__x & 0x5F) == __exp)
+    else if (std::toupper(__x) == __exp)
     {
-        __exp |= (char) 0x80;
+        __exp = std::tolower(__exp);
         if (__in_units)
         {
             __in_units = false;

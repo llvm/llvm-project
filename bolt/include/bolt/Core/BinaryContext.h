@@ -1236,10 +1236,10 @@ public:
     return Size;
   }
 
-  /// Verify that assembling instruction \p Inst results in the same sequence of
-  /// bytes as \p Encoding.
-  bool validateEncoding(const MCInst &Instruction,
-                        ArrayRef<uint8_t> Encoding) const;
+  /// Validate that disassembling the \p Sequence of bytes into an instruction
+  /// and assembling the instruction again, results in a byte sequence identical
+  /// to the original one.
+  bool validateInstructionEncoding(ArrayRef<uint8_t> Sequence) const;
 
   /// Return a function execution count threshold for determining whether
   /// the function is 'hot'. Consider it hot if count is above the average exec

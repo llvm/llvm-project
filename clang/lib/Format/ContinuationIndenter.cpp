@@ -1248,6 +1248,9 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
     return ContinuationIndent;
   }
 
+  if (State.Line->InPragmaDirective)
+    return CurrentState.Indent + Style.ContinuationIndentWidth;
+
   // This ensure that we correctly format ObjC methods calls without inputs,
   // i.e. where the last element isn't selector like: [callee method];
   if (NextNonComment->is(tok::identifier) && NextNonComment->FakeRParens == 0 &&

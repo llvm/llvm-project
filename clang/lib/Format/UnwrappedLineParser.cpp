@@ -1118,6 +1118,9 @@ void UnwrappedLineParser::parsePPDirective() {
   case tok::pp_endif:
     parsePPEndIf();
     break;
+  case tok::pp_pragma:
+    parsePPPragma();
+    break;
   default:
     parsePPUnknown();
     break;
@@ -1278,6 +1281,11 @@ void UnwrappedLineParser::parsePPDefine() {
   // re-indentation if there was a structural error) within the macro
   // definition.
   parseFile();
+}
+
+void UnwrappedLineParser::parsePPPragma() {
+  Line->InPragmaDirective = true;
+  parsePPUnknown();
 }
 
 void UnwrappedLineParser::parsePPUnknown() {
