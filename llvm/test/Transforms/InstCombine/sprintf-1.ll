@@ -79,7 +79,7 @@ define void @test_simplify5(ptr %dst, ptr %str) {
 
 define void @test_simplify6(ptr %dst) {
 ; CHECK-IPRINTF-LABEL: @test_simplify6(
-; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ptr, ...) @siprintf(ptr [[DST:%.*]], ptr nonnull @percent_d, i32 187)
+; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ptr, ...) @siprintf(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) @percent_d, i32 187)
 ; CHECK-IPRINTF-NEXT:    ret void
 ;
 ; WIN-LABEL: @test_simplify6(
