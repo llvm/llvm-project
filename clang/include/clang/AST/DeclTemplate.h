@@ -847,6 +847,15 @@ protected:
     /// The first value in the array is the number of specializations/partial
     /// specializations that follow.
     uint32_t *LazySpecializations = nullptr;
+
+    /// The set of "injected" template arguments used within this
+    /// template.
+    ///
+    /// This pointer refers to the template arguments (there are as
+    /// many template arguments as template parameaters) for the
+    /// template, and is allocated lazily, since most templates do not
+    /// require the use of this information.
+    TemplateArgument *InjectedArgs = nullptr;
   };
 
   /// Pointer to the common data shared by all declarations of this
@@ -954,6 +963,14 @@ public:
     getCommonPtr()->InstantiatedFromMember.setPointer(TD);
   }
 
+  /// Retrieve the "injected" template arguments that correspond to the
+  /// template parameters of this template.
+  ///
+  /// Although the C++ standard has no notion of the "injected" template
+  /// arguments for a template, the notion is convenient when
+  /// we need to perform substitutions inside the definition of a template.
+  ArrayRef<TemplateArgument> getInjectedTemplateArgs();
+
   using redecl_range = redeclarable_base::redecl_range;
   using redecl_iterator = redeclarable_base::redecl_iterator;
 
@@ -997,15 +1014,6 @@ protected:
     /// The function template specializations for this function
     /// template, including explicit specializations and instantiations.
     llvm::FoldingSetVector<FunctionTemplateSpecializationInfo> Specializations;
-
-    /// The set of "injected" template arguments used within this
-    /// function template.
-    ///
-    /// This pointer refers to the template arguments (there are as
-    /// many template arguments as template parameaters) for the function
-    /// template, and is allocated lazily, since most function templates do not
-    /// require the use of this information.
-    TemplateArgument *InjectedArgs = nullptr;
 
     Common() = default;
   };
@@ -1105,15 +1113,6 @@ public:
   spec_iterator spec_end() const {
     return makeSpecIterator(getSpecializations(), true);
   }
-
-  /// Retrieve the "injected" template arguments that correspond to the
-  /// template parameters of this function template.
-  ///
-  /// Although the C++ standard has no notion of the "injected" template
-  /// arguments for a function template, the notion is convenient when
-  /// we need to perform substitutions inside the definition of a function
-  /// template.
-  ArrayRef<TemplateArgument> getInjectedTemplateArgs();
 
   /// Return whether this function template is an abbreviated function template,
   /// e.g. `void foo(auto x)` or `template<typename T> void foo(auto x)`
