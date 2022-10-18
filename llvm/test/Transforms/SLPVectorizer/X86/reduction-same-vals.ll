@@ -8,13 +8,22 @@ define i64 @test() {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ poison, [[BB2:%.*]] ], [ zeroinitializer, [[BB1:%.*]] ]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[SHUFFLE]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = mul i32 [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP65:%.*]] = sext i32 [[OP_RDX]] to i64
+; CHECK-NEXT:    [[TMP:%.*]] = phi i32 [ 0, [[BB2:%.*]] ], [ 0, [[BB1:%.*]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ 0, [[BB2]] ], [ 0, [[BB1]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> poison, i32 [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[TMP0]], i32 [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> [[TMP1]], i32 [[TMP4]], i32 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i32> [[TMP2]], i32 [[TMP4]], i32 3
+; CHECK-NEXT:    [[TMP44:%.*]] = insertelement <8 x i32> [[TMP3]], i32 [[TMP4]], i32 4
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[TMP44]], i32 [[TMP4]], i32 5
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <8 x i32> [[TMP5]], i32 [[TMP4]], i32 6
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[TMP4]], i32 7
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> [[TMP7]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = mul i32 [[TMP8]], [[TMP4]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = mul i32 [[TMP4]], [[TMP4]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = mul i32 [[OP_RDX]], [[OP_RDX1]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = mul i32 [[OP_RDX2]], [[TMP]]
+; CHECK-NEXT:    [[TMP65:%.*]] = sext i32 [[OP_RDX3]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP65]]
 ;
 bb1:
