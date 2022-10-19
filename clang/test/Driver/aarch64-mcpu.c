@@ -41,6 +41,8 @@
 // CORTEXX1: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-x1"
 // RUN: %clang -target aarch64 -mcpu=cortex-x1c  -### -c %s 2>&1 | FileCheck -check-prefix=CORTEXX1C %s
 // CORTEXX1C: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-x1c"
+// RUN: %clang -target aarch64 -mcpu=cortex-x3 -### -c %s 2>&1 | FileCheck -check-prefix=CORTEXX3 %s
+// CORTEXX3: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-x3"
 // RUN: %clang -target aarch64 -mcpu=cortex-a78  -### -c %s 2>&1 | FileCheck -check-prefix=CORTEXA78 %s
 // CORTEXA78: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a78"
 // RUN: %clang -target aarch64 -mcpu=cortex-a78c  -### -c %s 2>&1 | FileCheck -check-prefix=CORTEX-A78C %s
