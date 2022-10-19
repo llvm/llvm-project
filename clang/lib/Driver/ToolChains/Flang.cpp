@@ -87,6 +87,7 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
   bool HonorNaNs = true;
   bool ApproxFunc = false;
   bool SignedZeros = true;
+  bool AssociativeMath = false;
 
   if (const Arg *A = Args.getLastArg(options::OPT_ffp_contract)) {
     const StringRef Val = A->getValue();
@@ -136,6 +137,12 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     case options::OPT_fno_signed_zeros:
       SignedZeros = false;
       break;
+    case options::OPT_fassociative_math:
+      AssociativeMath = true;
+      break;
+    case options::OPT_fno_associative_math:
+      AssociativeMath = false;
+      break;
     }
 
     // If we handled this option claim it
@@ -156,6 +163,9 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
 
   if (!SignedZeros)
     CmdArgs.push_back("-fno-signed-zeros");
+
+  if (AssociativeMath && !SignedZeros)
+    CmdArgs.push_back("-mreassociate");
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,

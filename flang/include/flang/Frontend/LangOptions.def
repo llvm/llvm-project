@@ -29,6 +29,8 @@ LANGOPT(NoHonorNaNs, 1, false)
 LANGOPT(ApproxFunc, 1, false)
 /// Allow optimizations that ignore the sign of floating point zeros
 LANGOPT(NoSignedZeros, 1, false)
+/// Allow reassociation transformations for floating-point instructions
+LANGOPT(AssociativeMath, 1, false)
 
 #undef LANGOPT
 #undef ENUM_LANGOPT
