@@ -9,8 +9,7 @@
 #include "AnalysisInternal.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
-namespace clang {
-namespace include_cleaner {
+namespace clang::include_cleaner {
 namespace {
 using DeclCallback = llvm::function_ref<void(SourceLocation, NamedDecl &)>;
 
@@ -43,5 +42,4 @@ void walkAST(Decl &Root, DeclCallback Callback) {
   ASTWalker(Callback).TraverseDecl(&Root);
 }
 
-} // namespace include_cleaner
-} // namespace clang
+} // namespace clang::include_cleaner

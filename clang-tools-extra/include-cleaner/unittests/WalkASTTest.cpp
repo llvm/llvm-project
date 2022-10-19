@@ -1,15 +1,28 @@
+//===--- WalkASTTest.cpp ------------------------------------------- C++-*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 #include "AnalysisInternal.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Testing/TestAST.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Annotations.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cstddef>
+#include <vector>
 
-namespace clang {
-namespace include_cleaner {
+namespace clang::include_cleaner {
 namespace {
+using testing::Pair;
+using testing::UnorderedElementsAre;
 
 // Specifies a test of which symbols are referenced by a piece of code.
 //
@@ -106,5 +119,4 @@ TEST(WalkAST, Alias) {
 }
 
 } // namespace
-} // namespace include_cleaner
-} // namespace clang
+} // namespace clang::include_cleaner
