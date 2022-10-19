@@ -117,6 +117,7 @@ if(CLANG_BUILT_STANDALONE)
   include(TableGen)
   include(HandleLLVMOptions)
   include(VersionFromVCS)
+  include(CheckAtomic)
   include(GetErrcMessages)
   include(LLVMDistributionSupport)
 
