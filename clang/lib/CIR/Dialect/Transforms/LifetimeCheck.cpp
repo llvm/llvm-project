@@ -191,9 +191,9 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
 
   struct InvalidHist {
     llvm::SmallVector<InvalidHistEntry, 8> entries;
-    void add(mlir::Value ptr, InvalidStyle histStyle, mlir::Location loc,
+    void add(mlir::Value ptr, InvalidStyle invalidStyle, mlir::Location loc,
              std::optional<mlir::Value> val = {}) {
-      entries.emplace_back(InvalidHistEntry(histStyle, loc, val));
+      entries.emplace_back(InvalidHistEntry(invalidStyle, loc, val));
     }
   };
 
@@ -213,7 +213,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
 
   PMapType *currPmap = nullptr;
   PMapType &getPmap() { return *currPmap; }
-  void markPsetInvalid(mlir::Value ptr, InvalidStyle histStyle,
+  void markPsetInvalid(mlir::Value ptr, InvalidStyle invalidStyle,
                        mlir::Location loc,
                        std::optional<mlir::Value> extraVal = {}) {
     auto &pset = getPmap()[ptr];
@@ -224,15 +224,15 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
 
     // 2.3 - putting invalid into pset(x) is said to invalidate it
     pset.insert(State::getInvalid());
-    invalidHist[ptr].add(ptr, histStyle, loc, extraVal);
+    invalidHist[ptr].add(ptr, invalidStyle, loc, extraVal);
   }
 
   void joinPmaps(SmallVectorImpl<PMapType> &pmaps);
 
   // Provides p1179's 'KILL' functionality. See implementation for more
   // information.
-  void kill(const State &s, InvalidStyle histStyle, mlir::Location loc);
-  void killInPset(mlir::Value ptrKey, const State &s, InvalidStyle histStyle,
+  void kill(const State &s, InvalidStyle invalidStyle, mlir::Location loc);
+  void killInPset(mlir::Value ptrKey, const State &s, InvalidStyle invalidStyle,
                   mlir::Location loc, std::optional<mlir::Value> extraVal);
 
   // Local pointers
@@ -361,12 +361,13 @@ static Location getEndLocForHist(LifetimeCheckPass::LexicalScopeContext &lsc) {
 }
 
 void LifetimeCheckPass::killInPset(mlir::Value ptrKey, const State &s,
-                                   InvalidStyle histStyle, mlir::Location loc,
+                                   InvalidStyle invalidStyle,
+                                   mlir::Location loc,
                                    std::optional<mlir::Value> extraVal) {
   auto &pset = getPmap()[ptrKey];
   if (pset.contains(s)) {
     pset.erase(s);
-    markPsetInvalid(ptrKey, histStyle, loc, extraVal);
+    markPsetInvalid(ptrKey, invalidStyle, loc, extraVal);
   }
 }
 
@@ -374,12 +375,12 @@ void LifetimeCheckPass::killInPset(mlir::Value ptrKey, const State &s,
 // in the pmap with invalid. For example, if pmap is {(p1,{a}), (p2,{a'})},
 // KILL(a') would invalidate only p2, and KILL(a) would invalidate both p1 and
 // p2.
-void LifetimeCheckPass::kill(const State &s, InvalidStyle histStyle,
+void LifetimeCheckPass::kill(const State &s, InvalidStyle invalidStyle,
                              mlir::Location loc) {
   assert(s.hasValue() && "does not know how to kill other data types");
   mlir::Value v = s.getData();
   std::optional<mlir::Value> extraVal;
-  if (histStyle == InvalidStyle::EndOfScope)
+  if (invalidStyle == InvalidStyle::EndOfScope)
     extraVal = v;
 
   for (auto &mapEntry : getPmap()) {
@@ -394,12 +395,12 @@ void LifetimeCheckPass::kill(const State &s, InvalidStyle histStyle,
     //
     // FIXME: add x'', x''', etc...
     if (s.isLocalValue() && owners.count(v))
-      killInPset(ptr, State::getOwnedBy(v), histStyle, loc, extraVal);
-    killInPset(ptr, s, histStyle, loc, extraVal);
+      killInPset(ptr, State::getOwnedBy(v), invalidStyle, loc, extraVal);
+    killInPset(ptr, s, invalidStyle, loc, extraVal);
   }
 
   // Delete the local value from pmap, since its scope has ended.
-  if (histStyle == InvalidStyle::EndOfScope)
+  if (invalidStyle == InvalidStyle::EndOfScope)
     getPmap().erase(v);
 }
 
