@@ -19,7 +19,7 @@ void foo() {
   A = (float *)omp_target_alloc((FROM + LENGTH) * sizeof(float), device_id);
 
   float *A_dev = NULL;
-#pragma omp target has_device_addr(A [FROM:LENGTH]) map(A_dev)
+#pragma omp target has_device_addr(A[FROM : LENGTH]) map(A_dev)
   { A_dev = A; }
   // CHECK: Success
   if (A_dev == NULL || A_dev != A)
@@ -33,8 +33,8 @@ void bar() {
   short *xp = &x[0];
 
   x[1] = 111;
-#pragma omp target data map(tofrom : xp [0:2]) use_device_addr(xp [0:2])
-#pragma omp target has_device_addr(xp [0:2])
+#pragma omp target data map(tofrom : xp[0 : 2]) use_device_addr(xp[0 : 2])
+#pragma omp target has_device_addr(xp[0 : 2])
   {
     xp[1] = 222;
     // CHECK: 222
@@ -81,7 +81,7 @@ void xoo() {
   short a[10], b[10];
   a[1] = 111;
   b[1] = 111;
-#pragma omp target data map(to : a [0:2], b [0:2]) use_device_addr(a, b)
+#pragma omp target data map(to : a[0 : 2], b[0 : 2]) use_device_addr(a, b)
 #pragma omp target has_device_addr(a) has_device_addr(b[0])
   {
     a[1] = 222;

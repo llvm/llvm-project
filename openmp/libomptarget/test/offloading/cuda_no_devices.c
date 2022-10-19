@@ -13,7 +13,7 @@
 // CHECK-NOT: {{.}}
 int main() {
   int x = 0;
-  #pragma omp target teams num_teams(2) reduction(+:x)
+#pragma omp target teams num_teams(2) reduction(+ : x)
   x += 2;
   printf("Hello World: %d\n", x);
   return 0;
