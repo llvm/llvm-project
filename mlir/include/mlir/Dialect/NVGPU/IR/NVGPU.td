@@ -151,7 +151,7 @@ def NVGPU_DeviceAsyncCopyOp : NVGPU_Op<"device_async_copy", [
                                        AttrSizedOperandSegments]> {
   let summary = "device-side asynchronous copy";
   let description = [{
-    The `gpu.device_async_copy` op initiates an asynchronous copy operation of
+    The `nvgpu.device_async_copy` op initiates an asynchronous copy operation of
     `$size` elements from source to the destination without blocking the thread.
     The destination has to be in shared memory.
 
@@ -176,25 +176,25 @@ def NVGPU_DeviceAsyncCopyOp : NVGPU_Op<"device_async_copy", [
     combination:
     ```
     // copy 1.
-    %cp1 = gpu.device_async_copy %A[%c0], %B[%c0], 4 :memref<16xf32> to memref<16xf32, 3>
+    %cp1 = nvgpu.device_async_copy %A[%c0], %B[%c0], 4 :memref<16xf32> to memref<16xf32, 3>
     // copy 2.
-    %cp2 = gpu.device_async_copy %C[%c0], %D[%c0], 4 : memref<16xf32> to memref<16xf32, 3>
+    %cp2 = nvgpu.device_async_copy %C[%c0], %D[%c0], 4 : memref<16xf32> to memref<16xf32, 3>
     // group 1 contains copy 1 and copy 2.
-    %token1 = gpu.device_async_create_group %cp1, %cp2
+    %token1 = nvgpu.device_async_create_group %cp1, %cp2
     // copy 3.
-    %cp3 = gpu.device_async_copy %E[%c0], %F[%c0], 4 : memref<16xf32> to memref<16xf32, 3>
+    %cp3 = nvgpu.device_async_copy %E[%c0], %F[%c0], 4 : memref<16xf32> to memref<16xf32, 3>
     // group 2 contains copy 3.
-    %token2 = gpu.device_async_create_group %cp3
+    %token2 = nvgpu.device_async_create_group %cp3
     // after the wait copy 1 and copy 2 are complete.
-    gpu.device_async_wait %token1
+    nvgpu.device_async_wait %token1
     // after the wait copy 3 is complete.
-    gpu.device_async_wait %token2
+    nvgpu.device_async_wait %token2
     ```
 
     Example:
 
     ```mlir
-    %0 = gpu.device_async_copy %src[%c0, %c0], %dst[%c0, %c0, %c0], 4 :
+    %0 = nvgpu.device_async_copy %src[%c0, %c0], %dst[%c0, %c0, %c0], 4 :
       memref<4x5xf32> to memref<2x7x5xf32, 3>
     ```
   }];
@@ -216,13 +216,13 @@ def NVGPU_DeviceAsyncCopyOp : NVGPU_Op<"device_async_copy", [
 def NVGPU_DeviceAsyncCreateGroupOp : NVGPU_Op<"device_async_create_group", []> {
   let summary = "device side asynchronous create group operation";
   let description = [{
-  The `gpu.device_async_create_group` op creates a group of memory accesses
+  The `nvgpu.device_async_create_group` op creates a group of memory accesses
   containing all the pending `device_async_copy` operations associated with
   argument tokens. Each token can only be part of one group.
 
   It returns a token that can be use to wait until the group fully completes.
 
-  This is meant to be used with `gpu.device_async_wait` to synchronize copies
+  This is meant to be used with `nvgpu.device_async_wait` to synchronize copies
   as explained in those ops descriptions.
 
   Groups are executed in the order they are created.
@@ -230,7 +230,7 @@ def NVGPU_DeviceAsyncCreateGroupOp : NVGPU_Op<"device_async_create_group", []> {
   Example:
 
   ```mlir
-  %0 = gpu.device_async_create_group
+  %0 = nvgpu.device_async_create_group
   ```
   }];
   let results = (outs NVGPU_DeviceAsyncToken:$asyncToken);
@@ -243,7 +243,7 @@ def NVGPU_DeviceAsyncCreateGroupOp : NVGPU_Op<"device_async_create_group", []> {
 def NVGPU_DeviceAsyncWaitOp : NVGPU_Op<"device_async_wait", []> {
   let summary = "Wait for async gpu ops to complete.";
   let description = [{
-  The `gpu.device_async_wait` op will block the execution thread until the group
+  The `nvgpu.device_async_wait` op will block the execution thread until the group
   associated with the source token is fully completed.
 
     The optional `$numGroup` attribute gives a lower bound of the number of
@@ -251,7 +251,7 @@ def NVGPU_DeviceAsyncWaitOp : NVGPU_Op<"device_async_wait", []> {
   Example:
 
   ```mlir
-  gpu.device_async_wait %0
+  nvgpu.device_async_wait %0
   ```
   }];
   let arguments = (ins NVGPU_DeviceAsyncToken:$asyncDependencies,
