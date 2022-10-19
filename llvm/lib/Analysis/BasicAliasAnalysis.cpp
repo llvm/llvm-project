@@ -740,7 +740,7 @@ static bool isIntrinsicCall(const CallBase *Call, Intrinsic::ID IID) {
   return II && II->getIntrinsicID() == IID;
 }
 
-static MemoryEffects getModRefBehaviorFromAttrs(AttributeSet Attrs) {
+static MemoryEffects getMemoryEffectsFromAttrs(AttributeSet Attrs) {
   if (Attrs.hasAttribute(Attribute::ReadNone))
     return MemoryEffects::none();
 
@@ -760,13 +760,13 @@ static MemoryEffects getModRefBehaviorFromAttrs(AttributeSet Attrs) {
 }
 
 /// Returns the behavior when calling the given call site.
-MemoryEffects BasicAAResult::getModRefBehavior(const CallBase *Call,
-                                               AAQueryInfo &AAQI) {
+MemoryEffects BasicAAResult::getMemoryEffects(const CallBase *Call,
+                                              AAQueryInfo &AAQI) {
   MemoryEffects Min =
-      getModRefBehaviorFromAttrs(Call->getAttributes().getFnAttrs());
+      getMemoryEffectsFromAttrs(Call->getAttributes().getFnAttrs());
 
   if (const Function *F = dyn_cast<Function>(Call->getCalledOperand())) {
-    MemoryEffects FuncME = AAQI.AAR.getModRefBehavior(F);
+    MemoryEffects FuncME = AAQI.AAR.getMemoryEffects(F);
     // Operand bundles on the call may also read or write memory, in addition
     // to the behavior of the called function.
     if (Call->hasReadingOperandBundles())
@@ -781,7 +781,7 @@ MemoryEffects BasicAAResult::getModRefBehavior(const CallBase *Call,
 
 /// Returns the behavior when calling the given function. For use when the call
 /// site is not known.
-MemoryEffects BasicAAResult::getModRefBehavior(const Function *F) {
+MemoryEffects BasicAAResult::getMemoryEffects(const Function *F) {
   switch (F->getIntrinsicID()) {
   case Intrinsic::experimental_guard:
   case Intrinsic::experimental_deoptimize:
@@ -791,7 +791,7 @@ MemoryEffects BasicAAResult::getModRefBehavior(const Function *F) {
            MemoryEffects::inaccessibleMemOnly(ModRefInfo::ModRef);
   }
 
-  return getModRefBehaviorFromAttrs(F->getAttributes().getFnAttrs());
+  return getMemoryEffectsFromAttrs(F->getAttributes().getFnAttrs());
 }
 
 /// Returns true if this is a writeonly (i.e Mod only) parameter.
@@ -1013,12 +1013,12 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call1,
   // possibilities for guard intrinsics.
 
   if (isIntrinsicCall(Call1, Intrinsic::experimental_guard))
-    return isModSet(getModRefBehavior(Call2, AAQI).getModRef())
+    return isModSet(getMemoryEffects(Call2, AAQI).getModRef())
                ? ModRefInfo::Ref
                : ModRefInfo::NoModRef;
 
   if (isIntrinsicCall(Call2, Intrinsic::experimental_guard))
-    return isModSet(getModRefBehavior(Call1, AAQI).getModRef())
+    return isModSet(getMemoryEffects(Call1, AAQI).getModRef())
                ? ModRefInfo::Mod
                : ModRefInfo::NoModRef;
 
