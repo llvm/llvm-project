@@ -425,8 +425,8 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   Key += "SVEMin";
   Key += std::to_string(MinSVEVectorSize);
   Key += "SVEMax";
-  Key += "StreamingSVEModeDisabled=" + std::to_string(StreamingSVEModeDisabled);
   Key += std::to_string(MaxSVEVectorSize);
+  Key += "StreamingSVEModeDisabled=" + std::to_string(StreamingSVEModeDisabled);
   Key += CPU;
   Key += TuneCPU;
   Key += FS;
