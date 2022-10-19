@@ -2075,6 +2075,15 @@ gentbl_cc_library(
     deps = [":PassBaseTdFiles"],
 )
 
+# This library is shared by both SparseTensorDialect and
+# SparseTensorRuntime, so it must not depend on any of the MLIR/LLVM
+# internals or else mlir_c_runner_utils will inherit that dependency.
+cc_library(
+    name = "SparseTensorEnums",
+    hdrs = ["include/mlir/Dialect/SparseTensor/IR/Enums.h"],
+    includes = ["include"],
+)
+
 cc_library(
     name = "SparseTensorDialect",
     srcs = ["lib/Dialect/SparseTensor/IR/SparseTensorDialect.cpp"],
@@ -2085,6 +2094,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":SparseTensorAttrDefsIncGen",
+        ":SparseTensorEnums",
         ":SparseTensorOpsIncGen",
         "//llvm:Support",
     ],
@@ -2102,6 +2112,7 @@ cc_library(
         ":LinalgDialect",
         ":MathDialect",
         ":SparseTensorDialect",
+        ":SparseTensorEnums",
         "//llvm:Support",
     ],
 )
@@ -2136,8 +2147,8 @@ cc_library(
         ":SCFDialect",
         ":SCFTransforms",
         ":SparseTensorDialect",
+        ":SparseTensorEnums",
         ":SparseTensorPassIncGen",
-        ":SparseTensorRuntime",
         ":SparseTensorUtils",
         ":Support",
         ":TensorDialect",
@@ -6754,10 +6765,6 @@ cc_binary(
 # pragma, therefore it cannot be safely/correctly used across DLL boundaries.
 # Consequently, we avoid using the "mlir_xxx_utils" naming scheme,
 # since that is reserved/intended for shared libraries only.
-#
-# We relist Float16bits.h because Enums.h includes it; rather than
-# forcing all direct-dependants state that they also directly-depend
-# on :mlir_float16_utils (to satisfy the layering_check).
 cc_library(
     name = "SparseTensorRuntime",
     srcs = [
@@ -6766,20 +6773,19 @@ cc_library(
         "lib/ExecutionEngine/SparseTensor/Storage.cpp",
     ],
     hdrs = [
-        "include/mlir/ExecutionEngine/Float16bits.h",
         "include/mlir/ExecutionEngine/SparseTensor/COO.h",
         "include/mlir/ExecutionEngine/SparseTensor/CheckedMul.h",
-        "include/mlir/ExecutionEngine/SparseTensor/Enums.h",
         "include/mlir/ExecutionEngine/SparseTensor/ErrorHandling.h",
         "include/mlir/ExecutionEngine/SparseTensor/File.h",
         "include/mlir/ExecutionEngine/SparseTensor/Storage.h",
     ],
     includes = ["include"],
-    deps = [":mlir_float16_utils"],
+    deps = [
+        ":SparseTensorEnums",
+        ":mlir_float16_utils",
+    ],
 )
 
-# We relist Enums.h because SparseTensorRuntime.h includes/reexports it
-# as part of the public API.
 cc_library(
     name = "_mlir_c_runner_utils",
     srcs = [
@@ -6789,11 +6795,14 @@ cc_library(
     hdrs = [
         "include/mlir/ExecutionEngine/CRunnerUtils.h",
         "include/mlir/ExecutionEngine/Msan.h",
-        "include/mlir/ExecutionEngine/SparseTensor/Enums.h",
         "include/mlir/ExecutionEngine/SparseTensorRuntime.h",
     ],
     includes = ["include"],
-    deps = [":SparseTensorRuntime"],
+    deps = [
+        ":SparseTensorEnums",
+        ":SparseTensorRuntime",
+        ":mlir_float16_utils",
+    ],
 )
 
 # Indirection to avoid 'libmlir_c_runner_utils.so' filename clash.

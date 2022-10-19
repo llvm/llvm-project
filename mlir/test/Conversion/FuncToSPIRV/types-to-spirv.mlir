@@ -207,6 +207,10 @@ func.func @float_vector(
   %arg1: vector<3xf64>
 ) { return }
 
+// CHECK-LABEL: spirv.func @one_element_vector
+// CHECK-SAME: %{{.+}}: i32
+func.func @one_element_vector(%arg0: vector<1xi8>) { return }
+
 } // end module
 
 // -----

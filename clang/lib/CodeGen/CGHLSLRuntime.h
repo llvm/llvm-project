@@ -73,7 +73,8 @@ protected:
   uint32_t ResourceCounters[static_cast<uint32_t>(
       hlsl::ResourceClass::NumClasses)] = {0};
 
-  llvm::Value *emitInputSemantic(llvm::IRBuilder<> &B, const ParmVarDecl &D);
+  llvm::Value *emitInputSemantic(llvm::IRBuilder<> &B, const ParmVarDecl &D,
+                                 llvm::Type *Ty);
 
 public:
   CGHLSLRuntime(CodeGenModule &CGM) : CGM(CGM) {}

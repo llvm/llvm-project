@@ -55,8 +55,8 @@ public:
   bool pointsToConstantMemory(const MemoryLocation &Loc, AAQueryInfo &AAQI,
                               bool OrLocal);
 
-  using AAResultBase::getModRefBehavior;
-  FunctionModRefBehavior getModRefBehavior(const Function *F);
+  using AAResultBase::getMemoryEffects;
+  MemoryEffects getMemoryEffects(const Function *F);
 
   using AAResultBase::getModRefInfo;
   ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,

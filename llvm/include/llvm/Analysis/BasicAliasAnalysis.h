@@ -83,12 +83,11 @@ public:
   ModRefInfo getArgModRefInfo(const CallBase *Call, unsigned ArgIdx);
 
   /// Returns the behavior when calling the given call site.
-  FunctionModRefBehavior getModRefBehavior(const CallBase *Call,
-                                           AAQueryInfo &AAQI);
+  MemoryEffects getMemoryEffects(const CallBase *Call, AAQueryInfo &AAQI);
 
   /// Returns the behavior when calling the given function. For use when the
   /// call site is not known.
-  FunctionModRefBehavior getModRefBehavior(const Function *Fn);
+  MemoryEffects getMemoryEffects(const Function *Fn);
 
 private:
   struct DecomposedGEP;

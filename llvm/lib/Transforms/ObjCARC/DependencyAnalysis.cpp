@@ -48,10 +48,10 @@ bool llvm::objcarc::CanAlterRefCount(const Instruction *Inst, const Value *Ptr,
   const auto *Call = cast<CallBase>(Inst);
 
   // See if AliasAnalysis can help us with the call.
-  FunctionModRefBehavior MRB = PA.getAA()->getModRefBehavior(Call);
-  if (MRB.onlyReadsMemory())
+  MemoryEffects ME = PA.getAA()->getMemoryEffects(Call);
+  if (ME.onlyReadsMemory())
     return false;
-  if (MRB.onlyAccessesArgPointees()) {
+  if (ME.onlyAccessesArgPointees()) {
     for (const Value *Op : Call->args()) {
       if (IsPotentialRetainableObjPtr(Op, *PA.getAA()) && PA.related(Ptr, Op))
         return true;

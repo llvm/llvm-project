@@ -1636,12 +1636,12 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
 
   auto *AF = SE.getConstant(IntegerType::getInt64Ty(CI->getContext()), 0);
   auto *CalledFunction = CI->getCalledFunction();
-  FunctionModRefBehavior FMRB = AA.getModRefBehavior(CalledFunction);
-  if (FMRB.doesNotAccessMemory())
+  MemoryEffects ME = AA.getMemoryEffects(CalledFunction);
+  if (ME.doesNotAccessMemory())
     return true;
 
-  if (FMRB.onlyAccessesArgPointees()) {
-    ModRefInfo ArgMR = FMRB.getModRef(FunctionModRefBehavior::ArgMem);
+  if (ME.onlyAccessesArgPointees()) {
+    ModRefInfo ArgMR = ME.getModRef(MemoryEffects::ArgMem);
     auto AccType =
         !isModSet(ArgMR) ? MemoryAccess::READ : MemoryAccess::MAY_WRITE;
     Loop *L = LI.getLoopFor(Inst->getParent());
@@ -1665,7 +1665,7 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
     return true;
   }
 
-  if (FMRB.onlyReadsMemory()) {
+  if (ME.onlyReadsMemory()) {
     GlobalReads.emplace_back(Stmt, CI);
     return true;
   }

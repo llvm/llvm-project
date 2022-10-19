@@ -6,7 +6,8 @@ add_clang_library(clangIncludeCleaner
   WalkAST.cpp
 
   LINK_LIBS
-  clangBasic
   clangAST
+  clangBasic
+  clangLex
   )
 

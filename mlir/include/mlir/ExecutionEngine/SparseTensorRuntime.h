@@ -15,8 +15,9 @@
 #ifndef MLIR_EXECUTIONENGINE_SPARSETENSORRUNTIME_H
 #define MLIR_EXECUTIONENGINE_SPARSETENSORRUNTIME_H
 
+#include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
-#include "mlir/ExecutionEngine/SparseTensor/Enums.h"
+#include "mlir/ExecutionEngine/Float16bits.h"
 
 #include <cinttypes>
 #include <complex>

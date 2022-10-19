@@ -73,6 +73,9 @@ v_fmac_f16_e32 v5, v1, v255
 v_fmamk_f16_e32 v5, v1, 0xfe0b, v255
 // GFX11: error: operands are not valid for this GPU or mode
 
+v_ldexp_f16_e32 v5, v1, v255
+// GFX11: error: operands are not valid for this GPU or mode
+
 v_max_f16_e32 v5, v1, v255
 // GFX11: error: operands are not valid for this GPU or mode
 
@@ -142,6 +145,9 @@ v_add_f16_dpp v5, v1, v255 quad_perm:[3,2,1,0]
 v_fmac_f16_dpp v5, v1, v255 quad_perm:[3,2,1,0]
 // GFX11: error: operands are not valid for this GPU or mode
 
+v_ldexp_f16_dpp v5, v1, v255 quad_perm:[3,2,1,0]
+// GFX11: error: operands are not valid for this GPU or mode
+
 v_max_f16_dpp v5, v1, v255 quad_perm:[3,2,1,0]
 // GFX11: error: operands are not valid for this GPU or mode
 
@@ -209,6 +215,9 @@ v_add_f16_dpp v5, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: error: operands are not valid for this GPU or mode
 
 v_fmac_f16_dpp v5, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: error: operands are not valid for this GPU or mode
+
+v_ldexp_f16_dpp v5, v1, v255 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: error: operands are not valid for this GPU or mode
 
 v_max_f16_dpp v5, v1, v255 dpp8:[7,6,5,4,3,2,1,0]

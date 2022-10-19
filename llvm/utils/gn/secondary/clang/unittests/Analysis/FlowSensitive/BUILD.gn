@@ -32,5 +32,6 @@ unittest("ClangAnalysisFlowSensitiveTests") {
     "TransferTest.cpp",
     "TypeErasedDataflowAnalysisTest.cpp",
     "UncheckedOptionalAccessModelTest.cpp",
+    "ValueTest.cpp",
   ]
 }

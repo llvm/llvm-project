@@ -1,7 +1,7 @@
 // RUN: %libomptarget-compile-run-and-check-generic
 
-#include <stdio.h>
 #include <omp.h>
+#include <stdio.h>
 
 #pragma omp declare target
 int isHost;
@@ -10,7 +10,7 @@ int isHost;
 int main(void) {
   isHost = -1;
 
-#pragma omp target enter data map(to: isHost)
+#pragma omp target enter data map(to : isHost)
 
 #pragma omp target
   { isHost = omp_is_initial_device(); }
@@ -20,7 +20,7 @@ int main(void) {
     printf("Runtime error, isHost=%d\n", isHost);
   }
 
-#pragma omp target exit data map(delete: isHost)
+#pragma omp target exit data map(delete : isHost)
 
   // CHECK: Target region executed on the device
   printf("Target region executed on the %s\n", isHost ? "host" : "device");

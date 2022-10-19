@@ -82,6 +82,26 @@ static bool UpgradeX86MaskedFPCompare(Function *F, Intrinsic::ID IID,
   return true;
 }
 
+static bool UpgradeX86BF16Intrinsic(Function *F, Intrinsic::ID IID,
+                                    Function *&NewFn) {
+  if (F->getReturnType()->getScalarType()->isBFloatTy())
+    return false;
+
+  rename(F);
+  NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
+  return true;
+}
+
+static bool UpgradeX86BF16DPIntrinsic(Function *F, Intrinsic::ID IID,
+                                      Function *&NewFn) {
+  if (F->getFunctionType()->getParamType(1)->getScalarType()->isBFloatTy())
+    return false;
+
+  rename(F);
+  NewFn = Intrinsic::getDeclaration(F->getParent(), IID);
+  return true;
+}
+
 static bool ShouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
   // All of the intrinsics matches below should be marked with which llvm
   // version started autoupgrading them. At some point in the future we would
@@ -488,6 +508,33 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
   if (Name == "avx512.mask.cmp.ps.512") // Added in 7.0
     return UpgradeX86MaskedFPCompare(F, Intrinsic::x86_avx512_mask_cmp_ps_512,
                                      NewFn);
+  if (Name == "avx512bf16.cvtne2ps2bf16.128") // Added in 9.0
+    return UpgradeX86BF16Intrinsic(
+        F, Intrinsic::x86_avx512bf16_cvtne2ps2bf16_128, NewFn);
+  if (Name == "avx512bf16.cvtne2ps2bf16.256") // Added in 9.0
+    return UpgradeX86BF16Intrinsic(
+        F, Intrinsic::x86_avx512bf16_cvtne2ps2bf16_256, NewFn);
+  if (Name == "avx512bf16.cvtne2ps2bf16.512") // Added in 9.0
+    return UpgradeX86BF16Intrinsic(
+        F, Intrinsic::x86_avx512bf16_cvtne2ps2bf16_512, NewFn);
+  if (Name == "avx512bf16.mask.cvtneps2bf16.128") // Added in 9.0
+    return UpgradeX86BF16Intrinsic(
+        F, Intrinsic::x86_avx512bf16_mask_cvtneps2bf16_128, NewFn);
+  if (Name == "avx512bf16.cvtneps2bf16.256") // Added in 9.0
+    return UpgradeX86BF16Intrinsic(
+        F, Intrinsic::x86_avx512bf16_cvtneps2bf16_256, NewFn);
+  if (Name == "avx512bf16.cvtneps2bf16.512") // Added in 9.0
+    return UpgradeX86BF16Intrinsic(
+        F, Intrinsic::x86_avx512bf16_cvtneps2bf16_512, NewFn);
+  if (Name == "avx512bf16.dpbf16ps.128") // Added in 9.0
+    return UpgradeX86BF16DPIntrinsic(
+        F, Intrinsic::x86_avx512bf16_dpbf16ps_128, NewFn);
+  if (Name == "avx512bf16.dpbf16ps.256") // Added in 9.0
+    return UpgradeX86BF16DPIntrinsic(
+        F, Intrinsic::x86_avx512bf16_dpbf16ps_256, NewFn);
+  if (Name == "avx512bf16.dpbf16ps.512") // Added in 9.0
+    return UpgradeX86BF16DPIntrinsic(
+        F, Intrinsic::x86_avx512bf16_dpbf16ps_512, NewFn);
 
   // frcz.ss/sd may need to have an argument dropped. Added in 3.2
   if (Name.startswith("xop.vfrcz.ss") && F->arg_size() == 2) {
@@ -4168,6 +4215,43 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     CI->replaceAllUsesWith(Res);
     CI->eraseFromParent();
     return;
+  }
+
+  case Intrinsic::x86_avx512bf16_cvtne2ps2bf16_128:
+  case Intrinsic::x86_avx512bf16_cvtne2ps2bf16_256:
+  case Intrinsic::x86_avx512bf16_cvtne2ps2bf16_512:
+  case Intrinsic::x86_avx512bf16_mask_cvtneps2bf16_128:
+  case Intrinsic::x86_avx512bf16_cvtneps2bf16_256:
+  case Intrinsic::x86_avx512bf16_cvtneps2bf16_512: {
+    SmallVector<Value *, 4> Args(CI->args());
+    unsigned NumElts = cast<FixedVectorType>(CI->getType())->getNumElements();
+    if (NewFn->getIntrinsicID() ==
+        Intrinsic::x86_avx512bf16_mask_cvtneps2bf16_128)
+      Args[1] = Builder.CreateBitCast(
+          Args[1], FixedVectorType::get(Builder.getBFloatTy(), NumElts));
+
+    NewCall = Builder.CreateCall(NewFn, Args);
+    Value *Res = Builder.CreateBitCast(
+        NewCall, FixedVectorType::get(Builder.getInt16Ty(), NumElts));
+
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(Res);
+    CI->eraseFromParent();
+    return;
+  }
+  case Intrinsic::x86_avx512bf16_dpbf16ps_128:
+  case Intrinsic::x86_avx512bf16_dpbf16ps_256:
+  case Intrinsic::x86_avx512bf16_dpbf16ps_512:{
+    SmallVector<Value *, 4> Args(CI->args());
+    unsigned NumElts =
+        cast<FixedVectorType>(CI->getType())->getNumElements() * 2;
+    Args[1] = Builder.CreateBitCast(
+        Args[1], FixedVectorType::get(Builder.getBFloatTy(), NumElts));
+    Args[2] = Builder.CreateBitCast(
+        Args[2], FixedVectorType::get(Builder.getBFloatTy(), NumElts));
+
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
   }
 
   case Intrinsic::thread_pointer: {
