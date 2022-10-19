@@ -160,7 +160,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
       return val.getPointer();
     }
 
-    void dump(llvm::raw_ostream &OS = llvm::errs());
+    void dump(llvm::raw_ostream &OS = llvm::errs(), int ownedGen = 0);
 
     static State getInvalid() { return {Invalid}; }
     static State getNullPtr() { return {NullPtr}; }
@@ -1119,8 +1119,6 @@ void LifetimeCheckPass::checkCall(CallOp callOp) {
     // o’s first non-const use pset(o) becomes {o__2'}, on o’s second non-const
     // use pset(o) becomes {o__3'}, and so on.
     incOwner(ownerAddr);
-    // markPsetInvalid(addr, InvalidStyle::NonConstUseOfOwner,
-    //                 callOp.getLoc());
     return;
   }
 
@@ -1207,7 +1205,7 @@ void LifetimeCheckPass::LexicalScopeContext::dumpLocalValues() {
   llvm::errs() << "}\n";
 }
 
-void LifetimeCheckPass::State::dump(llvm::raw_ostream &OS) {
+void LifetimeCheckPass::State::dump(llvm::raw_ostream &OS, int ownedGen) {
   switch (val.getInt()) {
   case Invalid:
     OS << "invalid";
@@ -1222,7 +1220,8 @@ void LifetimeCheckPass::State::dump(llvm::raw_ostream &OS) {
     OS << getVarNameFromValue(val.getPointer());
     break;
   case OwnedBy:
-    OS << getVarNameFromValue(val.getPointer()) << "'";
+    ownedGen++; // Start from 1.
+    OS << getVarNameFromValue(val.getPointer()) << "__" << ownedGen << "'";
     break;
   default:
     llvm_unreachable("Not handled");
@@ -1233,7 +1232,10 @@ void LifetimeCheckPass::printPset(PSetType &pset, llvm::raw_ostream &OS) {
   OS << "{ ";
   auto size = pset.size();
   for (auto s : pset) {
-    s.dump(OS);
+    int ownerGen = 0;
+    if (s.isOwnedBy())
+      ownerGen = owners[s.getData()];
+    s.dump(OS, ownerGen);
     size--;
     if (size > 0)
       OS << ", ";
