@@ -145,11 +145,17 @@ static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
       return;
 
     const Value *UO = getUnderlyingObject(Loc.Ptr);
-    // The accessed location can be either only argument memory, or
-    // argument & other memory, but never inaccessible memory.
-    ME |= MemoryEffects::argMemOnly(MR);
-    if (!isa<Argument>(UO) && !isa<AllocaInst>(UO))
-      ME |= MemoryEffects(MemoryEffects::Other, MR);
+    assert(!isa<AllocaInst>(UO) &&
+           "Should have been handled by pointsToConstantMemory()");
+    if (isa<Argument>(UO)) {
+      ME |= MemoryEffects::argMemOnly(MR);
+      return;
+    }
+
+    // If it's not an identified object, it might be an argument.
+    if (!isIdentifiedObject(UO))
+      ME |= MemoryEffects::argMemOnly(MR);
+    ME |= MemoryEffects(MemoryEffects::Other, MR);
   };
   // Scan the function body for instructions that may read or write memory.
   for (Instruction &I : instructions(F)) {
