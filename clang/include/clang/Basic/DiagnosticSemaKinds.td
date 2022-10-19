@@ -10301,8 +10301,8 @@ def err_reference_pipe_type : Error <
 def err_opencl_no_main : Error<"%select{function|kernel}0 cannot be called 'main'">;
 def err_opencl_kernel_attr :
   Error<"attribute %0 can only be applied to an OpenCL kernel function">;
-def err_opencl_return_value_with_address_space : Error<
-  "return value cannot be qualified with address space">;
+def err_return_value_with_address_space : Error<
+  "return type cannot be qualified with address space">;
 def err_opencl_constant_no_init : Error<
   "variable in constant address space must be initialized">;
 def err_opencl_atomic_init: Error<
