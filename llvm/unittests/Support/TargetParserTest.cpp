@@ -1503,7 +1503,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_BF16,    AArch64::AEK_I8MM,     AArch64::AEK_F32MM,
       AArch64::AEK_F64MM,   AArch64::AEK_TME,      AArch64::AEK_LS64,
       AArch64::AEK_BRBE,    AArch64::AEK_PAUTH,    AArch64::AEK_FLAGM,
-      AArch64::AEK_SME,     AArch64::AEK_SMEF64,   AArch64::AEK_SMEI64,
+      AArch64::AEK_SME,     AArch64::AEK_SMEF64F64, AArch64::AEK_SMEI16I64,
       AArch64::AEK_SME2,    AArch64::AEK_HBC,      AArch64::AEK_MOPS,
       AArch64::AEK_PERFMON};
 
@@ -1560,8 +1560,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+pauth"));
   EXPECT_TRUE(llvm::is_contained(Features, "+flagm"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+sme-f64"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+sme-i64"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme-f64f64"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme-i16i64"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme2"));
   EXPECT_TRUE(llvm::is_contained(Features, "+hbc"));
   EXPECT_TRUE(llvm::is_contained(Features, "+mops"));
@@ -1639,8 +1639,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"f32mm", "nof32mm", "+f32mm", "-f32mm"},
       {"f64mm", "nof64mm", "+f64mm", "-f64mm"},
       {"sme", "nosme", "+sme", "-sme"},
-      {"sme-f64", "nosme-f64", "+sme-f64", "-sme-f64"},
-      {"sme-i64", "nosme-i64", "+sme-i64", "-sme-i64"},
+      {"sme-f64f64", "nosme-f64f64", "+sme-f64f64", "-sme-f64f64"},
+      {"sme-i16i64", "nosme-i16i64", "+sme-i16i64", "-sme-i16i64"},
       {"sme2", "nosme2", "+sme2", "-sme2"},
       {"hbc", "nohbc", "+hbc", "-hbc"},
       {"mops", "nomops", "+mops", "-mops"},
