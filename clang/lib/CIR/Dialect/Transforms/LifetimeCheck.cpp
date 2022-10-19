@@ -238,8 +238,18 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   // Local pointers
   SmallPtrSet<mlir::Value, 8> ptrs;
 
-  // Local owners
-  SmallPtrSet<mlir::Value, 8> owners;
+  // Local owners. We use a map instead of a set to track the current generation
+  // for this owner type internal pointee's. For instance, this allows tracking
+  // subsequent reuse of owner storage when a non-const use happens.
+  DenseMap<mlir::Value, unsigned> owners;
+  void addOwner(mlir::Value o) {
+    assert(!owners.count(o) && "already tracked");
+    owners[o] = 0;
+  }
+  void incOwner(mlir::Value o) {
+    assert(owners.count(o) && "entry expected");
+    owners[o]++;
+  }
 
   // Useful helpers for debugging
   void printPset(PSetType &pset, llvm::raw_ostream &OS = llvm::errs());
@@ -773,7 +783,7 @@ void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
     break;
   case TypeCategory::Owner:
     // 2.4.2 - When a local Owner x is declared, add (x, {x__1'}) to pmap.
-    owners.insert(addr);
+    addOwner(addr);
     getPmap()[addr].insert(State::getOwnedBy(addr));
     currScope->localValues.push_back(addr);
     break;
@@ -1096,19 +1106,19 @@ void LifetimeCheckPass::checkCall(CallOp callOp) {
 
   // Non-const member call to a Owner invalidates any of its users.
   if (isNonConstUseOfOwner(callOp, methodDecl)) {
-    auto addr = callOp.getOperand(0);
+    auto ownerAddr = callOp.getOperand(0);
     // 2.4.2 - On every non-const use of a local Owner o:
     //
     // - For each entry e in pset(s): Remove e from pset(s), and if no other
     // Owner’s pset contains only e, then KILL(e).
-    kill(State::getOwnedBy(addr), InvalidStyle::NonConstUseOfOwner,
+    kill(State::getOwnedBy(ownerAddr), InvalidStyle::NonConstUseOfOwner,
          callOp.getLoc());
 
     // - Set pset(o) = {o__N'}, where N is one higher than the highest
     // previously used suffix. For example, initially pset(o) is {o__1'}, on
     // o’s first non-const use pset(o) becomes {o__2'}, on o’s second non-const
     // use pset(o) becomes {o__3'}, and so on.
-    // FIXME: for now we set pset(o) = { invalid }
+    incOwner(ownerAddr);
     // markPsetInvalid(addr, InvalidStyle::NonConstUseOfOwner,
     //                 callOp.getLoc());
     return;
