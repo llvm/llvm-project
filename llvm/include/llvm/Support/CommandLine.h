@@ -2140,6 +2140,9 @@ class ExpansionContext {
   /// current directory is used instead.
   StringRef CurrentDir;
 
+  /// Directories used for search of config files.
+  ArrayRef<StringRef> SearchDirs;
+
   /// True if names of nested response files must be resolved relative to
   /// including file.
   bool RelativeNames = false;
@@ -2172,10 +2175,26 @@ public:
     return *this;
   }
 
+  ExpansionContext &setSearchDirs(ArrayRef<StringRef> X) {
+    SearchDirs = X;
+    return *this;
+  }
+
   ExpansionContext &setVFS(vfs::FileSystem *X) {
     FS = X;
     return *this;
   }
+
+  /// Looks for the specified configuration file.
+  ///
+  /// \param[in]  FileName Name of the file to search for.
+  /// \param[out] FilePath File absolute path, if it was found.
+  /// \return True if file was found.
+  ///
+  /// If the specified file name contains a directory separator, it is searched
+  /// for by its absolute path. Otherwise looks for file sequentially in
+  /// directories specified by SearchDirs field.
+  bool findConfigFile(StringRef FileName, SmallVectorImpl<char> &FilePath);
 
   /// Reads command line options from the given configuration file.
   ///
