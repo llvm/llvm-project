@@ -168,7 +168,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
 
   // Provides p1179's 'KILL' functionality. See implementation for more
   // information.
-  void kill(const State &s);
+  void kill(const State &s, std::optional<mlir::Location> killLoc = {});
   void killInPset(PSetType &pset, const State &s);
 
   // Local pointers
@@ -306,7 +306,8 @@ void LifetimeCheckPass::killInPset(PSetType &pset, const State &s) {
 // in the pmap with invalid. For example, if pmap is {(p1,{a}), (p2,{a'})},
 // KILL(a') would invalidate only p2, and KILL(a) would invalidate both p1 and
 // p2.
-void LifetimeCheckPass::kill(const State &s) {
+void LifetimeCheckPass::kill(const State &s,
+                             std::optional<mlir::Location> killLoc) {
   assert(s.hasValue() && "does not know how to kill other data types");
   mlir::Value v = s.getData();
   for (auto &mapEntry : getPmap()) {
@@ -321,12 +322,23 @@ void LifetimeCheckPass::kill(const State &s) {
     //
     auto &pset = mapEntry.second;
 
+    // Record if pmap(ptr) is invalid already.
+    bool wasInvalid = pset.count(State::getInvalid());
+
     // FIXME: add x'', x''', etc...
     if (s.isLocalValue() && owners.count(v))
       killInPset(pset, State::getOwnedBy(v));
 
     killInPset(pset, s);
-    pmapInvalidHist[ptr] = std::make_pair(getEndLocForHist(*currScope), v);
+
+    // If pset(ptr) was already invalid, do not polute the history.
+    if (!wasInvalid) {
+      // FIXME: support invalidation history and types.
+      if (!killLoc)
+        pmapInvalidHist[ptr] = std::make_pair(getEndLocForHist(*currScope), v);
+      else
+        pmapInvalidHist[ptr] = std::make_pair(killLoc, std::nullopt);
+    }
   }
 
   // Delete the local value from pmap, since its now gone.
@@ -954,6 +966,14 @@ static bool isOperatorStar(const clang::CXXMethodDecl *m) {
   return m->getOverloadedOperator() == clang::OverloadedOperatorKind::OO_Star;
 }
 
+static bool sinkUnsupportedOperator(const clang::CXXMethodDecl *m) {
+  if (!m->isOverloadedOperator())
+    return false;
+  if (!isOperatorStar(m))
+    llvm_unreachable("NYI");
+  return false;
+}
+
 void LifetimeCheckPass::checkOperatorStar(CallOp callOp) {
   auto addr = callOp.getOperand(0);
   if (!ptrs.count(addr))
@@ -980,22 +1000,45 @@ void LifetimeCheckPass::checkCall(CallOp callOp) {
   if (!methodDecl)
     return;
 
-  // TODO: only ctor init implemented, assign ops and others needed.
   if (auto ctor = dyn_cast<clang::CXXConstructorDecl>(methodDecl))
     return checkCtor(callOp, ctor);
   if (methodDecl->isMoveAssignmentOperator())
     return checkMoveAssignment(callOp, methodDecl);
+  if (methodDecl->isCopyAssignmentOperator())
+    llvm_unreachable("NYI");
   if (isOperatorStar(methodDecl))
     return checkOperatorStar(callOp);
+  if (sinkUnsupportedOperator(methodDecl))
+    return;
 
   // For any other methods...
 
   // Non-const member call to a Owner invalidates any of its users.
   if (isNonConstUseOfOwner(callOp, methodDecl)) {
-    // auto addr = callOp.getOperand(0);
-    // TODO: kill(a')
-    llvm_unreachable("NYI");
+    auto addr = callOp.getOperand(0);
+    // 2.4.2 - On every non-const use of a local Owner o:
+    //
+    // - For each entry e in pset(s): Remove e from pset(s), and if no other
+    // Owner’s pset contains only e, then KILL(e).
+    kill(State::getOwnedBy(addr), callOp.getLoc());
+
+    // - Set pset(o) = {o__N'}, where N is one higher than the highest
+    // previously used suffix. For example, initially pset(o) is {o__1'}, on
+    // o’s first non-const use pset(o) becomes {o__2'}, on o’s second non-const
+    // use pset(o) becomes {o__3'}, and so on.
+    // FIXME: for now we set pset(o) = { invalid }
+    auto &pset = getPmap()[addr];
+    pset.clear();
+    pset.insert(State::getInvalid());
+    pmapInvalidHist[addr] = std::make_pair(callOp.getLoc(), std::nullopt);
+    return;
   }
+
+  // Take a pset(Ptr) = { Ownr' } where Own got invalidated, this will become
+  // invalid access to Ptr if any of its methods are used.
+  auto addr = callOp.getOperand(0);
+  if (ptrs.count(addr))
+    return checkPointerDeref(addr, callOp.getLoc());
 }
 
 void LifetimeCheckPass::checkOperation(Operation *op) {
