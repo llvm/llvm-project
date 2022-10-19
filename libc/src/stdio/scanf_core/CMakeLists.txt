@@ -23,3 +23,38 @@ add_object_library(
     libc.src.__support.CPP.bitset
     libc.src.__support.CPP.string_view
 )
+
+if(NOT (TARGET libc.src.__support.File.file))
+  # Not all platforms have a file implementation. If file is unvailable,
+  # then we must skip all the parts that need file.
+  return()
+endif()
+
+add_object_library(
+  string_reader
+  SRCS
+    string_reader.cpp
+  HDRS
+    string_reader.h
+)
+
+add_object_library(
+  file_reader
+  SRCS
+    file_reader.cpp
+  HDRS
+    file_reader.h
+  DEPENDS
+    libc.src.__support.File.file
+)
+
+add_object_library(
+  reader
+  SRCS
+    reader.cpp
+  HDRS
+    reader.h
+  DEPENDS
+    .string_reader
+    .file_reader
+)
