@@ -79,8 +79,42 @@ steps:
   #
   - wait
 
+  - label: "GCC ${GCC_STABLE_VERSION} / C++latest"
+    command: "libcxx/utils/ci/run-buildbot generic-gcc"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    env:
+        CC: "gcc-${GCC_STABLE_VERSION}"
+        CXX: "g++-${GCC_STABLE_VERSION}"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
   - label: "C++2b"
     command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "Modular build"
+    command: "libcxx/utils/ci/run-buildbot generic-modules"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -121,40 +155,6 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
-  - label: "Modular build"
-    command: "libcxx/utils/ci/run-buildbot generic-modules"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
-    env:
-        CC: "clang-${LLVM_HEAD_VERSION}"
-        CXX: "clang++-${LLVM_HEAD_VERSION}"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
-  - label: "GCC ${GCC_STABLE_VERSION} / C++latest"
-    command: "libcxx/utils/ci/run-buildbot generic-gcc"
-    artifact_paths:
-      - "**/test-results.xml"
-      - "**/*.abilist"
-    env:
-        CC: "gcc-${GCC_STABLE_VERSION}"
-        CXX: "g++-${GCC_STABLE_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
