@@ -100,7 +100,6 @@ define <16 x i8> @sub_op1_constant(ptr %p) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movzbl (%rdi), %eax
 ; AVX-NEXT:    addb $-42, %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    retq
   %x = load i8, ptr %p
@@ -242,7 +241,6 @@ define <16 x i8> @shl_op1_constant(ptr %p) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movzbl (%rdi), %eax
 ; AVX-NEXT:    shlb $5, %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    retq
   %x = load i8, ptr %p
@@ -542,7 +540,6 @@ define <16 x i8> @urem_op1_constant(ptr %p) nounwind {
 ; AVX-NEXT:    shrl $10, %ecx
 ; AVX-NEXT:    imull $42, %ecx, %ecx
 ; AVX-NEXT:    subb %cl, %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    retq
   %x = load i8, ptr %p
