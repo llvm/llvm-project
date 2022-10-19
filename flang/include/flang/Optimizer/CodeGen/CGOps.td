@@ -58,7 +58,7 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
     Variadic<AnyIntegerType>:$substr,
     Variadic<AnyIntegerType>:$lenParams
   );
-  let results = (outs fir_BoxType);
+  let results = (outs BoxOrClassType);
 
   let assemblyFormat = [{
     $memref (`(`$shape^`)`)? (`origin` $shift^)? (`[`$slice^`]`)?
@@ -107,14 +107,14 @@ def fircg_XReboxOp : fircg_Op<"ext_rebox", [AttrSizedOperandSegments]> {
   }];
 
   let arguments = (ins
-    fir_BoxType:$box,
+    BoxOrClassType:$box,
     Variadic<AnyIntegerType>:$shape,
     Variadic<AnyIntegerType>:$shift,
     Variadic<AnyIntegerType>:$slice,
     Variadic<AnyCoordinateType>:$subcomponent,
     Variadic<AnyIntegerType>:$substr
   );
-  let results = (outs fir_BoxType);
+  let results = (outs BoxOrClassType);
 
   let assemblyFormat = [{
     $box (`(`$shape^`)`)? (`origin` $shift^)? (`[`$slice^`]`)?
