@@ -160,7 +160,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   // Provides p1179's 'KILL' functionality. See implementation for more
   // information.
   void kill(mlir::Value v);
-  void killInPset(PSetType &pset, mlir::Value v);
+  void killInPset(PSetType &pset, const State &valState);
 
   // Local pointers
   SmallPtrSet<mlir::Value, 8> ptrs;
@@ -283,27 +283,13 @@ static Location getEndLocForHist(LifetimeCheckPass::LexicalScopeContext &lsc) {
   return getEndLocForHist(lsc.parent.get<Operation *>());
 }
 
-void LifetimeCheckPass::killInPset(PSetType &pset, mlir::Value v) {
-  State valState = State::getLocalValue(v);
+void LifetimeCheckPass::killInPset(PSetType &pset, const State &valState) {
   if (pset.contains(valState)) {
     // Erase the reference and mark this invalid.
     // FIXME: add a way to just mutate the state.
     pset.erase(valState);
     pset.insert(State::getInvalid());
     return;
-  }
-
-  // Note that this assumes a current pset cannot have multiple entries for
-  // values and owned values at the same time, for example this should not be
-  // possible: pset(s) = {o, o'}.
-  if (owners.count(v)) {
-    valState = State::getOwnedBy(v);
-    if (pset.contains(valState)) {
-      pset.erase(valState);
-      pset.insert(State::getInvalid());
-      return;
-    }
-    // TODO: o'', ...
   }
 }
 
@@ -319,9 +305,15 @@ void LifetimeCheckPass::kill(mlir::Value v) {
     if (v == ptr)
       continue;
 
-    // If the local value is part of this pset, it means we need to
-    // invalidate it, otherwise keep searching.
-    killInPset(mapEntry.second, v);
+    // ... replace all occurrences of x and x' and x''. Start with the primes
+    // so we first remove uses and then users.
+    //
+    // FIXME: right now we only support x and x'
+    auto &pset = mapEntry.second;
+    if (owners.count(v))
+      killInPset(pset, State::getOwnedBy(v));
+
+    killInPset(pset, State::getLocalValue(v));
     pmapInvalidHist[ptr] = std::make_pair(getEndLocForHist(*currScope), v);
   }
 
