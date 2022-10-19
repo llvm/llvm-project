@@ -666,9 +666,11 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
                    m_OneUse(m_Shl(m_OneUse(m_ZExt(m_OneUse(m_Instruction(L2)))),
                                   m_Value(ShAmt2)))))) ||
       match(V, m_OneUse(m_Or(m_Value(X),
-                             m_OneUse(m_ZExt(m_OneUse(m_Instruction(L2))))))))
-    foldLoadsRecursive(X, LOps, DL, AA);
-  else
+                             m_OneUse(m_ZExt(m_OneUse(m_Instruction(L2)))))))) {
+    if (!foldLoadsRecursive(X, LOps, DL, AA) && LOps.FoundRoot)
+      // Avoid Partial chain merge.
+      return false;
+  } else
     return false;
 
   // Check if the pattern has loads
@@ -691,18 +693,6 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   if (LI1->getParent() != LI2->getParent())
     return false;
 
-  // Swap loads if LI1 comes later as we handle only forward loads.
-  // This is done as InstCombine folds lowest node forward loads to reverse.
-  // The implementation will be subsequently extended to handle all reverse
-  // loads.
-  if (!LI1->comesBefore(LI2)) {
-    if (LOps.FoundRoot == false) {
-      std::swap(LI1, LI2);
-      std::swap(ShAmt1, ShAmt2);
-    } else
-      return false;
-  }
-
   // Find the data layout
   bool IsBigEndian = DL.isBigEndian();
 
@@ -719,6 +709,16 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
       Load2Ptr->stripAndAccumulateConstantOffsets(DL, Offset2,
                                                   /* AllowNonInbounds */ true);
 
+  // Make sure Load with lower Offset is at LI1
+  bool Reverse = false;
+  if (Offset2.slt(Offset1)) {
+    std::swap(LI1, LI2);
+    std::swap(ShAmt1, ShAmt2);
+    std::swap(Offset1, Offset2);
+    std::swap(Load1Ptr, Load2Ptr);
+    Reverse = true;
+  }
+
   // Verify if both loads have same base pointers and load sizes are same.
   uint64_t LoadSize1 = LI1->getType()->getPrimitiveSizeInBits();
   uint64_t LoadSize2 = LI2->getType()->getPrimitiveSizeInBits();
@@ -730,9 +730,13 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
     return false;
 
   // Alias Analysis to check for store b/w the loads.
-  MemoryLocation Loc = MemoryLocation::get(LI2);
+  LoadInst *Start = LI1, *End = LI2;
+  if (!LI1->comesBefore(LI2))
+    std::swap(Start, End);
+  MemoryLocation Loc = MemoryLocation::get(End);
   unsigned NumScanned = 0;
-  for (Instruction &Inst : make_range(LI1->getIterator(), LI2->getIterator())) {
+  for (Instruction &Inst :
+       make_range(Start->getIterator(), End->getIterator())) {
     if (Inst.mayWriteToMemory() && isModSet(AA.getModRefInfo(&Inst, Loc)))
       return false;
     if (++NumScanned > MaxInstrsToScan)
@@ -752,9 +756,13 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
     Shift2 = Temp->getZExtValue();
 
   // First load is always LI1. This is where we put the new load.
-  // Use the merged load size available from LI1, if we already combined loads.
-  if (LOps.FoundRoot)
-    LoadSize1 = LOps.LoadSize;
+  // Use the merged load size available from LI1 for forward loads.
+  if (LOps.FoundRoot) {
+    if (!Reverse)
+      LoadSize1 = LOps.LoadSize;
+    else
+      LoadSize2 = LOps.LoadSize;
+  }
 
   // Verify if shift amount and load index aligns and verifies that loads
   // are consecutive.
@@ -769,10 +777,9 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   AAMDNodes AATags2 = LI2->getAAMetadata();
   if (LOps.FoundRoot == false) {
     LOps.FoundRoot = true;
-    LOps.LoadSize = LoadSize1 + LoadSize2;
     AATags1 = LI1->getAAMetadata();
-  } else
-    LOps.LoadSize = LOps.LoadSize + LoadSize2;
+  }
+  LOps.LoadSize = LoadSize1 + LoadSize2;
 
   // Concatenate the AATags of the Merged Loads.
   LOps.AATags = AATags1.concat(AATags2);
