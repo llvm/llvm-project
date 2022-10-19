@@ -1884,8 +1884,15 @@ bool Generic_GCC::GCCVersion::isOlderThan(int RHSMajor, int RHSMinor,
                                           StringRef RHSPatchSuffix) const {
   if (Major != RHSMajor)
     return Major < RHSMajor;
-  if (Minor != RHSMinor)
+  if (Minor != RHSMinor) {
+    // Note that versions without a specified minor sort higher than those with
+    // a minor.
+    if (RHSMinor == -1)
+      return true;
+    if (Minor == -1)
+      return false;
     return Minor < RHSMinor;
+  }
   if (Patch != RHSPatch) {
     // Note that versions without a specified patch sort higher than those with
     // a patch.
