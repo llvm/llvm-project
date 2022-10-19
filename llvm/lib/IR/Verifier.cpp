@@ -5230,8 +5230,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::experimental_gc_result: {
     Check(Call.getParent()->getParent()->hasGC(),
           "Enclosing function does not use GC.", Call);
+
+    auto *Statepoint = Call.getArgOperand(0);
+    if (isa<UndefValue>(Statepoint))
+      break;
+
     // Are we tied to a statepoint properly?
-    const auto *StatepointCall = dyn_cast<CallBase>(Call.getArgOperand(0));
+    const auto *StatepointCall = dyn_cast<CallBase>(Statepoint);
     const Function *StatepointFn =
         StatepointCall ? StatepointCall->getCalledFunction() : nullptr;
     Check(StatepointFn && StatepointFn->isDeclaration() &&

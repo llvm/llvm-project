@@ -9659,7 +9659,9 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
     // If the recipe is uniform across all parts (instead of just per VF), only
     // generate a single instance.
     if ((isa<LoadInst>(UI) || isa<StoreInst>(UI)) &&
-        all_of(operands(), [](VPValue *Op) { return !Op->getDef(); })) {
+        all_of(operands(), [](VPValue *Op) {
+          return Op->isDefinedOutsideVectorRegions();
+        })) {
       State.ILV->scalarizeInstruction(UI, this, VPIteration(0, 0), IsPredicated,
                                       State);
       if (user_begin() != user_end()) {

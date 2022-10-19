@@ -19,6 +19,7 @@ add_clang_unittest(ClangAnalysisFlowSensitiveTests
   TypeErasedDataflowAnalysisTest.cpp
   SolverTest.cpp
   UncheckedOptionalAccessModelTest.cpp
+  ValueTest.cpp
   )
 
 clang_target_link_libraries(ClangAnalysisFlowSensitiveTests
