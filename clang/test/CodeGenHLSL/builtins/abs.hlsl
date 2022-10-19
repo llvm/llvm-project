@@ -5,6 +5,7 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -D__HLSL_ENABLE_16_BIT -o - | FileCheck %s --check-prefix=NO_HALF
 
+using hlsl::abs;
 
 // CHECK: define noundef signext i16 @
 // FIXME: int16_t is promoted to i32 now. Change to abs.i16 once it is fixed.
