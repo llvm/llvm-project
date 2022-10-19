@@ -282,13 +282,13 @@ static scf::ForOp createFor(OpBuilder &builder, Location loc, Value count,
 static void createPushback(OpBuilder &builder, Location loc,
                            SmallVectorImpl<Value> &fields, unsigned field,
                            Value value) {
-  assert(field < fields.size());
+  assert(2 <= field && field < fields.size());
   Type etp = fields[field].getType().cast<ShapedType>().getElementType();
   if (value.getType() != etp)
     value = builder.create<arith::IndexCastOp>(loc, etp, value);
   fields[field] =
       builder.create<PushBackOp>(loc, fields[field].getType(), fields[1],
-                                 fields[field], value, APInt(64, field));
+                                 fields[field], value, APInt(64, field - 2));
 }
 
 /// Generates insertion code.
