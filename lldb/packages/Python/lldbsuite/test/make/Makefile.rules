@@ -572,6 +572,12 @@ ifeq "$(SWIFT_OBJC_INTEROP)" "1"
 
 endif
 
+#----------------------------------------------------------------------
+# Check if we need the Swift/C++ interop features
+#----------------------------------------------------------------------
+ifeq "$(SWIFT_CXX_INTEROP)" "1"
+	SWIFTFLAGS += -Xfrontend -enable-experimental-cxx-interop -Xfrontend -validate-tbd-against-ir=none 
+endif
 
 #----------------------------------------------------------------------
 # Set up variables to run the Swift frontend directly.
