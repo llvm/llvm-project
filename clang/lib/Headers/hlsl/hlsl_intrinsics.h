@@ -9,6 +9,8 @@
 #ifndef _HLSL_HLSL_INTRINSICS_H_
 #define _HLSL_HLSL_INTRINSICS_H_
 
+namespace hlsl {
+
 __attribute__((availability(shadermodel, introduced = 6.0)))
 __attribute__((clang_builtin_alias(__builtin_hlsl_wave_active_count_bits))) uint
 WaveActiveCountBits(bool bBit);
@@ -98,5 +100,7 @@ __attribute__((clang_builtin_alias(__builtin_elementwise_ceil)))
 double3 ceil(double3);
 __attribute__((clang_builtin_alias(__builtin_elementwise_ceil)))
 double4 ceil(double4);
+
+} // namespace hlsl
 
 #endif //_HLSL_HLSL_INTRINSICS_H_

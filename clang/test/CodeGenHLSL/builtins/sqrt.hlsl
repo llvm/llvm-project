@@ -5,6 +5,8 @@
 // RUN:   dxil-pc-shadermodel6.2-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s --check-prefix=NO_HALF
 
+using hlsl::sqrt;
+
 double sqrt_d(double x)
 {
   return sqrt(x);
