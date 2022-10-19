@@ -176,7 +176,7 @@ namespace addr_of_obj_or_func {
 //   -- a pointer to member expressed as described in 5.3.1.
 
 namespace bad_args {
-  template <int* N> struct X0 { }; // precxx17-note 2{{template parameter is declared here}}
+  template <int* N> struct X0 { }; // precxx17-note 4{{template parameter is declared here}}
   int i = 42;
   X0<&i + 2> x0a; // precxx17-error{{non-type template argument does not refer to any declaration}} \
                      cxx17-error {{non-type template argument is not a constant expression}} \
@@ -194,6 +194,13 @@ namespace bad_args {
   // cxx17-error@-5 {{non-type template argument is not a constant expression}}
   // expected-note@-6 {{read of non-constexpr variable 'iptr' is not allowed in a constant expression}}
 #endif
+  X0<(int*)1> x0c;
+  // precxx17-error@-1 {{non-type template argument '(int *)1' is invalid}}
+  // cxx17-error@-2 {{non-type template argument is not a constant expression}}
+  // cxx17-note@-3 {{reinterpret_cast}}
+  X0<__builtin_constant_p(0) ? (int*)1 : (int*)1> x0d;
+  // precxx17-error@-1 {{non-type template argument '(int *)1' is invalid}}
+  // cxx17-error@-2 {{non-type template argument refers to subobject '(int *)1'}}
 }
 #endif // CPP11ONLY
 

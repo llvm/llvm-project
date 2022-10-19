@@ -5027,6 +5027,8 @@ def err_template_arg_not_pointer_to_member_form : Error<
 def err_template_arg_member_ptr_base_derived_not_supported : Error<
   "sorry, non-type template argument of pointer-to-member type %1 that refers "
   "to member %q0 of a different class is not supported yet">;
+def err_template_arg_invalid : Error<
+  "non-type template argument '%0' is invalid">;
 def ext_template_arg_extra_parens : ExtWarn<
   "address non-type template argument cannot be surrounded by parentheses">;
 def warn_cxx98_compat_template_arg_extra_parens : Warning<

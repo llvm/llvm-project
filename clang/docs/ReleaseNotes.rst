@@ -252,6 +252,9 @@ Bug Fixes
   `Issue 47177 <https://github.com/llvm/llvm-project/issues/47177>`_
   `Issue 47179 <https://github.com/llvm/llvm-project/issues/47179>`_
 - Fix a crash upon stray coloncolon token in C2x mode.
+- Reject non-type template arguments formed by casting a non-zero integer
+  to a pointer in pre-C++17 modes, instead of treating them as null
+  pointers.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
