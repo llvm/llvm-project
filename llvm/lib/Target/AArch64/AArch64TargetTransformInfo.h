@@ -120,20 +120,7 @@ public:
       std::function<void(Instruction *, unsigned, APInt, APInt &)>
           SimplifyAndSetOp) const;
 
-  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
-    switch (K) {
-    case TargetTransformInfo::RGK_Scalar:
-      return TypeSize::getFixed(64);
-    case TargetTransformInfo::RGK_FixedWidthVector:
-      if (ST->hasSVE())
-        return TypeSize::getFixed(
-            std::max(ST->getMinSVEVectorSizeInBits(), 128u));
-      return TypeSize::getFixed(ST->hasNEON() ? 128 : 0);
-    case TargetTransformInfo::RGK_ScalableVector:
-      return TypeSize::getScalable(ST->hasSVE() ? 128 : 0);
-    }
-    llvm_unreachable("Unsupported register kind");
-  }
+  TypeSize getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const;
 
   unsigned getMinVectorRegisterBitWidth() const {
     return ST->getMinVectorRegisterBitWidth();
