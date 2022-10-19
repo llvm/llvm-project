@@ -1200,3 +1200,45 @@ define <vscale x 2 x float> @mul_scalable_splat_zero(<vscale x 2 x float> %z) {
   %t3 = fmul fast <vscale x 2 x float> %shuf, %z
   ret <vscale x 2 x float> %t3
 }
+
+define half @mul_zero_nnan(half %x) {
+; CHECK-LABEL: @mul_zero_nnan(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan half @llvm.copysign.f16(half 0xH0000, half [[X:%.*]])
+; CHECK-NEXT:    ret half [[TMP1]]
+;
+  %r = fmul nnan half %x, 0.0
+  ret half %r
+}
+
+; poison propagates through vector elements
+
+define <2 x float> @mul_zero_nnan_vec_poison(<2 x float> %x) {
+; CHECK-LABEL: @mul_zero_nnan_vec_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <2 x float> @llvm.copysign.v2f32(<2 x float> <float 0.000000e+00, float poison>, <2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[TMP1]]
+;
+  %r = fmul nnan <2 x float> %x, <float 0.0, float poison>
+  ret <2 x float> %r
+}
+
+; negative test - must have nnan
+
+define half @mul_zero(half %x) {
+; CHECK-LABEL: @mul_zero(
+; CHECK-NEXT:    [[R:%.*]] = fmul ninf nsz half [[X:%.*]], 0xH0000
+; CHECK-NEXT:    ret half [[R]]
+;
+  %r = fmul ninf nsz half %x, 0.0
+  ret half %r
+}
+
+; TODO: This could be fneg+copysign.
+
+define half @mul_negzero_nnan(half %x) {
+; CHECK-LABEL: @mul_negzero_nnan(
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[X:%.*]], 0xH8000
+; CHECK-NEXT:    ret half [[R]]
+;
+  %r = fmul nnan half %x, -0.0
+  ret half %r
+}

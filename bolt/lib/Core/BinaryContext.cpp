@@ -2287,19 +2287,25 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   return std::make_pair(HotSize, ColdSize);
 }
 
-bool BinaryContext::validateEncoding(const MCInst &Inst,
-                                     ArrayRef<uint8_t> InputEncoding) const {
+bool BinaryContext::validateInstructionEncoding(
+    ArrayRef<uint8_t> InputSequence) const {
+  MCInst Inst;
+  uint64_t InstSize;
+  DisAsm->getInstruction(Inst, InstSize, InputSequence, 0, nulls());
+  assert(InstSize == InputSequence.size() &&
+         "Disassembled instruction size does not match the sequence.");
+
   SmallString<256> Code;
   SmallVector<MCFixup, 4> Fixups;
   raw_svector_ostream VecOS(Code);
 
   MCE->encodeInstruction(Inst, VecOS, Fixups, *STI);
-  auto EncodedData = ArrayRef<uint8_t>((uint8_t *)Code.data(), Code.size());
-  if (InputEncoding != EncodedData) {
+  auto OutputSequence = ArrayRef<uint8_t>((uint8_t *)Code.data(), Code.size());
+  if (InputSequence != OutputSequence) {
     if (opts::Verbosity > 1) {
       errs() << "BOLT-WARNING: mismatched encoding detected\n"
-             << "      input: " << InputEncoding << '\n'
-             << "     output: " << EncodedData << '\n';
+             << "      input: " << InputSequence << '\n'
+             << "     output: " << OutputSequence << '\n';
     }
     return false;
   }

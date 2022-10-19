@@ -1350,6 +1350,43 @@ bool cl::expandResponseFiles(int Argc, const char *const *Argv,
 ExpansionContext::ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T)
     : Saver(A), Tokenizer(T), FS(vfs::getRealFileSystem().get()) {}
 
+bool ExpansionContext::findConfigFile(StringRef FileName,
+                                      SmallVectorImpl<char> &FilePath) {
+  SmallString<128> CfgFilePath;
+  const auto FileExists = [this](SmallString<128> Path) -> bool {
+    auto Status = FS->status(Path);
+    return Status &&
+           Status->getType() == llvm::sys::fs::file_type::regular_file;
+  };
+
+  // If file name contains directory separator, treat it as a path to
+  // configuration file.
+  if (llvm::sys::path::has_parent_path(FileName)) {
+    CfgFilePath = FileName;
+    if (llvm::sys::path::is_relative(FileName) && FS->makeAbsolute(CfgFilePath))
+      return false;
+    if (!FileExists(CfgFilePath))
+      return false;
+    FilePath.assign(CfgFilePath.begin(), CfgFilePath.end());
+    return true;
+  }
+
+  // Look for the file in search directories.
+  for (const StringRef &Dir : SearchDirs) {
+    if (Dir.empty())
+      continue;
+    CfgFilePath.assign(Dir);
+    llvm::sys::path::append(CfgFilePath, FileName);
+    llvm::sys::path::native(CfgFilePath);
+    if (FileExists(CfgFilePath)) {
+      FilePath.assign(CfgFilePath.begin(), CfgFilePath.end());
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool ExpansionContext::readConfigFile(StringRef CfgFile,
                                       SmallVectorImpl<const char *> &Argv) {
   SmallString<128> AbsPath;

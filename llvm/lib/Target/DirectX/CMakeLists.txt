@@ -17,6 +17,7 @@ add_llvm_target(DirectXCodeGen
   DirectXRegisterInfo.cpp
   DirectXSubtarget.cpp
   DirectXTargetMachine.cpp
+  DXContainerGlobals.cpp
   DXILMetadata.cpp
   DXILOpBuilder.cpp
   DXILOpLowering.cpp

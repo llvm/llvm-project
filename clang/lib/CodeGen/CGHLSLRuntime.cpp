@@ -324,13 +324,30 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
   }
 }
 
+static Value *buildVectorInput(IRBuilder<> &B, Function *F, llvm::Type *Ty) {
+  if (const auto *VT = dyn_cast<FixedVectorType>(Ty)) {
+    Value *Result = PoisonValue::get(Ty);
+    for (unsigned I = 0; I < VT->getNumElements(); ++I) {
+      Value *Elt = B.CreateCall(F, {B.getInt32(I)});
+      Result = B.CreateInsertElement(Result, Elt, I);
+    }
+    return Result;
+  }
+  return B.CreateCall(F, {B.getInt32(0)});
+}
+
 llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
-                                              const ParmVarDecl &D) {
+                                              const ParmVarDecl &D,
+                                              llvm::Type *Ty) {
   assert(D.hasAttrs() && "Entry parameter missing annotation attribute!");
   if (D.hasAttr<HLSLSV_GroupIndexAttr>()) {
     llvm::Function *DxGroupIndex =
         CGM.getIntrinsic(Intrinsic::dx_flattened_thread_id_in_group);
     return B.CreateCall(FunctionCallee(DxGroupIndex));
+  }
+  if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
+    llvm::Function *DxThreadID = CGM.getIntrinsic(Intrinsic::dx_thread_id);
+    return buildVectorInput(B, DxThreadID, Ty);
   }
   assert(false && "Unhandled parameter attribute");
   return nullptr;
@@ -359,8 +376,17 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   llvm::SmallVector<Value *> Args;
   // FIXME: support struct parameters where semantics are on members.
   // See: https://github.com/llvm/llvm-project/issues/57874
-  for (const auto *Param : FD->parameters()) {
-    Args.push_back(emitInputSemantic(B, *Param));
+  unsigned SRetOffset = 0;
+  for (const auto &Param : Fn->args()) {
+    if (Param.hasStructRetAttr()) {
+      // FIXME: support output.
+      // See: https://github.com/llvm/llvm-project/issues/57874
+      SRetOffset = 1;
+      Args.emplace_back(PoisonValue::get(Param.getType()));
+      continue;
+    }
+    const ParmVarDecl *PD = FD->getParamDecl(Param.getArgNo() - SRetOffset);
+    Args.push_back(emitInputSemantic(B, *PD, Param.getType()));
   }
 
   CallInst *CI = B.CreateCall(FunctionCallee(Fn), Args);

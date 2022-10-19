@@ -19,17 +19,13 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 
 namespace mlir {
 namespace linalg {
 class LinalgOp;
-
-/// OpOperand vector that implicitly converts to a Value vector.
-struct OpOperandVector : public SmallVector<OpOperand *> {
-  operator SmallVector<Value>();
-};
 
 namespace detail {
 /// Implementation of the method that that check if given operands
@@ -56,9 +52,6 @@ LogicalResult verifyFillInterface(Operation *op);
 
 /// Verify that `op` conforms to the invariants of StructuredOpInterface
 LogicalResult verifyStructuredOpInterface(Operation *op);
-
-/// Verify that `op` conforms to the invariants of DestinationStyleOpInterface
-LogicalResult verifyDestinationStyleOpInterface(Operation *op);
 
 } // namespace detail
 } // namespace linalg

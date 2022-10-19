@@ -251,6 +251,7 @@ Bug Fixes
 - Address the thread identification problems in coroutines.
   `Issue 47177 <https://github.com/llvm/llvm-project/issues/47177>`_
   `Issue 47179 <https://github.com/llvm/llvm-project/issues/47179>`_
+- Fix a crash upon stray coloncolon token in C2x mode.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -532,6 +533,9 @@ C++20 Feature Support
 - Implemented `P0634r3 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0634r3.html>`_,
   which removes the requirement for the ``typename`` keyword in certain contexts.
 - Implemented The Equality Operator You Are Looking For (`P2468 <http://wg21.link/p2468r2>`_).
+
+- Implemented `P2113R0: Proposed resolution for 2019 comment CA 112 <https://wg21.link/P2113R0>`_
+  ([temp.func.order]p6.2.1 is not implemented, matching GCC).
 
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^

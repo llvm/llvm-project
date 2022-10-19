@@ -138,34 +138,20 @@ void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {
   copy->live = false;
   copy->wasCoalesced = true;
   copy->replacement = this;
-  for (auto &copySym : copy->symbols)
+  for (auto &copySym : copy->symbols) {
     copySym->wasIdenticalCodeFolded = true;
-
-  // Merge the sorted vectors of symbols together.
-  auto it = symbols.begin();
-  for (auto copyIt = copy->symbols.begin(); copyIt != copy->symbols.end();) {
-    if (it == symbols.end()) {
-      symbols.push_back(*copyIt++);
-      it = symbols.end();
-    } else if ((*it)->value > (*copyIt)->value) {
-      std::swap(*it++, *copyIt);
-    } else {
-      ++it;
-    }
+    copySym->size = 0;
   }
+
+  symbols.insert(symbols.end(), copy->symbols.begin(), copy->symbols.end());
   copy->symbols.clear();
 
   // Remove duplicate compact unwind info for symbols at the same address.
   if (symbols.empty())
     return;
-  it = symbols.begin();
-  uint64_t v = (*it)->value;
-  for (++it; it != symbols.end(); ++it) {
-    Defined *d = *it;
-    if (d->value == v)
-      d->unwindEntry = nullptr;
-    else
-      v = d->value;
+  for (auto it = symbols.begin() + 1; it != symbols.end(); ++it) {
+    assert((*it)->value == 0);
+    (*it)->unwindEntry = nullptr;
   }
 }
 

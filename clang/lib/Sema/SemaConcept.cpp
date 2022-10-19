@@ -1104,6 +1104,18 @@ NormalizedConstraint::fromConstraintExpr(Sema &S, NamedDecl *D, const Expr *E) {
   // - The normal form of an expression (E) is the normal form of E.
   // [...]
   E = E->IgnoreParenImpCasts();
+
+  // C++2a [temp.param]p4:
+  //     [...] If T is not a pack, then E is E', otherwise E is (E' && ...).
+  //
+  // Using the pattern suffices because the partial ordering rules guarantee
+  // the template paramaters are equivalent.
+  if (auto *FoldE = dyn_cast<const CXXFoldExpr>(E)) {
+    assert(FoldE->isRightFold() && FoldE->getOperator() == BO_LAnd);
+    assert(E->IgnoreParenImpCasts() == E);
+    E = FoldE->getPattern();
+  }
+
   if (LogicalBinOp BO = E) {
     auto LHS = fromConstraintExpr(S, D, BO.getLHS());
     if (!LHS)

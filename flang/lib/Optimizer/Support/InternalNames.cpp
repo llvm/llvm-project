@@ -335,12 +335,12 @@ mangleTypeDescriptorKinds(llvm::ArrayRef<std::int64_t> kinds) {
   return result;
 }
 
-std::string
-fir::NameUniquer::getTypeDescriptorName(llvm::StringRef mangledTypeName) {
-  auto result = deconstruct(mangledTypeName);
-  if (result.first != NameKind::DERIVED_TYPE)
+static std::string getDerivedTypeObjectName(llvm::StringRef mangledTypeName,
+                                            const llvm::StringRef separator) {
+  auto result = fir::NameUniquer::deconstruct(mangledTypeName);
+  if (result.first != fir::NameUniquer::NameKind::DERIVED_TYPE)
     return "";
-  std::string varName = ".dt." + result.second.name +
+  std::string varName = separator.str() + result.second.name +
                         mangleTypeDescriptorKinds(result.second.kinds);
   llvm::SmallVector<llvm::StringRef> modules;
   for (const std::string &mod : result.second.modules)
@@ -348,5 +348,15 @@ fir::NameUniquer::getTypeDescriptorName(llvm::StringRef mangledTypeName) {
   llvm::Optional<llvm::StringRef> host;
   if (result.second.host)
     host = *result.second.host;
-  return doVariable(modules, host, varName);
+  return fir::NameUniquer::doVariable(modules, host, varName);
+}
+
+std::string
+fir::NameUniquer::getTypeDescriptorName(llvm::StringRef mangledTypeName) {
+  return getDerivedTypeObjectName(mangledTypeName, typeDescriptorSeparator);
+}
+
+std::string fir::NameUniquer::getTypeDescriptorBindingTableName(
+    llvm::StringRef mangledTypeName) {
+  return getDerivedTypeObjectName(mangledTypeName, bindingTableSeparator);
 }

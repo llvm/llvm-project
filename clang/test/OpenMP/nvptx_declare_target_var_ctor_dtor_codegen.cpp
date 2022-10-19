@@ -34,17 +34,17 @@ int car() { return 0; }
 #pragma omp declare target (bar)
 int caz() { return 0; }
 
-// DEVICE-DAG: define{{ protected | }}noundef i32 [[FOO:@.*foo.*]]()
-// DEVICE-DAG: define{{ protected | }}noundef i32 [[BAR:@.*bar.*]]()
-// DEVICE-DAG: define{{ protected | }}noundef i32 [[BAZ:@.*baz.*]]()
-// DEVICE-DAG: define{{ protected | }}noundef i32 [[DOO:@.*doo.*]]()
-// DEVICE-DAG: define{{ protected | }}noundef i32 [[CAR:@.*car.*]]()
-// DEVICE-DAG: define{{ protected | }}noundef i32 [[CAZ:@.*caz.*]]()
+// DEVICE-DAG: define hidden noundef i32 [[FOO:@.*foo.*]]()
+// DEVICE-DAG: define hidden noundef i32 [[BAR:@.*bar.*]]()
+// DEVICE-DAG: define hidden noundef i32 [[BAZ:@.*baz.*]]()
+// DEVICE-DAG: define hidden noundef i32 [[DOO:@.*doo.*]]()
+// DEVICE-DAG: define hidden noundef i32 [[CAR:@.*car.*]]()
+// DEVICE-DAG: define hidden noundef i32 [[CAZ:@.*caz.*]]()
 
 static int c = foo() + bar() + baz();
 #pragma omp declare target (c)
 // HOST-DAG: @[[C_CTOR:__omp_offloading__.+_c_l44_ctor]] = private constant i8 0
-// DEVICE-DAG: define weak_odr void [[C_CTOR:@__omp_offloading__.+_c_l44_ctor]]()
+// DEVICE-DAG: define weak_odr protected void [[C_CTOR:@__omp_offloading__.+_c_l44_ctor]]()
 // DEVICE-DAG: call noundef i32 [[FOO]]()
 // DEVICE-DAG: call noundef i32 [[BAR]]()
 // DEVICE-DAG: call noundef i32 [[BAZ]]()
@@ -61,14 +61,14 @@ struct S {
 S cd = doo() + car() + caz() + baz();
 #pragma omp end declare target
 // HOST-DAG: @[[CD_CTOR:__omp_offloading__.+_cd_l61_ctor]] = private constant i8 0
-// DEVICE-DAG: define weak_odr void [[CD_CTOR:@__omp_offloading__.+_cd_l61_ctor]]()
+// DEVICE-DAG: define weak_odr protected void [[CD_CTOR:@__omp_offloading__.+_cd_l61_ctor]]()
 // DEVICE-DAG: call noundef i32 [[DOO]]()
 // DEVICE-DAG: call noundef i32 [[CAR]]()
 // DEVICE-DAG: call noundef i32 [[CAZ]]()
 // DEVICE-DAG: ret void
 
 // HOST-DAG: @[[CD_DTOR:__omp_offloading__.+_cd_l61_dtor]] = private constant i8 0
-// DEVICE-DAG: define weak_odr void [[CD_DTOR:@__omp_offloading__.+_cd_l61_dtor]]()
+// DEVICE-DAG: define weak_odr protected void [[CD_DTOR:@__omp_offloading__.+_cd_l61_dtor]]()
 // DEVICE-DAG: call void
 // DEVICE-DAG: ret void
 

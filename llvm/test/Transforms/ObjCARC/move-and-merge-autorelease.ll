@@ -1,4 +1,4 @@
-; RUN: opt -S -objc-arc -objc-arc-contract < %s | FileCheck %s
+; RUN: opt -S -passes=objc-arc,objc-arc-contract < %s | FileCheck %s
 
 ; The optimizer should be able to move the autorelease past two phi nodes
 ; and fold it with the release in bb65.

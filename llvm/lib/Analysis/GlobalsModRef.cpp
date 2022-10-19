@@ -238,11 +238,11 @@ void GlobalsAAResult::DeletionCallbackHandle::deleted() {
   // This object is now destroyed!
 }
 
-FunctionModRefBehavior GlobalsAAResult::getModRefBehavior(const Function *F) {
+MemoryEffects GlobalsAAResult::getMemoryEffects(const Function *F) {
   if (FunctionInfo *FI = getFunctionInfo(F))
-    return FunctionModRefBehavior(FI->getModRefInfo());
+    return MemoryEffects(FI->getModRefInfo());
 
-  return AAResultBase::getModRefBehavior(F);
+  return AAResultBase::getMemoryEffects(F);
 }
 
 /// Returns the function info for the function, or null if we don't have
@@ -577,8 +577,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
                 // Don't let dbg intrinsics affect alias info.
                 continue;
 
-              FunctionModRefBehavior Behaviour =
-                  AAResultBase::getModRefBehavior(Callee);
+              MemoryEffects Behaviour = AAResultBase::getMemoryEffects(Callee);
               FI.addModRefInfo(Behaviour.getModRef());
             }
           }

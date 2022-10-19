@@ -425,8 +425,8 @@ void macho::foldIdenticalSections(bool onlyCfStrings) {
     bool isFoldable = (!onlyCfStrings || isCfStringSection(isec)) &&
                       (isCodeSection(isec) || isFoldableWithAddendsRemoved ||
                        isGccExceptTabSection(isec)) &&
-                      !isec->keepUnique && !isec->shouldOmitFromOutput() &&
-                      hasFoldableFlags;
+                      !isec->keepUnique && !isec->hasAltEntry &&
+                      !isec->shouldOmitFromOutput() && hasFoldableFlags;
     if (isFoldable) {
       foldable.push_back(isec);
       for (Defined *d : isec->symbols)

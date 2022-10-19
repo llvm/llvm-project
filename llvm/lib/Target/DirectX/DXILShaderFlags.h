@@ -73,6 +73,26 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
+/// Wrapper pass for the legacy pass manager.
+///
+/// This is required because the passes that will depend on this are codegen
+/// passes which run through the legacy pass manager.
+class ShaderFlagsAnalysisWrapper : public ModulePass {
+  ComputedShaderFlags Flags;
+
+public:
+  static char ID;
+
+  ShaderFlagsAnalysisWrapper() : ModulePass(ID) {}
+
+  const ComputedShaderFlags &getShaderFlags() { return Flags; }
+
+  bool runOnModule(Module &M) override {
+    Flags = ComputedShaderFlags::computeFlags(M);
+    return false;
+  }
+};
+
 } // namespace dxil
 } // namespace llvm
 

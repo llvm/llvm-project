@@ -467,10 +467,10 @@ def FeatureRME : SubtargetFeature<"rme", "HasRME",
 def FeatureSME : SubtargetFeature<"sme", "HasSME", "true",
   "Enable Scalable Matrix Extension (SME) (FEAT_SME)", [FeatureBF16, FeatureUseScalarIncVL]>;
 
-def FeatureSMEF64 : SubtargetFeature<"sme-f64", "HasSMEF64", "true",
+def FeatureSMEF64F64 : SubtargetFeature<"sme-f64f64", "HasSMEF64F64", "true",
   "Enable Scalable Matrix Extension (SME) F64F64 instructions (FEAT_SME_F64F64)", [FeatureSME]>;
 
-def FeatureSMEI64 : SubtargetFeature<"sme-i64", "HasSMEI64", "true",
+def FeatureSMEI16I64 : SubtargetFeature<"sme-i16i64", "HasSMEI16I64", "true",
   "Enable Scalable Matrix Extension (SME) I16I64 instructions (FEAT_SME_I16I64)", [FeatureSME]>;
 
 def FeatureSME2 : SubtargetFeature<"sme2", "HasSME2", "true",
@@ -645,7 +645,7 @@ def PAUnsupported : AArch64Unsupported {
 }
 
 def SMEUnsupported : AArch64Unsupported {
-  let F = [HasSME, HasSMEF64, HasSMEI64, HasSME2];
+  let F = [HasSME, HasSMEF64F64, HasSMEI16I64, HasSME2];
 }
 
 include "AArch64SchedA53.td"

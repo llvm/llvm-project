@@ -122,22 +122,22 @@ using SCCNodeSet = SmallSetVector<Function *, 8>;
 /// result will be based only on AA results for the function declaration; it
 /// will be assumed that some other (perhaps less optimized) version of the
 /// function may be selected at link time.
-static FunctionModRefBehavior
-checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
-                          const SCCNodeSet &SCCNodes) {
-  FunctionModRefBehavior OrigMRB = AAR.getModRefBehavior(&F);
-  if (OrigMRB.doesNotAccessMemory())
+static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
+                                               AAResults &AAR,
+                                               const SCCNodeSet &SCCNodes) {
+  MemoryEffects OrigME = AAR.getMemoryEffects(&F);
+  if (OrigME.doesNotAccessMemory())
     // Already perfect!
-    return OrigMRB;
+    return OrigME;
 
   if (!ThisBody)
-    return OrigMRB;
+    return OrigME;
 
-  FunctionModRefBehavior MRB = FunctionModRefBehavior::none();
+  MemoryEffects ME = MemoryEffects::none();
   // Inalloca and preallocated arguments are always clobbered by the call.
   if (F.getAttributes().hasAttrSomewhere(Attribute::InAlloca) ||
       F.getAttributes().hasAttrSomewhere(Attribute::Preallocated))
-    MRB |= FunctionModRefBehavior::argMemOnly(ModRefInfo::ModRef);
+    ME |= MemoryEffects::argMemOnly(ModRefInfo::ModRef);
 
   // Returns true if Ptr is not based on a function argument.
   auto IsArgumentOrAlloca = [](const Value *Ptr) {
@@ -156,10 +156,10 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
       if (!Call->hasOperandBundles() && Call->getCalledFunction() &&
           SCCNodes.count(Call->getCalledFunction()))
         continue;
-      FunctionModRefBehavior CallMRB = AAR.getModRefBehavior(Call);
+      MemoryEffects CallME = AAR.getMemoryEffects(Call);
 
       // If the call doesn't access memory, we're done.
-      if (CallMRB.doesNotAccessMemory())
+      if (CallME.doesNotAccessMemory())
         continue;
 
       // A pseudo probe call shouldn't change any function attribute since it
@@ -169,17 +169,17 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
       if (isa<PseudoProbeInst>(I))
         continue;
 
-      MRB |= CallMRB.getWithoutLoc(FunctionModRefBehavior::ArgMem);
+      ME |= CallME.getWithoutLoc(MemoryEffects::ArgMem);
 
       // If the call accesses captured memory (currently part of "other") and
       // an argument is captured (currently not tracked), then it may also
       // access argument memory.
-      ModRefInfo OtherMR = CallMRB.getModRef(FunctionModRefBehavior::Other);
-      MRB |= FunctionModRefBehavior::argMemOnly(OtherMR);
+      ModRefInfo OtherMR = CallME.getModRef(MemoryEffects::Other);
+      ME |= MemoryEffects::argMemOnly(OtherMR);
 
       // Check whether all pointer arguments point to local memory, and
       // ignore calls that only access local memory.
-      ModRefInfo ArgMR = CallMRB.getModRef(FunctionModRefBehavior::ArgMem);
+      ModRefInfo ArgMR = CallME.getModRef(MemoryEffects::ArgMem);
       if (ArgMR != ModRefInfo::NoModRef) {
         for (const Use &U : Call->args()) {
           const Value *Arg = U;
@@ -193,9 +193,9 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
           if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
             continue;
 
-          MRB |= FunctionModRefBehavior::argMemOnly(ArgMR);
+          ME |= MemoryEffects::argMemOnly(ArgMR);
           if (!IsArgumentOrAlloca(Loc.Ptr))
-            MRB |= FunctionModRefBehavior(FunctionModRefBehavior::Other, ArgMR);
+            ME |= MemoryEffects(MemoryEffects::Other, ArgMR);
         }
       }
       continue;
@@ -213,7 +213,7 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
     if (!Loc) {
       // If no location is known, conservatively assume anything can be
       // accessed.
-      MRB |= FunctionModRefBehavior(MR);
+      ME |= MemoryEffects(MR);
       continue;
     }
 
@@ -223,16 +223,16 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
 
     // The accessed location can be either only argument memory, or
     // argument & other memory, but never inaccessible memory.
-    MRB |= FunctionModRefBehavior::argMemOnly(MR);
+    ME |= MemoryEffects::argMemOnly(MR);
     if (!IsArgumentOrAlloca(Loc->Ptr))
-      MRB |= FunctionModRefBehavior(FunctionModRefBehavior::Other, MR);
+      ME |= MemoryEffects(MemoryEffects::Other, MR);
   }
 
-  return OrigMRB & MRB;
+  return OrigME & ME;
 }
 
-FunctionModRefBehavior llvm::computeFunctionBodyMemoryAccess(Function &F,
-                                                             AAResults &AAR) {
+MemoryEffects llvm::computeFunctionBodyMemoryAccess(Function &F,
+                                                    AAResults &AAR) {
   return checkFunctionMemoryAccess(F, /*ThisBody=*/true, AAR, {});
 }
 
@@ -240,28 +240,27 @@ FunctionModRefBehavior llvm::computeFunctionBodyMemoryAccess(Function &F,
 template <typename AARGetterT>
 static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
                            SmallSet<Function *, 8> &Changed) {
-  FunctionModRefBehavior FMRB = FunctionModRefBehavior::none();
+  MemoryEffects ME = MemoryEffects::none();
   for (Function *F : SCCNodes) {
     // Call the callable parameter to look up AA results for this function.
     AAResults &AAR = AARGetter(*F);
     // Non-exact function definitions may not be selected at link time, and an
     // alternative version that writes to memory may be selected.  See the
     // comment on GlobalValue::isDefinitionExact for more details.
-    FMRB |= checkFunctionMemoryAccess(*F, F->hasExactDefinition(), AAR,
-                                      SCCNodes);
+    ME |= checkFunctionMemoryAccess(*F, F->hasExactDefinition(), AAR, SCCNodes);
     // Reached bottom of the lattice, we will not be able to improve the result.
-    if (FMRB == FunctionModRefBehavior::unknown())
+    if (ME == MemoryEffects::unknown())
       return;
   }
 
-  ModRefInfo MR = FMRB.getModRef();
+  ModRefInfo MR = ME.getModRef();
 
   for (Function *F : SCCNodes) {
     if (F->doesNotAccessMemory())
       // Already perfect!
       continue;
 
-    if (FMRB.doesNotAccessMemory()) {
+    if (ME.doesNotAccessMemory()) {
       // For readnone, remove all other memory attributes.
       AttributeMask AttrsToRemove;
       AttrsToRemove.addAttribute(Attribute::ReadOnly);
@@ -283,20 +282,20 @@ static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
     AttrsToRemove.addAttribute(Attribute::ArgMemOnly);
     AttrsToRemove.addAttribute(Attribute::InaccessibleMemOnly);
     AttrsToRemove.addAttribute(Attribute::InaccessibleMemOrArgMemOnly);
-    if (FMRB.onlyAccessesArgPointees()) {
+    if (ME.onlyAccessesArgPointees()) {
       if (!F->onlyAccessesArgMemory()) {
         NumArgMemOnly++;
         F->removeFnAttrs(AttrsToRemove);
         F->addFnAttr(Attribute::ArgMemOnly);
         Changed.insert(F);
       }
-    } else if (FMRB.onlyAccessesInaccessibleMem()) {
+    } else if (ME.onlyAccessesInaccessibleMem()) {
       if (!F->onlyAccessesInaccessibleMemory()) {
         F->removeFnAttrs(AttrsToRemove);
         F->addFnAttr(Attribute::InaccessibleMemOnly);
         Changed.insert(F);
       }
-    } else if (FMRB.onlyAccessesInaccessibleOrArgMem() &&
+    } else if (ME.onlyAccessesInaccessibleOrArgMem() &&
                !F->onlyAccessesInaccessibleMemOrArgMem()) {
       F->removeFnAttrs(AttrsToRemove);
       F->addFnAttr(Attribute::InaccessibleMemOrArgMemOnly);

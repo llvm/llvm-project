@@ -47,7 +47,5 @@ static void runPasses(Oracle &O, Module &Program) {
 }
 
 void llvm::runIRPassesDeltaPass(TestRunner &Test) {
-  errs() << "*** Running passes ...\n";
-  runDeltaPass(Test, runPasses);
-  errs() << "----------------------------\n";
+  runDeltaPass(Test, runPasses, "Running passes");
 }

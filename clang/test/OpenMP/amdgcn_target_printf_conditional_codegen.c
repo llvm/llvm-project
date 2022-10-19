@@ -14,7 +14,7 @@
 // CHECK-DAG: @__omp_offloading_[[KERNEL:.*]]_wg_size = weak addrspace(1) constant
 extern int printf(const char *, ...);
 
-// CHECK-LABEL: define weak_odr amdgpu_kernel void @__omp_offloading{{.+}}CheckInlinedConditionalArg{{.+}}
+// CHECK-LABEL: define weak_odr protected  amdgpu_kernel void @__omp_offloading{{.+}}CheckInlinedConditionalArg{{.+}}
 int CheckInlinedConditionalArg() {
   char *true_string = "true string";
   char *false_string = "false string";
@@ -55,7 +55,7 @@ int CheckInlinedConditionalArg() {
   return 0;
 }
 
-// CHECK-LABEL: define weak_odr amdgpu_kernel void @__omp_offloading{{.+}}CheckOutlinedConditionalArg{{.+}}
+// CHECK-LABEL: define weak_odr protected amdgpu_kernel void @__omp_offloading{{.+}}CheckOutlinedConditionalArg{{.+}}
 int CheckOutlinedConditionalArg() {
   char *true_string = "true string";
   char *false_string = "false string";

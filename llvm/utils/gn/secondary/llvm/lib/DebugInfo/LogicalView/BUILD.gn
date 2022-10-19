@@ -1,0 +1,14 @@
+static_library("LogicalView") {
+  output_name = "LLVMDebugInfoLogicalView"
+  deps = [
+    "//llvm/lib/BinaryFormat",
+    "//llvm/lib/DebugInfo/CodeView",
+    "//llvm/lib/DebugInfo/DWARF",
+    "//llvm/lib/DebugInfo/PDB",
+    "//llvm/lib/Demangle",
+    "//llvm/lib/MC",
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "Core/LVOptions.cpp" ]
+}

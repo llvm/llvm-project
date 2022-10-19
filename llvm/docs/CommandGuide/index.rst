@@ -21,6 +21,7 @@ Basic Commands
    llvm-config
    llvm-cov
    llvm-cxxmap
+   llvm-debuginfo-analyzer
    llvm-diff
    llvm-dis
    llvm-dwarfdump

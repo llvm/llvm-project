@@ -20,6 +20,7 @@ class StepAvoidsRegexTestCase(TestBase):
                 "settings set target.process.thread.step-avoid-regexp ^ignore::")
 
     @skipIfWindows
+    @skipIf(compiler="clang", compiler_version=['<', '11.0'])
     def test_step_avoid_regex(self):
         """Tests stepping into a function which matches the avoid regex"""
         self.build()
@@ -38,6 +39,7 @@ class StepAvoidsRegexTestCase(TestBase):
         self.hit_correct_function("main")
 
     @skipIfWindows
+    @skipIf(compiler="clang", compiler_version=['<', '11.0'])
     @expectedFailureAll(bugnumber="rdar://100645742")
     def test_step_avoid_regex_abi_tagged_template(self):
         """Tests stepping into an ABI tagged function that matches the avoid regex"""

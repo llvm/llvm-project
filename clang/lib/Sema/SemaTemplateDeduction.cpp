@@ -5172,43 +5172,26 @@ static bool isAtLeastAsSpecializedAs(Sema &S,
 /// candidate with a reversed parameter order. In this case, the corresponding
 /// P/A pairs between FT1 and FT2 are reversed.
 ///
-/// \param AllowOrderingByConstraints If \c is false, don't check whether one
-/// of the templates is more constrained than the other. Default is true.
-///
 /// \returns the more specialized function template. If neither
 /// template is more specialized, returns NULL.
 FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
     FunctionTemplateDecl *FT1, FunctionTemplateDecl *FT2, SourceLocation Loc,
     TemplatePartialOrderingContext TPOC, unsigned NumCallArguments1,
-    unsigned NumCallArguments2, bool Reversed,
-    bool AllowOrderingByConstraints) {
-
-  auto JudgeByConstraints = [&]() -> FunctionTemplateDecl * {
-    if (!AllowOrderingByConstraints)
-      return nullptr;
-    llvm::SmallVector<const Expr *, 3> AC1, AC2;
-    FT1->getAssociatedConstraints(AC1);
-    FT2->getAssociatedConstraints(AC2);
-    bool AtLeastAsConstrained1, AtLeastAsConstrained2;
-    if (IsAtLeastAsConstrained(FT1, AC1, FT2, AC2, AtLeastAsConstrained1))
-      return nullptr;
-    if (IsAtLeastAsConstrained(FT2, AC2, FT1, AC1, AtLeastAsConstrained2))
-      return nullptr;
-    if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
-      return nullptr;
-    return AtLeastAsConstrained1 ? FT1 : FT2;
-  };
+    unsigned NumCallArguments2, bool Reversed) {
 
   bool Better1 = isAtLeastAsSpecializedAs(*this, Loc, FT1, FT2, TPOC,
                                           NumCallArguments1, Reversed);
   bool Better2 = isAtLeastAsSpecializedAs(*this, Loc, FT2, FT1, TPOC,
                                           NumCallArguments2, Reversed);
 
+  // C++ [temp.deduct.partial]p10:
+  //   F is more specialized than G if F is at least as specialized as G and G
+  //   is not at least as specialized as F.
   if (Better1 != Better2) // We have a clear winner
     return Better1 ? FT1 : FT2;
 
   if (!Better1 && !Better2) // Neither is better than the other
-    return JudgeByConstraints();
+    return nullptr;
 
   // C++ [temp.deduct.partial]p11:
   //   ... and if G has a trailing function parameter pack for which F does not
@@ -5260,7 +5243,60 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
     }
   }
 
-  return JudgeByConstraints();
+  if (!Context.getLangOpts().CPlusPlus20)
+    return nullptr;
+
+  // Match GCC on not implementing [temp.func.order]p6.2.1.
+
+  // C++20 [temp.func.order]p6:
+  //   If deduction against the other template succeeds for both transformed
+  //   templates, constraints can be considered as follows:
+
+  // C++20 [temp.func.order]p6.1:
+  //   If their template-parameter-lists (possibly including template-parameters
+  //   invented for an abbreviated function template ([dcl.fct])) or function
+  //   parameter lists differ in length, neither template is more specialized
+  //   than the other.
+  TemplateParameterList *TPL1 = FT1->getTemplateParameters();
+  TemplateParameterList *TPL2 = FT2->getTemplateParameters();
+  if (TPL1->size() != TPL2->size() || NumParams1 != NumParams2)
+    return nullptr;
+
+  // C++20 [temp.func.order]p6.2.2:
+  //   Otherwise, if the corresponding template-parameters of the
+  //   template-parameter-lists are not equivalent ([temp.over.link]) or if the
+  //   function parameters that positionally correspond between the two
+  //   templates are not of the same type, neither template is more specialized
+  //   than the other.
+  if (!TemplateParameterListsAreEqual(
+          TPL1, TPL2, false, Sema::TPL_TemplateMatch, SourceLocation(), true))
+    return nullptr;
+
+  for (unsigned i = 0; i < NumParams1; ++i)
+    if (!Context.hasSameType(FD1->getParamDecl(i)->getType(),
+                             FD2->getParamDecl(i)->getType()))
+      return nullptr;
+
+  // C++20 [temp.func.order]p6.3:
+  //   Otherwise, if the context in which the partial ordering is done is
+  //   that of a call to a conversion function and the return types of the
+  //   templates are not the same, then neither template is more specialized
+  //   than the other.
+  if (TPOC == TPOC_Conversion &&
+      !Context.hasSameType(FD1->getReturnType(), FD2->getReturnType()))
+    return nullptr;
+
+  llvm::SmallVector<const Expr *, 3> AC1, AC2;
+  FT1->getAssociatedConstraints(AC1);
+  FT2->getAssociatedConstraints(AC2);
+  bool AtLeastAsConstrained1, AtLeastAsConstrained2;
+  if (IsAtLeastAsConstrained(FT1, AC1, FT2, AC2, AtLeastAsConstrained1))
+    return nullptr;
+  if (IsAtLeastAsConstrained(FT2, AC2, FT1, AC1, AtLeastAsConstrained2))
+    return nullptr;
+  if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
+    return nullptr;
+  return AtLeastAsConstrained1 ? FT1 : FT2;
 }
 
 /// Determine if the two templates are equivalent.
@@ -5438,7 +5474,7 @@ static bool isAtLeastAsSpecializedAs(Sema &S, QualType T1, QualType T2,
 }
 
 namespace {
-// A dummy pass to return nullptr instead of P2 when performing "more
+// A dummy class to return nullptr instead of P2 when performing "more
 // specialized than primary" check.
 struct GetP2 {
   template <typename T1, typename T2,
@@ -5450,6 +5486,52 @@ struct GetP2 {
             std::enable_if_t<!std::is_same<T1, T2>::value, bool> = true>
   T1 *operator()(T1 *, T2 *) {
     return nullptr;
+  }
+};
+
+// The assumption is that two template argument lists have the same size.
+struct TemplateArgumentListAreEqual {
+  ASTContext &Ctx;
+  TemplateArgumentListAreEqual(ASTContext &Ctx) : Ctx(Ctx) {}
+
+  template <typename T1, typename T2,
+            std::enable_if_t<std::is_same<T1, T2>::value, bool> = true>
+  bool operator()(T1 *PS1, T2 *PS2) {
+    ArrayRef<TemplateArgument> Args1 = PS1->getTemplateArgs().asArray(),
+                               Args2 = PS2->getTemplateArgs().asArray();
+
+    for (unsigned I = 0, E = Args1.size(); I < E; ++I) {
+      // We use profile, instead of structural comparison of the arguments,
+      // because canonicalization can't do the right thing for dependent
+      // expressions.
+      llvm::FoldingSetNodeID IDA, IDB;
+      Args1[I].Profile(IDA, Ctx);
+      Args2[I].Profile(IDB, Ctx);
+      if (IDA != IDB)
+        return false;
+    }
+    return true;
+  }
+
+  template <typename T1, typename T2,
+            std::enable_if_t<!std::is_same<T1, T2>::value, bool> = true>
+  bool operator()(T1 *Spec, T2 *Primary) {
+    ArrayRef<TemplateArgument> Args1 = Spec->getTemplateArgs().asArray(),
+                               Args2 = Primary->getInjectedTemplateArgs();
+
+    for (unsigned I = 0, E = Args1.size(); I < E; ++I) {
+      // We use profile, instead of structural comparison of the arguments,
+      // because canonicalization can't do the right thing for dependent
+      // expressions.
+      llvm::FoldingSetNodeID IDA, IDB;
+      Args1[I].Profile(IDA, Ctx);
+      // Unlike the specialization arguments, the injected arguments are not
+      // always canonical.
+      Ctx.getCanonicalTemplateArgument(Args2[I]).Profile(IDB, Ctx);
+      if (IDA != IDB)
+        return false;
+    }
+    return true;
   }
 };
 } // namespace
@@ -5491,52 +5573,81 @@ getMoreSpecialized(Sema &S, QualType T1, QualType T2, TemplateLikeDecl *P1,
   if (IsMoreSpecialThanPrimaryCheck && !Better2)
     return P1;
 
+  // C++ [temp.deduct.partial]p10:
+  //   F is more specialized than G if F is at least as specialized as G and G
+  //   is not at least as specialized as F.
+  if (Better1 != Better2) // We have a clear winner
+    return Better1 ? P1 : GetP2()(P1, P2);
+
   if (!Better1 && !Better2)
     return nullptr;
 
-  if (Better1 && Better2) {
-    // This a speculative fix for CWG1432 (Similar to the fix for CWG1395) that
-    // there is no wording or even resolution for this issue.
-    bool ClangABICompat15 = S.Context.getLangOpts().getClangABICompat() <=
-                            LangOptions::ClangABI::Ver15;
-    if (!ClangABICompat15) {
-      auto *TST1 = cast<TemplateSpecializationType>(T1);
-      auto *TST2 = cast<TemplateSpecializationType>(T2);
-      const TemplateArgument &TA1 = TST1->template_arguments().back();
-      if (TA1.getKind() == TemplateArgument::Pack) {
-        assert(TST1->getNumArgs() == TST2->getNumArgs());
-        const TemplateArgument &TA2 = TST2->template_arguments().back();
-        assert(TA2.getKind() == TemplateArgument::Pack);
-        unsigned PackSize1 = TA1.pack_size();
-        unsigned PackSize2 = TA2.pack_size();
-        bool IsPackExpansion1 =
-            PackSize1 && TA1.pack_elements().back().isPackExpansion();
-        bool IsPackExpansion2 =
-            PackSize2 && TA2.pack_elements().back().isPackExpansion();
-        if (PackSize1 != PackSize2 && IsPackExpansion1 != IsPackExpansion2) {
-          if (PackSize1 > PackSize2 && IsPackExpansion1)
-            return GetP2()(P1, P2);
-          if (PackSize1 < PackSize2 && IsPackExpansion2)
-            return P1;
-        }
+  // This a speculative fix for CWG1432 (Similar to the fix for CWG1395) that
+  // there is no wording or even resolution for this issue.
+  bool ClangABICompat15 = S.Context.getLangOpts().getClangABICompat() <=
+                          LangOptions::ClangABI::Ver15;
+  if (!ClangABICompat15) {
+    auto *TST1 = cast<TemplateSpecializationType>(T1);
+    auto *TST2 = cast<TemplateSpecializationType>(T2);
+    const TemplateArgument &TA1 = TST1->template_arguments().back();
+    if (TA1.getKind() == TemplateArgument::Pack) {
+      assert(TST1->getNumArgs() == TST2->getNumArgs());
+      const TemplateArgument &TA2 = TST2->template_arguments().back();
+      assert(TA2.getKind() == TemplateArgument::Pack);
+      unsigned PackSize1 = TA1.pack_size();
+      unsigned PackSize2 = TA2.pack_size();
+      bool IsPackExpansion1 =
+          PackSize1 && TA1.pack_elements().back().isPackExpansion();
+      bool IsPackExpansion2 =
+          PackSize2 && TA2.pack_elements().back().isPackExpansion();
+      if (PackSize1 != PackSize2 && IsPackExpansion1 != IsPackExpansion2) {
+        if (PackSize1 > PackSize2 && IsPackExpansion1)
+          return GetP2()(P1, P2);
+        if (PackSize1 < PackSize2 && IsPackExpansion2)
+          return P1;
       }
     }
-
-    llvm::SmallVector<const Expr *, 3> AC1, AC2;
-    P1->getAssociatedConstraints(AC1);
-    P2->getAssociatedConstraints(AC2);
-    bool AtLeastAsConstrained1, AtLeastAsConstrained2;
-    if (S.IsAtLeastAsConstrained(P1, AC1, P2, AC2, AtLeastAsConstrained1) ||
-        (IsMoreSpecialThanPrimaryCheck && !AtLeastAsConstrained1))
-      return nullptr;
-    if (S.IsAtLeastAsConstrained(P2, AC2, P1, AC1, AtLeastAsConstrained2))
-      return nullptr;
-    if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
-      return nullptr;
-    return AtLeastAsConstrained1 ? P1 : GetP2()(P1, P2);
   }
 
-  return Better1 ? P1 : GetP2()(P1, P2);
+  if (!S.Context.getLangOpts().CPlusPlus20)
+    return nullptr;
+
+  // Match GCC on not implementing [temp.func.order]p6.2.1.
+
+  // C++20 [temp.func.order]p6:
+  //   If deduction against the other template succeeds for both transformed
+  //   templates, constraints can be considered as follows:
+
+  TemplateParameterList *TPL1 = P1->getTemplateParameters();
+  TemplateParameterList *TPL2 = P2->getTemplateParameters();
+  if (TPL1->size() != TPL2->size())
+    return nullptr;
+
+  // C++20 [temp.func.order]p6.2.2:
+  // Otherwise, if the corresponding template-parameters of the
+  // template-parameter-lists are not equivalent ([temp.over.link]) or if the
+  // function parameters that positionally correspond between the two
+  // templates are not of the same type, neither template is more specialized
+  // than the other.
+  if (!S.TemplateParameterListsAreEqual(
+          TPL1, TPL2, false, Sema::TPL_TemplateMatch, SourceLocation(), true))
+    return nullptr;
+
+  if (!TemplateArgumentListAreEqual(S.getASTContext())(P1, P2))
+    return nullptr;
+
+  llvm::SmallVector<const Expr *, 3> AC1, AC2;
+  P1->getAssociatedConstraints(AC1);
+  P2->getAssociatedConstraints(AC2);
+  bool AtLeastAsConstrained1, AtLeastAsConstrained2;
+  if (S.IsAtLeastAsConstrained(P1, AC1, P2, AC2, AtLeastAsConstrained1) ||
+      (IsMoreSpecialThanPrimaryCheck && !AtLeastAsConstrained1))
+    return nullptr;
+  if (S.IsAtLeastAsConstrained(P2, AC2, P1, AC1, AtLeastAsConstrained2))
+    return nullptr;
+  if (AtLeastAsConstrained1 == AtLeastAsConstrained2)
+    return nullptr;
+  return AtLeastAsConstrained1 ? P1 : GetP2()(P1, P2);
 }
 
 /// Returns the more specialized class template partial specialization
@@ -5596,17 +5707,11 @@ Sema::getMoreSpecializedPartialSpecialization(
 
 bool Sema::isMoreSpecializedThanPrimary(
     VarTemplatePartialSpecializationDecl *Spec, TemplateDeductionInfo &Info) {
-  TemplateDecl *Primary = Spec->getSpecializedTemplate();
-  // FIXME: Cache the injected template arguments rather than recomputing
-  // them for each partial specialization.
-  SmallVector<TemplateArgument, 8> PrimaryArgs;
-  Context.getInjectedTemplateArgs(Primary->getTemplateParameters(),
-                                  PrimaryArgs);
-
+  VarTemplateDecl *Primary = Spec->getSpecializedTemplate();
   TemplateName CanonTemplate =
       Context.getCanonicalTemplateName(TemplateName(Primary));
   QualType PrimaryT = Context.getTemplateSpecializationType(
-      CanonTemplate, PrimaryArgs);
+      CanonTemplate, Primary->getInjectedTemplateArgs());
   QualType PartialT = Context.getTemplateSpecializationType(
       CanonTemplate, Spec->getTemplateArgs().asArray());
 

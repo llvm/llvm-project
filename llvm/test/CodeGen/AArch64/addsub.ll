@@ -693,3 +693,41 @@ if.then:                                          ; preds = %lor.lhs.false, %ent
 if.end:                                           ; preds = %if.then, %lor.lhs.false
   ret i32 undef
 }
+
+define i32 @commute_subop0(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: commute_subop0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl w8, w0, #3
+; CHECK-NEXT:    sub w8, w8, w1
+; CHECK-NEXT:    add w0, w8, w2
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 3
+  %sub = sub i32 %shl, %y
+  %add = add i32 %sub, %z
+  ret i32 %add
+}
+
+define i32 @commute_subop0_cadd(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: commute_subop0_cadd:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl w8, w0, #3
+; CHECK-NEXT:    sub w8, w8, w1
+; CHECK-NEXT:    add w0, w2, w8
+; CHECK-NEXT:    ret
+  %shl = shl i32 %x, 3
+  %sub = sub i32 %shl, %y
+  %add = add i32 %z, %sub
+  ret i32 %add
+}
+
+define i32 @commute_subop0_mul(i32 %x, i32 %y) {
+; CHECK-LABEL: commute_subop0_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl w8, w0, #3
+; CHECK-NEXT:    sub w8, w8, w0
+; CHECK-NEXT:    add w0, w8, w1
+; CHECK-NEXT:    ret
+  %mul = mul i32 %x, 7
+  %add = add i32 %mul, %y
+  ret i32 %add
+}

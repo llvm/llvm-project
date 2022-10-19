@@ -38,7 +38,7 @@ int metadirective1() {
    return errors;
 }
 
-// CHECK-LABEL: define weak_odr amdgpu_kernel void {{.+}}metadirective1
+// CHECK-LABEL: define weak_odr protected amdgpu_kernel void {{.+}}metadirective1
 // CHECK: entry:
 // CHECK: %{{[0-9]}} = call i32 @__kmpc_target_init
 // CHECK: user_code.entry:

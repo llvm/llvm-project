@@ -12,7 +12,6 @@ LLVM |release| Release Notes
      Release notes for previous releases can be found on
      `the Download Page <https://releases.llvm.org/download.html>`_.
 
-* The LoopFlatten pass is now enabled by default.
 
 Introduction
 ============
@@ -136,6 +135,9 @@ Changes to the Windows Target
 
 Changes to the X86 Backend
 --------------------------
+
+* Add support for the ``RDMSRLIST and WRMSRLIST`` instructions.
+* Add support for the ``WRMSRNS`` instruction.
 
 Changes to the OCaml bindings
 -----------------------------

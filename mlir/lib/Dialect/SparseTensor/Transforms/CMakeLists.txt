@@ -31,6 +31,7 @@ add_mlir_dialect_library(MLIRSparseTensorTransforms
   MLIRSCFTransforms
   MLIRSCFUtils
   MLIRSparseTensorDialect
+  MLIRSparseTensorEnums
   MLIRSparseTensorUtils
   MLIRTensorDialect
   MLIRTransforms
