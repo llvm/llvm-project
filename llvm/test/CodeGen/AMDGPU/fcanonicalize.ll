@@ -665,7 +665,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_v2f64(<2 x double> addrspace(
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 
-; GFX12: v_dual_max_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 define <2 x float> @v_test_canonicalize_v2f32_flush(<2 x float> %arg) #1 {
   %canon = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %arg)
   ret <2 x float> %canon
@@ -680,7 +680,7 @@ define <2 x float> @v_test_canonicalize_v2f32_flush(<2 x float> %arg) #1 {
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 
-; GFX12: v_dual_max_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; GFX12: v_max_num_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 define <3 x float> @v_test_canonicalize_v3f32_flush(<3 x float> %arg) #1 {
   %canon = call <3 x float> @llvm.canonicalize.v3f32(<3 x float> %arg)
@@ -698,8 +698,8 @@ define <3 x float> @v_test_canonicalize_v3f32_flush(<3 x float> %arg) #1 {
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 
-; GFX12: v_dual_max_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
-; GFX12: v_dual_max_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 define <4 x float> @v_test_canonicalize_v4f32_flush(<4 x float> %arg) #1 {
   %canon = call <4 x float> @llvm.canonicalize.v4f32(<4 x float> %arg)
   ret <4 x float> %canon
@@ -724,10 +724,10 @@ define <4 x float> @v_test_canonicalize_v4f32_flush(<4 x float> %arg) #1 {
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 ; GFX9: v_max_f32_e32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 
-; GFX12: v_dual_max_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
-; GFX12: v_dual_max_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
-; GFX12: v_dual_max_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
-; GFX12: v_dual_max_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
+; GFX12: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}} :: v_dual_max_num_f32 [[REG:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}
 define <8 x float> @v_test_canonicalize_v8f32_flush(<8 x float> %arg) #1 {
   %canon = call <8 x float> @llvm.canonicalize.v8f32(<8 x float> %arg)
   ret <8 x float> %canon
