@@ -277,10 +277,8 @@ public:
     target.addIllegalOp<fir::ArrayCoorOp>();
     target.addIllegalOp<fir::ReboxOp>();
     target.addDynamicallyLegalOp<fir::EmboxOp>([](fir::EmboxOp embox) {
-      if (embox.getType().isa<fir::ClassType>())
-        TODO(embox.getLoc(), "fir.class type CodeGenRewrite");
       return !(embox.getShape() || embox.getType()
-                                       .cast<fir::BoxType>()
+                                       .cast<fir::BaseBoxType>()
                                        .getEleTy()
                                        .isa<fir::SequenceType>());
     });
