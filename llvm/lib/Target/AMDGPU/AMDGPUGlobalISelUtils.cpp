@@ -20,9 +20,6 @@ std::pair<Register, unsigned>
 AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
                                   GISelKnownBits *KnownBits) {
   MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
-  if (!Def)
-    return std::make_pair(Reg, 0);
-
   if (Def->getOpcode() == TargetOpcode::G_CONSTANT) {
     unsigned Offset;
     const MachineOperand &Op = Def->getOperand(1);
