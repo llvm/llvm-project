@@ -1079,7 +1079,7 @@ amd_comgr_status_t lookUpCodeObject(DataObject *DataP,
       }
     }
 
-    if (Seen == QueryListSize) {
+    if (Seen == (int) QueryListSize) {
       break;
     }
   }

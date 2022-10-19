@@ -2162,7 +2162,7 @@ void llvm::DisassemHelper::printRawClangAST(const ObjectFile *Obj) {
 
   StringRef ClangASTContents;
   Expected<StringRef> ExpClangASTContents =
-      ClangASTSection.getValue().getContents();
+      ClangASTSection.value().getContents();
   if (ExpClangASTContents) {
     ClangASTContents = *ExpClangASTContents;
   } else {
@@ -2203,14 +2203,14 @@ void llvm::DisassemHelper::printFaultMaps(const ObjectFile *Obj) {
 
   OutS << "FaultMap table:\n";
 
-  if (!FaultMapSection.hasValue()) {
+  if (!FaultMapSection.has_value()) {
     OutS << "<not found>\n";
     return;
   }
 
   StringRef FaultMapContents;
   Expected<StringRef> ExpFaultMapContents =
-      FaultMapSection.getValue().getContents();
+      FaultMapSection.value().getContents();
   if (ExpFaultMapContents) {
     FaultMapContents = *ExpFaultMapContents;
   } else {

@@ -359,7 +359,7 @@ void testIsaName(char *Name, const char *Features) {
   char ExpectedIsaName[MAX_ISA_NAME_SIZE];
 
   strncpy(IsaName, Name, MAX_ISA_NAME_SIZE);
-  strncat(IsaName, Features, MAX_ISA_NAME_SIZE);
+  strncat(IsaName, Features, MAX_ISA_NAME_SIZE - 1);
 
   const char *V2Options[] = {"-mcode-object-version=2"};
   size_t V2OptionsCount = sizeof(V2Options) / sizeof(V2Options[0]);
