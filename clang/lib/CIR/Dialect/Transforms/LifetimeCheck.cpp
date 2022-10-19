@@ -47,8 +47,8 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkOperatorStar(CallOp callOp);
 
   // Helpers
-  bool isCtorInitFromOwner(CallOp callOp,
-                           const clang::CXXConstructorDecl *ctor);
+  bool isCtorInitPointerFromOwner(CallOp callOp,
+                                  const clang::CXXConstructorDecl *ctor);
   bool isNonConstUseOfOwner(CallOp callOp, const clang::CXXMethodDecl *m);
 
   struct Options {
@@ -885,7 +885,7 @@ void LifetimeCheckPass::checkMoveAssignment(CallOp callOp,
 // Example:
 //  MyIntPointer::MyIntPointer(MyIntOwner const&)(%5, %4)
 //
-bool LifetimeCheckPass::isCtorInitFromOwner(
+bool LifetimeCheckPass::isCtorInitPointerFromOwner(
     CallOp callOp, const clang::CXXConstructorDecl *ctor) {
   if (callOp.getNumOperands() < 2)
     return false;
@@ -939,7 +939,7 @@ void LifetimeCheckPass::checkCtor(CallOp callOp,
     llvm_unreachable("NYI");
   }
 
-  if (isCtorInitFromOwner(callOp, ctor)) {
+  if (isCtorInitPointerFromOwner(callOp, ctor)) {
     auto addr = callOp.getOperand(0);
     auto owner = callOp.getOperand(1);
     getPmap()[addr].clear();
