@@ -744,11 +744,11 @@ Arm and AArch64 Support in Clang
 - ``-march`` values for targeting armv2, armv2A, armv3 and armv3M have been removed.
   Their presence gave the impression that Clang can correctly generate code for
   them, which it cannot.
-- Add driver and tuning support for Neoverse V2 via the flag ``-mcpu=neoverse-v2``.
-  Native detection is also supported via ``-mcpu=native``.
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
 
   * Arm Cortex-A715 (cortex-a715).
+  * Arm Cortex-X3 (cortex-x3).
+  * Arm Neoverse V2 (neoverse-v2)
 
 Floating Point Support in Clang
 -------------------------------
