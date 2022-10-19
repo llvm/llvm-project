@@ -8788,3 +8788,114 @@ class sve2p1_multi_vec_shift_narrow<string mnemonic, bits<3> opc, bits<2> tsz>
 multiclass sve2p1_multi_vec_shift_narrow<string mnemonic, bits<3> opc> {
   def : sve2p1_multi_vec_shift_narrow<mnemonic, opc, 0b01>;
 }
+
+
+// SME2 multi-vec contiguous load (scalar plus scalar, two registers)
+class sve2p1_mem_cld_ss_2z<string mnemonic, bits<2> msz, bit n,
+                         RegisterOperand vector_ty, RegisterOperand gpr_ty>
+    : I<(outs vector_ty:$Zt),
+        (ins PNRAny_p8to15:$PNg, GPR64sp:$Rn, gpr_ty:$Rm),
+        mnemonic, "\t$Zt, $PNg/z, [$Rn, $Rm]",
+        "", []>, Sched<[]> {
+  bits<4> Zt;
+  bits<5> Rm;
+  bits<5> Rn;
+  bits<3> PNg;
+  let Inst{31-21} = 0b10100000000;
+  let Inst{20-16} = Rm;
+  let Inst{15}    = 0b0;
+  let Inst{14-13} = msz;
+  let Inst{12-10} = PNg;
+  let Inst{9-5} = Rn;
+  let Inst{4-1} = Zt;
+  let Inst{0}   = n;
+
+  let mayLoad = 1;
+}
+
+// SME2 multi-vec contiguous load (scalar plus immediate, two registers)
+class sve2p1_mem_cld_si_2z<string mnemonic, bits<2> msz, bit n,
+                         RegisterOperand vector_ty>
+    : I<(outs vector_ty:$Zt),
+        (ins PNRAny_p8to15:$PNg, GPR64sp:$Rn, simm4s2:$imm4),
+        mnemonic, "\t$Zt, $PNg/z, [$Rn, $imm4, mul vl]",
+        "", []>, Sched<[]> {
+  bits<4> Zt;
+  bits<5> Rn;
+  bits<3> PNg;
+  bits<4> imm4;
+  let Inst{31-20} = 0b101000000100;
+  let Inst{19-16} = imm4;
+  let Inst{15}    = 0b0;
+  let Inst{14-13} = msz;
+  let Inst{12-10} = PNg;
+  let Inst{9-5}   = Rn;
+  let Inst{4-1}   = Zt;
+  let Inst{0}     = n;
+
+  let mayLoad = 1;
+}
+
+multiclass sve2p1_mem_cld_si_2z<string mnemonic, bits<2> msz, bit n,
+                              RegisterOperand vector_ty> {
+  def NAME : sve2p1_mem_cld_si_2z<mnemonic, msz, n, vector_ty>;
+
+  def : InstAlias<mnemonic # " $Zt, $PNg/z, [$Rn]",
+                  (!cast<Instruction>(NAME) vector_ty:$Zt, PNRAny_p8to15:$PNg, GPR64sp:$Rn, 0), 1>;
+}
+
+// SME2 multi-vec contiguous load (scalar plus scalar, four registers)
+class sve2p1_mem_cld_ss_4z<string mnemonic, bits<2> msz, bit n,
+                         RegisterOperand vector_ty, RegisterOperand gpr_ty>
+    : I<(outs vector_ty:$Zt),
+        (ins PNRAny_p8to15:$PNg, GPR64sp:$Rn, gpr_ty:$Rm),
+        mnemonic, "\t$Zt, $PNg/z, [$Rn, $Rm]",
+        "", []>, Sched<[]> {
+  bits<3> Zt;
+  bits<5> Rm;
+  bits<5> Rn;
+  bits<3> PNg;
+  let Inst{31-21} = 0b10100000000;
+  let Inst{20-16} = Rm;
+  let Inst{15}    = 0b1;
+  let Inst{14-13} = msz;
+  let Inst{12-10} = PNg;
+  let Inst{9-5} = Rn;
+  let Inst{4-2} = Zt;
+  let Inst{1}   = 0b0;
+  let Inst{0}   = n;
+
+  let mayLoad = 1;
+}
+
+// SME2 multi-vec contiguous load (scalar plus immediate, four registers)
+class sve2p1_mem_cld_si_4z<string mnemonic, bits<2> msz, bit n,
+                         RegisterOperand vector_ty>
+    : I<(outs vector_ty:$Zt),
+        (ins PNRAny_p8to15:$PNg, GPR64sp:$Rn, simm4s4:$imm4),
+        mnemonic, "\t$Zt, $PNg/z, [$Rn, $imm4, mul vl]",
+        "", []>, Sched<[]> {
+  bits<3> Zt;
+  bits<5> Rn;
+  bits<3> PNg;
+  bits<4> imm4;
+  let Inst{31-20} = 0b101000000100;
+  let Inst{19-16} = imm4;
+  let Inst{15}    = 0b1;
+  let Inst{14-13} = msz;
+  let Inst{12-10} = PNg;
+  let Inst{9-5}   = Rn;
+  let Inst{4-2}   = Zt;
+  let Inst{1}     = 0b0;
+  let Inst{0}     = n;
+
+  let mayLoad = 1;
+}
+
+multiclass sve2p1_mem_cld_si_4z<string mnemonic, bits<2> msz, bit n,
+                              RegisterOperand vector_ty> {
+  def NAME : sve2p1_mem_cld_si_4z<mnemonic, msz, n, vector_ty>;
+
+  def : InstAlias<mnemonic # " $Zt, $PNg/z, [$Rn]",
+                  (!cast<Instruction>(NAME) vector_ty:$Zt, PNRAny_p8to15:$PNg, GPR64sp:$Rn, 0), 1>;
+}

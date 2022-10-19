@@ -266,8 +266,8 @@ private:
   OperandMatchResultTy tryParseGPROperand(OperandVector &Operands);
   template <bool ParseShiftExtend, bool ParseSuffix>
   OperandMatchResultTy tryParseSVEDataVector(OperandVector &Operands);
+  template <RegKind RK>
   OperandMatchResultTy tryParseSVEPredicateVector(OperandVector &Operands);
-  OperandMatchResultTy tryParseSVEPredicateAsCounter(OperandVector &Operands);
   template <RegKind VectorKind>
   OperandMatchResultTy tryParseVectorList(OperandVector &Operands,
                                           bool ExpectMatch = false);
@@ -3858,57 +3858,37 @@ AArch64AsmParser::tryParseVectorRegister(unsigned &Reg, StringRef &Kind,
   return MatchOperand_NoMatch;
 }
 
-OperandMatchResultTy
-AArch64AsmParser::tryParseSVEPredicateAsCounter(OperandVector &Operands) {
-  const SMLoc S = getLoc();
-  StringRef Kind;
-  unsigned RegNum;
-  auto Res =
-      tryParseVectorRegister(RegNum, Kind, RegKind::SVEPredicateAsCounter);
-  if (Res != MatchOperand_Success)
-    return Res;
-
-  const auto &KindRes = parseVectorKind(Kind, RegKind::SVEPredicateAsCounter);
-  if (!KindRes)
-    return MatchOperand_NoMatch;
-
-  unsigned ElementWidth = KindRes->second;
-  Operands.push_back(
-      AArch64Operand::CreateVectorReg(RegNum, RegKind::SVEPredicateAsCounter,
-                                      ElementWidth, S, getLoc(), getContext()));
-
-  // Check if register is followed by an index
-  OperandMatchResultTy ResIndex = tryParseVectorIndex(Operands);
-  if (ResIndex == MatchOperand_ParseFail)
-    return ResIndex;
-
-  return MatchOperand_Success;
-}
 /// tryParseSVEPredicateVector - Parse a SVE predicate register operand.
-OperandMatchResultTy
+template <RegKind RK> OperandMatchResultTy
 AArch64AsmParser::tryParseSVEPredicateVector(OperandVector &Operands) {
   // Check for a SVE predicate register specifier first.
   const SMLoc S = getLoc();
   StringRef Kind;
   unsigned RegNum;
-  auto Res = tryParseVectorRegister(RegNum, Kind, RegKind::SVEPredicateVector);
+  auto Res = tryParseVectorRegister(RegNum, Kind, RK);
   if (Res != MatchOperand_Success)
     return Res;
 
-  const auto &KindRes = parseVectorKind(Kind, RegKind::SVEPredicateVector);
+  const auto &KindRes = parseVectorKind(Kind, RK);
   if (!KindRes)
     return MatchOperand_NoMatch;
 
   unsigned ElementWidth = KindRes->second;
   Operands.push_back(AArch64Operand::CreateVectorReg(
-      RegNum, RegKind::SVEPredicateVector, ElementWidth, S,
+      RegNum, RK, ElementWidth, S,
       getLoc(), getContext()));
 
   if (getLexer().is(AsmToken::LBrac)) {
-    // Indexed predicate, there's no comma so try parse the next operand
-    // immediately.
-    if (parseOperand(Operands, false, false))
-      return MatchOperand_NoMatch;
+    if (RK == RegKind::SVEPredicateAsCounter) {
+      OperandMatchResultTy ResIndex = tryParseVectorIndex(Operands);
+      if (ResIndex == MatchOperand_Success)
+        return MatchOperand_Success;
+    } else {
+      // Indexed predicate, there's no comma so try parse the next operand
+      // immediately.
+      if (parseOperand(Operands, false, false))
+        return MatchOperand_NoMatch;
+    }
   }
 
   // Not all predicates are followed by a '/m' or '/z'.
@@ -3928,7 +3908,12 @@ AArch64AsmParser::tryParseSVEPredicateVector(OperandVector &Operands) {
 
   // Zeroing or merging?
   auto Pred = getTok().getString().lower();
-  if (Pred != "z" && Pred != "m") {
+  if (RK == RegKind::SVEPredicateAsCounter && Pred != "z") {
+    Error(getLoc(), "expecting 'z' predication");
+    return MatchOperand_ParseFail;
+  }
+
+  if (RK == RegKind::SVEPredicateVector && Pred != "z" && Pred != "m") {
     Error(getLoc(), "expecting 'm' or 'z' predication");
     return MatchOperand_ParseFail;
   }

@@ -3598,4 +3598,40 @@ defm SQCVTUN_Z2Z_StoH : sve2p1_multi_vec_extract_narrow<"sqcvtun", 0b10>;
 defm SQRSHRN_Z2ZI_StoH  : sve2p1_multi_vec_shift_narrow<"sqrshrn", 0b101>;
 defm UQRSHRN_Z2ZI_StoH  : sve2p1_multi_vec_shift_narrow<"uqrshrn", 0b111>;
 defm SQRSHRUN_Z2ZI_StoH : sve2p1_multi_vec_shift_narrow<"sqrshrun", 0b001>;
+
+// Load to two registers
+def LD1B_2Z        : sve2p1_mem_cld_ss_2z<"ld1b", 0b00, 0b0, ZZ_b_mul_r, GPR64shifted8>;
+def LD1H_2Z        : sve2p1_mem_cld_ss_2z<"ld1h", 0b01, 0b0, ZZ_h_mul_r, GPR64shifted16>;
+def LD1W_2Z        : sve2p1_mem_cld_ss_2z<"ld1w", 0b10, 0b0, ZZ_s_mul_r, GPR64shifted32>;
+def LD1D_2Z        : sve2p1_mem_cld_ss_2z<"ld1d", 0b11, 0b0, ZZ_d_mul_r, GPR64shifted64>;
+defm LD1B_2Z_IMM   : sve2p1_mem_cld_si_2z<"ld1b", 0b00, 0b0, ZZ_b_mul_r>;
+defm LD1H_2Z_IMM   : sve2p1_mem_cld_si_2z<"ld1h", 0b01, 0b0, ZZ_h_mul_r>;
+defm LD1W_2Z_IMM   : sve2p1_mem_cld_si_2z<"ld1w", 0b10, 0b0, ZZ_s_mul_r>;
+defm LD1D_2Z_IMM   : sve2p1_mem_cld_si_2z<"ld1d", 0b11, 0b0, ZZ_d_mul_r>;
+def LDNT1B_2Z      : sve2p1_mem_cld_ss_2z<"ldnt1b", 0b00, 0b1, ZZ_b_mul_r, GPR64shifted8>;
+def LDNT1H_2Z      : sve2p1_mem_cld_ss_2z<"ldnt1h", 0b01, 0b1, ZZ_h_mul_r, GPR64shifted16>;
+def LDNT1W_2Z      : sve2p1_mem_cld_ss_2z<"ldnt1w", 0b10, 0b1, ZZ_s_mul_r, GPR64shifted32>;
+def LDNT1D_2Z      : sve2p1_mem_cld_ss_2z<"ldnt1d", 0b11, 0b1, ZZ_d_mul_r, GPR64shifted64>;
+defm LDNT1B_2Z_IMM : sve2p1_mem_cld_si_2z<"ldnt1b", 0b00, 0b1, ZZ_b_mul_r>;
+defm LDNT1H_2Z_IMM : sve2p1_mem_cld_si_2z<"ldnt1h", 0b01, 0b1, ZZ_h_mul_r>;
+defm LDNT1W_2Z_IMM : sve2p1_mem_cld_si_2z<"ldnt1w", 0b10, 0b1, ZZ_s_mul_r>;
+defm LDNT1D_2Z_IMM : sve2p1_mem_cld_si_2z<"ldnt1d", 0b11, 0b1, ZZ_d_mul_r>;
+
+// Load to four registers
+def LD1B_4Z        : sve2p1_mem_cld_ss_4z<"ld1b", 0b00, 0b0, ZZZZ_b_mul_r, GPR64shifted8>;
+def LD1H_4Z        : sve2p1_mem_cld_ss_4z<"ld1h", 0b01, 0b0, ZZZZ_h_mul_r, GPR64shifted16>;
+def LD1W_4Z        : sve2p1_mem_cld_ss_4z<"ld1w", 0b10, 0b0, ZZZZ_s_mul_r, GPR64shifted32>;
+def LD1D_4Z        : sve2p1_mem_cld_ss_4z<"ld1d", 0b11, 0b0, ZZZZ_d_mul_r, GPR64shifted64>;
+defm LD1B_4Z_IMM   : sve2p1_mem_cld_si_4z<"ld1b", 0b00, 0b0, ZZZZ_b_mul_r>;
+defm LD1H_4Z_IMM   : sve2p1_mem_cld_si_4z<"ld1h", 0b01, 0b0, ZZZZ_h_mul_r>;
+defm LD1W_4Z_IMM   : sve2p1_mem_cld_si_4z<"ld1w", 0b10, 0b0, ZZZZ_s_mul_r>;
+defm LD1D_4Z_IMM   : sve2p1_mem_cld_si_4z<"ld1d", 0b11, 0b0, ZZZZ_d_mul_r>;
+def LDNT1B_4Z      : sve2p1_mem_cld_ss_4z<"ldnt1b", 0b00, 0b1, ZZZZ_b_mul_r, GPR64shifted8>;
+def LDNT1H_4Z      : sve2p1_mem_cld_ss_4z<"ldnt1h", 0b01, 0b1, ZZZZ_h_mul_r, GPR64shifted16>;
+def LDNT1W_4Z      : sve2p1_mem_cld_ss_4z<"ldnt1w", 0b10, 0b1, ZZZZ_s_mul_r, GPR64shifted32>;
+def LDNT1D_4Z      : sve2p1_mem_cld_ss_4z<"ldnt1d", 0b11, 0b1, ZZZZ_d_mul_r, GPR64shifted64>;
+defm LDNT1B_4Z_IMM : sve2p1_mem_cld_si_4z<"ldnt1b", 0b00, 0b1, ZZZZ_b_mul_r>;
+defm LDNT1H_4Z_IMM : sve2p1_mem_cld_si_4z<"ldnt1h", 0b01, 0b1, ZZZZ_h_mul_r>;
+defm LDNT1W_4Z_IMM : sve2p1_mem_cld_si_4z<"ldnt1w", 0b10, 0b1, ZZZZ_s_mul_r>;
+defm LDNT1D_4Z_IMM : sve2p1_mem_cld_si_4z<"ldnt1d", 0b11, 0b1, ZZZZ_d_mul_r>;
 } // End HasSVE2p1_or_HasSME2
