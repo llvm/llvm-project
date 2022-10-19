@@ -33,7 +33,7 @@ void yolo2() {
   MyIntOwner o(1);
   p = o;
   (void)o.read();
-  o.changeInt(42); // expected-note {{uninitialized here}}
+  o.changeInt(42); // expected-note {{invalidated by non-const use of owner type}}
   (void)p.read(); // expected-warning {{use of invalid pointer 'p'}}
   // expected-remark@-1 {{pset => { invalid }}}
 }
