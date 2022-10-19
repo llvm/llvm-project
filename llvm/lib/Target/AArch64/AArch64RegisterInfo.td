@@ -888,7 +888,7 @@ class PPRAsmOperand <string name, string RegClass, int Width>: AsmOperandClass {
                             # Width # ", " # "AArch64::" # RegClass # "RegClassID>";
   let DiagnosticType = "InvalidSVE" # name # "Reg";
   let RenderMethod = "addRegOperands";
-  let ParserMethod = "tryParseSVEPredicateVector";
+  let ParserMethod = "tryParseSVEPredicateVector<RegKind::SVEPredicateVector>";
 }
 
 def PPRAsmOpAny : PPRAsmOperand<"PredicateAny", "PPR",  0>;
@@ -915,7 +915,7 @@ class PNRAsmOperand<string name, string RegClass, int Width>
                             # Width # ", " # "AArch64::"
                             # RegClass # "RegClassID>";
   let DiagnosticType = "InvalidSVE" # name # "Reg";
-  let ParserMethod   = "tryParseSVEPredicateAsCounter";
+  let ParserMethod   = "tryParseSVEPredicateVector<RegKind::SVEPredicateAsCounter>";
 }
 
 class PNRP8to15RegOp<string Suffix, AsmOperandClass C, int EltSize, RegisterClass RC>
