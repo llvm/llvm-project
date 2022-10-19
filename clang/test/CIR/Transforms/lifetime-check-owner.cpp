@@ -43,3 +43,17 @@ void yolo2() {
   (void)p.read(); // expected-warning {{use of invalid pointer 'p'}}
   // expected-remark@-1 {{pset => { invalid }}}
 }
+
+void yolo3() {
+  MyIntPointer p, q;
+  MyIntOwner o(1);
+  p = o;
+  q = o;
+  (void)q.read(); // expected-remark {{pset => { o__1' }}}
+  (void)p.read(); // expected-remark {{pset => { o__1' }}}
+  o.changeInt(42); // expected-note {{invalidated by non-const use of owner type}}
+  (void)p.read(); // expected-warning {{use of invalid pointer 'p'}}
+  // expected-remark@-1 {{pset => { invalid }}}
+  (void)q.read(); // expected-warning {{use of invalid pointer 'q'}}
+  // expected-remark@-1 {{pset => { invalid }}}
+}
