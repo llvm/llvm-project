@@ -741,7 +741,7 @@ def ObjC : Flag<["-"], "ObjC">, Flags<[NoXarchOption]>,
   HelpText<"Treat source input files as Objective-C inputs">;
 def O : Joined<["-"], "O">, Group<O_Group>, Flags<[CC1Option,FC1Option]>;
 def O_flag : Flag<["-"], "O">, Flags<[CC1Option,FC1Option]>, Alias<O>, AliasArgs<["1"]>;
-def Ofast : Joined<["-"], "Ofast">, Group<O_Group>, Flags<[CC1Option]>;
+def Ofast : Joined<["-"], "Ofast">, Group<O_Group>, Flags<[CC1Option, FlangOption]>;
 def P : Flag<["-"], "P">, Flags<[CC1Option,FlangOption,FC1Option]>, Group<Preprocessor_Group>,
   HelpText<"Disable linemarker output in -E mode">,
   MarshallingInfoNegativeFlag<PreprocessorOutputOpts<"ShowLineMarkers">>;
@@ -1603,7 +1603,7 @@ def ffp_exception_behavior_EQ : Joined<["-"], "ffp-exception-behavior=">, Group<
   MarshallingInfoEnum<LangOpts<"FPExceptionMode">, "FPE_Default">;
 defm fast_math : BoolFOption<"fast-math",
   LangOpts<"FastMath">, DefaultFalse,
-  PosFlag<SetTrue, [CC1Option], "Allow aggressive, lossy floating-point optimizations",
+  PosFlag<SetTrue, [CC1Option, FC1Option, FlangOption], "Allow aggressive, lossy floating-point optimizations",
           [cl_fast_relaxed_math.KeyPath]>,
   NegFlag<SetFalse>>;
 defm math_errno : BoolFOption<"math-errno",
