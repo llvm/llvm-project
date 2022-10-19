@@ -3589,4 +3589,8 @@ def UDOT_ZZZI_HtoS : sve2p1_two_way_dot_vvi<"udot", 0b1>;
 
 defm PEXT_PCI : sve2p1_pred_as_ctr_to_mask<"pext">;
 defm PTRUE_C  : sve2p1_ptrue_pn<"ptrue">;
+
+defm SQCVTN_Z2Z_StoH  : sve2p1_multi_vec_extract_narrow<"sqcvtn", 0b00>;
+defm UQCVTN_Z2Z_StoH  : sve2p1_multi_vec_extract_narrow<"uqcvtn", 0b01>;
+defm SQCVTUN_Z2Z_StoH : sve2p1_multi_vec_extract_narrow<"sqcvtun", 0b10>;
 } // End HasSVE2p1_or_HasSME2
