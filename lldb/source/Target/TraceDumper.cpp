@@ -799,9 +799,14 @@ static TraceDumper::FunctionCall &AppendInstructionToFunctionCallForest(
   }
   // Now we are in a different symbol. Let's see if this is a return or a
   // call
-  switch (last_function_call->GetLastTracedSegment()
-              .GetLastInstructionSymbolInfo()
-              .instruction->GetControlFlowKind(&exe_ctx)) {
+  const InstructionSP &insn = last_function_call->GetLastTracedSegment()
+                                  .GetLastInstructionSymbolInfo()
+                                  .instruction;
+  InstructionControlFlowKind insn_kind =
+      insn ? insn->GetControlFlowKind(&exe_ctx)
+           : eInstructionControlFlowKindOther;
+
+  switch (insn_kind) {
   case lldb::eInstructionControlFlowKindCall:
   case lldb::eInstructionControlFlowKindFarCall: {
     // This is a regular call

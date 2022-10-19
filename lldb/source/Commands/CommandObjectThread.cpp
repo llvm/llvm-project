@@ -2199,7 +2199,8 @@ protected:
     llvm::Optional<StreamFile> out_file;
     if (m_options.m_output_file) {
       out_file.emplace(m_options.m_output_file->GetPath().c_str(),
-                       File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate);
+                       File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate |
+                           File::eOpenOptionTruncate);
     }
 
     m_options.m_dumper_options.forwards = true;
@@ -2395,7 +2396,8 @@ protected:
     llvm::Optional<StreamFile> out_file;
     if (m_options.m_output_file) {
       out_file.emplace(m_options.m_output_file->GetPath().c_str(),
-                       File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate);
+                       File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate |
+                           File::eOpenOptionTruncate);
     }
 
     if (m_options.m_continue && !m_last_id) {
