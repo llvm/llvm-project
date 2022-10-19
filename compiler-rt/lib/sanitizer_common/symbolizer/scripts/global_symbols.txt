@@ -163,6 +163,8 @@ strtoull_l U
 syscall U
 sysconf U
 tcgetattr U
+tolower U
+toupper U
 uname U
 ungetc U
 unlink U
