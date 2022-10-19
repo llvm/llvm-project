@@ -8654,3 +8654,44 @@ multiclass sve2p1_fclamp<string asm> {
   def _S : sve2p1_fclamp<asm, 0b10, ZPR32>;
   def _D : sve2p1_fclamp<asm, 0b11, ZPR64>;
 }
+
+// SVE two-way dot product
+class sve2p1_two_way_dot_vv<string mnemonic, bit u>
+    : I<(outs ZPR32:$Zda), (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR16:$Zm),
+        mnemonic, "\t$Zda, $Zn, $Zm",
+        "", []>, Sched<[]> {
+  bits<5> Zda;
+  bits<5> Zn;
+  bits<5> Zm;
+  let Inst{31-21} = 0b01000100000;
+  let Inst{20-16} = Zm;
+  let Inst{15-11} = 0b11001;
+  let Inst{10}    = u;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = DestructiveOther;
+}
+
+
+// SVE two-way dot product (indexed)
+class sve2p1_two_way_dot_vvi<string mnemonic, bit u>
+    : I<(outs ZPR32:$Zda), (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR3b16:$Zm, VectorIndexS:$i2),
+        mnemonic, "\t$Zda, $Zn, $Zm$i2",
+        "", []>, Sched<[]> {
+  bits<5> Zda;
+  bits<5> Zn;
+  bits<3> Zm;
+  bits<2> i2;
+  let Inst{31-21} = 0b01000100100;
+  let Inst{20-19} = i2;
+  let Inst{18-16} = Zm;
+  let Inst{15-11} = 0b11001;
+  let Inst{10}    = u;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = DestructiveOther;
+}
