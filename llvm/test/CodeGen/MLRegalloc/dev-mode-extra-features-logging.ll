@@ -31,7 +31,7 @@
 ; CHECK-LABEL: key: \"instructions\"
 ; Check the first five opcodes in the first eviction problem
 ; CHECK-NEXT: value: 19
-; CHECK-SAME: value: 3031
+; CHECK-SAME: value: 3032
 ; CHECK-SAME: value: 1245
 ; CHECK-SAME: value: 1264
 ; The first eviction problem is significantly less than 300 instructions. Check
