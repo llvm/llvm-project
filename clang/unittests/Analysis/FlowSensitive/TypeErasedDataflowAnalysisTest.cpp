@@ -517,11 +517,10 @@ public:
         Type->getAsCXXRecordDecl()->getQualifiedNameAsString() != "OptionalInt")
       return false;
 
-    auto *Prop1  = Val1.getProperty("has_value");
+    auto *Prop1 = Val1.getProperty("has_value");
     auto *Prop2 = Val2.getProperty("has_value");
-    return Prop1 == Prop2 ||
-           (Prop1 != nullptr && Prop2 != nullptr && isa<TopBoolValue>(Prop1) &&
-            isa<TopBoolValue>(Prop2));
+    assert(Prop1 != nullptr && Prop2 != nullptr);
+    return areEquivalentValues(*Prop1, *Prop2);
   }
 
   bool merge(QualType Type, const Value &Val1, const Environment &Env1,
