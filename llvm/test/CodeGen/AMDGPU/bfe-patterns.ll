@@ -440,40 +440,38 @@ define amdgpu_kernel void @s_sbfe_or_shl_shl_uniform_i32(i32 addrspace(1)* %out,
   ret void
 }
 
-; TODO ashr(or(shl(x,c1),shl(y,c2)),c1) -> sign_extend_inreg(or(x,shl(y,c2-c1))) iff c2 >= c1
+; ashr(or(shl(x,c1),shl(y,c2)),c1) -> sign_extend_inreg(or(x,shl(y,c2-c1))) iff c2 >= c1
 define amdgpu_kernel void @s_sbfe_or_shl_shl_nonuniform_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %x, i32 addrspace(1)* %y) {
 ; SI-LABEL: s_sbfe_or_shl_shl_nonuniform_i32:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
+; SI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0xd
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_load_dword s2, s[6:7], 0x0
-; SI-NEXT:    s_load_dword s0, s[0:1], 0x0
-; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_load_dword s4, s[4:5], 0x0
+; SI-NEXT:    s_load_dword s2, s[2:3], 0x0
+; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_lshl_b32 s1, s2, 17
-; SI-NEXT:    s_lshl_b32 s0, s0, 19
-; SI-NEXT:    s_or_b32 s0, s1, s0
-; SI-NEXT:    s_ashr_i32 s0, s0, 17
-; SI-NEXT:    s_mov_b32 s6, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s0
-; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-NEXT:    s_lshl_b32 s4, s4, 2
+; SI-NEXT:    s_or_b32 s2, s2, s4
+; SI-NEXT:    s_bfe_i32 s4, s2, 0xf0000
+; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    v_mov_b32_e32 v0, s4
+; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: s_sbfe_or_shl_shl_nonuniform_i32:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
+; VI-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x34
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_load_dword s2, s[6:7], 0x0
-; VI-NEXT:    s_load_dword s0, s[0:1], 0x0
-; VI-NEXT:    v_mov_b32_e32 v0, s4
-; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    s_load_dword s4, s[4:5], 0x0
+; VI-NEXT:    s_load_dword s2, s[2:3], 0x0
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_lshl_b32 s1, s2, 17
-; VI-NEXT:    s_lshl_b32 s0, s0, 19
-; VI-NEXT:    s_or_b32 s0, s1, s0
-; VI-NEXT:    s_ashr_i32 s0, s0, 17
+; VI-NEXT:    s_lshl_b32 s0, s4, 2
+; VI-NEXT:    s_or_b32 s0, s2, s0
+; VI-NEXT:    s_bfe_i32 s0, s0, 0xf0000
 ; VI-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
