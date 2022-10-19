@@ -708,7 +708,7 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
   }
 
   if (AllowModrefCall) {
-    MemoryEffects ME = AA.getModRefBehavior(CalledFunction);
+    MemoryEffects ME = AA.getMemoryEffects(CalledFunction);
     if (ME.onlyAccessesArgPointees()) {
       for (const auto &Arg : CI.args()) {
         if (!Arg->getType()->isPointerTy())

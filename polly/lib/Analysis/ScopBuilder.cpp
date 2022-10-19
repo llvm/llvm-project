@@ -1636,7 +1636,7 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, ScopStmt *Stmt) {
 
   auto *AF = SE.getConstant(IntegerType::getInt64Ty(CI->getContext()), 0);
   auto *CalledFunction = CI->getCalledFunction();
-  MemoryEffects ME = AA.getModRefBehavior(CalledFunction);
+  MemoryEffects ME = AA.getMemoryEffects(CalledFunction);
   if (ME.doesNotAccessMemory())
     return true;
 
