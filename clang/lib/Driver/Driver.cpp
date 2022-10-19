@@ -922,35 +922,6 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
   //
 }
 
-/// Looks the given directories for the specified file.
-///
-/// \param[out] FilePath File path, if the file was found.
-/// \param[in]  Dirs Directories used for the search.
-/// \param[in]  FileName Name of the file to search for.
-/// \return True if file was found.
-///
-/// Looks for file specified by FileName sequentially in directories specified
-/// by Dirs.
-///
-static bool searchForFile(SmallVectorImpl<char> &FilePath,
-                          ArrayRef<StringRef> Dirs, StringRef FileName,
-                          llvm::vfs::FileSystem &FS) {
-  SmallString<128> WPath;
-  for (const StringRef &Dir : Dirs) {
-    if (Dir.empty())
-      continue;
-    WPath.clear();
-    llvm::sys::path::append(WPath, Dir, FileName);
-    llvm::sys::path::native(WPath);
-    auto Status = FS.status(WPath);
-    if (Status && Status->getType() == llvm::sys::fs::file_type::regular_file) {
-      FilePath = std::move(WPath);
-      return true;
-    }
-  }
-  return false;
-}
-
 static void appendOneArg(InputArgList &Args, const Arg *Opt,
                          const Arg *BaseArg) {
   // The args for config files or /clang: flags belong to different InputArgList
@@ -967,11 +938,10 @@ static void appendOneArg(InputArgList &Args, const Arg *Opt,
   Args.append(Copy);
 }
 
-bool Driver::readConfigFile(StringRef FileName) {
+bool Driver::readConfigFile(StringRef FileName,
+                            llvm::cl::ExpansionContext &ExpCtx) {
   // Try reading the given file.
   SmallVector<const char *, 32> NewCfgArgs;
-  llvm::cl::ExpansionContext ExpCtx(Alloc, llvm::cl::tokenizeConfigFile);
-  ExpCtx.setVFS(&getVFS());
   if (!ExpCtx.readConfigFile(FileName, NewCfgArgs)) {
     Diag(diag::err_drv_cannot_read_config_file) << FileName;
     return true;
@@ -1012,6 +982,10 @@ bool Driver::readConfigFile(StringRef FileName) {
 }
 
 bool Driver::loadConfigFiles() {
+  llvm::cl::ExpansionContext ExpCtx(Saver.getAllocator(),
+                                    llvm::cl::tokenizeConfigFile);
+  ExpCtx.setVFS(&getVFS());
+
   // Process options that change search path for config files.
   if (CLOptions) {
     if (CLOptions->hasArg(options::OPT_config_system_dir_EQ)) {
@@ -1036,19 +1010,20 @@ bool Driver::loadConfigFiles() {
 
   // Prepare list of directories where config file is searched for.
   StringRef CfgFileSearchDirs[] = {UserConfigDir, SystemConfigDir, Dir};
+  ExpCtx.setSearchDirs(CfgFileSearchDirs);
 
   // First try to load configuration from the default files, return on error.
-  if (loadDefaultConfigFiles(CfgFileSearchDirs))
+  if (loadDefaultConfigFiles(ExpCtx))
     return true;
 
   // Then load configuration files specified explicitly.
-  llvm::SmallString<128> CfgFilePath;
+  SmallString<128> CfgFilePath;
   if (CLOptions) {
     for (auto CfgFileName : CLOptions->getAllArgValues(options::OPT_config)) {
       // If argument contains directory separator, treat it as a path to
       // configuration file.
       if (llvm::sys::path::has_parent_path(CfgFileName)) {
-        CfgFilePath = CfgFileName;
+        CfgFilePath.assign(CfgFileName);
         if (llvm::sys::path::is_relative(CfgFilePath)) {
           if (getVFS().makeAbsolute(CfgFilePath))
             return true;
@@ -1059,8 +1034,7 @@ bool Driver::loadConfigFiles() {
             return true;
           }
         }
-      } else if (!searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName,
-                                getVFS())) {
+      } else if (!ExpCtx.findConfigFile(CfgFileName, CfgFilePath)) {
         // Report an error that the config file could not be found.
         Diag(diag::err_drv_config_file_not_found) << CfgFileName;
         for (const StringRef &SearchDir : CfgFileSearchDirs)
@@ -1070,7 +1044,7 @@ bool Driver::loadConfigFiles() {
       }
 
       // Try to read the config file, return on error.
-      if (readConfigFile(CfgFilePath))
+      if (readConfigFile(CfgFilePath, ExpCtx))
         return true;
     }
   }
@@ -1079,7 +1053,7 @@ bool Driver::loadConfigFiles() {
   return false;
 }
 
-bool Driver::loadDefaultConfigFiles(ArrayRef<StringRef> CfgFileSearchDirs) {
+bool Driver::loadDefaultConfigFiles(llvm::cl::ExpansionContext &ExpCtx) {
   // Disable default config if CLANG_NO_DEFAULT_CONFIG is set to a non-empty
   // value.
   if (const char *NoConfigEnv = ::getenv("CLANG_NO_DEFAULT_CONFIG")) {
@@ -1123,36 +1097,36 @@ bool Driver::loadDefaultConfigFiles(ArrayRef<StringRef> CfgFileSearchDirs) {
   //    (e.g. i386-pc-linux-gnu.cfg + clang-g++.cfg for *clang-g++).
 
   // Try loading <triple>-<mode>.cfg, and return if we find a match.
-  llvm::SmallString<128> CfgFilePath;
+  SmallString<128> CfgFilePath;
   std::string CfgFileName = Triple + '-' + RealMode + ".cfg";
-  if (searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName, getVFS()))
-    return readConfigFile(CfgFilePath);
+  if (ExpCtx.findConfigFile(CfgFileName, CfgFilePath))
+    return readConfigFile(CfgFilePath, ExpCtx);
 
   bool TryModeSuffix = !ClangNameParts.ModeSuffix.empty() &&
                        ClangNameParts.ModeSuffix != RealMode;
   if (TryModeSuffix) {
     CfgFileName = Triple + '-' + ClangNameParts.ModeSuffix + ".cfg";
-    if (searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName, getVFS()))
-      return readConfigFile(CfgFilePath);
+    if (ExpCtx.findConfigFile(CfgFileName, CfgFilePath))
+      return readConfigFile(CfgFilePath, ExpCtx);
   }
 
   // Try loading <mode>.cfg, and return if loading failed.  If a matching file
   // was not found, still proceed on to try <triple>.cfg.
   CfgFileName = RealMode + ".cfg";
-  if (searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName, getVFS())) {
-    if (readConfigFile(CfgFilePath))
+  if (ExpCtx.findConfigFile(CfgFileName, CfgFilePath)) {
+    if (readConfigFile(CfgFilePath, ExpCtx))
       return true;
   } else if (TryModeSuffix) {
     CfgFileName = ClangNameParts.ModeSuffix + ".cfg";
-    if (searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName, getVFS()) &&
-        readConfigFile(CfgFilePath))
+    if (ExpCtx.findConfigFile(CfgFileName, CfgFilePath) &&
+        readConfigFile(CfgFilePath, ExpCtx))
       return true;
   }
 
   // Try loading <triple>.cfg and return if we find a match.
   CfgFileName = Triple + ".cfg";
-  if (searchForFile(CfgFilePath, CfgFileSearchDirs, CfgFileName, getVFS()))
-    return readConfigFile(CfgFilePath);
+  if (ExpCtx.findConfigFile(CfgFileName, CfgFilePath))
+    return readConfigFile(CfgFilePath, ExpCtx);
 
   // If we were unable to find a config file deduced from executable name,
   // that is not an error.

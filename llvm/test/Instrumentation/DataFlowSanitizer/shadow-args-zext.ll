@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=x86_64-unknown-linux-gnu < %s -dfsan -S --dfsan-abilist=%S/Inputs/shadow-args-abilist.txt | FileCheck %s
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu < %s -passes=dfsan -S --dfsan-abilist=%S/Inputs/shadow-args-abilist.txt | FileCheck %s
 
 ; REQUIRES: x86-registered-target
 

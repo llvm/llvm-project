@@ -137,6 +137,8 @@ add_mlir_library(mlir_c_runner_utils
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
+  mlir_float16_utils
+  MLIRSparseTensorEnums
   MLIRSparseTensorRuntime
   )
 set_property(TARGET mlir_c_runner_utils PROPERTY CXX_STANDARD 17)

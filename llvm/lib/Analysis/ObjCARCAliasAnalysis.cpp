@@ -92,18 +92,18 @@ bool ObjCARCAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
   return false;
 }
 
-FunctionModRefBehavior ObjCARCAAResult::getModRefBehavior(const Function *F) {
+MemoryEffects ObjCARCAAResult::getMemoryEffects(const Function *F) {
   if (!EnableARCOpts)
-    return AAResultBase::getModRefBehavior(F);
+    return AAResultBase::getMemoryEffects(F);
 
   switch (GetFunctionClass(F)) {
   case ARCInstKind::NoopCast:
-    return FunctionModRefBehavior::none();
+    return MemoryEffects::none();
   default:
     break;
   }
 
-  return AAResultBase::getModRefBehavior(F);
+  return AAResultBase::getMemoryEffects(F);
 }
 
 ModRefInfo ObjCARCAAResult::getModRefInfo(const CallBase *Call,

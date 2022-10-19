@@ -407,14 +407,6 @@ Error RewriteInstance::discoverStorage() {
   NamedRegionTimer T("discoverStorage", "discover storage", TimerGroupName,
                      TimerGroupDesc, opts::TimeRewrite);
 
-  // Stubs are harmful because RuntimeDyld may try to increase the size of
-  // sections accounting for stubs when we need those sections to match the
-  // same size seen in the input binary, in case this section is a copy
-  // of the original one seen in the binary.
-  BC->EFMM.reset(new ExecutableFileMemoryManager(*BC, /*AllowStubs*/ false));
-  BC->EFMM->setNewSecPrefix(getNewSecPrefix());
-  BC->EFMM->setOrgSecPrefix(getOrgSecPrefix());
-
   auto ELF64LEFile = dyn_cast<ELF64LEObjectFile>(InputFile);
   const ELFFile<ELF64LE> &Obj = ELF64LEFile->getELFFile();
 
@@ -3179,6 +3171,14 @@ void RewriteInstance::emitAndLink() {
 
   MCAsmLayout FinalLayout(
       static_cast<MCObjectStreamer *>(Streamer.get())->getAssembler());
+
+  // Disable stubs because RuntimeDyld may try to increase the size of
+  // sections accounting for stubs. We need those sections to match the
+  // same size seen in the input binary, in case this section is a copy
+  // of the original one seen in the binary.
+  BC->EFMM.reset(new ExecutableFileMemoryManager(*BC, /*AllowStubs=*/false));
+  BC->EFMM->setNewSecPrefix(getNewSecPrefix());
+  BC->EFMM->setOrgSecPrefix(getOrgSecPrefix());
 
   RTDyld.reset(new decltype(RTDyld)::element_type(*BC->EFMM, Resolver));
   RTDyld->setProcessAllSections(false);

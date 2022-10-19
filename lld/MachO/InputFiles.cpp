@@ -854,6 +854,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       //   4. If we have a literal section (e.g. __cstring and __literal4).
       if (!subsectionsViaSymbols || symbolOffset == 0 ||
           sym.n_desc & N_ALT_ENTRY || !isa<ConcatInputSection>(isec)) {
+        isec->hasAltEntry = symbolOffset != 0;
         symbols[symIndex] = createDefined(sym, name, isec, symbolOffset,
                                           symbolSize, forceHidden);
         continue;

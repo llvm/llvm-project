@@ -141,6 +141,19 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.wait.wait4
     libc.src.sys.wait.waitpid
 
+    # termios.h entrypoints
+    libc.src.termios.cfgetispeed
+    libc.src.termios.cfgetospeed
+    libc.src.termios.cfsetispeed
+    libc.src.termios.cfsetospeed
+    libc.src.termios.tcgetattr
+    libc.src.termios.tcgetsid
+    libc.src.termios.tcdrain
+    libc.src.termios.tcflow
+    libc.src.termios.tcflush
+    libc.src.termios.tcsendbreak
+    libc.src.termios.tcsetattr
+
     # unistd.h entrypoints
     libc.src.unistd.access
     libc.src.unistd.chdir
@@ -387,6 +400,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.raise
     libc.src.signal.kill
     libc.src.signal.sigaction
+    libc.src.signal.sigaltstack
     libc.src.signal.sigdelset
     libc.src.signal.sigaddset
     libc.src.signal.sigemptyset

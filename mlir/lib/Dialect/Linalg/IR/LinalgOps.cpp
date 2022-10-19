@@ -1602,6 +1602,142 @@ LogicalResult ReduceOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// TransposeOp
+//===----------------------------------------------------------------------===//
+
+std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
+                   mlir::ArrayRef<mlir::NamedAttribute>)>
+TransposeOp::getRegionBuilder() {
+  return [](mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
+            mlir::ArrayRef<mlir::NamedAttribute>) {
+    b.create<linalg::YieldOp>(block.getArguments().back());
+  };
+}
+
+void TransposeOp::createRegion(::mlir::OpBuilder &opBuilder,
+                               ::mlir::OperationState &odsState) {
+  Region *region = odsState.addRegion();
+
+  SmallVector<Type> argTypes;
+  SmallVector<Location> argLocs;
+  for (auto t : odsState.operands) {
+    argTypes.push_back(getElementTypeOrSelf(t));
+    argLocs.push_back(opBuilder.getUnknownLoc());
+  }
+
+  // RAII.
+  OpBuilder::InsertionGuard guard(opBuilder);
+  Block *body =
+      opBuilder.createBlock(region, /*insertPt=*/{}, argTypes, argLocs);
+
+  ImplicitLocOpBuilder b(opBuilder.getUnknownLoc(), opBuilder);
+  getRegionBuilder()(b, *body, odsState.attributes.getAttrs());
+}
+
+void TransposeOp::build(::mlir::OpBuilder &odsBuilder,
+                        ::mlir::OperationState &odsState, Value input,
+                        Value init, DenseI64ArrayAttr permutation,
+                        ArrayRef<NamedAttribute> attributes) {
+  odsState.addOperands(input);
+  odsState.addOperands(init);
+  odsState.addAttribute(getPermutationAttrName(odsState.name), permutation);
+  odsState.addAttributes(attributes);
+  odsState.addTypes(init.getType());
+
+  createRegion(odsBuilder, odsState);
+}
+
+void TransposeOp::build(::mlir::OpBuilder &odsBuilder,
+                        ::mlir::OperationState &odsState, Value input,
+                        Value init, ArrayRef<int64_t> permutation,
+                        ArrayRef<NamedAttribute> attributes) {
+  build(odsBuilder, odsState, input, init,
+        odsBuilder.getDenseI64ArrayAttr(permutation), attributes);
+}
+
+ParseResult TransposeOp::parse(OpAsmParser &parser, OperationState &result) {
+  if (failed(parseDstStyleOp(
+          parser, result, [&](OpAsmParser &parser, NamedAttrList &attributes) {
+            return parseDenseI64ArrayAttr(parser, attributes, "permutation");
+          })))
+    return failure();
+
+  OpBuilder opBuilder(parser.getContext());
+  createRegion(opBuilder, result);
+  return success();
+}
+
+void TransposeOp::getAsmResultNames(
+    function_ref<void(Value, StringRef)> setNameFn) {
+  if (!getResults().empty())
+    setNameFn(getResults().front(), "transposed");
+}
+
+void TransposeOp::print(OpAsmPrinter &p) {
+  printCommonStructuredOpParts(p, SmallVector<Value>(getInputOperands()),
+                               SmallVector<Value>(getOutputOperands()));
+  printDenseI64ArrayAttr(p, getPermutationAttrName(), getPermutation());
+  p.printOptionalAttrDict((*this)->getAttrs(), {getPermutationAttrName()});
+}
+
+LogicalResult TransposeOp::verify() {
+  ArrayRef<int64_t> permutationRef = getPermutation();
+
+  if (!isPermutation(permutationRef))
+    return emitOpError("permutation is not valid");
+
+  auto inputType = getInput().getType();
+  auto initType = getInit().getType();
+
+  int64_t rank = inputType.getRank();
+
+  if (rank != initType.getRank())
+    return emitOpError() << "input rank " << rank
+                         << " does not match init rank " << initType.getRank();
+
+  if (rank != static_cast<int64_t>(permutationRef.size()))
+    return emitOpError() << "size of permutation " << permutationRef.size()
+                         << " does not match the argument rank " << rank;
+
+  auto inputDims = inputType.getShape();
+  auto initDims = initType.getShape();
+
+  for (int64_t i = 0; i < rank; ++i) {
+    int64_t inputDim = inputDims[permutationRef[i]];
+    int64_t initDim = initDims[i];
+
+    if (inputDim != initDim) {
+      return emitOpError() << "dim(result, " << i << ") = " << initDim
+                           << " doesn't match dim(input, permutation[" << i
+                           << "]) = " << inputDim;
+    }
+  }
+
+  return success();
+}
+
+SmallVector<StringRef> TransposeOp::getIteratorTypesArray() {
+  int64_t rank = getInit().getType().getRank();
+  return SmallVector<StringRef>(rank, getParallelIteratorTypeName());
+}
+
+ArrayAttr TransposeOp::getIndexingMaps() {
+  Builder builder(getContext());
+  int64_t rank = getInit().getType().getRank();
+  return builder.getAffineMapArrayAttr(
+      {builder.getMultiDimIdentityMap(rank),
+       AffineMap::getPermutationMap(
+           llvm::to_vector_of<unsigned>(getPermutation()), getContext())});
+}
+
+void TransposeOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  getGenericEffectsImpl(effects, getOperation()->getResults(),
+                        getInputOperands(), getOutputOperands());
+}
+
+//===----------------------------------------------------------------------===//
 // YieldOp
 //===----------------------------------------------------------------------===//
 
@@ -1708,6 +1844,19 @@ SmallVector<AffineExpr, 4> mlir::linalg::concat(ArrayRef<AffineExpr> a,
   auto rangeB = llvm::make_range(b.begin(), b.end());
   auto concatRanges = llvm::concat<const AffineExpr>(rangeA, rangeB);
   return llvm::to_vector<4>(concatRanges);
+}
+
+bool mlir::linalg::isPermutation(ArrayRef<int64_t> permutation) {
+  // Count the number of appearances for all indices.
+  SmallVector<int64_t> indexCounts(permutation.size(), 0);
+  for (auto index : permutation) {
+    // Exit if the index is out-of-range.
+    if (index < 0 || index >= static_cast<int64_t>(permutation.size()))
+      return false;
+    ++indexCounts[index];
+  }
+  // Return true if all indices appear once.
+  return count(indexCounts, 1) == static_cast<int64_t>(permutation.size());
 }
 
 static void appendMangledType(llvm::raw_string_ostream &ss, Type t) {

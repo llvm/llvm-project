@@ -15,6 +15,7 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(pthread)
   add_subdirectory(sched)
   add_subdirectory(sys)
+  add_subdirectory(termios)
   add_subdirectory(unistd)
 endif()
 

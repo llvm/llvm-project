@@ -2193,9 +2193,7 @@ class getAsmVOP3OpSel <int NumSrcArgs,
   string src2 = !if(Src2HasMods, fsrc2, isrc2);
 
   string clamp = !if(HasClamp, "$clamp", "");
-  // TODO-GFX11 enable here when HasOMod with opsel is enabled
   string omod = "";
-  /*string omod =  !if(HasOMod, "$omod", "");*/
   string ret = dst#", "#src0#src1#src2#"$op_sel"#clamp#omod;
 }
 
@@ -2349,7 +2347,7 @@ class getHas64BitOps <int NumSrcArgs, ValueType DstVT, ValueType Src0VT,
 class getHasSDWA <int NumSrcArgs, ValueType DstVT = i32, ValueType Src0VT = i32,
                   ValueType Src1VT = i32> {
   bit ret = !if(!eq(NumSrcArgs, 3),
-                0, // NumSrcArgs == 3 - No SDWA for VOP3 before GFX11
+                0, // NumSrcArgs == 3 - No SDWA for VOP3
                 !if(!eq(DstVT.Size, 64),
                     0, // 64-bit dst - No SDWA for 64-bit operands
                     !if(!eq(Src0VT.Size, 64),

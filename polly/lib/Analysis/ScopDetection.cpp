@@ -708,8 +708,8 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
   }
 
   if (AllowModrefCall) {
-    FunctionModRefBehavior FMRB = AA.getModRefBehavior(CalledFunction);
-    if (FMRB.onlyAccessesArgPointees()) {
+    MemoryEffects ME = AA.getMemoryEffects(CalledFunction);
+    if (ME.onlyAccessesArgPointees()) {
       for (const auto &Arg : CI.args()) {
         if (!Arg->getType()->isPointerTy())
           continue;
@@ -735,7 +735,7 @@ bool ScopDetection::isValidCallInst(CallInst &CI,
       return true;
     }
 
-    if (FMRB.onlyReadsMemory()) {
+    if (ME.onlyReadsMemory()) {
       // Implicitly disable delinearization since we have an unknown
       // accesses with an unknown access function.
       Context.HasUnknownAccess = true;

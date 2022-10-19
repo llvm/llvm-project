@@ -136,6 +136,7 @@ add_gen_header(
     .llvm-libc-macros.signal_macros
     .llvm-libc-types.struct_sigaction
     .llvm-libc-types.__sighandler_t
+    .llvm-libc-types.stack_t
     .llvm-libc-types.sigset_t
     .llvm-libc-types.pid_t
 )
@@ -348,6 +349,19 @@ add_gen_header(
     .llvm-libc-macros.sys_wait_macros
     .llvm-libc-types.pid_t
     .llvm-libc-types.struct_rusage
+)
+
+add_gen_header(
+  termios
+  DEF_FILE termios.h.def
+  GEN_HDR termios.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.termios_macros
+    .llvm-libc-types.cc_t
+    .llvm-libc-types.speed_t
+    .llvm-libc-types.struct_termios
+    .llvm-libc-types.tcflag_t
 )
 
 if(NOT LLVM_LIBC_FULL_BUILD)

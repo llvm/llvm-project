@@ -1305,9 +1305,6 @@ class VOPC64_DPP8_NoDst<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
 // GFX11.
 //===----------------------------------------------------------------------===//
 
-// TODO-GFX11 Only 64bit forms of 16 bit insts with immediates are generated
-// pending proper 16 bit register support.
-
 let AssemblerPredicate = isGFX11Only in {
   multiclass VOPC_Real_gfx11<bits<9> op> {
     defvar ps32 = !cast<VOPC_Pseudo>(NAME#"_e32");

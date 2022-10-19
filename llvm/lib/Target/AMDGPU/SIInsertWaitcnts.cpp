@@ -434,6 +434,17 @@ public:
 #endif // NDEBUG
   }
 
+  // Return the appropriate VMEM_*_ACCESS type for Inst, which must be a VMEM or
+  // FLAT instruction.
+  WaitEventType getVmemWaitEventType(const MachineInstr &Inst) const {
+    assert(SIInstrInfo::isVMEM(Inst) || SIInstrInfo::isFLAT(Inst));
+    if (!ST->hasVscnt())
+      return VMEM_ACCESS;
+    if (Inst.mayStore() && !SIInstrInfo::isAtomicRet(Inst))
+      return VMEM_WRITE_ACCESS;
+    return VMEM_READ_ACCESS;
+  }
+
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
   bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
   bool generateWaitcntInstBefore(MachineInstr &MI,
@@ -1384,12 +1395,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
 
     if (mayAccessVMEMThroughFlat(Inst)) {
       ++FlatASCount;
-      if (!ST->hasVscnt())
-        ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_ACCESS, Inst);
-      else if (Inst.mayLoad() && !SIInstrInfo::isAtomicNoRet(Inst))
-        ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_READ_ACCESS, Inst);
-      else
-        ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_WRITE_ACCESS, Inst);
+      ScoreBrackets->updateByEvent(TII, TRI, MRI, getVmemWaitEventType(Inst),
+                                   Inst);
     }
 
     if (mayAccessLDSThroughFlat(Inst)) {
@@ -1407,14 +1414,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->setPendingFlat();
   } else if (SIInstrInfo::isVMEM(Inst) &&
              !llvm::AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode())) {
-    if (!ST->hasVscnt())
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_ACCESS, Inst);
-    else if ((Inst.mayLoad() && !SIInstrInfo::isAtomicNoRet(Inst)) ||
-             /* IMAGE_GET_RESINFO / IMAGE_GET_LOD */
-             (TII->isMIMG(Inst) && !Inst.mayLoad() && !Inst.mayStore()))
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_READ_ACCESS, Inst);
-    else if (Inst.mayStore())
-      ScoreBrackets->updateByEvent(TII, TRI, MRI, VMEM_WRITE_ACCESS, Inst);
+    ScoreBrackets->updateByEvent(TII, TRI, MRI, getVmemWaitEventType(Inst),
+                                 Inst);
 
     if (ST->vmemWriteNeedsExpWaitcnt() &&
         (Inst.mayStore() || SIInstrInfo::isAtomicRet(Inst))) {

@@ -23,6 +23,7 @@
 #include "mlir/Target/LLVMIR/TypeFromLLVM.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Attributes.h"
@@ -306,6 +307,22 @@ mlir::translateDataLayout(const llvm::DataLayout &dataLayout,
   return DataLayoutSpecAttr::get(context, entries);
 }
 
+/// Get a topologically sorted list of blocks for the given function.
+static SetVector<llvm::BasicBlock *>
+getTopologicallySortedBlocks(llvm::Function *func) {
+  SetVector<llvm::BasicBlock *> blocks;
+  for (llvm::BasicBlock &bb : *func) {
+    if (blocks.count(&bb) == 0) {
+      llvm::ReversePostOrderTraversal<llvm::BasicBlock *> traversal(&bb);
+      blocks.insert(traversal.begin(), traversal.end());
+    }
+  }
+  assert(blocks.size() == func->getBasicBlockList().size() &&
+         "some blocks are not sorted");
+
+  return blocks;
+}
+
 // Handles importing globals and functions from an LLVM module.
 namespace {
 class Importer {
@@ -325,6 +342,18 @@ public:
     assert(mlir == nullptr &&
            "attempting to map a value that is already mapped");
     return mlir;
+  }
+
+  /// Stores the mapping between an LLVM block and its MLIR counterpart.
+  void mapBlock(llvm::BasicBlock *llvm, Block *mlir) {
+    auto result = blockMapping.try_emplace(llvm, mlir);
+    (void)result;
+    assert(result.second && "attempting to map a block that is already mapped");
+  }
+
+  /// Returns the MLIR block mapped to the given LLVM block.
+  Block *lookupBlock(llvm::BasicBlock *block) const {
+    return blockMapping.lookup(block);
   }
 
   /// Returns the remapped version of `value` or a placeholder that will be
@@ -413,13 +442,10 @@ private:
     return std::prev(module.getBody()->end());
   }
 
-  /// Remapped blocks, for the current function.
-  DenseMap<llvm::BasicBlock *, Block *> blocks;
-  /// Mappings between original and imported values. These are function-local.
+  /// Function-local mapping between original and imported block.
+  DenseMap<llvm::BasicBlock *, Block *> blockMapping;
+  /// Function-local mapping between original and imported values.
   DenseMap<llvm::Value *, Value> valueMapping;
-  /// Instructions that had not been defined when first encountered as a use.
-  /// Maps to the dummy Operation that was created in processValue().
-  DenseMap<llvm::Value *, Operation *> unknownInstMap;
   /// Uniquing map of GlobalVariables.
   DenseMap<llvm::GlobalVariable *, GlobalOp> globals;
   /// The stateful type translator (contains named structs).
@@ -750,16 +776,7 @@ Value Importer::processValue(llvm::Value *value) {
   if (it != valueMapping.end())
     return it->second;
 
-  // We don't expect to see instructions in dominator order. If we haven't seen
-  // this instruction yet, create an unknown op and remap it later.
-  if (isa<llvm::Instruction>(value)) {
-    Type type = convertType(value->getType());
-    unknownInstMap[value] =
-        b.create(UnknownLoc::get(context), b.getStringAttr("llvm.unknown"),
-                 /*operands=*/{}, type);
-    return unknownInstMap[value]->getResult(0);
-  }
-
+  // Process constants such as immediate arguments that have no mapping.
   if (auto *c = dyn_cast<llvm::Constant>(value))
     return processConstant(c);
 
@@ -829,7 +846,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
       SmallVector<Value, 4> blockArguments;
       if (failed(processBranchArgs(brInst, succ, blockArguments)))
         return failure();
-      state.addSuccessors(blocks[succ]);
+      state.addSuccessors(lookupBlock(succ));
       state.addOperands(blockArguments);
       operandSegmentSizes[i + 1] = blockArguments.size();
     }
@@ -866,10 +883,10 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
         return failure();
       caseOperandRefs[i] = caseOperands[i];
       caseValues[i] = caseHandle.getCaseValue()->getSExtValue();
-      caseBlocks[i] = blocks[succBB];
+      caseBlocks[i] = lookupBlock(succBB);
     }
 
-    b.create<SwitchOp>(loc, condition, blocks[defaultBB], defaultBlockArgs,
+    b.create<SwitchOp>(loc, condition, lookupBlock(defaultBB), defaultBlockArgs,
                        caseValues, caseBlocks, caseOperandRefs);
     return success();
   }
@@ -931,12 +948,12 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     if (llvm::Function *callee = ii->getCalledFunction()) {
       op = b.create<InvokeOp>(
           loc, tys, SymbolRefAttr::get(b.getContext(), callee->getName()), ops,
-          blocks[ii->getNormalDest()], normalArgs, blocks[ii->getUnwindDest()],
-          unwindArgs);
+          lookupBlock(ii->getNormalDest()), normalArgs,
+          lookupBlock(ii->getUnwindDest()), unwindArgs);
     } else {
       ops.insert(ops.begin(), processValue(ii->getCalledOperand()));
-      op = b.create<InvokeOp>(loc, tys, ops, blocks[ii->getNormalDest()],
-                              normalArgs, blocks[ii->getUnwindDest()],
+      op = b.create<InvokeOp>(loc, tys, ops, lookupBlock(ii->getNormalDest()),
+                              normalArgs, lookupBlock(ii->getUnwindDest()),
                               unwindArgs);
     }
 
@@ -1001,9 +1018,8 @@ void Importer::processFunctionAttributes(llvm::Function *func,
 }
 
 LogicalResult Importer::processFunction(llvm::Function *f) {
-  blocks.clear();
+  blockMapping.clear();
   valueMapping.clear();
-  unknownInstMap.clear();
 
   auto functionType =
       convertType(f->getFunctionType()).dyn_cast<LLVMFunctionType>();
@@ -1064,34 +1080,28 @@ LogicalResult Importer::processFunction(llvm::Function *f) {
     return success();
 
   // Eagerly create all blocks.
-  SmallVector<Block *, 4> blockList;
   for (llvm::BasicBlock &bb : *f) {
-    blockList.push_back(b.createBlock(&fop.getBody(), fop.getBody().end()));
-    blocks[&bb] = blockList.back();
+    Block *block = b.createBlock(&fop.getBody(), fop.getBody().end());
+    mapBlock(&bb, block);
   }
-  currentEntryBlock = blockList[0];
+  currentEntryBlock = &fop.getFunctionBody().getBlocks().front();
 
   // Add function arguments to the entry block.
-  for (const auto &kv : llvm::enumerate(f->args())) {
-    mapValue(&kv.value(),
-             blockList[0]->addArgument(functionType.getParamType(kv.index()),
-                                       fop.getLoc()));
+  for (const auto &it : llvm::enumerate(f->args())) {
+    BlockArgument blockArg = fop.getFunctionBody().addArgument(
+        functionType.getParamType(it.index()), fop.getLoc());
+    mapValue(&it.value(), blockArg);
   }
 
-  for (auto bbs : llvm::zip(*f, blockList)) {
-    if (failed(processBasicBlock(&std::get<0>(bbs), std::get<1>(bbs))))
+  // Process the blocks in topological order. The ordered traversal ensures
+  // operands defined in a dominating block have a valid mapping to an MLIR
+  // value once a block is translated.
+  SetVector<llvm::BasicBlock *> blocks = getTopologicallySortedBlocks(f);
+  for (llvm::BasicBlock *bb : blocks) {
+    if (failed(processBasicBlock(bb, lookupBlock(bb))))
       return failure();
   }
 
-  // Now that all instructions are guaranteed to have been visited, ensure
-  // any unknown uses we encountered are remapped.
-  for (auto &llvmAndUnknown : unknownInstMap) {
-    assert(valueMapping.count(llvmAndUnknown.first));
-    Value newValue = valueMapping[llvmAndUnknown.first];
-    Value oldValue = llvmAndUnknown.second->getResult(0);
-    oldValue.replaceAllUsesWith(newValue);
-    llvmAndUnknown.second->erase();
-  }
   return success();
 }
 

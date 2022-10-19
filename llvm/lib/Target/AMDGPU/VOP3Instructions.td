@@ -785,7 +785,6 @@ let SubtargetPredicate = isGFX11Plus in {
   defm V_MINMAX_U32     : VOP3Inst<"v_minmax_u32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
   defm V_MAXMIN_I32     : VOP3Inst<"v_maxmin_i32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
   defm V_MINMAX_I32     : VOP3Inst<"v_minmax_i32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
-// TODO-GFX11 codegen support CVT_PK_.16_F32
   defm V_CVT_PK_I16_F32 : VOP3Inst<"v_cvt_pk_i16_f32", VOP3_Profile<VOP_V2I16_F32_F32>>;
   defm V_CVT_PK_U16_F32 : VOP3Inst<"v_cvt_pk_u16_f32", VOP3_Profile<VOP_V2I16_F32_F32>>;
 } // End SubtargetPredicate = isGFX11Plus
@@ -921,7 +920,6 @@ defm V_DIV_SCALE_F32       : VOP3be_Real_gfx11<0x2fc, "V_DIV_SCALE_F32", "v_div_
 defm V_DIV_SCALE_F64       : VOP3be_Real_gfx11<0x2fd, "V_DIV_SCALE_F64", "v_div_scale_f64">;
 defm V_MAD_U64_U32_gfx11   : VOP3be_Real_gfx11<0x2fe, "V_MAD_U64_U32_gfx11", "v_mad_u64_u32">;
 defm V_MAD_I64_I32_gfx11   : VOP3be_Real_gfx11<0x2ff, "V_MAD_I64_I32_gfx11", "v_mad_i64_i32">;
-// V_ADD_CO_U32, V_SUB_CO_U32, V_SUBREV_CO_U32 in VOP2Instructions.td
 defm V_ADD_NC_U16          : VOP3Only_Realtriple_gfx11<0x303>;
 defm V_SUB_NC_U16          : VOP3Only_Realtriple_gfx11<0x304>;
 defm V_MUL_LO_U16_t16      : VOP3Only_Realtriple_t16_gfx11<0x305, "v_mul_lo_u16">;
@@ -936,7 +934,6 @@ defm V_SUB_NC_I16          : VOP3_Realtriple_with_name_gfx11<0x30e, "V_SUB_I16",
 defm V_PACK_B32_F16        : VOP3_Realtriple_gfx11<0x311>;
 defm V_CVT_PK_NORM_I16_F16 : VOP3_Realtriple_with_name_gfx11<0x312, "V_CVT_PKNORM_I16_F16" , "v_cvt_pk_norm_i16_f16" >;
 defm V_CVT_PK_NORM_U16_F16 : VOP3_Realtriple_with_name_gfx11<0x313, "V_CVT_PKNORM_U16_F16" , "v_cvt_pk_norm_u16_f16" >;
-// LDEXP_F32, BFM_B32, BCNT, mbcntlo, mbcnt hi, cvt_pknorm_{i,u}16_f32, cvt_pk_u16_u32, cvt_pk_i16_i32  in VOP2
 defm V_SUB_NC_I32          : VOP3_Realtriple_with_name_gfx11<0x325, "V_SUB_I32", "v_sub_nc_i32">;
 defm V_ADD_NC_I32          : VOP3_Realtriple_with_name_gfx11<0x326, "V_ADD_I32", "v_add_nc_i32">;
 defm V_ADD_F64             : VOP3_Real_Base_gfx11<0x327>;
