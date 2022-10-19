@@ -726,6 +726,12 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.AssociativeMath = true;
   }
 
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_freciprocal_math)) {
+    diags.Report(diagUnimplemented) << a->getOption().getName();
+    opts.ReciprocalMath = true;
+  }
+
   return true;
 }
 

@@ -88,6 +88,7 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
   bool ApproxFunc = false;
   bool SignedZeros = true;
   bool AssociativeMath = false;
+  bool ReciprocalMath = false;
 
   if (const Arg *A = Args.getLastArg(options::OPT_ffp_contract)) {
     const StringRef Val = A->getValue();
@@ -143,6 +144,12 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     case options::OPT_fno_associative_math:
       AssociativeMath = false;
       break;
+    case options::OPT_freciprocal_math:
+      ReciprocalMath = true;
+      break;
+    case options::OPT_fno_reciprocal_math:
+      ReciprocalMath = false;
+      break;
     }
 
     // If we handled this option claim it
@@ -166,6 +173,9 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
 
   if (AssociativeMath && !SignedZeros)
     CmdArgs.push_back("-mreassociate");
+
+  if (ReciprocalMath)
+    CmdArgs.push_back("-freciprocal-math");
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,

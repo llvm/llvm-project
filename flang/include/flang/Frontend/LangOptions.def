@@ -31,6 +31,8 @@ LANGOPT(ApproxFunc, 1, false)
 LANGOPT(NoSignedZeros, 1, false)
 /// Allow reassociation transformations for floating-point instructions
 LANGOPT(AssociativeMath, 1, false)
+/// Allow division operations to be reassociated
+LANGOPT(ReciprocalMath, 1, false)
 
 #undef LANGOPT
 #undef ENUM_LANGOPT

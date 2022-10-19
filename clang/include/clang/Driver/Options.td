@@ -1888,7 +1888,7 @@ def fassociative_math : Flag<["-"], "fassociative-math">, Group<f_Group>;
 def fno_associative_math : Flag<["-"], "fno-associative-math">, Group<f_Group>;
 defm reciprocal_math : BoolFOption<"reciprocal-math",
   LangOpts<"AllowRecip">, DefaultFalse,
-  PosFlag<SetTrue, [CC1Option], "Allow division operations to be reassociated",
+  PosFlag<SetTrue, [CC1Option, FC1Option, FlangOption], "Allow division operations to be reassociated",
           [funsafe_math_optimizations.KeyPath]>,
   NegFlag<SetFalse>>;
 defm approx_func : BoolFOption<"approx-func", LangOpts<"ApproxFunc">, DefaultFalse,
