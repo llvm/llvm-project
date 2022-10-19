@@ -136,6 +136,8 @@ Changes to the Windows Target
 Changes to the X86 Backend
 --------------------------
 
+* Add support for the ``RDMSRLIST and WRMSRLIST`` instructions.
+
 Changes to the OCaml bindings
 -----------------------------
 
