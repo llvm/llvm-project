@@ -14,10 +14,11 @@ if ( WIN32 )
   libomptarget_say("Not buildingAMDGCN deviceRTL on windows")
   return()
 endif()
-find_package(AMDDeviceLibs REQUIRED CONFIG PATHS
-	${CMAKE_BINARY_DIR}/../../tools/ROCMDEVLIBS
-	${CMAKE_INSTALL_PREFIX}
-	/opt/rocm)
+find_package(AMDDeviceLibs REQUIRED CONFIG
+  HINTS
+  ${CMAKE_INSTALL_PREFIX}
+  PATHS
+  /opt/rocm)
 if(AMDDeviceLibs_DIR)
   libomptarget_say("Getting ROCm device libs from ${AMDDeviceLibs_DIR}")
 else()

@@ -194,9 +194,10 @@ function(compileDeviceRTLLibrary target_cpu target_name)
     # non-user library linked. It is linked once in GPU link phase
     # following llvm-link options: --internalize --only-needed
     if(NOT amd_device_libs_found)
-      find_package(AMDDeviceLibs REQUIRED CONFIG PATHS
-        ${CMAKE_BINARY_DIR}/../../tools/ROCMDEVLIBS
-	${CMAKE_INSTALL_PREFIX}
+      find_package(AMDDeviceLibs REQUIRED CONFIG
+        HINTS
+        ${CMAKE_INSTALL_PREFIX}
+        PATHS
         /opt/rocm)
       if(AMDDeviceLibs_DIR)
 	set(amd_device_libs_found ON)
