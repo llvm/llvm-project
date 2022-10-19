@@ -837,8 +837,9 @@ enum TemplateArgumentKind {
 enum FormatterMatchType {
   eFormatterMatchExact,
   eFormatterMatchRegex,
+  eFormatterMatchCallback,
 
-  eLastFormatterMatchType = eFormatterMatchRegex,
+  eLastFormatterMatchType = eFormatterMatchCallback,
 };
 
 /// Kind of argument for generics, either bound or unbound.

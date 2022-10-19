@@ -106,6 +106,7 @@ public:
   SBType();
 
   SBType(const lldb::SBType &rhs);
+  SBType(const lldb::TypeImplSP &);
 
   ~SBType();
 
@@ -239,7 +240,6 @@ protected:
 
   SBType(const lldb_private::CompilerType &);
   SBType(const lldb::TypeSP &);
-  SBType(const lldb::TypeImplSP &);
 };
 
 class SBTypeList {

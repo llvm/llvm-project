@@ -11,6 +11,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/LanguageCategory.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -182,15 +183,19 @@ void FormatManager::GetPossibleMatches(
     FormattersMatchCandidate::Flags current_flags, bool root_level) {
   compiler_type = compiler_type.GetTypeForFormatters();
   ConstString type_name(compiler_type.GetTypeName());
+  ScriptInterpreter *script_interpreter =
+      valobj.GetTargetSP()->GetDebugger().GetScriptInterpreter();
   if (valobj.GetBitfieldBitSize() > 0) {
     StreamString sstring;
     sstring.Printf("%s:%d", type_name.AsCString(), valobj.GetBitfieldBitSize());
     ConstString bitfieldname(sstring.GetString());
-    entries.push_back({bitfieldname, current_flags});
+    entries.push_back({bitfieldname, script_interpreter,
+                       TypeImpl(compiler_type), current_flags});
   }
 
   if (!compiler_type.IsMeaninglessWithoutDynamicResolution()) {
-    entries.push_back({type_name, current_flags});
+    entries.push_back({type_name, script_interpreter, TypeImpl(compiler_type),
+                       current_flags});
 
 // BEGIN SWIFT
     TypeSystem *ts = compiler_type.GetTypeSystem();
@@ -200,9 +205,10 @@ void FormatManager::GetPossibleMatches(
       if (valobj.GetFrameSP())
         sc = &valobj.GetFrameSP()->GetSymbolContext(eSymbolContextFunction);
 
-      ConstString display_type_name(compiler_type.GetDisplayTypeName(sc));
-      if (display_type_name != type_name)
-        entries.push_back({display_type_name, current_flags});
+    ConstString display_type_name(compiler_type.GetTypeName());
+    if (display_type_name != type_name)
+      entries.push_back({display_type_name, script_interpreter,
+                         TypeImpl(compiler_type), current_flags});
 // BEGIN SWIFT
     }
 // END SWIFT
@@ -260,9 +266,9 @@ void FormatManager::GetPossibleMatches(
   for (lldb::LanguageType language_type :
        GetCandidateLanguages(valobj.GetObjectRuntimeLanguage())) {
     if (Language *language = Language::FindPlugin(language_type)) {
-      for (ConstString candidate :
+      for (const FormattersMatchCandidate& candidate :
            language->GetPossibleFormattersMatches(valobj, use_dynamic)) {
-        entries.push_back({candidate, current_flags});
+        entries.push_back(candidate);
       }
     }
   }
