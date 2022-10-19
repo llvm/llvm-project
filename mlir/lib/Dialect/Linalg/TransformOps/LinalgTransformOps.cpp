@@ -1781,10 +1781,15 @@ void transform::TileToScfForOp::getEffects(
 //===----------------------------------------------------------------------===//
 
 void transform::VectorizeOp::build(OpBuilder &builder, OperationState &result,
-                                   Value target, bool vectorizePadding) {
+                                   Value target, bool vectorizePadding,
+                                   bool vectorizeExtract) {
   result.addOperands(target);
   if (vectorizePadding) {
     result.addAttribute(VectorizeOp::getVectorizePaddingAttrName(result.name),
+                        builder.getUnitAttr());
+  }
+  if (vectorizeExtract) {
+    result.addAttribute(VectorizeOp::getVectorizeNdExtractAttrName(result.name),
                         builder.getUnitAttr());
   }
   result.addTypes(pdl::OperationType::get(builder.getContext()));
@@ -1794,15 +1799,22 @@ namespace {
 /// This is an helper only to call vectorize via a pattern inside of
 /// VectorizeOp::applyToOne.
 struct VectorizationPattern : public RewritePattern {
-  explicit VectorizationPattern(MLIRContext *context)
-      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context) {}
+  explicit VectorizationPattern(MLIRContext *context,
+                                bool vectorizeExtract = false)
+      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context),
+        vectorizeNDExtract(vectorizeExtract) {}
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     LinalgOp linalgOp = dyn_cast<LinalgOp>(op);
     if (!linalgOp)
       return rewriter.notifyMatchFailure(op, "expected Linalg Op");
-    return vectorize(rewriter, linalgOp);
+    return vectorize(rewriter, linalgOp, vectorizeNDExtract);
   }
+
+private:
+  /// Controls whether to vectorize `tensor.extract` when the input tensor is
+  /// rank >= 2.
+  bool vectorizeNDExtract = false;
 };
 } // namespace
 
@@ -1818,7 +1830,7 @@ transform::VectorizeOp::applyToOne(Operation *target,
 
   MLIRContext *ctx = getContext();
   RewritePatternSet patterns(ctx);
-  patterns.add<VectorizationPattern>(ctx);
+  patterns.add<VectorizationPattern>(ctx, getVectorizeNdExtract());
 
   if (!getDisableTransferPermutationMapLoweringPatterns())
     vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
