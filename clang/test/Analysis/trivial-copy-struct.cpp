@@ -92,9 +92,9 @@ void nestedLazyCompoundVal(List* n) {
   }
   if (!n->next) {
     if (w->head.next) {
-      // FIXME: Unreachable, w->head is a copy of *n, therefore
+      // Unreachable, w->head is a copy of *n, therefore
       // w->head.next and n->next are equal
-      clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+      clang_analyzer_warnIfReached(); // no-warning: unreachable
     }
   }
   delete w;
