@@ -91,7 +91,7 @@ contains
   end subroutine
 
   subroutine proc_nopass_p2()
-    print*, 'call proc_nopass_p1'
+    print*, 'call proc_nopass_p2'
   end subroutine
 
   subroutine display_class(p)
