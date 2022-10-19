@@ -137,6 +137,7 @@ Changes to the X86 Backend
 --------------------------
 
 * Add support for the ``RDMSRLIST and WRMSRLIST`` instructions.
+* Add support for the ``WRMSRNS`` instruction.
 
 Changes to the OCaml bindings
 -----------------------------
