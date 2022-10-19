@@ -7,6 +7,7 @@
 ! RUN:      -fapprox-func \
 ! RUN:      -fno-signed-zeros \
 ! RUN:      -mreassociate \
+! RUN:      -freciprocal-math \
 ! RUN:      %s 2>&1 | FileCheck %s
 ! CHECK: ffp-contract= is not currently implemented
 ! CHECK: menable-no-infs is not currently implemented
@@ -14,3 +15,4 @@
 ! CHECK: fapprox-func is not currently implemented
 ! CHECK: fno-signed-zeros is not currently implemented
 ! CHECK: mreassociate is not currently implemented
+! CHECK: freciprocal-math is not currently implemented
