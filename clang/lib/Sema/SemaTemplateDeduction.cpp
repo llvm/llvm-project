@@ -5803,8 +5803,8 @@ struct MarkUsedTemplateParameterVisitor :
   }
 
   bool TraverseTemplateName(TemplateName Template) {
-    if (auto *TTP =
-            dyn_cast<TemplateTemplateParmDecl>(Template.getAsTemplateDecl()))
+    if (auto *TTP = llvm::dyn_cast_or_null<TemplateTemplateParmDecl>(
+            Template.getAsTemplateDecl()))
       if (TTP->getDepth() == Depth)
         Used[TTP->getIndex()] = true;
     RecursiveASTVisitor<MarkUsedTemplateParameterVisitor>::
