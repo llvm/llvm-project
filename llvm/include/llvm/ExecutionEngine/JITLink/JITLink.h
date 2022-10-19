@@ -22,6 +22,8 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1031,11 +1033,41 @@ public:
                        AlignmentOffset);
   }
 
+  /// Create a content block with initially mutable data of the given size.
+  /// Content will be allocated via the LinkGraph's allocateBuffer method.
+  /// By default the memory will be zero-initialized. Passing false for
+  /// ZeroInitialize will prevent this.
+  Block &createMutableContentBlock(Section &Parent, size_t ContentSize,
+                                   orc::ExecutorAddr Address,
+                                   uint64_t Alignment, uint64_t AlignmentOffset,
+                                   bool ZeroInitialize = true) {
+    auto Content = allocateContent(ContentSize);
+    if (ZeroInitialize)
+      memset(Content.data(), 0, Content.size());
+    return createBlock(Parent, Content, Address, Alignment, AlignmentOffset);
+  }
+
   /// Create a zero-fill block.
   Block &createZeroFillBlock(Section &Parent, orc::ExecutorAddrDiff Size,
                              orc::ExecutorAddr Address, uint64_t Alignment,
                              uint64_t AlignmentOffset) {
     return createBlock(Parent, Size, Address, Alignment, AlignmentOffset);
+  }
+
+  /// Returns a BinaryStreamReader for the given block.
+  BinaryStreamReader getBlockContentReader(Block &B) {
+    ArrayRef<uint8_t> C(
+        reinterpret_cast<const uint8_t *>(B.getContent().data()), B.getSize());
+    return BinaryStreamReader(C, getEndianness());
+  }
+
+  /// Returns a BinaryStreamWriter for the given block.
+  /// This will call getMutableContent to obtain mutable content for the block.
+  BinaryStreamWriter getBlockContentWriter(Block &B) {
+    MutableArrayRef<uint8_t> C(
+        reinterpret_cast<uint8_t *>(B.getMutableContent(*this).data()),
+        B.getSize());
+    return BinaryStreamWriter(C, getEndianness());
   }
 
   /// Cache type for the splitBlock function.

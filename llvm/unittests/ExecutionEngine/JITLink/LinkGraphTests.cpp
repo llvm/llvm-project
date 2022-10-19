@@ -10,6 +10,8 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Memory.h"
+
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -195,6 +197,16 @@ TEST(LinkGraphTest, ContentAccessAndUpdate) {
       << "Unexpected mutable content 2 data pointer";
   EXPECT_EQ(MutableContent3.size(), MutableContent.size())
       << "Unexpected mutable content 2 size";
+
+  // Check that we can obtain a writer and reader over the content.
+  // Check that we can get a BinaryStreamReader for B.
+  auto Writer = G.getBlockContentWriter(B);
+  EXPECT_THAT_ERROR(Writer.writeInteger((uint32_t)0xcafef00d), Succeeded());
+
+  auto Reader = G.getBlockContentReader(B);
+  uint32_t Initial32Bits = 0;
+  EXPECT_THAT_ERROR(Reader.readInteger(Initial32Bits), Succeeded());
+  EXPECT_EQ(Initial32Bits, (uint32_t)0xcafef00d);
 
   // Set content back to immutable and check that everything behaves as
   // expected again.
