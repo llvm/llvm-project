@@ -157,6 +157,11 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
       llvm::DenseMap<mlir::Value, std::optional<mlir::Location>>;
   PMapNullHistType pmapNullHist;
 
+  // Provides p1179's 'KILL' functionality. See implementation for more
+  // information.
+  void kill(mlir::Value v);
+  void killInPset(PSetType &pset, mlir::Value v);
+
   // Local pointers
   SmallPtrSet<mlir::Value, 8> ptrs;
 
@@ -278,60 +283,61 @@ static Location getEndLocForHist(LifetimeCheckPass::LexicalScopeContext &lsc) {
   return getEndLocForHist(lsc.parent.get<Operation *>());
 }
 
+void LifetimeCheckPass::killInPset(PSetType &pset, mlir::Value v) {
+  State valState = State::getLocalValue(v);
+  if (pset.contains(valState)) {
+    // Erase the reference and mark this invalid.
+    // FIXME: add a way to just mutate the state.
+    pset.erase(valState);
+    pset.insert(State::getInvalid());
+    return;
+  }
+
+  // Note that this assumes a current pset cannot have multiple entries for
+  // values and owned values at the same time, for example this should not be
+  // possible: pset(s) = {o, o'}.
+  if (owners.count(v)) {
+    valState = State::getOwnedBy(v);
+    if (pset.contains(valState)) {
+      pset.erase(valState);
+      pset.insert(State::getInvalid());
+      return;
+    }
+    // TODO: o'', ...
+  }
+}
+
+// 2.3 - KILL(x) means to replace all occurrences of x and x' and x'' (etc.)
+// in the pmap with invalid. For example, if pmap is {(p1,{a}), (p2,{a'})},
+// KILL(a') would invalidate only p2, and KILL(a) would invalidate both p1 and
+// p2.
+void LifetimeCheckPass::kill(mlir::Value v) {
+  for (auto &mapEntry : getPmap()) {
+    auto ptr = mapEntry.first;
+
+    // We are deleting this entry anyways, nothing to do here.
+    if (v == ptr)
+      continue;
+
+    // If the local value is part of this pset, it means we need to
+    // invalidate it, otherwise keep searching.
+    killInPset(mapEntry.second, v);
+    pmapInvalidHist[ptr] = std::make_pair(getEndLocForHist(*currScope), v);
+  }
+
+  // Delete the local value from pmap, since its now gone.
+  getPmap().erase(v);
+}
+
 void LifetimeCheckPass::LexicalScopeGuard::cleanup() {
   auto *localScope = Pass.currScope;
-  auto &pmap = Pass.getPmap();
   // If we are cleaning up at the function level, nothing
   // to do here cause we are past all possible deference points
   if (localScope->Depth == 0)
     return;
 
-  // 2.3 - KILL(x) means to replace all occurrences of x and x' and x'' (etc.)
-  // in the pmap with invalid. For example, if pmap is {(p1,{a}), (p2,{a'})},
-  // KILL(a') would invalidate only p2, and KILL(a) would invalidate both p1 and
-  // p2.
-  for (auto pointee : localScope->localValues) {
-    for (auto &mapEntry : pmap) {
-      auto ptr = mapEntry.first;
-
-      // We are deleting this entry anyways, nothing to do here.
-      if (pointee == ptr)
-        continue;
-
-      // If the local value is part of this pset, it means we need to invalidate
-      // it, otherwise keep searching. Note that this assumes a current pset
-      // cannot have multiple entries for values and owned values at the same
-      // time, for example this should not be possible: pset(s) = {o, o'}.
-      auto &pset = mapEntry.second;
-      auto killValueInPset = [&](mlir::Value v) {
-        State valState = State::getLocalValue(v);
-        if (pset.contains(valState)) {
-          // Erase the reference and mark this invalid.
-          // FIXME: add a way to just mutate the state.
-          pset.erase(valState);
-          pset.insert(State::getInvalid());
-          return;
-        }
-
-        if (Pass.owners.count(v)) {
-          valState = State::getOwnedBy(v);
-          if (pset.contains(valState)) {
-            pset.erase(valState);
-            pset.insert(State::getInvalid());
-            return;
-          }
-          // TODO: o'', ...
-        }
-      };
-
-      // KILL(x) for a particular pset.
-      killValueInPset(pointee);
-      Pass.pmapInvalidHist[ptr] =
-          std::make_pair(getEndLocForHist(*Pass.currScope), pointee);
-    }
-    // Delete the local value from pmap, since its gone now.
-    pmap.erase(pointee);
-  }
+  for (auto pointee : localScope->localValues)
+    Pass.kill(pointee);
 }
 
 void LifetimeCheckPass::checkBlock(Block &block) {
