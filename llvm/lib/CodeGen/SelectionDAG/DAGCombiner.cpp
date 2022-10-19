@@ -9433,47 +9433,10 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
         TargetLowering::Legal)
       return DAG.getNode(ISD::SIGN_EXTEND_INREG, SDLoc(N), VT,
                          N0.getOperand(0), DAG.getValueType(ExtVT));
-
     // Even if we can't convert to sext_inreg, we might be able to remove
     // this shift pair if the input is already sign extended.
     if (DAG.ComputeNumSignBits(N0.getOperand(0)) > N1C->getZExtValue())
       return N0.getOperand(0);
-  }
-
-  // fold (sra (or (shl x, c1), (shl y, c2)), c1)
-  //  -> (sext_inreg (or x, (shl y,c2-c1))
-  // for some c1 and target supports sext_inreg.
-  if (N1C && N0.getOpcode() == ISD::OR &&
-      N0.getOperand(0).getOpcode() == ISD::SHL &&
-      N0.getOperand(1).getOpcode() == ISD::SHL &&
-      (N1 == N0.getOperand(0).getOperand(1) ||
-       N1 == N0.getOperand(1).getOperand(1)) &&
-      N0->hasOneUse() && N0.getOperand(0)->hasOneUse() &&
-      N0.getOperand(1)->hasOneUse()) {
-    ConstantSDNode *N00C = isConstOrConstSplat(N0.getOperand(0).getOperand(1));
-    ConstantSDNode *N01C = isConstOrConstSplat(N0.getOperand(1).getOperand(1));
-    if (N00C && N01C &&
-        N00C->getAPIntValue().uge(N1C->getZExtValue()) &&
-        N01C->getAPIntValue().uge(N1C->getZExtValue())) {
-      unsigned LowBits = OpSizeInBits - (unsigned)N1C->getZExtValue();
-      EVT ExtVT = EVT::getIntegerVT(*DAG.getContext(), LowBits);
-      if (VT.isVector())
-        ExtVT = EVT::getVectorVT(*DAG.getContext(), ExtVT,
-                                 VT.getVectorElementCount());
-      if (!LegalOperations ||
-          TLI.getOperationAction(ISD::SIGN_EXTEND_INREG, ExtVT) ==
-              TargetLowering::Legal) {
-        // Apply SRL on top of the SHL nodes, SimplifyDemandedBits will clean
-        // this up. It looks messy but its a lot simpler than handling all the
-        // possible shift value type mismatches we could have....
-        SDLoc DL(N);
-        SDValue LHS = DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(0), N1);
-        SDValue RHS = DAG.getNode(ISD::SRL, DL, VT, N0.getOperand(1), N1);
-        SDValue Or = DAG.getNode(ISD::OR, DL, VT, LHS, RHS);
-        return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, Or,
-                           DAG.getValueType(ExtVT));
-      }
-    }
   }
 
   // fold (sra (sra x, c1), c2) -> (sra x, (add c1, c2))
