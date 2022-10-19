@@ -785,23 +785,23 @@ def X86vfproundRnd: SDNode<"X86ISD::VFPROUND_RND",
 
 // cvt fp to bfloat16
 def X86cvtne2ps2bf16 : SDNode<"X86ISD::CVTNE2PS2BF16",
-                       SDTypeProfile<1, 2, [SDTCVecEltisVT<0, i16>,
+                       SDTypeProfile<1, 2, [SDTCVecEltisVT<0, bf16>,
                                             SDTCVecEltisVT<1, f32>,
                                             SDTCisSameSizeAs<0,1>,
                                             SDTCisSameAs<1,2>]>>;
 def X86mcvtneps2bf16 : SDNode<"X86ISD::MCVTNEPS2BF16",
-                       SDTypeProfile<1, 3, [SDTCVecEltisVT<0, i16>,
+                       SDTypeProfile<1, 3, [SDTCVecEltisVT<0, bf16>,
                                             SDTCVecEltisVT<1, f32>,
                                             SDTCisSameAs<0, 2>,
                                             SDTCVecEltisVT<3, i1>,
                                             SDTCisSameNumEltsAs<1, 3>]>>;
 def X86cvtneps2bf16 :  SDNode<"X86ISD::CVTNEPS2BF16",
-                       SDTypeProfile<1, 1, [SDTCVecEltisVT<0, i16>,
+                       SDTypeProfile<1, 1, [SDTCVecEltisVT<0, bf16>,
                                             SDTCVecEltisVT<1, f32>]>>;
 def X86dpbf16ps :      SDNode<"X86ISD::DPBF16PS",
                        SDTypeProfile<1, 3, [SDTCVecEltisVT<0, f32>,
                                             SDTCisSameAs<0,1>,
-                                            SDTCVecEltisVT<2, i32>,
+                                            SDTCVecEltisVT<2, bf16>,
                                             SDTCisSameAs<2,3>]>>;
 
 // galois field arithmetic
@@ -819,6 +819,7 @@ def SDTX86MaskedStore: SDTypeProfile<0, 3, [       // masked store
 
 // 128-bit load pattern fragments
 def loadv8f16    : PatFrag<(ops node:$ptr), (v8f16 (load node:$ptr))>;
+def loadv8bf16   : PatFrag<(ops node:$ptr), (v8bf16 (load node:$ptr))>;
 def loadv4f32    : PatFrag<(ops node:$ptr), (v4f32 (load node:$ptr))>;
 def loadv2f64    : PatFrag<(ops node:$ptr), (v2f64 (load node:$ptr))>;
 def loadv2i64    : PatFrag<(ops node:$ptr), (v2i64 (load node:$ptr))>;
@@ -828,6 +829,7 @@ def loadv16i8    : PatFrag<(ops node:$ptr), (v16i8 (load node:$ptr))>;
 
 // 256-bit load pattern fragments
 def loadv16f16   : PatFrag<(ops node:$ptr), (v16f16 (load node:$ptr))>;
+def loadv16bf16  : PatFrag<(ops node:$ptr), (v16bf16 (load node:$ptr))>;
 def loadv8f32    : PatFrag<(ops node:$ptr), (v8f32  (load node:$ptr))>;
 def loadv4f64    : PatFrag<(ops node:$ptr), (v4f64  (load node:$ptr))>;
 def loadv4i64    : PatFrag<(ops node:$ptr), (v4i64  (load node:$ptr))>;
@@ -837,6 +839,7 @@ def loadv32i8    : PatFrag<(ops node:$ptr), (v32i8  (load node:$ptr))>;
 
 // 512-bit load pattern fragments
 def loadv32f16   : PatFrag<(ops node:$ptr), (v32f16 (load node:$ptr))>;
+def loadv32bf16  : PatFrag<(ops node:$ptr), (v32bf16 (load node:$ptr))>;
 def loadv16f32   : PatFrag<(ops node:$ptr), (v16f32 (load node:$ptr))>;
 def loadv8f64    : PatFrag<(ops node:$ptr), (v8f64  (load node:$ptr))>;
 def loadv8i64    : PatFrag<(ops node:$ptr), (v8i64  (load node:$ptr))>;
@@ -870,6 +873,8 @@ def alignedload : PatFrag<(ops node:$ptr), (load node:$ptr), [{
 // NOTE: all 128-bit integer vector loads are promoted to v2i64
 def alignedloadv8f16 : PatFrag<(ops node:$ptr),
                                (v8f16 (alignedload node:$ptr))>;
+def alignedloadv8bf16 : PatFrag<(ops node:$ptr),
+                                (v8bf16 (alignedload node:$ptr))>;
 def alignedloadv4f32 : PatFrag<(ops node:$ptr),
                                (v4f32 (alignedload node:$ptr))>;
 def alignedloadv2f64 : PatFrag<(ops node:$ptr),
@@ -887,6 +892,8 @@ def alignedloadv16i8 : PatFrag<(ops node:$ptr),
 // NOTE: all 256-bit integer vector loads are promoted to v4i64
 def alignedloadv16f16 : PatFrag<(ops node:$ptr),
                                 (v16f16 (alignedload node:$ptr))>;
+def alignedloadv16bf16 : PatFrag<(ops node:$ptr),
+                                 (v16bf16 (alignedload node:$ptr))>;
 def alignedloadv8f32  : PatFrag<(ops node:$ptr),
                                 (v8f32  (alignedload node:$ptr))>;
 def alignedloadv4f64  : PatFrag<(ops node:$ptr),
@@ -903,6 +910,8 @@ def alignedloadv32i8  : PatFrag<(ops node:$ptr),
 // 512-bit aligned load pattern fragments
 def alignedloadv32f16 : PatFrag<(ops node:$ptr),
                                 (v32f16 (alignedload node:$ptr))>;
+def alignedloadv32bf16 : PatFrag<(ops node:$ptr),
+                                 (v32bf16 (alignedload node:$ptr))>;
 def alignedloadv16f32 : PatFrag<(ops node:$ptr),
                                 (v16f32 (alignedload node:$ptr))>;
 def alignedloadv8f64  : PatFrag<(ops node:$ptr),
