@@ -58,6 +58,21 @@ public:
     
     bool ContainsPath(llvm::StringRef path);
 
+  private:
+    /// Returns the Basename of this method without a template parameter
+    /// list, if any.
+    ///
+    // Examples:
+    //
+    //   +--------------------------------+---------+
+    //   | MethodName                     | Returns |
+    //   +--------------------------------+---------+
+    //   | void func()                    | func    |
+    //   | void func<int>()               | func    |
+    //   | void func<std::vector<int>>()  | func    |
+    //   +--------------------------------+---------+
+    llvm::StringRef GetBasenameNoTemplateParameters();
+
   protected:
     void Parse();
     bool TrySimplifiedParse();
