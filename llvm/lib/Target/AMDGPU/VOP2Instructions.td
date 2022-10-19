@@ -832,9 +832,20 @@ def :  divergent_i64_BinOp <xor, V_XOR_B32_e64>;
 // 16-Bit Operand Instructions
 //===----------------------------------------------------------------------===//
 
+def LDEXP_F16_VOPProfile_True16 : VOPProfile_True16<VOP_F16_F16_I32> {
+  // The ldexp.f16 intrinsic expects a i32 src1 operand, though the hardware
+  // encoding treats src1 as an f16
+  let Src1RC32 = RegisterOperand<VGPR_32_Lo128>;
+  let Src1DPP = VGPR_32_Lo128;
+  let Src1ModDPP = IntT16VRegInputMods;
+}
+
 let isReMaterializable = 1 in {
 let FPDPRounding = 1 in {
-defm V_LDEXP_F16 : VOP2Inst_t16 <"v_ldexp_f16", VOP_F16_F16_I32, AMDGPUldexp>;
+  let SubtargetPredicate = NotHasTrue16BitInsts, OtherPredicates = [Has16BitInsts]  in
+    defm V_LDEXP_F16 : VOP2Inst <"v_ldexp_f16", VOP_F16_F16_I32, AMDGPUldexp>;
+  let SubtargetPredicate = HasTrue16BitInsts in
+    defm V_LDEXP_F16_t16 : VOP2Inst <"v_ldexp_f16_t16", LDEXP_F16_VOPProfile_True16, AMDGPUldexp>;
 } // End FPDPRounding = 1
 // FIXME VOP3 Only instructions. NFC using VOPProfile_True16 for these until a planned change to use a new register class for VOP3 encoded True16 instuctions
 defm V_LSHLREV_B16 : VOP2Inst_e64_t16 <"v_lshlrev_b16", VOP_I16_I16_I16, clshl_rev_16>;
