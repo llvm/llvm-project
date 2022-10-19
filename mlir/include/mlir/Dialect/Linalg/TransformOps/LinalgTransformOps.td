@@ -1091,6 +1091,7 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
 
   let arguments = (ins PDL_Operation:$target,
                    UnitAttr:$vectorize_padding,
+                   UnitAttr:$vectorize_nd_extract,
                    UnitAttr:$disable_multi_reduction_to_contract_patterns,
                    UnitAttr:$disable_transfer_permutation_map_lowering_patterns);
   let results = (outs PDL_Operation:$transformed);
@@ -1098,7 +1099,9 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
   let assemblyFormat = "$target attr-dict";
 
   let builders = [
-    OpBuilder<(ins "Value":$target, CArg<"bool", "false">:$vectorizePadding)>
+    OpBuilder<(ins "Value":$target,
+               CArg<"bool", "false">:$vectorizePadding,
+               CArg<"bool", "false">:$vectorizeNDExtract)>,
   ];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
