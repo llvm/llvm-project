@@ -163,8 +163,6 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   MachineBasicBlock *MBB = nullptr;
-  MachineLoop *Loop = nullptr;
-  bool IsExiting = false;
   float TotalWeight = 0;
   unsigned NumInstr = 0; // Number of instructions using LI
   SmallPtrSet<MachineInstr *, 8> Visited;
@@ -260,9 +258,10 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
     float Weight = 1.0f;
     if (IsSpillable) {
       // Get loop info for mi.
+      bool IsExiting = false;
       if (MI->getParent() != MBB) {
         MBB = MI->getParent();
-        Loop = Loops.getLoopFor(MBB);
+        const MachineLoop *Loop = Loops.getLoopFor(MBB);
         IsExiting = Loop ? Loop->isLoopExiting(MBB) : false;
       }
 
