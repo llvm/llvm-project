@@ -404,9 +404,8 @@ bool TypeBasedAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
   return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
 }
 
-FunctionModRefBehavior
-TypeBasedAAResult::getModRefBehavior(const CallBase *Call,
-                                     AAQueryInfo &AAQI) {
+MemoryEffects TypeBasedAAResult::getModRefBehavior(const CallBase *Call,
+                                                   AAQueryInfo &AAQI) {
   if (!EnableTBAA)
     return AAResultBase::getModRefBehavior(Call, AAQI);
 
@@ -414,12 +413,12 @@ TypeBasedAAResult::getModRefBehavior(const CallBase *Call,
   if (const MDNode *M = Call->getMetadata(LLVMContext::MD_tbaa))
     if ((!isStructPathTBAA(M) && TBAANode(M).isTypeImmutable()) ||
         (isStructPathTBAA(M) && TBAAStructTagNode(M).isTypeImmutable()))
-      return FunctionModRefBehavior::none();
+      return MemoryEffects::none();
 
   return AAResultBase::getModRefBehavior(Call, AAQI);
 }
 
-FunctionModRefBehavior TypeBasedAAResult::getModRefBehavior(const Function *F) {
+MemoryEffects TypeBasedAAResult::getModRefBehavior(const Function *F) {
   // Functions don't have metadata. Just chain to the next implementation.
   return AAResultBase::getModRefBehavior(F);
 }

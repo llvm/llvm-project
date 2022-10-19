@@ -104,7 +104,7 @@ public:
   /// getModRefBehavior - Return the behavior of the specified function if
   /// called from the specified call site.  The call site may be null in which
   /// case the most generic behavior of this function should be returned.
-  FunctionModRefBehavior getModRefBehavior(const Function *F);
+  MemoryEffects getModRefBehavior(const Function *F);
 
 private:
   FunctionInfo *getFunctionInfo(const Function *F);

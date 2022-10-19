@@ -383,10 +383,10 @@ public:
   ModRefInfo getArgModRefInfo(const CallBase *Call, unsigned ArgIdx);
 
   /// Return the behavior of the given call site.
-  FunctionModRefBehavior getModRefBehavior(const CallBase *Call);
+  MemoryEffects getModRefBehavior(const CallBase *Call);
 
   /// Return the behavior when calling the given function.
-  FunctionModRefBehavior getModRefBehavior(const Function *F);
+  MemoryEffects getModRefBehavior(const Function *F);
 
   /// Checks if the specified call is known to never read or write memory.
   ///
@@ -645,8 +645,7 @@ public:
   ModRefInfo callCapturesBefore(const Instruction *I,
                                 const MemoryLocation &MemLoc, DominatorTree *DT,
                                 AAQueryInfo &AAQIP);
-  FunctionModRefBehavior getModRefBehavior(const CallBase *Call,
-                                           AAQueryInfo &AAQI);
+  MemoryEffects getModRefBehavior(const CallBase *Call, AAQueryInfo &AAQI);
 
 private:
   class Concept;
@@ -701,7 +700,7 @@ public:
   ModRefInfo getArgModRefInfo(const CallBase *Call, unsigned ArgIdx) {
     return AA.getArgModRefInfo(Call, ArgIdx);
   }
-  FunctionModRefBehavior getModRefBehavior(const CallBase *Call) {
+  MemoryEffects getModRefBehavior(const CallBase *Call) {
     return AA.getModRefBehavior(Call, AAQI);
   }
   bool isMustAlias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
@@ -766,11 +765,11 @@ public:
                                       unsigned ArgIdx) = 0;
 
   /// Return the behavior of the given call site.
-  virtual FunctionModRefBehavior getModRefBehavior(const CallBase *Call,
-                                                   AAQueryInfo &AAQI) = 0;
+  virtual MemoryEffects getModRefBehavior(const CallBase *Call,
+                                          AAQueryInfo &AAQI) = 0;
 
   /// Return the behavior when calling the given function.
-  virtual FunctionModRefBehavior getModRefBehavior(const Function *F) = 0;
+  virtual MemoryEffects getModRefBehavior(const Function *F) = 0;
 
   /// getModRefInfo (for call sites) - Return information about whether
   /// a particular call site modifies or reads the specified memory location.
@@ -814,12 +813,12 @@ public:
     return Result.getArgModRefInfo(Call, ArgIdx);
   }
 
-  FunctionModRefBehavior getModRefBehavior(const CallBase *Call,
-                                           AAQueryInfo &AAQI) override {
+  MemoryEffects getModRefBehavior(const CallBase *Call,
+                                  AAQueryInfo &AAQI) override {
     return Result.getModRefBehavior(Call, AAQI);
   }
 
-  FunctionModRefBehavior getModRefBehavior(const Function *F) override {
+  MemoryEffects getModRefBehavior(const Function *F) override {
     return Result.getModRefBehavior(F);
   }
 
@@ -869,13 +868,12 @@ public:
     return ModRefInfo::ModRef;
   }
 
-  FunctionModRefBehavior getModRefBehavior(const CallBase *Call,
-                                           AAQueryInfo &AAQI) {
-    return FunctionModRefBehavior::unknown();
+  MemoryEffects getModRefBehavior(const CallBase *Call, AAQueryInfo &AAQI) {
+    return MemoryEffects::unknown();
   }
 
-  FunctionModRefBehavior getModRefBehavior(const Function *F) {
-    return FunctionModRefBehavior::unknown();
+  MemoryEffects getModRefBehavior(const Function *F) {
+    return MemoryEffects::unknown();
   }
 
   ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
