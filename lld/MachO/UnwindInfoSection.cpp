@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnwindInfoSection.h"
-#include "ConcatOutputSection.h"
-#include "Config.h"
 #include "InputSection.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
@@ -23,6 +21,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Parallel.h"
+
+#include "mach-o/compact_unwind_encoding.h"
 
 #include <numeric>
 
