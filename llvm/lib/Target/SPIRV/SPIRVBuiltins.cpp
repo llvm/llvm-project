@@ -1098,14 +1098,33 @@ static bool generateImageSizeQueryInst(const SPIRV::IncomingCall *Call,
 static bool generateImageMiscQueryInst(const SPIRV::IncomingCall *Call,
                                        MachineIRBuilder &MIRBuilder,
                                        SPIRVGlobalRegistry *GR) {
-  // TODO: Add support for other image query builtins.
-  Register Image = Call->Arguments[0];
-
   assert(Call->ReturnType->getOpcode() == SPIRV::OpTypeInt &&
          "Image samples query result must be of int type!");
-  assert(GR->getSPIRVTypeForVReg(Image)->getOperand(2).getImm() == 1 &&
-         "Image must be of 2D dimensionality");
-  MIRBuilder.buildInstr(SPIRV::OpImageQuerySamples)
+
+  // Lookup the instruction opcode in the TableGen records.
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  Register Image = Call->Arguments[0];
+  SPIRV::Dim::Dim ImageDimensionality = static_cast<SPIRV::Dim::Dim>(
+      GR->getSPIRVTypeForVReg(Image)->getOperand(2).getImm());
+
+  switch (Opcode) {
+  case SPIRV::OpImageQuerySamples:
+    assert(ImageDimensionality == SPIRV::Dim::DIM_2D &&
+           "Image must be of 2D dimensionality");
+    break;
+  case SPIRV::OpImageQueryLevels:
+    assert((ImageDimensionality == SPIRV::Dim::DIM_1D ||
+            ImageDimensionality == SPIRV::Dim::DIM_2D ||
+            ImageDimensionality == SPIRV::Dim::DIM_3D ||
+            ImageDimensionality == SPIRV::Dim::DIM_Cube) &&
+           "Image must be of 1D/2D/3D/Cube dimensionality");
+    break;
+  }
+
+  MIRBuilder.buildInstr(Opcode)
       .addDef(Call->ReturnRegister)
       .addUse(GR->getSPIRVTypeID(Call->ReturnType))
       .addUse(Image);
