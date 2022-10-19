@@ -162,9 +162,9 @@ static void doAtomicBinOpExpansion(const LoongArchInstrInfo *TII,
     BuildMI(LoopMBB, DL, TII->get(LoongArch::AND), ScratchReg)
         .addReg(DestReg)
         .addReg(IncrReg);
-    BuildMI(LoopMBB, DL, TII->get(LoongArch::NOR), ScratchReg)
+    BuildMI(LoopMBB, DL, TII->get(LoongArch::XORI), ScratchReg)
         .addReg(ScratchReg)
-        .addReg(LoongArch::R0);
+        .addImm(-1);
     break;
   case AtomicRMWInst::Add:
     BuildMI(LoopMBB, DL, TII->get(LoongArch::ADD_W), ScratchReg)
@@ -268,9 +268,9 @@ static void doMaskedAtomicBinOpExpansion(
     BuildMI(LoopMBB, DL, TII->get(LoongArch::AND), ScratchReg)
         .addReg(DestReg)
         .addReg(IncrReg);
-    BuildMI(LoopMBB, DL, TII->get(LoongArch::NOR), ScratchReg)
+    BuildMI(LoopMBB, DL, TII->get(LoongArch::XORI), ScratchReg)
         .addReg(ScratchReg)
-        .addReg(LoongArch::R0);
+        .addImm(-1);
     // TODO: support other AtomicRMWInst.
   }
 
