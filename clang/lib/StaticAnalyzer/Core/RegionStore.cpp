@@ -2838,6 +2838,10 @@ void RemoveDeadBindingsWorker::VisitBinding(SVal V) {
   // Is it a LazyCompoundVal?  All referenced regions are live as well.
   if (Optional<nonloc::LazyCompoundVal> LCS =
           V.getAs<nonloc::LazyCompoundVal>()) {
+    // TODO: Make regions referred to by `lazyCompoundVals` that are bound to
+    // subregions of the `LCS.getRegion()` also lazily copied.
+    if (const MemRegion *R = LCS->getRegion())
+      SymReaper.markLazilyCopied(R);
 
     const RegionStoreManager::SValListTy &Vals = RM.getInterestingValues(*LCS);
 
