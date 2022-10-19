@@ -87,6 +87,9 @@ Deprecations and Removals
   the C++23 paper that makes these functions ``constexpr``, therefore the
   extension has been removed.
 
+- The ``_LIBCPP_ENABLE_CXX03_FUNCTION`` macro that allowed re-enabling the now-deprecated C++03 implementation of
+  ``std::function`` has been removed. Users who need to use ``std::function`` should switch to C++11 and above.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 
