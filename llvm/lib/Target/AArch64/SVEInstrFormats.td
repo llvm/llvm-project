@@ -8272,19 +8272,20 @@ multiclass sve_bfloat_matmul<string asm, SDPatternOperator op> {
   def : SVE_3_Op_Pat<nxv4f32, op, nxv4f32, nxv8bf16, nxv8bf16 ,!cast<Instruction>(NAME)>;
 }
 
-class sve_bfloat_matmul_longvecl<bit BT, string asm>
+class sve_bfloat_matmul_longvecl<bit BT, bit sub, string asm>
 : sve_bfloat_matmul<asm> {
   let Inst{23}    = 0b1;
-  let Inst{14-13} = 0b00;
+  let Inst{14}    = 0b0;
+  let Inst{13}    = sub;
   let Inst{10}    = BT;
 }
 
-multiclass sve_bfloat_matmul_longvecl<bit BT, string asm, SDPatternOperator op> {
-  def NAME : sve_bfloat_matmul_longvecl<BT, asm>;
+multiclass sve_bfloat_matmul_longvecl<bit BT, bit sub, string asm, SDPatternOperator op> {
+  def NAME : sve_bfloat_matmul_longvecl<BT, sub, asm>;
   def : SVE_3_Op_Pat<nxv4f32, op, nxv4f32, nxv8bf16, nxv8bf16 ,!cast<Instruction>(NAME)>;
 }
 
-class sve_bfloat_matmul_longvecl_idx<bit BT, string asm>
+class sve_bfloat_matmul_longvecl_idx<bit BT, bit sub, string asm>
 : sve_bfloat_dot_base<0b01, asm, "\t$Zda, $Zn, $Zm$iop",
   (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR3b16:$Zm, VectorIndexH:$iop)> {
   bits<3> iop;
@@ -8292,12 +8293,13 @@ class sve_bfloat_matmul_longvecl_idx<bit BT, string asm>
   let Inst{23}    = 0b1;
   let Inst{20-19} = iop{2-1};
   let Inst{18-16} = Zm;
+  let Inst{13}    = sub;
   let Inst{11}    = iop{0};
   let Inst{10}    = BT;
 }
 
-multiclass sve_bfloat_matmul_longvecl_idx<bit BT, string asm, SDPatternOperator op> {
-  def NAME : sve_bfloat_matmul_longvecl_idx<BT, asm>;
+multiclass sve_bfloat_matmul_longvecl_idx<bit BT, bit sub, string asm, SDPatternOperator op> {
+  def NAME : sve_bfloat_matmul_longvecl_idx<BT, sub, asm>;
   def : SVE_4_Op_Imm_Pat<nxv4f32, op, nxv4f32, nxv8bf16, nxv8bf16, i64, VectorIndexH_timm, !cast<Instruction>(NAME)>;
 }
 
