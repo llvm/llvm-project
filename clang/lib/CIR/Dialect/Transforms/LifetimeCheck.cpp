@@ -136,6 +136,15 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
         return val.getInt() == RHS.val.getInt();
     }
 
+    bool isLocalValue() const { return val.getInt() == LocalValue; }
+    bool isOwnedBy() const { return val.getInt() == OwnedBy; }
+    bool hasValue() const { return isLocalValue() || isOwnedBy(); }
+
+    mlir::Value getData() const {
+      assert(hasValue() && "data type does not hold a mlir::Value");
+      return val.getPointer();
+    }
+
     void dump(llvm::raw_ostream &OS = llvm::errs());
 
     static State getInvalid() { return {}; }
@@ -159,8 +168,8 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
 
   // Provides p1179's 'KILL' functionality. See implementation for more
   // information.
-  void kill(mlir::Value v);
-  void killInPset(PSetType &pset, const State &valState);
+  void kill(const State &s);
+  void killInPset(PSetType &pset, const State &s);
 
   // Local pointers
   SmallPtrSet<mlir::Value, 8> ptrs;
@@ -283,11 +292,11 @@ static Location getEndLocForHist(LifetimeCheckPass::LexicalScopeContext &lsc) {
   return getEndLocForHist(lsc.parent.get<Operation *>());
 }
 
-void LifetimeCheckPass::killInPset(PSetType &pset, const State &valState) {
-  if (pset.contains(valState)) {
+void LifetimeCheckPass::killInPset(PSetType &pset, const State &s) {
+  if (pset.contains(s)) {
     // Erase the reference and mark this invalid.
     // FIXME: add a way to just mutate the state.
-    pset.erase(valState);
+    pset.erase(s);
     pset.insert(State::getInvalid());
     return;
   }
@@ -297,7 +306,9 @@ void LifetimeCheckPass::killInPset(PSetType &pset, const State &valState) {
 // in the pmap with invalid. For example, if pmap is {(p1,{a}), (p2,{a'})},
 // KILL(a') would invalidate only p2, and KILL(a) would invalidate both p1 and
 // p2.
-void LifetimeCheckPass::kill(mlir::Value v) {
+void LifetimeCheckPass::kill(const State &s) {
+  assert(s.hasValue() && "does not know how to kill other data types");
+  mlir::Value v = s.getData();
   for (auto &mapEntry : getPmap()) {
     auto ptr = mapEntry.first;
 
@@ -308,12 +319,13 @@ void LifetimeCheckPass::kill(mlir::Value v) {
     // ... replace all occurrences of x and x' and x''. Start with the primes
     // so we first remove uses and then users.
     //
-    // FIXME: right now we only support x and x'
     auto &pset = mapEntry.second;
-    if (owners.count(v))
+
+    // FIXME: add x'', x''', etc...
+    if (s.isLocalValue() && owners.count(v))
       killInPset(pset, State::getOwnedBy(v));
 
-    killInPset(pset, State::getLocalValue(v));
+    killInPset(pset, s);
     pmapInvalidHist[ptr] = std::make_pair(getEndLocForHist(*currScope), v);
   }
 
@@ -329,7 +341,7 @@ void LifetimeCheckPass::LexicalScopeGuard::cleanup() {
     return;
 
   for (auto pointee : localScope->localValues)
-    Pass.kill(pointee);
+    Pass.kill(State::getLocalValue(pointee));
 }
 
 void LifetimeCheckPass::checkBlock(Block &block) {
