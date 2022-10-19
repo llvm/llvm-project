@@ -8601,3 +8601,32 @@ multiclass sve_int_bin_pred_all_active_bhsd<SDPatternOperator op> {
   def : SVE_2_Op_Pred_All_Active_Pt<nxv2i64, op, nxv2i1,  nxv2i64, nxv2i64, !cast<Pseudo>(NAME # _UNDEF_D)>;
 }
 
+//===----------------------------------------------------------------------===//
+// SME2 or SVE2.1 Instructions
+//===----------------------------------------------------------------------===//
+
+class sve2p1_fclamp<string asm, bits<2> sz, ZPRRegOp zpr_ty>
+    : I<(outs zpr_ty:$Zd), (ins zpr_ty:$_Zd, zpr_ty:$Zn, zpr_ty:$Zm),
+        asm, "\t$Zd, $Zn, $Zm", "", []>,
+      Sched<[]> {
+  bits<5> Zm;
+  bits<5> Zn;
+  bits<5> Zd;
+  let Inst{31-24} = 0b01100100;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15-10} = 0b001001;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+
+  let Constraints = "$Zd = $_Zd";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize = zpr_ty.ElementSize;
+}
+
+multiclass sve2p1_fclamp<string asm> {
+  def _H : sve2p1_fclamp<asm, 0b01, ZPR16>;
+  def _S : sve2p1_fclamp<asm, 0b10, ZPR32>;
+  def _D : sve2p1_fclamp<asm, 0b11, ZPR64>;
+}
