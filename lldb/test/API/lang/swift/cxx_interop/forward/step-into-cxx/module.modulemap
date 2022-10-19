@@ -1,0 +1,4 @@
+module CxxFunctions {
+  header "cxx-functions.h"
+  requires cplusplus
+}
