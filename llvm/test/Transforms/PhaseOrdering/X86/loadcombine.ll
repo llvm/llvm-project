@@ -313,19 +313,8 @@ define i32 @loadCombine_4consecutive_2143(ptr %p) {
 
 define i32 @loadCombine_4consecutive_2314(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_2314(
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i64 3
-; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[L2:%.*]] = load i16, ptr [[P1]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[L2]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 8
-; CHECK-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1
-; CHECK-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
-; CHECK-NEXT:    [[E4:%.*]] = zext i8 [[L4]] to i32
-; CHECK-NEXT:    [[S4:%.*]] = shl nuw i32 [[E4]], 24
-; CHECK-NEXT:    [[O2:%.*]] = or i32 [[TMP2]], [[E1]]
-; CHECK-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[S4]]
-; CHECK-NEXT:    ret i32 [[O3]]
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    ret i32 [[L1]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
   %p2 = getelementptr i8, ptr %p, i32 2
@@ -352,19 +341,8 @@ define i32 @loadCombine_4consecutive_2314(ptr %p) {
 
 define i32 @loadCombine_4consecutive_2341(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_2341(
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i64 3
-; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[L2:%.*]] = load i16, ptr [[P1]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[L2]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 8
-; CHECK-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1
-; CHECK-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
-; CHECK-NEXT:    [[E4:%.*]] = zext i8 [[L4]] to i32
-; CHECK-NEXT:    [[S4:%.*]] = shl nuw i32 [[E4]], 24
-; CHECK-NEXT:    [[O2:%.*]] = or i32 [[TMP2]], [[E1]]
-; CHECK-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[S4]]
-; CHECK-NEXT:    ret i32 [[O3]]
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    ret i32 [[L1]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
   %p2 = getelementptr i8, ptr %p, i32 2
@@ -567,19 +545,8 @@ define i32 @loadCombine_4consecutive_3142(ptr %p) {
 
 define i32 @loadCombine_4consecutive_3214(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_3214(
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i64 3
-; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[L2:%.*]] = load i16, ptr [[P1]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[L2]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 8
-; CHECK-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1
-; CHECK-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
-; CHECK-NEXT:    [[E4:%.*]] = zext i8 [[L4]] to i32
-; CHECK-NEXT:    [[S4:%.*]] = shl nuw i32 [[E4]], 24
-; CHECK-NEXT:    [[O2:%.*]] = or i32 [[TMP2]], [[E1]]
-; CHECK-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[S4]]
-; CHECK-NEXT:    ret i32 [[O3]]
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    ret i32 [[L1]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
   %p2 = getelementptr i8, ptr %p, i32 2
@@ -606,19 +573,8 @@ define i32 @loadCombine_4consecutive_3214(ptr %p) {
 
 define i32 @loadCombine_4consecutive_3241(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_3241(
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i64 3
-; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[L2:%.*]] = load i16, ptr [[P1]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[L2]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i32 [[TMP1]], 8
-; CHECK-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1
-; CHECK-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
-; CHECK-NEXT:    [[E4:%.*]] = zext i8 [[L4]] to i32
-; CHECK-NEXT:    [[S4:%.*]] = shl nuw i32 [[E4]], 24
-; CHECK-NEXT:    [[O2:%.*]] = or i32 [[TMP2]], [[E1]]
-; CHECK-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[S4]]
-; CHECK-NEXT:    ret i32 [[O3]]
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    ret i32 [[L1]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
   %p2 = getelementptr i8, ptr %p, i32 2
@@ -684,19 +640,8 @@ define i32 @loadCombine_4consecutive_3412(ptr %p) {
 
 define i32 @loadCombine_4consecutive_3421(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_3421(
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[L3:%.*]] = load i16, ptr [[P2]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[L3]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[TMP1]], 16
-; CHECK-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
-; CHECK-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i32
-; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[E2]], 8
-; CHECK-NEXT:    [[O2:%.*]] = or i32 [[S2]], [[E1]]
-; CHECK-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[TMP2]]
-; CHECK-NEXT:    ret i32 [[O3]]
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    ret i32 [[L1]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
   %p2 = getelementptr i8, ptr %p, i32 2
@@ -938,19 +883,8 @@ define i32 @loadCombine_4consecutive_4312(ptr %p) {
 
 define i32 @loadCombine_4consecutive_4321(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_4321(
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i64 2
-; CHECK-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1
-; CHECK-NEXT:    [[L3:%.*]] = load i16, ptr [[P2]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[L3]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[TMP1]], 16
-; CHECK-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
-; CHECK-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i32
-; CHECK-NEXT:    [[S2:%.*]] = shl nuw nsw i32 [[E2]], 8
-; CHECK-NEXT:    [[O2:%.*]] = or i32 [[S2]], [[E1]]
-; CHECK-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[TMP2]]
-; CHECK-NEXT:    ret i32 [[O3]]
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    ret i32 [[L1]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
   %p2 = getelementptr i8, ptr %p, i32 2
