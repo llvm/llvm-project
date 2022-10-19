@@ -226,7 +226,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
 
   // We can completely ignore inaccessible memory here, because MemoryLocations
   // can only reference accessible memory.
-  auto ME = getModRefBehavior(Call, AAQI)
+  auto ME = getMemoryEffects(Call, AAQI)
                 .getWithoutLoc(MemoryEffects::InaccessibleMem);
   if (ME.doesNotAccessMemory())
     return ModRefInfo::NoModRef;
@@ -283,11 +283,11 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
   // aggregate set of AA results.
 
   // If Call1 or Call2 are readnone, they don't interact.
-  auto Call1B = getModRefBehavior(Call1, AAQI);
+  auto Call1B = getMemoryEffects(Call1, AAQI);
   if (Call1B.doesNotAccessMemory())
     return ModRefInfo::NoModRef;
 
-  auto Call2B = getModRefBehavior(Call2, AAQI);
+  auto Call2B = getMemoryEffects(Call2, AAQI);
   if (Call2B.doesNotAccessMemory())
     return ModRefInfo::NoModRef;
 
@@ -374,12 +374,12 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
   return Result;
 }
 
-MemoryEffects AAResults::getModRefBehavior(const CallBase *Call,
-                                           AAQueryInfo &AAQI) {
+MemoryEffects AAResults::getMemoryEffects(const CallBase *Call,
+                                          AAQueryInfo &AAQI) {
   MemoryEffects Result = MemoryEffects::unknown();
 
   for (const auto &AA : AAs) {
-    Result &= AA->getModRefBehavior(Call, AAQI);
+    Result &= AA->getMemoryEffects(Call, AAQI);
 
     // Early-exit the moment we reach the bottom of the lattice.
     if (Result.doesNotAccessMemory())
@@ -389,16 +389,16 @@ MemoryEffects AAResults::getModRefBehavior(const CallBase *Call,
   return Result;
 }
 
-MemoryEffects AAResults::getModRefBehavior(const CallBase *Call) {
+MemoryEffects AAResults::getMemoryEffects(const CallBase *Call) {
   SimpleAAQueryInfo AAQI(*this);
-  return getModRefBehavior(Call, AAQI);
+  return getMemoryEffects(Call, AAQI);
 }
 
-MemoryEffects AAResults::getModRefBehavior(const Function *F) {
+MemoryEffects AAResults::getMemoryEffects(const Function *F) {
   MemoryEffects Result = MemoryEffects::unknown();
 
   for (const auto &AA : AAs) {
-    Result &= AA->getModRefBehavior(F);
+    Result &= AA->getMemoryEffects(F);
 
     // Early-exit the moment we reach the bottom of the lattice.
     if (Result.doesNotAccessMemory())
@@ -655,7 +655,7 @@ ModRefInfo AAResults::getModRefInfo(const Instruction *I,
                                     AAQueryInfo &AAQIP) {
   if (OptLoc == None) {
     if (const auto *Call = dyn_cast<CallBase>(I))
-      return getModRefBehavior(Call, AAQIP).getModRef();
+      return getMemoryEffects(Call, AAQIP).getModRef();
   }
 
   const MemoryLocation &Loc = OptLoc.value_or(MemoryLocation());

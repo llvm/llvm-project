@@ -42,8 +42,8 @@ public:
                     AAQueryInfo &AAQI);
   bool pointsToConstantMemory(const MemoryLocation &Loc, AAQueryInfo &AAQI,
                               bool OrLocal);
-  MemoryEffects getModRefBehavior(const CallBase *Call, AAQueryInfo &AAQI);
-  MemoryEffects getModRefBehavior(const Function *F);
+  MemoryEffects getMemoryEffects(const CallBase *Call, AAQueryInfo &AAQI);
+  MemoryEffects getMemoryEffects(const Function *F);
   ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
                            AAQueryInfo &AAQI);
   ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
