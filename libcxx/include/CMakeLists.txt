@@ -310,6 +310,7 @@ set(files
   __format/formatter_pointer.h
   __format/formatter_string.h
   __format/parser_std_format_spec.h
+  __format/range_default_formatter.h
   __format/unicode.h
   __functional/binary_function.h
   __functional/binary_negate.h
@@ -626,6 +627,7 @@ set(files
   __type_traits/is_scoped_enum.h
   __type_traits/is_signed.h
   __type_traits/is_signed_integer.h
+  __type_traits/is_specialization.h
   __type_traits/is_standard_layout.h
   __type_traits/is_swappable.h
   __type_traits/is_trivial.h
