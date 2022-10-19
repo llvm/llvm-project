@@ -8739,3 +8739,27 @@ multiclass sve2p1_pred_as_ctr_to_mask<string mnemonic> {
  def _S : sve2p1_pred_as_ctr_to_mask<mnemonic, 0b10, PPR32>;
  def _D : sve2p1_pred_as_ctr_to_mask<mnemonic, 0b11, PPR64>;
 }
+
+
+// SME2 multi-vec extract narrow
+class sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc, bits<3> tsz>
+    : I<(outs ZPR16:$Zd), (ins ZZ_s_mul_r:$Zn),
+        mnemonic, "\t$Zd, $Zn",
+        "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<4> Zn;
+  let Inst{31-23} = 0b010001010;
+  let Inst{22}    = tsz{2};
+  let Inst{21}    = 0b1;
+  let Inst{20-19} = tsz{1-0};
+  let Inst{18-13} = 0b001010;
+  let Inst{12-11} = opc;
+  let Inst{10}    = 0b0;
+  let Inst{9-6}   = Zn;
+  let Inst{5}     = 0b0;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc> {
+  def : sve2p1_multi_vec_extract_narrow<mnemonic, opc, 0b010>;
+}
