@@ -404,10 +404,10 @@ bool TypeBasedAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
   return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
 }
 
-MemoryEffects TypeBasedAAResult::getModRefBehavior(const CallBase *Call,
-                                                   AAQueryInfo &AAQI) {
+MemoryEffects TypeBasedAAResult::getMemoryEffects(const CallBase *Call,
+                                                  AAQueryInfo &AAQI) {
   if (!EnableTBAA)
-    return AAResultBase::getModRefBehavior(Call, AAQI);
+    return AAResultBase::getMemoryEffects(Call, AAQI);
 
   // If this is an "immutable" type, the access is not observable.
   if (const MDNode *M = Call->getMetadata(LLVMContext::MD_tbaa))
@@ -415,12 +415,12 @@ MemoryEffects TypeBasedAAResult::getModRefBehavior(const CallBase *Call,
         (isStructPathTBAA(M) && TBAAStructTagNode(M).isTypeImmutable()))
       return MemoryEffects::none();
 
-  return AAResultBase::getModRefBehavior(Call, AAQI);
+  return AAResultBase::getMemoryEffects(Call, AAQI);
 }
 
-MemoryEffects TypeBasedAAResult::getModRefBehavior(const Function *F) {
+MemoryEffects TypeBasedAAResult::getMemoryEffects(const Function *F) {
   // Functions don't have metadata. Just chain to the next implementation.
-  return AAResultBase::getModRefBehavior(F);
+  return AAResultBase::getMemoryEffects(F);
 }
 
 ModRefInfo TypeBasedAAResult::getModRefInfo(const CallBase *Call,

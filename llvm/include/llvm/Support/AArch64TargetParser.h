@@ -67,8 +67,8 @@ enum ArchExtKind : uint64_t {
   AEK_PAUTH =       1ULL << 35, // FEAT_PAuth
   AEK_FLAGM =       1ULL << 36, // FEAT_FlagM
   AEK_SME =         1ULL << 37, // FEAT_SME
-  AEK_SMEF64 =      1ULL << 38, // FEAT_SME_F64F64
-  AEK_SMEI64 =      1ULL << 39, // FEAT_SME_I16I64
+  AEK_SMEF64F64 =   1ULL << 38, // FEAT_SME_F64F64
+  AEK_SMEI16I64 =   1ULL << 39, // FEAT_SME_I16I64
   AEK_HBC =         1ULL << 40, // FEAT_HBC
   AEK_MOPS =        1ULL << 41, // FEAT_MOPS
   AEK_PERFMON =     1ULL << 42, // FEAT_PMUv3
