@@ -46,8 +46,8 @@ def FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
       }]
     >,
     InterfaceMethod<
-      /*desc=*/"Get the shape of the variable",
-      /*retTy=*/"llvm::Optional<mlir::Value>",
+      /*desc=*/"Get the shape of the variable. May be a null value.",
+      /*retTy=*/"mlir::Value",
       /*methodName=*/"getShape",
       /*args=*/(ins),
       /*methodBody=*/[{}],
@@ -74,7 +74,7 @@ def FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     /// Get the sequence type or scalar value type corresponding to this
     /// variable.
     mlir::Type getElementOrSequenceType() {
-      return fir::unwrapPassByRefType(getBase().getType());
+      return fir::unwrapPassByRefType(fir::unwrapRefType(getBase().getType()));
     }
 
     /// Get the scalar value type corresponding to this variable.
@@ -85,6 +85,17 @@ def FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     /// Is the variable an array ?
     bool isArray() {
       return getElementOrSequenceType().isa<fir::SequenceType>();
+    }
+
+    /// Return the rank of the entity if it is known at compile time.
+    llvm::Optional<unsigned> getRank() {
+      if (auto sequenceType =
+            getElementOrSequenceType().dyn_cast<fir::SequenceType>()) {
+        if (sequenceType.hasUnknownShape())
+          return {};
+        return sequenceType.getDimension();
+      }
+      return 0;
     }
 
     /// Is this variable a Fortran pointer ?
@@ -117,8 +128,32 @@ def FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
       return getExplicitTypeParams()[0];
     }
 
+    /// Is this variable represented as a fir.box or fir.class value ?
+    bool isBoxValue() {
+      return getBase().getType().isa<fir::BaseBoxType>();
+    }
+
+    /// Is this variable represented as a fir.box or fir.class address ?
+    bool isBoxAddress() {
+      mlir::Type type = getBase().getType();
+      return fir::isa_ref_type(type) &&
+         fir::unwrapRefType(type).isa<fir::BaseBoxType>();
+    }
+
+    /// Is this variable represented as the value or address of a fir.box or
+    /// fir.class ?
+    bool isBox() {
+      return fir::unwrapRefType(getBase().getType()).isa<fir::BaseBoxType>();
+    }
+
+    /// Interface verifier imlementation.
+    mlir::LogicalResult verifyImpl();
+
   }];
 
+  let verify = [{
+    return ::mlir::cast<::fir::FortranVariableOpInterface>($_op).verifyImpl();
+  }];
 }
 
 #endif  // FORTRANVARIABLEINTERFACE
