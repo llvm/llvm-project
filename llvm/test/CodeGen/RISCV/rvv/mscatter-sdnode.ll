@@ -1814,6 +1814,7 @@ define void @mscatter_nxv16f64(<vscale x 8 x double> %val0, <vscale x 8 x double
 ; RV64-NEXT:    csrr a2, vlenb
 ; RV64-NEXT:    slli a2, a2, 3
 ; RV64-NEXT:    sub sp, sp, a2
+; RV64-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x08, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 8 * vlenb
 ; RV64-NEXT:    vl8re64.v v24, (a0)
 ; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
