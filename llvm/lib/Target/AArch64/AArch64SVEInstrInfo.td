@@ -3581,4 +3581,9 @@ def BFMLSLB_ZZZ_S : sve_bfloat_matmul_longvecl<0b0, 0b1, "bfmlslb">;
 def BFMLSLT_ZZZ_S : sve_bfloat_matmul_longvecl<0b1, 0b1, "bfmlslt">;
 def BFMLSLB_ZZZI_S : sve_bfloat_matmul_longvecl_idx<0b0, 0b1, "bfmlslb">;
 def BFMLSLT_ZZZI_S : sve_bfloat_matmul_longvecl_idx<0b1, 0b1, "bfmlslt">;
+
+def SDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"sdot", 0b0>;
+def UDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"udot", 0b1>;
+def SDOT_ZZZI_HtoS : sve2p1_two_way_dot_vvi<"sdot", 0b0>;
+def UDOT_ZZZI_HtoS : sve2p1_two_way_dot_vvi<"udot", 0b1>;
 } // End HasSVE2p1_or_HasSME2
