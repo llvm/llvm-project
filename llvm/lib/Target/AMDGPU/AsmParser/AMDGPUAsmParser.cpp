@@ -8940,7 +8940,6 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
   else if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel) != -1) {
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOpSel);
   }
-  // TODO-GFX11 handle vdst opsel?
 
   if (IsDPP8) {
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDPP8);
