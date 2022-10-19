@@ -302,6 +302,22 @@ add_gen_header(
 )
 
 add_gen_header(
+  sys_select
+  DEF_FILE sys/select.h.def
+  GEN_HDR sys/select.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_select_macros
+    .llvm-libc-types.fd_set
+    .llvm-libc-types.sigset_t
+    .llvm-libc-types.struct_timespec
+    .llvm-libc-types.struct_timeval
+    .llvm-libc-types.suseconds_t
+    .llvm-libc-types.time_t
+    .llvm-libc-types.ssize_t
+)
+
+add_gen_header(
   sys_sendfile
   DEF_FILE sys/sendfile.h.def
   GEN_HDR sys/sendfile.h
