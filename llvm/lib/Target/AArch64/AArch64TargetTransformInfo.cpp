@@ -106,6 +106,18 @@ cl::opt<TailFoldingKind, true, cl::parser<std::string>> SVETailFolding(
         "recurrences"),
     cl::location(TailFoldingKindLoc));
 
+// Experimental option that will only be fully functional when the
+// code-generator is changed to use SVE instead of NEON for all fixed-width
+// operations.
+static cl::opt<bool> EnableFixedwidthAutovecInStreamingMode(
+    "enable-fixedwidth-autovec-in-streaming-mode", cl::init(false), cl::Hidden);
+
+// Experimental option that will only be fully functional when the cost-model
+// and code-generator have been changed to avoid using scalable vector
+// instructions that are not legal in streaming SVE mode.
+static cl::opt<bool> EnableScalableAutovecInStreamingMode(
+    "enable-scalable-autovec-in-streaming-mode", cl::init(false), cl::Hidden);
+
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
   SMEAttrs CallerAttrs(*Caller);
@@ -1485,6 +1497,30 @@ Optional<Value *> AArch64TTIImpl::simplifyDemandedVectorEltsIntrinsic(
   }
 
   return None;
+}
+
+TypeSize
+AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
+  switch (K) {
+  case TargetTransformInfo::RGK_Scalar:
+    return TypeSize::getFixed(64);
+  case TargetTransformInfo::RGK_FixedWidthVector:
+    if (!ST->isStreamingSVEModeDisabled() &&
+        !EnableFixedwidthAutovecInStreamingMode)
+      return TypeSize::getFixed(0);
+
+    if (ST->hasSVE())
+      return TypeSize::getFixed(
+          std::max(ST->getMinSVEVectorSizeInBits(), 128u));
+
+    return TypeSize::getFixed(ST->hasNEON() ? 128 : 0);
+  case TargetTransformInfo::RGK_ScalableVector:
+    if (!ST->isStreamingSVEModeDisabled() && !EnableScalableAutovecInStreamingMode)
+      return TypeSize::getScalable(0);
+
+    return TypeSize::getScalable(ST->hasSVE() ? 128 : 0);
+  }
+  llvm_unreachable("Unsupported register kind");
 }
 
 bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,

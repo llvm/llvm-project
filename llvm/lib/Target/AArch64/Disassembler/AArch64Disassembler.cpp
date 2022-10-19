@@ -69,6 +69,9 @@ static DecodeStatus DecodeGPR64spRegisterClass(MCInst &Inst, unsigned RegNo,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder);
 static DecodeStatus
+DecodeMatrixIndexGPR32_8_11RegisterClass(MCInst &Inst, unsigned RegNo,
+                                         uint64_t Address, const void *Decoder);
+static DecodeStatus
 DecodeMatrixIndexGPR32_12_15RegisterClass(MCInst &Inst, unsigned RegNo,
                                           uint64_t Address,
                                           const MCDisassembler *Decoder);
@@ -506,6 +509,19 @@ static DecodeStatus DecodeGPR64spRegisterClass(MCInst &Inst, unsigned RegNo,
     return Fail;
   unsigned Register =
       AArch64MCRegisterClasses[AArch64::GPR64spRegClassID].getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
+
+static DecodeStatus
+DecodeMatrixIndexGPR32_8_11RegisterClass(MCInst &Inst, unsigned RegNo,
+                                         uint64_t Addr, const void *Decoder) {
+  if (RegNo > 3)
+    return Fail;
+
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::MatrixIndexGPR32_8_11RegClassID]
+          .getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
 }

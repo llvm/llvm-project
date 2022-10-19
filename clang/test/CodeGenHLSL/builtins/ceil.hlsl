@@ -5,6 +5,8 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
 // RUN:   -D__HLSL_ENABLE_16_BIT -o - | FileCheck %s --check-prefix=NO_HALF
 
+using hlsl::ceil;
+
 // CHECK: define noundef half @
 // CHECK: call half @llvm.ceil.f16(
 // NO_HALF: define noundef float @"?test_ceil_half@@YA$halff@$halff@@Z"(
