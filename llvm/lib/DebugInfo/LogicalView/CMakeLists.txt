@@ -4,7 +4,16 @@ macro(add_lv_impl_folder group)
 endmacro()
 
 add_lv_impl_folder(Core
+  Core/LVElement.cpp
+  Core/LVLine.cpp
+  Core/LVObject.cpp
   Core/LVOptions.cpp
+  Core/LVReader.cpp
+  Core/LVScope.cpp
+  Core/LVSort.cpp
+  Core/LVSupport.cpp
+  Core/LVSymbol.cpp
+  Core/LVType.cpp
   )
 
 list(APPEND LIBLV_ADDITIONAL_HEADER_DIRS
