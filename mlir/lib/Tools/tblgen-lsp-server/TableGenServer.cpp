@@ -142,6 +142,7 @@ struct TableGenIndexSymbol {
   TableGenIndexSymbol(const llvm::RecordVal *value)
       : definition(value),
         defLoc(lsp::convertTokenLocToRange(value->getLoc())) {}
+  virtual ~TableGenIndexSymbol() = default;
 
   // The main definition of the symbol.
   PointerUnion<const llvm::Record *, const llvm::RecordVal *> definition;
@@ -156,6 +157,7 @@ struct TableGenIndexSymbol {
 struct TableGenRecordSymbol : public TableGenIndexSymbol {
   TableGenRecordSymbol(const llvm::Record *record)
       : TableGenIndexSymbol(record) {}
+  ~TableGenRecordSymbol() override = default;
 
   static bool classof(const TableGenIndexSymbol *symbol) {
     return symbol->definition.is<const llvm::Record *>();
@@ -171,6 +173,7 @@ struct TableGenRecordValSymbol : public TableGenIndexSymbol {
   TableGenRecordValSymbol(const llvm::Record *record,
                           const llvm::RecordVal *value)
       : TableGenIndexSymbol(value), record(record) {}
+  ~TableGenRecordValSymbol() override = default;
 
   static bool classof(const TableGenIndexSymbol *symbol) {
     return symbol->definition.is<const llvm::RecordVal *>();
@@ -241,6 +244,9 @@ private:
 } // namespace
 
 void TableGenIndex::initialize(const llvm::RecordKeeper &records) {
+  intervalMap.clear();
+  defToSymbol.clear();
+
   auto insertRef = [&](TableGenIndexSymbol *sym, SMRange refLoc,
                        bool isDef = false) {
     const char *startLoc = refLoc.Start.getPointer();
