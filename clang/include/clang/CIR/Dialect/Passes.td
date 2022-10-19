@@ -42,7 +42,9 @@ def LifetimeCheck : Pass<"cir-lifetime-check"> {
                " Supported styles: {all|null|invalid}", "llvm::cl::ZeroOrMore">,
     ListOption<"remarksList", "remarks", "std::string",
                "List of remark styles to enable as part of diagnostics."
-               " Supported styles: {all|pset}", "llvm::cl::ZeroOrMore">
+               " Supported styles: {all|pset}", "llvm::cl::ZeroOrMore">,
+    Option<"historyLimit", "history_limit", "unsigned", /*default=*/"1",
+           "Max amount of diagnostics to emit on pointer history">
   ];
 }
 

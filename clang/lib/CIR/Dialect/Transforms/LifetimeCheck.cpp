@@ -49,10 +49,13 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   // Tracks current module.
   ModuleOp theModule;
 
-  // Helpers.
+  // Common helpers.
   bool isCtorInitPointerFromOwner(CallOp callOp,
                                   const clang::CXXConstructorDecl *ctor);
   bool isNonConstUseOfOwner(CallOp callOp, const clang::CXXMethodDecl *m);
+
+  // Diagnostic helpers.
+  void emitInvalidHistory(mlir::InFlightDiagnostic &D, mlir::Value histKey);
 
   ///
   /// Pass options handling
@@ -71,6 +74,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
       HistoryAll = 1 << 5,
     };
     unsigned val = None;
+    unsigned histLimit = 1;
 
     void parseOptions(LifetimeCheckPass &pass) {
       for (auto &remark : pass.remarksList) {
@@ -87,6 +91,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
                    .Case("all", HistoryAll)
                    .Default(None);
       }
+      histLimit = pass.historyLimit;
     }
 
     bool emitRemarkAll() { return val & RemarkAll; }
@@ -184,13 +189,15 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
         : style(s), loc(l), val(v) {}
   };
 
-  using PMapInvalidHistType = llvm::DenseMap<mlir::Value, InvalidHistEntry>;
-  PMapInvalidHistType pmapInvalidHist;
+  struct InvalidHist {
+    llvm::SmallVector<InvalidHistEntry, 8> entries;
+    void add(mlir::Value ptr, InvalidStyle histStyle, mlir::Location loc,
+             std::optional<mlir::Value> val = {}) {
+      entries.emplace_back(InvalidHistEntry(histStyle, loc, val));
+    }
+  };
 
-  void addInvalidHist(mlir::Value ptr, InvalidStyle histStyle,
-                      mlir::Location loc, std::optional<mlir::Value> val = {}) {
-    pmapInvalidHist[ptr] = InvalidHistEntry(histStyle, loc, val);
-  }
+  llvm::DenseMap<mlir::Value, InvalidHist> invalidHist;
 
   using PMapNullHistType =
       llvm::DenseMap<mlir::Value, std::optional<mlir::Location>>;
@@ -217,7 +224,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
 
     // 2.3 - putting invalid into pset(x) is said to invalidate it
     pset.insert(State::getInvalid());
-    addInvalidHist(ptr, histStyle, loc, extraVal);
+    invalidHist[ptr].add(ptr, histStyle, loc, extraVal);
   }
 
   void joinPmaps(SmallVectorImpl<PMapType> &pmaps);
@@ -435,7 +442,7 @@ void LifetimeCheckPass::checkFunc(Operation *op) {
   if (currPmap)
     getPmap().clear();
   pmapNullHist.clear();
-  pmapInvalidHist.clear();
+  invalidHist.clear();
 
   // Add a new scope. Note that as part of the scope cleanup process
   // we apply section 2.3 KILL(x) functionality, turning relevant
@@ -859,6 +866,37 @@ void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
   checkPointerDeref(addr, loadOp.getLoc());
 }
 
+void LifetimeCheckPass::emitInvalidHistory(mlir::InFlightDiagnostic &D,
+                                           mlir::Value histKey) {
+  assert(invalidHist.count(histKey) && "expected invalid hist");
+  auto &hist = invalidHist[histKey];
+  unsigned limit = opts.histLimit;
+
+  for (int lastIdx = hist.entries.size() - 1; limit > 0 && lastIdx >= 0;
+       lastIdx--, limit--) {
+    auto &info = hist.entries[lastIdx];
+
+    switch (info.style) {
+    case InvalidStyle::NotInitialized: {
+      D.attachNote(info.loc) << "uninitialized here";
+      break;
+    }
+    case InvalidStyle::EndOfScope: {
+      StringRef outOfScopeVarName = getVarNameFromValue(*info.val);
+      D.attachNote(info.loc) << "pointee '" << outOfScopeVarName
+                             << "' invalidated at end of scope";
+      break;
+    }
+    case InvalidStyle::NonConstUseOfOwner: {
+      D.attachNote(info.loc) << "invalidated by non-const use of owner type";
+      break;
+    }
+    default:
+      llvm_unreachable("unknown history style");
+    }
+  }
+}
+
 void LifetimeCheckPass::checkPointerDeref(mlir::Value addr,
                                           mlir::Location loc) {
   bool hasInvalid = getPmap()[addr].count(State::getInvalid());
@@ -887,29 +925,8 @@ void LifetimeCheckPass::checkPointerDeref(mlir::Value addr,
   auto D = emitWarning(loc);
   D << "use of invalid pointer '" << varName << "'";
 
-  if (hasInvalid && opts.emitHistoryInvalid()) {
-    assert(pmapInvalidHist.count(addr) && "expected invalid hist");
-    auto &info = pmapInvalidHist[addr];
-
-    switch (info.style) {
-    case InvalidStyle::NotInitialized: {
-      D.attachNote(info.loc) << "uninitialized here";
-      break;
-    }
-    case InvalidStyle::EndOfScope: {
-      StringRef outOfScopeVarName = getVarNameFromValue(*info.val);
-      D.attachNote(info.loc) << "pointee '" << outOfScopeVarName
-                             << "' invalidated at end of scope";
-      break;
-    }
-    case InvalidStyle::NonConstUseOfOwner: {
-      D.attachNote(info.loc) << "invalidated by non-const use of owner type";
-      break;
-    }
-    default:
-      llvm_unreachable("unknown history style");
-    }
-  }
+  if (hasInvalid && opts.emitHistoryInvalid())
+    emitInvalidHistory(D, addr);
 
   if (hasNullptr && opts.emitHistoryNull()) {
     assert(pmapNullHist.count(addr) && "expected nullptr hist");
