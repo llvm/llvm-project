@@ -9,8 +9,6 @@
 #ifndef LLVM_CLANG_LIB_CIR_CIRGENRECORDLAYOUT_H
 #define LLVM_CLANG_LIB_CIR_CIRGENRECORDLAYOUT_H
 
-#include "CIRGenTypes.h"
-
 #include "clang/AST/Decl.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
