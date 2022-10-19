@@ -64,10 +64,8 @@ public:
       // procedure pointer feature is implemented.
       return llvm::None;
     });
-    addConversion([&](fir::ClassType classTy) {
-      TODO_NOLOC("fir.class type conversion");
-      return llvm::None;
-    });
+    addConversion(
+        [&](fir::ClassType classTy) { return convertBoxType(classTy); });
     addConversion(
         [&](fir::CharacterType charTy) { return convertCharType(charTy); });
     addConversion(
@@ -203,7 +201,7 @@ public:
 
   // This corresponds to the descriptor as defined in ISO_Fortran_binding.h and
   // the addendum defined in descriptor.h.
-  mlir::Type convertBoxType(BoxType box, int rank = unknownRank()) {
+  mlir::Type convertBoxType(BaseBoxType box, int rank = unknownRank()) {
     // (base_addr*, elem_len, version, rank, type, attribute, f18Addendum, [dim]
     llvm::SmallVector<mlir::Type> dataDescFields;
     mlir::Type ele = box.getEleTy();
