@@ -986,23 +986,6 @@ CreateMainFile(SwiftASTContextForExpressions &swift_ast_context,
   return {buffer_id, filename.str()};
 }
 
-/// Determine whether this type was defined inside an LLDB expression.
-template <typename TypeType> bool FromLLDBModuleImpl(TypeType *type) {
-  if (auto *decl = type->getDecl())
-    if (auto *module = decl->getModuleContext())
-      return module->getName().str().startswith("__lldb_expr_");
-  return false;
-};
-
-/// Determine whether this type was defined inside an LLDB expression.
-static bool FromLLDBModule(swift::TypeBase *type) {
-  if (auto *type_alias = llvm::dyn_cast<swift::TypeAliasType>(type))
-    return FromLLDBModuleImpl(type_alias);
-  if (auto *nominal = llvm::dyn_cast<swift::NominalType>(type))
-    return FromLLDBModuleImpl(nominal);
-  return false;
-}
-
 /// Attempt to materialize one variable.
 static llvm::Optional<SwiftExpressionParser::SILVariableInfo>
 MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
