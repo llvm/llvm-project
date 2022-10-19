@@ -1,4 +1,4 @@
-//===-- PrintfMatcher.h -----------------------------------------*- C++ -*-===//
+//===-- ScanfMatcher.h ------------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_UTILS_UNITTEST_PRINTF_MATCHER_H
-#define LLVM_LIBC_UTILS_UNITTEST_PRINTF_MATCHER_H
+#ifndef LLVM_LIBC_UTILS_UNITTEST_SCANF_MATCHER_H
+#define LLVM_LIBC_UTILS_UNITTEST_SCANF_MATCHER_H
 
-#include "src/stdio/printf_core/core_structs.h"
+#include "src/stdio/scanf_core/core_structs.h"
 #include "utils/UnitTest/Test.h"
 
 #include <errno.h>
 
 namespace __llvm_libc {
-namespace printf_core {
+namespace scanf_core {
 namespace testing {
 
 class FormatSectionMatcher
@@ -32,15 +32,15 @@ public:
 };
 
 } // namespace testing
-} // namespace printf_core
+} // namespace scanf_core
 } // namespace __llvm_libc
 
-#define EXPECT_PFORMAT_EQ(expected, actual)                                    \
-  EXPECT_THAT(actual, __llvm_libc::printf_core::testing::FormatSectionMatcher( \
+#define EXPECT_SFORMAT_EQ(expected, actual)                                    \
+  EXPECT_THAT(actual, __llvm_libc::scanf_core::testing::FormatSectionMatcher(  \
                           expected))
 
-#define ASSERT_PFORMAT_EQ(expected, actual)                                    \
-  ASSERT_THAT(actual, __llvm_libc::printf_core::testing::FormatSectionMatcher( \
+#define ASSERT_SFORMAT_EQ(expected, actual)                                    \
+  ASSERT_THAT(actual, __llvm_libc::scanf_core::testing::FormatSectionMatcher(  \
                           expected))
 
-#endif // LLVM_LIBC_UTILS_UNITTEST_PRINTF_MATCHER_H
+#endif // LLVM_LIBC_UTILS_UNITTEST_SCANF_MATCHER_H

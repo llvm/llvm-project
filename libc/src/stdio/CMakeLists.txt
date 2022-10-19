@@ -3,6 +3,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
 add_subdirectory(printf_core)
+add_subdirectory(scanf_core)
 
 add_entrypoint_object(
   fopen
