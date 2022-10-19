@@ -41,10 +41,6 @@ bool hasOnlyScalarElementwiseOp(Region &r);
 /// Check if a LinalgOp is an element-wise operation.
 bool isElementwise(LinalgOp op);
 
-/// Check if `permutation` is a permutation of the range
-/// `[0, permutation.size())`.
-bool isPermutation(ArrayRef<int64_t> permutation);
-
 /// Check if iterator type has "parallel" semantics.
 bool isParallelIterator(StringRef iteratorType);
 
