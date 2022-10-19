@@ -56,7 +56,7 @@ public:
                               bool OrLocal);
 
   using AAResultBase::getModRefBehavior;
-  FunctionModRefBehavior getModRefBehavior(const Function *F);
+  MemoryEffects getModRefBehavior(const Function *F);
 
   using AAResultBase::getModRefInfo;
   ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,

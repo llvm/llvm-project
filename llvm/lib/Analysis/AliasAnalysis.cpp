@@ -226,14 +226,13 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
 
   // We can completely ignore inaccessible memory here, because MemoryLocations
   // can only reference accessible memory.
-  auto MRB = getModRefBehavior(Call, AAQI).getWithoutLoc(
-      FunctionModRefBehavior::InaccessibleMem);
-  if (MRB.doesNotAccessMemory())
+  auto ME = getModRefBehavior(Call, AAQI)
+                .getWithoutLoc(MemoryEffects::InaccessibleMem);
+  if (ME.doesNotAccessMemory())
     return ModRefInfo::NoModRef;
 
-  ModRefInfo ArgMR = MRB.getModRef(FunctionModRefBehavior::ArgMem);
-  ModRefInfo OtherMR =
-      MRB.getWithoutLoc(FunctionModRefBehavior::ArgMem).getModRef();
+  ModRefInfo ArgMR = ME.getModRef(MemoryEffects::ArgMem);
+  ModRefInfo OtherMR = ME.getWithoutLoc(MemoryEffects::ArgMem).getModRef();
   if ((ArgMR | OtherMR) != OtherMR) {
     // Refine the modref info for argument memory. We only bother to do this
     // if ArgMR is not a subset of OtherMR, otherwise this won't have an impact
@@ -375,9 +374,9 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
   return Result;
 }
 
-FunctionModRefBehavior AAResults::getModRefBehavior(const CallBase *Call,
-                                                    AAQueryInfo &AAQI) {
-  FunctionModRefBehavior Result = FunctionModRefBehavior::unknown();
+MemoryEffects AAResults::getModRefBehavior(const CallBase *Call,
+                                           AAQueryInfo &AAQI) {
+  MemoryEffects Result = MemoryEffects::unknown();
 
   for (const auto &AA : AAs) {
     Result &= AA->getModRefBehavior(Call, AAQI);
@@ -390,13 +389,13 @@ FunctionModRefBehavior AAResults::getModRefBehavior(const CallBase *Call,
   return Result;
 }
 
-FunctionModRefBehavior AAResults::getModRefBehavior(const CallBase *Call) {
+MemoryEffects AAResults::getModRefBehavior(const CallBase *Call) {
   SimpleAAQueryInfo AAQI(*this);
   return getModRefBehavior(Call, AAQI);
 }
 
-FunctionModRefBehavior AAResults::getModRefBehavior(const Function *F) {
-  FunctionModRefBehavior Result = FunctionModRefBehavior::unknown();
+MemoryEffects AAResults::getModRefBehavior(const Function *F) {
+  MemoryEffects Result = MemoryEffects::unknown();
 
   for (const auto &AA : AAs) {
     Result &= AA->getModRefBehavior(F);
@@ -447,21 +446,20 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, ModRefInfo MR) {
   return OS;
 }
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, FunctionModRefBehavior FMRB) {
-  for (FunctionModRefBehavior::Location Loc :
-       FunctionModRefBehavior::locations()) {
+raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
+  for (MemoryEffects::Location Loc : MemoryEffects::locations()) {
     switch (Loc) {
-    case FunctionModRefBehavior::ArgMem:
+    case MemoryEffects::ArgMem:
       OS << "ArgMem: ";
       break;
-    case FunctionModRefBehavior::InaccessibleMem:
+    case MemoryEffects::InaccessibleMem:
       OS << "InaccessibleMem: ";
       break;
-    case FunctionModRefBehavior::Other:
+    case MemoryEffects::Other:
       OS << "Other: ";
       break;
     }
-    OS << FMRB.getModRef(Loc) << ", ";
+    OS << ME.getModRef(Loc) << ", ";
   }
   return OS;
 }
