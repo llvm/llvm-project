@@ -37,18 +37,18 @@
 // UNSUPPORTED: amdgcn-amd-amdhsa-LTO
 
 #if ADD_REDUCTION
-# define REDUCTION(...) reduction(__VA_ARGS__)
+#define REDUCTION(...) reduction(__VA_ARGS__)
 #else
-# define REDUCTION(...)
+#define REDUCTION(...)
 #endif
 
 #include <stdio.h>
 int main() {
   int x = 0, y = 1;
-  #pragma omp target teams num_teams(1) map(tofrom:x, y) REDUCTION(+:x)
+#pragma omp target teams num_teams(1) map(tofrom : x, y) REDUCTION(+ : x)
   {
     x += 5;
-    #pragma omp parallel
+#pragma omp parallel
     y = 6;
   }
   // CHECK: 5, 6
