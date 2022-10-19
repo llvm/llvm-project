@@ -831,6 +831,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   std::vector<Type *> ParamTy;
   std::vector<Type *> AggParamTy;
   ValueSet StructValues;
+  const DataLayout &DL = M->getDataLayout();
 
   // Add the types of the input values to the function's argument list
   for (Value *value : inputs) {
@@ -849,7 +850,8 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       AggParamTy.push_back(output->getType());
       StructValues.insert(output);
     } else
-      ParamTy.push_back(PointerType::getUnqual(output->getType()));
+      ParamTy.push_back(
+          PointerType::get(output->getType(), DL.getAllocaAddrSpace()));
   }
 
   assert(
@@ -864,7 +866,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   StructType *StructTy = nullptr;
   if (AggregateArgs && !AggParamTy.empty()) {
     StructTy = StructType::get(M->getContext(), AggParamTy);
-    ParamTy.push_back(PointerType::getUnqual(StructTy));
+    ParamTy.push_back(PointerType::get(StructTy, DL.getAllocaAddrSpace()));
   }
 
   LLVM_DEBUG({
