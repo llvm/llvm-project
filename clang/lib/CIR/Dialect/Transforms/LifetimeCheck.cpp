@@ -400,8 +400,11 @@ void LifetimeCheckPass::kill(const State &s, InvalidStyle invalidStyle,
   }
 
   // Delete the local value from pmap, since its scope has ended.
-  if (invalidStyle == InvalidStyle::EndOfScope)
+  if (invalidStyle == InvalidStyle::EndOfScope) {
+    owners.erase(v);
+    ptrs.erase(v);
     getPmap().erase(v);
+  }
 }
 
 void LifetimeCheckPass::LexicalScopeGuard::cleanup() {
