@@ -720,6 +720,12 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.NoSignedZeros = true;
   }
 
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_mreassociate)) {
+    diags.Report(diagUnimplemented) << a->getOption().getName();
+    opts.AssociativeMath = true;
+  }
+
   return true;
 }
 
