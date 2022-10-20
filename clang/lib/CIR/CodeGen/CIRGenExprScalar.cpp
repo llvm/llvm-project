@@ -627,7 +627,8 @@ public:
   buildCompoundAssign(const CompoundAssignOperator *E,
                       mlir::Value (ScalarExprEmitter::*F)(const BinOpInfo &));
 
-  // TODO(cir): Candidate to be in a common AST helper between CIR and LLVM codegen.
+  // TODO(cir): Candidate to be in a common AST helper between CIR and LLVM
+  // codegen.
   QualType getPromotionType(QualType Ty) {
     if (auto *CT = Ty->getAs<ComplexType>()) {
       llvm_unreachable("NYI");
