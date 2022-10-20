@@ -94,7 +94,10 @@ public:
     llvm_unreachable("NYI");
   }
   mlir::Value VisitFloatingLiteral(const FloatingLiteral *E) {
-    llvm_unreachable("NYI");
+    mlir::Type Ty = CGF.getCIRType(E->getType());
+    return Builder.create<mlir::cir::ConstantOp>(
+        CGF.getLoc(E->getExprLoc()), Ty,
+        Builder.getFloatAttr(Ty, E->getValue()));
   }
   mlir::Value VisitCharacterLiteral(const CharacterLiteral *E) {
     llvm_unreachable("NYI");
@@ -1178,10 +1181,11 @@ mlir::Value ScalarExprEmitter::buildScalarCast(
     llvm_unreachable("NYI");
   }
 
-  // if (DstElementTy.getTypeID() < SrcElementTy.getTypeID())
-  //   llvm_unreachable("NYI");
-
-  llvm_unreachable("NYI");
+  auto FloatDstTy = DstElementTy.cast<mlir::FloatType>();
+  auto FloatSrcTy = SrcElementTy.cast<mlir::FloatType>();
+  if (FloatDstTy.getWidth() < FloatSrcTy.getWidth())
+    llvm_unreachable("truncation NYI");
+  return Builder.CreateFPExt(Src, DstTy);
 }
 
 LValue

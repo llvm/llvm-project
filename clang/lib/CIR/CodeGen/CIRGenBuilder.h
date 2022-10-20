@@ -72,6 +72,14 @@ public:
   llvm::RoundingMode getDefaultConstrainedRounding() {
     return DefaultConstrainedRounding;
   }
+
+  mlir::Value CreateFPExt(mlir::Value V, mlir::Type DestType) {
+    if (getIsFPConstrained())
+      llvm_unreachable("constrainedfp NYI");
+
+    return create<mlir::cir::CastOp>(V.getLoc(), DestType,
+                                     mlir::cir::CastKind::floating, V);
+  }
 };
 
 } // namespace cir
