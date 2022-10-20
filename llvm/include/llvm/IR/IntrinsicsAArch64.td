@@ -2642,10 +2642,6 @@ let TargetPrefix = "aarch64" in {
   // PSTATE Functions
   //
 
-  def int_aarch64_sme_get_pstatesm
-      : DefaultAttrsIntrinsic<[llvm_i64_ty], [],
-                              [IntrReadMem, IntrInaccessibleMemOnly]>;
-
   def int_aarch64_sme_get_tpidr2
       : DefaultAttrsIntrinsic<[llvm_i64_ty], [],
                               [IntrNoMem, IntrHasSideEffects]>;
