@@ -977,12 +977,11 @@ void LifetimeCheckPass::checkMoveAssignment(CallOp callOp,
   // Note that the current pattern here usually comes from a xvalue in src
   // where all the initialization is done, and this move assignment is
   // where we finally materialize it back to the original pointer category.
-  // TODO: should CIR ops retain xvalue information somehow?
   getPmap()[dst] = getPmap()[src];
-  // TODO: should this be null? or should we swap dst/src pset state?
-  // For now just consider moved-from state as invalid.
-  getPmap()[src].clear();
-  getPmap()[src].insert(State::getInvalid());
+
+  // 2.4.2 - It is an error to use a moved-from object.
+  // To that intent we mark src's pset with invalid.
+  markPsetInvalid(src, InvalidStyle::MovedFrom, callOp.getLoc());
 }
 
 void LifetimeCheckPass::checkCopyAssignment(CallOp callOp,
