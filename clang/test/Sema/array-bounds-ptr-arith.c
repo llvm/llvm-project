@@ -11,7 +11,7 @@ void* ext2_statfs (struct ext2_super_block *es,int a) {
   return (void *)es->s_uuid + sizeof(int); // no-warning
 }
 void* broken (struct ext2_super_block *es,int a) {
-  return (void *)es->s_uuid + 9; // expected-warning {{the pointer incremented by 9 refers past the end of the array}}
+  return (void *)es->s_uuid + 9; // expected-warning {{the pointer incremented by 9 refers past the end of the array (that has type 'unsigned char[8]')}}
 }
 
 // Test case reduced from PR11594
@@ -40,7 +40,7 @@ typedef struct RDar11387038_B RDar11387038_B;
 
 void radar11387038(void) {
   RDar11387038_B *pRDar11387038_B;
-  struct RDar11387038 *y = &(*pRDar11387038_B->x)->z[4]; // strict-warning {{array index 4 is past the end of the array (which contains 1 element)}}
+  struct RDar11387038 *y = &(*pRDar11387038_B->x)->z[4]; // strict-warning {{array index 4 is past the end of the array (that has type 'struct RDar11387038[1]')}}
 }
 
 void pr51682(void) {

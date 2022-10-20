@@ -16,7 +16,7 @@ struct t0 {
   int a[10]; // relaxed-note {{array 'a' declared here}}
 };
 void test0(t0 *s2) {
-  s2->a[12] = 0; // relaxed-warning {{array index 12 is past the end of the array (which contains 10 elements)}}
+  s2->a[12] = 0; // relaxed-warning {{array index 12 is past the end of the array (that has type 'int[10]')}}
 }
 
 
@@ -26,7 +26,7 @@ struct t1 {
   int a[1]; // strict-note {{array 'a' declared here}}
 };
 void test1(t1 *s2) {
-  s2->a[2] = 0; // strict-warning {{array index 2 is past the end of the array (which contains 1 element)}}
+  s2->a[2] = 0; // strict-warning {{array index 2 is past the end of the array (that has type 'int[1]')}}
 }
 
 // Under -fstrict-flex-arrays={1,2} `a` is a flexible array.

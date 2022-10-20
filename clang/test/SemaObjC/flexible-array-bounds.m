@@ -23,5 +23,4 @@
 
 char readit(Flexible *p) { return p->flexible[2]; }
 char readit0(Flexible0 *p) { return p->flexible[2]; }
-char readit1(Flexible1 *p) { return p->flexible[2]; } // warn-warning {{array index 2 is past the end of the array (which contains 1 element)}}
-
+char readit1(Flexible1 *p) { return p->flexible[2]; } // warn-warning {{array index 2 is past the end of the array (that has type 'char[1]')}}
