@@ -1,10 +1,12 @@
-// RUN: %clang_cc1 -verify=expected -Warray-bounds-pointer-arithmetic %s
-// RUN: %clang_cc1 -verify=expected -Warray-bounds-pointer-arithmetic %s -fstrict-flex-arrays=0
+// RUN: %clang_cc1 -verify=expected        -Warray-bounds-pointer-arithmetic %s
+// RUN: %clang_cc1 -verify=expected        -Warray-bounds-pointer-arithmetic %s -fstrict-flex-arrays=0
 // RUN: %clang_cc1 -verify=expected,strict -Warray-bounds-pointer-arithmetic %s -fstrict-flex-arrays=2
 
 // Test case from PR10615
 struct ext2_super_block{
   unsigned char s_uuid[8]; // expected-note {{declared here}}
+  int ignored; // Prevents "s_uuid" from being treated as a flexible array
+               // member.
 };
 
 void* ext2_statfs (struct ext2_super_block *es,int a) {
