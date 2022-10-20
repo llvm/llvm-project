@@ -1379,6 +1379,7 @@ def OpenCLCoreFeaturesDiagGroup : DiagGroup<"pedantic-core-features">;
 // Remarks for cached -cc1.
 def CompileJobCacheMiss : DiagGroup<"compile-job-cache-miss">;
 def CompileJobCacheHit : DiagGroup<"compile-job-cache-hit">;
+def CompileJobCacheTiming : DiagGroup<"compile-job-cache-timing">;
 def CompileJobCache : DiagGroup<"compile-job-cache", [CompileJobCacheMiss,
                                                       CompileJobCacheHit]>;
 

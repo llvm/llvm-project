@@ -44,6 +44,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrefixMapper.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/ScopedDurationTimer.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/VirtualOutputBackends.h"
@@ -514,6 +515,11 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
                             llvm::Optional<llvm::cas::CASID> &RootID) {
   using namespace clang::driver;
 
+  llvm::ScopedDurationTimer ScopedTime([&Diag](double Seconds) {
+    Diag.Report(diag::remark_compile_job_cache_timing_depscan)
+        << llvm::format("%.6fs", Seconds);
+  });
+
   StringRef WorkingDirectory;
   SmallString<128> WorkingDirectoryBuf;
   if (auto *Arg =
@@ -593,10 +599,27 @@ static int scanAndUpdateCC1(const char *Exec, ArrayRef<const char *> OldArgs,
 
 int cc1depscan_main(ArrayRef<const char *> Argv, const char *Argv0,
                     void *MainAddr) {
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
+  {
+    auto FoundCC1Args =
+        std::find_if(Argv.begin(), Argv.end(), [](const char *Arg) -> bool {
+          return StringRef(Arg).equals("-cc1-args");
+        });
+    if (FoundCC1Args != Argv.end()) {
+      SmallVector<const char *, 8> WarnOpts{Argv0};
+      WarnOpts.append(FoundCC1Args + 1, Argv.end());
+      DiagOpts = CreateAndPopulateDiagOpts(WarnOpts);
+    } else {
+      DiagOpts = new DiagnosticOptions();
+    }
+  }
   auto DiagsConsumer = std::make_unique<TextDiagnosticPrinter>(
-      llvm::errs(), new DiagnosticOptions(), false);
-  DiagnosticsEngine Diags(new DiagnosticIDs(), new DiagnosticOptions());
+      llvm::errs(), DiagOpts.get(), false);
+  DiagnosticsEngine Diags(new DiagnosticIDs(), DiagOpts);
   Diags.setClient(DiagsConsumer.get(), /*ShouldOwnClient=*/false);
+  ProcessWarningOptions(Diags, *DiagOpts);
+  if (Diags.hasErrorOccurred())
+    return 1;
 
   // FIXME: Create a new OptionFlag group for cc1depscan.
   const OptTable &Opts = clang::driver::getDriverOptTable();

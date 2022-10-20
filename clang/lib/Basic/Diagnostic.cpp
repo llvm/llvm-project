@@ -74,6 +74,14 @@ const StreamingDiagnostic &clang::operator<<(const StreamingDiagnostic &DB,
   return DB;
 }
 
+const StreamingDiagnostic &
+clang::operator<<(const StreamingDiagnostic &DB,
+                  const llvm::format_object_base &Fmt) {
+  SmallString<32> Buf;
+  llvm::raw_svector_ostream(Buf) << Fmt;
+  return DB << Buf;
+}
+
 static void DummyArgToStringFn(DiagnosticsEngine::ArgumentKind AK, intptr_t QT,
                             StringRef Modifier, StringRef Argument,
                             ArrayRef<DiagnosticsEngine::ArgumentValue> PrevArgs,
