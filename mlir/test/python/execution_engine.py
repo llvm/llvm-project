@@ -1,6 +1,6 @@
 # RUN: %PYTHON %s 2>&1 | FileCheck %s
 # REQUIRES: host-supports-jit
-import gc, sys
+import gc, sys, os, tempfile
 from mlir.ir import *
 from mlir.passmanager import *
 from mlir.execution_engine import *
@@ -552,3 +552,41 @@ def testNanoTime():
 
 
 run(testNanoTime)
+
+
+#  Test that nano time clock is available.
+# CHECK-LABEL: TEST: testDumpToObjectFile
+def testDumpToObjectFile():
+  fd, object_path = tempfile.mkstemp(suffix=".o")
+
+  try:
+    with Context():
+      module = Module.parse("""
+        module {
+        func.func @main() attributes { llvm.emit_c_interface } {
+          return
+        }
+      }""")
+
+      execution_engine = ExecutionEngine(
+          lowerToLLVM(module),
+          opt_level=3)
+
+      # CHECK: Object file exists: True
+      print(f"Object file exists: {os.path.exists(object_path)}")
+      # CHECK: Object file is empty: True
+      print(f"Object file is empty: {os.path.getsize(object_path) == 0}")
+
+      execution_engine.dump_to_object_file(object_path)
+
+      # CHECK: Object file exists: True
+      print(f"Object file exists: {os.path.exists(object_path)}")
+      # CHECK: Object file is empty: False
+      print(f"Object file is empty: {os.path.getsize(object_path) == 0}")
+
+  finally:
+    os.close(fd)
+    os.remove(object_path)
+
+
+run(testDumpToObjectFile)

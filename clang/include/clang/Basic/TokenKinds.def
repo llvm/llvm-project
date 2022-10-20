@@ -616,6 +616,7 @@ KEYWORD(__noinline__                , KEYCUDA)
 // HLSL keywords.
 KEYWORD(cbuffer                     , KEYHLSL)
 KEYWORD(tbuffer                     , KEYHLSL)
+KEYWORD(groupshared                 , KEYHLSL)
 
 // OpenMP Type Traits
 UNARY_EXPR_OR_TYPE_TRAIT(__builtin_omp_required_simd_align, OpenMPRequiredSimdAlign, KEYALL)

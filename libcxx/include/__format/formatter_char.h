@@ -44,6 +44,11 @@ public:
     if (__parser_.__type_ == __format_spec::__type::__default || __parser_.__type_ == __format_spec::__type::__char)
       return __formatter::__format_char(__value, __ctx.out(), __parser_.__get_parsed_std_specifications(__ctx));
 
+#  if _LIBCPP_STD_VER > 20
+    if (__parser_.__type_ == __format_spec::__type::__debug)
+      return __formatter::__format_escaped_char(__value, __ctx.out(), __parser_.__get_parsed_std_specifications(__ctx));
+#  endif
+
     if constexpr (sizeof(_CharT) <= sizeof(int))
       // Promotes _CharT to an integral type. This reduces the number of
       // instantiations of __format_integer reducing code size.
@@ -60,6 +65,10 @@ public:
   {
     return format(static_cast<wchar_t>(__value), __ctx);
   }
+
+#  if _LIBCPP_STD_VER > 20
+  _LIBCPP_HIDE_FROM_ABI constexpr void set_debug_format() { __parser_.__type_ = __format_spec::__type::__debug; }
+#  endif
 
   __format_spec::__parser<_CharT> __parser_;
 };

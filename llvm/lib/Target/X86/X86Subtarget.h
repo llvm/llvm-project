@@ -221,7 +221,8 @@ public:
     // We implicitly enable these when we have a write prefix supporting cache
     // level OR if we have prfchw, but don't already have a read prefetch from
     // 3dnow.
-    return hasSSE1() || (hasPRFCHW() && !hasThreeDNow()) || hasPREFETCHWT1();
+    return hasSSE1() || (hasPRFCHW() && !hasThreeDNow()) || hasPREFETCHWT1() ||
+           hasPREFETCHI();
   }
   bool canUseLAHFSAHF() const { return hasLAHFSAHF64() || !is64Bit(); }
   // These are generic getters that OR together all of the thunk types

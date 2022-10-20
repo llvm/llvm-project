@@ -1621,3 +1621,13 @@ define <4 x i32> @sel_common_op_extra_use(<4 x i32> %x, <4 x i32> %y) {
   %s2 = shufflevector <4 x i32> %s1, <4 x i32> %x, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
   ret <4 x i32> %s2
 }
+
+define <4 x float> @identity_mask(<4 x float>%x, <4 x float> %y) {
+; CHECK-LABEL: @identity_mask(
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <4 x float> [[X:%.*]], <4 x float> poison, <4 x i32> <i32 0, i32 undef, i32 2, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[S2]]
+;
+  %s1 = shufflevector <4 x float> %x, <4 x float> %y, <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>
+  %s2 = shufflevector <4 x float> %s1, <4 x float> %x, <4 x i32> <i32 0, i32 undef, i32 6, i32 7>
+  ret <4 x float> %s2
+}

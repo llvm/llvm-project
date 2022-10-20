@@ -24,6 +24,10 @@ namespace VEISD {
 enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
+  CMPI, // Compare between two signed integer values.
+  CMPU, // Compare between two unsigned integer values.
+  CMPF, // Compare between two floating-point values.
+  CMPQ, // Compare between two quad floating-point values.
   CMOV, // Select between two values using the result of comparison.
 
   CALL,                   // A call instruction.
@@ -203,6 +207,7 @@ public:
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
   SDValue combineSelect(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineSelectCC(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineTRUNCATE(SDNode *N, DAGCombinerInfo &DCI) const;
   /// } Custom DAGCombine
 

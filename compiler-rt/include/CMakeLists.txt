@@ -83,6 +83,11 @@ install(FILES ${FUZZER_HEADERS}
   COMPONENT compiler-rt-headers
   PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
   DESTINATION ${COMPILER_RT_INSTALL_INCLUDE_DIR}/fuzzer)
+# Install memprof headers.
+install(FILES sanitizer/memprof_interface.h
+  COMPONENT compiler-rt-headers
+  PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+  DESTINATION ${COMPILER_RT_INSTALL_INCLUDE_DIR}/sanitizer)
 # Install xray headers.
 install(FILES ${XRAY_HEADERS}
   COMPONENT compiler-rt-headers

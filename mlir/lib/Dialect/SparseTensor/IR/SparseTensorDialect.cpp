@@ -333,6 +333,17 @@ LogicalResult ConvertOp::verify() {
   return emitError("unexpected type in convert");
 }
 
+OpFoldResult ConvertOp::fold(ArrayRef<Attribute> operands) {
+  Type dstType = getType();
+  // Fold trivial dense-to-dense convert and leave trivial sparse-to-sparse
+  // convert for codegen to remove. This is because we use trivial
+  // sparse-to-sparse convert to tell bufferization that the sparse codegen
+  // will expand the tensor buffer into sparse tensor storage.
+  if (!getSparseTensorEncoding(dstType) && dstType == getSource().getType())
+    return getSource();
+  return {};
+}
+
 LogicalResult ToPointersOp::verify() {
   auto e = getSparseTensorEncoding(getTensor().getType());
   if (failed(isInBounds(getDimension().getZExtValue(), getTensor())))
@@ -506,7 +517,7 @@ LogicalResult ConcatenateOp::verify() {
               "sum of all the concatenation dimensions of the input tensors.");
       }
     } else {
-      int prev = dstDim;
+      int64_t prev = dstDim;
       for (auto src : getInputs()) {
         auto d = src.getType().cast<RankedTensorType>().getShape()[i];
         if (prev != ShapedType::kDynamicSize && d != prev)

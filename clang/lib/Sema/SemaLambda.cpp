@@ -971,6 +971,18 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
     ExplicitResultType = FTI.hasTrailingReturnType();
 
+    if (ExplicitResultType && getLangOpts().HLSL) {
+      QualType RetTy = FTI.getTrailingReturnType().get();
+      if (!RetTy.isNull()) {
+        // HLSL does not support specifying an address space on a lambda return
+        // type.
+        LangAS AddressSpace = RetTy.getAddressSpace();
+        if (AddressSpace != LangAS::Default)
+          Diag(FTI.getTrailingReturnTypeLoc(),
+               diag::err_return_value_with_address_space);
+      }
+    }
+
     if (FTIHasNonVoidParameters(FTI)) {
       Params.reserve(FTI.NumParams);
       for (unsigned i = 0, e = FTI.NumParams; i != e; ++i)

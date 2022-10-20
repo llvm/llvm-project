@@ -2,6 +2,15 @@
 
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 
+// CHECK-LABEL: func @sparse_nop_dense2dense_convert(
+//  CHECK-SAME: %[[A:.*]]: tensor<64xf32>)
+//   CHECK-NOT: sparse_tensor.convert
+//       CHECK: return %[[A]] : tensor<64xf32>
+func.func @sparse_nop_dense2dense_convert(%arg0: tensor<64xf32>) -> tensor<64xf32> {
+  %0 = sparse_tensor.convert %arg0 : tensor<64xf32> to tensor<64xf32>
+  return %0 : tensor<64xf32>
+}
+
 // CHECK-LABEL: func @sparse_dce_convert(
 //  CHECK-SAME: %[[A:.*]]: tensor<64xf32>)
 //   CHECK-NOT: sparse_tensor.convert

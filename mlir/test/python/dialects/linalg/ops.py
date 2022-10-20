@@ -23,7 +23,8 @@ def testFill():
       #  CHECK-NEXT: %[[CST:.*]] = arith.constant 0.0{{.*}} : f32
       #  CHECK-NEXT: %[[RES:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[OUT]] : tensor<12x?xf32>) -> tensor<12x?xf32>
       #  CHECK-NEXT: return %[[RES]] : tensor<12x?xf32>
-      @func.FuncOp.from_py_func(RankedTensorType.get((12, -1), f32))
+      @func.FuncOp.from_py_func(
+          RankedTensorType.get((12, ShapedType.get_dynamic_size()), f32))
       def fill_tensor(out):
         zero = arith.ConstantOp(value=FloatAttr.get(f32, 0.), result=f32).result
         return linalg.fill(zero, outs=[out])
@@ -33,7 +34,8 @@ def testFill():
       #  CHECK-NEXT: %[[CST:.*]] = arith.constant 0.0{{.*}} : f32
       #  CHECK-NEXT: linalg.fill ins(%[[CST]] : f32) outs(%[[OUT]] : memref<12x?xf32>)
       #  CHECK-NEXT: return
-      @func.FuncOp.from_py_func(MemRefType.get((12, -1), f32))
+      @func.FuncOp.from_py_func(
+          MemRefType.get((12, ShapedType.get_dynamic_size()), f32))
       def fill_buffer(out):
         zero = arith.ConstantOp(value=FloatAttr.get(f32, 0.), result=f32).result
         linalg.fill(zero, outs=[out])

@@ -392,6 +392,12 @@ mlir::Value fir::FirOpBuilder::genShape(mlir::Location loc,
   return genShape(loc, arr.getLBounds(), arr.getExtents());
 }
 
+mlir::Value fir::FirOpBuilder::genShift(mlir::Location loc,
+                                        llvm::ArrayRef<mlir::Value> shift) {
+  auto shiftType = fir::ShiftType::get(getContext(), shift.size());
+  return create<fir::ShiftOp>(loc, shiftType, shift);
+}
+
 mlir::Value fir::FirOpBuilder::createShape(mlir::Location loc,
                                            const fir::ExtendedValue &exv) {
   return exv.match(

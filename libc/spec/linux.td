@@ -81,7 +81,7 @@ def Linux : StandardSpec<"Linux"> {
         Macro<"GRND_NONBLOCK">,
         Macro<"GRND_INSECURE">,
       ],
-      [], // Types
+      [SizeTType, SSizeTType], // Types
       [], // Enumerations
       [
         FunctionSpec<

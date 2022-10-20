@@ -129,17 +129,18 @@ public:
   }
 
   /// Create MemoryEffects that can only access argument memory.
-  static MemoryEffects argMemOnly(ModRefInfo MR) {
+  static MemoryEffects argMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
     return MemoryEffects(ArgMem, MR);
   }
 
   /// Create MemoryEffects that can only access inaccessible memory.
-  static MemoryEffects inaccessibleMemOnly(ModRefInfo MR) {
+  static MemoryEffects inaccessibleMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
     return MemoryEffects(InaccessibleMem, MR);
   }
 
   /// Create MemoryEffects that can only access inaccessible or argument memory.
-  static MemoryEffects inaccessibleOrArgMemOnly(ModRefInfo MR) {
+  static MemoryEffects
+  inaccessibleOrArgMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
     MemoryEffects FRMB = none();
     FRMB.setModRef(ArgMem, MR);
     FRMB.setModRef(InaccessibleMem, MR);

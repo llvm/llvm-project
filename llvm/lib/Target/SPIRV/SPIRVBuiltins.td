@@ -493,10 +493,11 @@ defm : DemangledNativeBuiltin<"all", OpenCL_std, Relational, 1, 1, OpAll>;
 defm : DemangledNativeBuiltin<"__spirv_All", OpenCL_std, Relational, 1, 1, OpAll>;
 
 // Atomic builtin records:
+defm : DemangledNativeBuiltin<"atomic_init", OpenCL_std, Atomic, 2, 2, OpStore>;
 defm : DemangledNativeBuiltin<"atomic_load", OpenCL_std, Atomic, 1, 1, OpAtomicLoad>;
 defm : DemangledNativeBuiltin<"atomic_load_explicit", OpenCL_std, Atomic, 2, 3, OpAtomicLoad>;
 defm : DemangledNativeBuiltin<"atomic_store", OpenCL_std, Atomic, 2, 2, OpAtomicStore>;
-defm : DemangledNativeBuiltin<"atomic_store_explicit", OpenCL_std, Atomic, 2, 2, OpAtomicStore>;
+defm : DemangledNativeBuiltin<"atomic_store_explicit", OpenCL_std, Atomic, 2, 4, OpAtomicStore>;
 defm : DemangledNativeBuiltin<"atomic_compare_exchange_strong", OpenCL_std, Atomic, 3, 6, OpAtomicCompareExchange>;
 defm : DemangledNativeBuiltin<"atomic_compare_exchange_strong_explicit", OpenCL_std, Atomic, 5, 6, OpAtomicCompareExchange>;
 defm : DemangledNativeBuiltin<"atomic_compare_exchange_weak", OpenCL_std, Atomic, 3, 6, OpAtomicCompareExchangeWeak>;
@@ -953,6 +954,7 @@ defm : DemangledImageQueryBuiltin<"get_image_dim", OpenCL_std, 0>;
 defm : DemangledImageQueryBuiltin<"get_image_array_size", OpenCL_std, 3>;
 
 defm : DemangledNativeBuiltin<"get_image_num_samples", OpenCL_std, ImageMiscQuery, 1, 1, OpImageQuerySamples>;
+defm : DemangledNativeBuiltin<"get_image_num_mip_levels", OpenCL_std, ImageMiscQuery, 1, 1, OpImageQueryLevels>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a "convert_destType<_sat><_roundingMode>" call record for

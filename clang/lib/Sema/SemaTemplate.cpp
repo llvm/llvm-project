@@ -6506,7 +6506,7 @@ isNullPointerValueTemplateArgument(Sema &S, NonTypeTemplateParmDecl *Param,
   //   - a constant expression that evaluates to a null pointer value (4.10); or
   //   - a constant expression that evaluates to a null member pointer value
   //     (4.11); or
-  if ((EvalResult.Val.isLValue() && !EvalResult.Val.getLValueBase()) ||
+  if ((EvalResult.Val.isLValue() && EvalResult.Val.isNullPointer()) ||
       (EvalResult.Val.isMemberPointer() &&
        !EvalResult.Val.getMemberPointerDecl())) {
     // If our expression has an appropriate type, we've succeeded.
@@ -6522,6 +6522,16 @@ isNullPointerValueTemplateArgument(Sema &S, NonTypeTemplateParmDecl *Param,
       << Arg->getType() << ParamType << Arg->getSourceRange();
     S.Diag(Param->getLocation(), diag::note_template_param_here);
     return NPV_NullPointer;
+  }
+
+  if (EvalResult.Val.isLValue() && !EvalResult.Val.getLValueBase()) {
+    // We found a pointer that isn't null, but doesn't refer to an object.
+    // We could just return NPV_NotNullPointer, but we can print a better
+    // message with the information we have here.
+    S.Diag(Arg->getExprLoc(), diag::err_template_arg_invalid)
+      << EvalResult.Val.getAsString(S.Context, ParamType);
+    S.Diag(Param->getLocation(), diag::note_template_param_here);
+    return NPV_Error;
   }
 
   // If we don't have a null pointer value, but we do have a NULL pointer
