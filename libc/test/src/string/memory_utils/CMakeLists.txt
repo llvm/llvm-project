@@ -5,7 +5,6 @@ add_libc_unittest(
   SRCS
     elements_test.cpp
     memory_access_test.cpp
-    op_tests.cpp
     utils_test.cpp
   COMPILE_OPTIONS
     ${LIBC_COMPILE_OPTIONS_NATIVE}
