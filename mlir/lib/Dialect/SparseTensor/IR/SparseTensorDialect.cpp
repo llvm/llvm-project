@@ -506,7 +506,7 @@ LogicalResult ConcatenateOp::verify() {
               "sum of all the concatenation dimensions of the input tensors.");
       }
     } else {
-      int prev = dstDim;
+      int64_t prev = dstDim;
       for (auto src : getInputs()) {
         auto d = src.getType().cast<RankedTensorType>().getShape()[i];
         if (prev != ShapedType::kDynamicSize && d != prev)

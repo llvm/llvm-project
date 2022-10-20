@@ -30,7 +30,7 @@ class EmptyOp:
       if isinstance(s, int):
         static_sizes.append(s)
       else:
-        static_sizes.append(-1)
+        static_sizes.append(ShapedType.get_dynamic_size())
         dynamic_sizes.append(s)
     result_type = RankedTensorType.get(static_sizes, element_type)
     op = self.build_generic(
