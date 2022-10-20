@@ -40,6 +40,7 @@ LVSortValue compareKind(const LVObject *LHS, const LVObject *RHS);
 LVSortValue compareLine(const LVObject *LHS, const LVObject *RHS);
 LVSortValue compareName(const LVObject *LHS, const LVObject *RHS);
 LVSortValue compareOffset(const LVObject *LHS, const LVObject *RHS);
+LVSortValue compareRange(const LVObject *LHS, const LVObject *RHS);
 LVSortValue sortByKind(const LVObject *LHS, const LVObject *RHS);
 LVSortValue sortByLine(const LVObject *LHS, const LVObject *RHS);
 LVSortValue sortByName(const LVObject *LHS, const LVObject *RHS);

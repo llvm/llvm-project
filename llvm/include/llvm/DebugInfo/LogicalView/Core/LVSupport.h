@@ -158,6 +158,21 @@ inline std::string formattedNames(StringRef Name1, StringRef Name2) {
   return (Twine("'") + Twine(Name1) + Twine(Name2) + Twine("'")).str();
 }
 
+// These are the values assigned to the debug location record IDs.
+// See DebugInfo/CodeView/CodeViewSymbols.def.
+// S_DEFRANGE                               0x113f
+// S_DEFRANGE_SUBFIELD                      0x1140
+// S_DEFRANGE_REGISTER                      0x1141
+// S_DEFRANGE_FRAMEPOINTER_REL              0x1142
+// S_DEFRANGE_SUBFIELD_REGISTER             0x1143
+// S_DEFRANGE_FRAMEPOINTER_REL_FULL_SCOPE   0x1144
+// S_DEFRANGE_REGISTER_REL                  0x1145
+// When recording CodeView debug location, the above values are truncated
+// to a uint8_t value in order to fit the 'OpCode' used for the logical
+// debug location operations.
+// Return the original CodeView enum value.
+inline uint16_t getCodeViewOperationCode(uint8_t Code) { return 0x1100 | Code; }
+
 } // end namespace logicalview
 } // end namespace llvm
 

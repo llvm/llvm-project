@@ -12,7 +12,8 @@
 
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLine.h"
-#include "llvm/DebugInfo/LogicalView/Core/LVOptions.h"
+#include "llvm/DebugInfo/LogicalView/Core/LVLocation.h"
+#include "llvm/DebugInfo/LogicalView/Core/LVRange.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
@@ -48,6 +49,7 @@ LVScope::~LVScope() {
   delete Symbols;
   delete Scopes;
   delete Lines;
+  delete Ranges;
   delete Children;
 }
 
@@ -129,6 +131,21 @@ void LVScope::addElement(LVLine *Line) {
   traverseParents(&LVScope::getHasLines, &LVScope::setHasLines);
 }
 
+// Add a location.
+void LVScope::addObject(LVLocation *Location) {
+  assert(Location && "Invalid location.");
+  assert(!Location->getParent() && "Location already inserted");
+  if (!Ranges)
+    Ranges = new LVAutoLocations();
+
+  // Add it to parent.
+  Location->setParent(this);
+  Location->setOffset(getOffset());
+
+  Ranges->push_back(Location);
+  setHasRanges();
+}
+
 // Adds the scope to the child scopes and sets the parent in the child.
 void LVScope::addElement(LVScope *Scope) {
   assert(Scope && "Invalid scope.");
@@ -208,6 +225,17 @@ void LVScope::addElement(LVType *Type) {
 
   // Indicate that this tree branch has types.
   traverseParents(&LVScope::getHasTypes, &LVScope::setHasTypes);
+}
+
+// Add a pair of ranges.
+void LVScope::addObject(LVAddress LowerAddress, LVAddress UpperAddress) {
+  // Pack the ranges into a Location object.
+  LVLocation *Location = new LVLocation();
+  Location->setLowerAddress(LowerAddress);
+  Location->setUpperAddress(UpperAddress);
+  Location->setIsAddressRange();
+
+  addObject(Location);
 }
 
 bool LVScope::removeElement(LVElement *Element) {
@@ -618,6 +646,7 @@ void LVScope::sort() {
           Traverse(Parent->Types, SortFunction);
           Traverse(Parent->Symbols, SortFunction);
           Traverse(Parent->Scopes, SortFunction);
+          Traverse(Parent->Ranges, compareRange);
           Traverse(Parent->Children, SortFunction);
 
           if (Parent->Scopes)
@@ -679,6 +708,83 @@ void LVScope::traverseParentsAndChildren(LVObjectGetFunction GetFunction,
     TraverseChildren(this);
 }
 
+// Traverse the symbol location ranges and for each range:
+// - Apply the 'ValidLocation' validation criteria.
+// - Add any failed range to the 'LocationList'.
+// - Calculate location coverage.
+void LVScope::getLocations(LVLocations &LocationList,
+                           LVValidLocation ValidLocation, bool RecordInvalid) {
+  // Traverse scopes and symbols.
+  if (Symbols)
+    for (LVSymbol *Symbol : *Symbols)
+      Symbol->getLocations(LocationList, ValidLocation, RecordInvalid);
+  if (Scopes)
+    for (LVScope *Scope : *Scopes)
+      Scope->getLocations(LocationList, ValidLocation, RecordInvalid);
+}
+
+// Traverse the scope ranges and for each range:
+// - Apply the 'ValidLocation' validation criteria.
+// - Add any failed range to the 'LocationList'.
+// - Calculate location coverage.
+void LVScope::getRanges(LVLocations &LocationList,
+                        LVValidLocation ValidLocation, bool RecordInvalid) {
+  // Ignore discarded or stripped scopes (functions).
+  if (getIsDiscarded())
+    return;
+
+  // Process the ranges for current scope.
+  if (Ranges) {
+    for (LVLocation *Location : *Ranges) {
+      // Add the invalid location object.
+      if (!(Location->*ValidLocation)() && RecordInvalid)
+        LocationList.push_back(Location);
+    }
+
+    // Calculate coverage factor.
+    calculateCoverage();
+  }
+
+  // Traverse the scopes.
+  if (Scopes)
+    for (LVScope *Scope : *Scopes)
+      Scope->getRanges(LocationList, ValidLocation, RecordInvalid);
+}
+
+// Get all the ranges associated with scopes.
+void LVScope::getRanges(LVRange &RangeList) {
+  // Ignore discarded or stripped scopes (functions).
+  if (getIsDiscarded())
+    return;
+
+  if (Ranges)
+    RangeList.addEntry(this);
+  if (Scopes)
+    for (LVScope *Scope : *Scopes)
+      Scope->getRanges(RangeList);
+}
+
+LVScope *LVScope::outermostParent(LVAddress Address) {
+  LVScope *Parent = this;
+  while (Parent) {
+    const LVLocations *ParentRanges = Parent->getRanges();
+    if (ParentRanges)
+      for (const LVLocation *Location : *ParentRanges)
+        if (Location->getLowerAddress() <= Address)
+          return Parent;
+    Parent = Parent->getParentScope();
+  }
+  return Parent;
+}
+
+void LVScope::printActiveRanges(raw_ostream &OS, bool Full) const {
+  if (options().getPrintFormatting() && options().getAttributeRange() &&
+      Ranges) {
+    for (const LVLocation *Location : *Ranges)
+      Location->print(OS, Full);
+  }
+}
+
 void LVScope::printEncodedArgs(raw_ostream &OS, bool Full) const {
   if (options().getPrintFormatting() && options().getAttributeEncoded())
     printAttributes(OS, Full, "{Encoded} ", const_cast<LVScope *>(this),
@@ -705,6 +811,10 @@ void LVScope::printExtra(raw_ostream &OS, bool Full) const {
          << formattedNames(getTypeQualifiedName(), typeAsString());
   }
   OS << "\n";
+
+  // Print any active ranges.
+  if (Full && getIsBlock())
+    printActiveRanges(OS, Full);
 }
 
 //===----------------------------------------------------------------------===//
@@ -827,6 +937,24 @@ void LVScopeCompileUnit::addSize(LVScope *Scope, LVOffset Lower,
   if (this == Scope)
     // Record contribution size for the compilation unit.
     CUContributionSize = Size;
+}
+
+void LVScopeCompileUnit::processRangeLocationCoverage(
+    LVValidLocation ValidLocation) {
+
+  if (options().getAttributeRange()) {
+    // Traverse the scopes to get scopes that have invalid ranges.
+    LVLocations Locations;
+    bool RecordInvalid = false;
+    getRanges(Locations, ValidLocation, RecordInvalid);
+  }
+
+  if (options().getAttributeLocation()) {
+    // Traverse the scopes to get locations that have invalid ranges.
+    LVLocations Locations;
+    bool RecordInvalid = false;
+    getLocations(Locations, ValidLocation, RecordInvalid);
+  }
 }
 
 LVLine *LVScopeCompileUnit::lineLowerBound(LVAddress Address) const {
@@ -1103,9 +1231,10 @@ void LVScopeCompileUnit::printExtra(raw_ostream &OS, bool Full) const {
   // Reset file index, to allow its children to print the correct filename.
   options().resetFilenameIndex();
 
-  // Print any files, directories, public names.
+  // Print any files, directories, public names and active ranges.
   if (Full) {
     printLocalNames(OS, Full);
+    printActiveRanges(OS, Full);
   }
 }
 
@@ -1209,6 +1338,7 @@ void LVScopeFunction::printExtra(raw_ostream &OS, bool Full) const {
   if (Full) {
     if (getIsTemplateResolved())
       printEncodedArgs(OS, Full);
+    printActiveRanges(OS, Full);
     if (Reference)
       Reference->printReference(OS, Full, const_cast<LVScopeFunction *>(this));
   }
@@ -1268,10 +1398,29 @@ void LVScopeFunctionType::resolveExtra() {
 void LVScopeNamespace::printExtra(raw_ostream &OS, bool Full) const {
   OS << formattedKind(kind()) << " " << formattedName(getName()) << "\n";
 
+  // Print any active ranges.
   if (Full) {
+    printActiveRanges(OS, Full);
+
     if (LVScope *Reference = getReference())
       Reference->printReference(OS, Full, const_cast<LVScopeNamespace *>(this));
   }
+}
+
+//===----------------------------------------------------------------------===//
+// An object file (single or multiple CUs).
+//===----------------------------------------------------------------------===//
+void LVScopeRoot::processRangeInformation() {
+  if (!options().getAttributeAnyLocation())
+    return;
+
+  if (Scopes)
+    for (LVScope *Scope : *Scopes) {
+      LVScopeCompileUnit *CompileUnit =
+          static_cast<LVScopeCompileUnit *>(Scope);
+      getReader().setCompileUnit(CompileUnit);
+      CompileUnit->processRangeLocationCoverage();
+    }
 }
 
 void LVScopeRoot::print(raw_ostream &OS, bool Full) const {
