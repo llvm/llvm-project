@@ -46,7 +46,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkMoveAssignment(CallOp callOp, const clang::CXXMethodDecl *m);
   void checkCopyAssignment(CallOp callOp, const clang::CXXMethodDecl *m);
   void checkNonConstUseOfOwner(CallOp callOp);
-  void checkOperatorStar(CallOp callOp);
+  void checkOperators(CallOp callOp, const clang::CXXMethodDecl *m);
 
   // Tracks current module.
   ModuleOp theModule;
@@ -1081,26 +1081,30 @@ void LifetimeCheckPass::checkCtor(CallOp callOp,
   }
 }
 
-static bool isOperatorStar(const clang::CXXMethodDecl *m) {
-  if (!m->isOverloadedOperator())
-    return false;
-  return m->getOverloadedOperator() == clang::OverloadedOperatorKind::OO_Star;
-}
-
-static bool sinkUnsupportedOperator(const clang::CXXMethodDecl *m) {
-  if (!m->isOverloadedOperator())
-    return false;
-  if (!isOperatorStar(m))
-    llvm_unreachable("NYI");
-  return false;
-}
-
-void LifetimeCheckPass::checkOperatorStar(CallOp callOp) {
+void LifetimeCheckPass::checkOperators(CallOp callOp,
+                                       const clang::CXXMethodDecl *m) {
   auto addr = callOp.getOperand(0);
-  if (!ptrs.count(addr))
-    return;
+  if (owners.count(addr)) {
+    // const access to the owner is fine.
+    if (m->isConst())
+      return;
+    // TODO: this is a place where we can hook in some idiom recocgnition
+    // so we don't need to use actual source code annotation to make assumptions
+    // on methods we understand and know to behave nicely.
+    //
+    // In P1179, section 2.5.7.12, the use of [[gsl::lifetime_const]] is
+    // suggested, but it's not part of clang (will it ever?)
+    return checkNonConstUseOfOwner(callOp);
+  }
 
-  checkPointerDeref(addr, callOp.getLoc());
+  if (ptrs.count(addr)) {
+    // The assumption is that method calls on pointer types should trigger
+    // deref checking.
+    checkPointerDeref(addr, callOp.getLoc());
+  }
+
+  // FIXME: we also need to look at operators from non owner or pointer
+  // types that could be using Owner/Pointer types as parameters.
 }
 
 bool LifetimeCheckPass::isNonConstUseOfOwner(CallOp callOp,
@@ -1149,10 +1153,8 @@ void LifetimeCheckPass::checkCall(CallOp callOp) {
     return checkMoveAssignment(callOp, methodDecl);
   if (methodDecl->isCopyAssignmentOperator())
     return checkCopyAssignment(callOp, methodDecl);
-  if (isOperatorStar(methodDecl))
-    return checkOperatorStar(callOp);
-  if (sinkUnsupportedOperator(methodDecl))
-    return;
+  if (methodDecl->isOverloadedOperator())
+    return checkOperators(callOp, methodDecl);
 
   // For any other methods...
 
