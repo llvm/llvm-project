@@ -43,12 +43,22 @@ class LVSymbol final : public LVElement {
 
   // Reference to DW_AT_specification, DW_AT_abstract_origin attribute.
   LVSymbol *Reference = nullptr;
+  LVAutoLocations *Locations = nullptr;
+  LVLocation *CurrentLocation = nullptr;
 
   // Bitfields length.
   uint32_t BitSize = 0;
 
   // Index in the String pool representing any initial value.
   size_t ValueIndex = 0;
+
+  // Coverage factor in units (bytes).
+  unsigned CoverageFactor = 0;
+  float CoveragePercentage = 0;
+
+  // Add a location gap into the location list.
+  LVAutoLocations::iterator addLocationGap(LVAutoLocations::iterator Pos,
+                                           LVAddress LowPC, LVAddress HighPC);
 
 public:
   LVSymbol() : LVElement(LVSubclassID::LV_SYMBOL) {
@@ -57,7 +67,7 @@ public:
   }
   LVSymbol(const LVSymbol &) = delete;
   LVSymbol &operator=(const LVSymbol &) = delete;
-  ~LVSymbol() = default;
+  ~LVSymbol() { delete Locations; }
 
   static bool classof(const LVElement *Element) {
     return Element->getSubclassID() == LVSubclassID::LV_SYMBOL;
@@ -106,6 +116,34 @@ public:
     ValueIndex = getStringPool().getIndex(Value);
   }
   size_t getValueIndex() const override { return ValueIndex; }
+
+  // Add a Location Entry.
+  void addLocationConstant(dwarf::Attribute Attr, LVUnsigned Constant,
+                           uint64_t LocDescOffset);
+  void addLocationOperands(LVSmall Opcode, uint64_t Operand1,
+                           uint64_t Operand2);
+  void addLocation(dwarf::Attribute Attr, LVAddress LowPC, LVAddress HighPC,
+                   LVUnsigned SectionOffset, uint64_t LocDescOffset,
+                   bool CallSiteLocation = false);
+
+  // Fill gaps in the location list.
+  void fillLocationGaps();
+
+  // Get all the locations associated with symbols.
+  void getLocations(LVLocations &LocationList, LVValidLocation ValidLocation,
+                    bool RecordInvalid = false);
+  void getLocations(LVLocations &LocationList) const;
+
+  // Calculate coverage factor.
+  void calculateCoverage();
+
+  unsigned getCoverageFactor() const { return CoverageFactor; }
+  void setCoverageFactor(unsigned Value) { CoverageFactor = Value; }
+  float getCoveragePercentage() const { return CoveragePercentage; }
+  void setCoveragePercentage(float Value) { CoveragePercentage = Value; }
+
+  // Print location in raw format.
+  void printLocations(raw_ostream &OS, bool Full = true) const;
 
   // Follow a chain of references given by DW_AT_abstract_origin and/or
   // DW_AT_specification and update the symbol name.

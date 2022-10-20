@@ -47,6 +47,20 @@ LVSortValue llvm::logicalview::compareOffset(const LVObject *LHS,
   return LHS->getOffset() < RHS->getOffset();
 }
 
+// Callback comparator for Range compare.
+LVSortValue llvm::logicalview::compareRange(const LVObject *LHS,
+                                            const LVObject *RHS) {
+  if (LHS->getLowerAddress() < RHS->getLowerAddress())
+    return true;
+
+  // If the lower address is the same, use the upper address value in
+  // order to put first the smallest interval.
+  if (LHS->getLowerAddress() == RHS->getLowerAddress())
+    return LHS->getUpperAddress() < RHS->getUpperAddress();
+
+  return false;
+}
+
 // Callback comparator based on multiple keys (First: Kind).
 LVSortValue llvm::logicalview::sortByKind(const LVObject *LHS,
                                           const LVObject *RHS) {

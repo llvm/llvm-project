@@ -15,12 +15,15 @@
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVSCOPE_H
 
 #include "llvm/DebugInfo/LogicalView/Core/LVElement.h"
+#include "llvm/DebugInfo/LogicalView/Core/LVLocation.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSort.h"
 #include <map>
 #include <set>
 
 namespace llvm {
 namespace logicalview {
+
+class LVRange;
 
 enum class LVScopeKind {
   IsAggregate,
@@ -76,6 +79,15 @@ class LVScope : public LVElement {
   LVProperties<LVScopeKind> Kinds;
   LVProperties<Property> Properties;
 
+  // Coverage factor in units (bytes).
+  unsigned CoverageFactor = 0;
+
+  // Calculate coverage factor.
+  void calculateCoverage() {
+    float CoveragePercentage = 0;
+    LVLocation::calculateCoverage(Ranges, CoverageFactor, CoveragePercentage);
+  }
+
   // Decide if the scope will be printed, using some conditions given by:
   // only-globals, only-locals, a-pattern.
   bool resolvePrinting() const;
@@ -86,11 +98,12 @@ class LVScope : public LVElement {
                        LVScopeSetFunction SetFunction);
 
 protected:
-  // Types, Symbols, Scopes, Lines in this scope.
+  // Types, Symbols, Scopes, Lines, Locations in this scope.
   LVAutoTypes *Types = nullptr;
   LVAutoSymbols *Symbols = nullptr;
   LVAutoScopes *Scopes = nullptr;
   LVAutoLines *Lines = nullptr;
+  LVAutoLocations *Ranges = nullptr;
 
   // Vector of elements (types, scopes and symbols).
   // It is the union of (*Types, *Symbols and *Scopes) to be used for
@@ -104,8 +117,9 @@ protected:
   void resolveTemplate();
   void printEncodedArgs(raw_ostream &OS, bool Full) const;
 
-  virtual void printSizes(raw_ostream &OS) const {}
-  virtual void printSummary(raw_ostream &OS) const {}
+  void printActiveRanges(raw_ostream &OS, bool Full = true) const;
+  virtual void printSizes(raw_ostream &OS) const {};
+  virtual void printSummary(raw_ostream &OS) const {};
 
   // Encoded template arguments.
   virtual StringRef getEncodedArgs() const { return StringRef(); }
@@ -171,6 +185,7 @@ public:
 
   // Get the specific children.
   const LVLines *getLines() const { return Lines; }
+  const LVLocations *getRanges() const { return Ranges; }
   const LVScopes *getScopes() const { return Scopes; }
   const LVSymbols *getSymbols() const { return Symbols; }
   const LVTypes *getTypes() const { return Types; }
@@ -181,6 +196,8 @@ public:
   void addElement(LVScope *Scope);
   void addElement(LVSymbol *Symbol);
   void addElement(LVType *Type);
+  void addObject(LVLocation *Location);
+  void addObject(LVAddress LowerAddress, LVAddress UpperAddress);
   void addToChildren(LVElement *Element);
 
   // Add the missing elements from the given 'Reference', which is the
@@ -194,9 +211,22 @@ public:
 
   // Get the size of specific children.
   size_t lineCount() const { return Lines ? Lines->size() : 0; }
+  size_t rangeCount() const { return Ranges ? Ranges->size() : 0; }
   size_t scopeCount() const { return Scopes ? Scopes->size() : 0; }
   size_t symbolCount() const { return Symbols ? Symbols->size() : 0; }
   size_t typeCount() const { return Types ? Types->size() : 0; }
+
+  // Find containing parent for the given address.
+  LVScope *outermostParent(LVAddress Address);
+
+  // Get all the locations associated with symbols.
+  void getLocations(LVLocations &LocationList, LVValidLocation ValidLocation,
+                    bool RecordInvalid = false);
+  void getRanges(LVLocations &LocationList, LVValidLocation ValidLocation,
+                 bool RecordInvalid = false);
+  void getRanges(LVRange &RangeList);
+
+  unsigned getCoverageFactor() const { return CoverageFactor; }
 
   Error doPrint(bool Split, bool Match, bool Print, raw_ostream &OS,
                 bool Full = true) const override;
@@ -377,6 +407,10 @@ public:
   void setProducer(StringRef ProducerName) override {
     ProducerIndex = getStringPool().getIndex(ProducerName);
   }
+
+  // Process ranges, locations and calculate coverage.
+  void processRangeLocationCoverage(
+      LVValidLocation ValidLocation = &LVLocation::validateRanges);
 
   void printLocalNames(raw_ostream &OS, bool Full = true) const;
   void printSummary(raw_ostream &OS, const LVCounter &Counter,
@@ -562,6 +596,9 @@ public:
   void setFileFormatName(StringRef FileFormatName) {
     FileFormatNameIndex = getStringPool().getIndex(FileFormatName);
   }
+
+  // Process the collected location, ranges and calculate coverage.
+  void processRangeInformation();
 
   void print(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override;

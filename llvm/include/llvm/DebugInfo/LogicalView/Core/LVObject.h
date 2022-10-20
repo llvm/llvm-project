@@ -102,6 +102,9 @@ const LVAddress MaxAddress = std::numeric_limits<uint64_t>::max();
 
 enum class LVBinaryType { NONE, ELF, COFF };
 
+// Validate functions.
+using LVValidLocation = bool (LVLocation::*)();
+
 // Keep counters of objects.
 struct LVCounter {
   unsigned Lines = 0;
@@ -257,6 +260,11 @@ public:
   void setParent(LVScope *Scope);
   void setParent(LVSymbol *Symbol);
   void resetParent() { Parent = {nullptr}; }
+
+  virtual LVAddress getLowerAddress() const { return 0; }
+  virtual void setLowerAddress(LVAddress Address) {}
+  virtual LVAddress getUpperAddress() const { return 0; }
+  virtual void setUpperAddress(LVAddress Address) {}
 
   uint32_t getLineNumber() const { return LineNumber; }
   void setLineNumber(uint32_t Number) { LineNumber = Number; }
