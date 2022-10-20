@@ -861,11 +861,10 @@ public:
 
     if (MI.isCopy()) {
       unsigned Size = getOpSize(MI, OpIdx);
-      assert(Size == 8 || Size == 4 || Size == 2);
+      assert(Size == 8 || Size == 4);
 
-      uint8_t OpType = (Size == 8) ? AMDGPU::OPERAND_REG_IMM_INT64 :
-                       (Size == 4) ? AMDGPU::OPERAND_REG_IMM_INT32 :
-                                     AMDGPU::OPERAND_REG_IMM_INT16;
+      uint8_t OpType = (Size == 8) ?
+        AMDGPU::OPERAND_REG_IMM_INT64 : AMDGPU::OPERAND_REG_IMM_INT32;
       return isInlineConstant(MO, OpType);
     }
 

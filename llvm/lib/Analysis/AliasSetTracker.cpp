@@ -452,7 +452,7 @@ void AliasSetTracker::add(Instruction *I) {
           return AliasSet::NoAccess;
       };
 
-      ModRefInfo CallMask = AA.getModRefBehavior(Call).getModRef();
+      ModRefInfo CallMask = AA.getMemoryEffects(Call).getModRef();
 
       // Some intrinsics are marked as modifying memory for control flow
       // modelling purposes, but don't actually modify any specific memory

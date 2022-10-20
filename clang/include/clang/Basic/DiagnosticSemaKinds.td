@@ -11691,7 +11691,10 @@ def err_std_source_location_impl_malformed : Error<
 
 // HLSL Diagnostics
 def err_hlsl_attr_unsupported_in_stage : Error<"attribute %0 is unsupported in %select{Pixel|Vertex|Geometry|Hull|Domain|Compute|Library|RayGeneration|Intersection|AnyHit|ClosestHit|Miss|Callable|Mesh|Amplification|Invalid}1 shaders, requires %2">;
-
+def err_hlsl_attr_invalid_type : Error<
+   "attribute %0 only applies to a field or parameter of type '%1'">;
+def err_hlsl_attr_invalid_ast_node : Error<
+   "attribute %0 only applies to %1">;
 def err_hlsl_numthreads_argument_oor : Error<"argument '%select{X|Y|Z}0' to numthreads attribute cannot exceed %1">;
 def err_hlsl_numthreads_invalid : Error<"total number of threads cannot exceed %0">;
 def err_hlsl_missing_numthreads : Error<"missing numthreads attribute for %0 shader entry">;

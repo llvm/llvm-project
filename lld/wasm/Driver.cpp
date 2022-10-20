@@ -428,7 +428,7 @@ static void readConfigs(opt::InputArgList &args) {
   LLVM_DEBUG(errorHandler().verbose = true);
 
   config->initialMemory = args::getInteger(args, OPT_initial_memory, 0);
-  config->globalBase = args::getInteger(args, OPT_global_base, 1024);
+  config->globalBase = args::getInteger(args, OPT_global_base, 0);
   config->maxMemory = args::getInteger(args, OPT_max_memory, 0);
   config->zStackSize =
       args::getZOptionValue(args, OPT_z, "stack-size", WasmPageSize);
@@ -551,6 +551,8 @@ static void checkOptions(opt::InputArgList &args) {
       error("-r and -pie may not be used together");
     if (config->sharedMemory)
       error("-r and --shared-memory may not be used together");
+    if (config->globalBase)
+      error("-r and --global-base may not by used together");
   }
 
   // To begin to prepare for Module Linking-style shared libraries, start
@@ -577,6 +579,10 @@ static void checkOptions(opt::InputArgList &args) {
 
   if (config->bsymbolic && !config->shared) {
     warn("-Bsymbolic is only meaningful when combined with -shared");
+  }
+
+  if (config->globalBase && config->isPic) {
+    error("--global-base may not be used with -shared/-pie");
   }
 }
 

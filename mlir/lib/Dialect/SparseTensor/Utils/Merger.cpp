@@ -271,7 +271,7 @@ BitVector Merger::simplifyCond(unsigned s0, unsigned p0) {
     // Starts resetting from a dense dimension, so that the first bit (if kept)
     // is not undefined dimension type.
     for (unsigned b = 0; b < be; b++) {
-      if (simple[b] && isDimLevelType(b, DimLvlType::kDense)) {
+      if (simple[b] && isDenseDLT(getDimLevelType(b))) {
         offset = be - b - 1; // relative to the end
         break;
       }
@@ -281,8 +281,8 @@ BitVector Merger::simplifyCond(unsigned s0, unsigned p0) {
   // keep the rightmost bit (which could possibly be a synthetic tensor).
   for (unsigned b = be - 1 - offset, i = 0; i < be;
        b = b == 0 ? be - 1 : b - 1, i++) {
-    if (simple[b] && (!isDimLevelType(b, DimLvlType::kCompressed) &&
-                      !isDimLevelType(b, DimLvlType::kSingleton))) {
+    if (simple[b] && (!isCompressedDLT(getDimLevelType(b)) &&
+                      !isSingletonDLT(getDimLevelType(b)))) {
       if (reset)
         simple.reset(b);
       reset = true;
@@ -396,8 +396,8 @@ bool Merger::isSingleCondition(unsigned t, unsigned e) const {
 
 bool Merger::hasAnySparse(const BitVector &bits) const {
   for (unsigned b = 0, be = bits.size(); b < be; b++)
-    if (bits[b] && (isDimLevelType(b, DimLvlType::kCompressed) ||
-                    isDimLevelType(b, DimLvlType::kSingleton)))
+    if (bits[b] && (isCompressedDLT(getDimLevelType(b)) ||
+                    isSingletonDLT(getDimLevelType(b))))
       return true;
   return false;
 }
@@ -613,23 +613,18 @@ void Merger::dumpBits(const BitVector &bits) const {
     if (bits[b]) {
       unsigned t = tensor(b);
       unsigned i = index(b);
-      DimLevelFormat f = dims[t][i];
+      DimLevelType dlt = dimTypes[t][i];
       llvm::dbgs() << " i_" << t << "_" << i << "_";
-      switch (f.levelType) {
-      case DimLvlType::kDense:
+      if (isDenseDLT(dlt))
         llvm::dbgs() << "D";
-        break;
-      case DimLvlType::kCompressed:
+      else if (isCompressedDLT(dlt))
         llvm::dbgs() << "C";
-        break;
-      case DimLvlType::kSingleton:
+      else if (isSingletonDLT(dlt))
         llvm::dbgs() << "S";
-        break;
-      case DimLvlType::kUndef:
+      else if (isUndefDLT(dlt))
         llvm::dbgs() << "U";
-        break;
-      }
-      llvm::dbgs() << "[O=" << f.isOrdered << ",U=" << f.isUnique << "]";
+      llvm::dbgs() << "[O=" << isOrderedDLT(dlt) << ",U=" << isUniqueDLT(dlt)
+                   << "]";
     }
   }
 }

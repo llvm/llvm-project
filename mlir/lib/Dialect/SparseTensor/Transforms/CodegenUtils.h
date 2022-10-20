@@ -17,9 +17,9 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
-#include "mlir/ExecutionEngine/SparseTensor/Enums.h"
 #include "mlir/IR/Builders.h"
 
 namespace mlir {
@@ -135,7 +135,7 @@ private:
   /// Input (TODO: and output) tensors.
   std::vector<Value> tensors;
   /// The dim type array for each tensor.
-  std::vector<std::vector<SparseTensorEncodingAttr::DimLevelType>> dims;
+  std::vector<std::vector<DimLevelType>> dims;
   /// Sparse iteration information (by tensor and dim). These arrays
   /// are updated to remain current within the current loop.
   std::vector<std::vector<Value>> pidxs;
@@ -196,9 +196,6 @@ StringRef primaryTypeFunctionSuffix(PrimaryType pt);
 
 /// Converts a primary storage type to its function-name suffix.
 StringRef primaryTypeFunctionSuffix(Type elemTp);
-
-/// Converts the IR's dimension level type to its internal type-encoding.
-DimLevelType dimLevelTypeEncoding(SparseTensorEncodingAttr::DimLevelType dlt);
 
 //===----------------------------------------------------------------------===//
 // Misc code generators and utilities.
@@ -359,11 +356,9 @@ inline Value constantPrimaryTypeEncoding(OpBuilder &builder, Location loc,
 }
 
 /// Generates a constant of the internal dimension level type encoding.
-inline Value
-constantDimLevelTypeEncoding(OpBuilder &builder, Location loc,
-                             SparseTensorEncodingAttr::DimLevelType dlt) {
-  return constantI8(builder, loc,
-                    static_cast<uint8_t>(dimLevelTypeEncoding(dlt)));
+inline Value constantDimLevelTypeEncoding(OpBuilder &builder, Location loc,
+                                          DimLevelType dlt) {
+  return constantI8(builder, loc, static_cast<uint8_t>(dlt));
 }
 
 } // namespace sparse_tensor

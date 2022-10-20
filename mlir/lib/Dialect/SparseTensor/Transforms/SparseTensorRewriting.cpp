@@ -41,8 +41,7 @@ static bool isZeroValue(Value val) {
 // Helper to detect a sparse tensor type operand.
 static bool isSparseTensor(OpOperand *op) {
   if (auto enc = getSparseTensorEncoding(op->get().getType())) {
-    if (llvm::is_contained(enc.getDimLevelType(),
-                           SparseTensorEncodingAttr::DimLevelType::Compressed))
+    if (llvm::is_contained(enc.getDimLevelType(), DimLevelType::Compressed))
       return true;
   }
   return false;
@@ -131,21 +130,20 @@ static void sizesForTensor(OpBuilder &builder, SmallVector<Value, 4> &sizes,
 static RankedTensorType getUnorderedCOOFromType(RankedTensorType src) {
   auto *ctx = src.getContext();
   auto rank = src.getRank();
-  SmallVector<SparseTensorEncodingAttr::DimLevelType, 4> dims;
+  SmallVector<DimLevelType, 4> dims;
 
   // An unordered and non-unique compressed dim at beginning unless the tensor
   // is a 1D tensor.
   if (rank > 1)
-    dims.push_back(SparseTensorEncodingAttr::DimLevelType::CompressedNuNo);
+    dims.push_back(DimLevelType::CompressedNuNo);
 
   // TODO: it is actually ordered at the level for ordered input.
   // Followed by unordered non-unique n-2 singleton levels.
-  std::fill_n(std::back_inserter(dims), rank - 2,
-              SparseTensorEncodingAttr::DimLevelType::SingletonNuNo);
+  std::fill_n(std::back_inserter(dims), rank - 2, DimLevelType::SingletonNuNo);
   // TODO: only if all the inputs (for concatentate) are unique at the last
   // level should the COO has a unique level at the end. Ends by a unordered
   // unique singleton level.
-  dims.push_back(SparseTensorEncodingAttr::DimLevelType::SingletonNo);
+  dims.push_back(DimLevelType::SingletonNo);
   SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(src);
   // TODO: Maybe pick the bitwidth based on input/output tensors (probably the
   // largest one among them) in the original operation instead of using the

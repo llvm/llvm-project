@@ -49,7 +49,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
   if (failed(parser.parseGreater()))
     return {};
   // Process the data from the parsed dictionary value into struct-like data.
-  SmallVector<SparseTensorEncodingAttr::DimLevelType, 4> dlt;
+  SmallVector<DimLevelType, 4> dlt;
   AffineMap dimOrd = {};
   AffineMap higherOrd = {};
   unsigned ptr = 0;
@@ -71,23 +71,23 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
         }
         auto strVal = strAttr.getValue();
         if (strVal == "dense") {
-          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::Dense);
+          dlt.push_back(DimLevelType::Dense);
         } else if (strVal == "compressed") {
-          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::Compressed);
+          dlt.push_back(DimLevelType::Compressed);
         } else if (strVal == "compressed-nu") {
-          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::CompressedNu);
+          dlt.push_back(DimLevelType::CompressedNu);
         } else if (strVal == "compressed-no") {
-          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::CompressedNo);
+          dlt.push_back(DimLevelType::CompressedNo);
         } else if (strVal == "compressed-nu-no") {
-          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::CompressedNuNo);
+          dlt.push_back(DimLevelType::CompressedNuNo);
         } else if (strVal == "singleton") {
-          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::Singleton);
+          dlt.push_back(DimLevelType::Singleton);
         } else if (strVal == "singleton-nu") {
-          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::SingletonNu);
+          dlt.push_back(DimLevelType::SingletonNu);
         } else if (strVal == "singleton-no") {
-          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::SingletonNo);
+          dlt.push_back(DimLevelType::SingletonNo);
         } else if (strVal == "singleton-nu-no") {
-          dlt.push_back(SparseTensorEncodingAttr::DimLevelType::SingletonNuNo);
+          dlt.push_back(DimLevelType::SingletonNuNo);
         } else {
           parser.emitError(parser.getNameLoc(),
                            "unexpected dimension level type: ")
@@ -143,6 +143,10 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
   printer << "<{ dimLevelType = [ ";
   for (unsigned i = 0, e = getDimLevelType().size(); i < e; i++) {
     switch (getDimLevelType()[i]) {
+    case DimLevelType::Undef:
+      // TODO: should probably raise an error instead of printing it...
+      printer << "\"undef\"";
+      break;
     case DimLevelType::Dense:
       printer << "\"dense\"";
       break;
@@ -256,98 +260,6 @@ mlir::sparse_tensor::getSparseTensorEncoding(Type type) {
   if (auto ttp = type.dyn_cast<RankedTensorType>())
     return ttp.getEncoding().dyn_cast_or_null<SparseTensorEncodingAttr>();
   return nullptr;
-}
-
-bool mlir::sparse_tensor::isDenseDim(
-    SparseTensorEncodingAttr::DimLevelType dltp) {
-  return dltp == SparseTensorEncodingAttr::DimLevelType::Dense;
-}
-
-bool mlir::sparse_tensor::isCompressedDim(
-    SparseTensorEncodingAttr::DimLevelType dltp) {
-  switch (dltp) {
-  case SparseTensorEncodingAttr::DimLevelType::Compressed:
-  case SparseTensorEncodingAttr::DimLevelType::CompressedNu:
-  case SparseTensorEncodingAttr::DimLevelType::CompressedNo:
-  case SparseTensorEncodingAttr::DimLevelType::CompressedNuNo:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool mlir::sparse_tensor::isSingletonDim(
-    SparseTensorEncodingAttr::DimLevelType dltp) {
-  switch (dltp) {
-  case SparseTensorEncodingAttr::DimLevelType::Singleton:
-  case SparseTensorEncodingAttr::DimLevelType::SingletonNu:
-  case SparseTensorEncodingAttr::DimLevelType::SingletonNo:
-  case SparseTensorEncodingAttr::DimLevelType::SingletonNuNo:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool mlir::sparse_tensor::isDenseDim(RankedTensorType type, uint64_t d) {
-  assert(d < static_cast<uint64_t>(type.getRank()));
-  if (auto enc = getSparseTensorEncoding(type))
-    return isDenseDim(enc.getDimLevelType()[d]);
-  return true; // unannotated tensor is dense
-}
-
-bool mlir::sparse_tensor::isCompressedDim(RankedTensorType type, uint64_t d) {
-  assert(d < static_cast<uint64_t>(type.getRank()));
-  if (auto enc = getSparseTensorEncoding(type))
-    return isCompressedDim(enc.getDimLevelType()[d]);
-  return false; // unannotated tensor is dense
-}
-
-bool mlir::sparse_tensor::isSingletonDim(RankedTensorType type, uint64_t d) {
-  assert(d < static_cast<uint64_t>(type.getRank()));
-  if (auto enc = getSparseTensorEncoding(type))
-    return isSingletonDim(enc.getDimLevelType()[d]);
-  return false; // unannotated tensor is dense
-}
-
-bool mlir::sparse_tensor::isOrderedDim(
-    SparseTensorEncodingAttr::DimLevelType dltp) {
-  switch (dltp) {
-  case SparseTensorEncodingAttr::DimLevelType::CompressedNo:
-  case SparseTensorEncodingAttr::DimLevelType::CompressedNuNo:
-  case SparseTensorEncodingAttr::DimLevelType::SingletonNo:
-  case SparseTensorEncodingAttr::DimLevelType::SingletonNuNo:
-    return false;
-  default:
-    return true;
-  }
-}
-
-bool mlir::sparse_tensor::isUniqueDim(
-    SparseTensorEncodingAttr::DimLevelType dltp) {
-  switch (dltp) {
-  case SparseTensorEncodingAttr::DimLevelType::CompressedNu:
-  case SparseTensorEncodingAttr::DimLevelType::CompressedNuNo:
-  case SparseTensorEncodingAttr::DimLevelType::SingletonNu:
-  case SparseTensorEncodingAttr::DimLevelType::SingletonNuNo:
-    return false;
-  default:
-    return true;
-  }
-}
-
-bool mlir::sparse_tensor::isOrderedDim(RankedTensorType type, uint64_t d) {
-  assert(d < static_cast<uint64_t>(type.getRank()));
-  if (auto enc = getSparseTensorEncoding(type))
-    return isOrderedDim(enc.getDimLevelType()[d]);
-  return true; // unannotated tensor is dense (and thus ordered)
-}
-
-bool mlir::sparse_tensor::isUniqueDim(RankedTensorType type, uint64_t d) {
-  assert(d < static_cast<uint64_t>(type.getRank()));
-  if (auto enc = getSparseTensorEncoding(type))
-    return isUniqueDim(enc.getDimLevelType()[d]);
-  return true; // unannotated tensor is dense (and thus unique)
 }
 
 uint64_t mlir::sparse_tensor::toOrigDim(const SparseTensorEncodingAttr &enc,

@@ -124,6 +124,7 @@ class VOP2_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
   VOP_DPP_Pseudo <OpName, P, pattern> {
 }
 
+
 class getVOP2Pat64 <SDPatternOperator node, VOPProfile P> : LetDummies {
   list<dag> ret = !if(P.HasModifiers,
     [(set P.DstVT:$vdst,
@@ -351,20 +352,6 @@ multiclass VOP2eInstAliases<VOP2_Pseudo ps, VOP2_Real inst> {
   let WaveSizePredicate = isWave64 in {
     def : VOP2eInstAlias<ps, inst, "vcc">;
   }
-}
-
-// TODO-GFX11 can be used to enable opsel on promoted insts
-class VOP2_to_VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Profile_Base<P, Features> {
-  let Asm64 =!if(Features.HasOpSel,
-              getAsmVOP3OpSel<NumSrcArgs,
-                              HasIntClamp,
-                              HasSrc0FloatMods,
-                              HasSrc1FloatMods,
-                              HasSrc2FloatMods>.ret,
-              !if(Features.HasClamp,
-                  getAsm64<HasDst, NumSrcArgs, HasIntClamp,
-                           HasModifiers, HasOMod, DstVT>.ret,
-                  P.Asm64));
 }
 
 class VOP_MADK_Base<ValueType vt> : VOPProfile <[vt, vt, vt, vt]> {
@@ -851,9 +838,20 @@ def :  divergent_i64_BinOp <xor, V_XOR_B32_e64>;
 // 16-Bit Operand Instructions
 //===----------------------------------------------------------------------===//
 
+def LDEXP_F16_VOPProfile_True16 : VOPProfile_True16<VOP_F16_F16_I32> {
+  // The ldexp.f16 intrinsic expects a i32 src1 operand, though the hardware
+  // encoding treats src1 as an f16
+  let Src1RC32 = RegisterOperand<VGPR_32_Lo128>;
+  let Src1DPP = VGPR_32_Lo128;
+  let Src1ModDPP = IntT16VRegInputMods;
+}
+
 let isReMaterializable = 1 in {
 let FPDPRounding = 1 in {
-defm V_LDEXP_F16 : VOP2Inst_t16 <"v_ldexp_f16", VOP_F16_F16_I32, AMDGPUldexp>;
+  let SubtargetPredicate = NotHasTrue16BitInsts, OtherPredicates = [Has16BitInsts]  in
+    defm V_LDEXP_F16 : VOP2Inst <"v_ldexp_f16", VOP_F16_F16_I32, AMDGPUldexp>;
+  let SubtargetPredicate = HasTrue16BitInsts in
+    defm V_LDEXP_F16_t16 : VOP2Inst <"v_ldexp_f16_t16", LDEXP_F16_VOPProfile_True16, AMDGPUldexp>;
 } // End FPDPRounding = 1
 // FIXME VOP3 Only instructions. NFC using VOPProfile_True16 for these until a planned change to use a new register class for VOP3 encoded True16 instuctions
 defm V_LSHLREV_B16 : VOP2Inst_e64_t16 <"v_lshlrev_b16", VOP_I16_I16_I16, clshl_rev_16>;
@@ -866,7 +864,6 @@ defm V_SUB_F16 : VOP2Inst_t16 <"v_sub_f16", VOP_F16_F16_F16, any_fsub>;
 defm V_SUBREV_F16 : VOP2Inst_t16 <"v_subrev_f16", VOP_F16_F16_F16, null_frag, "v_sub_f16">;
 defm V_MUL_F16 : VOP2Inst_t16 <"v_mul_f16", VOP_F16_F16_F16, any_fmul>;
 } // End FPDPRounding = 1
-// TODO-GFX11 see above comment for VOP2_to_VOP3_Profile usage.
 defm V_MUL_LO_U16 : VOP2Inst_e64_t16 <"v_mul_lo_u16", VOP_I16_I16_I16, mul>;
 defm V_MAX_F16 : VOP2Inst_t16 <"v_max_f16", VOP_F16_F16_F16, fmaxnum_like>;
 defm V_MIN_F16 : VOP2Inst_t16 <"v_min_f16", VOP_F16_F16_F16, fminnum_like>;
@@ -1901,7 +1898,6 @@ defm V_XNOR_B32        : VOP2_Real_gfx10_gfx11_gfx12<0x01e>;
 defm V_FMAC_F32        : VOP2_Real_gfx10_gfx11_gfx12<0x02b>;
 defm V_FMAMK_F32       : VOP2Only_Real_MADK_gfx10_gfx11_gfx12<0x02c>;
 defm V_FMAAK_F32       : VOP2Only_Real_MADK_gfx10_gfx11_gfx12<0x02d>;
-// TODO-GFX11 gfx10 should have had dpp for v_pk_fmac_f16 but it didnt'
 defm V_ADD_F16         : VOP2_Real_gfx10<0x032>;
 defm V_SUB_F16         : VOP2_Real_gfx10<0x033>;
 defm V_SUBREV_F16      : VOP2_Real_gfx10<0x034>;

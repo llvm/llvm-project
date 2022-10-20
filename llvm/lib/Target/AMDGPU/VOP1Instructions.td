@@ -133,7 +133,6 @@ multiclass VOP1Inst <string opName, VOPProfile P,
   foreach _ = BoolToList<P.HasExtSDWA>.ret in
     def _sdwa : VOP1_SDWA_Pseudo <opName, P>;
 
-  // TODO-GFX11 make this _e32_dpp named for consistency
   foreach _ = BoolToList<P.HasExtDPP>.ret in
     def _dpp : VOP1_DPP_Pseudo <opName, P>;
 
@@ -228,7 +227,6 @@ def VOPProfile_MOV : VOPProfile <[i32, i32, untyped, untyped]> {
 }
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
-// TODO-GFX11 should allow Modifiers even before gfx11
 defm V_MOV_B32 : VOP1Inst <"v_mov_b32", VOPProfile_MOV, null_frag, 0x8>;
 
 let SubtargetPredicate = isGFX940Plus in
@@ -539,7 +537,6 @@ def : GCNPat<
 >;
 }
 
-// TODO 64bit defines may be unnecessary, this only has 32 bit encoding
 def VOP_SWAP_I32 : VOPProfile<[i32, i32, i32, untyped]> {
   let Outs32 = (outs VGPR_32:$vdst, VGPR_32:$vdst1);
   let Ins32 = (ins VGPR_32:$src0, VGPR_32:$src1);

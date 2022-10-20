@@ -33,9 +33,10 @@
 #ifndef MLIR_EXECUTIONENGINE_SPARSETENSOR_STORAGE_H
 #define MLIR_EXECUTIONENGINE_SPARSETENSOR_STORAGE_H
 
+#include "mlir/Dialect/SparseTensor/IR/Enums.h"
+#include "mlir/ExecutionEngine/Float16bits.h"
 #include "mlir/ExecutionEngine/SparseTensor/COO.h"
 #include "mlir/ExecutionEngine/SparseTensor/CheckedMul.h"
-#include "mlir/ExecutionEngine/SparseTensor/Enums.h"
 #include "mlir/ExecutionEngine/SparseTensor/ErrorHandling.h"
 
 namespace mlir {

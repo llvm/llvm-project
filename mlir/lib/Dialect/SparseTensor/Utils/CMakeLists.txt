@@ -9,4 +9,5 @@ add_mlir_dialect_library(MLIRSparseTensorUtils
   MLIRComplexDialect
   MLIRIR
   MLIRLinalgDialect
+  MLIRSparseTensorEnums
 )

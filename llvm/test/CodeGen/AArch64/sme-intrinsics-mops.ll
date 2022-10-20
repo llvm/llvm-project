@@ -109,8 +109,8 @@ define void @usmops_d(<vscale x 8 x i1> %pn, <vscale x 8 x i1> %pm, <vscale x 8 
   ret void
 }
 
-attributes #0 = { "target-features"="+sme-i64" }
-attributes #1 = { "target-features"="+sme-f64" }
+attributes #0 = { "target-features"="+sme-i16i64" }
+attributes #1 = { "target-features"="+sme-f64f64" }
 
 declare void @llvm.aarch64.sme.mops.wide.nxv8bf16(i64, <vscale x 8 x i1>, <vscale x 8 x i1>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>)
 declare void @llvm.aarch64.sme.mops.wide.nxv8f16(i64, <vscale x 8 x i1>, <vscale x 8 x i1>, <vscale x 8 x half>, <vscale x 8 x half>)

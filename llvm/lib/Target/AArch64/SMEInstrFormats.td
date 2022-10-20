@@ -247,7 +247,7 @@ def : Pat<(int_aarch64_sme_addva
             (nxv4i32 ZPR32:$zn)),
           (ADDVA_MPPZ_PSEUDO_S imm0_3:$tile, $pn, $pm, $zn)>;
 
-let Predicates = [HasSMEI64] in {
+let Predicates = [HasSMEI16I64] in {
 def ADDHA_MPPZ_PSEUDO_D : sme_add_vector_to_tile_pseudo<ZPR64>;
 def ADDVA_MPPZ_PSEUDO_D : sme_add_vector_to_tile_pseudo<ZPR64>;
 
