@@ -4592,12 +4592,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     // changed.
     return DAG.getMergeValues({MS.getValue(0), MS.getValue(2)}, DL);
   }
-  case Intrinsic::aarch64_sme_get_pstatesm: {
-    SDValue Chain = Op->getOperand(0);
-    SMEAttrs Attrs(DAG.getMachineFunction().getFunction());
-    SDValue PStateSM = getPStateSM(DAG, Chain, Attrs, DL, Op.getValueType());
-    return DAG.getMergeValues({PStateSM, Chain}, DL);
-  }
   case Intrinsic::aarch64_sme_za_enable:
     return DAG.getNode(
         AArch64ISD::SMSTART, DL, MVT::Other,
