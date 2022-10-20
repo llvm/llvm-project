@@ -349,8 +349,6 @@ class ReaderTestCoverage : public ReaderTest {
   // Locations.
   LVLocation *LocationOne = nullptr;
   LVLocation *LocationTwo = nullptr;
-  LVLocation *LocationThree = nullptr;
-  LVLocation *LocationFour = nullptr;
   LVLocation *LocationFive = nullptr;
   LVLocation *LocationSix = nullptr;
 
@@ -393,8 +391,6 @@ void ReaderTestCoverage::createElements() {
   // Create the logical locations.
   LocationOne = create<LVLocation>();
   LocationTwo = create<LVLocation>();
-  LocationThree = create<LVLocation>();
-  LocationFour = create<LVLocation>();
   LocationFive = create<LVLocation>();
   LocationSix = create<LVLocation>();
 }
@@ -479,14 +475,6 @@ void ReaderTestCoverage::initElements() {
   set(LocationTwo, LineTwo, LineSix, 0x5200, 0x6100);
   EXPECT_STREQ(LocationTwo->getIntervalInfo().c_str(),
                " Lines 200:600 [0x0000005200:0x0000006100]");
-
-  set(LocationThree, LineThree, LineFive, 0x5400, 0x5800);
-  EXPECT_STREQ(LocationThree->getIntervalInfo().c_str(),
-               " Lines 300:500 [0x0000005400:0x0000005800]");
-
-  set(LocationFour, LineFour, LineFour, 0x5600, 0x5700);
-  EXPECT_STREQ(LocationFour->getIntervalInfo().c_str(),
-               " Lines 400:400 [0x0000005600:0x0000005700]");
 
   set(LocationFive, LineFive, LineFive, 0x5800, 0x5900);
   EXPECT_STREQ(LocationFive->getIntervalInfo().c_str(),
