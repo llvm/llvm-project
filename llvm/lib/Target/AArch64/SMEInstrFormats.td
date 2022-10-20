@@ -1624,3 +1624,45 @@ multiclass sme2_int_mla_long_array_vg4_multi<string mnemonic, bits<2> op> {
   def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm2], $Zn, $Zm",
                  (!cast<Instruction>(NAME #_S) MatrixOp32:$ZAda,  MatrixIndexGPR32Op8_11:$Rv, uimm2s2range:$imm2, ZZZZ_h_mul_r:$Zn, ZZZZ_h_mul_r:$Zm), 0>;
 }
+
+//===----------------------------------------------------------------------===//
+// SME2 multi-vec INT/ FP down convert
+
+class sme2_cvt_vg2_single<string mnemonic, bits<2> op, bits<2> is_int>
+    : I<(outs ZPR16:$Zd), (ins ZZ_s_mul_r:$Zn),
+        mnemonic, "\t$Zd, $Zn", "", []>, Sched<[]> {
+  bits<4> Zn;
+  bits<5> Zd;
+  let Inst{31-23} = 0b110000010;
+  let Inst{22}    = op{1};
+  let Inst{21-18} = 0b1000;
+  let Inst{17-16} = is_int;
+  let Inst{15-10} = 0b111000;
+  let Inst{9-6}   = Zn;
+  let Inst{5}     = op{0};
+  let Inst{4-0}   = Zd;
+}
+
+
+class sme2_cvt_vg4_single<bit sz,bits<3> op, ZPRRegOp zpr_ty, RegisterOperand vector_ty,
+                           string mnemonic>
+    : I<(outs zpr_ty:$Zd), (ins vector_ty:$Zn),
+        mnemonic, "\t$Zd, $Zn", "", []>, Sched<[]> {
+  bits<3> Zn;
+  bits<5> Zd;
+  let Inst{31-24} = 0b11000001;
+  let Inst{23}    = sz;
+  let Inst{22}    = op{2};
+  let Inst{21-16} = 0b110011;
+  let Inst{15-10} = 0b111000;
+  let Inst{9-7}   = Zn;
+  let Inst{6-5}   = op{1-0};
+  let Inst{4-0}   = Zd;
+}
+
+
+multiclass sme2_int_cvt_vg4_single<string mnemonic, bits<3> op> {
+def _StoB : sme2_cvt_vg4_single<0b0, op, ZPR8, ZZZZ_s_mul_r, mnemonic>;
+def _DtoH : sme2_cvt_vg4_single<0b1, op, ZPR16, ZZZZ_d_mul_r, mnemonic>;
+}
+
