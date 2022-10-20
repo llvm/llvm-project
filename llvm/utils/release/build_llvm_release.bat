@@ -1,28 +1,58 @@
 @echo off
 setlocal enabledelayedexpansion
 
-if "%1"=="" goto usage
 goto begin
 
 :usage
 echo Script for building the LLVM installer on Windows,
 echo used for the releases at https://github.com/llvm/llvm-project/releases
 echo.
-echo Usage: build_llvm_release.bat ^<version^>
+echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64]
 echo.
-echo Example: build_llvm_release.bat 14.0.4
+echo Options:
+echo --version: [required] version to build
+echo --help: display this help
+echo --x86: build and test x86 variant
+echo --x64: build and test x64 variant
 echo.
+echo Note: At least one variant to build is required.
+echo.
+echo Example: build_llvm_release.bat --version 15.0.0 --x86 --x64
 exit /b 1
 
 :begin
 
+::==============================================================================
+:: parse args
+set version=
+set help=
+set x86=
+set x64=
+call :parse_args %*
+
+if "%help%" NEQ "" goto usage
+
+if "%version%" == "" (
+    echo --version option is required
+    echo =============================
+    goto usage
+)
+
+if "%x64%" == "" if "%x86%" == "" (
+    echo nothing to build!
+    echo choose one or several variants from: --x86 --x64
+    exit /b 1
+)
+
+::==============================================================================
+:: check prerequisites
 REM Note:
 REM   7zip versions 21.x and higher will try to extract the symlinks in
 REM   llvm's git archive, which requires running as administrator.
 
 REM Check 7-zip version and/or administrator permissions.
-for /f "delims=" %%i in ('7z.exe ^| findstr /r "2[1-9].[0-9][0-9]"') do set version=%%i
-if not "%version%"=="" (
+for /f "delims=" %%i in ('7z.exe ^| findstr /r "2[1-9].[0-9][0-9]"') do set version_7z=%%i
+if not "%version_7z%"=="" (
   REM Unique temporary filename to use by the 'mklink' command.
   set "link_name=%temp%\%username%_%random%_%random%.tmp"
 
@@ -32,7 +62,7 @@ if not "%version%"=="" (
   if errorlevel 1 (
     echo.
     echo Script requires administrator permissions, or a 7-zip version 20.x or older.
-    echo Current version is "%version%"
+    echo Current version is "%version_7z%"
     exit /b 1
   ) else (
     REM Remove the temporary symbolic link.
@@ -50,29 +80,36 @@ REM
 REM
 REM   For LLDB, SWIG version <= 3.0.8 needs to be used to work around
 REM   https://github.com/swig/swig/issues/769
+REM
 
+:: Detect Visual Studio
+set vsinstall=
+set vswhere=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe
 
-set vsdevcmd=
-set vs_2019_prefix=C:\Program Files (x86)\Microsoft Visual Studio\2019
-:: try potential activated visual studio, then 2019, with different editions
-call :find_visual_studio "%VSINSTALLDIR%"
-call :find_visual_studio "%vs_2019_prefix%\Enterprise"
-call :find_visual_studio "%vs_2019_prefix%\Professional"
-call :find_visual_studio "%vs_2019_prefix%\Community"
-call :find_visual_studio "%vs_2019_prefix%\BuildTools"
+if "%VSINSTALLDIR%" NEQ "" (
+  echo using enabled Visual Studio installation
+  set "vsinstall=%VSINSTALLDIR%"
+) else (
+  echo using vswhere to detect Visual Studio installation
+  FOR /F "delims=" %%r IN ('^""%vswhere%" -nologo -latest -products "*" -all -property installationPath^"') DO set vsinstall=%%r
+)
+set "vsdevcmd=%vsinstall%\Common7\Tools\VsDevCmd.bat"
+
 if not exist "%vsdevcmd%" (
   echo Can't find any installation of Visual Studio
   exit /b 1
 )
 echo Using VS devcmd: %vsdevcmd%
 
+::==============================================================================
 :: start echoing what we do
 @echo on
+
 set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310-32
 set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310
 
-set revision=llvmorg-%1
-set package_version=%1
+set revision=llvmorg-%version%
+set package_version=%version%
 set build_dir=%cd%\llvm_package_%package_version%
 
 echo Revision: %revision%
@@ -118,8 +155,8 @@ REM Preserve original path
 set OLDPATH=%PATH%
 
 REM Build the 32-bits and/or 64-bits binaries.
-call :do_build_32 || exit /b 1
-call :do_build_64 || exit /b 1
+if "%x86%" == "true" call :do_build_32 || exit /b 1
+if "%x64%" == "true" call :do_build_64 || exit /b 1
 exit /b 0
 
 ::==============================================================================
@@ -325,15 +362,4 @@ exit /b 0
   goto :parse_args_start
 
 :parse_args_done
-exit /b 0
-::==============================================================================
-:find_visual_studio
-set "vs_install=%~1"
-if "%vs_install%" == "" exit /b 1
-
-if "%vsdevcmd%" NEQ "" exit /b 0 :: already found
-
-set "candidate=%vs_install%\Common7\Tools\VsDevCmd.bat"
-echo trying VS devcmd: %candidate%
-if exist "%candidate%" set "vsdevcmd=%candidate%"
 exit /b 0

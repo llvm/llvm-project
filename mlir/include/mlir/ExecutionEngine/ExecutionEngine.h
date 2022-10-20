@@ -46,6 +46,9 @@ public:
   /// Dump cached object to output file `filename`.
   void dumpToObjectFile(StringRef filename);
 
+  /// Returns `true` if cache hasn't been populated yet.
+  bool isEmpty();
+
 private:
   llvm::StringMap<std::unique_ptr<llvm::MemoryBuffer>> cachedObjects;
 };
@@ -77,8 +80,8 @@ struct ExecutionEngineOptions {
 
   /// If `enableObjectCache` is set, the JIT compiler will create one to store
   /// the object generated for the given module. The contents of the cache can
-  /// be dumped to a file via the `dumpToObjectfile` method.
-  bool enableObjectCache = false;
+  /// be dumped to a file via the `dumpToObjectFile` method.
+  bool enableObjectDump = false;
 
   /// If enable `enableGDBNotificationListener` is set, the JIT compiler will
   /// notify the llvm's global GDB notification listener.
@@ -101,7 +104,7 @@ struct ExecutionEngineOptions {
 /// be used to invoke the JIT-compiled function.
 class ExecutionEngine {
 public:
-  ExecutionEngine(bool enableObjectCache, bool enableGDBNotificationListener,
+  ExecutionEngine(bool enableObjectDump, bool enableGDBNotificationListener,
                   bool enablePerfNotificationListener);
 
   /// Creates an execution engine for the given MLIR IR.
@@ -198,6 +201,9 @@ private:
 
   /// Underlying cache.
   std::unique_ptr<SimpleObjectCache> cache;
+
+  /// Names of functions that may be looked up.
+  std::vector<std::string> functionNames;
 
   /// GDB notification listener.
   llvm::JITEventListener *gdbListener;

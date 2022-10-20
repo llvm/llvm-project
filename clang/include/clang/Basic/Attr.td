@@ -4065,6 +4065,12 @@ def HLSLResource : InheritableAttr {
   let Documentation = [InternalOnly];
 }
 
+def HLSLGroupSharedAddressSpace : TypeAttr {
+  let Spellings = [Keyword<"groupshared">];
+  let Subjects = SubjectList<[Var]>;
+  let Documentation = [HLSLGroupSharedAddressSpaceDocs];
+}
+
 def RandomizeLayout : InheritableAttr {
   let Spellings = [GCC<"randomize_layout">];
   let Subjects = SubjectList<[Record]>;

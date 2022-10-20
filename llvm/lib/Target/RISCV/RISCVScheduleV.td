@@ -19,14 +19,8 @@ def WriteVSETVL       : SchedWrite;
 
 // 7. Vector Loads and Stores
 // 7.4. Vector Unit-Stride Instructions
-def WriteVLDE8        : SchedWrite;
-def WriteVLDE16       : SchedWrite;
-def WriteVLDE32       : SchedWrite;
-def WriteVLDE64       : SchedWrite;
-def WriteVSTE8        : SchedWrite;
-def WriteVSTE16       : SchedWrite;
-def WriteVSTE32       : SchedWrite;
-def WriteVSTE64       : SchedWrite;
+def WriteVLDE         : SchedWrite;
+def WriteVSTE         : SchedWrite;
 // 7.4.1. Vector Unit-Strided Mask
 def WriteVLDM         : SchedWrite;
 def WriteVSTM         : SchedWrite;
@@ -57,10 +51,7 @@ def WriteVSTOX16      : SchedWrite;
 def WriteVSTOX32      : SchedWrite;
 def WriteVSTOX64      : SchedWrite;
 // 7.7. Vector Unit-stride Fault-Only-First Loads
-def WriteVLDFF8       : SchedWrite;
-def WriteVLDFF16      : SchedWrite;
-def WriteVLDFF32      : SchedWrite;
-def WriteVLDFF64      : SchedWrite;
+def WriteVLDFF        : SchedWrite;
 // 7.8. Vector Segment Instructions
 foreach nf=2-8 in {
   foreach eew = [8, 16, 32, 64] in {
@@ -76,22 +67,10 @@ foreach nf=2-8 in {
   }
 }
 // 7.9. Vector Whole Register Instructions
-def WriteVLD1R8       : SchedWrite;
-def WriteVLD1R16      : SchedWrite;
-def WriteVLD1R32      : SchedWrite;
-def WriteVLD1R64      : SchedWrite;
-def WriteVLD2R8       : SchedWrite;
-def WriteVLD2R16      : SchedWrite;
-def WriteVLD2R32      : SchedWrite;
-def WriteVLD2R64      : SchedWrite;
-def WriteVLD4R8       : SchedWrite;
-def WriteVLD4R16      : SchedWrite;
-def WriteVLD4R32      : SchedWrite;
-def WriteVLD4R64      : SchedWrite;
-def WriteVLD8R8       : SchedWrite;
-def WriteVLD8R16      : SchedWrite;
-def WriteVLD8R32      : SchedWrite;
-def WriteVLD8R64      : SchedWrite;
+def WriteVLD1R        : SchedWrite;
+def WriteVLD2R        : SchedWrite;
+def WriteVLD4R        : SchedWrite;
+def WriteVLD8R        : SchedWrite;
 def WriteVST1R        : SchedWrite;
 def WriteVST2R        : SchedWrite;
 def WriteVST4R        : SchedWrite;
@@ -284,10 +263,7 @@ def ReadVSETVL        : SchedRead;
 def ReadVLDX          : SchedRead;
 def ReadVSTX          : SchedRead;
 // 7.4. Vector Unit-Stride Instructions
-def ReadVSTE8V        : SchedRead;
-def ReadVSTE16V       : SchedRead;
-def ReadVSTE32V       : SchedRead;
-def ReadVSTE64V       : SchedRead;
+def ReadVSTEV        : SchedRead;
 // 7.4.1. Vector Unit-Strided Mask
 def ReadVSTM          : SchedRead;
 // 7.5. Vector Strided Instructions
@@ -513,14 +489,8 @@ def : WriteRes<WriteVSETIVLI, []>;
 def : WriteRes<WriteVSETVL, []>;
 
 // 7. Vector Loads and Stores
-def : WriteRes<WriteVLDE8, []>;
-def : WriteRes<WriteVLDE16, []>;
-def : WriteRes<WriteVLDE32, []>;
-def : WriteRes<WriteVLDE64, []>;
-def : WriteRes<WriteVSTE8, []>;
-def : WriteRes<WriteVSTE16, []>;
-def : WriteRes<WriteVSTE32, []>;
-def : WriteRes<WriteVSTE64, []>;
+def : WriteRes<WriteVLDE, []>;
+def : WriteRes<WriteVSTE, []>;
 def : WriteRes<WriteVLDM, []>;
 def : WriteRes<WriteVSTM, []>;
 def : WriteRes<WriteVLDS8, []>;
@@ -547,26 +517,11 @@ def : WriteRes<WriteVSTOX8, []>;
 def : WriteRes<WriteVSTOX16, []>;
 def : WriteRes<WriteVSTOX32, []>;
 def : WriteRes<WriteVSTOX64, []>;
-def : WriteRes<WriteVLDFF8, []>;
-def : WriteRes<WriteVLDFF16, []>;
-def : WriteRes<WriteVLDFF32, []>;
-def : WriteRes<WriteVLDFF64, []>;
-def : WriteRes<WriteVLD1R8, []>;
-def : WriteRes<WriteVLD1R16, []>;
-def : WriteRes<WriteVLD1R32, []>;
-def : WriteRes<WriteVLD1R64, []>;
-def : WriteRes<WriteVLD2R8, []>;
-def : WriteRes<WriteVLD2R16, []>;
-def : WriteRes<WriteVLD2R32, []>;
-def : WriteRes<WriteVLD2R64, []>;
-def : WriteRes<WriteVLD4R8, []>;
-def : WriteRes<WriteVLD4R16, []>;
-def : WriteRes<WriteVLD4R32, []>;
-def : WriteRes<WriteVLD4R64, []>;
-def : WriteRes<WriteVLD8R8, []>;
-def : WriteRes<WriteVLD8R16, []>;
-def : WriteRes<WriteVLD8R32, []>;
-def : WriteRes<WriteVLD8R64, []>;
+def : WriteRes<WriteVLDFF, []>;
+def : WriteRes<WriteVLD1R, []>;
+def : WriteRes<WriteVLD2R, []>;
+def : WriteRes<WriteVLD4R, []>;
+def : WriteRes<WriteVLD8R, []>;
 def : WriteRes<WriteVST1R, []>;
 def : WriteRes<WriteVST2R, []>;
 def : WriteRes<WriteVST4R, []>;
@@ -712,10 +667,7 @@ def : ReadAdvance<ReadVSETVL, 0>;
 // 7. Vector Loads and Stores
 def : ReadAdvance<ReadVLDX, 0>;
 def : ReadAdvance<ReadVSTX, 0>;
-def : ReadAdvance<ReadVSTE8V, 0>;
-def : ReadAdvance<ReadVSTE16V, 0>;
-def : ReadAdvance<ReadVSTE32V, 0>;
-def : ReadAdvance<ReadVSTE64V, 0>;
+def : ReadAdvance<ReadVSTEV, 0>;
 def : ReadAdvance<ReadVSTM, 0>;
 def : ReadAdvance<ReadVLDSX, 0>;
 def : ReadAdvance<ReadVSTSX, 0>;

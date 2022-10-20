@@ -712,6 +712,17 @@ public:
     }
   }
 
+  /// If this is an HLSL address space attribute, returns its representation
+  /// in LangAS, otherwise returns default address space.
+  LangAS asHLSLLangAS() const {
+    switch (getParsedKind()) {
+    case ParsedAttr::AT_HLSLGroupSharedAddressSpace:
+      return LangAS::hlsl_groupshared;
+    default:
+      return LangAS::Default;
+    }
+  }
+
   AttributeCommonInfo::Kind getKind() const {
     return AttributeCommonInfo::Kind(Info.AttrKind);
   }
