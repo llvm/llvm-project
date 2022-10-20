@@ -51,8 +51,12 @@ DEFINE_C_API_STRUCT(MlirOpPassManager, void);
 // PassManager/OpPassManager APIs.
 //===----------------------------------------------------------------------===//
 
-/// Create a new top-level PassManager.
+/// Create a new top-level PassManager with the default anchor.
 MLIR_CAPI_EXPORTED MlirPassManager mlirPassManagerCreate(MlirContext ctx);
+
+/// Create a new top-level PassManager anchored on `anchorOp`.
+MLIR_CAPI_EXPORTED MlirPassManager
+mlirPassManagerCreateOnOperation(MlirContext ctx, MlirStringRef anchorOp);
 
 /// Destroy the provided PassManager.
 MLIR_CAPI_EXPORTED void mlirPassManagerDestroy(MlirPassManager passManager);
