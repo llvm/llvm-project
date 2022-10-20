@@ -1199,7 +1199,7 @@ void InstrProfiling::emitRegistration() {
 bool InstrProfiling::emitRuntimeHook() {
   // We expect the linker to be invoked with -u<hook_var> flag for Linux
   // in which case there is no need to emit the external variable.
-  if (TT.isOSLinux())
+  if (TT.isOSLinux() || TT.isOSAIX())
     return false;
 
   // If the module's provided its own runtime, we don't need to do anything.
