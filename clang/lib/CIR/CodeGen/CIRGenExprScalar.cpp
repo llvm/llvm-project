@@ -27,11 +27,11 @@ namespace {
 
 class ScalarExprEmitter : public StmtVisitor<ScalarExprEmitter, mlir::Value> {
   CIRGenFunction &CGF;
-  mlir::OpBuilder &Builder;
+  CIRGenBuilderTy &Builder;
   bool IgnoreResultAssign;
 
 public:
-  ScalarExprEmitter(CIRGenFunction &cgf, mlir::OpBuilder &builder,
+  ScalarExprEmitter(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
                     bool ira = false)
       : CGF(cgf), Builder(builder), IgnoreResultAssign(ira) {}
 
