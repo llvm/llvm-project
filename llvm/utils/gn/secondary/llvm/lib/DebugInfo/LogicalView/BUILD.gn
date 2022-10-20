@@ -13,8 +13,10 @@ static_library("LogicalView") {
   sources = [
     "Core/LVElement.cpp",
     "Core/LVLine.cpp",
+    "Core/LVLocation.cpp",
     "Core/LVObject.cpp",
     "Core/LVOptions.cpp",
+    "Core/LVRange.cpp",
     "Core/LVReader.cpp",
     "Core/LVScope.cpp",
     "Core/LVSort.cpp",
