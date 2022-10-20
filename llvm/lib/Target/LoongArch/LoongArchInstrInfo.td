@@ -1194,7 +1194,7 @@ def : Pat<(atomic_load_sub_64 GPR:$rj, GPR:$rk),
 def : AtomicPat<int_loongarch_masked_atomicrmw_sub_i64,
                 PseudoMaskedAtomicLoadSub32>;
 def : Pat<(atomic_load_nand_64 GPR:$rj, GPR:$rk),
-          (PseudoAtomicLoadNand64 GPR:$rk, GPR:$rj)>;
+          (PseudoAtomicLoadNand64 GPR:$rj, GPR:$rk)>;
 def : AtomicPat<int_loongarch_masked_atomicrmw_nand_i64,
                 PseudoMaskedAtomicLoadNand32>;
 def : Pat<(atomic_load_add_32 GPR:$rj, GPR:$rk),
@@ -1228,7 +1228,7 @@ def : AtomicPat<int_loongarch_masked_atomicrmw_umin_i64,
 } // Predicates = [IsLA64]
 
 def : Pat<(atomic_load_nand_32 GPR:$rj, GPR:$rk),
-          (PseudoAtomicLoadNand32 GPR:$rk, GPR:$rj)>;
+          (PseudoAtomicLoadNand32 GPR:$rj, GPR:$rk)>;
 
 let Predicates = [IsLA32] in {
 def : AtomicPat<int_loongarch_masked_atomicrmw_xchg_i32,
