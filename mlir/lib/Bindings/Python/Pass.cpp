@@ -85,7 +85,7 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
           [](const std::string &pipeline, DefaultingPyMlirContext context) {
             MlirPassManager passManager = mlirPassManagerCreate(context->get());
             PyPrintAccumulator errorMsg;
-            MlirLogicalResult status = mlirOpPassManagerAddPipeline(
+            MlirLogicalResult status = mlirParsePassPipeline(
                 mlirPassManagerGetAsOpPassManager(passManager),
                 mlirStringRefCreate(pipeline.data(), pipeline.size()),
                 errorMsg.getCallback(), errorMsg.getUserData());
