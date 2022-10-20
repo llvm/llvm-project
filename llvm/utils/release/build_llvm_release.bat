@@ -83,14 +83,18 @@ REM   https://github.com/swig/swig/issues/769
 REM
 
 :: Detect Visual Studio
-set vsdevcmd=
-set vs_2019_prefix=C:\Program Files (x86)\Microsoft Visual Studio\2019
-:: try potential activated visual studio, then 2019, with different editions
-call :find_visual_studio "%VSINSTALLDIR%"
-call :find_visual_studio "%vs_2019_prefix%\Enterprise"
-call :find_visual_studio "%vs_2019_prefix%\Professional"
-call :find_visual_studio "%vs_2019_prefix%\Community"
-call :find_visual_studio "%vs_2019_prefix%\BuildTools"
+set vsinstall=
+set vswhere=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe
+
+if "%VSINSTALLDIR%" NEQ "" (
+  echo using enabled Visual Studio installation
+  set "vsinstall=%VSINSTALLDIR%"
+) else (
+  echo using vswhere to detect Visual Studio installation
+  FOR /F "delims=" %%r IN ('^""%vswhere%" -nologo -latest -products "*" -all -property installationPath^"') DO set vsinstall=%%r
+)
+set "vsdevcmd=%vsinstall%\Common7\Tools\VsDevCmd.bat"
+
 if not exist "%vsdevcmd%" (
   echo Can't find any installation of Visual Studio
   exit /b 1
@@ -358,15 +362,4 @@ exit /b 0
   goto :parse_args_start
 
 :parse_args_done
-exit /b 0
-::==============================================================================
-:find_visual_studio
-set "vs_install=%~1"
-if "%vs_install%" == "" exit /b 1
-
-if "%vsdevcmd%" NEQ "" exit /b 0 :: already found
-
-set "candidate=%vs_install%\Common7\Tools\VsDevCmd.bat"
-echo trying VS devcmd: %candidate%
-if exist "%candidate%" set "vsdevcmd=%candidate%"
 exit /b 0
