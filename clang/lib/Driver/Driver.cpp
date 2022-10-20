@@ -970,11 +970,6 @@ bool Driver::readConfigFile(StringRef FileName,
   if (ContainErrors)
     return true;
 
-  if (NewOptions->hasArg(options::OPT_config)) {
-    Diag(diag::err_drv_nested_config_file);
-    return true;
-  }
-
   // Claim all arguments that come from a configuration file so that the driver
   // does not warn on any that is unused.
   for (Arg *A : *NewOptions)
