@@ -518,3 +518,15 @@ func.func @sparse_insert_typed(%arg0: tensor<128xf64, #SparseVector>, %arg1: ind
   %1 = sparse_tensor.load %0 hasInserts : tensor<128xf64, #SparseVector>
   return %1 : tensor<128xf64, #SparseVector>
 }
+
+// CHECK-LABEL:   func.func @sparse_nop_convert(
+//  CHECK-SAME:   %[[A0:.*]]: memref<1xindex>,
+//  CHECK-SAME:   %[[A1:.*]]: memref<3xindex>,
+//  CHECK-SAME:   %[[A2:.*]]: memref<?xi32>,
+//  CHECK-SAME:   %[[A3:.*]]: memref<?xi64>,
+//  CHECK-SAME:   %[[A4:.*]]: memref<?xf32>)
+//       CHECK:   return %[[A0]], %[[A1]], %[[A2]], %[[A3]], %[[A4]] : memref<1xindex>, memref<3xindex>, memref<?xi32>, memref<?xi64>, memref<?xf32>
+func.func @sparse_nop_convert(%arg0: tensor<?xf32, #SparseVector>) -> tensor<?xf32, #SparseVector> {
+  %0 = sparse_tensor.convert %arg0 : tensor<?xf32, #SparseVector> to tensor<?xf32, #SparseVector>
+  return %0 : tensor<?xf32, #SparseVector>
+}

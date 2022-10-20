@@ -12,6 +12,7 @@
 #include "OutputSegment.h"
 #include "Target.h"
 
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 

@@ -645,6 +645,17 @@ public:
   /// \param Loc The location where the taskyield directive was encountered.
   void createTaskyield(const LocationDescription &Loc);
 
+  /// A struct to pack the relevant information for an OpenMP depend clause.
+  struct DependData {
+    omp::RTLDependenceKindTy DepKind = omp::RTLDependenceKindTy::DepUnknown;
+    Type *DepValueType;
+    Value *DepVal;
+    explicit DependData() = default;
+    DependData(omp::RTLDependenceKindTy DepKind, Type *DepValueType,
+               Value *DepVal)
+        : DepKind(DepKind), DepValueType(DepValueType), DepVal(DepVal) {}
+  };
+
   /// Generator for `#omp task`
   ///
   /// \param Loc The location where the task construct was encountered.
@@ -662,7 +673,8 @@ public:
   InsertPointTy createTask(const LocationDescription &Loc,
                            InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
                            bool Tied = true, Value *Final = nullptr,
-                           Value *IfCondition = nullptr);
+                           Value *IfCondition = nullptr,
+                           ArrayRef<DependData *> Dependencies = {});
 
   /// Generator for the taskgroup construct
   ///

@@ -13,8 +13,6 @@
 #include "SyntheticSections.h"
 #include "llvm/ADT/MapVector.h"
 
-#include "mach-o/compact_unwind_encoding.h"
-
 namespace lld::macho {
 
 class UnwindInfoSection : public SyntheticSection {
