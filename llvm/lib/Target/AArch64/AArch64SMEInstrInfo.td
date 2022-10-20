@@ -266,12 +266,6 @@ defm FMLS_VG2_M2ZZ_S  : sme2_mla_add_sub_array_vg2_single_S<"fmls", 0b01>;
 defm FMLS_VG4_M4ZZ_S  : sme2_mla_add_sub_array_vg4_single_S<"fmls", 0b01>;
 defm FMLS_VG2_M2Z2Z_S : sme2_mla_add_sub_array_vg2_multi_S<"fmls", 0b01>;
 defm FMLS_VG4_M4Z4Z_S : sme2_mla_add_sub_array_vg4_multi_S<"fmls", 0b01>;
-
-defm ADD_VG2_2ZZ  : sme2_sqdmulh_add_vector_vg2_single<"add", 0b011000>;
-defm ADD_VG4_4ZZ  : sme2_sqdmulh_add_vector_vg4_single<"add", 0b011000>;
-
-defm SQDMULH_2ZZ : sme2_sqdmulh_add_vector_vg2_single<"sqdmulh", 0b100000>;
-defm SQDMULH_4ZZ : sme2_sqdmulh_add_vector_vg4_single<"sqdmulh", 0b100000>;
 }
 
 
