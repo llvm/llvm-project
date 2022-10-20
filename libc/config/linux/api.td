@@ -149,6 +149,7 @@ def StringAPI : PublicAPI<"string.h"> {
 def StdIOAPI : PublicAPI<"stdio.h"> {
   let Macros = [
     SimpleMacroDef<"stderr", "stderr">,
+    SimpleMacroDef<"stdin", "stdin">,
     SimpleMacroDef<"stdout", "stdout">,
     SimpleMacroDef<"_IOFBF", "0">,
     SimpleMacroDef<"_IOLBF", "1">,
