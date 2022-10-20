@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -verify=expected        -Warray-bounds-pointer-arithmetic %s
 // RUN: %clang_cc1 -verify=expected        -Warray-bounds-pointer-arithmetic %s -fstrict-flex-arrays=0
 // RUN: %clang_cc1 -verify=expected,strict -Warray-bounds-pointer-arithmetic %s -fstrict-flex-arrays=2
+// RUN: %clang_cc1 -verify=expected,strict -Warray-bounds-pointer-arithmetic %s -fstrict-flex-arrays=3
 
 // Test case from PR10615
 struct ext2_super_block{
