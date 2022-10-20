@@ -46,6 +46,16 @@ module {
     %1 = tensor.extract %0[] : tensor<f32>
     vector.print %1 : f32
 
+    // Print number of entries in the sparse vectors.
+    //
+    // CHECK: 5
+    // CHECK: 3
+    //
+    %noe1 = sparse_tensor.number_of_entries %s1 : tensor<1024xf32, #SparseVector>
+    %noe2 = sparse_tensor.number_of_entries %s2 : tensor<1024xf32, #SparseVector>
+    vector.print %noe1 : index
+    vector.print %noe2 : index
+
     // Release the resources.
     bufferization.dealloc_tensor %s1 : tensor<1024xf32, #SparseVector>
     bufferization.dealloc_tensor %s2 : tensor<1024xf32, #SparseVector>
