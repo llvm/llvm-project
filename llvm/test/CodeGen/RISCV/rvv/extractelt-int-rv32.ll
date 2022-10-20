@@ -873,9 +873,13 @@ define i32 @extractelt_nxv32i32_0(<vscale x 32 x i32> %v) {
 define i32 @extractelt_nxv32i32_neg1(<vscale x 32 x i32> %v) {
 ; CHECK-LABEL: extractelt_nxv32i32_neg1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi sp, sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    addi s0, sp, 64
+; CHECK-NEXT:    addi sp, sp, -80
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset ra, -4
+; CHECK-NEXT:    .cfi_offset s0, -8
+; CHECK-NEXT:    addi s0, sp, 80
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
@@ -890,8 +894,10 @@ define i32 @extractelt_nxv32i32_neg1(<vscale x 32 x i32> %v) {
 ; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    lw a0, -4(a0)
-; CHECK-NEXT:    addi sp, s0, -64
-; CHECK-NEXT:    addi sp, sp, 64
+; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 80
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 32 x i32> %v, i32 -1
   ret i32 %r
@@ -918,9 +924,13 @@ define i32 @extractelt_nxv32i32_idx(<vscale x 32 x i32> %v, i32 %idx) {
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:  .LBB74_2:
-; CHECK-NEXT:    addi sp, sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    addi s0, sp, 64
+; CHECK-NEXT:    addi sp, sp, -80
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset ra, -4
+; CHECK-NEXT:    .cfi_offset s0, -8
+; CHECK-NEXT:    addi s0, sp, 80
 ; CHECK-NEXT:    .cfi_def_cfa s0, 0
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 4
@@ -934,8 +944,10 @@ define i32 @extractelt_nxv32i32_idx(<vscale x 32 x i32> %v, i32 %idx) {
 ; CHECK-NEXT:    add a1, a2, a1
 ; CHECK-NEXT:    vs8r.v v16, (a1)
 ; CHECK-NEXT:    lw a0, 0(a0)
-; CHECK-NEXT:    addi sp, s0, -64
-; CHECK-NEXT:    addi sp, sp, 64
+; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 80
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 32 x i32> %v, i32 %idx
   ret i32 %r
