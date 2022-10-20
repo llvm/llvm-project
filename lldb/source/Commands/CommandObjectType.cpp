@@ -11,6 +11,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -2302,7 +2303,13 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
   // an actual type name. Matching a regex string against registered regexes
   // doesn't work.
   if (type == eRegularSynth) {
-    if (category->AnyMatches(type_name, eFormatCategoryItemFilter, false)) {
+    // It's not generally possible to get a type object here. For example, this
+    // command can be run before loading any binaries. Do just a best-effort
+    // name-based lookup here to try to prevent conflicts.
+    FormattersMatchCandidate candidate_type(type_name, nullptr, TypeImpl(),
+                                            FormattersMatchCandidate::Flags());
+    if (category->AnyMatches(candidate_type, eFormatCategoryItemFilter,
+                             false)) {
       if (error)
         error->SetErrorStringWithFormat("cannot add synthetic for type %s when "
                                         "filter is defined in same category!",
@@ -2427,7 +2434,14 @@ private:
     // if `type_name` is an actual type name. Matching a regex string against
     // registered regexes doesn't work.
     if (type == eRegularFilter) {
-      if (category->AnyMatches(type_name, eFormatCategoryItemSynth, false)) {
+      // It's not generally possible to get a type object here. For example,
+      // this command can be run before loading any binaries. Do just a
+      // best-effort name-based lookup here to try to prevent conflicts.
+      FormattersMatchCandidate candidate_type(
+          type_name, nullptr, TypeImpl(), FormattersMatchCandidate::Flags());
+      lldb::SyntheticChildrenSP entry;
+      if (category->AnyMatches(candidate_type, eFormatCategoryItemSynth,
+                               false)) {
         if (error)
           error->SetErrorStringWithFormat("cannot add filter for type %s when "
                                           "synthetic is defined in same "

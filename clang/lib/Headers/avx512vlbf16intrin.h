@@ -15,9 +15,6 @@
 #ifndef __AVX512VLBF16INTRIN_H
 #define __AVX512VLBF16INTRIN_H
 
-typedef __bf16 __v8bf __attribute__((__vector_size__(16), __aligned__(16)));
-typedef __bf16 __m128bh __attribute__((__vector_size__(16), __aligned__(16)));
-
 #define __DEFAULT_FN_ATTRS128 \
   __attribute__((__always_inline__, __nodebug__, \
                  __target__("avx512vl, avx512bf16"), __min_vector_width__(128)))

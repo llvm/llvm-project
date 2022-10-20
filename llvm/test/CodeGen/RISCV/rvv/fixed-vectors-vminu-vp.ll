@@ -356,18 +356,14 @@ define <256 x i8> @vminu_vx_v258i8_evl129(<256 x i8> %va, i8 %b, <256 x i1> %m) 
   ret <256 x i8> %v
 }
 
-; FIXME: The upper half is doing nothing.
+; The upper half is doing nothing.
 
 define <256 x i8> @vminu_vx_v258i8_evl128(<256 x i8> %va, i8 %b, <256 x i1> %m) {
 ; CHECK-LABEL: vminu_vx_v258i8_evl128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, 128
-; CHECK-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-NEXT:    vlm.v v24, (a1)
+; CHECK-NEXT:    li a1, 128
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, ta, ma
 ; CHECK-NEXT:    vminu.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    vsetivli zero, 0, e8, m8, ta, ma
-; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vminu.vx v16, v16, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <256 x i8> poison, i8 %b, i32 0
   %vb = shufflevector <256 x i8> %elt.head, <256 x i8> poison, <256 x i32> zeroinitializer

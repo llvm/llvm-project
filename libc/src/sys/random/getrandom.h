@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SYS_RANDOM_GETRANDOM_H
 #define LLVM_LIBC_SRC_SYS_RANDOM_GETRANDOM_H
 
-#include <sys/types.h>
+#include <sys/random.h>
 
 namespace __llvm_libc {
 

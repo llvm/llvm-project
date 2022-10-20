@@ -105,10 +105,10 @@ public:
     return false;
   }
 
-  bool AnyMatches(ConstString type_name) {
+  bool AnyMatches(const FormattersMatchCandidate &candidate) {
     std::shared_ptr<FormatterImpl> entry;
     for (auto sc : m_subcontainers) {
-      if (sc->Get(type_name, entry))
+      if (sc->Get(FormattersMatchVector{candidate}, entry))
         return true;
     }
     return false;
@@ -346,7 +346,7 @@ public:
 
   std::string GetDescription();
 
-  bool AnyMatches(ConstString type_name,
+  bool AnyMatches(const FormattersMatchCandidate &candidate_type,
                   FormatCategoryItems items = ALL_ITEM_TYPES,
                   bool only_enabled = true,
                   const char **matching_category = nullptr,
