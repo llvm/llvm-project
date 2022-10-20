@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s
+// RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -x hlsl -triple \
+// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type \
+// RUN:   -emit-llvm -disable-llvm-passes -o - -DNAMESPACED| FileCheck %s
 
 
 // CHECK:"?uint16_t_Val@@3GA" = global i16 0, align 2
@@ -36,7 +39,11 @@
 // CHECK:"?double3_Val@@3T?$__vector@N$02@__clang@@A" = global <3 x double> zeroinitializer, align 32
 // CHECK:"?double4_Val@@3T?$__vector@N$03@__clang@@A" = global <4 x double> zeroinitializer, align 32
 
+#ifdef NAMESPACED
+#define TYPE_DECL(T)  hlsl::T T##_Val
+#else
 #define TYPE_DECL(T)  T T##_Val
+#endif
 
 #ifdef __HLSL_ENABLE_16_BIT
 TYPE_DECL(uint16_t);

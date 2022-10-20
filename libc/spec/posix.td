@@ -58,6 +58,18 @@ def PosixSpawnFileActionsTRestrictedPtr : RestrictedPtrType<PosixSpawnFileAction
 def PosixSpawnAttrT : NamedType<"posix_spawnattr_t">;
 def RestrictedPosixSpawnAttrTPtrType : RestrictedPtrType<PosixSpawnAttrT>;
 
+def CcT : NamedType<"cc_t">;
+def SpeedT : NamedType<"speed_t">;
+def StructTermios : NamedType<"struct termios">;
+def StructTermiosPtr : PtrType<StructTermios>;
+def ConstStructTermiosPtr : ConstType<StructTermiosPtr>;
+def TcFlagT : NamedType<"tcflag_t">;
+
+def StackT : NamedType<"stack_t">;
+def StackTPtr : PtrType<StackT>;
+def RestrictedStackTPtr : RestrictedPtrType<StackT>;
+def ConstRestrictedStackTPtr : ConstType<RestrictedStackTPtr>;
+
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
   RestrictedPtrType RestrictedCharPtr = RestrictedPtrType<CharType>;
@@ -266,6 +278,7 @@ def POSIX : StandardSpec<"POSIX"> {
       [
         SigInfoType,
         SigSetType,
+        StackT,
         StructSigaction,
         UnionSigVal,
         PidT,
@@ -284,6 +297,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<IntType>,
            ArgSpec<ConstRestrictedStructSigactionPtr>,
            ArgSpec<RestrictedStructSigactionPtr>]
+        >,
+        FunctionSpec<
+          "sigaltstack",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstRestrictedStackTPtr>, ArgSpec<RestrictedStackTPtr>]
         >,
         FunctionSpec<
           "sigdelset",
@@ -1100,6 +1118,72 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  HeaderSpec Termios = HeaderSpec<
+    "termios.h",
+    [
+      Macro<"NCCS">,
+    ],
+    [CcT, PidT, SpeedT, StructTermios, TcFlagT], // Types
+    [], // Enumerations
+    [
+      FunctionSpec<
+        "cfgetispeed",
+        RetValSpec<SpeedT>,
+        [ArgSpec<ConstStructTermiosPtr>]
+      >,
+      FunctionSpec<
+        "cfgetospeed",
+        RetValSpec<SpeedT>,
+        [ArgSpec<ConstStructTermiosPtr>]
+      >,
+      FunctionSpec<
+        "cfsetispeed",
+        RetValSpec<SpeedT>,
+        [ArgSpec<StructTermiosPtr>, ArgSpec<SpeedT>]
+      >,
+      FunctionSpec<
+        "cfsetospeed",
+        RetValSpec<SpeedT>,
+        [ArgSpec<StructTermiosPtr>, ArgSpec<SpeedT>]
+      >,
+      FunctionSpec<
+        "tcdrain",
+        RetValSpec<IntType>,
+        [ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+        "tcflow",
+        RetValSpec<IntType>,
+        [ArgSpec<IntType>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+        "tcflush",
+        RetValSpec<IntType>,
+        [ArgSpec<IntType>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+        "tcgetattr",
+        RetValSpec<IntType>,
+        [ArgSpec<IntType>, ArgSpec<StructTermiosPtr>]
+      >,
+      FunctionSpec<
+        "tcgetsid",
+        RetValSpec<PidT>,
+        [ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+        "tcsendbreak",
+        RetValSpec<IntType>,
+        [ArgSpec<IntType>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+        "tcsetattr",
+        RetValSpec<IntType>,
+        [ArgSpec<IntType>, ArgSpec<IntType>, ArgSpec<StructTermiosPtr>]
+      >,
+    ]
+  >;
+
   let Headers = [
     CType,
     Dirent,
@@ -1117,6 +1201,7 @@ def POSIX : StandardSpec<"POSIX"> {
     SysUtsName,
     SysWait,
     Time,
+    Termios,
     UniStd,
     String
   ];

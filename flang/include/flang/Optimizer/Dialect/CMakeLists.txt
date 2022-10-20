@@ -14,6 +14,10 @@ mlir_tablegen(FIROpsTypes.h.inc --gen-typedef-decls)
 mlir_tablegen(FIROpsTypes.cpp.inc --gen-typedef-defs)
 add_public_tablegen_target(FIROpsIncGen)
 
+set(LLVM_TARGET_DEFINITIONS FortranVariableInterface.td)
+mlir_tablegen(FortranVariableInterface.h.inc -gen-op-interface-decls)
+mlir_tablegen(FortranVariableInterface.cpp.inc -gen-op-interface-defs)
+
 set(LLVM_TARGET_DEFINITIONS CanonicalizationPatterns.td)
 mlir_tablegen(CanonicalizationPatterns.inc -gen-rewriters)
 add_public_tablegen_target(CanonicalizationPatternsIncGen)

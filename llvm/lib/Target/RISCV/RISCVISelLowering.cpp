@@ -2903,8 +2903,9 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlidedown(const SDLoc &DL, MVT VT,
       VT.getVectorNumElements() != V2.getConstantOperandVal(1))
     return SDValue();
 
-  // Do not handle -1 here. -1 can be handled by isElementRotate.
-  if (Mask[0] == -1)
+  // First index must be known and non-zero. It will be used as the slidedown
+  // amount.
+  if (Mask[0] <= 0)
     return SDValue();
 
   // Mask is also continuous.

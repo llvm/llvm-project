@@ -808,3 +808,123 @@ func.func @test_fortran_var_attrs() {
   // expected-error@+1 {{Unknown fortran variable attribute: volatypo}}
   %0 = fir.alloca f32 {fortran_attrs = #fir.var_attrs<volatypo>}
 }
+
+// -----
+func.func @bad_numeric_declare(%arg0: !fir.ref<f32>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'fir.declare' op requires attribute 'uniq_name'}}
+  %0 = fir.declare %arg0 typeparams %c1 {uniq_typo = "x"} : (!fir.ref<f32>, index) -> !fir.ref<f32>
+  return
+}
+
+// -----
+func.func @bad_numeric_declare(%arg0: !fir.ref<f32>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'fir.declare' op of numeric, logical, or assumed type entity must not have length parameters}}
+  %0 = fir.declare %arg0 typeparams %c1 {uniq_name = "x"} : (!fir.ref<f32>, index) -> !fir.ref<f32>
+  return
+}
+
+// -----
+func.func @bad_char_declare(%arg0: !fir.boxchar<1> ) {
+  %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  // expected-error@+1 {{'fir.declare' op must be provided exactly one type parameter when its base is a character that is not a box}}
+  %1 = fir.declare %0#0 {uniq_name = "c"} : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
+  return
+}
+
+// -----
+func.func @bad_char_declare(%arg0: !fir.boxchar<1> ) {
+  %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  // expected-error@+1 {{'fir.declare' op of character entity must have at most one length parameter}}
+  %1 = fir.declare %0#0 typeparams %0#1, %0#1 {uniq_name = "c"} : (!fir.ref<!fir.char<1,?>>, index, index) -> !fir.ref<!fir.char<1,?>>
+  return
+}
+
+// -----
+func.func @bad_derived_declare(%arg0: !fir.ref<!fir.type<t{field:i32}>>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'fir.declare' op has too many length parameters}}
+  %0 = fir.declare %arg0 typeparams %c1 {uniq_name = "x"} : (!fir.ref<!fir.type<t{field:i32}>>, index) -> !fir.ref<!fir.type<t{field:i32}>>
+  return
+}
+
+// -----
+func.func @bad_pdt_declare(%arg0: !fir.ref<!fir.type<pdt(param:i32){field:i32}>>) {
+  // expected-error@+1 {{'fir.declare' op must be provided all the derived type length parameters when the base is not a box}}
+  %0 = fir.declare %arg0 {uniq_name = "x"} : (!fir.ref<!fir.type<pdt(param:i32){field:i32}>>) -> !fir.ref<!fir.type<pdt(param:i32){field:i32}>>
+  return
+}
+
+// -----
+func.func @bad_pdt_declare_2(%arg0: !fir.ref<!fir.type<pdt(param:i32){field:i32}>>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'fir.declare' op has too many length parameters}}
+  %0 = fir.declare %arg0 typeparams %c1, %c1 {uniq_name = "x"} : (!fir.ref<!fir.type<pdt(param:i32){field:i32}>>, index, index) -> !fir.ref<!fir.type<pdt(param:i32){field:i32}>>
+  return
+}
+
+
+// -----
+func.func @bad_array_declare(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
+  // expected-error@+1 {{'fir.declare' op of array entity with a raw address base must have a shape operand that is a shape or shapeshift}}
+  %0 = fir.declare %arg0 {uniq_name = "x"} : (!fir.ref<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+func.func @bad_array_declare_2(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %shift = fir.shift %c1, %c2 : (index, index) -> !fir.shift<2>
+  // expected-error@+1 {{'fir.declare' op of array entity with a raw address base must have a shape operand that is a shape or shapeshift}}
+  %0 = fir.declare %arg0(%shift) {uniq_name = "x"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shift<2>) -> !fir.ref<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+func.func @bad_array_declare_3(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %shape = fir.shape %c1 : (index) -> !fir.shape<1>
+  // expected-error@+1 {{'fir.declare' op has conflicting shape and base operand ranks}}
+  %0 = fir.declare %arg0(%shape) {uniq_name = "x"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+func.func @bad_array_declare_4(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %shape = fir.shape_shift %c1, %c1 : (index, index) -> !fir.shapeshift<1>
+  // expected-error@+1 {{'fir.declare' op has conflicting shape and base operand ranks}}
+  %0 = fir.declare %arg0(%shape) {uniq_name = "x"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<1>) -> !fir.ref<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+func.func @bad_array_declare_box(%arg0: !fir.box<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %shape = fir.shift %c1 : (index) -> !fir.shift<1>
+  // expected-error@+1 {{'fir.declare' op has conflicting shape and base operand ranks}}
+  %0 = fir.declare %arg0(%shape) {uniq_name = "x"} : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<1>) -> !fir.box<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+func.func @bad_array_declare_char_boxaddr(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x!fir.char<1,?>>>>>) {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %shape = fir.shift %c1, %c2 : (index, index) -> !fir.shift<2>
+  // expected-error@+1 {{'fir.declare' op for box address must not have a shape operand}}
+  %0 = fir.declare %arg0(%shape) {uniq_name = "x"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x!fir.char<1,?>>>>>, !fir.shift<2>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x!fir.char<1,?>>>>>
+  return
+}
+
+// -----
+func.func @bad_array_declare_unlimited_polymorphic_boxaddr(%arg0: !fir.ref<!fir.class<!fir.ptr<!fir.array<?x?xnone>>>>) {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %shape = fir.shift %c1, %c2 : (index, index) -> !fir.shift<2>
+  // expected-error@+1 {{'fir.declare' op for box address must not have a shape operand}}
+  %0 = fir.declare %arg0(%shape) {uniq_name = "x"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x?xnone>>>>, !fir.shift<2>) -> !fir.ref<!fir.class<!fir.ptr<!fir.array<?x?xnone>>>>
+  return
+}

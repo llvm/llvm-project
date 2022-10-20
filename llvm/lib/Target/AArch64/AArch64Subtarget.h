@@ -121,6 +121,7 @@ protected:
 
   bool IsLittle;
 
+  bool StreamingSVEModeDisabled;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
   unsigned VScaleForTuning = 2;
@@ -158,7 +159,8 @@ public:
                    const std::string &TuneCPU, const std::string &FS,
                    const TargetMachine &TM, bool LittleEndian,
                    unsigned MinSVEVectorSizeInBitsOverride = 0,
-                   unsigned MaxSVEVectorSizeInBitsOverride = 0);
+                   unsigned MaxSVEVectorSizeInBitsOverride = 0,
+                   bool StreamingSVEModeDisabled = true);
 
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -198,6 +200,9 @@ public:
   bool isXRaySupported() const override { return true; }
 
   unsigned getMinVectorRegisterBitWidth() const {
+    // Don't assume any minimum vector size when PSTATE.SM may not be 0.
+    if (!isStreamingSVEModeDisabled())
+      return 0;
     return MinVectorRegisterBitWidth;
   }
 
@@ -391,6 +396,7 @@ public:
     return "__security_check_cookie";
   }
 
+  bool isStreamingSVEModeDisabled() const { return StreamingSVEModeDisabled; }
 };
 } // End llvm namespace
 

@@ -91,6 +91,10 @@ public:
     Flags = ComputedShaderFlags::computeFlags(M);
     return false;
   }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+  }
 };
 
 } // namespace dxil

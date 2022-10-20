@@ -7919,7 +7919,6 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
     Gen = SIEncodingFamily::GFX80;
 
   if (get(Opcode).TSFlags & SIInstrFlags::SDWA) {
-    assert(ST.hasSDWA() && "SDWA is not supported on this GPU");
     switch (ST.getGeneration()) {
     default:
       Gen = SIEncodingFamily::SDWA;

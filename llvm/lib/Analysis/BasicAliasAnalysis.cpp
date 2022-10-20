@@ -740,9 +740,9 @@ static bool isIntrinsicCall(const CallBase *Call, Intrinsic::ID IID) {
   return II && II->getIntrinsicID() == IID;
 }
 
-static FunctionModRefBehavior getModRefBehaviorFromAttrs(AttributeSet Attrs) {
+static MemoryEffects getMemoryEffectsFromAttrs(AttributeSet Attrs) {
   if (Attrs.hasAttribute(Attribute::ReadNone))
-    return FunctionModRefBehavior::none();
+    return MemoryEffects::none();
 
   ModRefInfo MR = ModRefInfo::ModRef;
   if (Attrs.hasAttribute(Attribute::ReadOnly))
@@ -751,29 +751,29 @@ static FunctionModRefBehavior getModRefBehaviorFromAttrs(AttributeSet Attrs) {
     MR = ModRefInfo::Mod;
 
   if (Attrs.hasAttribute(Attribute::ArgMemOnly))
-    return FunctionModRefBehavior::argMemOnly(MR);
+    return MemoryEffects::argMemOnly(MR);
   if (Attrs.hasAttribute(Attribute::InaccessibleMemOnly))
-    return FunctionModRefBehavior::inaccessibleMemOnly(MR);
+    return MemoryEffects::inaccessibleMemOnly(MR);
   if (Attrs.hasAttribute(Attribute::InaccessibleMemOrArgMemOnly))
-    return FunctionModRefBehavior::inaccessibleOrArgMemOnly(MR);
-  return FunctionModRefBehavior(MR);
+    return MemoryEffects::inaccessibleOrArgMemOnly(MR);
+  return MemoryEffects(MR);
 }
 
 /// Returns the behavior when calling the given call site.
-FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call,
-                                                        AAQueryInfo &AAQI) {
-  FunctionModRefBehavior Min =
-      getModRefBehaviorFromAttrs(Call->getAttributes().getFnAttrs());
+MemoryEffects BasicAAResult::getMemoryEffects(const CallBase *Call,
+                                              AAQueryInfo &AAQI) {
+  MemoryEffects Min =
+      getMemoryEffectsFromAttrs(Call->getAttributes().getFnAttrs());
 
   if (const Function *F = dyn_cast<Function>(Call->getCalledOperand())) {
-    FunctionModRefBehavior FMRB = AAQI.AAR.getModRefBehavior(F);
+    MemoryEffects FuncME = AAQI.AAR.getMemoryEffects(F);
     // Operand bundles on the call may also read or write memory, in addition
     // to the behavior of the called function.
     if (Call->hasReadingOperandBundles())
-      FMRB |= FunctionModRefBehavior::readOnly();
+      FuncME |= MemoryEffects::readOnly();
     if (Call->hasClobberingOperandBundles())
-      FMRB |= FunctionModRefBehavior::writeOnly();
-    Min &= FMRB;
+      FuncME |= MemoryEffects::writeOnly();
+    Min &= FuncME;
   }
 
   return Min;
@@ -781,17 +781,17 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call,
 
 /// Returns the behavior when calling the given function. For use when the call
 /// site is not known.
-FunctionModRefBehavior BasicAAResult::getModRefBehavior(const Function *F) {
+MemoryEffects BasicAAResult::getMemoryEffects(const Function *F) {
   switch (F->getIntrinsicID()) {
   case Intrinsic::experimental_guard:
   case Intrinsic::experimental_deoptimize:
     // These intrinsics can read arbitrary memory, and additionally modref
     // inaccessible memory to model control dependence.
-    return FunctionModRefBehavior::readOnly() |
-           FunctionModRefBehavior::inaccessibleMemOnly(ModRefInfo::ModRef);
+    return MemoryEffects::readOnly() |
+           MemoryEffects::inaccessibleMemOnly(ModRefInfo::ModRef);
   }
 
-  return getModRefBehaviorFromAttrs(F->getAttributes().getFnAttrs());
+  return getMemoryEffectsFromAttrs(F->getAttributes().getFnAttrs());
 }
 
 /// Returns true if this is a writeonly (i.e Mod only) parameter.
@@ -1013,12 +1013,12 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call1,
   // possibilities for guard intrinsics.
 
   if (isIntrinsicCall(Call1, Intrinsic::experimental_guard))
-    return isModSet(getModRefBehavior(Call2, AAQI).getModRef())
+    return isModSet(getMemoryEffects(Call2, AAQI).getModRef())
                ? ModRefInfo::Ref
                : ModRefInfo::NoModRef;
 
   if (isIntrinsicCall(Call2, Intrinsic::experimental_guard))
-    return isModSet(getModRefBehavior(Call1, AAQI).getModRef())
+    return isModSet(getMemoryEffects(Call1, AAQI).getModRef())
                ? ModRefInfo::Mod
                : ModRefInfo::NoModRef;
 

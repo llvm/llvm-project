@@ -29,8 +29,7 @@ class Module;
 class Pass;
 
 /// Returns the memory access properties of this copy of the function.
-FunctionModRefBehavior computeFunctionBodyMemoryAccess(Function &F,
-                                                       AAResults &AAR);
+MemoryEffects computeFunctionBodyMemoryAccess(Function &F, AAResults &AAR);
 
 /// Propagate function attributes for function summaries along the index's
 /// callgraph during thinlink

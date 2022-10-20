@@ -1227,7 +1227,6 @@ class VOP3_Profile_Base<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VO
   let HasModifiers =
       !if (Features.IsMAI, 0,
            !or(Features.IsPacked, Features.HasOpSel, P.HasModifiers));
-  /*let NeedPatGen = P.NeedPatGen;*/
 }
 
 class VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOP3_Profile_Base<P, Features> {
@@ -1248,7 +1247,6 @@ class VOP3InstBase<string OpName, VOPProfile P, SDPatternOperator node = null_fr
             getVOP3OpSelPat<P, node>.ret),
         !if(P.HasModifiers,
             getVOP3ModPat<P, node>.ret,
-            // TODO-GFX11 remove from VOP2 logic if VOP1/2 logic is unified
             !if(IsVOP2,
               getVOP3FromVOP2Pat<P, node>.ret,
               !if(P.HasIntClamp,

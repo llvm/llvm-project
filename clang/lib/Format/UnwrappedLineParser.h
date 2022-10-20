@@ -46,6 +46,8 @@ struct UnwrappedLine {
 
   /// Whether this \c UnwrappedLine is part of a preprocessor directive.
   bool InPPDirective;
+  /// Whether this \c UnwrappedLine is part of a pramga directive.
+  bool InPragmaDirective;
   /// Whether it is part of a macro body.
   bool InMacroBody;
 
@@ -120,6 +122,7 @@ private:
   void parsePPElIf();
   void parsePPElse();
   void parsePPEndIf();
+  void parsePPPragma();
   void parsePPUnknown();
   void readTokenWithJavaScriptASI();
   void parseStructuralElement(bool IsTopLevel = false,
@@ -355,8 +358,9 @@ struct UnwrappedLineNode {
 };
 
 inline UnwrappedLine::UnwrappedLine()
-    : Level(0), InPPDirective(false), InMacroBody(false),
-      MustBeDeclaration(false), MatchingOpeningBlockLineIndex(kInvalidIndex) {}
+    : Level(0), InPPDirective(false), InPragmaDirective(false),
+      InMacroBody(false), MustBeDeclaration(false),
+      MatchingOpeningBlockLineIndex(kInvalidIndex) {}
 
 } // end namespace format
 } // end namespace clang

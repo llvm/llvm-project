@@ -68,8 +68,8 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
       "individualCounts": {
         "software disabled tracing": 1,
         "trace synchronization point": 1,
-        "HW clock tick": 8,
-        "CPU core changed": 1
+        "CPU core changed": 1,
+        "HW clock tick": 8
       }
     },
     "continuousExecutions": 1,

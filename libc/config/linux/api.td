@@ -210,6 +210,7 @@ def SignalAPI : PublicAPI<"signal.h"> {
     "struct sigaction",
     "union sigval",
     "siginfo_t",
+    "stack_t",
     "pid_t",
   ];
 }
@@ -292,4 +293,8 @@ def SysUtsNameAPI : PublicAPI<"sys/utsname.h"> {
 
 def SpawnAPI : PublicAPI<"spawn.h"> {
   let Types = ["mode_t", "pid_t", "posix_spawnattr_t", "posix_spawn_file_actions_t"];
+}
+
+def TermiosAPI : PublicAPI<"termios.h"> {
+  let Types = ["cc_t", "pid_t", "speed_t", "struct termios", "tcflag_t"];
 }

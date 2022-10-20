@@ -247,7 +247,7 @@ def : Pat<(int_aarch64_sme_addva
             (nxv4i32 ZPR32:$zn)),
           (ADDVA_MPPZ_PSEUDO_S imm0_3:$tile, $pn, $pm, $zn)>;
 
-let Predicates = [HasSMEI64] in {
+let Predicates = [HasSMEI16I64] in {
 def ADDHA_MPPZ_PSEUDO_D : sme_add_vector_to_tile_pseudo<ZPR64>;
 def ADDVA_MPPZ_PSEUDO_D : sme_add_vector_to_tile_pseudo<ZPR64>;
 
@@ -1186,3 +1186,71 @@ multiclass sve2_int_perm_sel_p<string asm, SDPatternOperator op> {
               (!cast<Instruction>(NAME # _D) $Pn, $Pm, $idx, $imm)>;
   }
 }
+
+//===----------------------------------------------------------------------===//
+// SME2 Instructions
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// SME2 single-multi ternary int/fp, two/four registers
+
+class sme2_mla_add_sub_array_vg24_single<bit vg4, bit sz, bits<2> op,
+                                         MatrixOperand matrix_ty,
+                                         RegisterOperand multi_vector_ty,
+                                         ZPRRegOp zpr_ty,
+                                         string mnemonic>
+   : I<(outs matrix_ty:$ZAd),
+       (ins  matrix_ty:$_ZAd, MatrixIndexGPR32Op8_11:$Rv,
+       sme_elm_idx0_7:$imm3, multi_vector_ty:$Zn, zpr_ty:$Zm),
+       mnemonic,"\t$ZAd[$Rv, $imm3, " # !if(vg4, "vgx4", "vgx2") # "], $Zn, $Zm",
+       "", []> , Sched<[]> {
+  bits<4> Zm;
+  bits<5> Zn;
+  bits<2> Rv;
+  bits<3> imm3;
+  let Inst{31-23} = 0b110000010;
+  let Inst{22}    = sz;
+  let Inst{21}    = 0b1;
+  let Inst{20}    = vg4;
+  let Inst{19-16} = Zm;
+  let Inst{15}    = 0b0;
+  let Inst{14-13} = Rv;
+  let Inst{12-10} = 0b110;
+  let Inst{9-5}   = Zn;
+  let Inst{4-3}   = op;
+  let Inst{2-0}   = imm3;
+  let Constraints = "$ZAd = $_ZAd";
+}
+
+multiclass sme2_mla_add_sub_array_vg2_single_S<string mnemonic, bits<2> op>{
+  def NAME : sme2_mla_add_sub_array_vg24_single<0b0, 0b0, op, MatrixOp32, ZZ_s,
+                                                ZPR4b32, mnemonic>;
+
+  def : InstAlias<mnemonic # "\t$ZAd[$Rv, $imm3], $Zn, $Zm",
+                 (!cast<Instruction>(NAME) MatrixOp32:$ZAd,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3, ZZ_s:$Zn, ZPR4b32:$Zm), 0>;
+}
+
+multiclass sme2_mla_add_sub_array_vg2_single_D<string mnemonic, bits<2> op>{
+  def NAME : sme2_mla_add_sub_array_vg24_single<0b0, 0b1, op, MatrixOp64,
+                                                ZZ_d, ZPR4b64, mnemonic>;
+
+  def : InstAlias<mnemonic # "\t$ZAd[$Rv, $imm3], $Zn, $Zm",
+                 (!cast<Instruction>(NAME) MatrixOp64:$ZAd,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3, ZZ_d:$Zn, ZPR4b64:$Zm), 0>;
+}
+
+multiclass sme2_mla_add_sub_array_vg4_single_S<string mnemonic, bits<2> op>{
+  def NAME : sme2_mla_add_sub_array_vg24_single<0b1, 0b0, op, MatrixOp32, ZZZZ_s,
+                                                ZPR4b32, mnemonic>;
+
+  def : InstAlias<mnemonic # "\t$ZAd[$Rv, $imm3], $Zn, $Zm",
+                 (!cast<Instruction>(NAME) MatrixOp32:$ZAd,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3, ZZZZ_s:$Zn, ZPR4b32:$Zm), 0>;
+}
+
+multiclass sme2_mla_add_sub_array_vg4_single_D<string mnemonic, bits<2> op>{
+  def NAME : sme2_mla_add_sub_array_vg24_single<0b1, 0b1, op, MatrixOp64, ZZZZ_d,
+                                                ZPR4b64, mnemonic>;
+
+  def : InstAlias<mnemonic # "\t$ZAd[$Rv, $imm3], $Zn, $Zm",
+                 (!cast<Instruction>(NAME) MatrixOp64:$ZAd,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3, ZZZZ_d:$Zn, ZPR4b64:$Zm), 0>;
+}
+
