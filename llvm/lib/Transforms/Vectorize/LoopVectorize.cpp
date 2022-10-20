@@ -2337,7 +2337,6 @@ static void buildScalarSteps(Value *ScalarIV, Value *Step,
                              VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
   // We shouldn't have to build scalar steps if we aren't vectorizing.
-  assert(State.VF.isVector() && "VF should be greater than one");
   // Get the value type and ensure it and the step have the same integer type.
   Type *ScalarIVTy = ScalarIV->getType()->getScalarType();
   assert(ScalarIVTy == Step->getType() &&
@@ -9555,29 +9554,7 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   };
 
   Value *ScalarIV = CreateScalarIV(Step);
-  if (State.VF.isVector()) {
-    buildScalarSteps(ScalarIV, Step, IndDesc, this, State);
-    return;
-  }
-
-  for (unsigned Part = 0; Part < State.UF; ++Part) {
-    assert(!State.VF.isScalable() && "scalable vectors not yet supported.");
-    Value *EntryPart;
-    if (Step->getType()->isFloatingPointTy()) {
-      Value *StartIdx =
-          getRuntimeVFAsFloat(State.Builder, Step->getType(), State.VF * Part);
-      // Floating-point operations inherit FMF via the builder's flags.
-      Value *MulOp = State.Builder.CreateFMul(StartIdx, Step);
-      EntryPart = State.Builder.CreateBinOp(IndDesc.getInductionOpcode(),
-                                            ScalarIV, MulOp);
-    } else {
-      Value *StartIdx =
-          getRuntimeVF(State.Builder, Step->getType(), State.VF * Part);
-      EntryPart = State.Builder.CreateAdd(
-          ScalarIV, State.Builder.CreateMul(StartIdx, Step), "induction");
-    }
-    State.set(this, EntryPart, Part);
-  }
+  buildScalarSteps(ScalarIV, Step, IndDesc, this, State);
 }
 
 void VPInterleaveRecipe::execute(VPTransformState &State) {
