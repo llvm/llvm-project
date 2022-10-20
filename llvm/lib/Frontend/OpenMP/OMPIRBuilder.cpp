@@ -1290,7 +1290,8 @@ void OpenMPIRBuilder::createTaskyield(const LocationDescription &Loc) {
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createTask(const LocationDescription &Loc,
                             InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
-                            bool Tied, Value *Final, Value *IfCondition) {
+                            bool Tied, Value *Final, Value *IfCondition,
+                            ArrayRef<DependData *> Dependencies) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
@@ -1322,8 +1323,8 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
   OI.EntryBB = TaskAllocaBB;
   OI.OuterAllocaBB = AllocaIP.getBlock();
   OI.ExitBB = TaskExitBB;
-  OI.PostOutlineCB = [this, Ident, Tied, Final,
-                      IfCondition](Function &OutlinedFn) {
+  OI.PostOutlineCB = [this, Ident, Tied, Final, IfCondition,
+                      Dependencies](Function &OutlinedFn) {
     // The input IR here looks like the following-
     // ```
     // func @current_fn() {
@@ -1433,6 +1434,49 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
                            TaskSize);
     }
 
+    Value *DepArrayPtr = nullptr;
+    if (Dependencies.size()) {
+      InsertPointTy OldIP = Builder.saveIP();
+      Builder.SetInsertPoint(
+          &OldIP.getBlock()->getParent()->getEntryBlock().back());
+
+      Type *DepArrayTy = ArrayType::get(DependInfo, Dependencies.size());
+      Value *DepArray =
+          Builder.CreateAlloca(DepArrayTy, nullptr, ".dep.arr.addr");
+
+      unsigned P = 0;
+      for (DependData *Dep : Dependencies) {
+        Value *Base =
+            Builder.CreateConstInBoundsGEP2_64(DepArrayTy, DepArray, 0, P);
+        // Store the pointer to the variable
+        Value *Addr = Builder.CreateStructGEP(
+            DependInfo, Base,
+            static_cast<unsigned int>(RTLDependInfoFields::BaseAddr));
+        Value *DepValPtr =
+            Builder.CreatePtrToInt(Dep->DepVal, Builder.getInt64Ty());
+        Builder.CreateStore(DepValPtr, Addr);
+        // Store the size of the variable
+        Value *Size = Builder.CreateStructGEP(
+            DependInfo, Base,
+            static_cast<unsigned int>(RTLDependInfoFields::Len));
+        Builder.CreateStore(Builder.getInt64(M.getDataLayout().getTypeStoreSize(
+                                Dep->DepValueType)),
+                            Size);
+        // Store the dependency kind
+        Value *Flags = Builder.CreateStructGEP(
+            DependInfo, Base,
+            static_cast<unsigned int>(RTLDependInfoFields::Flags));
+        Builder.CreateStore(
+            ConstantInt::get(Builder.getInt8Ty(),
+                             static_cast<unsigned int>(Dep->DepKind)),
+            Flags);
+        ++P;
+      }
+
+      DepArrayPtr = Builder.CreateBitCast(DepArray, Builder.getInt8PtrTy());
+      Builder.restoreIP(OldIP);
+    }
+
     // In the presence of the `if` clause, the following IR is generated:
     //    ...
     //    %data = call @__kmpc_omp_task_alloc(...)
@@ -1471,9 +1515,21 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
       Builder.CreateCall(TaskCompleteFn, {Ident, ThreadID, NewTaskData});
       Builder.SetInsertPoint(ThenTI);
     }
-    // Emit the @__kmpc_omp_task runtime call to spawn the task
-    Function *TaskFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task);
-    Builder.CreateCall(TaskFn, {Ident, ThreadID, NewTaskData});
+
+    if (Dependencies.size()) {
+      Function *TaskFn =
+          getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_with_deps);
+      Builder.CreateCall(
+          TaskFn,
+          {Ident, ThreadID, NewTaskData, Builder.getInt32(Dependencies.size()),
+           DepArrayPtr, ConstantInt::get(Builder.getInt32Ty(), 0),
+           ConstantPointerNull::get(Type::getInt8PtrTy(M.getContext()))});
+
+    } else {
+      // Emit the @__kmpc_omp_task runtime call to spawn the task
+      Function *TaskFn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task);
+      Builder.CreateCall(TaskFn, {Ident, ThreadID, NewTaskData});
+    }
 
     StaleCI->eraseFromParent();
 

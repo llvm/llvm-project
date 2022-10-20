@@ -127,7 +127,7 @@
 "`P1638R1 <https://wg21.link/P1638R1>`__","LWG","basic_istream_view::iterator should not be copyable","Cologne","|Complete|","16.0"
 "`P1643R1 <https://wg21.link/P1643R1>`__","LWG","Add wait/notify to atomic_ref","Cologne","",""
 "`P1644R0 <https://wg21.link/P1644R0>`__","LWG","Add wait/notify to atomic<shared_ptr>","Cologne","",""
-"`P1650R0 <https://wg21.link/P1650R0>`__","LWG","Output std::chrono::days with 'd' suffix","Cologne","","|Complete|","16.0"
+"`P1650R0 <https://wg21.link/P1650R0>`__","LWG","Output std::chrono::days with 'd' suffix","Cologne","|Complete|","16.0"
 "`P1651R0 <https://wg21.link/P1651R0>`__","LWG","bind_front should not unwrap reference_wrapper","Cologne","|Complete|","13.0"
 "`P1652R1 <https://wg21.link/P1652R1>`__","LWG","Printf corner cases in std::format","Cologne","|Complete|","14.0"
 "`P1661R1 <https://wg21.link/P1661R1>`__","LWG","Remove dedicated precalculated hash lookup interface","Cologne","|Nothing To Do|",""

@@ -720,6 +720,22 @@ public:
   }
 };
 
+/// Sparse codegen rule for the convert operator.
+class SparseConvertConverter : public OpConversionPattern<ConvertOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ConvertOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (op.getType() != op.getSource().getType()) {
+      // This should be handled by rewriting before codegen.
+      return failure();
+    }
+    rewriter.replaceOp(op, adaptor.getSource());
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -744,6 +760,6 @@ void mlir::populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
                SparseTensorDeallocConverter, SparseTensorLoadConverter,
                SparseExpandConverter, SparseCompressConverter,
                SparseInsertConverter, SparseToPointersConverter,
-               SparseToIndicesConverter, SparseToValuesConverter>(
-      typeConverter, patterns.getContext());
+               SparseToIndicesConverter, SparseToValuesConverter,
+               SparseConvertConverter>(typeConverter, patterns.getContext());
 }

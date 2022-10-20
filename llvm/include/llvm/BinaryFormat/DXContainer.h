@@ -47,7 +47,7 @@ enum class HashFlags : uint32_t {
 };
 
 struct ShaderHash {
-  uint32_t Flags; // DxilShaderHashFlags
+  uint32_t Flags; // dxbc::HashFlags
   uint8_t Digest[16];
 
   void swapBytes() { sys::swapByteOrder(Flags); }

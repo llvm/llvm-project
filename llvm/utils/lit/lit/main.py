@@ -53,7 +53,7 @@ def main(builtin_params={}):
         sys.exit(0)
 
     if opts.show_used_features:
-        features = set(itertools.chain.from_iterable(t.getUsedFeatures() for t in discovered_tests))
+        features = set(itertools.chain.from_iterable(t.getUsedFeatures() for t in discovered_tests if t.gtest_json_file is None))
         print(' '.join(sorted(features)))
         sys.exit(0)
 

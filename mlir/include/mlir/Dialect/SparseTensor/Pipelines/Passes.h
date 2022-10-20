@@ -52,29 +52,7 @@ struct SparseCompilerOptions
               mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
               "any-storage-any-loop",
               "Enable sparse parallelization for any storage and loop."))};
-  PassOptions::Option<mlir::SparseVectorizationStrategy> vectorization{
-      *this, "vectorization-strategy",
-      ::llvm::cl::desc("Set the vectorization strategy"),
-      ::llvm::cl::init(mlir::SparseVectorizationStrategy::kNone),
-      llvm::cl::values(
-          clEnumValN(mlir::SparseVectorizationStrategy::kNone, "none",
-                     "Turn off sparse vectorization."),
-          clEnumValN(mlir::SparseVectorizationStrategy::kDenseInnerLoop,
-                     "dense-inner-loop",
-                     "Enable vectorization for dense inner loops."),
-          clEnumValN(mlir::SparseVectorizationStrategy::kAnyStorageInnerLoop,
-                     "any-storage-inner-loop",
-                     "Enable sparse vectorization for inner loops with any "
-                     "storage."))};
 
-  PassOptions::Option<int32_t> vectorLength{
-      *this, "vl", desc("Set the vector length"), init(1)};
-  PassOptions::Option<bool> enableSIMDIndex32{
-      *this, "enable-simd-index32",
-      desc("Enable i32 indexing into vectors (for efficiency)"), init(false)};
-  PassOptions::Option<bool> enableVLAVectorization{
-      *this, "enable-vla-vectorization",
-      desc("Enable vector length agnostic vectorization"), init(false)};
   PassOptions::Option<bool> enableRuntimeLibrary{
       *this, "enable-runtime-library",
       desc("Enable runtime library for manipulating sparse tensors"),
@@ -87,9 +65,7 @@ struct SparseCompilerOptions
 
   /// Projects out the options for `createSparsificationPass`.
   SparsificationOptions sparsificationOptions() const {
-    return SparsificationOptions(parallelization, vectorization, vectorLength,
-                                 enableSIMDIndex32, enableVLAVectorization,
-                                 enableRuntimeLibrary);
+    return SparsificationOptions(parallelization);
   }
 
   // These options must be kept in sync with `SparseTensorConversionBase`.

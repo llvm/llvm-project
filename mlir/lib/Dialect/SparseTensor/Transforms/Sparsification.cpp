@@ -27,7 +27,6 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/SparseTensor/Utils/Merger.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TensorEncoding.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -97,9 +96,6 @@ struct CodeGen {
   Value expFilled;
   Value expAdded;
   Value expCount;
-  // Current vector length and mask.
-  unsigned curVecLength = 1;
-  Value curVecMask;
   // Topsort (reference should remain in scope).
   std::vector<unsigned> &topSort;
 };
@@ -373,26 +369,6 @@ static bool isAdmissibleTensorExp(Merger &merger, linalg::GenericOp op,
 // Sparse compiler synthesis methods (reductions).
 //===----------------------------------------------------------------------===//
 
-/// Maps reduction kind to vector::CombiningKind.
-static vector::CombiningKind getCombiningKind(Reduction kind) {
-  switch (kind) {
-  case kNoReduc:
-  case kCustom:
-    break;
-  case kSum:
-    return vector::CombiningKind::ADD;
-  case kProduct:
-    return vector::CombiningKind::MUL;
-  case kAnd:
-    return vector::CombiningKind::AND;
-  case kOr:
-    return vector::CombiningKind::OR;
-  case kXor:
-    return vector::CombiningKind::XOR;
-  }
-  llvm_unreachable("unknown reduction kind");
-}
-
 /// Maps operation to reduction.
 static Reduction getReduction(Kind kind) {
   switch (kind) {
@@ -418,42 +394,6 @@ static Reduction getReduction(Kind kind) {
   default:
     llvm_unreachable("unexpected reduction operator");
   }
-}
-
-/// Generates an initial value for a vector reduction, following the scheme
-/// given in Chapter 5 of "The Software Vectorization Handbook", where the
-/// initial scalar value is correctly embedded in the vector reduction value,
-/// and a straightforward horizontal reduction will complete the operation.
-static Value genVectorReducInit(CodeGen &codegen, OpBuilder &builder,
-                                Location loc, VectorType vtp) {
-  Value r = codegen.redVal;
-  switch (codegen.redKind) {
-  case kNoReduc:
-  case kCustom:
-    break;
-  case kSum:
-  case kXor:
-    // Initialize reduction vector to: | 0 | .. | 0 | r |
-    return builder.create<vector::InsertElementOp>(
-        loc, r, constantZero(builder, loc, vtp),
-        constantIndex(builder, loc, 0));
-  case kProduct:
-    // Initialize reduction vector to: | 1 | .. | 1 | r |
-    return builder.create<vector::InsertElementOp>(
-        loc, r, constantOne(builder, loc, vtp), constantIndex(builder, loc, 0));
-  case kAnd:
-  case kOr:
-    // Initialize reduction vector to: | r | .. | r | r |
-    return builder.create<vector::BroadcastOp>(loc, vtp, r);
-  }
-  llvm_unreachable("unknown reduction kind");
-}
-
-/// Generates final value for a vector reduction.
-static Value genVectorReducEnd(CodeGen &codegen, OpBuilder &builder,
-                               Location loc, VectorType vtp) {
-  vector::CombiningKind kind = getCombiningKind(codegen.redKind);
-  return builder.create<vector::ReductionOp>(loc, kind, codegen.redVal);
 }
 
 /// Updates scalarized reduction value.
@@ -571,89 +511,6 @@ static void genBuffers(Merger &merger, CodeGen &codegen, OpBuilder &builder,
           builder.create<ToValuesOp>(loc, sparseTp, t.get());
     }
   }
-}
-
-/// Constructs vector type.
-static VectorType vectorType(CodeGen &codegen, Type etp) {
-  unsigned numScalableDims = codegen.options.enableVLAVectorization;
-  return VectorType::get(codegen.curVecLength, etp, numScalableDims);
-}
-
-/// Constructs vector type from pointer.
-static VectorType vectorType(CodeGen &codegen, Value ptr) {
-  return vectorType(codegen, ptr.getType().cast<MemRefType>().getElementType());
-}
-
-/// Constructs vector iteration mask.
-static Value genVectorMask(CodeGen &codegen, OpBuilder &builder, Value iv,
-                           Value lo, Value hi, Value step) {
-  Location loc = iv.getLoc();
-  VectorType mtp = vectorType(codegen, builder.getI1Type());
-  // Special case if the vector length evenly divides the trip count (for
-  // example, "for i = 0, 128, 16"). A constant all-true mask is generated
-  // so that all subsequent masked memory operations are immediately folded
-  // into unconditional memory operations.
-  IntegerAttr loInt, hiInt, stepInt;
-  if (matchPattern(lo, m_Constant(&loInt)) &&
-      matchPattern(hi, m_Constant(&hiInt)) &&
-      matchPattern(step, m_Constant(&stepInt))) {
-    if (((hiInt.getInt() - loInt.getInt()) % stepInt.getInt()) == 0)
-      return builder.create<vector::BroadcastOp>(
-          loc, mtp, constantI1(builder, loc, true));
-  }
-  // Otherwise, generate a vector mask that avoids overrunning the upperbound
-  // during vector execution. Here we rely on subsequent loop optimizations to
-  // avoid executing the mask in all iterations, for example, by splitting the
-  // loop into an unconditional vector loop and a scalar cleanup loop.
-  auto minMap = AffineMap::get(
-      /*dimCount=*/2, /*symbolCount=*/1,
-      {builder.getAffineSymbolExpr(0),
-       builder.getAffineDimExpr(0) - builder.getAffineDimExpr(1)},
-      builder.getContext());
-  Value end =
-      builder.createOrFold<AffineMinOp>(loc, minMap, ValueRange{hi, iv, step});
-  return builder.create<vector::CreateMaskOp>(loc, mtp, end);
-}
-
-/// Generates a vectorized load lhs = a[ind[lo:hi]] or lhs = a[lo:hi].
-static Value genVectorLoad(CodeGen &codegen, OpBuilder &builder, Value ptr,
-                           ArrayRef<Value> args) {
-  Location loc = ptr.getLoc();
-  VectorType vtp = vectorType(codegen, ptr);
-  Value pass = constantZero(builder, loc, vtp);
-  if (args.back().getType().isa<VectorType>()) {
-    SmallVector<Value, 4> scalarArgs(args.begin(), args.end());
-    Value indexVec = args.back();
-    scalarArgs.back() = constantIndex(builder, loc, 0);
-    return builder.create<vector::GatherOp>(loc, vtp, ptr, scalarArgs, indexVec,
-                                            codegen.curVecMask, pass);
-  }
-  return builder.create<vector::MaskedLoadOp>(loc, vtp, ptr, args,
-                                              codegen.curVecMask, pass);
-}
-
-/// Generates a vectorized store a[ind[lo:hi]] = rhs or a[lo:hi] = rhs.
-static void genVectorStore(CodeGen &codegen, OpBuilder &builder, Value rhs,
-                           Value ptr, ArrayRef<Value> args) {
-  Location loc = ptr.getLoc();
-  if (args.back().getType().isa<VectorType>()) {
-    SmallVector<Value, 4> scalarArgs(args.begin(), args.end());
-    Value indexVec = args.back();
-    scalarArgs.back() = constantIndex(builder, loc, 0);
-    builder.create<vector::ScatterOp>(loc, ptr, scalarArgs, indexVec,
-                                      codegen.curVecMask, rhs);
-    return;
-  }
-  builder.create<vector::MaskedStoreOp>(loc, ptr, args, codegen.curVecMask,
-                                        rhs);
-}
-
-/// Generates a vectorized invariant. Here we rely on subsequent loop
-/// optimizations to hoist the invariant broadcast out of the vector loop.
-static Value genVectorInvariantValue(CodeGen &codegen, OpBuilder &builder,
-                                     Value val) {
-  VectorType vtp = vectorType(codegen, val.getType());
-  return builder.create<vector::BroadcastOp>(val.getLoc(), vtp, val);
 }
 
 /// Generates an affine expression.
@@ -808,11 +665,9 @@ static Value genTensorLoad(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                            linalg::GenericOp op, unsigned exp) {
   // Test if the load was hoisted to a higher loop nest.
   Value val = merger.exp(exp).val;
-  if (val) {
-    if (codegen.curVecLength > 1 && !val.getType().isa<VectorType>())
-      return genVectorInvariantValue(codegen, builder, val);
+  if (val)
     return val;
-  }
+
   // Load during insertion.
   OpOperand &t = op->getOpOperand(merger.exp(exp).tensor);
   if (&t == codegen.sparseOut) {
@@ -823,8 +678,6 @@ static Value genTensorLoad(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   // Actual load.
   SmallVector<Value, 4> args;
   Value ptr = genSubscript(codegen, builder, op, &t, args);
-  if (codegen.curVecLength > 1)
-    return genVectorLoad(codegen, builder, ptr, args);
   return builder.create<memref::LoadOp>(op.getLoc(), ptr, args);
 }
 
@@ -834,9 +687,6 @@ static void genTensorStore(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   Location loc = op.getLoc();
   // Test if this is a scalarized reduction.
   if (codegen.redVal) {
-    if (codegen.curVecLength > 1)
-      rhs = builder.create<arith::SelectOp>(loc, codegen.curVecMask, rhs,
-                                            codegen.redVal);
     updateReduc(merger, codegen, rhs);
     return;
   }
@@ -864,10 +714,7 @@ static void genTensorStore(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   // Actual store.
   SmallVector<Value, 4> args;
   Value ptr = genSubscript(codegen, builder, op, t, args);
-  if (codegen.curVecLength > 1)
-    genVectorStore(codegen, builder, rhs, ptr, args);
-  else
-    builder.create<memref::StoreOp>(loc, rhs, ptr, args);
+  builder.create<memref::StoreOp>(loc, rhs, ptr, args);
 }
 
 /// Generates a pointer/index load from the sparse storage scheme. Narrower
@@ -875,37 +722,8 @@ static void genTensorStore(Merger &merger, CodeGen &codegen, OpBuilder &builder,
 /// index type used for looping and indexing.
 static Value genLoad(CodeGen &codegen, OpBuilder &builder, Location loc,
                      Value ptr, Value s) {
-  // See https://llvm.org/docs/GetElementPtr.html for some background on
-  // the complications described below.
-  if (codegen.curVecLength > 1) {
-    // Since the index vector is used in a subsequent gather/scatter operations,
-    // which effectively defines an unsigned pointer + signed index, we must
-    // zero extend the vector to an index width. For 8-bit and 16-bit values,
-    // an 32-bit index width suffices. For 32-bit values, zero extending the
-    // elements into 64-bit loses some performance since the 32-bit indexed
-    // gather/scatter is more efficient than the 64-bit index variant (if the
-    // negative 32-bit index space is unused, the enableSIMDIndex32 flag can
-    // preserve this performance). For 64-bit values, there is no good way
-    // to state that the indices are unsigned, with creates the potential of
-    // incorrect address calculations in the unlikely case we need such
-    // extremely large offsets.
-    Type etp = ptr.getType().cast<MemRefType>().getElementType();
-    Value vload = genVectorLoad(codegen, builder, ptr, {s});
-    if (!etp.isa<IndexType>()) {
-      if (etp.getIntOrFloatBitWidth() < 32)
-        vload = builder.create<arith::ExtUIOp>(
-            loc, vectorType(codegen, builder.getI32Type()), vload);
-      else if (etp.getIntOrFloatBitWidth() < 64 &&
-               !codegen.options.enableSIMDIndex32)
-        vload = builder.create<arith::ExtUIOp>(
-            loc, vectorType(codegen, builder.getI64Type()), vload);
-    }
-    return vload;
-  }
-  // For the scalar case, we simply zero extend narrower indices into 64-bit
-  // values before casting to index without a performance penalty. Here too,
-  // however, indices that already are 64-bit, in theory, cannot express the
-  // full range as explained above.
+  // Simply zero extends narrower indices into 64-bit values before casting to
+  // index without a performance penalty.
   Value load = builder.create<memref::LoadOp>(loc, ptr, s);
   if (!load.getType().isa<IndexType>()) {
     if (load.getType().getIntOrFloatBitWidth() < 64)
@@ -920,8 +738,6 @@ static Value genLoad(CodeGen &codegen, OpBuilder &builder, Location loc,
 static Value genInvariantValue(Merger &merger, CodeGen &codegen,
                                OpBuilder &builder, unsigned exp) {
   Value val = merger.exp(exp).val;
-  if (codegen.curVecLength > 1)
-    return genVectorInvariantValue(codegen, builder, val);
   return val;
 }
 
@@ -929,11 +745,6 @@ static Value genInvariantValue(Merger &merger, CodeGen &codegen,
 static Value genAddress(CodeGen &codegen, OpBuilder &builder, Location loc,
                         Value size, Value p, Value i) {
   Value mul = builder.create<arith::MulIOp>(loc, size, p);
-  if (auto vtp = i.getType().dyn_cast<VectorType>()) {
-    Value inv =
-        builder.create<arith::IndexCastOp>(loc, vtp.getElementType(), mul);
-    mul = genVectorInvariantValue(codegen, builder, inv);
-  }
   return builder.create<arith::AddIOp>(loc, mul, i);
 }
 
@@ -941,31 +752,6 @@ static Value genAddress(CodeGen &codegen, OpBuilder &builder, Location loc,
 static Value genIndexValue(CodeGen &codegen, OpBuilder &builder, unsigned idx,
                            unsigned ldx) {
   Value ival = codegen.loops[idx];
-  Type itype = ival.getType();
-  // During vectorization, we either encounter:
-  // (1) indices already in vector form, as in ... = ind[lo:hi], good to go, or
-  // (2) single index, as in ... = i, must convert to [i, i+1, ...] for inner i.
-  unsigned vl = codegen.curVecLength;
-  if (vl > 1 && !itype.isa<VectorType>()) {
-    Location loc = ival.getLoc();
-    VectorType vtp = vectorType(codegen, itype);
-    ival = builder.create<vector::BroadcastOp>(loc, vtp, ival);
-    if (idx == ldx) {
-      Value incr;
-      if (vtp.isScalable()) {
-        Type stepvty = vectorType(codegen, builder.getI64Type());
-        Value stepv = builder.create<LLVM::StepVectorOp>(loc, stepvty);
-        incr = builder.create<arith::IndexCastOp>(loc, vtp, stepv);
-      } else {
-        SmallVector<APInt, 4> integers;
-        for (unsigned i = 0; i < vl; i++)
-          integers.push_back(APInt(/*width=*/64, i));
-        auto values = DenseElementsAttr::get(vtp, integers);
-        incr = builder.create<arith::ConstantOp>(loc, vtp, values);
-      }
-      ival = builder.create<arith::AddIOp>(loc, ival, incr);
-    }
-  }
   return ival;
 }
 
@@ -1207,31 +993,11 @@ static bool genInit(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   return needsUniv;
 }
 
-/// Returns vectorization strategy. Any implicit inner loop in the Linalg
-/// operation is a candidate. Whether it is actually converted to SIMD code
-/// depends on the requested strategy.
-static bool isVectorFor(CodeGen &codegen, bool isInner, bool isReduction,
-                        bool isSparse) {
-  // Reject vectorization of sparse output, unless innermost is reduction.
-  if (codegen.sparseOut && !isReduction)
-    return false;
-  // Inspect strategy.
-  switch (codegen.options.vectorizationStrategy) {
-  case SparseVectorizationStrategy::kNone:
-    return false;
-  case SparseVectorizationStrategy::kDenseInnerLoop:
-    return isInner && !isSparse;
-  case SparseVectorizationStrategy::kAnyStorageInnerLoop:
-    return isInner;
-  }
-  llvm_unreachable("unexpected vectorization strategy");
-}
-
 /// Returns parallelization strategy. Any implicit loop in the Linalg operation
 /// that is marked "parallel" is a candidate. Whether it is actually converted
 /// to a parallel operation depends on the requested strategy.
 static bool isParallelFor(CodeGen &codegen, bool isOuter, bool isReduction,
-                          bool isSparse, bool isVector) {
+                          bool isSparse) {
   // Reject parallelization of sparse output.
   if (codegen.sparseOut)
     return false;
@@ -1240,40 +1006,15 @@ static bool isParallelFor(CodeGen &codegen, bool isOuter, bool isReduction,
   case SparseParallelizationStrategy::kNone:
     return false;
   case SparseParallelizationStrategy::kDenseOuterLoop:
-    return isOuter && !isSparse && !isReduction && !isVector;
+    return isOuter && !isSparse && !isReduction;
   case SparseParallelizationStrategy::kAnyStorageOuterLoop:
-    return isOuter && !isReduction && !isVector;
+    return isOuter && !isReduction;
   case SparseParallelizationStrategy::kDenseAnyLoop:
-    return !isSparse && !isReduction && !isVector;
+    return !isSparse && !isReduction;
   case SparseParallelizationStrategy::kAnyStorageAnyLoop:
-    return !isReduction && !isVector;
+    return !isReduction;
   }
   llvm_unreachable("unexpected parallelization strategy");
-}
-
-/// Checks unit stride for dense tensors. The iteration graph may have ignored
-/// dense access patterns in order to avoid cycles (sparse access patterns are
-/// always placed innermost), but that means dense access has become strided.
-/// This prevents effective vectorization.
-static bool denseUnitStrides(Merger &merger, linalg::GenericOp op,
-                             unsigned idx) {
-  for (OpOperand &t : op->getOpOperands()) {
-    if (!getSparseTensorEncoding(t.get().getType())) {
-      auto map = op.getMatchingIndexingMap(&t);
-      for (unsigned d = 0, rank = map.getNumResults(); d < rank; d++) {
-        AffineExpr a = map.getResult(d);
-        // Report non-unit stride if innermost index appears at an outer
-        // dimension (true non-unit stride) or if the innermost index appears
-        // in a compound subscript in the innermost dimension. Even if the
-        // latter is unit stride, it does not play well with scatter/gather.
-        // TODO: accept unit stride affine innermost like a[i,j+k+1]?
-        if (a.isFunctionOfDim(idx) &&
-            ((d != rank - 1) || (a.getKind() != AffineExprKind::DimId)))
-          return false;
-      }
-    }
-  }
-  return true;
 }
 
 /// Generates a for-loop on a single index.
@@ -1287,29 +1028,16 @@ static Operation *genFor(Merger &merger, CodeGen &codegen, OpBuilder &builder,
   bool isReduction = linalg::isReductionIterator(iteratorTypes[idx]);
   bool isSparse = isCompressedDLT(merger.getDimLevelType(fb)) ||
                   isSingletonDLT(merger.getDimLevelType(fb));
-  bool isVector = isVectorFor(codegen, isInner, isReduction, isSparse) &&
-                  denseUnitStrides(merger, op, idx);
-  bool isParallel =
-      isParallelFor(codegen, isOuter, isReduction, isSparse, isVector);
-
-  // Prepare vector length.
-  if (isVector)
-    codegen.curVecLength = codegen.options.vectorLength;
+  bool isParallel = isParallelFor(codegen, isOuter, isReduction, isSparse);
 
   // Loop bounds and increment.
   Location loc = op.getLoc();
   Value lo = isSparse ? codegen.pidxs[tensor][idx] : codegen.loops[idx];
   Value hi = isSparse ? codegen.highs[tensor][idx] : codegen.sizes[idx];
-  Value step = constantIndex(builder, loc, codegen.curVecLength);
-  if (isVector && codegen.options.enableVLAVectorization) {
-    Value vscale = builder.create<vector::VectorScaleOp>(
-        loc, IndexType::get(builder.getContext()));
-    step = builder.create<arith::MulIOp>(loc, vscale, step);
-  }
+  Value step = constantIndex(builder, loc, 1);
 
   // Emit a parallel loop.
   if (isParallel) {
-    assert(!isVector);
     scf::ParallelOp parOp = builder.create<scf::ParallelOp>(loc, lo, hi, step);
     if (isSparse)
       codegen.pidxs[tensor][idx] = parOp.getInductionVars()[0];
@@ -1321,18 +1049,13 @@ static Operation *genFor(Merger &merger, CodeGen &codegen, OpBuilder &builder,
 
   // Emit a sequential or vector loop.
   SmallVector<Value, 4> operands;
-  if (codegen.redVal) {
-    // In a vector loop, bring reduction into SIMD form, if not already.
-    if (isVector && !codegen.redVal.getType().isa<VectorType>()) {
-      VectorType vtp = vectorType(codegen, codegen.redVal.getType());
-      Value vred = genVectorReducInit(codegen, builder, loc, vtp);
-      updateReduc(merger, codegen, vred);
-    }
+  if (codegen.redVal)
     operands.push_back(codegen.redVal);
-  }
   if (codegen.expValues)
     operands.push_back(codegen.expCount);
+
   scf::ForOp forOp = builder.create<scf::ForOp>(loc, lo, hi, step, operands);
+
   if (codegen.redVal)
     updateReduc(merger, codegen, forOp.getRegionIterArgs().front());
   if (codegen.expValues)
@@ -1343,10 +1066,8 @@ static Operation *genFor(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     codegen.pidxs[tensor][idx] = iv;
   else
     codegen.loops[idx] = iv;
+
   builder.setInsertionPointToStart(forOp.getBody());
-  // Share vector iteration mask between all subsequent loads/stores.
-  if (isVector)
-    codegen.curVecMask = genVectorMask(codegen, builder, iv, lo, hi, step);
   return forOp;
 }
 
@@ -1659,7 +1380,6 @@ static void endIf(Merger &merger, CodeGen &codegen, OpBuilder &builder,
 static bool startLoopSeq(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                          linalg::GenericOp op, unsigned exp, unsigned at,
                          unsigned idx, unsigned ldx, unsigned lts) {
-  assert(codegen.curVecLength == 1);
   assert(!codegen.loops[idx]);
   // Emit invariants at this loop sequence level.
   genInvariants(merger, codegen, builder, op, exp, ldx, /*atStart=*/true);
@@ -1686,7 +1406,6 @@ static bool startLoopSeq(Merger &merger, CodeGen &codegen, OpBuilder &builder,
 static Operation *startLoop(Merger &merger, CodeGen &codegen,
                             OpBuilder &builder, linalg::GenericOp op,
                             unsigned at, unsigned li, bool needsUniv) {
-  assert(codegen.curVecLength == 1);
   // Emit the for/while-loop control.
   Operation *loop = genLoop(merger, codegen, builder, op, at, needsUniv,
                             merger.lat(li).simple);
@@ -1699,7 +1418,6 @@ static Operation *startLoop(Merger &merger, CodeGen &codegen,
 static bool endLoop(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                     linalg::GenericOp op, Operation *loop, unsigned idx,
                     unsigned li, bool needsUniv) {
-  codegen.curVecLength = 1;
   // End a while-loop.
   if (auto whileOp = dyn_cast<scf::WhileOp>(loop)) {
     genWhileInduction(merger, codegen, builder, op, idx, needsUniv,
@@ -1715,14 +1433,8 @@ static bool endLoop(Merger &merger, CodeGen &codegen, OpBuilder &builder,
 static void endLoopSeq(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                        linalg::GenericOp op, unsigned exp, unsigned at,
                        unsigned idx, unsigned ldx) {
-  assert(codegen.curVecLength == 1);
   assert(codegen.loops[idx]);
   codegen.loops[idx] = Value();
-  // Bring a pending reduction back from SIMD form when sequence ends.
-  if (codegen.redVal)
-    if (auto vtp = codegen.redVal.getType().dyn_cast<VectorType>())
-      updateReduc(merger, codegen,
-                  genVectorReducEnd(codegen, builder, op.getLoc(), vtp));
   // Unmark bookkeeping of invariants and loop index.
   genInvariants(merger, codegen, builder, op, exp, ldx, /*atStart=*/false);
   // Finalize access pattern expansion for sparse tensor output.
