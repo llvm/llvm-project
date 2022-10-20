@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_LIB_CIR_CIRGENBUILDER_H
 #define LLVM_CLANG_LIB_CIR_CIRGENBUILDER_H
 
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/FPEnv.h"
 
 #include "mlir/IR/Builders.h"
@@ -19,11 +20,28 @@ namespace cir {
 class CIRGenFunction;
 
 class CIRGenBuilderTy : public mlir::OpBuilder {
+  bool IsFPConstrained = false;
   fp::ExceptionBehavior DefaultConstrainedExcept = fp::ebStrict;
   llvm::RoundingMode DefaultConstrainedRounding = llvm::RoundingMode::Dynamic;
 
 public:
   CIRGenBuilderTy(mlir::MLIRContext &C) : mlir::OpBuilder(&C) {}
+
+  /// Enable/Disable use of constrained floating point math. When enabled the
+  /// CreateF<op>() calls instead create constrained floating point intrinsic
+  /// calls. Fast math flags are unaffected by this setting.
+  void setIsFPConstrained(bool IsCon) {
+    if (IsCon)
+      llvm_unreachable("Constrained FP NYI");
+    IsFPConstrained = IsCon;
+  }
+
+  /// Query for the use of constrained floating point math
+  bool getIsFPConstrained() {
+    if (IsFPConstrained)
+      llvm_unreachable("Constrained FP NYI");
+    return IsFPConstrained;
+  }
 
   /// Set the exception handling to be used with constrained floating point
   void setDefaultConstrainedExcept(fp::ExceptionBehavior NewExcept) {
