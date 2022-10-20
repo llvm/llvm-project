@@ -17,8 +17,6 @@
 
 typedef __bf16 __v32bf __attribute__((__vector_size__(64), __aligned__(64)));
 typedef __bf16 __m512bh __attribute__((__vector_size__(64), __aligned__(64)));
-typedef __bf16 __v16bf __attribute__((__vector_size__(32), __aligned__(32)));
-typedef __bf16 __m256bh __attribute__((__vector_size__(32), __aligned__(32)));
 typedef __bf16 __bfloat16 __attribute__((deprecated("use __bf16 instead")));
 
 #define __DEFAULT_FN_ATTRS512 \

@@ -39,6 +39,16 @@ typedef float __m256_u __attribute__ ((__vector_size__ (32), __aligned__(1)));
 typedef double __m256d_u __attribute__((__vector_size__(32), __aligned__(1)));
 typedef long long __m256i_u __attribute__((__vector_size__(32), __aligned__(1)));
 
+#ifdef __SSE2__
+/* Both _Float16 and __bf16 require SSE2 being enabled. */
+typedef _Float16 __v16hf __attribute__((__vector_size__(32), __aligned__(32)));
+typedef _Float16 __m256h __attribute__((__vector_size__(32), __aligned__(32)));
+typedef _Float16 __m256h_u __attribute__((__vector_size__(32), __aligned__(1)));
+
+typedef __bf16 __v16bf __attribute__((__vector_size__(32), __aligned__(32)));
+typedef __bf16 __m256bh __attribute__((__vector_size__(32), __aligned__(32)));
+#endif
+
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("avx"), __min_vector_width__(256)))
 #define __DEFAULT_FN_ATTRS128 __attribute__((__always_inline__, __nodebug__, __target__("avx"), __min_vector_width__(128)))
