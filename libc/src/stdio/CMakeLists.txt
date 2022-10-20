@@ -269,6 +269,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  stdin
+  SRCS
+    stdin.cpp
+  HDRS
+    stdin.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
   stdout
   SRCS
     stdout.cpp
