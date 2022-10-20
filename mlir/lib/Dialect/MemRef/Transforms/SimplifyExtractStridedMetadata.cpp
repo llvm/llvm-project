@@ -455,20 +455,15 @@ template <typename ReassociativeReshapeLikeOp,
               ReassociativeReshapeLikeOp, OpBuilder &,
               ArrayRef<OpFoldResult> /*origSizes*/,
               ArrayRef<OpFoldResult> /*origStrides*/, unsigned /*groupId*/)>
-struct ExtractStridedMetadataOpReshapeFolder
-    : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
+struct ReshapeFolder : public OpRewritePattern<ReassociativeReshapeLikeOp> {
 public:
-  using OpRewritePattern<memref::ExtractStridedMetadataOp>::OpRewritePattern;
+  using OpRewritePattern<ReassociativeReshapeLikeOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(memref::ExtractStridedMetadataOp op,
+  LogicalResult matchAndRewrite(ReassociativeReshapeLikeOp reshape,
                                 PatternRewriter &rewriter) const override {
-    auto reshape = op.getSource().getDefiningOp<ReassociativeReshapeLikeOp>();
-    if (!reshape)
-      return failure();
-
     // Build a plain extract_strided_metadata(memref) from
     // extract_strided_metadata(reassociative_reshape_like(memref)).
-    Location origLoc = op.getLoc();
+    Location origLoc = reshape.getLoc();
     Value source = reshape.getSrc();
     auto sourceType = source.getType().cast<MemRefType>();
     unsigned sourceRank = sourceType.getRank();
@@ -487,26 +482,25 @@ public:
     MemRefType reshapeType = reshape.getResultType();
     unsigned reshapeRank = reshapeType.getRank();
 
-    // The result value will start with the base_buffer and offset.
-    unsigned baseIdxInResult = 2;
-    SmallVector<OpFoldResult> results(baseIdxInResult + reshapeRank * 2);
-    results[0] = newExtractStridedMetadata.getBaseBuffer();
-    results[1] = ShapedType::isDynamicStrideOrOffset(offset)
-                     ? getAsOpFoldResult(newExtractStridedMetadata.getOffset())
-                     : rewriter.getIndexAttr(offset);
+    OpFoldResult offsetOfr =
+        ShapedType::isDynamicStrideOrOffset(offset)
+            ? getAsOpFoldResult(newExtractStridedMetadata.getOffset())
+            : rewriter.getIndexAttr(offset);
 
     // Get the special case of 0-D out of the way.
     if (sourceRank == 0) {
-      Value constantOne = getValueOrCreateConstantIndexOp(
-          rewriter, origLoc, rewriter.getIndexAttr(1));
-      SmallVector<Value> resultValues(baseIdxInResult + reshapeRank * 2,
-                                      constantOne);
-      for (unsigned i = 0; i < baseIdxInResult; ++i)
-        resultValues[i] =
-            getValueOrCreateConstantIndexOp(rewriter, origLoc, results[i]);
-      rewriter.replaceOp(op, resultValues);
+      SmallVector<OpFoldResult> ones(reshapeRank, rewriter.getIndexAttr(1));
+      auto memrefDesc = rewriter.create<memref::ReinterpretCastOp>(
+          origLoc, reshapeType, newExtractStridedMetadata.getBaseBuffer(),
+          offsetOfr, /*sizes=*/ones, /*strides=*/ones);
+      rewriter.replaceOp(reshape, memrefDesc.getResult());
       return success();
     }
+
+    SmallVector<OpFoldResult> finalSizes;
+    finalSizes.reserve(reshapeRank);
+    SmallVector<OpFoldResult> finalStrides;
+    finalStrides.reserve(reshapeRank);
 
     // Compute the reshaped strides and sizes from the base strides and sizes.
     SmallVector<OpFoldResult> origSizes =
@@ -521,21 +515,20 @@ public:
           reshape, rewriter, origSizes, origStrides, /*groupId=*/idx);
 
       unsigned groupSize = reshapedSizes.size();
-      const unsigned sizeStartIdx = baseIdxInResult;
-      const unsigned strideStartIdx = sizeStartIdx + reshapeRank;
       for (unsigned i = 0; i < groupSize; ++i) {
-        results[sizeStartIdx + i] = reshapedSizes[i];
-        results[strideStartIdx + i] = reshapedStrides[i];
+        finalSizes.push_back(reshapedSizes[i]);
+        finalStrides.push_back(reshapedStrides[i]);
       }
-      baseIdxInResult += groupSize;
     }
     assert(((isa<memref::ExpandShapeOp>(reshape) && idx == sourceRank) ||
             (isa<memref::CollapseShapeOp>(reshape) && idx == reshapeRank)) &&
            "We should have visited all the input dimensions");
-    assert(baseIdxInResult == reshapeRank + 2 &&
+    assert(finalSizes.size() == reshapeRank &&
            "We should have populated all the values");
-    rewriter.replaceOp(
-        op, getValueOrCreateConstantIndexOp(rewriter, origLoc, results));
+    auto memrefDesc = rewriter.create<memref::ReinterpretCastOp>(
+        origLoc, reshapeType, newExtractStridedMetadata.getBaseBuffer(),
+        offsetOfr, finalSizes, finalStrides);
+    rewriter.replaceOp(reshape, memrefDesc.getResult());
     return success();
   }
 };
@@ -745,18 +738,17 @@ class ExtractStridedMetadataOpExtractStridedMetadataFolder
 
 void memref::populateSimplifyExtractStridedMetadataOpPatterns(
     RewritePatternSet &patterns) {
-  patterns
-      .add<SubviewFolder,
-           ExtractStridedMetadataOpReshapeFolder<
-               memref::ExpandShapeOp, getExpandedSizes, getExpandedStrides>,
-           ExtractStridedMetadataOpReshapeFolder<
-               memref::CollapseShapeOp, getCollapsedSize, getCollapsedStride>,
-           ExtractStridedMetadataOpAllocFolder<memref::AllocOp>,
-           ExtractStridedMetadataOpAllocFolder<memref::AllocaOp>,
-           RewriteExtractAlignedPointerAsIndexOfViewLikeOp,
-           ExtractStridedMetadataOpReinterpretCastFolder,
-           ExtractStridedMetadataOpExtractStridedMetadataFolder>(
-          patterns.getContext());
+  patterns.add<SubviewFolder,
+               ReshapeFolder<memref::ExpandShapeOp, getExpandedSizes,
+                             getExpandedStrides>,
+               ReshapeFolder<memref::CollapseShapeOp, getCollapsedSize,
+                             getCollapsedStride>,
+               ExtractStridedMetadataOpAllocFolder<memref::AllocOp>,
+               ExtractStridedMetadataOpAllocFolder<memref::AllocaOp>,
+               RewriteExtractAlignedPointerAsIndexOfViewLikeOp,
+               ExtractStridedMetadataOpReinterpretCastFolder,
+               ExtractStridedMetadataOpExtractStridedMetadataFolder>(
+      patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//
