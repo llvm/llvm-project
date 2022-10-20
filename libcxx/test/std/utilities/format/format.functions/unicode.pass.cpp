@@ -11,6 +11,10 @@
 // This version runs the test when the platform has Unicode support.
 // UNSUPPORTED: libcpp-has-no-unicode
 
+// TODO FMT Investigate Windows and AIX issues.
+// UNSUPPORTED msvc, target={{.+}}-windows-gnu
+// UNSUPPORTED: LIBCXX-AIX-FIXME
+
 // <format>
 
 // Tests the Unicode width support of the standard format specifiers.

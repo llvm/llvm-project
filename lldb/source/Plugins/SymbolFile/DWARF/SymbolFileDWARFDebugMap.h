@@ -19,6 +19,7 @@
 #include "UniqueDWARFASTType.h"
 
 class SymbolFileDWARF;
+class DWARFCompileUnit;
 class DWARFDebugAranges;
 class DWARFDeclContext;
 
@@ -174,7 +175,10 @@ protected:
     llvm::sys::TimePoint<> oso_mod_time;
     lldb_private::Status oso_load_error;
     OSOInfoSP oso_sp;
-    lldb::CompUnitSP compile_unit_sp;
+    /// The compile units that an object file contains.
+    llvm::SmallVector<lldb::CompUnitSP, 2> compile_units_sps;
+    /// A map from the compile unit ID to its index in the vector.
+    llvm::SmallDenseMap<uint64_t, uint64_t, 2> id_to_index_map;
     uint32_t first_symbol_index = UINT32_MAX;
     uint32_t last_symbol_index = UINT32_MAX;
     uint32_t first_symbol_id = UINT32_MAX;
@@ -182,10 +186,7 @@ protected:
     FileRangeMap file_range_map;
     bool file_range_map_valid = false;
 
-    CompileUnitInfo()
-        : so_file(), oso_path(), oso_mod_time(), oso_sp(), compile_unit_sp(),
-
-          file_range_map() {}
+    CompileUnitInfo() = default;
 
     const FileRangeMap &GetFileRangeMap(SymbolFileDWARFDebugMap *exe_symfile);
   };
@@ -193,7 +194,17 @@ protected:
   // Protected Member Functions
   void InitOSO();
 
+  /// This function actually returns the number of object files, which may be
+  /// less than the actual number of compile units, since an object file may
+  /// contain more than one compile unit. SymbolFileDWARFDebugMap looks up the
+  /// number of compile units by reading the nlist symbol table, which
+  /// currently, on macOS, only reports one compile unit per object file, and
+  /// there's no efficient way to calculate the actual number of compile units
+  /// upfront.
   uint32_t CalculateNumCompileUnits() override;
+
+  /// This function actually returns the first compile unit the object file at
+  /// the given index contains.
   lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
 
   static uint32_t GetOSOIndexFromUserID(lldb::user_id_t uid) {
@@ -263,7 +274,11 @@ protected:
   void SetCompileUnit(SymbolFileDWARF *oso_dwarf,
                       const lldb::CompUnitSP &cu_sp);
 
-  lldb::CompUnitSP GetCompileUnit(SymbolFileDWARF *oso_dwarf);
+  /// Returns the compile unit associated with the dwarf compile unit. This may
+  /// be one of the extra compile units an object file contains which isn't
+  /// reachable by ParseCompileUnitAtIndex(uint32_t).
+  lldb::CompUnitSP GetCompileUnit(SymbolFileDWARF *oso_dwarf,
+                                  DWARFCompileUnit &dwarf_cu);
 
   CompileUnitInfo *GetCompileUnitInfo(SymbolFileDWARF *oso_dwarf);
 

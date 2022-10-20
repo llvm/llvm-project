@@ -373,8 +373,8 @@ func.func @sparse_expansion3(%arg0: index, %arg1: index) -> memref<?xindex> {
 //       CHECK:  %[[R:.*]]:2 = scf.for %[[I:.*]] = %[[C0]] to %[[A8]] step %[[C1]] iter_args(%[[P0:.*]] = %[[A3]], %[[P1:.*]] = %[[A4]]) -> (memref<?xindex>, memref<?xf64>) {
 //       CHECK:    %[[T1:.*]] = memref.load %[[A7]][%[[I]]] : memref<?xindex>
 //       CHECK:    %[[T2:.*]] = memref.load %[[A5]][%[[T1]]] : memref<?xf64>
-//       CHECK:    %[[T3:.*]] = sparse_tensor.push_back %[[A1]], %[[P0]], %[[T1]] {idx = 3 : index} : memref<3xindex>, memref<?xindex>, index
-//       CHECK:    %[[T4:.*]] = sparse_tensor.push_back %[[A1]], %[[P1]], %[[T2]] {idx = 4 : index} : memref<3xindex>, memref<?xf64>, f64
+//       CHECK:    %[[T3:.*]] = sparse_tensor.push_back %[[A1]], %[[P0]], %[[T1]] {idx = 1 : index} : memref<3xindex>, memref<?xindex>, index
+//       CHECK:    %[[T4:.*]] = sparse_tensor.push_back %[[A1]], %[[P1]], %[[T2]] {idx = 2 : index} : memref<3xindex>, memref<?xf64>, f64
 //       CHECK:    memref.store %[[F0]], %arg5[%[[T1]]] : memref<?xf64>
 //       CHECK:    memref.store %[[B0]], %arg6[%[[T1]]] : memref<?xi1>
 //       CHECK:    scf.yield %[[T3]], %[[T4]] : memref<?xindex>, memref<?xf64>
@@ -383,8 +383,8 @@ func.func @sparse_expansion3(%arg0: index, %arg1: index) -> memref<?xindex> {
 //       CHECK:  memref.dealloc %[[A6]] : memref<?xi1>
 //       CHECK:  memref.dealloc %[[A7]] : memref<?xindex>
 //       CHECK:  %[[LL:.*]] = memref.load %[[A1]][%[[C2]]] : memref<3xindex>
-//       CHECK:    %[[P1:.*]] = sparse_tensor.push_back %[[A1]], %[[A2]], %[[C0]] {idx = 2 : index} : memref<3xindex>, memref<?xindex>, index
-//       CHECK:    %[[P2:.*]] = sparse_tensor.push_back %[[A1]], %[[P1]], %[[LL]] {idx = 2 : index} : memref<3xindex>, memref<?xindex>, index
+//       CHECK:  %[[P1:.*]] = sparse_tensor.push_back %[[A1]], %[[A2]], %[[C0]] {idx = 0 : index} : memref<3xindex>, memref<?xindex>, index
+//       CHECK:  %[[P2:.*]] = sparse_tensor.push_back %[[A1]], %[[P1]], %[[LL]] {idx = 0 : index} : memref<3xindex>, memref<?xindex>, index
 //       CHECK:  return %[[A0]], %[[A1]], %[[P2]], %[[R]]#0, %[[R]]#1 : memref<1xindex>, memref<3xindex>, memref<?xindex>, memref<?xindex>, memref<?xf64>
 func.func @sparse_compression_1d(%tensor: tensor<100xf64, #SV>,
                                  %values: memref<?xf64>,
@@ -526,7 +526,7 @@ func.func @sparse_insert_typed(%arg0: tensor<128xf64, #SparseVector>, %arg1: ind
 //  CHECK-SAME:   %[[A3:.*]]: memref<?xi64>,
 //  CHECK-SAME:   %[[A4:.*]]: memref<?xf32>)
 //       CHECK:   return %[[A0]], %[[A1]], %[[A2]], %[[A3]], %[[A4]] : memref<1xindex>, memref<3xindex>, memref<?xi32>, memref<?xi64>, memref<?xf32>
-func.func @sparse_nop_convert(%arg0: tensor<?xf32, #SparseVector>) -> tensor<?xf32, #SparseVector> {
-  %0 = sparse_tensor.convert %arg0 : tensor<?xf32, #SparseVector> to tensor<?xf32, #SparseVector>
+func.func @sparse_nop_convert(%arg0: tensor<32xf32, #SparseVector>) -> tensor<?xf32, #SparseVector> {
+  %0 = sparse_tensor.convert %arg0 : tensor<32xf32, #SparseVector> to tensor<?xf32, #SparseVector>
   return %0 : tensor<?xf32, #SparseVector>
 }

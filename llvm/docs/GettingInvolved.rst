@@ -310,6 +310,14 @@ don't find anyone present, chances are they happen to be off that day.
     - Monthly, 3rd Thursday of the month at 21:00 Warsaw/Poland time, 1 hour slot.
     - `MS Teams <https://teams.microsoft.com/l/meetup-join/19%3ameeting_ODRmN2UwYTgtODdiOS00N2VkLTgxZjgtNDUxYjI3YmNkM2Ri%40thread.v2/0?context=%7b%22Tid%22%3a%2246c98d88-e344-4ed4-8496-4ed7712e255d%22%2c%22Oid%22%3a%220c2b140d-8412-4963-a118-0f7534426b65%22%7d>`__
     - English, Polish
+  * - Quentin Colombet (he/him)
+    - LLVM/MLIR; Codegen (Instruction selection (GlobalISel/SDISel), Machine IR,
+      Register allocation, etc.); Optimizations; MCA
+    - Monthly, 1st Wednesday of the month at 8.00am PT, for 30 minutes.
+      `ics <https://calendar.google.com/calendar/ical/48c4ad60290a4df218e51e1ceec1106fe317b0ebc76938d9273592053f38204e%40group.calendar.google.com/public/basic.ics>`__
+      `gcal <https://calendar.google.com/calendar/embed?src=48c4ad60290a4df218e51e1ceec1106fe317b0ebc76938d9273592053f38204e%40group.calendar.google.com>`__
+    - `Google meet <https://meet.google.com/cbz-grrp-obs>`__
+    - English, French
 
 
 Guidance for office hours hosts

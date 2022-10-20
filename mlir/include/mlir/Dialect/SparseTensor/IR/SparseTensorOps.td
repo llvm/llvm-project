@@ -71,6 +71,12 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
     data structure transformations. Also, conversions from sparse tensor types
     into dense tensor types may be infeasible in terms of storage requirements.
 
+    Trivial dense-to-dense convert will be removed by canonicalization while
+    trivial sparse-to-sparse convert will be removed by the sparse codegen. This
+    is because we use trivial sparse-to-sparse convert to tell bufferization
+    that the sparse codegen will expand the tensor buffer into sparse tensor
+    storage.
+
     Examples:
 
     ```mlir
@@ -86,6 +92,7 @@ def SparseTensor_ConvertOp : SparseTensor_Op<"convert",
 
   }];
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
+  let hasFolder = 1;
   let hasVerifier = 1;
 }
 

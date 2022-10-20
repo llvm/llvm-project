@@ -76,6 +76,8 @@ template <typename OpTy>
 struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
 
+  void initialize() { OpRewritePattern<OpTy>::setHasBoundedRewriteRecursion(); }
+
   LogicalResult matchAndRewrite(OpTy dimOp,
                                 PatternRewriter &rewriter) const override {
     OpResult dimValue = dimOp.getSource().template dyn_cast<OpResult>();

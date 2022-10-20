@@ -949,7 +949,8 @@ static const LangASMap *getAddressSpaceMap(const TargetInfo &T,
         0,  // sycl_private
         10, // ptr32_sptr
         11, // ptr32_uptr
-        12  // ptr64
+        12, // ptr64
+        13, // hlsl_groupshared
     };
     return &FakeAddrSpaceMap;
   } else {

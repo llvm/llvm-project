@@ -505,7 +505,7 @@ def VOP_DOT_ACC_I32_I32   : VOP_DOT_ACC<i32, i32> {
 }
 
 // Write out to vcc or arbitrary SGPR.
-def VOP2b_I32_I1_I32_I32 : VOPProfile<[i32, i32, i32, untyped], 0, /*EnableClamp=*/1> {
+def VOP2b_I32_I1_I32_I32 : VOPProfile<[i32, i32, i32, untyped], /*EnableClamp=*/1> {
   let Asm32 = "$vdst, vcc, $src0, $src1";
   let Asm64 = "$vdst, $sdst, $src0, $src1$clamp";
   let AsmSDWA = "$vdst, vcc, $src0_modifiers, $src1_modifiers$clamp $dst_sel $dst_unused $src0_sel $src1_sel";
@@ -532,7 +532,7 @@ def VOP2b_I32_I1_I32_I32 : VOPProfile<[i32, i32, i32, untyped], 0, /*EnableClamp
 
 // Write out to vcc or arbitrary SGPR and read in from vcc or
 // arbitrary SGPR.
-def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1], 0, /*EnableClamp=*/1> {
+def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1], /*EnableClamp=*/1> {
   let HasSrc2Mods = 0;
   let Asm32 = "$vdst, vcc, $src0, $src1, vcc";
   let Asm64 = "$vdst, $sdst, $src0, $src1, $src2$clamp";
@@ -576,7 +576,7 @@ def VOP2b_I32_I1_I32_I32_I1 : VOPProfile<[i32, i32, i32, i1], 0, /*EnableClamp=*
 }
 
 // Read in from vcc or arbitrary SGPR.
-class VOP2e_SGPR<list<ValueType> ArgVT> : VOPProfile<ArgVT, /*EnableF32SrcMods=*/1> {
+class VOP2e_SGPR<list<ValueType> ArgVT> : VOPProfile<ArgVT> {
   let Asm32 = "$vdst, $src0, $src1";
   let Asm64 = "$vdst, $src0_modifiers, $src1_modifiers, $src2";
   let AsmSDWA = "$vdst, $src0_modifiers, $src1_modifiers, vcc$clamp $dst_sel $dst_unused $src0_sel $src1_sel";
@@ -591,14 +591,20 @@ class VOP2e_SGPR<list<ValueType> ArgVT> : VOPProfile<ArgVT, /*EnableF32SrcMods=*
 
   // Suppress src2 implied by type since the 32-bit encoding uses an
   // implicit VCC use.
-  let Ins32 = (ins Src0RC32:$src0, Src1RC32:$src1);
+  let Ins32 = (ins VSrc_f32:$src0, Src1RC32:$src1);
+
+  let HasModifiers = 1;
+
+  // Select FP modifiers for VOP3
+  let Src0Mod = !if(!eq(Src0VT.Size, 16), FP16InputMods, FP32InputMods);
+  let Src1Mod = Src0Mod;
 
   let HasSrc0IntMods = 0;
   let HasSrc1IntMods = 0;
   let HasSrc0FloatMods = 1;
   let HasSrc1FloatMods = 1;
-  let InsSDWA = (ins FP32SDWAInputMods:$src0_modifiers, Src0SDWA:$src0,
-                     FP32SDWAInputMods:$src1_modifiers, Src1SDWA:$src1,
+  let InsSDWA = (ins FP32SDWAInputMods:$src0_modifiers, SDWASrc_f32:$src0,
+                     FP32SDWAInputMods:$src1_modifiers, SDWASrc_f32:$src1,
                      clampmod:$clamp,
                      dst_sel:$dst_sel, dst_unused:$dst_unused,
                      src0_sel:$src0_sel, src1_sel:$src1_sel);

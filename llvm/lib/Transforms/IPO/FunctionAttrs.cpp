@@ -139,10 +139,23 @@ static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
       F.getAttributes().hasAttrSomewhere(Attribute::Preallocated))
     ME |= MemoryEffects::argMemOnly(ModRefInfo::ModRef);
 
-  // Returns true if Ptr is not based on a function argument.
-  auto IsArgumentOrAlloca = [](const Value *Ptr) {
-    const Value *UO = getUnderlyingObject(Ptr);
-    return isa<Argument>(UO) || isa<AllocaInst>(UO);
+  auto AddLocAccess = [&](const MemoryLocation &Loc, ModRefInfo MR) {
+    // Ignore accesses to local memory.
+    if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
+      return;
+
+    const Value *UO = getUnderlyingObject(Loc.Ptr);
+    assert(!isa<AllocaInst>(UO) &&
+           "Should have been handled by pointsToConstantMemory()");
+    if (isa<Argument>(UO)) {
+      ME |= MemoryEffects::argMemOnly(MR);
+      return;
+    }
+
+    // If it's not an identified object, it might be an argument.
+    if (!isIdentifiedObject(UO))
+      ME |= MemoryEffects::argMemOnly(MR);
+    ME |= MemoryEffects(MemoryEffects::Other, MR);
   };
   // Scan the function body for instructions that may read or write memory.
   for (Instruction &I : instructions(F)) {
@@ -186,16 +199,7 @@ static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
           if (!Arg->getType()->isPtrOrPtrVectorTy())
             continue;
 
-          MemoryLocation Loc =
-              MemoryLocation::getBeforeOrAfter(Arg, I.getAAMetadata());
-          // Skip accesses to local or constant memory as they don't impact the
-          // externally visible mod/ref behavior.
-          if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
-            continue;
-
-          ME |= MemoryEffects::argMemOnly(ArgMR);
-          if (!IsArgumentOrAlloca(Loc.Ptr))
-            ME |= MemoryEffects(MemoryEffects::Other, ArgMR);
+          AddLocAccess(MemoryLocation::getBeforeOrAfter(Arg, I.getAAMetadata()), ArgMR);
         }
       }
       continue;
@@ -217,15 +221,11 @@ static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
       continue;
     }
 
-    // Ignore non-volatile accesses from local memory. (Atomic is okay here.)
-    if (!I.isVolatile() && AAR.pointsToConstantMemory(*Loc, /*OrLocal=*/true))
-      continue;
+    // Volatile operations may access inaccessible memory.
+    if (I.isVolatile())
+      ME |= MemoryEffects::inaccessibleMemOnly(MR);
 
-    // The accessed location can be either only argument memory, or
-    // argument & other memory, but never inaccessible memory.
-    ME |= MemoryEffects::argMemOnly(MR);
-    if (!IsArgumentOrAlloca(Loc->Ptr))
-      ME |= MemoryEffects(MemoryEffects::Other, MR);
+    AddLocAccess(*Loc, MR);
   }
 
   return OrigME & ME;

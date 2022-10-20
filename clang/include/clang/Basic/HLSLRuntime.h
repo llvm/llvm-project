@@ -20,14 +20,6 @@
 namespace clang {
 namespace hlsl {
 
-enum class ResourceClass : uint8_t {
-  SRV = 0,
-  UAV,
-  CBuffer,
-  Sampler,
-  NumClasses
-};
-
 constexpr ShaderStage
 getStageFromEnvironment(const llvm::Triple::EnvironmentType &E) {
   uint32_t Pipeline =

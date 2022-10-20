@@ -415,6 +415,18 @@ static Register buildConstantIntReg(uint64_t Val, MachineIRBuilder &MIRBuilder,
   return GR->buildConstantInt(Val, MIRBuilder, IntType);
 }
 
+/// Helper function for translating atomic init to OpStore.
+static bool buildAtomicInitInst(const SPIRV::IncomingCall *Call,
+                                MachineIRBuilder &MIRBuilder) {
+  assert(Call->Arguments.size() == 2 &&
+         "Need 2 arguments for atomic init translation");
+
+  MIRBuilder.buildInstr(SPIRV::OpStore)
+      .addUse(Call->Arguments[0])
+      .addUse(Call->Arguments[1]);
+  return true;
+}
+
 /// Helper function for building an atomic load instruction.
 static bool buildAtomicLoadInst(const SPIRV::IncomingCall *Call,
                                 MachineIRBuilder &MIRBuilder,
@@ -577,10 +589,10 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
   if (Call->Arguments.size() >= 4) {
     assert(Call->Arguments.size() == 4 && "Extra args for explicit atomic RMW");
     auto CLScope = static_cast<SPIRV::CLMemoryScope>(
-        getIConstVal(Call->Arguments[5], MRI));
+        getIConstVal(Call->Arguments[3], MRI));
     Scope = getSPIRVScope(CLScope);
     if (CLScope == static_cast<unsigned>(Scope))
-      ScopeRegister = Call->Arguments[5];
+      ScopeRegister = Call->Arguments[3];
   }
   if (!ScopeRegister.isValid())
     ScopeRegister = buildConstantIntReg(Scope, MIRBuilder, GR);
@@ -595,7 +607,7 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
         getSPIRVMemSemantics(Order) |
         getMemSemanticsForStorageClass(GR->getPointerStorageClass(PtrRegister));
     if (Order == Semantics)
-      MemSemanticsReg = Call->Arguments[3];
+      MemSemanticsReg = Call->Arguments[2];
   }
   if (!MemSemanticsReg.isValid())
     MemSemanticsReg = buildConstantIntReg(Semantics, MIRBuilder, GR);
@@ -961,6 +973,8 @@ static bool generateAtomicInst(const SPIRV::IncomingCall *Call,
       SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
 
   switch (Opcode) {
+  case SPIRV::OpStore:
+    return buildAtomicInitInst(Call, MIRBuilder);
   case SPIRV::OpAtomicLoad:
     return buildAtomicLoadInst(Call, MIRBuilder, GR);
   case SPIRV::OpAtomicStore:
@@ -973,6 +987,7 @@ static bool generateAtomicInst(const SPIRV::IncomingCall *Call,
   case SPIRV::OpAtomicOr:
   case SPIRV::OpAtomicXor:
   case SPIRV::OpAtomicAnd:
+  case SPIRV::OpAtomicExchange:
     return buildAtomicRMWInst(Call, Opcode, MIRBuilder, GR);
   case SPIRV::OpMemoryBarrier:
     return buildBarrierInst(Call, SPIRV::OpMemoryBarrier, MIRBuilder, GR);
@@ -1083,14 +1098,33 @@ static bool generateImageSizeQueryInst(const SPIRV::IncomingCall *Call,
 static bool generateImageMiscQueryInst(const SPIRV::IncomingCall *Call,
                                        MachineIRBuilder &MIRBuilder,
                                        SPIRVGlobalRegistry *GR) {
-  // TODO: Add support for other image query builtins.
-  Register Image = Call->Arguments[0];
-
   assert(Call->ReturnType->getOpcode() == SPIRV::OpTypeInt &&
          "Image samples query result must be of int type!");
-  assert(GR->getSPIRVTypeForVReg(Image)->getOperand(2).getImm() == 1 &&
-         "Image must be of 2D dimensionality");
-  MIRBuilder.buildInstr(SPIRV::OpImageQuerySamples)
+
+  // Lookup the instruction opcode in the TableGen records.
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  Register Image = Call->Arguments[0];
+  SPIRV::Dim::Dim ImageDimensionality = static_cast<SPIRV::Dim::Dim>(
+      GR->getSPIRVTypeForVReg(Image)->getOperand(2).getImm());
+
+  switch (Opcode) {
+  case SPIRV::OpImageQuerySamples:
+    assert(ImageDimensionality == SPIRV::Dim::DIM_2D &&
+           "Image must be of 2D dimensionality");
+    break;
+  case SPIRV::OpImageQueryLevels:
+    assert((ImageDimensionality == SPIRV::Dim::DIM_1D ||
+            ImageDimensionality == SPIRV::Dim::DIM_2D ||
+            ImageDimensionality == SPIRV::Dim::DIM_3D ||
+            ImageDimensionality == SPIRV::Dim::DIM_Cube) &&
+           "Image must be of 1D/2D/3D/Cube dimensionality");
+    break;
+  }
+
+  MIRBuilder.buildInstr(Opcode)
       .addDef(Call->ReturnRegister)
       .addUse(GR->getSPIRVTypeID(Call->ReturnType))
       .addUse(Image);
@@ -1558,15 +1592,15 @@ Optional<bool> lowerBuiltin(const StringRef DemangledCall,
       lookupBuiltin(DemangledCall, Set, ReturnRegister, ReturnType, Args);
 
   if (!Call) {
-    LLVM_DEBUG(dbgs() << "Builtin record was not found!");
-    return {};
+    LLVM_DEBUG(dbgs() << "Builtin record was not found!\n");
+    return None;
   }
 
   // TODO: check if the provided args meet the builtin requirments.
   assert(Args.size() >= Call->Builtin->MinNumArgs &&
          "Too few arguments to generate the builtin");
-  if (Call->Builtin->MaxNumArgs && Args.size() <= Call->Builtin->MaxNumArgs)
-    LLVM_DEBUG(dbgs() << "More arguments provided than required!");
+  if (Call->Builtin->MaxNumArgs && Args.size() > Call->Builtin->MaxNumArgs)
+    LLVM_DEBUG(dbgs() << "More arguments provided than required!\n");
 
   // Match the builtin with implementation based on the grouping.
   switch (Call->Builtin->Group) {
