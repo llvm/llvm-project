@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 
@@ -33,6 +34,11 @@ cl::opt<bool> EnableFSDiscriminator(
 
 const DIExpression::FragmentInfo DebugVariable::DefaultFragment = {
     std::numeric_limits<uint64_t>::max(), std::numeric_limits<uint64_t>::min()};
+
+DebugVariable::DebugVariable(const DbgVariableIntrinsic *DII)
+    : Variable(DII->getVariable()),
+      Fragment(DII->getExpression()->getFragmentInfo()),
+      InlinedAt(DII->getDebugLoc().getInlinedAt()) {}
 
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, ArrayRef<Metadata *> MDs,
