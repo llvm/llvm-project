@@ -15,6 +15,7 @@
 #define LLVM_DEBUGINFO_LOGICALVIEW_CORE_LVREADER_H
 
 #include "llvm/DebugInfo/LogicalView/Core/LVOptions.h"
+#include "llvm/DebugInfo/LogicalView/Core/LVRange.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -127,6 +128,11 @@ public:
   Error doPrint();
   Error doLoad();
 
+  virtual std::string getRegisterName(LVSmall Opcode, uint64_t Operands[2]) {
+    llvm_unreachable("Invalid instance reader.");
+    return {};
+  }
+
   virtual bool isSystemEntry(LVElement *Element, StringRef Name = {}) {
     return false;
   };
@@ -136,6 +142,7 @@ public:
 
   // Conditions to print an object.
   bool doPrintLine(const LVLine *Line) const { return true; }
+  bool doPrintLocation(const LVLocation *Location) const { return true; }
   bool doPrintScope(const LVScope *Scope) const { return true; }
   bool doPrintSymbol(const LVSymbol *Symbol) const { return true; }
   bool doPrintType(const LVType *Type) const { return true; }

@@ -13,7 +13,6 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLine.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
-#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -133,6 +132,9 @@ Error LVReader::doLoad() {
   // Delegate the scope tree creation to the specific reader.
   if (Error Err = createScopes())
     return Err;
+
+  // Calculate symbol coverage and detect invalid debug locations and ranges.
+  Root->processRangeInformation();
 
   // As the elements can depend on elements from a different compile unit,
   // information such as name and file/line source information needs to be

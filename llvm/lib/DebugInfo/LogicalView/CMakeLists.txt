@@ -6,8 +6,10 @@ endmacro()
 add_lv_impl_folder(Core
   Core/LVElement.cpp
   Core/LVLine.cpp
+  Core/LVLocation.cpp
   Core/LVObject.cpp
   Core/LVOptions.cpp
+  Core/LVRange.cpp
   Core/LVReader.cpp
   Core/LVScope.cpp
   Core/LVSort.cpp

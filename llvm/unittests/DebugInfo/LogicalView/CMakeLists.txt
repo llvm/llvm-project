@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_unittest(DebugInfoLogicalViewTests
   CommandLineOptionsTest.cpp
+  LocationRangesTest.cpp
   LogicalElementsTest.cpp
   StringPoolTest.cpp
   )
