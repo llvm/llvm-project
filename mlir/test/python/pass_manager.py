@@ -44,7 +44,7 @@ def testParseSuccess():
 
     # A registered pass should parse successfully.
     pm = PassManager.parse("builtin.module(func.func(print-op-stats{json=false}))")
-    # CHECK: Roundtrip: builtin.module(builtin.module(func.func(print-op-stats{json=false})))
+    # CHECK: Roundtrip: builtin.module(func.func(print-op-stats{json=false}))
     log("Roundtrip: ", pm)
 run(testParseSuccess)
 
@@ -53,7 +53,7 @@ run(testParseSuccess)
 def testParseFail():
   with Context():
     try:
-      pm = PassManager.parse("unknown-pass")
+      pm = PassManager.parse("any(unknown-pass)")
     except ValueError as e:
       #      CHECK: ValueError exception: MLIR Textual PassPipeline Parser:1:1: error:
       # CHECK-SAME: 'unknown-pass' does not refer to a registered pass or pass pipeline
@@ -83,7 +83,7 @@ run(testInvalidNesting)
 # CHECK-LABEL: TEST: testRun
 def testRunPipeline():
   with Context():
-    pm = PassManager.parse("print-op-stats{json=false}")
+    pm = PassManager.parse("builtin.module(print-op-stats{json=false})")
     module = Module.parse(r"""func.func @successfulParse() { return }""")
     pm.run(module)
 # CHECK: Operations encountered:
