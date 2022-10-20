@@ -17,14 +17,14 @@
 
 ; CHECK: bb4: ; preds = %bb3
 ; CHECK-NEXT: store i32 0, ptr addrspace(1) null, align 4
-; CHECK-NEXT: br label %bb10
+; CHECK-NEXT: ret void
 
 ; CHECK: bb7: ; preds = %bb3, %bb
 ; CHECK-NEXT: %i = phi i1 [ false, %bb ], [ true, %bb3 ]
 ; CHECK-NEXT: store i32 1, ptr addrspace(1) null, align 4
 ; CHECK-NEXT: br label %bb10
 
-; CHECK: bb10: ; preds = %bb7, %bb4
+; CHECK: bb10: ; preds = %bb7
 ; CHECK-NEXT: store i32 2, ptr addrspace(1) null, align 4
 ; CHECK-NEXT: unreachable
 define amdgpu_kernel void @func(i1 %arg, i1 %arg1, i1 %arg2) {
