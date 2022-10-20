@@ -344,6 +344,22 @@ defm UMLSL_VG2_M2ZZ  : sme2_int_mla_long_array_vg2_single<"umlsl", 0b11>;
 defm UMLSL_VG4_M4ZZ  : sme2_int_mla_long_array_vg4_single<"umlsl", 0b11>;
 defm UMLSL_VG2_M2Z2Z : sme2_int_mla_long_array_vg2_multi<"umlsl",  0b11>;
 defm UMLSL_VG4_M4Z4Z : sme2_int_mla_long_array_vg4_multi<"umlsl",  0b11>;
+
+def FCVT_Z2Z_StoH   : sme2_cvt_vg2_single<"fcvt",   0b00, 0b00>;
+def FCVTN_Z2Z_StoH  : sme2_cvt_vg2_single<"fcvtn",  0b01, 0b00>;
+def BFCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"bfcvt",  0b10, 0b00>;
+def BFCVTN_Z2Z_StoH : sme2_cvt_vg2_single<"bfcvtn", 0b11, 0b00>;
+
+def SQCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"sqcvt", 0b00, 0b11>;
+def UQCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"uqcvt", 0b01, 0b11>;
+def SQCVTU_Z2Z_StoH : sme2_cvt_vg2_single<"sqcvtu", 0b10, 0b11>;
+defm SQCVT_Z4Z      : sme2_int_cvt_vg4_single<"sqcvt", 0b000>;
+defm UQCVT_Z4Z      : sme2_int_cvt_vg4_single<"uqcvt", 0b001>;
+defm SQCVTU_Z4Z     : sme2_int_cvt_vg4_single<"sqcvtu", 0b100>;
+defm SQCVTN_Z4Z     : sme2_int_cvt_vg4_single<"sqcvtn", 0b010>;
+defm SQCVTUN_Z4Z    : sme2_int_cvt_vg4_single<"sqcvtun", 0b110>;
+defm UQCVTN_Z4Z     : sme2_int_cvt_vg4_single<"uqcvtn", 0b011>;
+
 }
 
 
