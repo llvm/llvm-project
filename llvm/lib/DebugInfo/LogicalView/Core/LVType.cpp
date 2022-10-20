@@ -83,6 +83,28 @@ const char *LVType::kind() const {
   return Kind;
 }
 
+LVTypeDispatch LVType::Dispatch = {
+    {LVTypeKind::IsBase, &LVType::getIsBase},
+    {LVTypeKind::IsConst, &LVType::getIsConst},
+    {LVTypeKind::IsEnumerator, &LVType::getIsEnumerator},
+    {LVTypeKind::IsImport, &LVType::getIsImport},
+    {LVTypeKind::IsImportDeclaration, &LVType::getIsImportDeclaration},
+    {LVTypeKind::IsImportModule, &LVType::getIsImportModule},
+    {LVTypeKind::IsPointer, &LVType::getIsPointer},
+    {LVTypeKind::IsPointerMember, &LVType::getIsPointerMember},
+    {LVTypeKind::IsReference, &LVType::getIsReference},
+    {LVTypeKind::IsRestrict, &LVType::getIsRestrict},
+    {LVTypeKind::IsRvalueReference, &LVType::getIsRvalueReference},
+    {LVTypeKind::IsSubrange, &LVType::getIsSubrange},
+    {LVTypeKind::IsTemplateParam, &LVType::getIsTemplateParam},
+    {LVTypeKind::IsTemplateTemplateParam, &LVType::getIsTemplateTemplateParam},
+    {LVTypeKind::IsTemplateTypeParam, &LVType::getIsTemplateTypeParam},
+    {LVTypeKind::IsTemplateValueParam, &LVType::getIsTemplateValueParam},
+    {LVTypeKind::IsTypedef, &LVType::getIsTypedef},
+    {LVTypeKind::IsUnaligned, &LVType::getIsUnaligned},
+    {LVTypeKind::IsUnspecified, &LVType::getIsUnspecified},
+    {LVTypeKind::IsVolatile, &LVType::getIsVolatile}};
+
 void LVType::resolveReferences() {
   // Some DWARF tags are the representation of types. However, we associate
   // some of them to scopes. The ones associated with types, do not have
@@ -136,6 +158,9 @@ void LVType::resolveName() {
     generateName();
 
   LVElement::resolveName();
+
+  // Resolve any given pattern.
+  patterns().resolvePatternMatch(this);
 }
 
 StringRef LVType::resolveReferencesChain() {

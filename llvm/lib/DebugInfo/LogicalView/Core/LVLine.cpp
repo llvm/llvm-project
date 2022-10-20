@@ -45,6 +45,18 @@ const char *LVLine::kind() const {
   return Kind;
 }
 
+LVLineDispatch LVLine::Dispatch = {
+    {LVLineKind::IsBasicBlock, &LVLine::getIsBasicBlock},
+    {LVLineKind::IsDiscriminator, &LVLine::getIsDiscriminator},
+    {LVLineKind::IsEndSequence, &LVLine::getIsEndSequence},
+    {LVLineKind::IsLineDebug, &LVLine::getIsLineDebug},
+    {LVLineKind::IsLineAssembler, &LVLine::getIsLineAssembler},
+    {LVLineKind::IsNewStatement, &LVLine::getIsNewStatement},
+    {LVLineKind::IsEpilogueBegin, &LVLine::getIsEpilogueBegin},
+    {LVLineKind::IsPrologueEnd, &LVLine::getIsPrologueEnd},
+    {LVLineKind::IsAlwaysStepInto, &LVLine::getIsAlwaysStepInto},
+    {LVLineKind::IsNeverStepInto, &LVLine::getIsNeverStepInto}};
+
 // String used as padding for printing elements with no line number.
 std::string LVLine::noLineAsString(bool ShowZero) const {
   return (ShowZero || options().getAttributeZero()) ? ("    0   ")
