@@ -44,7 +44,8 @@ if(${LIBOMPTARGET_DEP_VEO_FOUND})
   # Install plugin under the lib destination folder.
   install(TARGETS  "omptarget.rtl.${tmachine_libname}" LIBRARY DESTINATION "${OPENMP_INSTALL_LIBDIR}")
   set_target_properties("omptarget.rtl.${tmachine_libname}" PROPERTIES 
-    INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/..")
+    INSTALL_RPATH "$ORIGIN" BUILD_RPATH "$ORIGIN:${CMAKE_CURRENT_BINARY_DIR}/.."
+    CXX_VISIBILITY_PRESET protected)
 
   target_include_directories("omptarget.rtl.${tmachine_libname}" PRIVATE
     ${LIBOMPTARGET_INCLUDE_DIR}
