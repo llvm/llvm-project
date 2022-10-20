@@ -1,4 +1,4 @@
-; RUN: opt -S -strip-nonlinetable-debuginfo %s -o - |  FileCheck %s
+; RUN: opt -S -passes=strip-nonlinetable-debuginfo %s -o - |  FileCheck %s
 ; RUN: opt -S -strip-debug %s -o - |  FileCheck %s
 ; int *get() { return new int[256]; }
 ; ModuleID = '/tmp/heapallocsite.cpp'
