@@ -9401,15 +9401,14 @@ def warn_ptr_arith_precedes_bounds : Warning<
   "the pointer decremented by %0 refers before the beginning of the array">,
   InGroup<ArrayBoundsPointerArithmetic>, DefaultIgnore;
 def warn_ptr_arith_exceeds_bounds : Warning<
-  "the pointer incremented by %0 refers past the end of the array (that "
-  "contains %1 element%s2)">,
+  "the pointer incremented by %0 refers past the end of the array (that has type %1)">,
   InGroup<ArrayBoundsPointerArithmetic>, DefaultIgnore;
 def warn_array_index_precedes_bounds : Warning<
   "array index %0 is before the beginning of the array">,
   InGroup<ArrayBounds>;
 def warn_array_index_exceeds_bounds : Warning<
-  "array index %0 is past the end of the array (which contains %1 "
-  "element%s2)">, InGroup<ArrayBounds>;
+  "array index %0 is past the end of the array (that has type %1%select{|, cast to %3}2)">,
+  InGroup<ArrayBounds>;
 def warn_ptr_arith_exceeds_max_addressable_bounds : Warning<
   "the pointer incremented by %0 refers past the last possible element for an array in %1-bit "
   "address space containing %2-bit (%3-byte) elements (max possible %4 element%s5)">,
