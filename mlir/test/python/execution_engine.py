@@ -557,7 +557,7 @@ run(testNanoTime)
 #  Test that nano time clock is available.
 # CHECK-LABEL: TEST: testDumpToObjectFile
 def testDumpToObjectFile():
-  _, object_path = tempfile.mkstemp(suffix=".o")
+  fd, object_path = tempfile.mkstemp(suffix=".o")
 
   try:
     with Context():
@@ -585,6 +585,7 @@ def testDumpToObjectFile():
       print(f"Object file is empty: {os.path.getsize(object_path) == 0}")
 
   finally:
+    os.close(fd)
     os.remove(object_path)
 
 
