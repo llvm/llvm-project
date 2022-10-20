@@ -1,0 +1,42 @@
+RUN: rm -rf %t
+RUN: mkdir -p %t
+
+RUN: not clang-stat-cache %t/not-there -o %t/stat.cache 2>&1 | FileCheck --check-prefix=NO-SUCH-DIR %s
+NO-SUCH-DIR: Failed to stat the target directory: {{[Nn]}}o such file or directory
+
+RUN: not clang-stat-cache %t -o %t/not-there/stat.cache 2>&1 | FileCheck --check-prefix=NO-SUCH-FILE %s
+NO-SUCH-FILE: Failed to open cache file: '{{.*}}': {{[Nn]}}o such file or directory
+
+# Use mixed-case directories to exercise the case insensitive implementation.
+RUN: mkdir -p %t/Dir
+RUN: mkdir -p %t/Dir2
+
+# Try to overwrite a few invalid caches
+RUN: echo "Not a stat cache" > %t/stat.cache
+RUN: not clang-stat-cache %t/Dir -o %t/stat.cache 2>&1 | FileCheck --check-prefix=INVALID-CACHE %s
+RUN: echo "Not a stat cache, but bigger than the stat cache header" > %t/stat.cache
+RUN: not clang-stat-cache %t/Dir -o %t/stat.cache 2>&1 | FileCheck --check-prefix=INVALID-CACHE %s
+RUN: echo "STAT. This has the correct MAGIC and is bigger than the header." > %t/stat.cache
+RUN: not clang-stat-cache %t/Dir -o %t/stat.cache 2>&1 | FileCheck --check-prefix=INVALID-CACHE %s
+
+INVALID-CACHE: The output cache file exists and is not a valid stat cache. Aborting.
+
+# Test the force flag
+RUN: echo "STAT. This has the correct MAGIC and is bigger than the header." > %t/stat.cache
+RUN: clang-stat-cache %t/Dir -f -o %t/stat.cache 2>&1 | FileCheck --check-prefix=INVALID-CACHE-FORCE %s
+INVALID-CACHE-FORCE: The output cache file exists and is not a valid stat cache. Forced update.
+
+# Generate a valid cache for dir
+RUN: rm %t/stat.cache
+RUN: clang-stat-cache %t/Dir -o %t/stat.cache
+RUN: cp %t/stat.cache %t/stat.cache.save
+
+# Try with same base direcotry but with extraneous separators
+RUN: clang-stat-cache %t/Dir/// -v -o %t/stat.cache | FileCheck --check-prefix=EXTRA-SEP %s
+EXTRA-SEP-NOT: Existing cache has different directory. Regenerating...
+EXTRA-SEP: Cache up-to-date, exiting
+
+# Rewrite the cache with a different base directory
+RUN: clang-stat-cache %t/Dir2 -o %t/stat.cache 2>&1 | FileCheck --check-prefix=OTHER-DIR %s
+OTHER-DIR: Existing cache has different directory. Regenerating...
+
