@@ -140,7 +140,8 @@ static void dontPrint(MlirStringRef str, void *userData) {
 
 void testPrintPassPipeline() {
   MlirContext ctx = mlirContextCreate();
-  MlirPassManager pm = mlirPassManagerCreate(ctx);
+  MlirPassManager pm = mlirPassManagerCreateOnOperation(
+      ctx, mlirStringRefCreateFromCString("any"));
   // Populate the pass-manager
   MlirOpPassManager nestedModulePm = mlirPassManagerGetNestedUnder(
       pm, mlirStringRefCreateFromCString("builtin.module"));
@@ -150,7 +151,7 @@ void testPrintPassPipeline() {
   mlirOpPassManagerAddOwnedPass(nestedFuncPm, printOpStatPass);
 
   // Print the top level pass manager
-  //      CHECK: Top-level: builtin.module(
+  //      CHECK: Top-level: any(
   // CHECK-SAME:   builtin.module(func.func(print-op-stats{json=false}))
   // CHECK-SAME: )
   fprintf(stderr, "Top-level: ");
