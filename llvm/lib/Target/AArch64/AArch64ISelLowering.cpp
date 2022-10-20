@@ -15065,8 +15065,8 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
   // 64-bit is 5 cycles, so this is always a win.
   // More aggressively, some multiplications N0 * C can be lowered to
   // shift+add+shift if the constant C = A * B where A = 2^N + 1 and B = 2^M,
-  // e.g. 6=3*2=(2+1)*2.
-  // TODO: lower more cases, e.g. C = 45 which equals to (1+2)*16-(1+2).
+  // e.g. 6=3*2=(2+1)*2, 45=(1+4)*(1+8)
+  // TODO: lower more cases.
 
   // TrailingZeroes is used to test if the mul can be lowered to
   // shift+add+shift.
@@ -15103,13 +15103,34 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
     return DAG.getNode(ISD::SUB, DL, VT, Zero, N);
   };
 
+  // Can the const C be decomposed into (1+2^M1)*(1+2^N1), eg:
+  // C = 45 is equal to (1+4)*(1+8), we don't decompose it into (1+2)*(16-1) as
+  // the (2^N - 1) can't be execused via a single instruction.
+  auto isPowPlusPlusConst = [](APInt C, APInt &M, APInt &N) {
+    unsigned BitWidth = C.getBitWidth();
+    for (unsigned i = 1; i < BitWidth / 2; i++) {
+      APInt Rem;
+      APInt X(BitWidth, (1 << i) + 1);
+      APInt::sdivrem(C, X, N, Rem);
+      APInt NVMinus1 = N - 1;
+      if (Rem == 0 && NVMinus1.isPowerOf2()) {
+        M = X;
+        return true;
+      }
+    }
+    return false;
+  };
+
   if (ConstValue.isNonNegative()) {
     // (mul x, (2^N + 1) * 2^M) => (shl (add (shl x, N), x), M)
     // (mul x, 2^N - 1) => (sub (shl x, N), x)
     // (mul x, (2^(N-M) - 1) * 2^M) => (sub (shl x, N), (shl x, M))
+    // (mul x, (2^M + 1) * (2^N + 1))
+    //     => MV = (add (shl x, M), x); (add (shl MV, N), MV)
     APInt SCVMinus1 = ShiftedConstValue - 1;
     APInt SCVPlus1 = ShiftedConstValue + 1;
     APInt CVPlus1 = ConstValue + 1;
+    APInt CVM, CVN;
     if (SCVMinus1.isPowerOf2()) {
       ShiftAmt = SCVMinus1.logBase2();
       return Shl(Add(Shl(N0, ShiftAmt), N0), TrailingZeroes);
@@ -15119,6 +15140,17 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
     } else if (SCVPlus1.isPowerOf2()) {
       ShiftAmt = SCVPlus1.logBase2() + TrailingZeroes;
       return Sub(Shl(N0, ShiftAmt), Shl(N0, TrailingZeroes));
+    } else if (Subtarget->hasLSLFast() &&
+               isPowPlusPlusConst(ConstValue, CVM, CVN)) {
+      APInt CVMMinus1 = CVM - 1;
+      APInt CVNMinus1 = CVN - 1;
+      unsigned ShiftM1 = CVMMinus1.logBase2();
+      unsigned ShiftN1 = CVNMinus1.logBase2();
+      // LSLFast implicate that Shifts <= 3 places are fast
+      if (ShiftM1 <= 3 && ShiftN1 <= 3) {
+        SDValue MVal = Add(Shl(N0, ShiftM1), N0);
+        return Add(Shl(MVal, ShiftN1), MVal);
+      }
     }
   } else {
     // (mul x, -(2^N - 1)) => (sub x, (shl x, N))
