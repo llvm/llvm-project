@@ -8,18 +8,29 @@
 
 ; CHECK: bb:
 ; CHECK-NEXT: %tmp = icmp eq i8 0, 0
-; CHECK-NEXT: %tmp12 = load i32, ptr addrspace(4) inttoptr (i64 3016 to ptr addrspace(4)), align 8
-; CHECK-NEXT: %tmp13 = load i32, ptr addrspace(4) null, align 8
-; CHECK-NEXT: br label %bb20
+; CHECK-NEXT: %tmp12 = load i32,
+; CHECK-NEXT: %tmp13 = load i32,
+; CHECK-NEXT: br label %bb14
+
+; CHECK: bb14:
+; CHECK-NEXT: switch i32 %tmp12, label %bb14 [
+; CHECK-NEXT: i32 2, label %bb14
+; CHECK-NEXT: i32 1, label %bb19
+; CHECK-NEXT: ]
+
+; CHECK: bb19:
+; CHECK-NEXT: switch i32 %tmp13, label %bb14 [
+; CHECK-NEXT: i32 2, label %bb21
+; CHECK-NEXT: i32 1, label %bb20
+; CHECK-NEXT: ]
 
 ; CHECK: bb20:
-; CHECK-NEXT: store i32 0, ptr addrspace(3) null, align 4
-; CHECK-NEXT: br label %bb21
+; CHECK-NEXT: store i32 0,
+; CHECK-NEXT: br label %bb14
 
 ; CHECK: bb21:
-; CHECK-NEXT: store i32 1, ptr addrspace(3) null, align 4
-; CHECK-NEXT: ret void
-
+; CHECK-NEXT: store i32 1,
+; CHECK-NEXT: br label %bb14
 define void @snork() {
 bb:
   %tmp = icmp eq i8 0, 0
