@@ -1121,6 +1121,11 @@ void LifetimeCheckPass::checkCall(CallOp callOp) {
     return;
 
   const auto *methodDecl = getMethod(theModule, callOp.getCallee());
+
+  // FIXME:
+  // Handle free functions and other methods that use non-const
+  // Owners parameters, those should also invalidate the necessary
+  // pointers.
   if (!methodDecl)
     return;
 
