@@ -26,6 +26,89 @@
 namespace llvm {
 namespace logicalview {
 
+template <typename T>
+using TypeIsValid = std::bool_constant<std::is_pointer<T>::value>;
+
+// Utility class to help memory management and perform an automatic cleaning.
+template <typename T, unsigned N = 8>
+class LVAutoSmallVector : public SmallVector<T, N> {
+  static_assert(TypeIsValid<T>::value, "T must be a pointer type");
+
+public:
+  using iterator = typename SmallVector<T, N>::iterator;
+  LVAutoSmallVector() : SmallVector<T, N>::SmallVector() {}
+
+  ~LVAutoSmallVector() {
+    // Destroy the constructed elements in the vector.
+    for (auto *Item : *this)
+      delete Item;
+  }
+};
+
+// Used to record specific characteristics about the objects.
+template <typename T> class LVProperties {
+  SmallBitVector Bits = SmallBitVector(static_cast<unsigned>(T::LastEntry) + 1);
+
+public:
+  LVProperties() = default;
+
+  void set(T Idx) { Bits[static_cast<unsigned>(Idx)] = 1; }
+  void reset(T Idx) { Bits[static_cast<unsigned>(Idx)] = 0; }
+  bool get(T Idx) const { return Bits[static_cast<unsigned>(Idx)]; }
+};
+
+// Generate get, set and reset 'bool' functions for LVProperties instances.
+// FAMILY: instance name.
+// ENUM: enumeration instance.
+// FIELD: enumerator instance.
+// F1, F2, F3: optional 'set' functions to be called.
+#define BOOL_BIT(FAMILY, ENUM, FIELD)                                          \
+  bool get##FIELD() const { return FAMILY.get(ENUM::FIELD); }                  \
+  void set##FIELD() { FAMILY.set(ENUM::FIELD); }                               \
+  void reset##FIELD() { FAMILY.reset(ENUM::FIELD); }
+
+#define BOOL_BIT_1(FAMILY, ENUM, FIELD, F1)                                    \
+  bool get##FIELD() const { return FAMILY.get(ENUM::FIELD); }                  \
+  void set##FIELD() {                                                          \
+    FAMILY.set(ENUM::FIELD);                                                   \
+    set##F1();                                                                 \
+  }                                                                            \
+  void reset##FIELD() { FAMILY.reset(ENUM::FIELD); }
+
+#define BOOL_BIT_2(FAMILY, ENUM, FIELD, F1, F2)                                \
+  bool get##FIELD() const { return FAMILY.get(ENUM::FIELD); }                  \
+  void set##FIELD() {                                                          \
+    FAMILY.set(ENUM::FIELD);                                                   \
+    set##F1();                                                                 \
+    set##F2();                                                                 \
+  }                                                                            \
+  void reset##FIELD() { FAMILY.reset(ENUM::FIELD); }
+
+#define BOOL_BIT_3(FAMILY, ENUM, FIELD, F1, F2, F3)                            \
+  bool get##FIELD() const { return FAMILY.get(ENUM::FIELD); }                  \
+  void set##FIELD() {                                                          \
+    FAMILY.set(ENUM::FIELD);                                                   \
+    set##F1();                                                                 \
+    set##F2();                                                                 \
+    set##F3();                                                                 \
+  }                                                                            \
+  void reset##FIELD() { FAMILY.reset(ENUM::FIELD); }
+
+// Generate get, set and reset functions for 'properties'.
+#define PROPERTY(ENUM, FIELD) BOOL_BIT(Properties, ENUM, FIELD)
+#define PROPERTY_1(ENUM, FIELD, F1) BOOL_BIT_1(Properties, ENUM, FIELD, F1)
+#define PROPERTY_2(ENUM, FIELD, F1, F2)                                        \
+  BOOL_BIT_2(Properties, ENUM, FIELD, F1, F2)
+#define PROPERTY_3(ENUM, FIELD, F1, F2, F3)                                    \
+  BOOL_BIT_3(Properties, ENUM, FIELD, F1, F2, F3)
+
+// Generate get, set and reset functions for 'kinds'.
+#define KIND(ENUM, FIELD) BOOL_BIT(Kinds, ENUM, FIELD)
+#define KIND_1(ENUM, FIELD, F1) BOOL_BIT_1(Kinds, ENUM, FIELD, F1)
+#define KIND_2(ENUM, FIELD, F1, F2) BOOL_BIT_2(Kinds, ENUM, FIELD, F1, F2)
+#define KIND_3(ENUM, FIELD, F1, F2, F3)                                        \
+  BOOL_BIT_3(Kinds, ENUM, FIELD, F1, F2, F3)
+
 const int HEX_WIDTH = 12;
 inline FormattedNumber hexValue(uint64_t N, unsigned Width = HEX_WIDTH,
                                 bool Upper = false) {
@@ -43,6 +126,36 @@ inline std::string hexString(uint64_t Value, size_t Width = HEX_WIDTH) {
 // Get a hexadecimal string representation for the given value.
 inline std::string hexSquareString(uint64_t Value) {
   return (Twine("[") + Twine(hexString(Value)) + Twine("]")).str();
+}
+
+// Return a string with the First and Others separated by spaces.
+template <typename... Args>
+std::string formatAttributes(const StringRef First, Args... Others) {
+  const auto List = {First, Others...};
+  std::stringstream Stream;
+  size_t Size = 0;
+  for (const StringRef &Item : List) {
+    Stream << (Size ? " " : "") << Item.str();
+    Size = Item.size();
+  }
+  Stream << (Size ? " " : "");
+  return Stream.str();
+}
+
+// Unified and flattened pathnames.
+std::string transformPath(StringRef Path);
+std::string flattenedFilePath(StringRef Path);
+
+inline std::string formattedKind(StringRef Kind) {
+  return (Twine("{") + Twine(Kind) + Twine("}")).str();
+}
+
+inline std::string formattedName(StringRef Name) {
+  return (Twine("'") + Twine(Name) + Twine("'")).str();
+}
+
+inline std::string formattedNames(StringRef Name1, StringRef Name2) {
+  return (Twine("'") + Twine(Name1) + Twine(Name2) + Twine("'")).str();
 }
 
 } // end namespace logicalview

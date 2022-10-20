@@ -31,6 +31,97 @@ enum class LVSymbolKind {
 };
 using LVSymbolKindSet = std::set<LVSymbolKind>;
 
+class LVSymbol final : public LVElement {
+  enum class Property { HasLocation, FillGaps, LastEntry };
+
+  // Typed bitvector with kinds and properties for this symbol.
+  LVProperties<LVSymbolKind> Kinds;
+  LVProperties<Property> Properties;
+
+  // CodeView symbol Linkage name.
+  size_t LinkageNameIndex = 0;
+
+  // Reference to DW_AT_specification, DW_AT_abstract_origin attribute.
+  LVSymbol *Reference = nullptr;
+
+  // Bitfields length.
+  uint32_t BitSize = 0;
+
+  // Index in the String pool representing any initial value.
+  size_t ValueIndex = 0;
+
+public:
+  LVSymbol() : LVElement(LVSubclassID::LV_SYMBOL) {
+    setIsSymbol();
+    setIncludeInPrint();
+  }
+  LVSymbol(const LVSymbol &) = delete;
+  LVSymbol &operator=(const LVSymbol &) = delete;
+  ~LVSymbol() = default;
+
+  static bool classof(const LVElement *Element) {
+    return Element->getSubclassID() == LVSubclassID::LV_SYMBOL;
+  }
+
+  KIND(LVSymbolKind, IsCallSiteParameter);
+  KIND(LVSymbolKind, IsConstant);
+  KIND(LVSymbolKind, IsInheritance);
+  KIND(LVSymbolKind, IsMember);
+  KIND(LVSymbolKind, IsParameter);
+  KIND(LVSymbolKind, IsUnspecified);
+  KIND(LVSymbolKind, IsVariable);
+
+  PROPERTY(Property, HasLocation);
+  PROPERTY(Property, FillGaps);
+
+  const char *kind() const override;
+
+  // Access DW_AT_specification, DW_AT_abstract_origin reference.
+  LVSymbol *getReference() const { return Reference; }
+  void setReference(LVSymbol *Symbol) override {
+    Reference = Symbol;
+    setHasReference();
+  }
+  void setReference(LVElement *Element) override {
+    assert((!Element || isa<LVSymbol>(Element)) && "Invalid element");
+    setReference(static_cast<LVSymbol *>(Element));
+  }
+
+  void setLinkageName(StringRef LinkageName) override {
+    LinkageNameIndex = getStringPool().getIndex(LinkageName);
+  }
+  StringRef getLinkageName() const override {
+    return getStringPool().getString(LinkageNameIndex);
+  }
+  size_t getLinkageNameIndex() const override { return LinkageNameIndex; }
+
+  uint32_t getBitSize() const override { return BitSize; }
+  void setBitSize(uint32_t Size) override { BitSize = Size; }
+
+  // Process the values for a DW_AT_const_value.
+  std::string getValue() const override {
+    return std::string(getStringPool().getString(ValueIndex));
+  }
+  void setValue(StringRef Value) override {
+    ValueIndex = getStringPool().getIndex(Value);
+  }
+  size_t getValueIndex() const override { return ValueIndex; }
+
+  // Follow a chain of references given by DW_AT_abstract_origin and/or
+  // DW_AT_specification and update the symbol name.
+  StringRef resolveReferencesChain();
+
+  void resolveName() override;
+  void resolveReferences() override;
+
+  void print(raw_ostream &OS, bool Full = true) const override;
+  void printExtra(raw_ostream &OS, bool Full = true) const override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void dump() const override { print(dbgs()); }
+#endif
+};
+
 } // end namespace logicalview
 } // end namespace llvm
 
