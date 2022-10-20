@@ -400,9 +400,11 @@ inline bool ScopDetection::invalid(DetectionContext &Context, bool Assert,
   if (!Context.Verifying) {
     RejectLog &Log = Context.Log;
     std::shared_ptr<RR> RejectReason = std::make_shared<RR>(Arguments...);
+    Context.IsInvalid = true;
 
-    if (PollyTrackFailures)
-      Log.report(RejectReason);
+    // Log even if PollyTrackFailures is false, the log entries are also used in
+    // canUseISLTripCount().
+    Log.report(RejectReason);
 
     LLVM_DEBUG(dbgs() << RejectReason->getMessage());
     LLVM_DEBUG(dbgs() << "\n");
@@ -1013,11 +1015,12 @@ bool ScopDetection::computeAccessFunctions(
     // (Possibly) report non affine access
     if (IsNonAffine) {
       BasePtrHasNonAffine = true;
-      if (!AllowNonAffine)
+      if (!AllowNonAffine) {
         invalid<ReportNonAffineAccess>(Context, /*Assert=*/true, Pair.second,
                                        Insn, BaseValue);
-      if (!KeepGoing && !AllowNonAffine)
-        return false;
+        if (!KeepGoing)
+          return false;
+      }
     }
   }
 
@@ -1055,9 +1058,8 @@ bool ScopDetection::hasAffineMemoryAccesses(DetectionContext &Context) const {
     auto *BasePointer = Pair.first;
     auto *Scope = Pair.second;
     if (!hasBaseAffineAccesses(Context, BasePointer, Scope)) {
-      if (KeepGoing)
-        continue;
-      else
+      Context.IsInvalid = true;
+      if (!KeepGoing)
         return false;
     }
   }
@@ -1268,17 +1270,29 @@ static bool hasExitingBlocks(Loop *L) {
 }
 
 bool ScopDetection::canUseISLTripCount(Loop *L, DetectionContext &Context) {
+  // FIXME: Yes, this is bad. isValidCFG() may call invalid<Reason>() which
+  // causes the SCoP to be rejected regardless on whether non-ISL trip counts
+  // could be used. We currently preserve the legacy behaviour of rejecting
+  // based on Context.Log.size() added by isValidCFG() or before, regardless on
+  // whether the ISL trip count can be used or can be used as a non-affine
+  // region. However, we allow rejections by isValidCFG() that do not result in
+  // an error log entry.
+  bool OldIsInvalid = Context.IsInvalid;
+
   // Ensure the loop has valid exiting blocks as well as latches, otherwise we
   // need to overapproximate it as a boxed loop.
   SmallVector<BasicBlock *, 4> LoopControlBlocks;
   L->getExitingBlocks(LoopControlBlocks);
   L->getLoopLatches(LoopControlBlocks);
   for (BasicBlock *ControlBB : LoopControlBlocks) {
-    if (!isValidCFG(*ControlBB, true, false, Context))
+    if (!isValidCFG(*ControlBB, true, false, Context)) {
+      Context.IsInvalid = OldIsInvalid || Context.Log.size();
       return false;
+    }
   }
 
   // We can use ISL to compute the trip count of L.
+  Context.IsInvalid = OldIsInvalid || Context.Log.size();
   return true;
 }
 
@@ -1550,15 +1564,23 @@ void ScopDetection::findScops(Region &R) {
   Entry = std::make_unique<DetectionContext>(R, AA, /*Verifying=*/false);
   DetectionContext &Context = *Entry.get();
 
-  bool RegionIsValid = false;
+  bool DidBailout = true;
   if (!PollyProcessUnprofitable && regionWithoutLoops(R, LI))
     invalid<ReportUnprofitable>(Context, /*Assert=*/true, &R);
   else
-    RegionIsValid = isValidRegion(Context);
+    DidBailout = !isValidRegion(Context);
 
-  bool HasErrors = !RegionIsValid || Context.Log.size() > 0;
+  (void)DidBailout;
+  if (KeepGoing) {
+    assert((!DidBailout || Context.IsInvalid) &&
+           "With -polly-detect-keep-going, it is sufficient that if "
+           "isValidRegion short-circuited, that SCoP is invalid");
+  } else {
+    assert(DidBailout == Context.IsInvalid &&
+           "isValidRegion must short-circuit iff the ScoP is invalid");
+  }
 
-  if (HasErrors) {
+  if (Context.IsInvalid) {
     removeCachedResults(R);
   } else {
     ValidRegions.insert(&R);
@@ -1609,8 +1631,11 @@ bool ScopDetection::allBlocksValid(DetectionContext &Context) {
     Loop *L = LI.getLoopFor(BB);
     if (L && L->getHeader() == BB) {
       if (CurRegion.contains(L)) {
-        if (!isValidLoop(L, Context) && !KeepGoing)
-          return false;
+        if (!isValidLoop(L, Context)) {
+          Context.IsInvalid = true;
+          if (!KeepGoing)
+            return false;
+        }
       } else {
         SmallVector<BasicBlock *, 1> Latches;
         L->getLoopLatches(Latches);
@@ -1635,8 +1660,11 @@ bool ScopDetection::allBlocksValid(DetectionContext &Context) {
       continue;
 
     for (BasicBlock::iterator I = BB->begin(), E = --BB->end(); I != E; ++I)
-      if (!isValidInstruction(*I, Context) && !KeepGoing)
-        return false;
+      if (!isValidInstruction(*I, Context)) {
+        Context.IsInvalid = true;
+        if (!KeepGoing)
+          return false;
+      }
   }
 
   if (!hasAffineMemoryAccesses(Context))
@@ -1724,6 +1752,7 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) {
 
   if (!PollyAllowFullFunction && CurRegion.isTopLevelRegion()) {
     LLVM_DEBUG(dbgs() << "Top level region is invalid\n");
+    Context.IsInvalid = true;
     return false;
   }
 
@@ -1741,6 +1770,7 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) {
       dbgs() << "Region entry does not match -polly-only-region";
       dbgs() << "\n";
     });
+    Context.IsInvalid = true;
     return false;
   }
 
@@ -1758,8 +1788,13 @@ bool ScopDetection::isValidRegion(DetectionContext &Context) {
           &(CurRegion.getEntry()->getParent()->getEntryBlock()))
     return invalid<ReportEntry>(Context, /*Assert=*/true, CurRegion.getEntry());
 
-  if (!allBlocksValid(Context))
+  if (!allBlocksValid(Context)) {
+    // TODO: Every failure condition within allBlocksValid should call
+    // invalid<Reason>(). Otherwise we reject SCoPs without giving feedback to
+    // the user.
+    Context.IsInvalid = true;
     return false;
+  }
 
   if (!isReducibleRegion(CurRegion, DbgLoc))
     return invalid<ReportIrreducibleRegion>(Context, /*Assert=*/true,
