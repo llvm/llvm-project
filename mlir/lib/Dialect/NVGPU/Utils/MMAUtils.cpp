@@ -45,14 +45,24 @@ static std::array<int64_t, 2> getTileShape(ArrayRef<int64_t> operandShape,
               lineSizeBits};
 }
 
+/// Returns the first user of the `op` that is vector.contract. If no
+/// vector.contract user exists, return failure.
+FailureOr<vector::ContractionOp> nvgpu::getUserContract(Operation *op) {
+  for (Operation *user : op->getUsers()) {
+    if (auto contractOp = dyn_cast<vector::ContractionOp>(user))
+      return contractOp;
+  }
+  return failure();
+}
+
 FailureOr<WarpMatrixInfo> nvgpu::getWarpMatrixInfo(Operation *op) {
   WarpMatrixInfo info;
 
-  // Determine the vector type.
+  // Determine the vector type at warp-level.
   if (vector::TransferWriteOp writeOp = dyn_cast<vector::TransferWriteOp>(op)) {
     info.vectorType = writeOp.getVectorType();
   } else if (isa<vector::TransferReadOp, vector::ContractionOp,
-                 arith::ConstantOp>(op)) {
+                 vector::ExtractStridedSliceOp, arith::ConstantOp>(op)) {
     info.vectorType = op->getResult(0).getType().cast<VectorType>();
   } else {
     return op->emitError()
@@ -62,19 +72,15 @@ FailureOr<WarpMatrixInfo> nvgpu::getWarpMatrixInfo(Operation *op) {
   // Determine the operand role. We assume it is an accumulator/result unless it
   // is directly consumed by a `vector.contract` op.
   info.operandRole = MatMulOperandRole::C;
-  for (Operation *user : op->getUsers()) {
-    auto contract = dyn_cast<vector::ContractionOp>(user);
-    if (!contract)
-      continue;
-    if (contract.getLhs() == op->getResult(0)) {
-      info.operandRole = MatMulOperandRole::A;
-      break;
-    }
-    if (contract.getRhs() == op->getResult(0)) {
-      info.operandRole = MatMulOperandRole::B;
-      break;
-    }
-  }
+  FailureOr<vector::ContractionOp> contractOp = getUserContract(op);
+  if (failed(contractOp))
+    return info;
+
+  if ((*contractOp).getLhs() == op->getResult(0))
+    info.operandRole = MatMulOperandRole::A;
+  else if ((*contractOp).getRhs() == op->getResult(0))
+    info.operandRole = MatMulOperandRole::B;
+
   return info;
 }
 
