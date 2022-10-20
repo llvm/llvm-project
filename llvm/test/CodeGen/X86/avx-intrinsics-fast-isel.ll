@@ -715,8 +715,7 @@ define <4 x i64> @test_mm256_insert_epi8(<4 x i64> %a0, i8 %a1) nounwind {
 ;
 ; X64-LABEL: test_mm256_insert_epi8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    vpinsrb $4, %eax, %xmm0, %xmm1
+; X64-NEXT:    vpinsrb $4, %edi, %xmm0, %xmm1
 ; X64-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <32 x i8>
@@ -1418,8 +1417,8 @@ define <4 x i64> @test_mm256_set_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8
 ; X86-LABEL: test_mm256_set_epi8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovd %ecx, %xmm0
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
@@ -1450,8 +1449,8 @@ define <4 x i64> @test_mm256_set_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovd %ecx, %xmm1
+; X86-NEXT:    vmovd %eax, %xmm1
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
@@ -1487,8 +1486,8 @@ define <4 x i64> @test_mm256_set_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8
 ; X64-LABEL: test_mm256_set_epi8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
-; X64-NEXT:    vmovd %r10d, %xmm0
+; X64-NEXT:    vmovd %eax, %xmm0
+; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
@@ -1506,21 +1505,15 @@ define <4 x i64> @test_mm256_set_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8
 ; X64-NEXT:    vpinsrb $8, %eax, %xmm0, %xmm0
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vpinsrb $9, %eax, %xmm0, %xmm0
-; X64-NEXT:    movzbl %r9b, %eax
-; X64-NEXT:    vpinsrb $10, %eax, %xmm0, %xmm0
-; X64-NEXT:    movzbl %r8b, %eax
-; X64-NEXT:    vpinsrb $11, %eax, %xmm0, %xmm0
-; X64-NEXT:    movzbl %cl, %eax
-; X64-NEXT:    vpinsrb $12, %eax, %xmm0, %xmm0
-; X64-NEXT:    movzbl %dl, %eax
-; X64-NEXT:    vpinsrb $13, %eax, %xmm0, %xmm0
-; X64-NEXT:    movzbl %sil, %eax
-; X64-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
+; X64-NEXT:    vpinsrb $10, %r9d, %xmm0, %xmm0
+; X64-NEXT:    vpinsrb $11, %r8d, %xmm0, %xmm0
+; X64-NEXT:    vpinsrb $12, %ecx, %xmm0, %xmm0
+; X64-NEXT:    vpinsrb $13, %edx, %xmm0, %xmm0
+; X64-NEXT:    vpinsrb $14, %esi, %xmm0, %xmm0
+; X64-NEXT:    vpinsrb $15, %edi, %xmm0, %xmm0
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    vmovd %ecx, %xmm1
+; X64-NEXT:    vmovd %eax, %xmm1
+; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
@@ -1859,8 +1852,7 @@ define <4 x i64> @test_mm256_set1_epi8(i8 %a0) nounwind {
 ;
 ; X64-LABEL: test_mm256_set1_epi8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    vmovd %eax, %xmm0
+; X64-NEXT:    vmovd %edi, %xmm0
 ; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
@@ -2034,8 +2026,8 @@ define <4 x i64> @test_mm256_setr_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i
 ; X86-LABEL: test_mm256_setr_epi8:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovd %ecx, %xmm0
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
@@ -2066,8 +2058,8 @@ define <4 x i64> @test_mm256_setr_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    vmovd %ecx, %xmm1
+; X86-NEXT:    vmovd %eax, %xmm1
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
@@ -2103,8 +2095,8 @@ define <4 x i64> @test_mm256_setr_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i
 ; X64-LABEL: test_mm256_setr_epi8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d
-; X64-NEXT:    vmovd %r10d, %xmm0
+; X64-NEXT:    vmovd %eax, %xmm0
+; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0
@@ -2134,18 +2126,12 @@ define <4 x i64> @test_mm256_setr_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i
 ; X64-NEXT:    vpinsrb $14, %eax, %xmm0, %xmm0
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vpinsrb $15, %eax, %xmm0, %xmm0
-; X64-NEXT:    movzbl %sil, %eax
-; X64-NEXT:    movzbl %dil, %esi
-; X64-NEXT:    vmovd %esi, %xmm1
-; X64-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; X64-NEXT:    movzbl %dl, %eax
-; X64-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; X64-NEXT:    movzbl %cl, %eax
-; X64-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; X64-NEXT:    movzbl %r8b, %eax
-; X64-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; X64-NEXT:    movzbl %r9b, %eax
-; X64-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
+; X64-NEXT:    vmovd %edi, %xmm1
+; X64-NEXT:    vpinsrb $1, %esi, %xmm1, %xmm1
+; X64-NEXT:    vpinsrb $2, %edx, %xmm1, %xmm1
+; X64-NEXT:    vpinsrb $3, %ecx, %xmm1, %xmm1
+; X64-NEXT:    vpinsrb $4, %r8d, %xmm1, %xmm1
+; X64-NEXT:    vpinsrb $5, %r9d, %xmm1, %xmm1
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; X64-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
 ; X64-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
