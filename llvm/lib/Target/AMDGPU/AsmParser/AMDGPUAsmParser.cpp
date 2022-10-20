@@ -4805,7 +4805,7 @@ bool AMDGPUAsmParser::isSupportedMnemo(StringRef Mnemo,
 
 bool AMDGPUAsmParser::checkUnsupportedInstruction(StringRef Mnemo,
                                                   const SMLoc &IDLoc) {
-  FeatureBitset FBS = ComputeAvailableFeatures(getSTI().getFeatureBits());
+  FeatureBitset FBS = ComputeAvailableFeatures(getFeatureBits());
 
   // Check if requested instruction variant is supported.
   if (isSupportedMnemo(Mnemo, FBS, getMatchedVariants()))
@@ -4822,6 +4822,20 @@ bool AMDGPUAsmParser::checkUnsupportedInstruction(StringRef Mnemo,
     return Error(IDLoc,
                  Twine(VariantName,
                        " variant of this instruction is not supported"));
+  }
+
+  // Check if this instruction may be used with a different wavesize.
+  if (isGFX10Plus() && getFeatureBits()[AMDGPU::FeatureWavefrontSize64] &&
+      !getFeatureBits()[AMDGPU::FeatureWavefrontSize32]) {
+
+    FeatureBitset FeaturesWS32 = getFeatureBits();
+    FeaturesWS32.flip(AMDGPU::FeatureWavefrontSize64)
+        .flip(AMDGPU::FeatureWavefrontSize32);
+    FeatureBitset AvailableFeaturesWS32 =
+        ComputeAvailableFeatures(FeaturesWS32);
+
+    if (isSupportedMnemo(Mnemo, AvailableFeaturesWS32, getMatchedVariants()))
+      return Error(IDLoc, "instruction requires wavesize=32");
   }
 
   // Finally check if this instruction is supported on any other GPU.
