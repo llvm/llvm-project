@@ -21,7 +21,7 @@ def LinkageAttr : LLVM_Attr<"Linkage"> {
   let parameters = (ins
     "linkage::Linkage":$linkage
   );
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "`<` $linkage `>`";
 }
 
 // Attribute definition for the LLVM Linkage enum.
@@ -30,7 +30,7 @@ def CConvAttr : LLVM_Attr<"CConv"> {
   let parameters = (ins
     "CConv":$CallingConv
   );
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = "`<` $CallingConv `>`";
 }
 
 def LoopOptionsAttr : LLVM_Attr<"LoopOptions"> {
