@@ -12,8 +12,7 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "Target.h"
-#include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Strings.h"
+
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/MathExtras.h"
 

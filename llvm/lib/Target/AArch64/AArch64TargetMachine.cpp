@@ -388,6 +388,11 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
 
   SmallString<512> Key;
 
+  bool StreamingSVEModeDisabled =
+      !F.hasFnAttribute("aarch64_pstate_sm_enabled") &&
+      !F.hasFnAttribute("aarch64_pstate_sm_compatible") &&
+      !F.hasFnAttribute("aarch64_pstate_sm_body");
+
   unsigned MinSVEVectorSize = 0;
   unsigned MaxSVEVectorSize = 0;
   Attribute VScaleRangeAttr = F.getFnAttribute(Attribute::VScaleRange);
@@ -421,6 +426,7 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   Key += std::to_string(MinSVEVectorSize);
   Key += "SVEMax";
   Key += std::to_string(MaxSVEVectorSize);
+  Key += "StreamingSVEModeDisabled=" + std::to_string(StreamingSVEModeDisabled);
   Key += CPU;
   Key += TuneCPU;
   Key += FS;
@@ -431,9 +437,9 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
     // creation will depend on the TM and the code generation flags on the
     // function that reside in TargetOptions.
     resetTargetOptions(F);
-    I = std::make_unique<AArch64Subtarget>(TargetTriple, CPU, TuneCPU, FS,
-                                           *this, isLittle, MinSVEVectorSize,
-                                           MaxSVEVectorSize);
+    I = std::make_unique<AArch64Subtarget>(
+        TargetTriple, CPU, TuneCPU, FS, *this, isLittle, MinSVEVectorSize,
+        MaxSVEVectorSize, StreamingSVEModeDisabled);
   }
   return I.get();
 }

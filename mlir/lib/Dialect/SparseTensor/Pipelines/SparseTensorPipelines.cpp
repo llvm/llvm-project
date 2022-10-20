@@ -58,7 +58,7 @@ void mlir::sparse_tensor::buildSparseCompiler(
           /*analysisOnly=*/options.testBufferizationAnalysisOnly)));
   if (options.testBufferizationAnalysisOnly)
     return;
-  pm.addPass(createSparseTensorRewritePass(options.sparsificationOptions()));
+  pm.addPass(createSparseTensorRewritePass(options.enableRuntimeLibrary));
   pm.addPass(createSparsificationPass(options.sparsificationOptions()));
   if (options.enableRuntimeLibrary)
     pm.addPass(createSparseTensorConversionPass(

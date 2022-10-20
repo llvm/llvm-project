@@ -12,8 +12,11 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "UnwindInfoSection.h"
-#include "mach-o/compact_unwind_encoding.h"
+
+#include "lld/Common/ErrorHandler.h"
 #include "llvm/Support/TimeProfiler.h"
+
+#include "mach-o/compact_unwind_encoding.h"
 
 namespace lld::macho {
 

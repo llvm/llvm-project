@@ -5092,6 +5092,81 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskUntied) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
+TEST_F(OpenMPIRBuilderTest, CreateTaskDepend) {
+  using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  F->setName("func");
+  IRBuilder<> Builder(BB);
+  auto BodyGenCB = [&](InsertPointTy AllocaIP, InsertPointTy CodeGenIP) {};
+  BasicBlock *AllocaBB = Builder.GetInsertBlock();
+  BasicBlock *BodyBB = splitBB(Builder, /*CreateBranch=*/true, "alloca.split");
+  OpenMPIRBuilder::LocationDescription Loc(
+      InsertPointTy(BodyBB, BodyBB->getFirstInsertionPt()), DL);
+  AllocaInst *InDep = Builder.CreateAlloca(Type::getInt32Ty(M->getContext()));
+  OpenMPIRBuilder::DependData DDIn(RTLDependenceKindTy::DepIn,
+                                   Type::getInt32Ty(M->getContext()), InDep);
+  SmallVector<OpenMPIRBuilder::DependData *, 4> DDS;
+  DDS.push_back(&DDIn);
+  Builder.restoreIP(OMPBuilder.createTask(
+      Loc, InsertPointTy(AllocaBB, AllocaBB->getFirstInsertionPt()), BodyGenCB,
+      /*Tied=*/false, /*Final*/ nullptr, /*IfCondition*/ nullptr, DDS));
+  OMPBuilder.finalize();
+  Builder.CreateRetVoid();
+
+  // Check for the `NumDeps` argument
+  CallInst *TaskAllocCall = dyn_cast<CallInst>(
+      OMPBuilder
+          .getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_with_deps)
+          ->user_back());
+  ASSERT_NE(TaskAllocCall, nullptr);
+  ConstantInt *NumDeps = dyn_cast<ConstantInt>(TaskAllocCall->getArgOperand(3));
+  ASSERT_NE(NumDeps, nullptr);
+  EXPECT_EQ(NumDeps->getZExtValue(), 1U);
+
+  // Check for the `DepInfo` array argument
+  BitCastInst *DepArrayPtr =
+      dyn_cast<BitCastInst>(TaskAllocCall->getOperand(4));
+  ASSERT_NE(DepArrayPtr, nullptr);
+  AllocaInst *DepArray = dyn_cast<AllocaInst>(DepArrayPtr->getOperand(0));
+  ASSERT_NE(DepArray, nullptr);
+  Value::user_iterator DepArrayI = DepArray->user_begin();
+  EXPECT_EQ(*DepArrayI, DepArrayPtr);
+  ++DepArrayI;
+  Value::user_iterator DepInfoI = DepArrayI->user_begin();
+  // Check for the `DependKind` flag in the `DepInfo` array
+  Value *Flag = findStoredValue<GetElementPtrInst>(*DepInfoI);
+  ASSERT_NE(Flag, nullptr);
+  ConstantInt *FlagInt = dyn_cast<ConstantInt>(Flag);
+  ASSERT_NE(FlagInt, nullptr);
+  EXPECT_EQ(FlagInt->getZExtValue(),
+            static_cast<unsigned int>(RTLDependenceKindTy::DepIn));
+  ++DepInfoI;
+  // Check for the size in the `DepInfo` array
+  Value *Size = findStoredValue<GetElementPtrInst>(*DepInfoI);
+  ASSERT_NE(Size, nullptr);
+  ConstantInt *SizeInt = dyn_cast<ConstantInt>(Size);
+  ASSERT_NE(SizeInt, nullptr);
+  EXPECT_EQ(SizeInt->getZExtValue(), 4U);
+  ++DepInfoI;
+  // Check for the variable address in the `DepInfo` array
+  Value *AddrStored = findStoredValue<GetElementPtrInst>(*DepInfoI);
+  ASSERT_NE(AddrStored, nullptr);
+  PtrToIntInst *AddrInt = dyn_cast<PtrToIntInst>(AddrStored);
+  ASSERT_NE(AddrInt, nullptr);
+  Value *Addr = AddrInt->getPointerOperand();
+  EXPECT_EQ(Addr, InDep);
+
+  ConstantInt *NumDepsNoAlias =
+      dyn_cast<ConstantInt>(TaskAllocCall->getArgOperand(5));
+  ASSERT_NE(NumDepsNoAlias, nullptr);
+  EXPECT_EQ(NumDepsNoAlias->getZExtValue(), 0U);
+  EXPECT_EQ(TaskAllocCall->getOperand(6),
+            ConstantPointerNull::get(Type::getInt8PtrTy(M->getContext())));
+
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
 TEST_F(OpenMPIRBuilderTest, CreateTaskFinal) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);

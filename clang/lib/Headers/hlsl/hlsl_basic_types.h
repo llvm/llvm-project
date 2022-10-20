@@ -9,6 +9,7 @@
 #ifndef _HLSL_HLSL_BASIC_TYPES_H_
 #define _HLSL_HLSL_BASIC_TYPES_H_
 
+namespace hlsl {
 // built-in scalar data types:
 
 #ifdef __HLSL_ENABLE_16_BIT
@@ -60,5 +61,7 @@ typedef vector<float, 4> float4;
 typedef vector<double, 2> double2;
 typedef vector<double, 3> double3;
 typedef vector<double, 4> double4;
+
+} // namespace hlsl
 
 #endif //_HLSL_HLSL_BASIC_TYPES_H_
