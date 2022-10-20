@@ -246,6 +246,12 @@ LogicalResult CastOp::verify() {
       return emitOpError() << "requires !cir.ptr type for source and result";
     return success();
   }
+  case cir::CastKind::floating: {
+    if (!srcType.dyn_cast<mlir::FloatType>() ||
+        !resType.dyn_cast<mlir::FloatType>())
+      return emitOpError() << "requries floating for source and result";
+    return success();
+  }
   }
 
   llvm_unreachable("Unknown CastOp kind?");
