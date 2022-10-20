@@ -24,11 +24,11 @@ define void @foo(i32* %data1, i32* %data2) {
 ; CHECK-NEXT:    store i32 {{%.*}}, i32* {{%.*}}
 ; CHECK-NEXT:    br label %pred.store.continue
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    br i1 {{%.*}}, label %pred.store.if2, label %pred.store.continue3
-; CHECK:       pred.store.if2:
+; CHECK-NEXT:    br i1 {{%.*}}, label %pred.store.if1, label %pred.store.continue2
+; CHECK:       pred.store.if1:
 ; CHECK-NEXT:    store i32 {{%.*}}, i32* {{%.*}}
-; CHECK-NEXT:    br label %pred.store.continue3
-; CHECK:       pred.store.continue3:
+; CHECK-NEXT:    br label %pred.store.continue2
+; CHECK:       pred.store.continue2:
 
 entry:
   br label %while.body
