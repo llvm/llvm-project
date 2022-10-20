@@ -105,6 +105,13 @@ MLIR_CAPI_EXPORTED void mlirPassManagerAddOwnedPass(MlirPassManager passManager,
 MLIR_CAPI_EXPORTED void
 mlirOpPassManagerAddOwnedPass(MlirOpPassManager passManager, MlirPass pass);
 
+/// Parse a sequence of textual MLIR pass pipeline elements and add them to the
+/// provided OpPassManager. If parsing fails an error message is reported using
+/// the provided callback.
+MLIR_CAPI_EXPORTED MlirLogicalResult mlirOpPassManagerAddPipeline(
+    MlirOpPassManager passManager, MlirStringRef pipelineElements,
+    MlirStringCallback callback, void *userData);
+
 /// Print a textual MLIR pass pipeline by sending chunks of the string
 /// representation and forwarding `userData to `callback`. Note that the
 /// callback may be called several times with consecutive chunks of the string.

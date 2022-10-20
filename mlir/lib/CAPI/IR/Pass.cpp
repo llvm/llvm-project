@@ -65,6 +65,15 @@ void mlirOpPassManagerAddOwnedPass(MlirOpPassManager passManager,
   unwrap(passManager)->addPass(std::unique_ptr<Pass>(unwrap(pass)));
 }
 
+MlirLogicalResult mlirOpPassManagerAddPipeline(MlirOpPassManager passManager,
+                                               MlirStringRef pipelineElements,
+                                               MlirStringCallback callback,
+                                               void *userData) {
+  detail::CallbackOstream stream(callback, userData);
+  return wrap(parsePassPipeline(unwrap(pipelineElements), *unwrap(passManager),
+                                stream));
+}
+
 void mlirPrintPassPipeline(MlirOpPassManager passManager,
                            MlirStringCallback callback, void *userData) {
   detail::CallbackOstream stream(callback, userData);
