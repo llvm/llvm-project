@@ -12606,7 +12606,8 @@ TreeTransform<Derived>::TransformRequiresExpr(RequiresExpr *E) {
   // C++2a [expr.prim.req]p2
   // Expressions appearing within a requirement-body are unevaluated operands.
   EnterExpressionEvaluationContext Ctx(
-      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
+      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated,
+      Sema::ReuseLambdaContextDecl);
 
   RequiresExprBodyDecl *Body = RequiresExprBodyDecl::Create(
       getSema().Context, getSema().CurContext,
