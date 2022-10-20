@@ -185,6 +185,11 @@ public:
   unsigned fixOneOperandFPComparison(const MCInst &MI, unsigned EncodedValue,
                                      const MCSubtargetInfo &STI) const;
 
+  template <unsigned Multiple>
+  uint32_t EncodeRegAsMultipleOf(const MCInst &MI, unsigned OpIdx,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const;
+
   uint32_t EncodeMatrixTileListRegisterClass(const MCInst &MI, unsigned OpIdx,
                                              SmallVectorImpl<MCFixup> &Fixups,
                                              const MCSubtargetInfo &STI) const;
@@ -515,6 +520,17 @@ AArch64MCCodeEmitter::getVecShiftL8OpValue(const MCInst &MI, unsigned OpIdx,
   const MCOperand &MO = MI.getOperand(OpIdx);
   assert(MO.isImm() && "Expected an immediate value for the scale amount!");
   return MO.getImm() - 8;
+}
+
+template <unsigned Multiple>
+uint32_t
+AArch64MCCodeEmitter::EncodeRegAsMultipleOf(const MCInst &MI, unsigned OpIdx,
+                                            SmallVectorImpl<MCFixup> &Fixups,
+                                            const MCSubtargetInfo &STI) const {
+  assert(llvm::isPowerOf2_32(Multiple) && "Multiple is not a power of 2");
+  auto RegOpnd = MI.getOperand(OpIdx).getReg();
+  unsigned RegVal = Ctx.getRegisterInfo()->getEncodingValue(RegOpnd);
+  return RegVal / Multiple;
 }
 
 uint32_t AArch64MCCodeEmitter::EncodeMatrixTileListRegisterClass(

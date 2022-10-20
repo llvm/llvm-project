@@ -434,7 +434,7 @@ LogicalResult tosa::ConcatOp::inferReturnTypeComponents(
   }
 
   // Determine the dimension size along the concatenation axis.
-  int concatDimSize = 0;
+  int64_t concatDimSize = 0;
   for (auto operand : operands) {
     ShapeAdaptor operandShape = operands.getShape(operand);
 
@@ -645,7 +645,7 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
   // Any non dynamic dimension can be multiplied to a known size.
   outputShape.reserve(multiples.size());
   for (int i = 0, s = inputShape.getRank(); i < s; i++) {
-    int dim = inputShape.getDimSize(i);
+    int64_t dim = inputShape.getDimSize(i);
     if (dim != ShapedType::kDynamicSize)
       dim *= multipleValues[i];
     outputShape.push_back(dim);
@@ -653,6 +653,12 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
   return success();
+}
+
+static SmallVector<int64_t> ConvertToMlirShape(ArrayRef<int64_t> shape) {
+  return to_vector(llvm::map_range(shape, [](int64_t dim) {
+    return dim == -1 ? ShapedType::kDynamicSize : dim;
+  }));
 }
 
 LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
@@ -665,6 +671,7 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
   ArrayAttr newShape = adaptor.getNewShape();
   llvm::SmallVector<int64_t> newShapeValue;
   getI64Values(newShape, newShapeValue);
+  newShapeValue = ConvertToMlirShape(newShapeValue);
 
   // We cannot infer from the total number of elements so we must take the
   // shape attribute as exact.
@@ -679,14 +686,14 @@ LogicalResult tosa::ReshapeOp::inferReturnTypeComponents(
   int64_t numElements = inputShape.getNumElements();
   int64_t staticMul = 1;
   for (auto val : newShapeValue) {
-    if (val != ShapedType::kDynamicSize) {
+    if (!ShapedType::isDynamic(val)) {
       staticMul *= val;
     }
   }
 
   // Determine the length of the dynamic dimension.
   for (auto &val : newShapeValue) {
-    if (val == ShapedType::kDynamicSize)
+    if (ShapedType::isDynamic(val))
       val = numElements / staticMul;
   }
 
@@ -800,8 +807,8 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
 
   outputShape[0] = inputShape.getDimSize(0);
   outputShape[3] = inputShape.getDimSize(3);
-  int32_t inputHeight = inputShape.getDimSize(1);
-  int32_t inputWidth = inputShape.getDimSize(2);
+  int64_t inputHeight = inputShape.getDimSize(1);
+  int64_t inputWidth = inputShape.getDimSize(2);
 
   if ((inputHeight == ShapedType::kDynamicSize) ||
       (inputWidth == ShapedType::kDynamicSize))
@@ -961,7 +968,7 @@ static LogicalResult poolingInferReturnTypes(
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
   ShapeAdaptor inputShape = operands.getShape(0);
   llvm::SmallVector<int64_t> outputShape;
-  outputShape.resize(4, -1);
+  outputShape.resize(4, ShapedType::kDynamicSize);
 
   // We only know the rank if the input type is unranked.
   if (!inputShape) {
@@ -973,8 +980,8 @@ static LogicalResult poolingInferReturnTypes(
   outputShape[0] = inputShape.getDimSize(0);
   outputShape[3] = inputShape.getDimSize(3);
 
-  int32_t height = inputShape.getDimSize(1);
-  int32_t width = inputShape.getDimSize(2);
+  int64_t height = inputShape.getDimSize(1);
+  int64_t width = inputShape.getDimSize(2);
 
   llvm::SmallVector<int64_t> kernel;
   llvm::SmallVector<int64_t> stride;
@@ -984,13 +991,13 @@ static LogicalResult poolingInferReturnTypes(
   getI64Values(attributes.get("stride").cast<ArrayAttr>(), stride);
   getI64Values(attributes.get("pad").cast<ArrayAttr>(), pad);
 
-  if (height != -1) {
-    int32_t padded = height + pad[0] + pad[1] - kernel[0];
+  if (!ShapedType::isDynamic(height)) {
+    int64_t padded = height + pad[0] + pad[1] - kernel[0];
     outputShape[1] = padded / stride[0] + 1;
   }
 
-  if (width != -1) {
-    int32_t padded = width + pad[2] + pad[3] - kernel[1];
+  if (!ShapedType::isDynamic(width)) {
+    int64_t padded = width + pad[2] + pad[3] - kernel[1];
     outputShape[2] = padded / stride[1] + 1;
   }
 
@@ -1005,10 +1012,10 @@ LogicalResult Conv2DOp::inferReturnTypeComponents(
   llvm::SmallVector<int64_t> outputShape(4, ShapedType::kDynamicSize);
   Conv2DOp::Adaptor adaptor(operands.getValues(), attributes);
 
-  int32_t inputWidth = ShapedType::kDynamicSize;
-  int32_t inputHeight = ShapedType::kDynamicSize;
-  int32_t weightWidth = ShapedType::kDynamicSize;
-  int32_t weightHeight = ShapedType::kDynamicSize;
+  int64_t inputWidth = ShapedType::kDynamicSize;
+  int64_t inputHeight = ShapedType::kDynamicSize;
+  int64_t weightWidth = ShapedType::kDynamicSize;
+  int64_t weightHeight = ShapedType::kDynamicSize;
 
   // Input shape describes input width/height and batch.
 
@@ -1045,17 +1052,17 @@ LogicalResult Conv2DOp::inferReturnTypeComponents(
 
   if (!ShapedType::isDynamic(inputHeight) &&
       !ShapedType::isDynamic(weightHeight)) {
-    int32_t inputSize = inputHeight + padding[0] + padding[1];
-    int32_t filterSize = (weightHeight - 1) * dilation[0] + 1;
-    int32_t unstridedResult = inputSize - filterSize + 1;
+    int64_t inputSize = inputHeight + padding[0] + padding[1];
+    int64_t filterSize = (weightHeight - 1) * dilation[0] + 1;
+    int64_t unstridedResult = inputSize - filterSize + 1;
     outputShape[1] = (unstridedResult - 1) / stride[0] + 1;
   }
 
   if (!ShapedType::isDynamic(inputWidth) &&
       !ShapedType::isDynamic(weightWidth)) {
-    int32_t inputSize = inputWidth + padding[2] + padding[3];
-    int32_t filterSize = (weightWidth - 1) * dilation[1] + 1;
-    int32_t unstridedResult = inputSize - filterSize + 1;
+    int64_t inputSize = inputWidth + padding[2] + padding[3];
+    int64_t filterSize = (weightWidth - 1) * dilation[1] + 1;
+    int64_t unstridedResult = inputSize - filterSize + 1;
     outputShape[2] = (unstridedResult - 1) / stride[1] + 1;
   }
 
@@ -1072,13 +1079,13 @@ LogicalResult Conv3DOp::inferReturnTypeComponents(
   llvm::SmallVector<int64_t> outputShape(5, ShapedType::kDynamicSize);
   Conv3DOp::Adaptor adaptor(operands.getValues(), attributes);
 
-  int32_t inputWidth = ShapedType::kDynamicSize;
-  int32_t inputHeight = ShapedType::kDynamicSize;
-  int32_t inputDepth = ShapedType::kDynamicSize;
+  int64_t inputWidth = ShapedType::kDynamicSize;
+  int64_t inputHeight = ShapedType::kDynamicSize;
+  int64_t inputDepth = ShapedType::kDynamicSize;
 
-  int32_t weightWidth = ShapedType::kDynamicSize;
-  int32_t weightHeight = ShapedType::kDynamicSize;
-  int32_t weightDepth = ShapedType::kDynamicSize;
+  int64_t weightWidth = ShapedType::kDynamicSize;
+  int64_t weightHeight = ShapedType::kDynamicSize;
+  int64_t weightDepth = ShapedType::kDynamicSize;
 
   // Input shape describes input width/height and batch.
   ShapeAdaptor inputShape = operands.getShape(adaptor.getInput());
@@ -1163,13 +1170,13 @@ LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
   llvm::SmallVector<int64_t> outputShape(4, ShapedType::kDynamicSize);
   DepthwiseConv2DOp::Adaptor adaptor(operands.getValues(), attributes);
 
-  int32_t inputWidth = ShapedType::kDynamicSize;
-  int32_t inputHeight = ShapedType::kDynamicSize;
-  int32_t inputChannels = ShapedType::kDynamicSize;
+  int64_t inputWidth = ShapedType::kDynamicSize;
+  int64_t inputHeight = ShapedType::kDynamicSize;
+  int64_t inputChannels = ShapedType::kDynamicSize;
 
-  int32_t weightWidth = ShapedType::kDynamicSize;
-  int32_t weightHeight = ShapedType::kDynamicSize;
-  int32_t depthChannels = ShapedType::kDynamicSize;
+  int64_t weightWidth = ShapedType::kDynamicSize;
+  int64_t weightHeight = ShapedType::kDynamicSize;
+  int64_t depthChannels = ShapedType::kDynamicSize;
 
   // Input shape describes input width/height and batch.
   ShapeAdaptor inputShape = operands.getShape(adaptor.getInput());
@@ -1216,17 +1223,17 @@ LogicalResult DepthwiseConv2DOp::inferReturnTypeComponents(
 
   if (!ShapedType::isDynamic(inputHeight) &&
       !ShapedType::isDynamic(weightHeight)) {
-    int32_t inputSize = inputHeight + padding[0] + padding[1];
-    int32_t filterSize = (weightHeight - 1) * dilation[0] + 1;
-    int32_t unstridedResult = inputSize - filterSize + 1;
+    int64_t inputSize = inputHeight + padding[0] + padding[1];
+    int64_t filterSize = (weightHeight - 1) * dilation[0] + 1;
+    int64_t unstridedResult = inputSize - filterSize + 1;
     outputShape[1] = (unstridedResult - 1) / stride[0] + 1;
   }
 
   if (!ShapedType::isDynamic(inputWidth) &&
       !ShapedType::isDynamic(weightWidth)) {
-    int32_t inputSize = inputWidth + padding[2] + padding[3];
-    int32_t filterSize = (weightWidth - 1) * dilation[1] + 1;
-    int32_t unstridedResult = inputSize - filterSize + 1;
+    int64_t inputSize = inputWidth + padding[2] + padding[3];
+    int64_t filterSize = (weightWidth - 1) * dilation[1] + 1;
+    int64_t unstridedResult = inputSize - filterSize + 1;
     outputShape[2] = (unstridedResult - 1) / stride[1] + 1;
   }
 
@@ -1243,11 +1250,12 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
   TransposeConv2DOp::Adaptor adaptor(operands.getValues(), attributes);
   llvm::SmallVector<int64_t> outputShape;
   getI64Values(adaptor.getOutShape(), outputShape);
+  outputShape = ConvertToMlirShape(outputShape);
 
-  int32_t inputWidth = ShapedType::kDynamicSize;
-  int32_t inputHeight = ShapedType::kDynamicSize;
-  int32_t weightWidth = ShapedType::kDynamicSize;
-  int32_t weightHeight = ShapedType::kDynamicSize;
+  int64_t inputWidth = ShapedType::kDynamicSize;
+  int64_t inputHeight = ShapedType::kDynamicSize;
+  int64_t weightWidth = ShapedType::kDynamicSize;
+  int64_t weightHeight = ShapedType::kDynamicSize;
 
   // Input shape describes input width/height and batch.
   ShapeAdaptor inputShape = operands.getShape(adaptor.getInput());
@@ -1285,16 +1293,18 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
 
   if (!ShapedType::isDynamic(inputHeight) &&
       !ShapedType::isDynamic(weightHeight)) {
-    int32_t calculateSize =
+    int64_t calculateSize =
         (inputHeight - 1) * stride[0] - padding[0] - padding[1] + weightHeight;
-    outputShape[1] = outputShape[1] == -1 ? calculateSize : outputShape[1];
+    outputShape[1] =
+        ShapedType::isDynamic(outputShape[1]) ? calculateSize : outputShape[1];
   }
 
   if (!ShapedType::isDynamic(inputWidth) &&
       !ShapedType::isDynamic(weightWidth)) {
-    int32_t calculateSize =
+    int64_t calculateSize =
         (inputWidth - 1) * stride[1] - padding[2] - padding[3] + weightWidth;
-    outputShape[2] = outputShape[2] == -1 ? calculateSize : outputShape[2];
+    outputShape[2] =
+        ShapedType::isDynamic(outputShape[2]) ? calculateSize : outputShape[2];
   }
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));

@@ -493,6 +493,94 @@ define i32 @test16(i32 %x) {
   ret i32 %mul
 }
 
+define i32 @test25_fast_shift(i32 %x) "target-features"="+lsl-fast" {
+; CHECK-LABEL: test25_fast_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, w0, lsl #2
+; CHECK-NEXT:    add w0, w8, w8, lsl #2
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test25_fast_shift:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #25
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 25 ; 25 = (1+4)*(1+4)
+  ret i32 %mul
+}
+
+define i32 @test45_fast_shift(i32 %x) "target-features"="+lsl-fast" {
+; CHECK-LABEL: test45_fast_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    add w8, w0, w0, lsl #2
+; CHECK-NEXT:    add w0, w8, w8, lsl #3
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test45_fast_shift:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #45
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 45 ; 45 = (1+4)*(1+8)
+  ret i32 %mul
+}
+
+; Negative test: Keep MUL as don't have the feature LSLFast
+define i32 @test45(i32 %x) {
+; CHECK-LABEL: test45:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #45
+; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test45:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #45
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 45 ; 45 = (1+4)*(1+8)
+  ret i32 %mul
+}
+
+; Negative test: The shift amount 4 larger than 3
+define i32 @test85_fast_shift(i32 %x) "target-features"="+lsl-fast" {
+; CHECK-LABEL: test85_fast_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #85
+; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test85_fast_shift:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #85
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 85 ; 85 = (1+4)*(1+16)
+  ret i32 %mul
+}
+
+; Negative test: The shift amount 5 larger than 3
+define i32 @test297_fast_shift(i32 %x) "target-features"="+lsl-fast" {
+; CHECK-LABEL: test297_fast_shift:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #297
+; CHECK-NEXT:    mul w0, w0, w8
+; CHECK-NEXT:    ret
+;
+; GISEL-LABEL: test297_fast_shift:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    mov w8, #297
+; GISEL-NEXT:    mul w0, w0, w8
+; GISEL-NEXT:    ret
+
+  %mul = mul nsw i32 %x, 297 ; 297 = (1+8)*(1+32)
+  ret i32 %mul
+}
+
 ; Convert mul x, -pow2 to shift.
 ; Convert mul x, -(pow2 +/- 1) to shift + add/sub.
 ; Lowering other negative constants are not supported yet.
@@ -770,11 +858,11 @@ define <4 x i32> @muladd_demand_commute(<4 x i32> %x, <4 x i32> %y) {
 ;
 ; GISEL-LABEL: muladd_demand_commute:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    adrp x8, .LCPI44_1
-; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI44_1]
-; GISEL-NEXT:    adrp x8, .LCPI44_0
+; GISEL-NEXT:    adrp x8, .LCPI49_1
+; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI49_1]
+; GISEL-NEXT:    adrp x8, .LCPI49_0
 ; GISEL-NEXT:    mla v1.4s, v0.4s, v2.4s
-; GISEL-NEXT:    ldr q0, [x8, :lo12:.LCPI44_0]
+; GISEL-NEXT:    ldr q0, [x8, :lo12:.LCPI49_0]
 ; GISEL-NEXT:    and v0.16b, v1.16b, v0.16b
 ; GISEL-NEXT:    ret
   %m = mul <4 x i32> %x, <i32 131008, i32 131008, i32 131008, i32 131008>

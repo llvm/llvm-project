@@ -9,7 +9,6 @@ add_libc_unittest(
   COMPILE_OPTIONS
     ${LIBC_COMPILE_OPTIONS_NATIVE}
     -ffreestanding
-    -pthread
   DEPENDS
     libc.src.string.memory_utils.memory_utils
     libc.src.__support.CPP.array

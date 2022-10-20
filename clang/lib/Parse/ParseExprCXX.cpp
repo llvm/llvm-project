@@ -1474,7 +1474,8 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                          tok::kw_constexpr, tok::kw_consteval, tok::kw_static,
                          tok::kw___private, tok::kw___global, tok::kw___local,
                          tok::kw___constant, tok::kw___generic,
-                         tok::kw_requires, tok::kw_noexcept) ||
+                         tok::kw_groupshared, tok::kw_requires,
+                         tok::kw_noexcept) ||
              (Tok.is(tok::l_square) && NextToken().is(tok::l_square))) {
     if (!getLangOpts().CPlusPlus2b)
       // It's common to forget that one needs '()' before 'mutable', an

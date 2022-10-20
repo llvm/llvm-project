@@ -161,7 +161,7 @@ define void @store_unordered(ptr nocapture %0) norecurse nounwind uwtable {
 ; negative, should not deduce nosync
 ; atomic load with release ordering
 define void @load_release(ptr nocapture %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: argmemonly nofree norecurse nounwind uwtable
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly nofree norecurse nounwind uwtable
 ; CHECK-LABEL: @load_release(
 ; CHECK-NEXT:    store atomic volatile i32 10, ptr [[TMP0:%.*]] release, align 4
 ; CHECK-NEXT:    ret void
@@ -172,7 +172,7 @@ define void @load_release(ptr nocapture %0) norecurse nounwind uwtable {
 
 ; negative volatile, relaxed atomic
 define void @load_volatile_release(ptr nocapture %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: argmemonly nofree norecurse nounwind uwtable
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly nofree norecurse nounwind uwtable
 ; CHECK-LABEL: @load_volatile_release(
 ; CHECK-NEXT:    store atomic volatile i32 10, ptr [[TMP0:%.*]] release, align 4
 ; CHECK-NEXT:    ret void
@@ -183,7 +183,7 @@ define void @load_volatile_release(ptr nocapture %0) norecurse nounwind uwtable 
 
 ; volatile store.
 define void @volatile_store(ptr %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: argmemonly nofree norecurse nounwind uwtable
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly nofree norecurse nounwind uwtable
 ; CHECK-LABEL: @volatile_store(
 ; CHECK-NEXT:    store volatile i32 14, ptr [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -195,7 +195,7 @@ define void @volatile_store(ptr %0) norecurse nounwind uwtable {
 ; negative, should not deduce nosync
 ; volatile load.
 define i32 @volatile_load(ptr %0) norecurse nounwind uwtable {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nounwind willreturn uwtable
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly mustprogress nofree norecurse nounwind willreturn uwtable
 ; CHECK-LABEL: @volatile_load(
 ; CHECK-NEXT:    [[TMP2:%.*]] = load volatile i32, ptr [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[TMP2]]
@@ -211,7 +211,7 @@ declare void @nosync_function() noinline nounwind uwtable nosync
 define void @call_nosync_function() nounwind uwtable noinline {
 ; CHECK: Function Attrs: noinline nosync nounwind uwtable
 ; CHECK-LABEL: @call_nosync_function(
-; CHECK-NEXT:    tail call void @nosync_function() #[[ATTR10:[0-9]+]]
+; CHECK-NEXT:    tail call void @nosync_function() #[[ATTR11:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @nosync_function() noinline nounwind uwtable
@@ -225,7 +225,7 @@ declare void @might_sync() noinline nounwind uwtable
 define void @call_might_sync() nounwind uwtable noinline {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: @call_might_sync(
-; CHECK-NEXT:    tail call void @might_sync() #[[ATTR10]]
+; CHECK-NEXT:    tail call void @might_sync() #[[ATTR11]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @might_sync() noinline nounwind uwtable

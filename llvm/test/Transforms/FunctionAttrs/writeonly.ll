@@ -96,7 +96,7 @@ define void @test_readwrite(ptr %p) {
 }
 
 define void @test_volatile(ptr %p) {
-; CHECK: Function Attrs: argmemonly nofree norecurse nounwind
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly nofree norecurse nounwind
 ; CHECK-LABEL: define {{[^@]+}}@test_volatile
 ; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    store volatile i8 0, ptr [[P]], align 1

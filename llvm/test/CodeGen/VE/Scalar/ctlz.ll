@@ -9,11 +9,10 @@ declare i8 @llvm.ctlz.i8(i8, i1)
 define i128 @func128(i128 %p){
 ; CHECK-LABEL: func128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmps.l %s2, %s1, (0)1
-; CHECK-NEXT:    ldz %s1, %s1
+; CHECK-NEXT:    ldz %s2, %s1
 ; CHECK-NEXT:    ldz %s0, %s0
 ; CHECK-NEXT:    lea %s0, 64(, %s0)
-; CHECK-NEXT:    cmov.l.ne %s0, %s1, %s2
+; CHECK-NEXT:    cmov.l.ne %s0, %s2, %s1
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i128 @llvm.ctlz.i128(i128 %p, i1 true)
@@ -178,11 +177,10 @@ define zeroext i8 @func8iz() {
 define i128 @func128x(i128 %p){
 ; CHECK-LABEL: func128x:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmps.l %s2, %s1, (0)1
-; CHECK-NEXT:    ldz %s1, %s1
+; CHECK-NEXT:    ldz %s2, %s1
 ; CHECK-NEXT:    ldz %s0, %s0
 ; CHECK-NEXT:    lea %s0, 64(, %s0)
-; CHECK-NEXT:    cmov.l.ne %s0, %s1, %s2
+; CHECK-NEXT:    cmov.l.ne %s0, %s2, %s1
 ; CHECK-NEXT:    or %s1, 0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %r = tail call i128 @llvm.ctlz.i128(i128 %p, i1 false)

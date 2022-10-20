@@ -10,6 +10,7 @@
 
 // <format>
 
+// C++23 the formatter is a debug-enabled specialization.
 // [format.formatter.spec]:
 // Each header that declares the template `formatter` provides the following
 // enabled specializations:
@@ -24,11 +25,12 @@
 #include <concepts>
 #include <type_traits>
 
+#include "make_string.h"
 #include "test_format_context.h"
 #include "test_macros.h"
-#include "make_string.h"
 
 #define STR(S) MAKE_STRING(CharT, S)
+#define SV(S) MAKE_STRING_VIEW(CharT, S)
 #define CSTR(S) MAKE_CSTRING(CharT, S)
 
 template <class T, class ArgumentT, class StringT, class StringViewT>
@@ -72,6 +74,27 @@ void test_termination_condition(StringT expected, StringT f, StringT arg) {
   test<T, ArgumentT>(expected, fmt, arg);
 }
 
+#if TEST_STD_VER > 20
+template <class ArgumentT, class CharT>
+constexpr bool test_set_debug_format() {
+  std::formatter<ArgumentT, CharT> formatter;
+  LIBCPP_ASSERT(formatter.__parser_.__type_ == std::__format_spec::__type::__default);
+
+  formatter.set_debug_format();
+  LIBCPP_ASSERT(formatter.__parser_.__type_ == std::__format_spec::__type::__debug);
+
+  std::basic_string_view fmt = SV("s}");
+  std::basic_format_parse_context<CharT> parse_ctx{fmt};
+  formatter.parse(parse_ctx);
+  LIBCPP_ASSERT(formatter.__parser_.__type_ == std::__format_spec::__type::__string);
+
+  formatter.set_debug_format();
+  LIBCPP_ASSERT(formatter.__parser_.__type_ == std::__format_spec::__type::__debug);
+
+  return true;
+}
+#endif
+
 template <class T, class ArgumentT>
 void test_string_type() {
   static_assert(std::same_as<typename T::value_type,
@@ -107,6 +130,11 @@ void test_string_type() {
                                            STR("world"));
   test_termination_condition<T, ArgumentT>(STR("univers"), STR("%^7.7}"),
                                            STR("universe"));
+
+#if TEST_STD_VER > 20
+  test_set_debug_format<std::remove_cvref_t<ArgumentT>, CharT>();
+  static_assert(test_set_debug_format<std::remove_cvref_t<ArgumentT>, CharT>());
+#endif
 }
 
 template <class CharT>
@@ -121,6 +149,5 @@ int main(int, char**) {
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test_all_string_types<wchar_t>();
 #endif
-
   return 0;
 }

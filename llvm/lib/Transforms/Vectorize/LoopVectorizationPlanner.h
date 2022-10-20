@@ -188,6 +188,7 @@ public:
 struct VectorizationFactor {
   /// Vector width with best cost.
   ElementCount Width;
+
   /// Cost of the loop with that width.
   InstructionCost Cost;
 

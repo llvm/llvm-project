@@ -58,7 +58,7 @@ int MachineFrameInfo::CreateStackObject(uint64_t Size, Align Alignment,
                                 !IsSpillSlot, StackID));
   int Index = (int)Objects.size() - NumFixedObjects - 1;
   assert(Index >= 0 && "Bad frame index!");
-  if (StackID == 0)
+  if (contributesToMaxAlignment(StackID))
     ensureMaxAlignment(Alignment);
   return Index;
 }

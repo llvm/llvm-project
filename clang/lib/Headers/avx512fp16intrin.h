@@ -19,12 +19,6 @@
 typedef _Float16 __v32hf __attribute__((__vector_size__(64), __aligned__(64)));
 typedef _Float16 __m512h __attribute__((__vector_size__(64), __aligned__(64)));
 typedef _Float16 __m512h_u __attribute__((__vector_size__(64), __aligned__(1)));
-typedef _Float16 __v8hf __attribute__((__vector_size__(16), __aligned__(16)));
-typedef _Float16 __m128h __attribute__((__vector_size__(16), __aligned__(16)));
-typedef _Float16 __m128h_u __attribute__((__vector_size__(16), __aligned__(1)));
-typedef _Float16 __v16hf __attribute__((__vector_size__(32), __aligned__(32)));
-typedef _Float16 __m256h __attribute__((__vector_size__(32), __aligned__(32)));
-typedef _Float16 __m256h_u __attribute__((__vector_size__(32), __aligned__(1)));
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS512                                                  \
