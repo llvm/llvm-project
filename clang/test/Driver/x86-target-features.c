@@ -91,6 +91,11 @@
 // PREFETCHWT1: "-target-feature" "+prefetchwt1"
 // NO-PREFETCHWT1: "-target-feature" "-prefetchwt1"
 
+// RUN: %clang --target=i386 -march=i386 -mprefetchi %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PREFETCHI %s
+// RUN: %clang --target=i386 -march=i386 -mno-prefetchi %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-PREFETCHI %s
+// PREFETCHI: "-target-feature" "+prefetchi"
+// NO-PREFETCHI: "-target-feature" "-prefetchi"
+
 // RUN: %clang --target=i386 -march=i386 -mclzero %s -### 2>&1 | FileCheck -check-prefix=CLZERO %s
 // RUN: %clang --target=i386 -march=i386 -mno-clzero %s -### 2>&1 | FileCheck -check-prefix=NO-CLZERO %s
 // CLZERO: "-target-feature" "+clzero"

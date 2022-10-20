@@ -587,6 +587,7 @@ X86 Support in Clang
 - Support ``-mindirect-branch-cs-prefix`` for call and jmp to indirect thunk.
 - Fix 32-bit ``__fastcall`` and ``__vectorcall`` ABI mismatch with MSVC.
 - Switch ``AVX512-BF16`` intrinsics types from ``short`` to ``__bf16``.
+- Add support for ``PREFETCHI`` instructions.
 
 DWARF Support in Clang
 ----------------------
