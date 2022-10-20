@@ -965,23 +965,34 @@ const clang::CXXMethodDecl *getMethod(ModuleOp mod, StringRef name) {
 
 void LifetimeCheckPass::checkMoveAssignment(CallOp callOp,
                                             const clang::CXXMethodDecl *m) {
-  // MyIntPointer::operator=(MyIntPointer&&)(%dst, %src)
+  // MyPointer::operator=(MyPointer&&)(%dst, %src)
+  // or
+  // MyOwner::operator=(MyOwner&&)(%dst, %src)
   auto dst = callOp.getOperand(0);
   auto src = callOp.getOperand(1);
 
-  // Currently only handle move assignments between pointer categories.
-  // TODO: add Owner category
-  if (!(ptrs.count(dst) && ptrs.count(src)))
+  // Move assignments between pointer categories.
+  if (ptrs.count(dst) && ptrs.count(src)) {
+    // Note that the current pattern here usually comes from a xvalue in src
+    // where all the initialization is done, and this move assignment is
+    // where we finally materialize it back to the original pointer category.
+    getPmap()[dst] = getPmap()[src];
+
+    // 2.4.2 - It is an error to use a moved-from object.
+    // To that intent we mark src's pset with invalid.
+    markPsetInvalid(src, InvalidStyle::MovedFrom, callOp.getLoc());
     return;
+  }
 
-  // Note that the current pattern here usually comes from a xvalue in src
-  // where all the initialization is done, and this move assignment is
-  // where we finally materialize it back to the original pointer category.
-  getPmap()[dst] = getPmap()[src];
+  // Copy assignments between pointer categories.
+  if (owners.count(dst) && owners.count(src)) {
+    // Handle as a non const use of owner, invalidating pointers.
+    checkNonConstUseOfOwner(callOp);
 
-  // 2.4.2 - It is an error to use a moved-from object.
-  // To that intent we mark src's pset with invalid.
-  markPsetInvalid(src, InvalidStyle::MovedFrom, callOp.getLoc());
+    // 2.4.2 - It is an error to use a moved-from object.
+    // To that intent we mark src's pset with invalid.
+    markPsetInvalid(src, InvalidStyle::MovedFrom, callOp.getLoc());
+  }
 }
 
 void LifetimeCheckPass::checkCopyAssignment(CallOp callOp,
