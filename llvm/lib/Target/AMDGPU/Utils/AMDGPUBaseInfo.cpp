@@ -508,12 +508,14 @@ unsigned ComponentInfo::getParsedOperandIndex(unsigned OprIdx) const {
 }
 
 Optional<unsigned> InstInfo::getInvalidOperandIndex(
-    std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
+    std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+    bool SkipSrc) const {
 
   auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx);
   auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx);
 
-  for (unsigned OprIdx = 0; OprIdx < Component::MAX_OPR_NUM; ++OprIdx) {
+  const unsigned OprNum = SkipSrc ? Component::DST_NUM : Component::MAX_OPR_NUM;
+  for (unsigned OprIdx = 0; OprIdx < OprNum; ++OprIdx) {
     unsigned BanksNum = BANKS_NUM[OprIdx];
     if (OpXRegs[OprIdx] && OpYRegs[OprIdx] &&
         (OpXRegs[OprIdx] % BanksNum == OpYRegs[OprIdx] % BanksNum))

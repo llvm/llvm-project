@@ -3619,8 +3619,12 @@ bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
                : MCRegister::NoRegister;
   };
 
+  // On GFX12 if both OpX and OpY are V_MOV_B32 then OPY uses SRC2 source-cache.
+  bool SkipSrc = Opcode == AMDGPU::V_DUAL_MOV_B32_e32_X_MOV_B32_e32_gfx12;
+
   auto InstInfo = getVOPDInstInfo(Opcode, &MII);
-  auto InvalidOperandInfo = InstInfo.getInvalidOperandIndex(getVRegIdx);
+  auto InvalidOperandInfo =
+      InstInfo.getInvalidOperandIndex(getVRegIdx, SkipSrc);
   if (!InvalidOperandInfo)
     return true;
 

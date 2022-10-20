@@ -92,3 +92,10 @@ v_dual_cndmask_b32  v255, s1, v2                 ::  v_dual_cndmask_b32   v6, s1
 
 v_dual_add_f32      v255, vcc_lo, v2             ::  v_dual_cndmask_b32   v6, v1, v3
 // GFX12: encoding: [0x6a,0x04,0x12,0xc9,0x01,0x07,0x06,0xff]
+
+//===----------------------------------------------------------------------===//
+// A VOPD OpY mov_b32 instruction uses SRC2 source-cache if OpX is also mov_b32
+//===----------------------------------------------------------------------===//
+
+v_dual_mov_b32      v2, v5                       ::  v_dual_mov_b32       v3, v1
+// GFX12: encoding: [0x05,0x01,0x10,0xca,0x01,0x01,0x02,0x02]

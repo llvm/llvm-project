@@ -647,15 +647,20 @@ public:
   // GetRegIdx(Component, OperandIdx) must return a VGPR register index
   // for the specified component and operand. The callback must return 0
   // if the operand is not a register or not a VGPR.
-  bool hasInvalidOperand(
-      std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
-    return getInvalidOperandIndex(GetRegIdx).has_value();
+  // If \p SkipSrc is set to true then constraints for source operands are not
+  // checked.
+  bool hasInvalidOperand(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+                         bool SkipSrc = false) const {
+    return getInvalidOperandIndex(GetRegIdx, SkipSrc).has_value();
   }
 
   // Check VOPD operands constraints.
   // Return the index of an invalid component operand, if any.
-  Optional<unsigned> getInvalidOperandIndex(
-      std::function<unsigned(unsigned, unsigned)> GetRegIdx) const;
+  // If \p SkipSrc is set to true then constraints for source operands are not
+  // checked.
+  Optional<unsigned>
+  getInvalidOperandIndex(std::function<unsigned(unsigned, unsigned)> GetRegIdx,
+                         bool SkipSrc = false) const;
 
 private:
   RegIndices
