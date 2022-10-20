@@ -20,13 +20,29 @@ struct [[gsl::Pointer(int)]] StringView {
   int getSize() const;
 };
 
-void lifetime_example() {
+void sv0() {
   StringView sv;
   String name = "abcdefghijklmnop";
   sv = name;
   (void)sv.getSize(); // expected-remark {{pset => { name__1' }}}
   name = "frobozz"; // expected-note {{invalidated by non-const use of owner type}}
   (void)sv.getSize(); // expected-warning {{use of invalid pointer 'sv'}}
+  // expected-remark@-1 {{pset => { invalid }}}
+  sv = name;
+  (void)sv.getSize(); // expected-remark {{pset => { name__2' }}}
+}
+
+void sv1() {
+  StringView sv, sv_other;
+  String name = "abcdefghijklmnop";
+  sv = name;
+  sv_other = sv;
+  (void)sv.getSize();  // expected-remark {{pset => { name__1' }}}
+  (void)sv_other.getSize();  // expected-remark {{pset => { name__1' }}}
+  name = "frobozz"; // expected-note {{invalidated by non-const use of owner type}}
+  (void)sv.getSize(); // expected-warning {{use of invalid pointer 'sv'}}
+  // expected-remark@-1 {{pset => { invalid }}}
+  (void)sv_other.getSize(); // expected-warning {{use of invalid pointer 'sv_other'}}
   // expected-remark@-1 {{pset => { invalid }}}
   sv = name;
   (void)sv.getSize(); // expected-remark {{pset => { name__2' }}}

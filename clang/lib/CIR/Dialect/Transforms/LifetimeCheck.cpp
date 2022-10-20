@@ -1001,12 +1001,15 @@ void LifetimeCheckPass::checkCopyAssignment(CallOp callOp,
   auto dst = callOp.getOperand(0);
   auto src = callOp.getOperand(1);
 
-  // Currently only handle copy assignments between owner categories.
-  // TODO: add Ptr category
-  if (!(owners.count(dst) && owners.count(src)))
-    return;
+  // Copy assignment between owner categories.
+  if (owners.count(dst) && owners.count(src))
+    return checkNonConstUseOfOwner(callOp);
 
-  checkNonConstUseOfOwner(callOp);
+  // Copy assignment between pointer categories.
+  if (ptrs.count(dst) && ptrs.count(src)) {
+    getPmap()[dst] = getPmap()[src];
+    return;
+  }
 }
 
 // User defined ctors that initialize from owner types is one
