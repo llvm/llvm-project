@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine -o - %s | FileCheck %s
+; RUN: opt -S -passes=instcombine -o - %s | FileCheck %s
 
 ; Test that fast math lib call simplification of double math function to float
 ; equivalent doesn't occur when the calling function matches the float

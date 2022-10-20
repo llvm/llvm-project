@@ -6,7 +6,7 @@
 ; - PhaseOrdering/fast-reassociate-gvn.ll
 ; - Reassociate/fast-basictest.ll
 ;
-; RUN: opt < %s -reassociate -S | FileCheck %s
+; RUN: opt < %s -passes=reassociate -S | FileCheck %s
 
 ; ((a + (-3)) + b) + 3 -> a + b
 ; That only works with both instcombine and reassociate passes enabled.

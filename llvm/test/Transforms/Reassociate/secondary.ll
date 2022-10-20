@@ -1,4 +1,4 @@
-; RUN: opt -S -reassociate < %s | FileCheck %s
+; RUN: opt -S -passes=reassociate < %s | FileCheck %s
 ; rdar://9167457
 
 ; Reassociate shouldn't break this testcase involving a secondary

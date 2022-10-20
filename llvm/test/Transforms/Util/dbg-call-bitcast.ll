@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S %s | FileCheck %s
+; RUN: opt -passes=instcombine -S %s | FileCheck %s
 
 define dso_local void @_Z1fv() {
   %1 = alloca i32, align 4
