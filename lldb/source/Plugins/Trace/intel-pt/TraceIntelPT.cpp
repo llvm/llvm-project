@@ -89,7 +89,7 @@ TraceIntelPTSP TraceIntelPT::CreateInstanceForPostmortemTrace(
   trace_sp->m_storage.tsc_conversion =
       bundle_description.tsc_perf_zero_conversion;
 
-  if (bundle_description.cpus) {
+  if (bundle_description.cpus && trace_mode == TraceMode::UserMode) {
     std::vector<cpu_id_t> cpus;
 
     for (const JSONCpu &cpu : *bundle_description.cpus) {

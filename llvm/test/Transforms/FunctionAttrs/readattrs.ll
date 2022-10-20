@@ -175,7 +175,7 @@ define <4 x i32> @test12_2(<4 x ptr> %ptrs) {
 }
 
 define i32 @volatile_load(ptr %p) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly mustprogress nofree norecurse nounwind willreturn
 ; CHECK-LABEL: define {{[^@]+}}@volatile_load
 ; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR13:[0-9]+]] {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load volatile i32, ptr [[P]], align 4

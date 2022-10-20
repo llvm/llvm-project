@@ -64,6 +64,8 @@ namespace dwarf {
 enum Tag : uint16_t;
 }
 
+class DbgVariableIntrinsic;
+
 extern cl::opt<bool> EnableFSDiscriminator;
 
 class DITypeRefArray {
@@ -3629,6 +3631,8 @@ class DebugVariable {
   static const FragmentInfo DefaultFragment;
 
 public:
+  DebugVariable(const DbgVariableIntrinsic *DII);
+
   DebugVariable(const DILocalVariable *Var, Optional<FragmentInfo> FragmentInfo,
                 const DILocation *InlinedAt)
       : Variable(Var), Fragment(FragmentInfo), InlinedAt(InlinedAt) {}

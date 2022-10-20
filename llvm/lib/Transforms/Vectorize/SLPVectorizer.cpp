@@ -6795,7 +6795,6 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
         VecCost += TTI->getCastInstrCost(E->getAltOpcode(), VecTy, Src1Ty,
                                          TTI::CastContextHint::None, CostKind);
       }
-      SmallVector<int> Mask;
       if (E->ReuseShuffleIndices.empty()) {
         VecCost +=
             TTI->getShuffleCost(TargetTransformInfo::SK_Select, FinalVecTy);

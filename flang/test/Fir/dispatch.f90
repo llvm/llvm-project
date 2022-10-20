@@ -17,6 +17,7 @@ module dispatch1
     procedure :: get_value => get_value_p1
     procedure :: proc_with_values => proc_p1
     procedure, nopass :: proc_nopass => proc_nopass_p1
+    procedure, pass(this) :: proc_pass => proc_pass_p1
   end type
 
   type, extends(p1) :: p2
@@ -28,6 +29,7 @@ module dispatch1
     procedure :: get_value => get_value_p2
     procedure :: proc_with_values => proc_p2
     procedure, nopass :: proc_nopass => proc_nopass_p2
+    procedure, pass(this) :: proc_pass => proc_pass_p2
   end type
 
 contains
@@ -94,6 +96,18 @@ contains
     print*, 'call proc_nopass_p2'
   end subroutine
 
+  subroutine proc_pass_p1(i, this)
+    integer :: i
+    class(p1) :: this
+    print*, 'call proc_nopass_p1'
+  end subroutine
+
+  subroutine proc_pass_p2(i, this)
+    integer :: i
+    class(p2) :: this
+    print*, 'call proc_nopass_p2'
+  end subroutine
+
   subroutine display_class(p)
     class(p1) :: p
     integer :: i
@@ -103,6 +117,7 @@ contains
     i = p%get_value()
     call p%proc_with_values(2.5)
     call p%proc_nopass()
+    call p%proc_pass(1)
   end subroutine
 
 end module
@@ -120,6 +135,7 @@ end
 ! CHECK-LABEL: define void @_QMdispatch1Pdisplay_class(
 ! CHECK-SAME: ptr %[[CLASS:.*]])
 
+! CHECK-DAG: %[[INT32:.*]] = alloca i32, i64 1
 ! CHECK-DAG: %[[REAL:.*]] = alloca float, i64 1
 ! CHECK-DAG: %[[I:.*]] = alloca i32, i64 1
 
@@ -183,7 +199,7 @@ end
 ! CHECK: %[[LOADED_TYPEDESC:.*]] = load %_QM__fortran_type_infoTderivedtype, ptr %[[TYPEDESCPTR]]
 ! CHECK: %[[DT:.*]] = extractvalue %_QM__fortran_type_infoTderivedtype %[[LOADED_TYPEDESC]], 0
 ! CHECK: %[[BINDING_BASE_ADDR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] } %[[DT]], 0
-! CHECK: %[[BINDING_PTR:.*]] = getelementptr %_QM__fortran_type_infoTbinding, ptr %[[BINDING_BASE_ADDR]], i32 5
+! CHECK: %[[BINDING_PTR:.*]] = getelementptr %_QM__fortran_type_infoTbinding, ptr %[[BINDING_BASE_ADDR]], i32 6
 ! CHECK: %[[LOADED_BINDING:.*]] = load %_QM__fortran_type_infoTbinding, ptr %[[BINDING_PTR]]
 ! CHECK: %[[BUILTIN_FUNC_PTR:.*]] = extractvalue %_QM__fortran_type_infoTbinding %[[LOADED_BINDING]], 0
 ! CHECK: %[[FUNC_ADDR:.*]] = extractvalue %_QM__fortran_builtinsT__builtin_c_funptr %[[BUILTIN_FUNC_PTR]], 0
@@ -203,25 +219,41 @@ end
 ! CHECK: %[[FUNC_PTR:.*]] = inttoptr i64 %[[FUNC_ADDR]] to ptr
 ! CHECK: call void %[[FUNC_PTR]]()
 
+! CHECK: store i32 1, ptr %[[INT32]]
+! CHECK: %[[LOADED_CLASS:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[CLASS]]
+! CHECK: %[[TYPEDESCPTR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOADED_CLASS]], 7
+! CHECK: %[[LOADED_TYPEDESC:.*]] = load %_QM__fortran_type_infoTderivedtype, ptr %[[TYPEDESCPTR]]
+! CHECK: %[[DT:.*]] = extractvalue %_QM__fortran_type_infoTderivedtype %[[LOADED_TYPEDESC]], 0
+! CHECK: %[[BINDING_BASE_ADDR:.*]] = extractvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] } %[[DT]], 0
+! CHECK: %[[BINDING_PTR:.*]] = getelementptr %_QM__fortran_type_infoTbinding, ptr %[[BINDING_BASE_ADDR]], i32 5
+! CHECK: %[[LOADED_BINDING:.*]] = load %_QM__fortran_type_infoTbinding, ptr %[[BINDING_PTR]]
+! CHECK: %[[BUILTIN_FUNC_PTR:.*]] = extractvalue %_QM__fortran_type_infoTbinding %[[LOADED_BINDING]], 0
+! CHECK: %[[FUNC_ADDR:.*]] = extractvalue %_QM__fortran_builtinsT__builtin_c_funptr %[[BUILTIN_FUNC_PTR]], 0
+! CHECK: %[[FUNC_PTR:.*]] = inttoptr i64 %[[FUNC_ADDR]] to ptr
+! CHECK: call void %[[FUNC_PTR]](ptr %[[INT32]], ptr %[[CLASS]])
+
 
 ! Check the layout of the binding table. This is easier to do in FIR than in 
 ! LLVM IR.
 
-! BT-LABEL: fir.global linkonce_odr @_QMdispatch1E.v.p1 constant target : !fir.array<6x!fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>> {
+! BT-LABEL: fir.global linkonce_odr @_QMdispatch1E.v.p1 constant target : !fir.array<7x!fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>> {
 ! BT: %{{.*}} = fir.address_of(@_QMdispatch1Paproc) : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ()
 ! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pdisplay1_p1) : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ()
 ! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pdisplay2_p1) : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ()
 ! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pget_value_p1) : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> i32
 ! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pproc_nopass_p1) : () -> ()
+! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pproc_pass_p1) : (!fir.ref<i32>, !fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ()
 ! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pproc_p1) : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>, !fir.ref<f32>) -> ()
 ! BT: }
 
-! BT-LABEL: fir.global linkonce_odr @_QMdispatch1E.v.p2 constant target : !fir.array<7x!fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>> {
-! BT: %3 = fir.address_of(@_QMdispatch1Paproc) : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ()
-! BT: %18 = fir.address_of(@_QMdispatch1Pdisplay1_p2) : (!fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>) -> ()
-! BT: %33 = fir.address_of(@_QMdispatch1Pdisplay2_p2) : (!fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>) -> ()
-! BT: %48 = fir.address_of(@_QMdispatch1Pget_value_p2) : (!fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>) -> i32
-! BT: %63 = fir.address_of(@_QMdispatch1Pproc_nopass_p2) : () -> ()
-! BT: %78 = fir.address_of(@_QMdispatch1Pproc_p2) : (!fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>, !fir.ref<f32>) -> ()
-! BT: %93 = fir.address_of(@_QMdispatch1Pdisplay3) : (!fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>) -> ()
+! BT-LABEL: fir.global linkonce_odr @_QMdispatch1E.v.p2 constant target : !fir.array<8x!fir.type<_QM__fortran_type_infoTbinding{proc:!fir.type<_QM__fortran_builtinsT__builtin_c_funptr{__address:i64}>,name:!fir.box<!fir.ptr<!fir.char<1,?>>>}>> {
+! BT: %{{.*}} = fir.address_of(@_QMdispatch1Paproc) : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>) -> ()
+! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pdisplay1_p2) : (!fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>) -> ()
+! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pdisplay2_p2) : (!fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>) -> ()
+! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pget_value_p2) : (!fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>) -> i32
+! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pproc_nopass_p2) : () -> ()
+! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pproc_pass_p2) : (!fir.ref<i32>, !fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>) -> ()
+! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pproc_p2) : (!fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>, !fir.ref<f32>) -> ()
+! BT: %{{.*}} = fir.address_of(@_QMdispatch1Pdisplay3) : (!fir.class<!fir.type<_QMdispatch1Tp2{a:i32,b:i32,c:i32}>>) -> ()
 ! BT: }
+

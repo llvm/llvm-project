@@ -1312,6 +1312,18 @@ public:
     return VectorList.NumElements == NumElements;
   }
 
+  template <RegKind VectorKind, unsigned NumRegs, unsigned NumElements,
+            unsigned ElementWidth>
+  DiagnosticPredicate isTypedVectorListMultiple() const {
+    bool Res =
+        isTypedVectorList<VectorKind, NumRegs, NumElements, ElementWidth>();
+    if (!Res)
+      return DiagnosticPredicateTy::NoMatch;
+    if (((VectorList.RegNum - AArch64::Z0) % NumRegs) != 0)
+      return DiagnosticPredicateTy::NearMatch;
+    return DiagnosticPredicateTy::Match;
+  }
+
   template <int Min, int Max>
   DiagnosticPredicate isVectorIndex() const {
     if (Kind != k_VectorIndex)
@@ -5514,6 +5526,16 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "operand must be a register in range [w12, w15]");
   case Match_InvalidMatrixIndexGPR32_8_11:
     return Error(Loc, "operand must be a register in range [w8, w11]");
+  case Match_InvalidSVEVectorListMul2x32:
+  case Match_InvalidSVEVectorListMul2x64:
+    return Error(Loc, "Invalid vector list, expected list with 2 consecutive "
+                      "SVE vectors, where the first vector is a multiple of 2 "
+                      "and with matching element types");
+  case Match_InvalidSVEVectorListMul4x32:
+  case Match_InvalidSVEVectorListMul4x64:
+    return Error(Loc, "Invalid vector list, expected list with 4 consecutive "
+                      "SVE vectors, where the first vector is a multiple of 4 "
+                      "and with matching element types");
   default:
     llvm_unreachable("unexpected error code!");
   }
@@ -6051,6 +6073,10 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSVCR:
   case Match_InvalidMatrixIndexGPR32_12_15:
   case Match_InvalidMatrixIndexGPR32_8_11:
+  case Match_InvalidSVEVectorListMul2x32:
+  case Match_InvalidSVEVectorListMul2x64:
+  case Match_InvalidSVEVectorListMul4x32:
+  case Match_InvalidSVEVectorListMul4x64:
   case Match_MSR:
   case Match_MRS: {
     if (ErrorInfo >= Operands.size())

@@ -1930,7 +1930,7 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
                                                       Value *Ptr1) const
     -> std::optional<int> {
   struct Builder : IRBuilder<> {
-    Builder(BasicBlock *B) : IRBuilder<>(B) {}
+    Builder(BasicBlock *B) : IRBuilder<>(B->getTerminator()) {}
     ~Builder() {
       for (Instruction *I : llvm::reverse(ToErase))
         I->eraseFromParent();

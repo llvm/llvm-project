@@ -33,26 +33,26 @@ define void @VF1-VPlanExe(i32* %dst) {
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
 ; CHECK:       pred.store.continue:
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_STORE_IF7:%.*]], label [[PRED_STORE_CONTINUE8:%.*]]
-; CHECK:       pred.store.if7:
+; CHECK:       pred.store.if4:
 ; CHECK-NEXT:    [[INDUCTION1:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 [[INDUCTION1]]
 ; CHECK-NEXT:    store i32 0, i32* [[TMP5]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE8]]
-; CHECK:       pred.store.continue8:
+; CHECK:       pred.store.continue5:
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF9:%.*]], label [[PRED_STORE_CONTINUE10:%.*]]
-; CHECK:       pred.store.if9:
+; CHECK:       pred.store.if6:
 ; CHECK-NEXT:    [[INDUCTION2:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 [[INDUCTION2]]
 ; CHECK-NEXT:    store i32 0, i32* [[TMP6]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE10]]
-; CHECK:       pred.store.continue10:
+; CHECK:       pred.store.continue7:
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[PRED_STORE_IF11:%.*]], label [[PRED_STORE_CONTINUE12]]
-; CHECK:       pred.store.if11:
+; CHECK:       pred.store.if8:
 ; CHECK-NEXT:    [[INDUCTION3:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, i32* [[DST]], i64 [[INDUCTION3]]
 ; CHECK-NEXT:    store i32 0, i32* [[TMP7]], align 4
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE12]]
-; CHECK:       pred.store.continue12:
+; CHECK:       pred.store.continue9:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

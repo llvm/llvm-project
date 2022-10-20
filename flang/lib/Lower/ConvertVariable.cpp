@@ -1293,6 +1293,42 @@ recoverShapeVector(llvm::ArrayRef<std::int64_t> shapeVec, mlir::Value initVal) {
   return result;
 }
 
+static fir::FortranVariableFlagsAttr
+translateSymbolAttributes(mlir::MLIRContext *mlirContext,
+                          const Fortran::semantics::Symbol &sym) {
+  fir::FortranVariableFlagsEnum flags = fir::FortranVariableFlagsEnum::None;
+  const auto &attrs = sym.attrs();
+  if (attrs.test(Fortran::semantics::Attr::ALLOCATABLE))
+    flags = flags | fir::FortranVariableFlagsEnum::allocatable;
+  if (attrs.test(Fortran::semantics::Attr::ASYNCHRONOUS))
+    flags = flags | fir::FortranVariableFlagsEnum::asynchronous;
+  if (attrs.test(Fortran::semantics::Attr::BIND_C))
+    flags = flags | fir::FortranVariableFlagsEnum::bind_c;
+  if (attrs.test(Fortran::semantics::Attr::CONTIGUOUS))
+    flags = flags | fir::FortranVariableFlagsEnum::contiguous;
+  if (attrs.test(Fortran::semantics::Attr::INTENT_IN))
+    flags = flags | fir::FortranVariableFlagsEnum::intent_in;
+  if (attrs.test(Fortran::semantics::Attr::INTENT_INOUT))
+    flags = flags | fir::FortranVariableFlagsEnum::intent_inout;
+  if (attrs.test(Fortran::semantics::Attr::INTENT_OUT))
+    flags = flags | fir::FortranVariableFlagsEnum::intent_out;
+  if (attrs.test(Fortran::semantics::Attr::OPTIONAL))
+    flags = flags | fir::FortranVariableFlagsEnum::optional;
+  if (attrs.test(Fortran::semantics::Attr::PARAMETER))
+    flags = flags | fir::FortranVariableFlagsEnum::parameter;
+  if (attrs.test(Fortran::semantics::Attr::POINTER))
+    flags = flags | fir::FortranVariableFlagsEnum::pointer;
+  if (attrs.test(Fortran::semantics::Attr::TARGET))
+    flags = flags | fir::FortranVariableFlagsEnum::target;
+  if (attrs.test(Fortran::semantics::Attr::VALUE))
+    flags = flags | fir::FortranVariableFlagsEnum::value;
+  if (attrs.test(Fortran::semantics::Attr::VOLATILE))
+    flags = flags | fir::FortranVariableFlagsEnum::fortran_volatile;
+  if (flags == fir::FortranVariableFlagsEnum::None)
+    return {};
+  return fir::FortranVariableFlagsAttr::get(mlirContext, flags);
+}
+
 /// Map a symbol to its FIR address and evaluated specification expressions.
 /// Not for symbols lowered to fir.box.
 /// Will optionally create fir.declare.
@@ -1303,9 +1339,29 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
                              llvm::ArrayRef<mlir::Value> shape = llvm::None,
                              llvm::ArrayRef<mlir::Value> lbounds = llvm::None,
                              bool force = false) {
-  if (converter.getLoweringOptions().getLowerToHighLevelFIR())
-    TODO(genLocation(converter, sym),
-         "generate fir.declare when lowering symbol");
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    const mlir::Location loc = genLocation(converter, sym);
+    mlir::Value shapeOrShift;
+    if (!shape.empty() && !lbounds.empty())
+      shapeOrShift = builder.genShape(loc, shape, lbounds);
+    else if (!shape.empty())
+      shapeOrShift = builder.genShape(loc, shape);
+    else if (!lbounds.empty())
+      shapeOrShift = builder.genShift(loc, lbounds);
+    llvm::SmallVector<mlir::Value> lenParams;
+    if (len)
+      lenParams.emplace_back(len);
+    auto name = mlir::StringAttr::get(builder.getContext(),
+                                      Fortran::lower::mangle::mangleName(sym));
+    fir::FortranVariableFlagsAttr attributes =
+        translateSymbolAttributes(builder.getContext(), sym);
+    auto newBase = builder.create<fir::DeclareOp>(
+        loc, base.getType(), base, shapeOrShift, lenParams, name, attributes);
+    base = newBase;
+    symMap.addVariableDefinition(sym, newBase);
+    return;
+  }
 
   if (len) {
     if (!shape.empty()) {

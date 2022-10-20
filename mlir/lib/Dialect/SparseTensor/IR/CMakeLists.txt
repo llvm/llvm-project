@@ -9,13 +9,31 @@
 # `INTERFACE` libraries.
 set(MLIRSparseTensorEnums_srcs
     ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SparseTensor/IR/Enums.h)
-add_library(MLIRSparseTensorEnums INTERFACE ${MLIRSparseTensorEnums_srcs})
+# This conditional is copypasta from `add_mlir_library`.
 if(MSVC_IDE OR XCODE)
   set_source_files_properties(${MLIRSparseTensorEnums_srcs}
     PROPERTIES HEADER_FILE_ONLY ON)
 endif()
-add_mlir_library_install(MLIRSparseTensorEnums)
-set_property(TARGET MLIRSparseTensorEnums PROPERTY CXX_STANDARD 17)
+# Older versions of cmake (< 3.19) require INTERFACE libraries to separate
+# the `add_library` and `target_sources` calls.
+add_library(MLIRSparseTensorEnums INTERFACE)
+target_sources(MLIRSparseTensorEnums INTERFACE ${MLIRSparseTensorEnums_srcs})
+# The `add_mlir_library_install` is required for other libraries to
+# depend on this one, but the conditional itself and the phony target
+# are copypasta from `add_mlir_library`.  Afaict (wrengr), the version
+# in `add_mlir_library` is to prevent `add_mlir_library_install` from
+# raising additional errors whenever the underlying call to `add_llvm_library`
+# fails.  However, since we are using `add_library` directly, I'm not
+# sure if the conditional is helpful/required here or not.
+if(TARGET MLIRSparseTensorEnums)
+  add_mlir_library_install(MLIRSparseTensorEnums)
+else()
+  # Add empty "phony" target
+  add_custom_target(MLIRSparseTensorEnums)
+endif()
+# Older versions of cmake (i.e., 3.18.0 but not 3.24.2) disallow setting
+# the CXX_STANDARD property for INTERFACE libraries.  However, this library
+# must adhere to the same CXX_STANDARD restriction as mlir_c_runner_utils.
 
 
 add_mlir_dialect_library(MLIRSparseTensorDialect

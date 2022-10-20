@@ -25,10 +25,18 @@ add_custom_target(libcxx-generate-extended-grapheme-cluster-tests
          "${LIBCXX_SOURCE_DIR}/test/libcxx/utilities/format/format.string/format.string.std/extended_grapheme_cluster.h"
     COMMENT "Generate the extended grapheme cluster header.")
 
+add_custom_target(libcxx-generate-escaped-output-table
+    COMMAND
+        "${Python3_EXECUTABLE}"
+        "${LIBCXX_SOURCE_DIR}/utils/generate_escaped_output_table.py"
+        "${LIBCXX_SOURCE_DIR}/include/__format/escaped_output_table.h"
+    COMMENT "Generate the escaped output header")
+
 add_custom_target(libcxx-generate-files
     DEPENDS libcxx-generate-public-header-transitive-inclusion-tests
             libcxx-generate-public-header-tests
             libcxx-generate-feature-test-macros
             libcxx-generate-extended-grapheme-cluster-tables
             libcxx-generate-extended-grapheme-cluster-tests
+            libcxx-generate-escaped-output-table
     COMMENT "Create all the auto-generated files in libc++ and its tests.")

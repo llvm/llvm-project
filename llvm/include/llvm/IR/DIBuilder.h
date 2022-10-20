@@ -685,7 +685,7 @@ namespace llvm {
     DIGlobalVariable *createTempGlobalVariableFwdDecl(
         DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *File,
         unsigned LineNo, DIType *Ty, bool IsLocalToUnit, MDNode *Decl = nullptr,
-        MDTuple *TemplateParams= nullptr, uint32_t AlignInBits = 0);
+        MDTuple *TemplateParams = nullptr, uint32_t AlignInBits = 0);
 
     /// Create a new descriptor for an auto variable.  This is a local variable
     /// that is not a subprogram parameter.

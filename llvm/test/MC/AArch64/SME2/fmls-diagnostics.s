@@ -48,3 +48,30 @@ fmls za.d[w8, 0, vgx2], {z0.d-z3.d}, z0.d
 // CHECK-NEXT: za.d[w8, 0, vgx2], {z0.d-z3.d}, z0.d
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+// --------------------------------------------------------------------------//
+// Invalid vector list.
+
+fmls za.d[w8, 0], {z0.d,z2.d}, {z0.d,z2.d}
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must be sequential
+// CHECK-NEXT: fmls za.d[w8, 0], {z0.d,z2.d}, {z0.d,z2.d}
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+fmls za.s[w10, 3, vgx2], {z10.s-z11.s}, {z21.s-z22.s}
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Invalid vector list, expected list with 2 consecutive SVE vectors, where the first vector is a multiple of 2 and with matching element types
+// CHECK-NEXT: fmls za.s[w10, 3, vgx2], {z10.s-z11.s}, {z21.s-z22.s}
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+fmls za.d[w11, 7, vgx4], {z12.d-z15.d}, {z9.d-z12.d}
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Invalid vector list, expected list with 4 consecutive SVE vectors, where the first vector is a multiple of 4 and with matching element types
+// CHECK-NEXT: fmls za.d[w11, 7, vgx4], {z12.d-z15.d}, {z9.d-z12.d}
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+fmls za.s[w10, 3], {z10.b-z11.b}, {z20.b-z21.b}
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: fmls za.s[w10, 3], {z10.b-z11.b}, {z20.b-z21.b}
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+fmls     za.d[w11, 7], {z28.h - z31.h}, {z28.h - z31.h}
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: fmls     za.d[w11, 7], {z28.h - z31.h}, {z28.h - z31.h}
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

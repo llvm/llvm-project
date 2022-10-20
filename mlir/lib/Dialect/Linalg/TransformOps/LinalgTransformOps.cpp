@@ -1050,7 +1050,7 @@ transform::SplitReductionOp::applyToOne(linalg::LinalgOp target,
   ControlSplitReductionFn splitFn = [&](LinalgOp) {
     return linalg::SplitReductionOptions{int64_t(getSplitFactor()),
                                          unsigned(getInsertSplitDimension()),
-                                         /*innerParallel=*/false};
+                                         bool(getInnerParallel())};
   };
   SimpleRewriter rewriter(getContext());
   rewriter.setInsertionPoint(target);

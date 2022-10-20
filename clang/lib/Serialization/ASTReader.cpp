@@ -122,6 +122,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/raw_ostream.h"
@@ -4208,6 +4209,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
                                             SourceLocation ImportLoc,
                                             unsigned ClientLoadCapabilities,
                                             SmallVectorImpl<ImportedSubmodule> *Imported) {
+  llvm::TimeTraceScope scope("ReadAST", FileName);
+
   llvm::SaveAndRestore<SourceLocation>
     SetCurImportLocRAII(CurrentImportLoc, ImportLoc);
   llvm::SaveAndRestore<Optional<ModuleKind>> SetCurModuleKindRAII(

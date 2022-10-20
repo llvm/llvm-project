@@ -184,20 +184,15 @@ uint32_t TypeCategoryImpl::GetCount(FormatCategoryItems items) {
   return count;
 }
 
-bool TypeCategoryImpl::AnyMatches(ConstString type_name,
-                                  FormatCategoryItems items, bool only_enabled,
-                                  const char **matching_category,
-                                  FormatCategoryItems *matching_type) {
+bool TypeCategoryImpl::AnyMatches(
+    const FormattersMatchCandidate &candidate_type, FormatCategoryItems items,
+    bool only_enabled, const char **matching_category,
+    FormatCategoryItems *matching_type) {
   if (!IsEnabled() && only_enabled)
     return false;
 
-  lldb::TypeFormatImplSP format_sp;
-  lldb::TypeSummaryImplSP summary_sp;
-  TypeFilterImpl::SharedPointer filter_sp;
-  ScriptedSyntheticChildren::SharedPointer synth_sp;
-
   if (items & eFormatCategoryItemFormat) {
-    if (m_format_cont.AnyMatches(type_name)) {
+    if (m_format_cont.AnyMatches(candidate_type)) {
       if (matching_category)
         *matching_category = m_name.GetCString();
       if (matching_type)
@@ -207,7 +202,7 @@ bool TypeCategoryImpl::AnyMatches(ConstString type_name,
   }
 
   if (items & eFormatCategoryItemSummary) {
-    if (m_summary_cont.AnyMatches(type_name)) {
+    if (m_summary_cont.AnyMatches(candidate_type)) {
       if (matching_category)
         *matching_category = m_name.GetCString();
       if (matching_type)
@@ -217,7 +212,7 @@ bool TypeCategoryImpl::AnyMatches(ConstString type_name,
   }
 
   if (items & eFormatCategoryItemFilter) {
-    if (m_filter_cont.AnyMatches(type_name)) {
+    if (m_filter_cont.AnyMatches(candidate_type)) {
       if (matching_category)
         *matching_category = m_name.GetCString();
       if (matching_type)
@@ -227,7 +222,7 @@ bool TypeCategoryImpl::AnyMatches(ConstString type_name,
   }
 
   if (items & eFormatCategoryItemSynth) {
-    if (m_synth_cont.AnyMatches(type_name)) {
+    if (m_synth_cont.AnyMatches(candidate_type)) {
       if (matching_category)
         *matching_category = m_name.GetCString();
       if (matching_type)
