@@ -57,6 +57,7 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/ScopedDurationTimer.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -266,6 +267,8 @@ private:
   Error finishComputedResult(const llvm::cas::CASID &ResultCacheKey,
                              bool SkipCache) override;
 
+  Expected<cas::ObjectRef> writeOutputs(const llvm::cas::CASID &ResultCacheKey);
+
   /// Replay a cache hit.
   ///
   /// Return status if should exit immediately, otherwise None.
@@ -349,6 +352,9 @@ private:
 
   Error finishComputedResult(const llvm::cas::CASID &ResultCacheKey,
                              bool SkipCache) override;
+
+  Expected<llvm::cas::remote::KeyValueDBClient::ValueTy>
+  saveOutputs(const llvm::cas::CASID &ResultCacheKey);
 
   Expected<bool> replayCachedResult(
       const llvm::cas::CASID &ResultCacheKey,
@@ -587,17 +593,28 @@ Expected<bool> ObjectStoreCachingOutputs::tryReplayCachedResult(
     const llvm::cas::CASID &ResultCacheKey) {
   DiagnosticsEngine &Diags = Clang.getDiagnostics();
 
-  Expected<Optional<llvm::cas::CASID>> Result = Cache->get(ResultCacheKey);
-  if (!Result)
-    return Result.takeError();
+  Optional<llvm::cas::CASID> Result;
+  {
+    llvm::ScopedDurationTimer ScopedTime([&Diags](double Seconds) {
+      Diags.Report(diag::remark_compile_job_cache_timing_backend_key_query)
+          << llvm::format("%.6fs", Seconds);
+    });
+    if (Error E = Cache->get(ResultCacheKey).moveInto(Result))
+      return std::move(E);
+  }
 
-  if (!*Result) {
+  if (!Result) {
     Diags.Report(diag::remark_compile_job_cache_miss)
         << ResultCacheKey.toString();
     return false;
   }
 
-  Optional<llvm::cas::ObjectRef> ResultRef = CAS->getReference(**Result);
+  llvm::ScopedDurationTimer ScopedTime([&Diags](double Seconds) {
+    Diags.Report(diag::remark_compile_job_cache_timing_backend_load)
+        << llvm::format("%.6fs", Seconds);
+  });
+
+  Optional<llvm::cas::ObjectRef> ResultRef = CAS->getReference(*Result);
   if (!ResultRef) {
     Diags.Report(diag::remark_compile_job_cache_miss_result_not_found)
         << ResultCacheKey.toString() << "result not in CAS";
@@ -763,18 +780,18 @@ bool CompileJobCache::finishComputedResult(CompilerInstance &Clang,
   if (!Success)
     return false;
 
+  DiagnosticsEngine &Diags = Clang.getDiagnostics();
+
   // Existing diagnostic client is finished, create a new one in case we need
   // to print more diagnostics.
-  Clang.getDiagnostics().setClient(
-      new TextDiagnosticPrinter(llvm::errs(),
-                                &Clang.getInvocation().getDiagnosticOpts()),
-      /*ShouldOwnClient=*/true);
+  Diags.setClient(new TextDiagnosticPrinter(
+                      llvm::errs(), &Clang.getInvocation().getDiagnosticOpts()),
+                  /*ShouldOwnClient=*/true);
 
   // Check if we encounter any source that would generate non-reproducible
   // outputs.
   bool SkipCache = Clang.hasPreprocessor() && Clang.isSourceNonReproducible();
   if (SkipCache) {
-    DiagnosticsEngine &Diags = Clang.getDiagnostics();
     switch (Clang.getPreprocessorOpts().CachingDiagOption) {
       case CachingDiagKind::None:
         break;
@@ -789,7 +806,7 @@ bool CompileJobCache::finishComputedResult(CompilerInstance &Clang,
 
   if (Error E =
           CacheBackend->finishComputedResult(*ResultCacheKey, SkipCache)) {
-    reportCachingBackendError(Clang.getDiagnostics(), std::move(E));
+    reportCachingBackendError(Diags, std::move(E));
     return false;
   }
   return true;
@@ -811,18 +828,22 @@ void CachingOutputs::finishSerializedDiagnostics() {
   }
 }
 
-Error ObjectStoreCachingOutputs::finishComputedResult(
-    const llvm::cas::CASID &ResultCacheKey, bool SkipCache) {
-  // FIXME: Stop calling report_fatal_error().
+Expected<cas::ObjectRef> ObjectStoreCachingOutputs::writeOutputs(
+    const llvm::cas::CASID &ResultCacheKey) {
+  DiagnosticsEngine &Diags = Clang.getDiagnostics();
+  llvm::ScopedDurationTimer ScopedTime([&Diags](double Seconds) {
+    Diags.Report(diag::remark_compile_job_cache_timing_backend_store)
+        << llvm::format("%.6fs", Seconds);
+  });
+
   if (!SerialDiagsOutput) {
     // Not requested to get a serialized diagnostics file but we generated it
     // and will store it regardless so that the key is independent of the
     // presence of '--serialize-diagnostics'.
     Expected<llvm::cas::ObjectProxy> SerialDiags =
         CAS->createProxy(None, SerialDiagsBuf);
-    // FIXME: Stop calling report_fatal_error().
     if (!SerialDiags)
-      llvm::report_fatal_error(SerialDiags.takeError());
+      return SerialDiags.takeError();
     CachedResultBuilder.addOutput(OutputKind::SerializedDiagnostics,
                                   SerialDiags->getRef());
   }
@@ -834,27 +855,33 @@ Error ObjectStoreCachingOutputs::finishComputedResult(
   auto BackendOutputs = CASOutputs->takeOutputs();
   for (auto &Output : BackendOutputs)
     if (auto Err = CachedResultBuilder.addOutput(Output.Path, Output.Object))
-      llvm::report_fatal_error(std::move(Err));
+      return std::move(Err);
 
   // Hack around llvm::errs() not being captured by the output backend yet.
-  //
-  // FIXME: Stop calling report_fatal_error().
   Expected<llvm::cas::ObjectRef> Errs = CAS->storeFromString(None, ResultDiags);
   if (!Errs)
-    llvm::report_fatal_error(Errs.takeError());
+    return Errs.takeError();
   CachedResultBuilder.addOutput(OutputKind::Stderr, *Errs);
 
   // Cache the result.
-  //
-  // FIXME: Stop calling report_fatal_error().
-  Expected<cas::ObjectRef> Result = CachedResultBuilder.build(*CAS);
+  return CachedResultBuilder.build(*CAS);
+}
+
+Error ObjectStoreCachingOutputs::finishComputedResult(
+    const llvm::cas::CASID &ResultCacheKey, bool SkipCache) {
+  Expected<cas::ObjectRef> Result = writeOutputs(ResultCacheKey);
   if (!Result)
-    llvm::report_fatal_error(Result.takeError());
+    return Result.takeError();
 
   // Skip caching if requested.
   if (!SkipCache) {
+    DiagnosticsEngine &Diags = Clang.getDiagnostics();
+    llvm::ScopedDurationTimer ScopedTime([&Diags](double Seconds) {
+      Diags.Report(diag::remark_compile_job_cache_timing_backend_key_update)
+          << llvm::format("%.6fs", Seconds);
+    });
     if (llvm::Error E = Cache->put(ResultCacheKey, CAS->getID(*Result)))
-      llvm::report_fatal_error(std::move(E));
+      return E;
   }
 
   // Replay / decanonicalize as necessary.
@@ -952,16 +979,28 @@ Expected<bool> RemoteCachingOutputs::tryReplayCachedResult(
     const llvm::cas::CASID &ResultCacheKey) {
   DiagnosticsEngine &Diags = Clang.getDiagnostics();
 
-  RemoteKVClient->getValueQueue().getValueAsync(ResultCacheKey.getHash());
-  Expected<llvm::cas::remote::KeyValueDBClient::GetValueAsyncQueue::Response>
-      Response = RemoteKVClient->getValueQueue().receiveNext();
-  if (!Response)
-    return Response.takeError();
+  Optional<llvm::cas::remote::KeyValueDBClient::GetValueAsyncQueue::Response>
+      Response;
+  {
+    llvm::ScopedDurationTimer ScopedTime([&Diags](double Seconds) {
+      Diags.Report(diag::remark_compile_job_cache_timing_backend_key_query)
+          << llvm::format("%.6fs", Seconds);
+    });
+    RemoteKVClient->getValueQueue().getValueAsync(ResultCacheKey.getHash());
+    if (Error E =
+            RemoteKVClient->getValueQueue().receiveNext().moveInto(Response))
+      return std::move(E);
+  }
   if (!Response->Value) {
     Diags.Report(diag::remark_compile_job_cache_miss)
         << ResultCacheKey.toString();
     return false;
   }
+
+  llvm::ScopedDurationTimer ScopedTime([&Diags](double Seconds) {
+    Diags.Report(diag::remark_compile_job_cache_timing_backend_load)
+        << llvm::format("%.6fs", Seconds);
+  });
 
   Expected<bool> ReplayedResult =
       replayCachedResult(ResultCacheKey, *Response->Value);
@@ -1118,14 +1157,13 @@ bool RemoteCachingOutputs::prepareOutputCollection() {
   return prepareOutputCollectionCommon(CollectingOutputs);
 }
 
-Error RemoteCachingOutputs::finishComputedResult(
-    const llvm::cas::CASID &ResultCacheKey, bool SkipCache) {
-  if (SkipCache)
-    return Error::success();
-
-  // Release the llbuild execution lane while we wait to upload data to remote
-  // cache.
-  tryReleaseLLBuildExecutionLane();
+Expected<llvm::cas::remote::KeyValueDBClient::ValueTy>
+RemoteCachingOutputs::saveOutputs(const llvm::cas::CASID &ResultCacheKey) {
+  DiagnosticsEngine &Diags = Clang.getDiagnostics();
+  llvm::ScopedDurationTimer ScopedTime([&Diags](double Seconds) {
+    Diags.Report(diag::remark_compile_job_cache_timing_backend_store)
+        << llvm::format("%.6fs", Seconds);
+  });
 
   auto &SaveQueue = RemoteCASClient->saveQueue();
   struct CallCtx : public llvm::cas::remote::AsyncCallerContext {
@@ -1174,8 +1212,31 @@ Error RemoteCachingOutputs::finishComputedResult(
     CompResult[OutputName] = Response->CASID;
   }
 
+  return std::move(CompResult);
+}
+
+Error RemoteCachingOutputs::finishComputedResult(
+    const llvm::cas::CASID &ResultCacheKey, bool SkipCache) {
+  if (SkipCache)
+    return Error::success();
+
+  // Release the llbuild execution lane while we wait to upload data to remote
+  // cache.
+  tryReleaseLLBuildExecutionLane();
+
+  Expected<llvm::cas::remote::KeyValueDBClient::ValueTy> CompResult =
+      saveOutputs(ResultCacheKey);
+  if (!CompResult)
+    return CompResult.takeError();
+
+  DiagnosticsEngine &Diags = Clang.getDiagnostics();
+  llvm::ScopedDurationTimer ScopedTime([&Diags](double Seconds) {
+    Diags.Report(diag::remark_compile_job_cache_timing_backend_key_update)
+        << llvm::format("%.6fs", Seconds);
+  });
+
   RemoteKVClient->putValueQueue().putValueAsync(ResultCacheKey.getHash(),
-                                                CompResult);
+                                                *CompResult);
   auto Response = RemoteKVClient->putValueQueue().receiveNext();
   if (!Response)
     return Response.takeError();

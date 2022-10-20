@@ -56,5 +56,15 @@ def remark_compile_job_cache_backend_output_not_found : Remark<
   InGroup<CompileJobCacheMiss>;
 def remark_compile_job_cache_skipped : Remark<
   "compile job cache skipped for '%0'">, InGroup<CompileJobCache>;
+def remark_compile_job_cache_timing_depscan : Remark<
+  "compile job dependency scanning time: %0">, InGroup<CompileJobCacheTiming>;
+def remark_compile_job_cache_timing_backend_key_query : Remark<
+  "compile job cache backend key query time: %0">, InGroup<CompileJobCacheTiming>;
+def remark_compile_job_cache_timing_backend_key_update : Remark<
+  "compile job cache backend key update time: %0">, InGroup<CompileJobCacheTiming>;
+def remark_compile_job_cache_timing_backend_load : Remark<
+  "compile job cache backend load artifacts time: %0">, InGroup<CompileJobCacheTiming>;
+def remark_compile_job_cache_timing_backend_store : Remark<
+  "compile job cache backend store artifacts time: %0">, InGroup<CompileJobCacheTiming>;
 
 } // let Component = "CAS" in
