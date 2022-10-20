@@ -204,6 +204,9 @@
 #define bit_AVX512BF16    0x00000020
 #define bit_HRESET        0x00400000
 
+/* Features in %edx for leaf 7 sub-leaf 1 */
+#define bit_PREFETCHI     0x00004000
+
 /* Features in %eax for leaf 13 sub-leaf 1 */
 #define bit_XSAVEOPT    0x00000001
 #define bit_XSAVEC      0x00000002

@@ -174,6 +174,7 @@ set(x86_files
   pkuintrin.h
   pmmintrin.h
   popcntintrin.h
+  prfchiintrin.h
   prfchwintrin.h
   ptrauth.h
   ptwriteintrin.h
