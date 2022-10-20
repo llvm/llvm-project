@@ -51,6 +51,15 @@ const char *LVSymbol::kind() const {
   return Kind;
 }
 
+LVSymbolDispatch LVSymbol::Dispatch = {
+    {LVSymbolKind::IsCallSiteParameter, &LVSymbol::getIsCallSiteParameter},
+    {LVSymbolKind::IsConstant, &LVSymbol::getIsConstant},
+    {LVSymbolKind::IsInheritance, &LVSymbol::getIsInheritance},
+    {LVSymbolKind::IsMember, &LVSymbol::getIsMember},
+    {LVSymbolKind::IsParameter, &LVSymbol::getIsParameter},
+    {LVSymbolKind::IsUnspecified, &LVSymbol::getIsUnspecified},
+    {LVSymbolKind::IsVariable, &LVSymbol::getIsVariable}};
+
 // Add a Location Entry.
 void LVSymbol::addLocation(dwarf::Attribute Attr, LVAddress LowPC,
                            LVAddress HighPC, LVUnsigned SectionOffset,
@@ -212,6 +221,9 @@ void LVSymbol::resolveName() {
   setIsResolvedName();
 
   LVElement::resolveName();
+
+  // Resolve any given pattern.
+  patterns().resolvePatternMatch(this);
 }
 
 void LVSymbol::resolveReferences() {
