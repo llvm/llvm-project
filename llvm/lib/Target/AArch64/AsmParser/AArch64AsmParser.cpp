@@ -272,6 +272,7 @@ private:
   OperandMatchResultTy tryParseMatrixTileList(OperandVector &Operands);
   OperandMatchResultTy tryParseSVEPattern(OperandVector &Operands);
   OperandMatchResultTy tryParseGPR64x8(OperandVector &Operands);
+  OperandMatchResultTy tryParseImmRange(OperandVector &Operands);
 
 public:
   enum AArch64MatchResultTy {
@@ -327,6 +328,7 @@ private:
   enum KindTy {
     k_Immediate,
     k_ShiftedImm,
+    k_ImmRange,
     k_CondCode,
     k_Register,
     k_MatrixRegister,
@@ -417,6 +419,11 @@ private:
     unsigned ShiftAmount;
   };
 
+  struct ImmRangeOp {
+    unsigned First;
+    unsigned Last;
+  };
+
   struct CondCodeOp {
     AArch64CC::CondCode Code;
   };
@@ -478,6 +485,7 @@ private:
     struct VectorIndexOp VectorIndex;
     struct ImmOp Imm;
     struct ShiftedImmOp ShiftedImm;
+    struct ImmRangeOp ImmRange;
     struct CondCodeOp CondCode;
     struct FPImmOp FPImm;
     struct BarrierOp Barrier;
@@ -510,6 +518,9 @@ public:
       break;
     case k_ShiftedImm:
       ShiftedImm = o.ShiftedImm;
+      break;
+    case k_ImmRange:
+      ImmRange = o.ImmRange;
       break;
     case k_CondCode:
       CondCode = o.CondCode;
@@ -587,6 +598,16 @@ public:
   unsigned getShiftedImmShift() const {
     assert(Kind == k_ShiftedImm && "Invalid access!");
     return ShiftedImm.ShiftAmount;
+  }
+
+  unsigned getFirstImmVal() const {
+    assert(Kind == k_ImmRange && "Invalid access!");
+    return ImmRange.First;
+  }
+
+  unsigned getLastImmVal() const {
+    assert(Kind == k_ImmRange && "Invalid access!");
+    return ImmRange.Last;
   }
 
   AArch64CC::CondCode getCondCode() const {
@@ -752,18 +773,30 @@ public:
     return isImmScaled<Bits, Scale>(true);
   }
 
-  template <int Bits, int Scale> DiagnosticPredicate isUImmScaled() const {
-    return isImmScaled<Bits, Scale>(false);
+  template <int Bits, int Scale, int Offset = 0, bool IsRange = false>
+  DiagnosticPredicate isUImmScaled() const {
+    if (IsRange && isImmRange() &&
+        (getLastImmVal() != getFirstImmVal() + Offset))
+      return DiagnosticPredicateTy::NoMatch;
+
+    return isImmScaled<Bits, Scale, IsRange>(false);
   }
 
-  template <int Bits, int Scale>
+  template <int Bits, int Scale, bool IsRange = false>
   DiagnosticPredicate isImmScaled(bool Signed) const {
-    if (!isImm())
+    if ((!isImm() && !isImmRange()) || (isImm() && IsRange) ||
+        (isImmRange() && !IsRange))
       return DiagnosticPredicateTy::NoMatch;
 
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return DiagnosticPredicateTy::NoMatch;
+    int64_t Val;
+    if (isImmRange())
+      Val = getFirstImmVal();
+    else {
+      const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
+      if (!MCE)
+        return DiagnosticPredicateTy::NoMatch;
+      Val = MCE->getValue();
+    }
 
     int64_t MinVal, MaxVal;
     if (Signed) {
@@ -775,7 +808,6 @@ public:
       MaxVal = ((int64_t(1) << Bits) - 1) * Scale;
     }
 
-    int64_t Val = MCE->getValue();
     if (Val >= MinVal && Val <= MaxVal && (Val % Scale) == 0)
       return DiagnosticPredicateTy::Match;
 
@@ -874,6 +906,8 @@ public:
   }
 
   bool isShiftedImm() const { return Kind == k_ShiftedImm; }
+
+  bool isImmRange() const { return Kind == k_ImmRange; }
 
   /// Returns the immediate value as a pair of (imm, shift) if the immediate is
   /// a shifted immediate by value 'Shift' or '0', or if it is an unshifted
@@ -1770,6 +1804,12 @@ public:
     Inst.addOperand(MCOperand::createImm(MCE->getValue() / Scale));
   }
 
+  template <int Scale>
+  void addImmScaledRangeOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getFirstImmVal() / Scale));
+  }
+
   template <typename T>
   void addLogicalImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
@@ -2111,6 +2151,17 @@ public:
     return Op;
   }
 
+  static std::unique_ptr<AArch64Operand> CreateImmRange(unsigned First,
+                                                        unsigned Last, SMLoc S,
+                                                        SMLoc E,
+                                                        MCContext &Ctx) {
+    auto Op = std::make_unique<AArch64Operand>(k_ImmRange, Ctx);
+    Op->ImmRange.First = First;
+    Op->ImmRange.Last = Last;
+    Op->EndLoc = E;
+    return Op;
+  }
+
   static std::unique_ptr<AArch64Operand>
   CreateCondCode(AArch64CC::CondCode Code, SMLoc S, SMLoc E, MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_CondCode, Ctx);
@@ -2271,6 +2322,12 @@ void AArch64Operand::print(raw_ostream &OS) const {
     OS << "<shiftedimm ";
     OS << *getShiftedImmVal();
     OS << ", lsl #" << AArch64_AM::getShiftValue(Shift) << ">";
+    break;
+  }
+  case k_ImmRange: {
+    OS << "<immrange ";
+    OS << getFirstImmVal();
+    OS << ":" << getLastImmVal() << ">";
     break;
   }
   case k_CondCode:
@@ -2998,6 +3055,10 @@ AArch64AsmParser::tryParseImmWithOptionalShift(OperandVector &Operands) {
   else if (getTok().isNot(AsmToken::Integer))
     // Operand should start from # or should be integer, emit error otherwise.
     return MatchOperand_NoMatch;
+
+  if (getTok().is(AsmToken::Integer) &&
+      getLexer().peekTok().is(AsmToken::Colon))
+    return tryParseImmRange(Operands);
 
   const MCExpr *Imm = nullptr;
   if (parseSymbolicImmVal(Imm))
@@ -5351,6 +5412,15 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "immediate must be an integer in range [1, 32].");
   case Match_InvalidImm1_64:
     return Error(Loc, "immediate must be an integer in range [1, 64].");
+  case Match_InvalidMemoryIndexedRange2UImm2:
+  case Match_InvalidMemoryIndexedRange2UImm3:
+    return Error(
+        Loc,
+        "vector select offset must be an immediate range of the form "
+        "<immf>:<imml>, "
+        "where the first immediate is a multiple of 2 in the range [0, 6] or "
+        "[0, 14] "
+        "depending on the instruction, and the second immediate is immf + 1.");
   case Match_InvalidSVEAddSubImm8:
     return Error(Loc, "immediate must be an integer in range [0, 255]"
                       " with a shift amount of 0");
@@ -5996,6 +6066,8 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm1_16:
   case Match_InvalidImm1_32:
   case Match_InvalidImm1_64:
+  case Match_InvalidMemoryIndexedRange2UImm2:
+  case Match_InvalidMemoryIndexedRange2UImm3:
   case Match_InvalidSVEAddSubImm8:
   case Match_InvalidSVEAddSubImm16:
   case Match_InvalidSVEAddSubImm32:
@@ -7288,5 +7360,39 @@ AArch64AsmParser::tryParseGPR64x8(OperandVector &Operands) {
 
   Operands.push_back(
       AArch64Operand::CreateReg(X8Reg, RegKind::Scalar, SS, getLoc(), ctx));
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy
+AArch64AsmParser::tryParseImmRange(OperandVector &Operands) {
+  SMLoc S = getLoc();
+
+  if (getTok().isNot(AsmToken::Integer))
+    return MatchOperand_NoMatch;
+
+  if (getLexer().peekTok().isNot(AsmToken::Colon))
+    return MatchOperand_NoMatch;
+
+  const MCExpr *ImmF;
+  if (getParser().parseExpression(ImmF))
+    return MatchOperand_NoMatch;
+
+  if (getTok().isNot(AsmToken::Colon))
+    return MatchOperand_NoMatch;
+
+  Lex(); // Eat ':'
+  if (getTok().isNot(AsmToken::Integer))
+    return MatchOperand_NoMatch;
+
+  SMLoc E = getTok().getLoc();
+  const MCExpr *ImmL;
+  if (getParser().parseExpression(ImmL))
+    return MatchOperand_NoMatch;
+
+  unsigned ImmFVal = dyn_cast<MCConstantExpr>(ImmF)->getValue();
+  unsigned ImmLVal = dyn_cast<MCConstantExpr>(ImmL)->getValue();
+
+  Operands.push_back(
+      AArch64Operand::CreateImmRange(ImmFVal, ImmLVal, S, E, getContext()));
   return MatchOperand_Success;
 }
