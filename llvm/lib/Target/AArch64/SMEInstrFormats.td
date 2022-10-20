@@ -1474,6 +1474,55 @@ multiclass sme2_sqdmulh_add_vector_vg4_single<string mnemonic, bits<6> op> {
   def _D : sme2_sqdmulh_add_vector_vg4_single<0b11, op, ZZZZ_d_mul_r, ZPR4b64, mnemonic>;
 }
 
+
+class sme2_sqdmulh_vector_vg2_multi<bits<2> sz, RegisterOperand vector_ty,
+                                    string mnemonic>
+    : I<(outs vector_ty:$Zdn), (ins vector_ty:$_Zdn, vector_ty:$Zm),
+        mnemonic, "\t$Zdn, $_Zdn, $Zm",
+        "", []>, Sched<[]> {
+  bits<4> Zm;
+  bits<4> Zdn;
+  let Inst{31-24} = 0b11000001;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b1;
+  let Inst{20-17} = Zm;
+  let Inst{16-5}  = 0b010110100000;
+  let Inst{4-1}   = Zdn;
+  let Inst{0}     = 0b0;
+  let Constraints = "$Zdn = $_Zdn";
+}
+
+multiclass sme2_sqdmulh_vector_vg2_multi<string mnemonic> {
+  def _B : sme2_sqdmulh_vector_vg2_multi<0b00, ZZ_b_mul_r, mnemonic>;
+  def _H : sme2_sqdmulh_vector_vg2_multi<0b01, ZZ_h_mul_r, mnemonic>;
+  def _S : sme2_sqdmulh_vector_vg2_multi<0b10, ZZ_s_mul_r, mnemonic>;
+  def _D : sme2_sqdmulh_vector_vg2_multi<0b11, ZZ_d_mul_r, mnemonic>;
+}
+
+class sme2_sqdmulh_vector_vg4_multi<bits<2> sz, RegisterOperand vector_ty,
+                                    string mnemonic>
+    : I<(outs vector_ty:$Zdn), (ins vector_ty:$_Zdn, vector_ty:$Zm),
+        mnemonic, "\t$Zdn, $_Zdn, $Zm",
+        "", []>, Sched<[]> {
+  bits<3> Zm;
+  bits<3> Zdn;
+  let Inst{31-24} = 0b11000001;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b1;
+  let Inst{20-18} = Zm;
+  let Inst{17-5}  = 0b0010111100000;
+  let Inst{4-2}   = Zdn;
+  let Inst{1-0}   = 0b00;
+  let Constraints = "$Zdn = $_Zdn";
+}
+
+multiclass sme2_sqdmulh_vector_vg4_multi<string mnemonic> {
+  def _B : sme2_sqdmulh_vector_vg4_multi<0b00, ZZZZ_b_mul_r, mnemonic>;
+  def _H : sme2_sqdmulh_vector_vg4_multi<0b01, ZZZZ_h_mul_r, mnemonic>;
+  def _S : sme2_sqdmulh_vector_vg4_multi<0b10, ZZZZ_s_mul_r, mnemonic>;
+  def _D : sme2_sqdmulh_vector_vg4_multi<0b11, ZZZZ_d_mul_r, mnemonic>;
+}
+
 //===----------------------------------------------------------------------===//
 // SME2 Multi-vector - Index/Single/Multi Array Vectors FMA sources
 
@@ -1745,4 +1794,3 @@ multiclass sme2_int_cvt_vg4_single<string mnemonic, bits<3> op> {
 def _StoB : sme2_cvt_vg4_single<0b0, op, ZPR8, ZZZZ_s_mul_r, mnemonic>;
 def _DtoH : sme2_cvt_vg4_single<0b1, op, ZPR16, ZZZZ_d_mul_r, mnemonic>;
 }
-
