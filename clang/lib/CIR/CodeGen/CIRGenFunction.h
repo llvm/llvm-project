@@ -360,7 +360,7 @@ public:
 
   clang::ASTContext &getContext() const;
 
-  mlir::OpBuilder &getBuilder() { return builder; }
+  CIRGenBuilderTy &getBuilder() { return builder; }
 
   CIRGenModule &getCIRGenModule() { return CGM; }
 
