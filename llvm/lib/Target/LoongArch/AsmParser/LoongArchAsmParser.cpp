@@ -74,6 +74,7 @@ public:
     Match_Dummy = FIRST_TARGET_MATCH_RESULT_TY,
     Match_RequiresMsbNotLessThanLsb,
     Match_RequiresOpnd2NotR0R1,
+    Match_RequiresAMORdDifferRkRj,
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "LoongArchGenAsmMatcher.inc"
 #undef GET_OPERAND_DIAGNOSTIC_TYPES
@@ -667,8 +668,16 @@ bool LoongArchAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
 }
 
 unsigned LoongArchAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
-  switch (Inst.getOpcode()) {
+  unsigned Opc = Inst.getOpcode();
+  switch (Opc) {
   default:
+    if (Opc >= LoongArch::AMADD_D && Opc <= LoongArch::AMXOR_W) {
+      unsigned Rd = Inst.getOperand(0).getReg();
+      unsigned Rk = Inst.getOperand(1).getReg();
+      unsigned Rj = Inst.getOperand(2).getReg();
+      if (Rd == Rk || Rd == Rj)
+        return Match_RequiresAMORdDifferRkRj;
+    }
     break;
   case LoongArch::CSRXCHG: {
     unsigned Rj = Inst.getOperand(2).getReg();
@@ -791,6 +800,9 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   }
   case Match_RequiresOpnd2NotR0R1:
     return Error(Operands[2]->getStartLoc(), "must not be $r0 or $r1");
+  case Match_RequiresAMORdDifferRkRj:
+    return Error(Operands[1]->getStartLoc(),
+                 "$rd must be different from both $rk and $rj");
   case Match_InvalidUImm2:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 2) - 1);
