@@ -41,12 +41,6 @@ template <class Emitter>
 class ByteCodeExprGen : public ConstStmtVisitor<ByteCodeExprGen<Emitter>, bool>,
                         public Emitter {
 protected:
-  // Emitters for opcodes of various arities.
-  using NullaryFn = bool (ByteCodeExprGen::*)(const SourceInfo &);
-  using UnaryFn = bool (ByteCodeExprGen::*)(PrimType, const SourceInfo &);
-  using BinaryFn = bool (ByteCodeExprGen::*)(PrimType, PrimType,
-                                             const SourceInfo &);
-
   // Aliases for types defined in the emitter.
   using LabelTy = typename Emitter::LabelTy;
   using AddrTy = typename Emitter::AddrTy;
