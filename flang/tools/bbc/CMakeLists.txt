@@ -11,6 +11,7 @@ FIRDialect
 FIRSupport
 FIRTransforms
 FIRBuilder
+HLFIRDialect
 ${dialect_libs}
 MLIRAffineToStandard
 MLIRSCFToControlFlow
