@@ -365,7 +365,7 @@ void OpPassManager::printAsTextualPipeline(raw_ostream &os) const {
 }
 
 void OpPassManager::dump() {
-  llvm::errs() << "Pass Manager with " << impl->passes.size() << " passes: ";
+  llvm::errs() << "Pass Manager with " << impl->passes.size() << " passes:\n";
   printAsTextualPipeline(llvm::errs());
   llvm::errs() << "\n";
 }
