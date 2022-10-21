@@ -1232,7 +1232,7 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
     LLVMFuncOp getFunction(SymbolTableCollection &symbolTable);
   }];
 
-  let assemblyFormat = "$global_name attr-dict `:` type($res)";
+  let assemblyFormat = "$global_name attr-dict `:` qualified(type($res))";
 }
 
 def LLVM_MetadataOp : LLVM_Op<"metadata", [
@@ -1656,7 +1656,7 @@ def LLVM_NullOp
 
   let results = (outs LLVM_AnyPointer:$res);
   let builders = [LLVM_OneResultOpBuilder];
-  let assemblyFormat = "attr-dict `:` type($res)";
+  let assemblyFormat = "attr-dict `:` qualified(type($res))";
 }
 
 def LLVM_UndefOp : LLVM_Op<"mlir.undef", [Pure]>,

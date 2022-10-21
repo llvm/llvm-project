@@ -124,20 +124,8 @@ void mlir::LLVM::detail::printType(Type type, AsmPrinter &printer) {
 
   printer << getTypeKeyword(type);
 
-  if (auto ptrType = type.dyn_cast<LLVMPointerType>()) {
-    if (ptrType.isOpaque()) {
-      if (ptrType.getAddressSpace() != 0)
-        printer << '<' << ptrType.getAddressSpace() << '>';
-      return;
-    }
-
-    printer << '<';
-    dispatchPrint(printer, ptrType.getElementType());
-    if (ptrType.getAddressSpace() != 0)
-      printer << ", " << ptrType.getAddressSpace();
-    printer << '>';
-    return;
-  }
+  if (auto ptrType = type.dyn_cast<LLVMPointerType>())
+    return ptrType.print(printer);
 
   if (auto arrayType = type.dyn_cast<LLVMArrayType>())
     return arrayType.print(printer);
@@ -163,37 +151,6 @@ void mlir::LLVM::detail::printType(Type type, AsmPrinter &printer) {
 //===----------------------------------------------------------------------===//
 
 static ParseResult dispatchParse(AsmParser &parser, Type &type);
-
-/// Parses an LLVM dialect pointer type.
-///   llvm-type ::= `ptr<` llvm-type (`,` integer)? `>`
-///               | `ptr` (`<` integer `>`)?
-static LLVMPointerType parsePointerType(AsmParser &parser) {
-  SMLoc loc = parser.getCurrentLocation();
-  Type elementType;
-  if (parser.parseOptionalLess()) {
-    return parser.getChecked<LLVMPointerType>(loc, parser.getContext(),
-                                              /*addressSpace=*/0);
-  }
-
-  unsigned addressSpace = 0;
-  OptionalParseResult opr = parser.parseOptionalInteger(addressSpace);
-  if (opr.has_value()) {
-    if (failed(*opr) || parser.parseGreater())
-      return LLVMPointerType();
-    return parser.getChecked<LLVMPointerType>(loc, parser.getContext(),
-                                              addressSpace);
-  }
-
-  if (dispatchParse(parser, elementType))
-    return LLVMPointerType();
-
-  if (succeeded(parser.parseOptionalComma()) &&
-      failed(parser.parseInteger(addressSpace)))
-    return LLVMPointerType();
-  if (failed(parser.parseGreater()))
-    return LLVMPointerType();
-  return parser.getChecked<LLVMPointerType>(loc, elementType, addressSpace);
-}
 
 /// Parses an LLVM dialect vector type.
 ///   llvm-type ::= `vec<` `? x`? integer `x` llvm-type `>`
@@ -391,7 +348,7 @@ static Type dispatchParse(AsmParser &parser, bool allowAny = true) {
       .Case("label", [&] { return LLVMLabelType::get(ctx); })
       .Case("metadata", [&] { return LLVMMetadataType::get(ctx); })
       .Case("func", [&] { return LLVMFunctionType::parse(parser); })
-      .Case("ptr", [&] { return parsePointerType(parser); })
+      .Case("ptr", [&] { return LLVMPointerType::parse(parser); })
       .Case("vec", [&] { return parseVectorType(parser); })
       .Case("array", [&] { return LLVMArrayType::parse(parser); })
       .Case("struct", [&] { return parseStructType(parser); })
