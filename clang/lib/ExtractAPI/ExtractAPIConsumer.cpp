@@ -20,10 +20,12 @@
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/ExtractAPI/API.h"
+#include "clang/ExtractAPI/APIIgnoresList.h"
 #include "clang/ExtractAPI/AvailabilityInfo.h"
 #include "clang/ExtractAPI/DeclarationFragments.h"
 #include "clang/ExtractAPI/FrontendActions.h"
@@ -38,6 +40,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -858,6 +861,18 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   Policy.AnonymousTagLocations = false;
   CI.getASTContext().setPrintingPolicy(Policy);
 
+  if (!CI.getFrontendOpts().ExtractAPIIgnoresFile.empty()) {
+    llvm::handleAllErrors(
+        APIIgnoresList::create(CI.getFrontendOpts().ExtractAPIIgnoresFile,
+                               CI.getFileManager())
+            .moveInto(IgnoresList),
+        [&CI](const IgnoresFileNotFound &Err) {
+          CI.getDiagnostics().Report(
+              diag::err_extract_api_ignores_file_not_found)
+              << Err.Path;
+        });
+  }
+
   return std::make_unique<ExtractAPIConsumer>(CI.getASTContext(),
                                               std::move(LCF), *API);
 }
@@ -926,7 +941,7 @@ void ExtractAPIAction::EndSourceFileAction() {
   // Setup a SymbolGraphSerializer to write out collected API information in
   // the Symbol Graph format.
   // FIXME: Make the kind of APISerializer configurable.
-  SymbolGraphSerializer SGSerializer(*API, ProductName);
+  SymbolGraphSerializer SGSerializer(*API, ProductName, IgnoresList);
   SGSerializer.serialize(*OS);
   OS.reset();
 }
