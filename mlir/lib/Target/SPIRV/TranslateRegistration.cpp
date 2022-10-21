@@ -36,8 +36,8 @@ using namespace mlir;
 
 // Deserializes the SPIR-V binary module stored in the file named as
 // `inputFilename` and returns a module containing the SPIR-V module.
-static OwningOpRef<ModuleOp> deserializeModule(const llvm::MemoryBuffer *input,
-                                               MLIRContext *context) {
+static OwningOpRef<Operation *>
+deserializeModule(const llvm::MemoryBuffer *input, MLIRContext *context) {
   context->loadDialect<spirv::SPIRVDialect>();
 
   // Make sure the input stream can be treated as a stream of SPIR-V words
@@ -61,7 +61,7 @@ static OwningOpRef<ModuleOp> deserializeModule(const llvm::MemoryBuffer *input,
       context, input->getBufferIdentifier(), /*line=*/0, /*column=*/0)));
   module->getBody()->push_front(spirvModule.release());
 
-  return module;
+  return std::move(module);
 }
 
 namespace mlir {

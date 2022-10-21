@@ -16,6 +16,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser/Parser.h"
+#include "mlir/Tools/ParseUtilties.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;
@@ -65,10 +66,10 @@ static void registerTranslateToMLIRFunction(
     const TranslateSourceMgrToMLIRFunction &function) {
   auto wrappedFn = [function](llvm::SourceMgr &sourceMgr, raw_ostream &output,
                               MLIRContext *context) {
-    OwningOpRef<ModuleOp> module = function(sourceMgr, context);
-    if (!module || failed(verify(*module)))
+    OwningOpRef<Operation *> op = function(sourceMgr, context);
+    if (!op || failed(verify(*op)))
       return failure();
-    module->print(output);
+    op.get()->print(output);
     return success();
   };
   registerTranslation(name, description, wrappedFn);
@@ -101,6 +102,12 @@ TranslateFromMLIRRegistration::TranslateFromMLIRRegistration(
     StringRef name, StringRef description,
     const TranslateFromMLIRFunction &function,
     const std::function<void(DialectRegistry &)> &dialectRegistration) {
+
+  static llvm::cl::opt<bool> noImplicitModule{
+      "no-implicit-module",
+      llvm::cl::desc("Disable the parsing of an implicit top-level module op"),
+      llvm::cl::init(false)};
+
   registerTranslation(name, description,
                       [function, dialectRegistration](
                           llvm::SourceMgr &sourceMgr, raw_ostream &output,
@@ -108,11 +115,11 @@ TranslateFromMLIRRegistration::TranslateFromMLIRRegistration(
                         DialectRegistry registry;
                         dialectRegistration(registry);
                         context->appendDialectRegistry(registry);
-                        auto module =
-                            parseSourceFile<ModuleOp>(sourceMgr, context);
-                        if (!module || failed(verify(*module)))
+                        OwningOpRef<Operation *> op = parseSourceFileForTool(
+                            sourceMgr, context, !noImplicitModule);
+                        if (!op || failed(verify(*op)))
                           return failure();
-                        return function(module.get(), output);
+                        return function(op.get(), output);
                       });
 }
 
