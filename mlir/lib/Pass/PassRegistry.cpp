@@ -699,13 +699,14 @@ FailureOr<OpPassManager> mlir::parsePassPipeline(StringRef pipeline,
   if (pipelineStart == 0 || pipelineStart == StringRef::npos ||
       !pipeline.consume_back(")")) {
     errorStream << "expected pass pipeline to be wrapped with the anchor "
-                   "operation type, e.g. `builtin.module(...)";
+                   "operation type, e.g. 'builtin.module(...)'";
     return failure();
   }
 
   StringRef opName = pipeline.take_front(pipelineStart);
   OpPassManager pm(opName);
-  if (failed(parsePassPipeline(pipeline.drop_front(1 + pipelineStart), pm)))
+  if (failed(parsePassPipeline(pipeline.drop_front(1 + pipelineStart), pm,
+                               errorStream)))
     return failure();
   return pm;
 }
