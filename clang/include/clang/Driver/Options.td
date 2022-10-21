@@ -3186,6 +3186,11 @@ defm codeview_ghash : BoolOption<"g", "codeview-ghash",
   CodeGenOpts<"CodeViewGHash">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Emit type record hashes in a .debug$H section">,
   NegFlag<SetFalse>, BothFlags<[CoreOption]>>;
+defm codeview_command_line : BoolOption<"g", "codeview-command-line",
+  CodeGenOpts<"CodeViewCommandLine">, DefaultTrue,
+  PosFlag<SetTrue, [], "Emit compiler path and command line into CodeView debug information">,
+  NegFlag<SetFalse, [], "Don't emit compiler path and command line into CodeView debug information">,
+  BothFlags<[CoreOption, CC1Option]>>;
 defm inline_line_tables : BoolGOption<"inline-line-tables",
   CodeGenOpts<"NoInlineLineTables">, DefaultFalse,
   NegFlag<SetTrue, [CC1Option], "Don't emit inline line tables.">,

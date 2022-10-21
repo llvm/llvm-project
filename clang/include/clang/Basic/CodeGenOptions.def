@@ -401,6 +401,9 @@ CODEGENOPT(EmitCodeView, 1, 0)
 /// Whether to emit the .debug$H section containing hashes of CodeView types.
 CODEGENOPT(CodeViewGHash, 1, 0)
 
+/// Whether to emit the compiler path and command line into the CodeView debug information.
+CODEGENOPT(CodeViewCommandLine, 1, 0)
+
 /// The kind of inlining to perform.
 ENUM_CODEGENOPT(Inlining, InliningMethod, 2, NormalInlining)
 
