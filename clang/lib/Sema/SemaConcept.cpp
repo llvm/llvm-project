@@ -511,7 +511,7 @@ Sema::SetupConstraintCheckingTemplateArgumentsAndScope(
                                        /*Pattern=*/nullptr,
                                        /*ForConstraintInstantiation=*/true);
   if (SetupConstraintScope(FD, TemplateArgs, MLTAL, Scope))
-    return {};
+    return llvm::None;
 
   return MLTAL;
 }
@@ -546,6 +546,9 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
   llvm::Optional<MultiLevelTemplateArgumentList> MLTAL =
       SetupConstraintCheckingTemplateArgumentsAndScope(
           const_cast<FunctionDecl *>(FD), {}, Scope);
+
+  if (!MLTAL)
+    return true;
 
   Qualifiers ThisQuals;
   CXXRecordDecl *Record = nullptr;
