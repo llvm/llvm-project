@@ -1379,7 +1379,7 @@ entry:
 define dso_local <4 x half> @test_vdup_lane_f16(<4 x half> %a) {
 ; CHECK-LABEL: test_vdup_lane_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.32 d0, d0[3]
+; CHECK-NEXT:    vdup.16 d0, d0[3]
 ; CHECK-NEXT:    bx lr
 entry:
   %shuffle = shufflevector <4 x half> %a, <4 x half> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
