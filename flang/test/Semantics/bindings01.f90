@@ -3,8 +3,8 @@
 ! and C733, C734 and C779, C780, C782, C783, C784, and C785.
 
 module m
-  !WARNING: A derived type with the BIND attribute is empty
   !ERROR: An ABSTRACT derived type must be extensible
+  !PORTABILITY: A derived type with the BIND attribute is empty
   type, abstract, bind(c) :: badAbstract1
   end type
   !ERROR: An ABSTRACT derived type must be extensible
