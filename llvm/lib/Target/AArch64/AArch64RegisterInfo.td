@@ -957,10 +957,12 @@ def ZPR3b8  : ZPRRegOp<"b", ZPRAsmOp3b8,  ElementSizeB, ZPR_3b>;
 def ZPR3b16 : ZPRRegOp<"h", ZPRAsmOp3b16, ElementSizeH, ZPR_3b>;
 def ZPR3b32 : ZPRRegOp<"s", ZPRAsmOp3b32, ElementSizeS, ZPR_3b>;
 
+def ZPRAsmOp4b8   : ZPRAsmOperand<"Vector4bB", 8,  "_4b">;
 def ZPRAsmOp4b16  : ZPRAsmOperand<"Vector4bH", 16, "_4b">;
 def ZPRAsmOp4b32  : ZPRAsmOperand<"Vector4bS", 32, "_4b">;
 def ZPRAsmOp4b64  : ZPRAsmOperand<"Vector4bD", 64, "_4b">;
 
+def ZPR4b8  : ZPRRegOp<"b", ZPRAsmOp4b8,  ElementSizeB, ZPR_4b>;
 def ZPR4b16 : ZPRRegOp<"h", ZPRAsmOp4b16, ElementSizeH, ZPR_4b>;
 def ZPR4b32 : ZPRRegOp<"s", ZPRAsmOp4b32, ElementSizeS, ZPR_4b>;
 def ZPR4b64 : ZPRRegOp<"d", ZPRAsmOp4b64, ElementSizeD, ZPR_4b>;
@@ -1095,6 +1097,14 @@ class ZPRVectorListMul<int ElementWidth, int NumRegs> : ZPRVectorList<ElementWid
 
 let EncoderMethod = "EncodeRegAsMultipleOf<2>",
     DecoderMethod = "DecodeZPR2Mul2RegisterClass" in {
+  def ZZ_b_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'b'>"> {
+    let ParserMatchClass = ZPRVectorListMul<8, 2>;
+  }
+
+  def ZZ_h_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'h'>"> {
+    let ParserMatchClass = ZPRVectorListMul<16, 2>;
+  }
+
   def ZZ_s_mul_r : RegisterOperand<ZPR2Mul2, "printTypedVectorList<0,'s'>"> {
     let ParserMatchClass = ZPRVectorListMul<32, 2>;
   }
@@ -1106,6 +1116,14 @@ let EncoderMethod = "EncodeRegAsMultipleOf<2>",
 
 let EncoderMethod = "EncodeRegAsMultipleOf<4>",
     DecoderMethod = "DecodeZPR4Mul4RegisterClass" in {
+  def ZZZZ_b_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'b'>"> {
+    let ParserMatchClass = ZPRVectorListMul<8, 4>;
+  }
+
+  def ZZZZ_h_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'h'>"> {
+    let ParserMatchClass = ZPRVectorListMul<16, 4>;
+  }
+
   def ZZZZ_s_mul_r : RegisterOperand<ZPR4Mul4, "printTypedVectorList<0,'s'>"> {
     let ParserMatchClass = ZPRVectorListMul<32, 4>;
   }

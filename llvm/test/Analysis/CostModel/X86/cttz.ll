@@ -6,7 +6,6 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -mattr=+bmi,+avx2 | FileCheck %s -check-prefixes=BMI,AVX2
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -mattr=+bmi,+avx512f | FileCheck %s -check-prefixes=BMI,AVX512,AVX512F
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -mattr=+bmi,+avx512vl,+avx512bw,+avx512dq | FileCheck %s -check-prefixes=BMI,AVX512,AVX512BW
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -mattr=+bmi,+avx512vl,+avx512bw,+avx512dq | FileCheck %s -check-prefixes=BMI,AVX512,AVX512BW
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -mattr=+bmi,+avx512vl,+avx512vpopcntdq | FileCheck %s -check-prefixes=BMI,AVX512,AVX512VPOPCNT
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -mattr=+bmi,+avx512vl,+avx512bitalg | FileCheck %s -check-prefixes=BMI,AVX512,AVX512BITALG
 

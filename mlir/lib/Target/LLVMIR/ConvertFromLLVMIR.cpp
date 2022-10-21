@@ -1018,7 +1018,7 @@ void Importer::processFunctionAttributes(llvm::Function *func,
   auto addNamedUnitAttr = [&](StringRef name) {
     return funcOp->setAttr(name, UnitAttr::get(context));
   };
-  if (func->hasFnAttribute(llvm::Attribute::ReadNone))
+  if (func->doesNotAccessMemory())
     addNamedUnitAttr(LLVMDialect::getReadnoneAttrName());
 }
 

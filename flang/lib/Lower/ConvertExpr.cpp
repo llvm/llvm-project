@@ -2754,9 +2754,15 @@ public:
         assert(component && "expect component for type-bound procedure call.");
         fir::ExtendedValue pass =
             symMap.lookupSymbol(component->GetFirstSymbol()).toExtendedValue();
+        mlir::Value passObject = fir::getBase(pass);
+        if (fir::isa_ref_type(passObject.getType()))
+          passObject = builder.create<fir::ConvertOp>(
+              loc,
+              passObject.getType().dyn_cast<fir::ReferenceType>().getEleTy(),
+              passObject);
         dispatch = builder.create<fir::DispatchOp>(
             loc, funcType.getResults(), builder.getStringAttr(procName),
-            fir::getBase(pass), operands, nullptr);
+            passObject, operands, nullptr);
       }
       callResult = dispatch.getResult(0);
       callNumResults = dispatch.getNumResults();
