@@ -107,22 +107,6 @@ static void printVectorType(AsmPrinter &printer, TypeTy type) {
   printer << '>';
 }
 
-/// Prints a function type.
-static void printFunctionType(AsmPrinter &printer, LLVMFunctionType funcType) {
-  printer << '<';
-  dispatchPrint(printer, funcType.getReturnType());
-  printer << " (";
-  llvm::interleaveComma(
-      funcType.getParams(), printer.getStream(),
-      [&printer](Type subtype) { dispatchPrint(printer, subtype); });
-  if (funcType.isVarArg()) {
-    if (funcType.getNumParams() != 0)
-      printer << ", ";
-    printer << "...";
-  }
-  printer << ")>";
-}
-
 /// Prints the given LLVM dialect type recursively. This leverages closedness of
 /// the LLVM dialect type system to avoid printing the dialect prefix
 /// repeatedly. For recursive structures, only prints the name of the structure
@@ -171,7 +155,7 @@ void mlir::LLVM::detail::printType(Type type, AsmPrinter &printer) {
     return printStructType(printer, structType);
 
   if (auto funcType = type.dyn_cast<LLVMFunctionType>())
-    return printFunctionType(printer, funcType);
+    return funcType.print(printer);
 }
 
 //===----------------------------------------------------------------------===//
@@ -179,45 +163,6 @@ void mlir::LLVM::detail::printType(Type type, AsmPrinter &printer) {
 //===----------------------------------------------------------------------===//
 
 static ParseResult dispatchParse(AsmParser &parser, Type &type);
-
-/// Parses an LLVM dialect function type.
-///   llvm-type :: = `func<` llvm-type `(` llvm-type-list `...`? `)>`
-static LLVMFunctionType parseFunctionType(AsmParser &parser) {
-  SMLoc loc = parser.getCurrentLocation();
-  Type returnType;
-  if (parser.parseLess() || dispatchParse(parser, returnType) ||
-      parser.parseLParen())
-    return LLVMFunctionType();
-
-  // Function type without arguments.
-  if (succeeded(parser.parseOptionalRParen())) {
-    if (succeeded(parser.parseGreater()))
-      return parser.getChecked<LLVMFunctionType>(loc, returnType, llvm::None,
-                                                 /*isVarArg=*/false);
-    return LLVMFunctionType();
-  }
-
-  // Parse arguments.
-  SmallVector<Type, 8> argTypes;
-  do {
-    if (succeeded(parser.parseOptionalEllipsis())) {
-      if (parser.parseOptionalRParen() || parser.parseOptionalGreater())
-        return LLVMFunctionType();
-      return parser.getChecked<LLVMFunctionType>(loc, returnType, argTypes,
-                                                 /*isVarArg=*/true);
-    }
-
-    Type arg;
-    if (dispatchParse(parser, arg))
-      return LLVMFunctionType();
-    argTypes.push_back(arg);
-  } while (succeeded(parser.parseOptionalComma()));
-
-  if (parser.parseOptionalRParen() || parser.parseOptionalGreater())
-    return LLVMFunctionType();
-  return parser.getChecked<LLVMFunctionType>(loc, returnType, argTypes,
-                                             /*isVarArg=*/false);
-}
 
 /// Parses an LLVM dialect pointer type.
 ///   llvm-type ::= `ptr<` llvm-type (`,` integer)? `>`
@@ -445,7 +390,7 @@ static Type dispatchParse(AsmParser &parser, bool allowAny = true) {
       .Case("token", [&] { return LLVMTokenType::get(ctx); })
       .Case("label", [&] { return LLVMLabelType::get(ctx); })
       .Case("metadata", [&] { return LLVMMetadataType::get(ctx); })
-      .Case("func", [&] { return parseFunctionType(parser); })
+      .Case("func", [&] { return LLVMFunctionType::parse(parser); })
       .Case("ptr", [&] { return parsePointerType(parser); })
       .Case("vec", [&] { return parseVectorType(parser); })
       .Case("array", [&] { return LLVMArrayType::parse(parser); })

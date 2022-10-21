@@ -322,62 +322,6 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-// LLVMFunctionTypeStorage.
-//===----------------------------------------------------------------------===//
-
-/// Type storage for LLVM dialect function types. These are uniqued using the
-/// list of types they contain and the vararg bit.
-struct LLVMFunctionTypeStorage : public TypeStorage {
-  using KeyTy = std::tuple<Type, ArrayRef<Type>, bool>;
-
-  /// Construct a storage from the given components. The list is expected to be
-  /// allocated in the context.
-  LLVMFunctionTypeStorage(Type result, ArrayRef<Type> arguments, bool variadic)
-      : resultType(result), isVariadicFlag(variadic),
-        numArguments(arguments.size()), argumentTypes(arguments.data()) {}
-
-  /// Hook into the type uniquing infrastructure.
-  static LLVMFunctionTypeStorage *construct(TypeStorageAllocator &allocator,
-                                            const KeyTy &key) {
-    return new (allocator.allocate<LLVMFunctionTypeStorage>())
-        LLVMFunctionTypeStorage(std::get<0>(key),
-                                allocator.copyInto(std::get<1>(key)),
-                                std::get<2>(key));
-  }
-
-  static unsigned hashKey(const KeyTy &key) {
-    // LLVM doesn't like hashing bools in tuples.
-    return llvm::hash_combine(std::get<0>(key), std::get<1>(key),
-                              static_cast<int>(std::get<2>(key)));
-  }
-
-  bool operator==(const KeyTy &key) const {
-    return std::make_tuple(getReturnType(), getArgumentTypes(), isVariadic()) ==
-           key;
-  }
-
-  /// Returns the list of function argument types.
-  ArrayRef<Type> getArgumentTypes() const {
-    return ArrayRef<Type>(argumentTypes, numArguments);
-  }
-
-  /// Checks whether the function type is variadic.
-  bool isVariadic() const { return isVariadicFlag; }
-
-  /// Returns the function result type.
-  const Type &getReturnType() const { return resultType; }
-
-private:
-  /// The result type of the function.
-  Type resultType;
-  /// Flag indicating if the function is variadic.
-  bool isVariadicFlag;
-  /// The argument types of the function.
-  unsigned numArguments;
-  const Type *argumentTypes;
-};
-
-//===----------------------------------------------------------------------===//
 // LLVMPointerTypeStorage.
 //===----------------------------------------------------------------------===//
 

@@ -28,6 +28,70 @@ using namespace mlir::LLVM;
 constexpr const static unsigned kBitsInByte = 8;
 
 //===----------------------------------------------------------------------===//
+// custom<FunctionTypes>
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseFunctionTypes(AsmParser &p,
+                                      FailureOr<SmallVector<Type>> &params,
+                                      FailureOr<bool> &isVarArg) {
+  params.emplace();
+  isVarArg = false;
+  // `(` `)`
+  if (succeeded(p.parseOptionalRParen()))
+    return success();
+
+  // `(` `...` `)`
+  if (succeeded(p.parseOptionalEllipsis())) {
+    isVarArg = true;
+    return p.parseRParen();
+  }
+
+  // type (`,` type)* (`,` `...`)?
+  FailureOr<Type> type;
+  if (parsePrettyLLVMType(p, type))
+    return failure();
+  params->push_back(*type);
+  while (succeeded(p.parseOptionalComma())) {
+    if (succeeded(p.parseOptionalEllipsis())) {
+      isVarArg = true;
+      return p.parseRParen();
+    }
+    if (parsePrettyLLVMType(p, type))
+      return failure();
+    params->push_back(*type);
+  }
+  return p.parseRParen();
+}
+
+static void printFunctionTypes(AsmPrinter &p, ArrayRef<Type> params,
+                               bool isVarArg) {
+  llvm::interleaveComma(params, p,
+                        [&](Type type) { printPrettyLLVMType(p, type); });
+  if (isVarArg) {
+    if (!params.empty())
+      p << ", ";
+    p << "...";
+  }
+  p << ')';
+}
+
+//===----------------------------------------------------------------------===//
+// ODS-Generated Definitions
+//===----------------------------------------------------------------------===//
+
+/// These are unused for now.
+/// TODO: Move over to these once more types have been migrated to TypeDef.
+LLVM_ATTRIBUTE_UNUSED static OptionalParseResult
+generatedTypeParser(AsmParser &parser, StringRef *mnemonic, Type &value);
+LLVM_ATTRIBUTE_UNUSED static LogicalResult
+generatedTypePrinter(Type def, AsmPrinter &printer);
+
+#include "mlir/Dialect/LLVMIR/LLVMTypeInterfaces.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/LLVMIR/LLVMTypes.cpp.inc"
+
+//===----------------------------------------------------------------------===//
 // LLVMArrayType
 //===----------------------------------------------------------------------===//
 
@@ -130,25 +194,8 @@ LLVMFunctionType LLVMFunctionType::clone(TypeRange inputs,
   return get(results[0], llvm::to_vector(inputs), isVarArg());
 }
 
-Type LLVMFunctionType::getReturnType() const {
-  return getImpl()->getReturnType();
-}
 ArrayRef<Type> LLVMFunctionType::getReturnTypes() const {
-  return getImpl()->getReturnType();
-}
-
-unsigned LLVMFunctionType::getNumParams() {
-  return getImpl()->getArgumentTypes().size();
-}
-
-Type LLVMFunctionType::getParamType(unsigned i) {
-  return getImpl()->getArgumentTypes()[i];
-}
-
-bool LLVMFunctionType::isVarArg() const { return getImpl()->isVariadic(); }
-
-ArrayRef<Type> LLVMFunctionType::getParams() const {
-  return getImpl()->getArgumentTypes();
+  return static_cast<detail::LLVMFunctionTypeStorage *>(getImpl())->returnType;
 }
 
 LogicalResult
@@ -164,10 +211,14 @@ LLVMFunctionType::verify(function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// SubElementTypeInterface
+
 void LLVMFunctionType::walkImmediateSubElements(
     function_ref<void(Attribute)> walkAttrsFn,
     function_ref<void(Type)> walkTypesFn) const {
-  for (Type type : llvm::concat<const Type>(getReturnTypes(), getParams()))
+  walkTypesFn(getReturnType());
+  for (Type type : getParams())
     walkTypesFn(type);
 }
 
@@ -1004,22 +1055,6 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
         return llvm::TypeSize::Fixed(0);
       });
 }
-
-//===----------------------------------------------------------------------===//
-// ODS-Generated Definitions
-//===----------------------------------------------------------------------===//
-
-/// These are unused for now.
-/// TODO: Move over to these once more types have been migrated to TypeDef.
-LLVM_ATTRIBUTE_UNUSED static OptionalParseResult
-generatedTypeParser(AsmParser &parser, StringRef *mnemonic, Type &value);
-LLVM_ATTRIBUTE_UNUSED static LogicalResult
-generatedTypePrinter(Type def, AsmPrinter &printer);
-
-#include "mlir/Dialect/LLVMIR/LLVMTypeInterfaces.cpp.inc"
-
-#define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/LLVMIR/LLVMTypes.cpp.inc"
 
 //===----------------------------------------------------------------------===//
 // LLVMDialect
