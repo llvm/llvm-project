@@ -683,14 +683,15 @@ allocate(rectangle::shapes(2)%item)
 
 **FIR**
 ```c
-%0 = fir.alloca !fir.class<!fir.type<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32>>
-%1 = fir.alloca !fir.class<!fir.type<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32}>>
-%3 = fir.convert %0 : (!fir.ref<!fir.class<!fir.type<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32>>>) -> !fir.ref<!fir.box<none>>
-%4 = fir.gentypedesc !fir.type<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32}>>
-%5 = fir.call @_FortranAAllocatableInitDerived(%3, %4)
+%0 = fir.address_of(@_QMgeometryE.dt.triangle) : !fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype>>
+%1 = fir.convert %item1 : (!fir.ref<!fir.class<!fir.type<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32>>>) -> !fir.ref<!fir.box<none>>
+%2 = fir.call @_FortranAAllocatableInitDerived(%1, %0)
+%3 = fir.call @_FortranAAllocatableAllocate(%1, ...)
 
-%6 = fir.convert %1 : (!fir.ref<!fir.class<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32}>>>) -> !fir.ref<!fir.box<none>>
-%7 = fir.gentypedesc !fir.type<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32}>> %8 = fir.call @_FortranAAllocatableInitDerived(%6, %7)
+%4 = fir.address_of(@_QMgeometryE.dt.rectangle) : !fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype>>
+%5 = fir.convert %item2 : (!fir.ref<!fir.class<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32}>>>) -> !fir.ref<!fir.box<none>>
+%6 = fir.call @_FortranAAllocatableInitDerived(%5, %4)
+%7 = fir.call @_FortranAAllocatableAllocate(%5, ...)
 ```
 
 For pointer allocation, the `PointerAllocate` function is used.
@@ -851,7 +852,6 @@ dynamic type of polymorphic entities.
 Current list of TODOs in lowering:
 - `flang/lib/Lower/Allocatable.cpp:465` not yet implemented: SOURCE allocation
 - `flang/lib/Lower/Allocatable.cpp:468` not yet implemented: MOLD allocation
-- `flang/lib/Lower/Allocatable.cpp:471` not yet implemented: polymorphic entity allocation
 - `flang/lib/Lower/Bridge.cpp:448` not yet implemented: create polymorphic host associated copy
 - `flang/lib/Lower/Bridge.cpp:2185` not yet implemented: assignment to polymorphic allocatable
 - `flang/lib/Lower/Bridge.cpp:2288` not yet implemented: pointer assignment involving polymorphic entity
