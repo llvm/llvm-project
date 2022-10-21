@@ -332,8 +332,7 @@ declare dso_local i32 @foo(i32, i32, i32, i32)
 define <8 x i32> @PR49658_zext(ptr %ptr, i32 %mul) {
 ; SSE-LABEL: PR49658_zext:
 ; SSE:       # %bb.0: # %start
-; SSE-NEXT:    movl %esi, %eax
-; SSE-NEXT:    movq %rax, %xmm0
+; SSE-NEXT:    movd %esi, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,1,0,1]
 ; SSE-NEXT:    pxor %xmm0, %xmm0
 ; SSE-NEXT:    movq $-2097152, %rax # imm = 0xFFE00000
