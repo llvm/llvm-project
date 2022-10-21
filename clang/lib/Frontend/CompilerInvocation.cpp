@@ -4546,8 +4546,10 @@ bool CompilerInvocation::CreateFromArgsImpl(
   }
 
   // Store the command-line for using in the CodeView backend.
-  Res.getCodeGenOpts().Argv0 = Argv0;
-  append_range(Res.getCodeGenOpts().CommandLineArgs, CommandLineArgs);
+  if (Res.getCodeGenOpts().CodeViewCommandLine) {
+    Res.getCodeGenOpts().Argv0 = Argv0;
+    append_range(Res.getCodeGenOpts().CommandLineArgs, CommandLineArgs);
+  }
 
   FixupInvocation(Res, Diags, Args, DashX);
 

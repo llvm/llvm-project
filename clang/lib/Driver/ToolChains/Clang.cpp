@@ -4315,9 +4315,14 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
 
   if (EmitCodeView) {
     CmdArgs.push_back("-gcodeview");
+
     Args.addOptInFlag(CmdArgs, options::OPT_gcodeview_ghash,
                       options::OPT_gno_codeview_ghash);
+
+    Args.addOptOutFlag(CmdArgs, options::OPT_gcodeview_command_line,
+                       options::OPT_gno_codeview_command_line);
   }
+
   Args.addOptOutFlag(CmdArgs, options::OPT_ginline_line_tables,
                      options::OPT_gno_inline_line_tables);
 
