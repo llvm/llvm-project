@@ -846,6 +846,35 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
      tensor's element type, representing the actual value loaded from the input
      tensor at the given coordinates.
 
+     Note that foreach generated loop iterates over the stored elements in the storage
+     order. However, no matter what storage order is used, the indices passed to the block
+     always obey the original dimension order.
+
+     For example:
+     ```mlir
+     #COL_MAJOR = #sparse_tensor.encoding<{
+       dimLevelType = [ "compressed", "compressed" ],
+       dimOrdering = affine_map<(i,j) -> (j,i)>
+     }>
+     
+     // foreach on a column-major sparse tensor
+     sparse_tensor.foreach in %0 : tensor<2x3xf64, #COL_MAJOR> do {
+      ^bb0(%row: index, %col: index, %arg3: f64): 
+         // [%row, %col] -> [0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]
+     }
+
+     #ROW_MAJOR = #sparse_tensor.encoding<{
+       dimLevelType = [ "compressed", "compressed" ],
+     }>
+
+     // foreach on a row-major sparse tensor
+     sparse_tensor.foreach in %0 : tensor<2x3xf64, #ROW_MAJOR> do {
+      ^bb0(%row: index, %col: index, %arg3: f64): 
+         // [%row, %col] -> [0, 0], [0, 1], [1, 0], [1, 1], [2, 0], [2, 1]
+     }
+
+     ```
+
      Example:
 
      ```mlir
