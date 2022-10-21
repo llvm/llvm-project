@@ -735,14 +735,6 @@ LLVMFixedVectorType::getChecked(function_ref<InFlightDiagnostic()> emitError,
                           numElements);
 }
 
-Type LLVMFixedVectorType::getElementType() const {
-  return static_cast<detail::LLVMTypeAndSizeStorage *>(impl)->elementType;
-}
-
-unsigned LLVMFixedVectorType::getNumElements() const {
-  return getImpl()->numElements;
-}
-
 bool LLVMFixedVectorType::isValidElementType(Type type) {
   return type.isa<LLVMPointerType, LLVMPPCFP128Type>();
 }
@@ -781,14 +773,6 @@ LLVMScalableVectorType::getChecked(function_ref<InFlightDiagnostic()> emitError,
   assert(elementType && "expected non-null subtype");
   return Base::getChecked(emitError, elementType.getContext(), elementType,
                           minNumElements);
-}
-
-Type LLVMScalableVectorType::getElementType() const {
-  return static_cast<detail::LLVMTypeAndSizeStorage *>(impl)->elementType;
-}
-
-unsigned LLVMScalableVectorType::getMinNumElements() const {
-  return getImpl()->numElements;
 }
 
 bool LLVMScalableVectorType::isValidElementType(Type type) {
