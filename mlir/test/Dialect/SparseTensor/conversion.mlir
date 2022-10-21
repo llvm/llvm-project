@@ -268,6 +268,17 @@ func.func @sparse_valuesi8(%arg0: tensor<128xi8, #SparseVector>) -> memref<?xi8>
   return %0 : memref<?xi8>
 }
 
+// CHECK-LABEL: func @sparse_noe(
+//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
+//   CHECK-DAG: %[[C:.*]] = arith.constant 0 : index
+//   CHECK-DAG: %[[T:.*]] = call @sparseValuesF64(%[[A]]) : (!llvm.ptr<i8>) -> memref<?xf64>
+//       CHECK: %[[NOE:.*]] = memref.dim %[[T]], %[[C]] : memref<?xf64>
+//       CHECK: return %[[NOE]] : index
+func.func @sparse_noe(%arg0: tensor<128xf64, #SparseVector>) -> index {
+  %0 = sparse_tensor.number_of_entries %arg0 : tensor<128xf64, #SparseVector>
+  return %0 : index
+}
+
 // CHECK-LABEL: func @sparse_reconstruct(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>
 //       CHECK: return %[[A]] : !llvm.ptr<i8>

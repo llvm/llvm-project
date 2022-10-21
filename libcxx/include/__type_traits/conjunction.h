@@ -29,6 +29,11 @@ __expand_to_true<__enable_if_t<_Pred::value>...> __and_helper(int);
 template <class...>
 false_type __and_helper(...);
 
+// _And always performs lazy evaluation of its arguments.
+//
+// However, `_And<_Pred...>` itself will evaluate its result immediately (without having to
+// be instantiated) since it is an alias, unlike `conjunction<_Pred...>`, which is a struct.
+// If you want to defer the evaluation of `_And<_Pred...>` itself, use `_Lazy<_And, _Pred...>`.
 template <class... _Pred>
 using _And _LIBCPP_NODEBUG = decltype(__and_helper<_Pred...>(0));
 

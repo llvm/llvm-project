@@ -479,10 +479,7 @@ define i1 @bools2_logical_commute1_and1_and2(i1 %a, i1 %b, i1 %c) {
 
 define i1 @bools2_logical_commute2(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @bools2_logical_commute2(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[C]], i1 [[A:%.*]], i1 false
-; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[B:%.*]], i1 [[NOT]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[AND1]], i1 true, i1 [[AND2]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %not = xor i1 %c, -1
@@ -494,10 +491,7 @@ define i1 @bools2_logical_commute2(i1 %a, i1 %b, i1 %c) {
 
 define i1 @bools2_logical_commute2_and1(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @bools2_logical_commute2_and1(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[C]], [[A:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[B:%.*]], i1 [[NOT]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[AND1]], i1 true, i1 [[AND2]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %not = xor i1 %c, -1
@@ -510,10 +504,7 @@ define i1 @bools2_logical_commute2_and1(i1 %a, i1 %b, i1 %c) {
 define i1 @bools2_logical_commute2_and2(i1 %a, i1 %c) {
 ; CHECK-LABEL: @bools2_logical_commute2_and2(
 ; CHECK-NEXT:    [[B:%.*]] = call i1 @gen1()
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[C]], i1 [[A:%.*]], i1 false
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[B]], [[NOT]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[AND1]], i1 true, i1 [[AND2]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %b = call i1 @gen1()
@@ -527,10 +518,7 @@ define i1 @bools2_logical_commute2_and2(i1 %a, i1 %c) {
 define i1 @bools2_logical_commute2_and1_and2(i1 %a, i1 %c) {
 ; CHECK-LABEL: @bools2_logical_commute2_and1_and2(
 ; CHECK-NEXT:    [[B:%.*]] = call i1 @gen1()
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[C]], [[A:%.*]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[B]], [[NOT]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[AND1]], i1 true, i1 [[AND2]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C:%.*]], i1 [[A:%.*]], i1 [[B]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %b = call i1 @gen1()
