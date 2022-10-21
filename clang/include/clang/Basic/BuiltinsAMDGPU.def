@@ -381,11 +381,5 @@ TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_fp8_f32, "iffiIb", "nc", "fp8-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_bf8_f32, "ifiiIi", "nc", "fp8-insts")
 TARGET_BUILTIN(__builtin_amdgcn_cvt_sr_fp8_f32, "ifiiIi", "nc", "fp8-insts")
 
-//===----------------------------------------------------------------------===//
-// GFX12+ only builtins.
-//===----------------------------------------------------------------------===//
-
-TARGET_BUILTIN(__builtin_amdgcn_s_sleep_var, "vUi", "n", "gfx12-insts")
-
 #undef BUILTIN
 #undef TARGET_BUILTIN
