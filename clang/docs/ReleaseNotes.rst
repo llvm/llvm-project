@@ -360,6 +360,9 @@ Non-comprehensive list of changes in this release
   timestamp to be used in replacement of the current date and time in
   the ``__DATE__``, ``__TIME__``, and ``__TIMESTAMP__`` macros. See
   `<https://reproducible-builds.org/docs/source-date-epoch/>`_.
+- Clang now supports ``__has_constexpr_builtin`` function-like macro that
+  evaluates to 1 if the builtin is supported and can be constant evaluated.
+  It can be used to writing conditionally constexpr code that uses builtins.
 
 New Compiler Flags
 ------------------
