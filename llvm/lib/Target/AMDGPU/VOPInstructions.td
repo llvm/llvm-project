@@ -1550,6 +1550,17 @@ multiclass VOP3Only_Realtriple_t16_gfx11<bits<10> op, string asmName,
 // VOP3 GFX12
 //===----------------------------------------------------------------------===//
 
+multiclass VOP3Only_Realtriple_gfx12<bits<10> op, bit isSingle = 0> :
+  VOP3_Realtriple<GFX12Gen, op, isSingle>;
+
+// IsSingle is captured from the vopprofile for these instructions, but the
+// following alternative is more explicit
+multiclass VO3Only_Real_Base_gfx12<bits<10> op> :
+  VOP3_Real_Base<GFX12Gen, op, NAME, 1/*IsSingle*/>;
+
+multiclass VOP3Only_Realtriple_t16_gfx12<bits<10> op> :
+  VOP3Only_Realtriple<GFX12Gen, op>;
+
 multiclass VOP3be_Real_with_name_gfx12<bits<10> op, string opName,
                                        string asmName, bit isSingle = 0> {
   defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
@@ -1565,7 +1576,7 @@ multiclass VOP3_Realtriple_with_name_gfx12<bits<10> op, string opName,
                                            string asmName, bit isSingle = 0> :
   VOP3_Realtriple_with_name<GFX12Gen, op, opName, asmName, isSingle>;
 
-multiclass VOP3Only_Realtriple_t16_gfx12<bits<10> op, string asmName,
+multiclass VOP3Only_Realtriple_with_name_t16_gfx12<bits<10> op, string asmName,
                                      string opName = NAME>
     : VOP3Only_Realtriple_with_name<GFX12Gen, op, opName, asmName>;
 

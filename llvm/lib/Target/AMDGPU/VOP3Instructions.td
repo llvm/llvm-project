@@ -157,6 +157,19 @@ defm V_MUL_HI_U32 : VOP3Inst <"v_mul_hi_u32", V_MUL_PROF<VOP_I32_I32_I32>, mulhu
 defm V_MUL_LO_I32 : VOP3Inst <"v_mul_lo_i32", V_MUL_PROF<VOP_I32_I32_I32>>;
 defm V_MUL_HI_I32 : VOP3Inst <"v_mul_hi_i32", V_MUL_PROF<VOP_I32_I32_I32>, mulhs>;
 } // End SchedRW = [WriteIntMul]
+
+let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
+defm V_MINIMUM_F32 : VOP3Inst <"v_minimum_f32", VOP3_Profile<VOP_F32_F32_F32>, DivergentBinFrag<fminimum>>;
+defm V_MAXIMUM_F32 : VOP3Inst <"v_maximum_f32", VOP3_Profile<VOP_F32_F32_F32>, DivergentBinFrag<fmaximum>>;
+defm V_MINIMUM_F16 : VOP3Inst <"v_minimum_f16", VOP3_Profile<VOP_F16_F16_F16>, DivergentBinFrag<fminimum>>;
+defm V_MAXIMUM_F16 : VOP3Inst <"v_maximum_f16", VOP3_Profile<VOP_F16_F16_F16>, DivergentBinFrag<fmaximum>>;
+
+let SchedRW = [WriteDoubleAdd] in {
+defm V_MINIMUM_F64 : VOP3Inst <"v_minimum_f64", VOP3_Profile<VOP_F64_F64_F64>, fminimum>;
+defm V_MAXIMUM_F64 : VOP3Inst <"v_maximum_f64", VOP3_Profile<VOP_F64_F64_F64>, fmaximum>;
+} // End SchedRW = [WriteDoubleAdd]
+} // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
+
 } // End isReMaterializable = 1
 
 let Uses = [MODE, VCC, EXEC] in {
@@ -861,6 +874,12 @@ defm V_MINMAX_NUM_F16     : VOP3_Realtriple_with_name_gfx12<0x26a, "V_MINMAX_F16
 defm V_MAXMIN_NUM_F16     : VOP3_Realtriple_with_name_gfx12<0x26b, "V_MAXMIN_F16", "v_maxmin_num_f16">;
 defm V_MAD_CO_U64_U32     : VOP3be_Real_with_name_gfx12<0x2fe, "V_MAD_U64_U32", "v_mad_co_u64_u32">;
 defm V_MAD_CO_I64_I32     : VOP3be_Real_with_name_gfx12<0x2ff, "V_MAD_I64_I32", "v_mad_co_i64_i32">;
+defm V_MINIMUM_F64        : VO3Only_Real_Base_gfx12<0x341>;
+defm V_MAXIMUM_F64        : VO3Only_Real_Base_gfx12<0x342>;
+defm V_MINIMUM_F32        : VOP3Only_Realtriple_gfx12<0x365>;
+defm V_MAXIMUM_F32        : VOP3Only_Realtriple_gfx12<0x366>;
+defm V_MINIMUM_F16        : VOP3Only_Realtriple_t16_gfx12<0x367>;
+defm V_MAXIMUM_F16        : VOP3Only_Realtriple_t16_gfx12<0x368>;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12

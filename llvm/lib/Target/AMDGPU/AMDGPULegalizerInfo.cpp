@@ -1713,10 +1713,18 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       G_READ_REGISTER,
       G_WRITE_REGISTER,
 
-      G_SADDO, G_SSUBO,
+      G_SADDO, G_SSUBO}).lower();
 
-       // TODO: Implement
-      G_FMINIMUM, G_FMAXIMUM}).lower();
+  if (ST.hasIEEEMinMax()) {
+    getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
+        .legalFor({{S16}, {S32}, {S64}})
+        .scalarize(0)
+        .minScalar(0, S32);
+  } else {
+    // TODO: Implement
+    getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
+        .lower();
+  }
 
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET})
       .lower();

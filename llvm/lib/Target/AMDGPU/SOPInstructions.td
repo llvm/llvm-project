@@ -820,10 +820,10 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
       def S_MAX_F16 : SOP2_F16_Inst<"s_max_f16", fmaxnum_like>;
 
       let SubtargetPredicate = isGFX12Plus in {
-        def S_MINIMUM_F32 : SOP2_F32<"s_minimum_f32">;
-        def S_MAXIMUM_F32 : SOP2_F32<"s_maximum_f32">;
-        def S_MINIMUM_F16 : SOP2_F16<"s_minimum_f16">;
-        def S_MAXIMUM_F16 : SOP2_F16<"s_maximum_f16">;
+        def S_MINIMUM_F32 : SOP2_F32_Inst<"s_minimum_f32", fminimum>;
+        def S_MAXIMUM_F32 : SOP2_F32_Inst<"s_maximum_f32", fmaximum>;
+        def S_MINIMUM_F16 : SOP2_F16_Inst<"s_minimum_f16", fminimum>;
+        def S_MAXIMUM_F16 : SOP2_F16_Inst<"s_maximum_f16", fmaximum>;
       }
     } // End isCommutable = 1
 
