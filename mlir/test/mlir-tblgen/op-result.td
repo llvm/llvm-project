@@ -31,7 +31,7 @@ def OpB : NS_Op<"same_input_output_type_op", [SameOperandsAndResultType]> {
 // CHECK:   if (::mlir::succeeded(OpB::inferReturnTypes(odsBuilder.getContext(),
 // CHECK:             odsState.location, odsState.operands,
 // CHECK:             odsState.attributes.getDictionary(odsState.getContext()),
-// CHECK:             /*regions=*/{}, inferredReturnTypes)))
+// CHECK:             odsState.regions, inferredReturnTypes)))
 // CHECK:     odsState.addTypes(inferredReturnTypes);
 
 def OpC : NS_Op<"three_normal_result_op", []> {
