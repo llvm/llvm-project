@@ -4813,6 +4813,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-extract-api");
     if (Arg *ProductNameArg = Args.getLastArg(options::OPT_product_name_EQ))
       ProductNameArg->render(Args, CmdArgs);
+    if (Arg *ExtractAPIIgnoresFileArg =
+            Args.getLastArg(options::OPT_extract_api_ignores_EQ))
+      ExtractAPIIgnoresFileArg->render(Args, CmdArgs);
   } else {
     assert((isa<CompileJobAction>(JA) || isa<BackendJobAction>(JA)) &&
            "Invalid action for clang tool.");
