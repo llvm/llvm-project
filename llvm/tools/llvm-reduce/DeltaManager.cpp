@@ -31,6 +31,7 @@
 #include "deltas/ReduceInstructionFlagsMIR.h"
 #include "deltas/ReduceInstructions.h"
 #include "deltas/ReduceInstructionsMIR.h"
+#include "deltas/ReduceMemoryOperations.h"
 #include "deltas/ReduceMetadata.h"
 #include "deltas/ReduceModuleData.h"
 #include "deltas/ReduceOpcodes.h"
@@ -94,6 +95,7 @@ static cl::list<std::string>
     DELTA_PASS("attributes", reduceAttributesDeltaPass)                        \
     DELTA_PASS("module-data", reduceModuleDataDeltaPass)                       \
     DELTA_PASS("opcodes", reduceOpcodesDeltaPass)                              \
+    DELTA_PASS("volatile", reduceVolatileInstructionsDeltaPass)                \
     DELTA_PASS("instruction-flags", reduceInstructionFlagsDeltaPass)           \
 } while (false)
 
