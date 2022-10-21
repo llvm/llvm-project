@@ -7,6 +7,7 @@ target_link_libraries(tco PRIVATE
   FIRSupport
   FIRTransforms
   FIRBuilder
+  HLFIRDialect
   ${dialect_libs}
   MLIRIR
   MLIRLLVMDialect
