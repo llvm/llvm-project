@@ -583,7 +583,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
 
   // Quickly eliminate it, if it's not a candidate.
   StringRef Name = F->getName();
-  if (Name.size() <= 8 || !Name.startswith("llvm."))
+  if (Name.size() <= 7 || !Name.startswith("llvm."))
     return false;
   Name = Name.substr(5); // Strip off "llvm."
 
