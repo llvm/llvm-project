@@ -167,6 +167,25 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values", [Pure]>,
   let hasVerifier = 1;
 }
 
+def SparseTensor_NumberOfEntriesOp : SparseTensor_Op<"number_of_entries", [Pure]>,
+    Arguments<(ins AnySparseTensor:$tensor)>,
+    Results<(outs Index:$result)> {
+  let summary = "Returns the number of entries that are stored in the tensor.";
+  let description = [{
+    Returns the number of entries that are stored in the given sparse tensor.
+    Note that this is typically the number of nonzero elements in the tensor,
+    but since explicit zeros may appear in the storage formats, the more
+    accurate nomenclature is used.
+
+    Example:
+
+    ```mlir
+    %noe = sparse_tensor.number_of_entries %tensor : tensor<64x64xf64, #CSR>
+    ```
+  }];
+  let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
+}
+
 def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate", [Pure]>,
     Arguments<(ins Variadic<AnyRankedTensor>:$inputs, IndexAttr:$dimension)>,
     Results<(outs AnyRankedTensor:$result)> {
