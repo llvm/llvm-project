@@ -45,6 +45,7 @@
 #include "deltas/ReduceVirtualRegisters.h"
 #include "deltas/RunIRPasses.h"
 #include "deltas/SimplifyInstructions.h"
+#include "deltas/StripDebugInfo.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -66,6 +67,7 @@ static cl::list<std::string>
 
 #define DELTA_PASSES                                                           \
   do {                                                                         \
+    DELTA_PASS("strip-debug-info", stripDebugInfoDeltaPass)                    \
     DELTA_PASS("functions", reduceFunctionsDeltaPass)                          \
     DELTA_PASS("function-bodies", reduceFunctionBodiesDeltaPass)               \
     DELTA_PASS("special-globals", reduceSpecialGlobalsDeltaPass)               \
