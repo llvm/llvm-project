@@ -99,14 +99,6 @@ static void printStructType(AsmPrinter &printer, LLVMStructType type) {
   printer << '>';
 }
 
-/// Prints a type containing a fixed number of elements.
-template <typename TypeTy>
-static void printVectorType(AsmPrinter &printer, TypeTy type) {
-  printer << '<' << type.getNumElements() << " x ";
-  dispatchPrint(printer, type.getElementType());
-  printer << '>';
-}
-
 /// Prints the given LLVM dialect type recursively. This leverages closedness of
 /// the LLVM dialect type system to avoid printing the dialect prefix
 /// repeatedly. For recursive structures, only prints the name of the structure
@@ -124,26 +116,13 @@ void mlir::LLVM::detail::printType(Type type, AsmPrinter &printer) {
 
   printer << getTypeKeyword(type);
 
-  if (auto ptrType = type.dyn_cast<LLVMPointerType>())
-    return ptrType.print(printer);
-
-  if (auto arrayType = type.dyn_cast<LLVMArrayType>())
-    return arrayType.print(printer);
-  if (auto vectorType = type.dyn_cast<LLVMFixedVectorType>())
-    return printVectorType(printer, vectorType);
-
-  if (auto vectorType = type.dyn_cast<LLVMScalableVectorType>()) {
-    printer << "<? x " << vectorType.getMinNumElements() << " x ";
-    dispatchPrint(printer, vectorType.getElementType());
-    printer << '>';
-    return;
-  }
-
-  if (auto structType = type.dyn_cast<LLVMStructType>())
-    return printStructType(printer, structType);
-
-  if (auto funcType = type.dyn_cast<LLVMFunctionType>())
-    return funcType.print(printer);
+  llvm::TypeSwitch<Type>(type)
+      .Case<LLVMPointerType, LLVMArrayType, LLVMFixedVectorType,
+            LLVMScalableVectorType, LLVMFunctionType>(
+          [&](auto type) { type.print(printer); })
+      .Case([&](LLVMStructType structType) {
+        printStructType(printer, structType);
+      });
 }
 
 //===----------------------------------------------------------------------===//
