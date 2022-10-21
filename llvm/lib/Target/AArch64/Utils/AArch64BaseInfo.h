@@ -783,6 +783,13 @@ namespace AArch64II {
     /// SP-relative load or store instruction (which do not check tags), or to
     /// an LDG instruction to obtain the tag value.
     MO_TAGGED = 0x400,
+
+    /// MO_DLLIMPORTAUX - Symbol refers to "auxilliary" import stub. On
+    /// Arm64EC, there are two kinds of import stubs used for DLL import of
+    /// functions: MO_DLLIMPORT refers to natively callable Arm64 code, and
+    /// MO_DLLIMPORTAUX refers to the original address which can be compared
+    /// for equality.
+    MO_DLLIMPORTAUX = 0x800,
   };
 } // end namespace AArch64II
 
