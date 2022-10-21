@@ -531,11 +531,11 @@ void ReaderTestCoverage::initElements() {
 
   // Before the changes: Parameter: CoveragePercentage = 100.00
   // After the changes:  Parameter: CoveragePercentage = 100.00
-  EXPECT_FLOAT_EQ(Parameter->getCoveragePercentage(), 100.00);
+  EXPECT_FLOAT_EQ(Parameter->getCoveragePercentage(), 100.00f);
 
   // Before the changes: Variable: CoveragePercentage = 1000.00
   // After the changes:  Variable: CoveragePercentage = 56.83
-  EXPECT_FLOAT_EQ(Variable->getCoveragePercentage(), 56.83);
+  EXPECT_FLOAT_EQ(Variable->getCoveragePercentage(), 56.83f);
 }
 
 TEST(LogicalViewTest, LocationRanges) {
