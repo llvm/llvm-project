@@ -55,6 +55,7 @@
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/ModRef.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Operator.h"
@@ -627,8 +628,6 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   // stored here with their replacement function.
   using UpdatedIntrinsicMap = DenseMap<Function *, Function *>;
   UpdatedIntrinsicMap UpgradedIntrinsics;
-  // Intrinsics which were remangled because of types rename
-  UpdatedIntrinsicMap RemangledIntrinsics;
 
   // Several operations happen after the module header has been read, but
   // before function bodies are processed. This keeps track of whether
@@ -885,7 +884,7 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   // We save a GUID which refers to the same global as the ValueInfo, but
   // ignoring the linkage, i.e. for values other than local linkage they are
   // identical.
-  DenseMap<unsigned, std::pair<ValueInfo, GlobalValue::GUID>>
+  DenseMap<unsigned, std::tuple<ValueInfo, GlobalValue::GUID>>
       ValueIdToValueInfoMap;
 
   /// Map populated during module path string table parsing, from the
@@ -932,7 +931,7 @@ private:
   std::vector<FunctionSummary::ParamAccess>
   parseParamAccesses(ArrayRef<uint64_t> Record);
 
-  std::pair<ValueInfo, GlobalValue::GUID>
+  std::tuple<ValueInfo, GlobalValue::GUID>
   getValueInfoFromValueId(unsigned ValueId);
 
   void addThisModule();
@@ -1880,6 +1879,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::InReg;
   case bitc::ATTR_KIND_JUMP_TABLE:
     return Attribute::JumpTable;
+  case bitc::ATTR_KIND_MEMORY:
+    return Attribute::Memory;
   case bitc::ATTR_KIND_MIN_SIZE:
     return Attribute::MinSize;
   case bitc::ATTR_KIND_NAKED:
@@ -2124,6 +2125,8 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addUWTableAttr(UWTableKind(Record[++i]));
           else if (Kind == Attribute::AllocKind)
             B.addAllocKindAttr(static_cast<AllocFnKind>(Record[++i]));
+          else if (Kind == Attribute::Memory)
+            B.addMemoryAttr(MemoryEffects::createFromIntValue(Record[++i]));
         } else if (Record[i] == 3 || Record[i] == 4) { // String attribute
           bool HasValue = (Record[i++] == 4);
           SmallString<64> KindStr;
@@ -3568,11 +3571,6 @@ Error BitcodeReader::globalCleanup() {
     Function *NewFn;
     if (UpgradeIntrinsicFunction(&F, NewFn))
       UpgradedIntrinsics[&F] = NewFn;
-    else if (auto Remangled = Intrinsic::remangleIntrinsicFunction(&F))
-      // Some types could be renamed during loading if several modules are
-      // loaded in the same LLVMContext (LTO scenario). In this case we should
-      // remangle intrinsics names as well.
-      RemangledIntrinsics[&F] = *Remangled;
     // Look for functions that rely on old function attribute behavior.
     UpgradeFunctionAttributes(F);
   }
@@ -6459,12 +6457,6 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         UpgradeIntrinsicCall(CI, I.second);
   }
 
-  // Update calls to the remangled intrinsics
-  for (auto &I : RemangledIntrinsics)
-    for (User *U : llvm::make_early_inc_range(I.first->materialized_users()))
-      // Don't expect any other users than call sites
-      cast<CallBase>(U)->setCalledFunction(I.second);
-
   // Finish fn->subprogram upgrade for materialized functions.
   if (DISubprogram *SP = MDLoader->lookupSubprogramForFunction(F))
     F->setSubprogram(SP);
@@ -6569,12 +6561,6 @@ Error BitcodeReader::materializeModule() {
     I.first->eraseFromParent();
   }
   UpgradedIntrinsics.clear();
-  // Do the same for remangled intrinsics
-  for (auto &I : RemangledIntrinsics) {
-    I.first->replaceAllUsesWith(I.second);
-    I.first->eraseFromParent();
-  }
-  RemangledIntrinsics.clear();
 
   UpgradeDebugInfo(*TheModule);
 
@@ -6604,10 +6590,10 @@ ModuleSummaryIndexBitcodeReader::getThisModule() {
   return TheIndex.getModule(ModulePath);
 }
 
-std::pair<ValueInfo, GlobalValue::GUID>
+std::tuple<ValueInfo, GlobalValue::GUID>
 ModuleSummaryIndexBitcodeReader::getValueInfoFromValueId(unsigned ValueId) {
   auto VGI = ValueIdToValueInfoMap[ValueId];
-  assert(VGI.first);
+  assert(std::get<0>(VGI));
   return VGI;
 }
 
@@ -6627,10 +6613,9 @@ void ModuleSummaryIndexBitcodeReader::setValueGUID(
   // UseStrtab is false for legacy summary formats and value names are
   // created on stack. In that case we save the name in a string saver in
   // the index so that the value name can be recorded.
-  ValueIdToValueInfoMap[ValueID] = std::make_pair(
+  ValueIdToValueInfoMap[ValueID] = std::make_tuple(
       TheIndex.getOrInsertValueInfo(
-          ValueGUID,
-          UseStrtab ? ValueName : TheIndex.saveString(ValueName)),
+          ValueGUID, UseStrtab ? ValueName : TheIndex.saveString(ValueName)),
       OriginalNameID);
 }
 
@@ -6720,7 +6705,7 @@ Error ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
       // The "original name", which is the second value of the pair will be
       // overriden later by a FS_COMBINED_ORIGINAL_NAME in the combined index.
       ValueIdToValueInfoMap[ValueID] =
-          std::make_pair(TheIndex.getOrInsertValueInfo(RefGUID), RefGUID);
+          std::make_tuple(TheIndex.getOrInsertValueInfo(RefGUID), RefGUID);
       break;
     }
     }
@@ -6874,7 +6859,7 @@ ModuleSummaryIndexBitcodeReader::makeRefList(ArrayRef<uint64_t> Record) {
   std::vector<ValueInfo> Ret;
   Ret.reserve(Record.size());
   for (uint64_t RefValueId : Record)
-    Ret.push_back(getValueInfoFromValueId(RefValueId).first);
+    Ret.push_back(std::get<0>(getValueInfoFromValueId(RefValueId)));
   return Ret;
 }
 
@@ -6887,7 +6872,7 @@ ModuleSummaryIndexBitcodeReader::makeCallList(ArrayRef<uint64_t> Record,
   for (unsigned I = 0, E = Record.size(); I != E; ++I) {
     CalleeInfo::HotnessType Hotness = CalleeInfo::HotnessType::Unknown;
     uint64_t RelBF = 0;
-    ValueInfo Callee = getValueInfoFromValueId(Record[I]).first;
+    ValueInfo Callee = std::get<0>(getValueInfoFromValueId(Record[I]));
     if (IsOldProfileFormat) {
       I += 1; // Skip old callsitecount field
       if (HasProfile)
@@ -6978,7 +6963,7 @@ ModuleSummaryIndexBitcodeReader::parseParamAccesses(ArrayRef<uint64_t> Record) {
     for (auto &Call : ParamAccess.Calls) {
       Call.ParamNo = Record.front();
       Record = Record.drop_front();
-      Call.Callee = getValueInfoFromValueId(Record.front()).first;
+      Call.Callee = std::get<0>(getValueInfoFromValueId(Record.front()));
       Record = Record.drop_front();
       Call.Offsets = ReadRange();
     }
@@ -6990,7 +6975,7 @@ void ModuleSummaryIndexBitcodeReader::parseTypeIdCompatibleVtableInfo(
     ArrayRef<uint64_t> Record, size_t &Slot,
     TypeIdCompatibleVtableInfo &TypeId) {
   uint64_t Offset = Record[Slot++];
-  ValueInfo Callee = getValueInfoFromValueId(Record[Slot++]).first;
+  ValueInfo Callee = std::get<0>(getValueInfoFromValueId(Record[Slot++]));
   TypeId.push_back({Offset, Callee});
 }
 
@@ -7104,7 +7089,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       uint64_t ValueID = Record[0];
       GlobalValue::GUID RefGUID = Record[1];
       ValueIdToValueInfoMap[ValueID] =
-          std::make_pair(TheIndex.getOrInsertValueInfo(RefGUID), RefGUID);
+          std::make_tuple(TheIndex.getOrInsertValueInfo(RefGUID), RefGUID);
       break;
     }
     // FS_PERMODULE: [valueid, flags, instcount, fflags, numrefs,
@@ -7166,8 +7151,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::move(PendingParamAccesses));
       auto VIAndOriginalGUID = getValueInfoFromValueId(ValueID);
       FS->setModulePath(getThisModule()->first());
-      FS->setOriginalName(VIAndOriginalGUID.second);
-      TheIndex.addGlobalValueSummary(VIAndOriginalGUID.first, std::move(FS));
+      FS->setOriginalName(std::get<1>(VIAndOriginalGUID));
+      TheIndex.addGlobalValueSummary(std::get<0>(VIAndOriginalGUID),
+                                     std::move(FS));
       break;
     }
     // FS_ALIAS: [valueid, flags, valueid]
@@ -7186,15 +7172,15 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       // ownership.
       AS->setModulePath(getThisModule()->first());
 
-      auto AliaseeVI = getValueInfoFromValueId(AliaseeID).first;
+      auto AliaseeVI = std::get<0>(getValueInfoFromValueId(AliaseeID));
       auto AliaseeInModule = TheIndex.findSummaryInModule(AliaseeVI, ModulePath);
       if (!AliaseeInModule)
         return error("Alias expects aliasee summary to be parsed");
       AS->setAliasee(AliaseeVI, AliaseeInModule);
 
       auto GUID = getValueInfoFromValueId(ValueID);
-      AS->setOriginalName(GUID.second);
-      TheIndex.addGlobalValueSummary(GUID.first, std::move(AS));
+      AS->setOriginalName(std::get<1>(GUID));
+      TheIndex.addGlobalValueSummary(std::get<0>(GUID), std::move(AS));
       break;
     }
     // FS_PERMODULE_GLOBALVAR_INIT_REFS: [valueid, flags, varflags, n x valueid]
@@ -7217,8 +7203,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::make_unique<GlobalVarSummary>(Flags, GVF, std::move(Refs));
       FS->setModulePath(getThisModule()->first());
       auto GUID = getValueInfoFromValueId(ValueID);
-      FS->setOriginalName(GUID.second);
-      TheIndex.addGlobalValueSummary(GUID.first, std::move(FS));
+      FS->setOriginalName(std::get<1>(GUID));
+      TheIndex.addGlobalValueSummary(std::get<0>(GUID), std::move(FS));
       break;
     }
     // FS_PERMODULE_VTABLE_GLOBALVAR_INIT_REFS: [valueid, flags, varflags,
@@ -7236,7 +7222,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           ArrayRef<uint64_t>(Record).slice(RefListStartIndex, NumRefs));
       VTableFuncList VTableFuncs;
       for (unsigned I = VTableListStartIndex, E = Record.size(); I != E; ++I) {
-        ValueInfo Callee = getValueInfoFromValueId(Record[I]).first;
+        ValueInfo Callee = std::get<0>(getValueInfoFromValueId(Record[I]));
         uint64_t Offset = Record[++I];
         VTableFuncs.push_back({Callee, Offset});
       }
@@ -7245,8 +7231,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       VS->setModulePath(getThisModule()->first());
       VS->setVTableFuncs(VTableFuncs);
       auto GUID = getValueInfoFromValueId(ValueID);
-      VS->setOriginalName(GUID.second);
-      TheIndex.addGlobalValueSummary(GUID.first, std::move(VS));
+      VS->setOriginalName(std::get<1>(GUID));
+      TheIndex.addGlobalValueSummary(std::get<0>(GUID), std::move(VS));
       break;
     }
     // FS_COMBINED: [valueid, modid, flags, instcount, fflags, numrefs,
@@ -7297,7 +7283,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       std::vector<FunctionSummary::EdgeTy> Edges = makeCallList(
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
           IsOldProfileFormat, HasProfile, false);
-      ValueInfo VI = getValueInfoFromValueId(ValueID).first;
+      ValueInfo VI = std::get<0>(getValueInfoFromValueId(ValueID));
       setSpecialRefs(Refs, NumRORefs, NumWORefs);
       auto FS = std::make_unique<FunctionSummary>(
           Flags, InstCount, getDecodedFFlags(RawFunFlags), EntryCount,
@@ -7326,11 +7312,11 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       LastSeenSummary = AS.get();
       AS->setModulePath(ModuleIdMap[ModuleId]);
 
-      auto AliaseeVI = getValueInfoFromValueId(AliaseeValueId).first;
+      auto AliaseeVI = std::get<0>(getValueInfoFromValueId(AliaseeValueId));
       auto AliaseeInModule = TheIndex.findSummaryInModule(AliaseeVI, AS->modulePath());
       AS->setAliasee(AliaseeVI, AliaseeInModule);
 
-      ValueInfo VI = getValueInfoFromValueId(ValueID).first;
+      ValueInfo VI = std::get<0>(getValueInfoFromValueId(ValueID));
       LastSeenGUID = VI.getGUID();
       TheIndex.addGlobalValueSummary(VI, std::move(AS));
       break;
@@ -7356,7 +7342,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           std::make_unique<GlobalVarSummary>(Flags, GVF, std::move(Refs));
       LastSeenSummary = FS.get();
       FS->setModulePath(ModuleIdMap[ModuleId]);
-      ValueInfo VI = getValueInfoFromValueId(ValueID).first;
+      ValueInfo VI = std::get<0>(getValueInfoFromValueId(ValueID));
       LastSeenGUID = VI.getGUID();
       TheIndex.addGlobalValueSummary(VI, std::move(FS));
       break;

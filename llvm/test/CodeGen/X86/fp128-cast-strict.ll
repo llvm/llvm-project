@@ -19,9 +19,10 @@ define dso_local void @TestFPExtF16_F128() nounwind strictfp {
 ; X64-SSE-LABEL: TestFPExtF16_F128:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    pinsrw $0, vf16(%rip), %xmm0
-; X64-SSE-NEXT:    callq __extendhftf2@PLT
-; X64-SSE-NEXT:    movdqa %xmm0, vf128(%rip)
+; X64-SSE-NEXT:    movzwl vf16(%rip), %edi
+; X64-SSE-NEXT:    callq __gnu_h2f_ieee@PLT
+; X64-SSE-NEXT:    callq __extendsftf2@PLT
+; X64-SSE-NEXT:    movaps %xmm0, vf128(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq
 ;
@@ -217,9 +218,8 @@ define dso_local void @TestFPTruncF128_F16() nounwind strictfp {
 ; X64-SSE-LABEL: TestFPTruncF128_F16:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
-; X64-SSE-NEXT:    movdqa vf128(%rip), %xmm0
+; X64-SSE-NEXT:    movaps vf128(%rip), %xmm0
 ; X64-SSE-NEXT:    callq __trunctfhf2@PLT
-; X64-SSE-NEXT:    pextrw $0, %xmm0, %eax
 ; X64-SSE-NEXT:    movw %ax, vf16(%rip)
 ; X64-SSE-NEXT:    popq %rax
 ; X64-SSE-NEXT:    retq

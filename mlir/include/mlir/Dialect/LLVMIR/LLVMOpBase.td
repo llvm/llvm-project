@@ -49,6 +49,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getByRefAttrName() { return "llvm.byref"; }
     static StringRef getStructRetAttrName() { return "llvm.sret"; }
     static StringRef getInAllocaAttrName() { return "llvm.inalloca"; }
+    static StringRef getNoUndefAttrName() { return "llvm.noundef"; }
 
     /// Verifies if the attribute is a well-formed value for "llvm.struct_attrs"
     static LogicalResult verifyStructAttr(

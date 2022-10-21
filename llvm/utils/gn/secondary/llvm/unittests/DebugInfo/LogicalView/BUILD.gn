@@ -7,6 +7,9 @@ unittest("DebugInfoLogicalViewTests") {
   ]
   sources = [
     "CommandLineOptionsTest.cpp",
+    "LocationRangesTest.cpp",
+    "LogicalElementsTest.cpp",
+    "SelectElementsTest.cpp",
     "StringPoolTest.cpp",
   ]
 }

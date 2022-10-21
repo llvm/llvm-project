@@ -1,5 +1,3 @@
-// FIXME: The runtime needs support for _Float16 on X86, see PR55992
-// UNSUPPORTED: i386, x86_64
 // RUN: mlir-opt %s --sparse-compiler | \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \

@@ -69,7 +69,7 @@ struct MemoryAccessObserver {
   Buffer Buffer2;
 };
 
-MemoryAccessObserver Observer;
+static MemoryAccessObserver Observer;
 
 template <size_t Size> struct TestingElement {
   static constexpr size_t SIZE = Size;

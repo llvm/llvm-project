@@ -109,6 +109,7 @@ void CostModelAnalysis::print(raw_ostream &OS, const Module*) const {
       else {
         Cost = TTI->getInstructionCost(&Inst, CostKind);
       }
+
       if (auto CostVal = Cost.getValue())
         OS << "Cost Model: Found an estimated cost of " << *CostVal;
       else
@@ -137,6 +138,7 @@ PreservedAnalyses CostModelPrinterPass::run(Function &F,
       else {
         Cost = TTI.getInstructionCost(&Inst, CostKind);
       }
+
       if (auto CostVal = Cost.getValue())
         OS << "Cost Model: Found an estimated cost of " << *CostVal;
       else

@@ -138,7 +138,6 @@ Changes to the X86 Backend
 
 * Add support for the ``RDMSRLIST and WRMSRLIST`` instructions.
 * Add support for the ``WRMSRNS`` instruction.
-* Support ``half`` type on SSE2 and above targets.
 
 Changes to the OCaml bindings
 -----------------------------

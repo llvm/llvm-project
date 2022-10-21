@@ -266,11 +266,12 @@ static Type parseVectorType(AsmParser &parser) {
 
   // We parsed a generic dimension list, but vectors only support two forms:
   //  - single non-dynamic entry in the list (fixed vector);
-  //  - two elements, the first dynamic (indicated by -1) and the second
+  //  - two elements, the first dynamic (indicated by ShapedType::kDynamicSize)
+  //  and the second
   //    non-dynamic (scalable vector).
   if (dims.empty() || dims.size() > 2 ||
-      ((dims.size() == 2) ^ (dims[0] == -1)) ||
-      (dims.size() == 2 && dims[1] == -1)) {
+      ((dims.size() == 2) ^ (ShapedType::isDynamic(dims[0]))) ||
+      (dims.size() == 2 && ShapedType::isDynamic(dims[1]))) {
     parser.emitError(dimPos)
         << "expected '? x <integer> x <type>' or '<integer> x <type>'";
     return Type();

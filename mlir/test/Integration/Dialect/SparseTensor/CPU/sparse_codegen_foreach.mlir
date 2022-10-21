@@ -78,6 +78,16 @@ module {
      return
   }
 
+  func.func @foreach_print_dense(%arg0: tensor<2x2xf64>) {
+    sparse_tensor.foreach in %arg0 : tensor<2x2xf64> do {
+    ^bb0(%1: index, %2: index, %v: f64) :
+      vector.print %1: index
+      vector.print %2: index
+      vector.print %v: f64
+   }
+   return
+  }
+  
   //
   // Main driver.
   //
@@ -99,6 +109,19 @@ module {
     %s4 = sparse_tensor.convert %src : tensor<2x2xf64> to tensor<2x2xf64, #SortedCOO>
     %s5 = sparse_tensor.convert %src : tensor<2x2xf64> to tensor<2x2xf64, #SortedCOOPerm>
     // CHECK: 0
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 2
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: 5
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 6    
+    call @foreach_print_dense(%src) : (tensor<2x2xf64>) -> ()
+    // CHECK-NEXT: 0
     // CHECK-NEXT: 0
     // CHECK-NEXT: 1
     // CHECK-NEXT: 0

@@ -335,7 +335,7 @@ RankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
                          ArrayRef<int64_t> shape, Type elementType,
                          Attribute encoding) {
   for (int64_t s : shape)
-    if (s < -1)
+    if (s < 0 && !ShapedType::isDynamic(s))
       return emitError() << "invalid tensor dimension size";
   if (auto v = encoding.dyn_cast_or_null<VerifiableTensorEncoding>())
     if (failed(v.verifyEncoding(shape, elementType, emitError)))
@@ -656,9 +656,9 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
   if (!BaseMemRefType::isValidElementType(elementType))
     return emitError() << "invalid memref element type";
 
-  // Negative sizes are not allowed except for `-1` that means dynamic size.
+  // Negative sizes are not allowed except for `kDynamicSize`.
   for (int64_t s : shape)
-    if (s < -1)
+    if (s < 0 && !ShapedType::isDynamic(s))
       return emitError() << "invalid memref size";
 
   assert(layout && "missing layout specification");

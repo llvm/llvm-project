@@ -4,6 +4,8 @@
 // RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
+// UNSUPPORTED: aarch64
+
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 #DenseVector = #sparse_tensor.encoding<{dimLevelType = ["dense"]}>
 

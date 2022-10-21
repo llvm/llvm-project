@@ -132,18 +132,19 @@ static RankedTensorType getUnorderedCOOFromType(RankedTensorType src) {
   auto rank = src.getRank();
   SmallVector<DimLevelType, 4> dims;
 
-  // An unordered and non-unique compressed dim at beginning unless the tensor
-  // is a 1D tensor.
-  if (rank > 1)
-    dims.push_back(DimLevelType::CompressedNuNo);
+  // An unordered and non-unique compressed dim at beginning.
+  dims.push_back(DimLevelType::CompressedNuNo);
 
-  // TODO: it is actually ordered at the level for ordered input.
-  // Followed by unordered non-unique n-2 singleton levels.
-  std::fill_n(std::back_inserter(dims), rank - 2, DimLevelType::SingletonNuNo);
-  // TODO: only if all the inputs (for concatentate) are unique at the last
-  // level should the COO has a unique level at the end. Ends by a unordered
-  // unique singleton level.
-  dims.push_back(DimLevelType::SingletonNo);
+  if (rank > 1) {
+    // TODO: it is actually ordered at the level for ordered input.
+    // Followed by unordered non-unique n-2 singleton levels.
+    std::fill_n(std::back_inserter(dims), rank - 2,
+                DimLevelType::SingletonNuNo);
+    // TODO: only if all the inputs (for concatentate) are unique at the last
+    // level should the COO has a unique level at the end. Ends by a unordered
+    // unique singleton level unless the tensor rank is 1.
+    dims.push_back(DimLevelType::SingletonNo);
+  }
   SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(src);
   // TODO: Maybe pick the bitwidth based on input/output tensors (probably the
   // largest one among them) in the original operation instead of using the
@@ -479,13 +480,16 @@ public:
     for (int64_t i = 0; i < rank; i++)
       loopEmitter.enterLoopOverTensorAtDim(rewriter, loc, 0, i);
 
-    Value vals = loopEmitter.getTensorValueBuffer(0);
-    Value idx = loopEmitter.getLastLevelTensorPointerIndex(0);
-    Value val = rewriter.create<memref::LoadOp>(op.getLoc(), vals, idx);
-
     SmallVector<Value, 4> coords;
     coords.reserve(rank);
     loopEmitter.getCoordinateArray(coords);
+
+    Value vals = loopEmitter.getTensorValueBuffer(0);
+    Value pidx = loopEmitter.getLastLevelTensorPointerIndex(0);
+    // Loads the value from sparse tensor using pointer index;
+    // loads the value from dense tensor using coordinate array.
+    Value val = enc ? rewriter.create<memref::LoadOp>(loc, vals, pidx)
+                    : rewriter.create<memref::LoadOp>(loc, vals, coords);
 
     for (int64_t i = 0; i < rank; i++)
       loopEmitter.exitCurrentLoop();

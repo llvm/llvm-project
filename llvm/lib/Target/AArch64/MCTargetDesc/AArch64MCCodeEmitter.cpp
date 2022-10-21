@@ -185,9 +185,15 @@ public:
   unsigned fixOneOperandFPComparison(const MCInst &MI, unsigned EncodedValue,
                                      const MCSubtargetInfo &STI) const;
 
+  template <unsigned Multiple>
+  uint32_t EncodeRegAsMultipleOf(const MCInst &MI, unsigned OpIdx,
+                                 SmallVectorImpl<MCFixup> &Fixups,
+                                 const MCSubtargetInfo &STI) const;
+
   uint32_t EncodeMatrixTileListRegisterClass(const MCInst &MI, unsigned OpIdx,
                                              SmallVectorImpl<MCFixup> &Fixups,
                                              const MCSubtargetInfo &STI) const;
+  template <unsigned BaseReg>
   uint32_t encodeMatrixIndexGPR32(const MCInst &MI, unsigned OpIdx,
                                   SmallVectorImpl<MCFixup> &Fixups,
                                   const MCSubtargetInfo &STI) const;
@@ -516,6 +522,17 @@ AArch64MCCodeEmitter::getVecShiftL8OpValue(const MCInst &MI, unsigned OpIdx,
   return MO.getImm() - 8;
 }
 
+template <unsigned Multiple>
+uint32_t
+AArch64MCCodeEmitter::EncodeRegAsMultipleOf(const MCInst &MI, unsigned OpIdx,
+                                            SmallVectorImpl<MCFixup> &Fixups,
+                                            const MCSubtargetInfo &STI) const {
+  assert(llvm::isPowerOf2_32(Multiple) && "Multiple is not a power of 2");
+  auto RegOpnd = MI.getOperand(OpIdx).getReg();
+  unsigned RegVal = Ctx.getRegisterInfo()->getEncodingValue(RegOpnd);
+  return RegVal / Multiple;
+}
+
 uint32_t AArch64MCCodeEmitter::EncodeMatrixTileListRegisterClass(
     const MCInst &MI, unsigned OpIdx, SmallVectorImpl<MCFixup> &Fixups,
     const MCSubtargetInfo &STI) const {
@@ -524,14 +541,13 @@ uint32_t AArch64MCCodeEmitter::EncodeMatrixTileListRegisterClass(
   return RegMask;
 }
 
+template <unsigned BaseReg>
 uint32_t
 AArch64MCCodeEmitter::encodeMatrixIndexGPR32(const MCInst &MI, unsigned OpIdx,
                                              SmallVectorImpl<MCFixup> &Fixups,
                                              const MCSubtargetInfo &STI) const {
   auto RegOpnd = MI.getOperand(OpIdx).getReg();
-  assert(RegOpnd >= AArch64::W12 && RegOpnd <= AArch64::W15 &&
-         "Expected register in the range w12-w15!");
-  return RegOpnd - AArch64::W12;
+  return RegOpnd - BaseReg;
 }
 
 uint32_t

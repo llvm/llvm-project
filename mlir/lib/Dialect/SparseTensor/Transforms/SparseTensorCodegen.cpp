@@ -282,13 +282,13 @@ static scf::ForOp createFor(OpBuilder &builder, Location loc, Value count,
 static void createPushback(OpBuilder &builder, Location loc,
                            SmallVectorImpl<Value> &fields, unsigned field,
                            Value value) {
-  assert(field < fields.size());
+  assert(2 <= field && field < fields.size());
   Type etp = fields[field].getType().cast<ShapedType>().getElementType();
   if (value.getType() != etp)
     value = builder.create<arith::IndexCastOp>(loc, etp, value);
   fields[field] =
       builder.create<PushBackOp>(loc, fields[field].getType(), fields[1],
-                                 fields[field], value, APInt(64, field));
+                                 fields[field], value, APInt(64, field - 2));
 }
 
 /// Generates insertion code.
@@ -720,6 +720,25 @@ public:
   }
 };
 
+/// Sparse codegen rule for the convert operator.
+class SparseConvertConverter : public OpConversionPattern<ConvertOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(ConvertOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    SparseTensorEncodingAttr encDst = getSparseTensorEncoding(op.getType());
+    SparseTensorEncodingAttr encSrc =
+        getSparseTensorEncoding(op.getSource().getType());
+    if (encDst != encSrc) {
+      // This should be handled by rewriting before codegen.
+      return failure();
+    }
+    rewriter.replaceOp(op, adaptor.getSource());
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -729,6 +748,17 @@ public:
 mlir::SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
   addConversion([](Type type) { return type; });
   addConversion(convertSparseTensorType);
+
+  // Required by scf.for 1:N type conversion.
+  addSourceMaterialization([](OpBuilder &builder, RankedTensorType tp,
+                              ValueRange inputs,
+                              Location loc) -> Optional<Value> {
+    if (!getSparseTensorEncoding(tp))
+      // Not a sparse tensor.
+      return llvm::None;
+    // Sparse compiler knows how to cancel out these casts.
+    return genTuple(builder, loc, tp, inputs);
+  });
 }
 
 //===----------------------------------------------------------------------===//
@@ -744,6 +774,6 @@ void mlir::populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
                SparseTensorDeallocConverter, SparseTensorLoadConverter,
                SparseExpandConverter, SparseCompressConverter,
                SparseInsertConverter, SparseToPointersConverter,
-               SparseToIndicesConverter, SparseToValuesConverter>(
-      typeConverter, patterns.getContext());
+               SparseToIndicesConverter, SparseToValuesConverter,
+               SparseConvertConverter>(typeConverter, patterns.getContext());
 }

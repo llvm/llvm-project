@@ -1064,6 +1064,11 @@ llvm.func @nestattr(%arg0: !llvm.ptr<i32> {llvm.nest}) {
   llvm.return
 }
 
+// CHECK-LABEL: define void @noundefattr(i32 noundef %
+llvm.func @noundefattr(%arg0: i32 {llvm.noundef}) {
+  llvm.return
+}
+
 // CHECK-LABEL: define void @llvm_align(ptr align 4 {{%*.}})
 llvm.func @llvm_align(%arg0: !llvm.ptr<f32> {llvm.align = 4}) {
   llvm.return

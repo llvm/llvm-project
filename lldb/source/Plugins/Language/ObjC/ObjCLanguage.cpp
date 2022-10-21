@@ -12,6 +12,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -931,10 +932,10 @@ lldb::TypeCategoryImplSP ObjCLanguage::GetFormatters() {
   return g_category;
 }
 
-std::vector<ConstString>
+std::vector<FormattersMatchCandidate>
 ObjCLanguage::GetPossibleFormattersMatches(ValueObject &valobj,
                                            lldb::DynamicValueType use_dynamic) {
-  std::vector<ConstString> result;
+  std::vector<FormattersMatchCandidate> result;
 
   if (use_dynamic == lldb::eNoDynamicValues)
     return result;
@@ -959,7 +960,10 @@ ObjCLanguage::GetPossibleFormattersMatches(ValueObject &valobj,
       if (!objc_class_sp)
         break;
       if (ConstString name = objc_class_sp->GetClassName())
-        result.push_back(name);
+        result.push_back(
+            {name, valobj.GetTargetSP()->GetDebugger().GetScriptInterpreter(),
+             TypeImpl(objc_class_sp->GetType()),
+             FormattersMatchCandidate::Flags{}});
     } while (false);
   }
 

@@ -134,3 +134,29 @@ define void @fdiv() {
 
   ret void
 }
+
+define void @frem() {
+; CHECK-LABEL: 'frem'
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %V4F16 = frem <vscale x 4 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %V8F16 = frem <vscale x 8 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %V16F16 = frem <vscale x 16 x half> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %V2F32 = frem <vscale x 2 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %V4F32 = frem <vscale x 4 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %V8F32 = frem <vscale x 8 x float> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %V2F64 = frem <vscale x 2 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Invalid cost for instruction: %V4F64 = frem <vscale x 4 x double> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %V4F16 = frem <vscale x 4 x half> undef, undef
+  %V8F16 = frem <vscale x 8 x half> undef, undef
+  %V16F16 = frem <vscale x 16 x half> undef, undef
+
+  %V2F32 = frem <vscale x 2 x float> undef, undef
+  %V4F32 = frem <vscale x 4 x float> undef, undef
+  %V8F32 = frem <vscale x 8 x float> undef, undef
+
+  %V2F64 = frem <vscale x 2 x double> undef, undef
+  %V4F64 = frem <vscale x 4 x double> undef, undef
+
+  ret void
+}

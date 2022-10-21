@@ -252,6 +252,9 @@ Bug Fixes
   `Issue 47177 <https://github.com/llvm/llvm-project/issues/47177>`_
   `Issue 47179 <https://github.com/llvm/llvm-project/issues/47179>`_
 - Fix a crash upon stray coloncolon token in C2x mode.
+- Reject non-type template arguments formed by casting a non-zero integer
+  to a pointer in pre-C++17 modes, instead of treating them as null
+  pointers.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -318,6 +321,10 @@ Improvements to Clang's diagnostics
   on the previous undocumented behavior. As a side effect of this change,
   constructor calls outside of initializer expressions are no longer ignored,
   which can result in new warnings (or make existing warnings disappear).
+- The wording of diagnostics regarding arithmetic on fixed-sized arrays and
+  pointers is improved to include the type of the array and whether it's cast
+  to another type. This should improve comprehension for why an index is
+  out-of-bounds.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -620,7 +627,10 @@ AST Matchers
 
 clang-format
 ------------
-- Add `RemoveSemicolon` option for removing `;` after a non-empty function definition.
+- Add ``RemoveSemicolon`` option for removing ``;`` after a non-empty function definition.
+- Add ``RequiresExpressionIndentation`` option for configuring the alignment of requires-expressions.
+  The default value of this option is ``OuterScope``, which differs in behavior from clang-format 15.
+  To match the default behavior of clang-format 15, use the ``Keyword`` value.
 
 clang-extdef-mapping
 --------------------

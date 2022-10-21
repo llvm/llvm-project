@@ -11,7 +11,7 @@ int main() {
   for (int i = 0; i < N; ++i)
     hst_ptr[i] = 2;
 
-#pragma omp target teams distribute parallel for map(tofrom : hst_ptr [0:N])
+#pragma omp target teams distribute parallel for map(tofrom : hst_ptr[0 : N])
   for (int i = 0; i < N; ++i)
     hst_ptr[i] -= 1;
 

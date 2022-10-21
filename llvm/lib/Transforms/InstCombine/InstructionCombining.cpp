@@ -1943,6 +1943,14 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
   if (!shouldMergeGEPs(*cast<GEPOperator>(&GEP), *Src))
     return nullptr;
 
+  // LICM moves a GEP with constant indices to the front, while canonicalization
+  // swaps it to the back of a non-constant GEP. If both transformations can be
+  // applied, LICM takes priority because it generally provides greater
+  // optimization by reducing instruction count in the loop body, but performing
+  // canonicalization swapping first negates the LICM opportunity while it does
+  // not necessarily reduce instruction count.
+  bool ShouldCanonicalizeSwap = true;
+
   if (Src->getResultElementType() == GEP.getSourceElementType() &&
       Src->getNumOperands() == 2 && GEP.getNumOperands() == 2 &&
       Src->hasOneUse()) {
@@ -1952,6 +1960,12 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     if (LI) {
       // Try to reassociate loop invariant GEP chains to enable LICM.
       if (Loop *L = LI->getLoopFor(GEP.getParent())) {
+        // If SO1 is invariant and GO1 is variant, they should not be swapped by
+        // canonicalization even if it can be applied, otherwise it triggers
+        // LICM swapping in the next iteration, causing an infinite loop.
+        if (!L->isLoopInvariant(GO1) && L->isLoopInvariant(SO1))
+          ShouldCanonicalizeSwap = false;
+
         // Reassociate the two GEPs if SO1 is variant in the loop and GO1 is
         // invariant: this breaks the dependence between GEPs and allows LICM
         // to hoist the invariant part out of the loop.
@@ -1976,12 +1990,31 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     }
   }
 
-  // Note that if our source is a gep chain itself then we wait for that
-  // chain to be resolved before we perform this transformation.  This
-  // avoids us creating a TON of code in some cases.
-  if (auto *SrcGEP = dyn_cast<GEPOperator>(Src->getOperand(0)))
-    if (SrcGEP->getNumOperands() == 2 && shouldMergeGEPs(*Src, *SrcGEP))
-      return nullptr;   // Wait until our source is folded to completion.
+  // Canonicalize swapping. Swap GEP with constant index suffix to the back if
+  // it doesn't violate def-use relations or contradict with loop invariant
+  // swap above. This allows more potential applications of constant-indexed GEP
+  // optimizations below.
+  if (ShouldCanonicalizeSwap && Src->hasOneUse() &&
+      Src->getPointerOperandType() == GEP.getPointerOperandType() &&
+      Src->getType()->isVectorTy() == GEP.getType()->isVectorTy() &&
+      !isa<GlobalValue>(Src->getPointerOperand())) {
+    // When swapping, GEP with all constant indices are more prioritized than
+    // GEP with only the last few indices (but not all) being constant because
+    // it may be merged with GEP with all constant indices.
+    if ((isa<ConstantInt>(*(Src->indices().end() - 1)) &&
+         !isa<ConstantInt>(*(GEP.indices().end() - 1))) ||
+        (Src->hasAllConstantIndices() && !GEP.hasAllConstantIndices())) {
+      // Cannot guarantee inbounds after swapping because the non-const GEP can
+      // have arbitrary sign.
+      Value *NewSrc = Builder.CreateGEP(
+          GEP.getSourceElementType(), Src->getOperand(0),
+          SmallVector<Value *>(GEP.indices()), Src->getName());
+      GetElementPtrInst *NewGEP = GetElementPtrInst::Create(
+          Src->getSourceElementType(), NewSrc,
+          SmallVector<Value *>(Src->indices()), GEP.getName());
+      return NewGEP;
+    }
+  }
 
   // For constant GEPs, use a more general offset-based folding approach.
   // Only do this for opaque pointers, as the result element type may change.

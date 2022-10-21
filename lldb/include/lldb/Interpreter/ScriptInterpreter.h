@@ -418,6 +418,14 @@ public:
     return false;
   }
 
+  // Calls the specified formatter matching Python function and returns its
+  // result (true if it's a match, false if we should keep looking for a
+  // matching formatter).
+  virtual bool FormatterCallbackFunction(const char *function_name,
+                                         lldb::TypeImplSP type_impl_sp) {
+    return true;
+  }
+
   virtual void Clear() {
     // Clean up any ref counts to SBObjects that might be in global variables
   }

@@ -305,7 +305,7 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
 
   // Look through the various header search paths to load any available module
   // maps, searching for a module map that describes this module.
-  for (DirectoryLookup Dir : search_dir_range()) {
+  for (DirectoryLookup &Dir : search_dir_range()) {
     if (Dir.isFramework()) {
       // Search for or infer a module map for a framework. Here we use
       // SearchName rather than ModuleName, to permit finding private modules

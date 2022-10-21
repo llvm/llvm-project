@@ -189,6 +189,7 @@ check-generated-output)
     # Depends on LC_COLLATE set at the top of this script.
     ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test libcxx/benchmarks \
            --exclude '*.dat' \
+           --exclude 'escaped_output.*.pass.cpp' \
            --exclude 'format_tests.h' \
            --exclude 'formatter.*.pass.cpp' \
            --exclude 'grep.pass.cpp' \

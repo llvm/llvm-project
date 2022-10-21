@@ -16,10 +16,10 @@
 
 #include "llvm/ADT/StringSet.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLine.h"
-#include "llvm/DebugInfo/LogicalView/Core/LVOptions.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
+#include "llvm/Support/Regex.h"
 #include <set>
 #include <string>
 
@@ -444,6 +444,201 @@ public:
 
 inline LVOptions &options() { return (*LVOptions::getOptions()); }
 inline void setOptions(LVOptions *Options) { LVOptions::setOptions(Options); }
+
+class LVPatterns final {
+  // Pattern Mode.
+  enum class LVMatchMode {
+    None = 0, // No given pattern.
+    Match,    // Perfect match.
+    NoCase,   // Ignore case.
+    Regex     // Regular expression.
+  };
+
+  // Keep the search pattern information.
+  struct LVMatch {
+    std::string Pattern;                  // Normal pattern.
+    std::shared_ptr<Regex> RE;            // Regular Expression Pattern.
+    LVMatchMode Mode = LVMatchMode::None; // Match mode.
+  };
+
+  using LVMatchInfo = std::vector<LVMatch>;
+  LVMatchInfo GenericMatchInfo;
+  using LVMatchOffsets = std::vector<uint64_t>;
+  LVMatchOffsets OffsetMatchInfo;
+
+  // Element selection.
+  LVElementDispatch ElementDispatch;
+  LVLineDispatch LineDispatch;
+  LVScopeDispatch ScopeDispatch;
+  LVSymbolDispatch SymbolDispatch;
+  LVTypeDispatch TypeDispatch;
+
+  // Element selection request.
+  LVElementRequest ElementRequest;
+  LVLineRequest LineRequest;
+  LVScopeRequest ScopeRequest;
+  LVSymbolRequest SymbolRequest;
+  LVTypeRequest TypeRequest;
+
+  // Check an element printing Request.
+  template <typename T, typename U>
+  bool checkElementRequest(const T *Element, const U &Requests) const {
+    assert(Element && "Element must not be nullptr");
+    for (const auto &Request : Requests)
+      if ((Element->*Request)())
+        return true;
+    // Check generic element requests.
+    for (const LVElementGetFunction &Request : ElementRequest)
+      if ((Element->*Request)())
+        return true;
+    return false;
+  }
+
+  // Add an element printing request based on its kind.
+  template <typename T, typename U, typename V>
+  void addRequest(const T &Selection, const U &Dispatch, V &Request) const {
+    for (const auto &Entry : Selection) {
+      // Find target function to fullfit request.
+      typename U::const_iterator Iter = Dispatch.find(Entry);
+      if (Iter != Dispatch.end())
+        Request.push_back(Iter->second);
+    }
+  }
+
+  void addElement(LVElement *Element);
+
+  template <typename T, typename U>
+  void resolveGenericPatternMatch(T *Element, const U &Requests) {
+    assert(Element && "Element must not be nullptr");
+    auto CheckPattern = [=]() -> bool {
+      return Element->isNamed() &&
+             (matchGenericPattern(Element->getName()) ||
+              matchGenericPattern(Element->getTypeName()));
+    };
+    auto CheckOffset = [=]() -> bool {
+      return matchOffsetPattern(Element->getOffset());
+    };
+    if ((options().getSelectGenericPattern() && CheckPattern()) ||
+        (options().getSelectOffsetPattern() && CheckOffset()) ||
+        ((Requests.size() || ElementRequest.size()) &&
+         checkElementRequest(Element, Requests)))
+      addElement(Element);
+  }
+
+  template <typename U>
+  void resolveGenericPatternMatch(LVLine *Line, const U &Requests) {
+    assert(Line && "Line must not be nullptr");
+    auto CheckPattern = [=]() -> bool {
+      return matchGenericPattern(Line->lineNumberAsStringStripped()) ||
+             matchGenericPattern(Line->getName()) ||
+             matchGenericPattern(Line->getPathname());
+    };
+    auto CheckOffset = [=]() -> bool {
+      return matchOffsetPattern(Line->getAddress());
+    };
+    if ((options().getSelectGenericPattern() && CheckPattern()) ||
+        (options().getSelectOffsetPattern() && CheckOffset()) ||
+        (Requests.size() && checkElementRequest(Line, Requests)))
+      addElement(Line);
+  }
+
+  Error createMatchEntry(LVMatchInfo &Filters, StringRef Pattern,
+                         bool IgnoreCase, bool UseRegex);
+
+public:
+  static LVPatterns *getPatterns();
+
+  LVPatterns() {
+    ElementDispatch = LVElement::getDispatch();
+    LineDispatch = LVLine::getDispatch();
+    ScopeDispatch = LVScope::getDispatch();
+    SymbolDispatch = LVSymbol::getDispatch();
+    TypeDispatch = LVType::getDispatch();
+  }
+  LVPatterns(const LVPatterns &) = delete;
+  LVPatterns &operator=(const LVPatterns &) = delete;
+  ~LVPatterns() = default;
+
+  // Clear any existing patterns.
+  void clear() {
+    GenericMatchInfo.clear();
+    OffsetMatchInfo.clear();
+    ElementRequest.clear();
+    LineRequest.clear();
+    ScopeRequest.clear();
+    SymbolRequest.clear();
+    TypeRequest.clear();
+
+    options().resetSelectGenericKind();
+    options().resetSelectGenericPattern();
+    options().resetSelectOffsetPattern();
+  }
+
+  void addRequest(LVElementKindSet &Selection) {
+    addRequest(Selection, ElementDispatch, ElementRequest);
+  }
+  void addRequest(LVLineKindSet &Selection) {
+    addRequest(Selection, LineDispatch, LineRequest);
+  }
+  void addRequest(LVScopeKindSet &Selection) {
+    addRequest(Selection, ScopeDispatch, ScopeRequest);
+  }
+  void addRequest(LVSymbolKindSet &Selection) {
+    addRequest(Selection, SymbolDispatch, SymbolRequest);
+  }
+  void addRequest(LVTypeKindSelection &Selection) {
+    addRequest(Selection, TypeDispatch, TypeRequest);
+  }
+
+  void updateReportOptions();
+
+  bool matchPattern(StringRef Input, const LVMatchInfo &MatchInfo);
+  // Match a pattern (--select='pattern').
+  bool matchGenericPattern(StringRef Input) {
+    return matchPattern(Input, GenericMatchInfo);
+  }
+  bool matchOffsetPattern(LVOffset Offset) {
+    return std::find(OffsetMatchInfo.begin(), OffsetMatchInfo.end(), Offset) !=
+           OffsetMatchInfo.end();
+  }
+
+  void resolvePatternMatch(LVLine *Line) {
+    resolveGenericPatternMatch(Line, LineRequest);
+  }
+
+  void resolvePatternMatch(LVScope *Scope) {
+    resolveGenericPatternMatch(Scope, ScopeRequest);
+  }
+
+  void resolvePatternMatch(LVSymbol *Symbol) {
+    resolveGenericPatternMatch(Symbol, SymbolRequest);
+  }
+
+  void resolvePatternMatch(LVType *Type) {
+    resolveGenericPatternMatch(Type, TypeRequest);
+  }
+
+  void addPatterns(StringSet<> &Patterns, LVMatchInfo &Filters);
+
+  // Add generic and offset patterns info.
+  void addGenericPatterns(StringSet<> &Patterns);
+  void addOffsetPatterns(const LVOffsetSet &Patterns);
+
+  // Conditions to print an object.
+  bool printElement(const LVLine *Line) const;
+  bool printObject(const LVLocation *Location) const;
+  bool printElement(const LVScope *Scope) const;
+  bool printElement(const LVSymbol *Symbol) const;
+  bool printElement(const LVType *Type) const;
+
+  void print(raw_ostream &OS) const;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void dump() const { print(dbgs()); }
+#endif
+};
+
+inline LVPatterns &patterns() { return *LVPatterns::getPatterns(); }
 
 } // namespace logicalview
 } // namespace llvm

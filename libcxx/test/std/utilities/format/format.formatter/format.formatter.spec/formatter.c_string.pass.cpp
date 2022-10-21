@@ -10,6 +10,7 @@
 
 // <format>
 
+// C++23 the formatter is a debug-enabled specialization.
 // [format.formatter.spec]:
 // Each header that declares the template `formatter` provides the following
 // enabled specializations:
@@ -27,6 +28,7 @@
 #include "make_string.h"
 
 #define STR(S) MAKE_STRING(CharT, S)
+#define SV(S) MAKE_STRING_VIEW(CharT, S)
 #define CSTR(S) MAKE_CSTRING(CharT, S)
 
 template <class T, class StringT, class StringViewT, class CharT>
@@ -63,6 +65,27 @@ void test_termination_condition(StringT expected, StringT f, const CharT* arg) {
   test<ArgumentT>(expected, fmt, arg);
 }
 
+#if TEST_STD_VER > 20
+template <class ArgumentT, class CharT>
+constexpr bool test_set_debug_format() {
+  std::formatter<ArgumentT, CharT> formatter;
+  LIBCPP_ASSERT(formatter.__parser_.__type_ == std::__format_spec::__type::__default);
+
+  formatter.set_debug_format();
+  LIBCPP_ASSERT(formatter.__parser_.__type_ == std::__format_spec::__type::__debug);
+
+  std::basic_string_view fmt = SV("s}");
+  std::basic_format_parse_context<CharT> parse_ctx{fmt};
+  formatter.parse(parse_ctx);
+  LIBCPP_ASSERT(formatter.__parser_.__type_ == std::__format_spec::__type::__string);
+
+  formatter.set_debug_format();
+  LIBCPP_ASSERT(formatter.__parser_.__type_ == std::__format_spec::__type::__debug);
+
+  return true;
+}
+#endif
+
 template <class ArgumentT>
 void test_char_pointer() {
   using CharT = std::remove_cv_t<std::remove_pointer_t<ArgumentT>>;
@@ -95,6 +118,11 @@ void test_char_pointer() {
                                         CSTR("world"));
   test_termination_condition<ArgumentT>(STR("univers"), STR("%^7.7}"),
                                         CSTR("universe"));
+
+#if TEST_STD_VER > 20
+  test_set_debug_format<ArgumentT, CharT>();
+  static_assert(test_set_debug_format<ArgumentT, CharT>());
+#endif
 }
 
 int main(int, char**) {

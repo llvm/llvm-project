@@ -49,6 +49,8 @@ if(${LIBOMPTARGET_DEP_VEO_FOUND})
     ${LIBOMPTARGET_INCLUDE_DIR}
     ${LIBOMPTARGET_DEP_VEO_INCLUDE_DIR})
 
+  set_target_properties("omptarget.rtl.${tmachine_libname}" PROPERTY CXX_VISIBILITY_PRESET protected)
+
   target_link_libraries(
     "omptarget.rtl.${tmachine_libname}"
     elf_common

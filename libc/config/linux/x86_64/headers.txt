@@ -14,6 +14,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.stdio
     libc.include.stdlib
     libc.include.string
+    libc.include.termios
     libc.include.threads
     libc.include.time
     libc.include.unistd

@@ -4,17 +4,156 @@
 define <16 x half> @foo(<16 x half> %a, <16 x half> %b) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvtph2ps %xmm1, %ymm2
-; CHECK-NEXT:    vcvtph2ps %xmm0, %ymm3
-; CHECK-NEXT:    vaddps %ymm2, %ymm3, %ymm2
-; CHECK-NEXT:    vcvtps2ph $4, %ymm2, %xmm2
-; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; CHECK-NEXT:    vcvtph2ps %xmm1, %ymm1
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; CHECK-NEXT:    vcvtph2ps %xmm0, %ymm0
-; CHECK-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vcvtps2ph $4, %ymm0, %xmm0
-; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %edi
+; CHECK-NEXT:    vmovd %edi, %xmm0
+; CHECK-NEXT:    movzwl %si, %esi
+; CHECK-NEXT:    vmovd %esi, %xmm1
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %esi
+; CHECK-NEXT:    vmovd %esi, %xmm2
+; CHECK-NEXT:    vmovdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    movzwl %dx, %edx
+; CHECK-NEXT:    vmovd %edx, %xmm2
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    vmovd %edx, %xmm4
+; CHECK-NEXT:    movzwl %cx, %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm5
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm6
+; CHECK-NEXT:    movzwl %r8w, %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm7
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm8
+; CHECK-NEXT:    movzwl %r9w, %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm9
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm10
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm11
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm12
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm13
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm14
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm15
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm0
+; CHECK-NEXT:    vcvtph2ps %xmm1, %xmm1
+; CHECK-NEXT:    vaddss %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovd %ecx, %xmm3
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vcvtph2ps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; CHECK-NEXT:    vcvtph2ps %xmm2, %xmm2
+; CHECK-NEXT:    vaddss %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; CHECK-NEXT:    vmovd %ecx, %xmm0
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vcvtph2ps %xmm4, %xmm1
+; CHECK-NEXT:    vcvtph2ps %xmm5, %xmm2
+; CHECK-NEXT:    vaddss %xmm1, %xmm2, %xmm2
+; CHECK-NEXT:    vmovd %ecx, %xmm4
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vcvtph2ps %xmm6, %xmm1
+; CHECK-NEXT:    vcvtph2ps %xmm7, %xmm5
+; CHECK-NEXT:    vaddss %xmm1, %xmm5, %xmm1
+; CHECK-NEXT:    vmovd %ecx, %xmm5
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vcvtph2ps %xmm8, %xmm6
+; CHECK-NEXT:    vcvtph2ps %xmm9, %xmm7
+; CHECK-NEXT:    vaddss %xmm6, %xmm7, %xmm8
+; CHECK-NEXT:    vmovd %ecx, %xmm9
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vcvtph2ps %xmm10, %xmm6
+; CHECK-NEXT:    vcvtph2ps %xmm11, %xmm7
+; CHECK-NEXT:    vaddss %xmm6, %xmm7, %xmm10
+; CHECK-NEXT:    vmovd %ecx, %xmm11
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vcvtph2ps %xmm12, %xmm6
+; CHECK-NEXT:    vcvtph2ps %xmm13, %xmm7
+; CHECK-NEXT:    vaddss %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vmovd %ecx, %xmm12
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vcvtph2ps %xmm14, %xmm7
+; CHECK-NEXT:    vcvtph2ps %xmm15, %xmm13
+; CHECK-NEXT:    vaddss %xmm7, %xmm13, %xmm7
+; CHECK-NEXT:    vmovd %ecx, %xmm13
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vcvtph2ps %xmm3, %xmm3
+; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm0
+; CHECK-NEXT:    vaddss %xmm3, %xmm0, %xmm0
+; CHECK-NEXT:    vmovd %ecx, %xmm3
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vcvtph2ps %xmm4, %xmm4
+; CHECK-NEXT:    vcvtph2ps %xmm5, %xmm5
+; CHECK-NEXT:    vaddss %xmm4, %xmm5, %xmm4
+; CHECK-NEXT:    vmovd %ecx, %xmm5
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vcvtph2ps %xmm9, %xmm9
+; CHECK-NEXT:    vcvtph2ps %xmm11, %xmm11
+; CHECK-NEXT:    vaddss %xmm9, %xmm11, %xmm9
+; CHECK-NEXT:    vmovd %ecx, %xmm11
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vcvtph2ps %xmm12, %xmm12
+; CHECK-NEXT:    vcvtph2ps %xmm13, %xmm13
+; CHECK-NEXT:    vaddss %xmm12, %xmm13, %xmm12
+; CHECK-NEXT:    vmovd %ecx, %xmm13
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vcvtph2ps %xmm3, %xmm3
+; CHECK-NEXT:    vcvtph2ps %xmm5, %xmm5
+; CHECK-NEXT:    vaddss %xmm3, %xmm5, %xmm3
+; CHECK-NEXT:    vmovd %ecx, %xmm5
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vcvtph2ps %xmm11, %xmm11
+; CHECK-NEXT:    vcvtph2ps %xmm13, %xmm13
+; CHECK-NEXT:    vaddss %xmm11, %xmm13, %xmm11
+; CHECK-NEXT:    vmovd %ecx, %xmm13
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vcvtph2ps %xmm5, %xmm5
+; CHECK-NEXT:    vcvtph2ps %xmm13, %xmm13
+; CHECK-NEXT:    vaddss %xmm5, %xmm13, %xmm5
+; CHECK-NEXT:    vmovd %ecx, %xmm13
+; CHECK-NEXT:    movzwl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    vcvtph2ps %xmm13, %xmm13
+; CHECK-NEXT:    vmovd %ecx, %xmm14
+; CHECK-NEXT:    vcvtph2ps %xmm14, %xmm14
+; CHECK-NEXT:    vaddss %xmm13, %xmm14, %xmm13
+; CHECK-NEXT:    vcvtps2ph $4, %xmm13, %xmm13
+; CHECK-NEXT:    vpextrw $0, %xmm13, 30(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm5, %xmm5
+; CHECK-NEXT:    vpextrw $0, %xmm5, 28(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm11, %xmm5
+; CHECK-NEXT:    vpextrw $0, %xmm5, 26(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm3, %xmm3
+; CHECK-NEXT:    vpextrw $0, %xmm3, 24(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm12, %xmm3
+; CHECK-NEXT:    vpextrw $0, %xmm3, 22(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm9, %xmm3
+; CHECK-NEXT:    vpextrw $0, %xmm3, 20(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm4, %xmm3
+; CHECK-NEXT:    vpextrw $0, %xmm3, 18(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-NEXT:    vpextrw $0, %xmm0, 16(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm7, %xmm0
+; CHECK-NEXT:    vpextrw $0, %xmm0, 14(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm6, %xmm0
+; CHECK-NEXT:    vpextrw $0, %xmm0, 12(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm10, %xmm0
+; CHECK-NEXT:    vpextrw $0, %xmm0, 10(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm8, %xmm0
+; CHECK-NEXT:    vpextrw $0, %xmm0, 8(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm1, %xmm0
+; CHECK-NEXT:    vpextrw $0, %xmm0, 6(%rax)
+; CHECK-NEXT:    vcvtps2ph $4, %xmm2, %xmm0
+; CHECK-NEXT:    vpextrw $0, %xmm0, 4(%rax)
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-NEXT:    vpextrw $0, %xmm0, 2(%rax)
+; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; CHECK-NEXT:    vpextrw $0, %xmm0, (%rax)
 ; CHECK-NEXT:    retq
   %1 = fadd <16 x half> %a, %b
   ret <16 x half> %1

@@ -99,10 +99,14 @@ bool SBTypeNameSpecifier::GetDescription(
     lldb::SBStream &description, lldb::DescriptionLevel description_level) {
   LLDB_INSTRUMENT_VA(this, description, description_level);
 
+  lldb::FormatterMatchType match_type = GetMatchType();
+  const char *match_type_str =
+      (match_type == eFormatterMatchExact   ? "plain"
+       : match_type == eFormatterMatchRegex ? "regex"
+                                            : "callback");
   if (!IsValid())
     return false;
-  description.Printf("SBTypeNameSpecifier(%s,%s)", GetName(),
-                     IsRegex() ? "regex" : "plain");
+  description.Printf("SBTypeNameSpecifier(%s,%s)", GetName(), match_type_str);
   return true;
 }
 

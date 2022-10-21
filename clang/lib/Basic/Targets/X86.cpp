@@ -290,6 +290,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasCLWB = true;
     } else if (Feature == "+wbnoinvd") {
       HasWBNOINVD = true;
+    } else if (Feature == "+prefetchi") {
+      HasPREFETCHI = true;
     } else if (Feature == "+prefetchwt1") {
       HasPREFETCHWT1 = true;
     } else if (Feature == "+clzero") {
@@ -738,6 +740,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__SHSTK__");
   if (HasSGX)
     Builder.defineMacro("__SGX__");
+  if (HasPREFETCHI)
+    Builder.defineMacro("__PREFETCHI__");
   if (HasPREFETCHWT1)
     Builder.defineMacro("__PREFETCHWT1__");
   if (HasCLZERO)
@@ -929,6 +933,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("pconfig", true)
       .Case("pku", true)
       .Case("popcnt", true)
+      .Case("prefetchi", true)
       .Case("prefetchwt1", true)
       .Case("prfchw", true)
       .Case("ptwrite", true)
@@ -1025,6 +1030,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("pconfig", HasPCONFIG)
       .Case("pku", HasPKU)
       .Case("popcnt", HasPOPCNT)
+      .Case("prefetchi", HasPREFETCHI)
       .Case("prefetchwt1", HasPREFETCHWT1)
       .Case("prfchw", HasPRFCHW)
       .Case("ptwrite", HasPTWRITE)

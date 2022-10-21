@@ -515,6 +515,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     if (STI.isRegisterReservedByUser(FPReg))
       MF.getFunction().getContext().diagnose(DiagnosticInfoUnsupported{
           MF.getFunction(), "Frame pointer required, but has been reserved."});
+    // The frame pointer does need to be reserved from register allocation.
+    assert(MF.getRegInfo().isReserved(FPReg) && "FP not reserved");
 
     adjustReg(MBB, MBBI, DL, FPReg, SPReg,
               RealStackSize - RVFI->getVarArgsSaveSize(),

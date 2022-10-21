@@ -90,13 +90,15 @@ public:
 
 // Private constructor/destructor.
 class Priv {
-  Priv() {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
-  // CHECK-FIXES: Priv() = default;
+  Priv();
   ~Priv() {};
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
   // CHECK-FIXES: ~Priv() = default;
 };
+
+Priv::Priv() {}
+// CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use '= default'
+// CHECK-FIXES: Priv::Priv() = default;
 
 // struct.
 struct ST {
