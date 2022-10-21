@@ -62,3 +62,26 @@ void sv2() {
   char read4 = sv[1]; // expected-warning {{use of invalid pointer 'sv'}}
   // expected-remark@-1 {{pset => { invalid }}}
 }
+
+class Stream {
+ public:
+  Stream& operator<<(char);
+  Stream& operator<<(const StringView &);
+  // FIXME: conservative for now, but do not invalidate const Owners?
+  Stream& operator<<(const String &);
+};
+
+void sv3() {
+  Stream cout;
+  StringView sv;
+  String name = "abcdefghijklmnop";
+  sv = name;
+  cout << sv; // expected-remark {{pset => { name__1' }}}
+  name = "frobozz"; // expected-note {{invalidated by non-const use of owner type}}
+  cout << sv[2]; // expected-warning {{use of invalid pointer 'sv'}}
+  sv = name; // expected-remark@-1 {{pset => { invalid }}}
+  cout << sv; // expected-remark {{pset => { name__2' }}}
+  cout << name; // expected-note {{invalidated by non-const use of owner type}}
+  cout << sv; // expected-warning {{use of invalid pointer 'sv'}}
+  // expected-remark@-1 {{pset => { invalid }}}
+}
