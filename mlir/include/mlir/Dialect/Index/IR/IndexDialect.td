@@ -80,6 +80,8 @@ def IndexDialect : Dialect {
     /// Register all dialect operations.
     void registerOperations();
   }];
+
+  let useDefaultAttributePrinterParser = 1;
 }
 
 #endif // INDEX_DIALECT
