@@ -6868,8 +6868,8 @@ def err_array_init_plain_string_into_char8_t : Error<
 def note_array_init_plain_string_into_char8_t : Note<
   "add 'u8' prefix to form a 'char8_t' string literal">;
 def err_array_init_utf8_string_into_char : Error<
-  "%select{|ISO C++20 does not permit }0initialization of char array with "
-  "UTF-8 string literal%select{ is not permitted by '-fchar8_t'|}0">;
+  "initialization of %select{|signed }0char array with "
+  "UTF-8 string literal is not permitted by %select{'-fchar8_t'|C++20}1">;
 def warn_cxx20_compat_utf8_string : Warning<
   "type of UTF-8 string literal will change from array of const char to "
   "array of const char8_t in C++20">, InGroup<CXX20Compat>, DefaultIgnore;
