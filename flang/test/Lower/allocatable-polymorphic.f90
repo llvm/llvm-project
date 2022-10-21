@@ -5,11 +5,24 @@ module poly
   type p1
     integer :: a
     integer :: b
+  contains
+    procedure, nopass :: proc1 => proc1_p1
   end type
 
   type, extends(p1) :: p2
     integer :: c
+  contains
+      procedure, nopass :: proc1 => proc1_p2
   end type
+
+contains
+  subroutine proc1_p1()
+    print*, 'call proc1_p1'
+  end subroutine
+
+  subroutine proc1_p2()
+    print*, 'call proc1_p2'
+  end subroutine
 end module
 
 program test_allocatable
@@ -27,6 +40,8 @@ program test_allocatable
   allocate(p1::c3(10))
   allocate(p2::c4(20))
 
+  call c1%proc1()
+  call c2%proc1()
 end
 
 ! CHECK-LABEL: func.func @_QQmain()
