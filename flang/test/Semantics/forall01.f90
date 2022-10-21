@@ -41,8 +41,8 @@ subroutine forall3
   end forall
   forall(i=1:10)
     forall(j=1:10)
-      !WARNING: FORALL index variable 'j' not used on left-hand side of assignment
       !ERROR: Cannot redefine FORALL variable 'i'
+      !WARNING: FORALL index variable 'j' not used on left-hand side of assignment
       i = 1
     end forall
   end forall
