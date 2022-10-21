@@ -179,7 +179,7 @@ func.func @two_d(%arg0: tensor<10x34xf32>,
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   // expected-error @below {{expects either a dynamic or a static split point to be provided}}
-  %0:2 = "transform.structured.split"(%arg1) { dimension = 1, static_split_point = -1 } : (!pdl.operation) -> (!pdl.operation, !pdl.operation)
+  %0:2 = "transform.structured.split"(%arg1) { dimension = 1, static_split_point = -9223372036854775808 } : (!pdl.operation) -> (!pdl.operation, !pdl.operation)
 }
 
 // -----
