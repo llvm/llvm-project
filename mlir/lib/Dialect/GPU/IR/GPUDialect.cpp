@@ -1192,17 +1192,10 @@ LogicalResult SubgroupMmaLoadMatrixOp::verify() {
   auto resMatrixType = resType.cast<gpu::MMAMatrixType>();
   auto operand = resMatrixType.getOperand();
   auto srcMemrefType = srcType.cast<MemRefType>();
-  auto srcMemSpace = srcMemrefType.getMemorySpaceAsInt();
 
   if (!isLastMemrefDimUnitStride(srcMemrefType))
     return emitError(
         "expected source memref most minor dim must have unit stride");
-
-  if (srcMemSpace != kGenericMemorySpace && srcMemSpace != kSharedMemorySpace &&
-      srcMemSpace != kGlobalMemorySpace)
-    return emitError(
-        "source memorySpace kGenericMemorySpace, kSharedMemorySpace or "
-        "kGlobalMemorySpace only allowed");
 
   if (!operand.equals("AOp") && !operand.equals("BOp") &&
       !operand.equals("COp"))
@@ -1220,16 +1213,10 @@ LogicalResult SubgroupMmaStoreMatrixOp::verify() {
   auto dstType = getDstMemref().getType();
   auto srcMatrixType = srcType.cast<gpu::MMAMatrixType>();
   auto dstMemrefType = dstType.cast<MemRefType>();
-  auto dstMemSpace = dstMemrefType.getMemorySpaceAsInt();
 
   if (!isLastMemrefDimUnitStride(dstMemrefType))
     return emitError(
         "expected destination memref most minor dim must have unit stride");
-
-  if (dstMemSpace != kGenericMemorySpace && dstMemSpace != kSharedMemorySpace &&
-      dstMemSpace != kGlobalMemorySpace)
-    return emitError("destination memorySpace of kGenericMemorySpace, "
-                     "kGlobalMemorySpace or kSharedMemorySpace only allowed");
 
   if (!srcMatrixType.getOperand().equals("COp"))
     return emitError(
