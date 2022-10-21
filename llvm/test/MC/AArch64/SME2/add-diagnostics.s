@@ -23,6 +23,17 @@ add     za.s[w8, -1], {z0.s - z3.s}, {z4.s - z7.s}
 // CHECK-NEXT: add     za.s[w8, -1], {z0.s - z3.s}, {z4.s - z7.s}
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+add za.d[w8, 8, vgx4], {z0.s-z3.s}
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 7].
+// CHECK-NEXT: za.d[w8, 8, vgx4], {z0.s-z3.s}
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add za.d[w8, -1, vgx4], {z0.s-z3.s}
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [0, 7].
+// CHECK-NEXT: za.d[w8, -1, vgx4], {z0.s-z3.s}
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+
 // --------------------------------------------------------------------------//
 // Invalid vector select register
 
@@ -47,6 +58,11 @@ add     za.s[w7, 0], {z0.s - z1.s}, {z2.s - z3.s}
 add za.h[w8, #0], {z0.h-z3.h}, z4.h
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid matrix operand, expected suffix .d
 // CHECK-NEXT: add za.h[w8, #0], {z0.h-z3.h}, z4.h
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+add za.h[w8, 0, vgx2], {z0.s, z1.s}
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid matrix operand, expected suffix .d
+// CHECK-NEXT: za.h[w8, 0, vgx2], {z0.s, z1.s}
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 // --------------------------------------------------------------------------//
