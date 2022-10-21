@@ -87,6 +87,30 @@ const char *LVScope::kind() const {
   return Kind;
 }
 
+LVScopeDispatch LVScope::Dispatch = {
+    {LVScopeKind::IsAggregate, &LVScope::getIsAggregate},
+    {LVScopeKind::IsArray, &LVScope::getIsArray},
+    {LVScopeKind::IsBlock, &LVScope::getIsBlock},
+    {LVScopeKind::IsCallSite, &LVScope::getIsCallSite},
+    {LVScopeKind::IsCatchBlock, &LVScope::getIsCatchBlock},
+    {LVScopeKind::IsClass, &LVScope::getIsClass},
+    {LVScopeKind::IsCompileUnit, &LVScope::getIsCompileUnit},
+    {LVScopeKind::IsEntryPoint, &LVScope::getIsEntryPoint},
+    {LVScopeKind::IsEnumeration, &LVScope::getIsEnumeration},
+    {LVScopeKind::IsFunction, &LVScope::getIsFunction},
+    {LVScopeKind::IsFunctionType, &LVScope::getIsFunctionType},
+    {LVScopeKind::IsInlinedFunction, &LVScope::getIsInlinedFunction},
+    {LVScopeKind::IsLabel, &LVScope::getIsLabel},
+    {LVScopeKind::IsLexicalBlock, &LVScope::getIsLexicalBlock},
+    {LVScopeKind::IsNamespace, &LVScope::getIsNamespace},
+    {LVScopeKind::IsRoot, &LVScope::getIsRoot},
+    {LVScopeKind::IsStructure, &LVScope::getIsStructure},
+    {LVScopeKind::IsTemplate, &LVScope::getIsTemplate},
+    {LVScopeKind::IsTemplateAlias, &LVScope::getIsTemplateAlias},
+    {LVScopeKind::IsTemplatePack, &LVScope::getIsTemplatePack},
+    {LVScopeKind::IsTryBlock, &LVScope::getIsTryBlock},
+    {LVScopeKind::IsUnion, &LVScope::getIsUnion}};
+
 void LVScope::addToChildren(LVElement *Element) {
   if (!Children)
     Children = new LVElements();
@@ -395,6 +419,9 @@ void LVScope::resolveName() {
   }
 
   LVElement::resolveName();
+
+  // Resolve any given pattern.
+  patterns().resolvePatternMatch(this);
 }
 
 void LVScope::resolveReferences() {
@@ -432,6 +459,8 @@ void LVScope::resolveElements() {
     LVScopeCompileUnit *CompileUnit = static_cast<LVScopeCompileUnit *>(Scope);
     getReader().setCompileUnit(CompileUnit);
     CompileUnit->resolve();
+    // Propagate any matching information into the scopes tree.
+    CompileUnit->propagatePatternMatch();
   }
 }
 
@@ -530,6 +559,13 @@ void LVScope::encodeTemplateArguments(std::string &Name,
 }
 
 bool LVScope::resolvePrinting() const {
+  // In selection mode, always print the root scope regardless of the
+  // number of matched elements. If no matches, the root by itself will
+  // indicate no matches.
+  if (options().getSelectExecute()) {
+    return getIsRoot() || getIsCompileUnit() || getHasPattern();
+  }
+
   bool Globals = options().getAttributeGlobal();
   bool Locals = options().getAttributeLocal();
   if ((Globals && Locals) || (!Globals && !Locals)) {
@@ -794,7 +830,8 @@ void LVScope::printEncodedArgs(raw_ostream &OS, bool Full) const {
 void LVScope::print(raw_ostream &OS, bool Full) const {
   if (getIncludeInPrint() && getReader().doPrintScope(this)) {
     // For a summary (printed elements), do not count the scope root.
-    if (!(getIsRoot()))
+    // For a summary (selected elements) do not count a compile unit.
+    if (!(getIsRoot() || (getIsCompileUnit() && options().getSelectExecute())))
       getReaderCompileUnit()->incrementPrintedScopes();
     LVElement::print(OS, Full);
     printExtra(OS, Full);
@@ -939,9 +976,28 @@ void LVScopeCompileUnit::addSize(LVScope *Scope, LVOffset Lower,
     CUContributionSize = Size;
 }
 
+// Update parents and children with pattern information.
+void LVScopeCompileUnit::propagatePatternMatch() {
+  // At this stage, we have finished creating the Scopes tree and we have
+  // a list of elements that match the pattern specified in the command line.
+  // The pattern corresponds to a scope or element; mark parents and/or
+  // children as having that pattern, before any printing is done.
+  if (!options().getSelectExecute())
+    return;
+
+  if (MatchedScopes.size()) {
+    for (LVScope *Scope : MatchedScopes)
+      Scope->traverseParentsAndChildren(&LVScope::getHasPattern,
+                                        &LVScope::setHasPattern);
+  } else {
+    // Mark the compile unit as having a pattern to enable any requests to
+    // print sizes and summary as that information is recorded at that level.
+    setHasPattern();
+  }
+}
+
 void LVScopeCompileUnit::processRangeLocationCoverage(
     LVValidLocation ValidLocation) {
-
   if (options().getAttributeRange()) {
     // Traverse the scopes to get scopes that have invalid ranges.
     LVLocations Locations;
@@ -975,10 +1031,18 @@ StringRef LVScopeCompileUnit::getFilename(size_t Index) const {
   return getStringPool().getString(Filenames[Index - 1]);
 }
 
-void LVScopeCompileUnit::incrementPrintedLines() { ++Printed.Lines; }
-void LVScopeCompileUnit::incrementPrintedScopes() { ++Printed.Scopes; }
-void LVScopeCompileUnit::incrementPrintedSymbols() { ++Printed.Symbols; }
-void LVScopeCompileUnit::incrementPrintedTypes() { ++Printed.Types; }
+void LVScopeCompileUnit::incrementPrintedLines() {
+  options().getSelectExecute() ? ++Found.Lines : ++Printed.Lines;
+}
+void LVScopeCompileUnit::incrementPrintedScopes() {
+  options().getSelectExecute() ? ++Found.Scopes : ++Printed.Scopes;
+}
+void LVScopeCompileUnit::incrementPrintedSymbols() {
+  options().getSelectExecute() ? ++Found.Symbols : ++Printed.Symbols;
+}
+void LVScopeCompileUnit::incrementPrintedTypes() {
+  options().getSelectExecute() ? ++Found.Types : ++Printed.Types;
+}
 
 // Values are used by '--summary' option (allocated).
 void LVScopeCompileUnit::increment(LVLine *Line) {
@@ -1074,6 +1138,13 @@ void LVScopeCompileUnit::printSizes(raw_ostream &OS) const {
   // Recursively print the contributions for each scope.
   std::function<void(const LVScope *Scope)> PrintScope =
       [&](const LVScope *Scope) {
+        // If we have selection criteria, then use only the selected scopes.
+        if (options().getSelectExecute() && options().getReportAnyView()) {
+          for (const LVScope *Scope : MatchedScopes)
+            if (Scope->getLevel() < options().getOutputLevel())
+              printScopeSize(Scope, OS);
+          return;
+        }
         if (Scope->getLevel() < options().getOutputLevel()) {
           if (const LVScopes *Scopes = Scope->getScopes())
             for (const LVScope *Scope : *Scopes) {
@@ -1108,7 +1179,7 @@ void LVScopeCompileUnit::printSizes(raw_ostream &OS) const {
 }
 
 void LVScopeCompileUnit::printSummary(raw_ostream &OS) const {
-  printSummary(OS, Printed, "Printed");
+  printSummary(OS, options().getSelectExecute() ? Found : Printed, "Printed");
 }
 
 // Print summary details for the scopes tree.
