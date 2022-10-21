@@ -363,6 +363,8 @@ Non-comprehensive list of changes in this release
 - Clang now supports ``__has_constexpr_builtin`` function-like macro that
   evaluates to 1 if the builtin is supported and can be constant evaluated.
   It can be used to writing conditionally constexpr code that uses builtins.
+- The time profiler (using ``-ftime-trace`` option) now traces various constant
+  evaluation events.
 
 New Compiler Flags
 ------------------
