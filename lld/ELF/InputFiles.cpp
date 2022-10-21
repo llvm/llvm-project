@@ -1190,7 +1190,7 @@ template <class ELFT> void ObjFile<ELFT>::postParse() {
       continue;
     }
 
-    if (binding == STB_WEAK)
+    if (sym.binding == STB_WEAK || binding == STB_WEAK)
       continue;
     std::lock_guard<std::mutex> lock(mu);
     ctx.duplicates.push_back({&sym, this, sec, eSym.st_value});
