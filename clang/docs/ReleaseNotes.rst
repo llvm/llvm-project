@@ -557,6 +557,8 @@ C++2b Feature Support
 
 - Support label at end of compound statement (`P2324 <https://wg21.link/p2324r2>`_).
 - Implemented `P1169R4: static operator() <https://wg21.link/P1169R4>`_.
+- Implemented "char8_t Compatibility and Portability Fix" (`P2513R3 <https://wg21.link/P2513R3>`_).
+  This Change was applied to C++20 as a Defect Report.
 
 CUDA/HIP Language Changes in Clang
 ----------------------------------
@@ -654,8 +656,8 @@ libclang
   the behavior of ``QualType::getNonReferenceType`` for ``CXType``.
 - Introduced the new function ``clang_CXXMethod_isDeleted``, which queries
   whether the method is declared ``= delete``.
-- ``clang_Cursor_getNumTemplateArguments``, ``clang_Cursor_getTemplateArgumentKind``, 
-  ``clang_Cursor_getTemplateArgumentType``, ``clang_Cursor_getTemplateArgumentValue`` and 
+- ``clang_Cursor_getNumTemplateArguments``, ``clang_Cursor_getTemplateArgumentKind``,
+  ``clang_Cursor_getTemplateArgumentType``, ``clang_Cursor_getTemplateArgumentValue`` and
   ``clang_Cursor_getTemplateArgumentUnsignedValue`` now work on struct, class,
   and partial template specialization cursors in addition to function cursors.
 
