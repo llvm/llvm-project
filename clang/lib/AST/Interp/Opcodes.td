@@ -419,6 +419,11 @@ def Inv: Opcode {
   let HasGroup = 1;
 }
 
+def Inc: IntegerOpcode;
+def IncPop : IntegerOpcode;
+def Dec: IntegerOpcode;
+def DecPop: IntegerOpcode;
+
 // [Real] -> [Real]
 def Neg: Opcode {
   let Types = [AluTypeClass];
