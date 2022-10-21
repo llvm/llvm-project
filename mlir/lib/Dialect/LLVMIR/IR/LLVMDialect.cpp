@@ -2573,7 +2573,6 @@ void LLVMDialect::initialize() {
            LLVMTokenType,
            LLVMLabelType,
            LLVMMetadataType,
-           LLVMPointerType,
            LLVMFixedVectorType,
            LLVMScalableVectorType,
            LLVMStructType>();
