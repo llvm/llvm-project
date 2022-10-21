@@ -2573,8 +2573,6 @@ void LLVMDialect::initialize() {
            LLVMTokenType,
            LLVMLabelType,
            LLVMMetadataType,
-           LLVMFixedVectorType,
-           LLVMScalableVectorType,
            LLVMStructType>();
   // clang-format on
   registerTypes();
