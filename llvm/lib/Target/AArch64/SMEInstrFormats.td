@@ -1422,9 +1422,10 @@ multiclass sme2_multivec_accum_add_sub_vg4_D<string mnemonic, bits<2> op> {
 // SME2 Multi-vector - Multiple and Single SVE Destructive
 // Two and Four registers
 
-class sme2_sqdmulh_add_vector_vg2_single<bits<2> sz, bits<6> op,
-                                         RegisterOperand vector_ty,
-                                         ZPRRegOp zpr_ty, string mnemonic>
+class sme2_sve_destructive_vector_vg2_single<bits<2> sz, bits<7> op,
+                                             RegisterOperand vector_ty,
+                                             ZPRRegOp zpr_ty,
+                                             string mnemonic>
     : I<(outs vector_ty:$Zdn), (ins vector_ty:$_Zdn, zpr_ty:$Zm),
         mnemonic, "\t$Zdn, $_Zdn, $Zm",
         "", []>, Sched<[]> {
@@ -1435,22 +1436,30 @@ class sme2_sqdmulh_add_vector_vg2_single<bits<2> sz, bits<6> op,
   let Inst{21-20} = 0b10;
   let Inst{19-16} = Zm;
   let Inst{15-11} = 0b10100;
-  let Inst{10-5}  = op;
+  let Inst{10-5}  = op{6-1};
   let Inst{4-1}   = Zdn;
-  let Inst{0}     = 0b0;
+  let Inst{0}     = op{0};
+
   let Constraints = "$Zdn = $_Zdn";
 }
 
-multiclass sme2_sqdmulh_add_vector_vg2_single<string mnemonic, bits<6> op> {
-  def _B : sme2_sqdmulh_add_vector_vg2_single<0b00, op, ZZ_b_mul_r, ZPR4b8, mnemonic>;
-  def _H : sme2_sqdmulh_add_vector_vg2_single<0b01, op, ZZ_h_mul_r, ZPR4b16, mnemonic>;
-  def _S : sme2_sqdmulh_add_vector_vg2_single<0b10, op, ZZ_s_mul_r, ZPR4b32, mnemonic>;
-  def _D : sme2_sqdmulh_add_vector_vg2_single<0b11, op, ZZ_d_mul_r, ZPR4b64, mnemonic>;
+multiclass sme2_fp_sve_destructive_vector_vg2_single<string mnemonic, bits<7> op> {
+  def _H : sme2_sve_destructive_vector_vg2_single<0b01, op, ZZ_h_mul_r, ZPR4b16, mnemonic>;
+  def _S : sme2_sve_destructive_vector_vg2_single<0b10, op, ZZ_s_mul_r, ZPR4b32, mnemonic>;
+  def _D : sme2_sve_destructive_vector_vg2_single<0b11, op, ZZ_d_mul_r, ZPR4b64, mnemonic>;
 }
 
-class sme2_sqdmulh_add_vector_vg4_single<bits<2> sz, bits<6> op,
-                                         RegisterOperand vector_ty,
-                                         ZPRRegOp zpr_ty, string mnemonic>
+multiclass sme2_int_sve_destructive_vector_vg2_single<string mnemonic, bits<7> op> {
+  def _B : sme2_sve_destructive_vector_vg2_single<0b00, op, ZZ_b_mul_r, ZPR4b8, mnemonic>;
+  def _H : sme2_sve_destructive_vector_vg2_single<0b01, op, ZZ_h_mul_r, ZPR4b16, mnemonic>;
+  def _S : sme2_sve_destructive_vector_vg2_single<0b10, op, ZZ_s_mul_r, ZPR4b32, mnemonic>;
+  def _D : sme2_sve_destructive_vector_vg2_single<0b11, op, ZZ_d_mul_r, ZPR4b64, mnemonic>;
+}
+
+class sme2_sve_destructive_vector_vg4_single<bits<2> sz, bits<7> op,
+                                             RegisterOperand vector_ty,
+                                             ZPRRegOp zpr_ty,
+                                             string mnemonic>
     : I<(outs vector_ty:$Zdn), (ins vector_ty:$_Zdn, zpr_ty:$Zm),
         mnemonic, "\t$Zdn, $_Zdn, $Zm",
         "", []>, Sched<[]> {
@@ -1461,22 +1470,30 @@ class sme2_sqdmulh_add_vector_vg4_single<bits<2> sz, bits<6> op,
   let Inst{21-20} = 0b10;
   let Inst{19-16} = Zm;
   let Inst{15-11} = 0b10101;
-  let Inst{10-5}  = op;
+  let Inst{10-5}  = op{6-1};
   let Inst{4-2}   = Zdn;
-  let Inst{1-0}   = 0b00;
+  let Inst{1}     = 0b0;
+  let Inst{0}     = op{0};
+
   let Constraints = "$Zdn = $_Zdn";
 }
 
-multiclass sme2_sqdmulh_add_vector_vg4_single<string mnemonic, bits<6> op> {
-  def _B : sme2_sqdmulh_add_vector_vg4_single<0b00, op, ZZZZ_b_mul_r, ZPR4b8, mnemonic>;
-  def _H : sme2_sqdmulh_add_vector_vg4_single<0b01, op, ZZZZ_h_mul_r, ZPR4b16, mnemonic>;
-  def _S : sme2_sqdmulh_add_vector_vg4_single<0b10, op, ZZZZ_s_mul_r, ZPR4b32, mnemonic>;
-  def _D : sme2_sqdmulh_add_vector_vg4_single<0b11, op, ZZZZ_d_mul_r, ZPR4b64, mnemonic>;
+multiclass sme2_fp_sve_destructive_vector_vg4_single<string mnemonic, bits<7> op> {
+  def _H : sme2_sve_destructive_vector_vg4_single<0b01, op, ZZZZ_h_mul_r, ZPR4b16, mnemonic>;
+  def _S : sme2_sve_destructive_vector_vg4_single<0b10, op, ZZZZ_s_mul_r, ZPR4b32, mnemonic>;
+  def _D : sme2_sve_destructive_vector_vg4_single<0b11, op, ZZZZ_d_mul_r, ZPR4b64, mnemonic>;
 }
 
+multiclass sme2_int_sve_destructive_vector_vg4_single<string mnemonic, bits<7> op> {
+  def _B : sme2_sve_destructive_vector_vg4_single<0b00, op, ZZZZ_b_mul_r, ZPR4b8, mnemonic>;
+  def _H : sme2_sve_destructive_vector_vg4_single<0b01, op, ZZZZ_h_mul_r, ZPR4b16, mnemonic>;
+  def _S : sme2_sve_destructive_vector_vg4_single<0b10, op, ZZZZ_s_mul_r, ZPR4b32, mnemonic>;
+  def _D : sme2_sve_destructive_vector_vg4_single<0b11, op, ZZZZ_d_mul_r, ZPR4b64, mnemonic>;
+}
 
-class sme2_sqdmulh_vector_vg2_multi<bits<2> sz, RegisterOperand vector_ty,
-                                    string mnemonic>
+class sme2_sve_destructive_vector_vg2_multi<bits<2> sz, bits<7> op,
+                                            RegisterOperand vector_ty,
+                                            string mnemonic>
     : I<(outs vector_ty:$Zdn), (ins vector_ty:$_Zdn, vector_ty:$Zm),
         mnemonic, "\t$Zdn, $_Zdn, $Zm",
         "", []>, Sched<[]> {
@@ -1486,21 +1503,30 @@ class sme2_sqdmulh_vector_vg2_multi<bits<2> sz, RegisterOperand vector_ty,
   let Inst{23-22} = sz;
   let Inst{21}    = 0b1;
   let Inst{20-17} = Zm;
-  let Inst{16-5}  = 0b010110100000;
+  let Inst{16-11} = 0b010110;
+  let Inst{10-5}  = op{6-1};
   let Inst{4-1}   = Zdn;
-  let Inst{0}     = 0b0;
+  let Inst{0}     = op{0};
+
   let Constraints = "$Zdn = $_Zdn";
 }
 
-multiclass sme2_sqdmulh_vector_vg2_multi<string mnemonic> {
-  def _B : sme2_sqdmulh_vector_vg2_multi<0b00, ZZ_b_mul_r, mnemonic>;
-  def _H : sme2_sqdmulh_vector_vg2_multi<0b01, ZZ_h_mul_r, mnemonic>;
-  def _S : sme2_sqdmulh_vector_vg2_multi<0b10, ZZ_s_mul_r, mnemonic>;
-  def _D : sme2_sqdmulh_vector_vg2_multi<0b11, ZZ_d_mul_r, mnemonic>;
+multiclass sme2_fp_sve_destructive_vector_vg2_multi<string mnemonic, bits<7> op> {
+  def _H : sme2_sve_destructive_vector_vg2_multi<0b01, op, ZZ_h_mul_r, mnemonic>;
+  def _S : sme2_sve_destructive_vector_vg2_multi<0b10, op, ZZ_s_mul_r, mnemonic>;
+  def _D : sme2_sve_destructive_vector_vg2_multi<0b11, op, ZZ_d_mul_r, mnemonic>;
 }
 
-class sme2_sqdmulh_vector_vg4_multi<bits<2> sz, RegisterOperand vector_ty,
-                                    string mnemonic>
+multiclass sme2_int_sve_destructive_vector_vg2_multi<string mnemonic, bits<7> op> {
+  def _B : sme2_sve_destructive_vector_vg2_multi<0b00, op, ZZ_b_mul_r, mnemonic>;
+  def _H : sme2_sve_destructive_vector_vg2_multi<0b01, op, ZZ_h_mul_r, mnemonic>;
+  def _S : sme2_sve_destructive_vector_vg2_multi<0b10, op, ZZ_s_mul_r, mnemonic>;
+  def _D : sme2_sve_destructive_vector_vg2_multi<0b11, op, ZZ_d_mul_r, mnemonic>;
+}
+
+class sme2_sve_destructive_vector_vg4_multi<bits<2> sz, bits<7> op,
+                                            RegisterOperand vector_ty,
+                                            string mnemonic>
     : I<(outs vector_ty:$Zdn), (ins vector_ty:$_Zdn, vector_ty:$Zm),
         mnemonic, "\t$Zdn, $_Zdn, $Zm",
         "", []>, Sched<[]> {
@@ -1510,18 +1536,28 @@ class sme2_sqdmulh_vector_vg4_multi<bits<2> sz, RegisterOperand vector_ty,
   let Inst{23-22} = sz;
   let Inst{21}    = 0b1;
   let Inst{20-18} = Zm;
-  let Inst{17-5}  = 0b0010111100000;
+  let Inst{17-11} = 0b0010111;
+  let Inst{10-5}  = op{6-1};
   let Inst{4-2}   = Zdn;
-  let Inst{1-0}   = 0b00;
+  let Inst{1}     = 0b0;
+  let Inst{0}     = op{0};
+
   let Constraints = "$Zdn = $_Zdn";
 }
 
-multiclass sme2_sqdmulh_vector_vg4_multi<string mnemonic> {
-  def _B : sme2_sqdmulh_vector_vg4_multi<0b00, ZZZZ_b_mul_r, mnemonic>;
-  def _H : sme2_sqdmulh_vector_vg4_multi<0b01, ZZZZ_h_mul_r, mnemonic>;
-  def _S : sme2_sqdmulh_vector_vg4_multi<0b10, ZZZZ_s_mul_r, mnemonic>;
-  def _D : sme2_sqdmulh_vector_vg4_multi<0b11, ZZZZ_d_mul_r, mnemonic>;
+multiclass sme2_fp_sve_destructive_vector_vg4_multi<string mnemonic, bits<7> op> {
+  def _H : sme2_sve_destructive_vector_vg4_multi<0b01, op, ZZZZ_h_mul_r, mnemonic>;
+  def _S : sme2_sve_destructive_vector_vg4_multi<0b10, op, ZZZZ_s_mul_r, mnemonic>;
+  def _D : sme2_sve_destructive_vector_vg4_multi<0b11, op, ZZZZ_d_mul_r, mnemonic>;
 }
+
+multiclass sme2_int_sve_destructive_vector_vg4_multi<string mnemonic, bits<7> op> {
+  def _B : sme2_sve_destructive_vector_vg4_multi<0b00, op, ZZZZ_b_mul_r, mnemonic>;
+  def _H : sme2_sve_destructive_vector_vg4_multi<0b01, op, ZZZZ_h_mul_r, mnemonic>;
+  def _S : sme2_sve_destructive_vector_vg4_multi<0b10, op, ZZZZ_s_mul_r, mnemonic>;
+  def _D : sme2_sve_destructive_vector_vg4_multi<0b11, op, ZZZZ_d_mul_r, mnemonic>;
+}
+
 
 //===----------------------------------------------------------------------===//
 // SME2 Multi-vector - Index/Single/Multi Array Vectors FMA sources
