@@ -42,3 +42,34 @@ static void removeVolatileInModule(Oracle &O, Module &Mod) {
 void llvm::reduceVolatileInstructionsDeltaPass(TestRunner &Test) {
   runDeltaPass(Test, removeVolatileInModule, "Reducing Volatile Instructions");
 }
+
+static void reduceAtomicSyncScopesInFunction(Oracle &O, Function &F) {
+  for (Instruction &I : instructions(F)) {
+    if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
+      if (LI->getSyncScopeID() != SyncScope::System && !O.shouldKeep())
+        LI->setSyncScopeID(SyncScope::System);
+    } else if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
+      if (SI->getSyncScopeID() != SyncScope::System && !O.shouldKeep())
+        SI->setSyncScopeID(SyncScope::System);
+    } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(&I)) {
+      if (RMW->getSyncScopeID() != SyncScope::System && !O.shouldKeep())
+        RMW->setSyncScopeID(SyncScope::System);
+    } else if (AtomicCmpXchgInst *CmpXChg = dyn_cast<AtomicCmpXchgInst>(&I)) {
+      if (CmpXChg->getSyncScopeID() != SyncScope::System && !O.shouldKeep())
+        CmpXChg->setSyncScopeID(SyncScope::System);
+    } else if (FenceInst *Fence = dyn_cast<FenceInst>(&I)) {
+      if (Fence->getSyncScopeID() != SyncScope::System && !O.shouldKeep())
+        Fence->setSyncScopeID(SyncScope::System);
+    }
+  }
+}
+
+static void reduceAtomicSyncScopesInModule(Oracle &O, Module &Mod) {
+  for (Function &F : Mod)
+    reduceAtomicSyncScopesInFunction(O, F);
+}
+
+void llvm::reduceAtomicSyncScopesDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, reduceAtomicSyncScopesInModule,
+               "Reducing Atomic Sync Scopes");
+}
