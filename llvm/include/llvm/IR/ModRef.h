@@ -82,11 +82,6 @@ private:
     return (uint32_t)Loc * BitsPerLoc;
   }
 
-  static auto locations() {
-    return enum_seq_inclusive(Location::ArgMem, Location::Other,
-                              force_iteration_on_noniterable_enum);
-  }
-
   MemoryEffects(uint32_t Data) : Data(Data) {}
 
   void setModRef(Location Loc, ModRefInfo MR) {
@@ -97,6 +92,12 @@ private:
   friend raw_ostream &operator<<(raw_ostream &OS, MemoryEffects RMRB);
 
 public:
+  /// Returns iterator over all supported location kinds.
+  static auto locations() {
+    return enum_seq_inclusive(Location::ArgMem, Location::Other,
+                              force_iteration_on_noniterable_enum);
+  }
+
   /// Create MemoryEffects that can access only the given location with the
   /// given ModRefInfo.
   MemoryEffects(Location Loc, ModRefInfo MR) { setModRef(Loc, MR); }
@@ -145,6 +146,18 @@ public:
     FRMB.setModRef(ArgMem, MR);
     FRMB.setModRef(InaccessibleMem, MR);
     return FRMB;
+  }
+
+  /// Create MemoryEffects from an encoded integer value (used by memory
+  /// attribute).
+  static MemoryEffects createFromIntValue(uint32_t Data) {
+    return MemoryEffects(Data);
+  }
+
+  /// Convert MemoryEffects into an encoded integer value (used by memory
+  /// attribute).
+  uint32_t toIntValue() const {
+    return Data;
   }
 
   /// Get ModRefInfo for the given Location.

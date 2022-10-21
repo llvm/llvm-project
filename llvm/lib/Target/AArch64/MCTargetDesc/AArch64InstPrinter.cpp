@@ -1223,6 +1223,15 @@ void AArch64InstPrinter::printImmScale(const MCInst *MI, unsigned OpNum,
     << formatImm(Scale * MI->getOperand(OpNum).getImm()) << markup(">");
 }
 
+template <int Scale, int Offset>
+void AArch64InstPrinter::printImmRangeScale(const MCInst *MI, unsigned OpNum,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O) {
+  unsigned FirstImm = Scale * MI->getOperand(OpNum).getImm();
+  O << formatImm(FirstImm);
+  O << ":" << formatImm(FirstImm + Offset);
+}
+
 void AArch64InstPrinter::printUImm12Offset(const MCInst *MI, unsigned OpNum,
                                            unsigned Scale, raw_ostream &O) {
   const MCOperand MO = MI->getOperand(OpNum);

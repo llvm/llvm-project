@@ -1894,6 +1894,44 @@ TypeInfoChars ASTContext::getTypeInfoInChars(QualType T) const {
   return getTypeInfoInChars(T.getTypePtr());
 }
 
+bool ASTContext::isPromotableIntegerType(QualType T) const {
+  // HLSL doesn't promote all small integer types to int, it
+  // just uses the rank-based promotion rules for all types.
+  if (getLangOpts().HLSL)
+    return false;
+
+  if (const auto *BT = T->getAs<BuiltinType>())
+    switch (BT->getKind()) {
+    case BuiltinType::Bool:
+    case BuiltinType::Char_S:
+    case BuiltinType::Char_U:
+    case BuiltinType::SChar:
+    case BuiltinType::UChar:
+    case BuiltinType::Short:
+    case BuiltinType::UShort:
+    case BuiltinType::WChar_S:
+    case BuiltinType::WChar_U:
+    case BuiltinType::Char8:
+    case BuiltinType::Char16:
+    case BuiltinType::Char32:
+      return true;
+    default:
+      return false;
+    }
+
+  // Enumerated types are promotable to their compatible integer types
+  // (C99 6.3.1.1) a.k.a. its underlying type (C++ [conv.prom]p2).
+  if (const auto *ET = T->getAs<EnumType>()) {
+    if (T->isDependentType() || ET->getDecl()->getPromotionType().isNull() ||
+        ET->getDecl()->isScoped())
+      return false;
+
+    return true;
+  }
+
+  return false;
+}
+
 bool ASTContext::isAlignmentRequired(const Type *T) const {
   return getTypeInfo(T).AlignRequirement != AlignRequirementKind::None;
 }
@@ -7128,7 +7166,7 @@ QualType ASTContext::isPromotableBitField(Expr *E) const {
 /// integer type.
 QualType ASTContext::getPromotedIntegerType(QualType Promotable) const {
   assert(!Promotable.isNull());
-  assert(Promotable->isPromotableIntegerType());
+  assert(isPromotableIntegerType(Promotable));
   if (const auto *ET = Promotable->getAs<EnumType>())
     return ET->getDecl()->getPromotionType();
 
@@ -10329,7 +10367,7 @@ QualType ASTContext::mergeFunctionTypes(QualType lhs, QualType rhs,
           return {};
       }
 
-      if (paramTy->isPromotableIntegerType() ||
+      if (isPromotableIntegerType(paramTy) ||
           getCanonicalType(paramTy).getUnqualifiedType() == FloatTy)
         return {};
     }

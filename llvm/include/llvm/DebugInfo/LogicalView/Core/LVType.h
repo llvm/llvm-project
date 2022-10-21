@@ -44,6 +44,8 @@ enum class LVTypeKind {
   LastEntry
 };
 using LVTypeKindSelection = std::set<LVTypeKind>;
+using LVTypeDispatch = std::map<LVTypeKind, LVTypeGetFunction>;
+using LVTypeRequest = std::vector<LVTypeGetFunction>;
 
 // Class to represent a DWARF Type.
 class LVType : public LVElement {
@@ -52,6 +54,7 @@ class LVType : public LVElement {
   // Typed bitvector with kinds and properties for this type.
   LVProperties<LVTypeKind> Kinds;
   LVProperties<Property> Properties;
+  static LVTypeDispatch Dispatch;
 
 public:
   LVType() : LVElement(LVSubclassID::LV_TYPE) { setIsType(); }
@@ -105,6 +108,8 @@ public:
 
   void resolveName() override;
   void resolveReferences() override;
+
+  static LVTypeDispatch &getDispatch() { return Dispatch; }
 
   void print(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override;

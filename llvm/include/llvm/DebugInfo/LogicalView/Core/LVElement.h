@@ -17,7 +17,9 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVObject.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVStringPool.h"
 #include "llvm/Support/Casting.h"
+#include <map>
 #include <set>
+#include <vector>
 
 namespace llvm {
 namespace logicalview {
@@ -60,6 +62,8 @@ enum class LVSubclassID : unsigned char {
 
 enum class LVElementKind { Discarded, Global, Optimized, LastEntry };
 using LVElementKindSet = std::set<LVElementKind>;
+using LVElementDispatch = std::map<LVElementKind, LVElementGetFunction>;
+using LVElementRequest = std::vector<LVElementGetFunction>;
 
 class LVElement : public LVObject {
   enum class Property {
@@ -98,6 +102,7 @@ class LVElement : public LVObject {
   };
   // Typed bitvector with properties for this element.
   LVProperties<Property> Properties;
+  static LVElementDispatch Dispatch;
 
   /// RTTI.
   const LVSubclassID SubclassID;
@@ -330,6 +335,9 @@ public:
   virtual void resolveName();
   virtual void resolveReferences() {}
   void resolveParents();
+
+public:
+  static LVElementDispatch &getDispatch() { return Dispatch; }
 };
 
 } // end namespace logicalview

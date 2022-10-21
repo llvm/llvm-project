@@ -55,6 +55,7 @@
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/ModRef.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Operator.h"
@@ -627,8 +628,6 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   // stored here with their replacement function.
   using UpdatedIntrinsicMap = DenseMap<Function *, Function *>;
   UpdatedIntrinsicMap UpgradedIntrinsics;
-  // Intrinsics which were remangled because of types rename
-  UpdatedIntrinsicMap RemangledIntrinsics;
 
   // Several operations happen after the module header has been read, but
   // before function bodies are processed. This keeps track of whether
@@ -1880,6 +1879,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::InReg;
   case bitc::ATTR_KIND_JUMP_TABLE:
     return Attribute::JumpTable;
+  case bitc::ATTR_KIND_MEMORY:
+    return Attribute::Memory;
   case bitc::ATTR_KIND_MIN_SIZE:
     return Attribute::MinSize;
   case bitc::ATTR_KIND_NAKED:
@@ -2124,6 +2125,8 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addUWTableAttr(UWTableKind(Record[++i]));
           else if (Kind == Attribute::AllocKind)
             B.addAllocKindAttr(static_cast<AllocFnKind>(Record[++i]));
+          else if (Kind == Attribute::Memory)
+            B.addMemoryAttr(MemoryEffects::createFromIntValue(Record[++i]));
         } else if (Record[i] == 3 || Record[i] == 4) { // String attribute
           bool HasValue = (Record[i++] == 4);
           SmallString<64> KindStr;
@@ -3570,11 +3573,6 @@ Error BitcodeReader::globalCleanup() {
     Function *NewFn;
     if (UpgradeIntrinsicFunction(&F, NewFn))
       UpgradedIntrinsics[&F] = NewFn;
-    else if (auto Remangled = Intrinsic::remangleIntrinsicFunction(&F))
-      // Some types could be renamed during loading if several modules are
-      // loaded in the same LLVMContext (LTO scenario). In this case we should
-      // remangle intrinsics names as well.
-      RemangledIntrinsics[&F] = *Remangled;
     // Look for functions that rely on old function attribute behavior.
     UpgradeFunctionAttributes(F);
   }
@@ -6461,12 +6459,6 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         UpgradeIntrinsicCall(CI, I.second);
   }
 
-  // Update calls to the remangled intrinsics
-  for (auto &I : RemangledIntrinsics)
-    for (User *U : llvm::make_early_inc_range(I.first->materialized_users()))
-      // Don't expect any other users than call sites
-      cast<CallBase>(U)->setCalledFunction(I.second);
-
   // Finish fn->subprogram upgrade for materialized functions.
   if (DISubprogram *SP = MDLoader->lookupSubprogramForFunction(F))
     F->setSubprogram(SP);
@@ -6571,12 +6563,6 @@ Error BitcodeReader::materializeModule() {
     I.first->eraseFromParent();
   }
   UpgradedIntrinsics.clear();
-  // Do the same for remangled intrinsics
-  for (auto &I : RemangledIntrinsics) {
-    I.first->replaceAllUsesWith(I.second);
-    I.first->eraseFromParent();
-  }
-  RemangledIntrinsics.clear();
 
   UpgradeDebugInfo(*TheModule);
 

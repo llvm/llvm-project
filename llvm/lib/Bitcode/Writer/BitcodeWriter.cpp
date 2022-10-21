@@ -656,6 +656,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_ALLOCATED_POINTER;
   case Attribute::AllocKind:
     return bitc::ATTR_KIND_ALLOC_KIND;
+  case Attribute::Memory:
+    return bitc::ATTR_KIND_MEMORY;
   case Attribute::Naked:
     return bitc::ATTR_KIND_NAKED;
   case Attribute::Nest:

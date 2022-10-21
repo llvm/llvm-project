@@ -371,6 +371,8 @@ void Preprocessor::RegisterBuiltinMacros() {
   Ident__has_feature      = RegisterBuiltinMacro(*this, "__has_feature");
   Ident__has_extension    = RegisterBuiltinMacro(*this, "__has_extension");
   Ident__has_builtin      = RegisterBuiltinMacro(*this, "__has_builtin");
+  Ident__has_constexpr_builtin =
+      RegisterBuiltinMacro(*this, "__has_constexpr_builtin");
   Ident__has_attribute    = RegisterBuiltinMacro(*this, "__has_attribute");
   if (!getLangOpts().CPlusPlus)
     Ident__has_c_attribute = RegisterBuiltinMacro(*this, "__has_c_attribute");
@@ -1735,6 +1737,18 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               .Default(false);
         }
       });
+  } else if (II == Ident__has_constexpr_builtin) {
+    EvaluateFeatureLikeBuiltinMacro(
+        OS, Tok, II, *this, false,
+        [this](Token &Tok, bool &HasLexedNextToken) -> int {
+          IdentifierInfo *II = ExpectFeatureIdentifierInfo(
+              Tok, *this, diag::err_feature_check_malformed);
+          if (!II)
+            return false;
+          unsigned BuiltinOp = II->getBuiltinID();
+          return BuiltinOp != 0 &&
+                 this->getBuiltinInfo().isConstantEvaluated(BuiltinOp);
+        });
   } else if (II == Ident__is_identifier) {
     EvaluateFeatureLikeBuiltinMacro(OS, Tok, II, *this, false,
       [](Token &Tok, bool &HasLexedNextToken) -> int {

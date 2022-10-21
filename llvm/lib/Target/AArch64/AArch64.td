@@ -162,6 +162,9 @@ def FeatureSVE2SHA3 : SubtargetFeature<"sve2-sha3", "HasSVE2SHA3", "true",
 def FeatureSVE2BitPerm : SubtargetFeature<"sve2-bitperm", "HasSVE2BitPerm", "true",
   "Enable bit permutation SVE2 instructions (FEAT_SVE_BitPerm)", [FeatureSVE2]>;
 
+def FeatureSVE2p1: SubtargetFeature<"sve2p1", "HasSVE2p1", "true",
+  "Enable Scalable Vector Extension 2.1 instructions", [FeatureSVE2]>;
+
 def FeatureZCRegMove : SubtargetFeature<"zcm", "HasZeroCycleRegMove", "true",
                                         "Has zero-cycle register moves">;
 
@@ -645,7 +648,7 @@ def PAUnsupported : AArch64Unsupported {
 }
 
 def SMEUnsupported : AArch64Unsupported {
-  let F = [HasSME, HasSMEF64F64, HasSMEI16I64, HasSME2];
+  let F = [HasSME, HasSMEF64F64, HasSMEI16I64, HasSME2, HasSVE2p1_or_HasSME2];
 }
 
 include "AArch64SchedA53.td"

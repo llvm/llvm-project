@@ -28,9 +28,7 @@ parseSourceFileForTool(llvm::SourceMgr &sourceMgr, const ParserConfig &config,
                        bool insertImplicitModule) {
   if (insertImplicitModule) {
     // TODO: Move implicit module logic out of 'parseSourceFile' and into here.
-    return parseSourceFile<ModuleOp>(sourceMgr, config)
-        .release()
-        .getOperation();
+    return parseSourceFile<ModuleOp>(sourceMgr, config);
   }
   return parseSourceFile(sourceMgr, config);
 }

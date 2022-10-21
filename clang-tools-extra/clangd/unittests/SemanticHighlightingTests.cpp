@@ -142,16 +142,16 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       $Namespace[[abc]]::$Class[[A]]<int> $Variable_def[[AA]];
       typedef $Namespace[[abc]]::$Class[[A]]<int> $Class_decl[[AAA]];
       struct $Class_def[[B]] {
-        $Class_decl[[B]]();
-        ~$Class[[B]](); // FIXME: inconsistent with constructor
+        $Class_decl_constrDestr[[B]]();
+        ~$Class_decl_constrDestr[[B]]();
         void operator<<($Class[[B]]);
         $Class[[AAA]] $Field_decl[[AA]];
       };
-      $Class[[B]]::$Class_def[[B]]() {}
-      $Class[[B]]::~$Class[[B]]() {} // FIXME: inconsistent with constructor
+      $Class[[B]]::$Class_def_constrDestr[[B]]() {}
+      $Class[[B]]::~$Class_def_constrDestr[[B]]() {}
       void $Function_def[[f]] () {
         $Class[[B]] $LocalVariable_def[[BB]] = $Class[[B]]();
-        $LocalVariable[[BB]].~$Class[[B]]();
+        $LocalVariable[[BB]].~$Class_constrDestr[[B]]();
         $Class[[B]]();
       }
     )cpp",
@@ -310,13 +310,13 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         $Class[[Foo]] $Field_decl[[Fo]];
         $Enum[[En]] $Field_decl[[E]];
         int $Field_decl[[I]];
-        $Class_def[[Bar]] ($Class[[Foo]] $Parameter_def[[F]],
+        $Class_def_constrDestr[[Bar]] ($Class[[Foo]] $Parameter_def[[F]],
                 $Enum[[En]] $Parameter_def[[E]])
         : $Field[[Fo]] ($Parameter[[F]]), $Field[[E]] ($Parameter[[E]]),
           $Field[[I]] (123) {}
       };
       class $Class_def[[Bar2]] : public $Class[[Bar]] {
-        $Class_def[[Bar2]]() : $Class[[Bar]]($Class[[Foo]](), $EnumConstant_readonly[[EC]]) {}
+        $Class_def_constrDestr[[Bar2]]() : $Class[[Bar]]($Class[[Foo]](), $EnumConstant_readonly[[EC]]) {}
       };
     )cpp",
       R"cpp(
@@ -757,7 +757,7 @@ sizeof...($TemplateParameter[[Elements]]);
             static inline int $StaticField_def_static[[j]] = 0;
         };
         struct $Class_def[[ClassWithRefMembers]] {
-          $Class_def[[ClassWithRefMembers]](int $Parameter_def[[i]])
+          $Class_def_constrDestr[[ClassWithRefMembers]](int $Parameter_def[[i]])
             : $Field[[i1]]($Parameter[[i]]),
               $Field_readonly[[i2]]($Parameter[[i]]),
               $Field[[i3]]($Parameter_usedAsMutableReference[[i]]),
@@ -803,7 +803,7 @@ sizeof...($TemplateParameter[[Elements]]);
           $LocalVariable_readonly[[c2]][$LocalVariable[[val]]];
         }
         struct $Class_def[[S]] {
-          $Class_def[[S]](int&) {
+          $Class_def_constrDestr[[S]](int&) {
             $Class[[S]] $LocalVariable_def[[s1]]($Field_usedAsMutableReference[[field]]);
             $Class[[S]] $LocalVariable_def[[s2]]($LocalVariable[[s1]].$Field_usedAsMutableReference[[field]]);
 

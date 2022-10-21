@@ -8202,29 +8202,51 @@ class sve_bfloat_dot_base<bits<2> opc, string asm, string ops, dag iops>
   let ElementSize = ElementSizeH;
 }
 
-class sve_bfloat_dot<string asm>
-: sve_bfloat_dot_base<0b10, asm, "\t$Zda, $Zn, $Zm",
-  (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR16:$Zm)> {
+class sve_float_dot<bit bf, string asm>
+: I<(outs ZPR32:$Zda), (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR16:$Zm),
+     asm, "\t$Zda, $Zn, $Zm", "", []>, Sched<[]> {
+  bits<5> Zda;
+  bits<5> Zn;
   bits<5> Zm;
+  let Inst{31-23} = 0b011001000;
+  let Inst{22}    = bf;
+  let Inst{21}    = 0b1;
   let Inst{20-16} = Zm;
+  let Inst{15-10} = 0b100000;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = DestructiveOther;
 }
 
 multiclass sve_bfloat_dot<string asm, SDPatternOperator op> {
-  def NAME : sve_bfloat_dot<asm>;
+  def NAME : sve_float_dot<0b1, asm>;
   def : SVE_3_Op_Pat<nxv4f32, op, nxv4f32, nxv8bf16, nxv8bf16 ,!cast<Instruction>(NAME)>;
 }
 
-class sve_bfloat_dot_indexed<string asm>
-: sve_bfloat_dot_base<0b01, asm, "\t$Zda, $Zn, $Zm$iop",
-  (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR3b16:$Zm, VectorIndexS:$iop)> {
-  bits<2> iop;
+class sve_float_dot_indexed<bit bf, string asm>
+: I<(outs ZPR32:$Zda), (ins ZPR32:$_Zda, ZPR16:$Zn, ZPR3b16:$Zm, VectorIndexS:$iop),
+    asm, "\t$Zda, $Zn, $Zm$iop", "", []>, Sched<[]> {
+  bits<5> Zda;
+  bits<5> Zn;
   bits<3> Zm;
+  bits<2> iop;
+  let Inst{31-23} = 0b011001000;
+  let Inst{22}    = bf;
+  let Inst{21}    = 0b1;
   let Inst{20-19} = iop;
   let Inst{18-16} = Zm;
+  let Inst{15-10} = 0b010000;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = DestructiveOther;
 }
 
 multiclass sve_bfloat_dot_indexed<string asm, SDPatternOperator op> {
-  def NAME : sve_bfloat_dot_indexed<asm>;
+  def NAME : sve_float_dot_indexed<0b1, asm>;
   def : SVE_4_Op_Imm_Pat<nxv4f32, op, nxv4f32, nxv8bf16, nxv8bf16, i64, VectorIndexS_timm, !cast<Instruction>(NAME)>;
 }
 
@@ -8601,3 +8623,32 @@ multiclass sve_int_bin_pred_all_active_bhsd<SDPatternOperator op> {
   def : SVE_2_Op_Pred_All_Active_Pt<nxv2i64, op, nxv2i1,  nxv2i64, nxv2i64, !cast<Pseudo>(NAME # _UNDEF_D)>;
 }
 
+//===----------------------------------------------------------------------===//
+// SME2 or SVE2.1 Instructions
+//===----------------------------------------------------------------------===//
+
+class sve2p1_fclamp<string asm, bits<2> sz, ZPRRegOp zpr_ty>
+    : I<(outs zpr_ty:$Zd), (ins zpr_ty:$_Zd, zpr_ty:$Zn, zpr_ty:$Zm),
+        asm, "\t$Zd, $Zn, $Zm", "", []>,
+      Sched<[]> {
+  bits<5> Zm;
+  bits<5> Zn;
+  bits<5> Zd;
+  let Inst{31-24} = 0b01100100;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15-10} = 0b001001;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+
+  let Constraints = "$Zd = $_Zd";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize = zpr_ty.ElementSize;
+}
+
+multiclass sve2p1_fclamp<string asm> {
+  def _H : sve2p1_fclamp<asm, 0b01, ZPR16>;
+  def _S : sve2p1_fclamp<asm, 0b10, ZPR32>;
+  def _D : sve2p1_fclamp<asm, 0b11, ZPR64>;
+}

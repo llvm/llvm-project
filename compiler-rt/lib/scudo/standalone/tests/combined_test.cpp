@@ -525,6 +525,7 @@ struct DeathConfig {
   static const scudo::uptr PrimaryCompactPtrScale = 0;
   static const bool PrimaryEnableRandomOffset = true;
   static const scudo::uptr PrimaryMapSizeIncrement = 1UL << 18;
+  static const scudo::uptr PrimaryGroupSizeLog = 18;
 
   typedef scudo::MapAllocatorNoCache SecondaryCache;
   template <class A> using TSDRegistryT = scudo::TSDRegistrySharedT<A, 1U, 1U>;

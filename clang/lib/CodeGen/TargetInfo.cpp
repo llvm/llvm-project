@@ -106,7 +106,7 @@ static llvm::Type *getVAListElementType(CodeGenFunction &CGF) {
 }
 
 bool ABIInfo::isPromotableIntegerTypeForABI(QualType Ty) const {
-  if (Ty->isPromotableIntegerType())
+  if (getContext().isPromotableIntegerType(Ty))
     return true;
 
   if (const auto *EIT = Ty->getAs<BitIntType>())
@@ -4588,7 +4588,7 @@ bool AIXABIInfo::isPromotableTypeForABI(QualType Ty) const {
     Ty = EnumTy->getDecl()->getIntegerType();
 
   // Promotable integer types are required to be promoted by the ABI.
-  if (Ty->isPromotableIntegerType())
+  if (getContext().isPromotableIntegerType(Ty))
     return true;
 
   if (!Is64Bit)

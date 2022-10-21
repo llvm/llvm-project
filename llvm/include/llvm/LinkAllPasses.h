@@ -138,11 +138,7 @@ namespace {
       (void) llvm::createLowerInvokePass();
       (void) llvm::createLowerSwitchPass();
       (void) llvm::createNaryReassociatePass();
-      (void) llvm::createObjCARCAAWrapperPass();
-      (void) llvm::createObjCARCAPElimPass();
-      (void) llvm::createObjCARCExpandPass();
       (void) llvm::createObjCARCContractPass();
-      (void) llvm::createObjCARCOptPass();
       (void) llvm::createPromoteMemoryToRegisterPass();
       (void) llvm::createDemoteRegisterToMemoryPass();
       (void)llvm::createPostDomOnlyPrinterWrapperPassPass();

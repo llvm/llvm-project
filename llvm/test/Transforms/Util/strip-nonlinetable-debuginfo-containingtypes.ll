@@ -1,4 +1,4 @@
-; RUN: opt -S -strip-nonlinetable-debuginfo %s -o %t.ll
+; RUN: opt -S -passes=strip-nonlinetable-debuginfo %s -o %t.ll
 ; RUN: cat %t.ll | FileCheck %s
 ; RUN: cat %t.ll | FileCheck %s --check-prefix=CHECK-NEG
 ;

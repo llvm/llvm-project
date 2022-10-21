@@ -2067,6 +2067,9 @@ bool AArch64LoadStoreOpt::tryToPromoteLoadFromStore(
   if (MI.hasOrderedMemoryRef())
     return false;
 
+  if (needsWinCFI(MI.getMF()) && MI.getFlag(MachineInstr::FrameDestroy))
+    return false;
+
   // Make sure this is a reg+imm.
   // FIXME: It is possible to extend it to handle reg+reg cases.
   if (!AArch64InstrInfo::getLdStOffsetOp(MI).isImm())

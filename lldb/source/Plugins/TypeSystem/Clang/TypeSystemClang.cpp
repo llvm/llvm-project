@@ -1063,7 +1063,7 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
     break;
 
   case DW_ATE_signed_char:
-    if (ast.getLangOpts().CharIsSigned && type_name == "char") {
+    if (type_name == "char") {
       if (QualTypeMatchesBitSize(bit_size, ast, ast.CharTy))
         return GetType(ast.CharTy);
     }
@@ -1115,7 +1115,7 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
     break;
 
   case DW_ATE_unsigned_char:
-    if (!ast.getLangOpts().CharIsSigned && type_name == "char") {
+    if (type_name == "char") {
       if (QualTypeMatchesBitSize(bit_size, ast, ast.CharTy))
         return GetType(ast.CharTy);
     }
@@ -6578,8 +6578,6 @@ CompilerType TypeSystemClang::GetChildCompilerTypeAtIndex(
             child_is_base_class, tmp_child_is_deref_of_parent, valobj,
             language_flags);
       } else {
-        child_is_deref_of_parent = true;
-
         const char *parent_name =
             valobj ? valobj->GetName().GetCString() : nullptr;
         if (parent_name) {
