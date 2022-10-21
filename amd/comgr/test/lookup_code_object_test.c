@@ -84,8 +84,8 @@ void createFatBinary(const char *InputName, const char *InputPath,
 
 void fatbinTest(const char *FatBin, amd_comgr_data_kind_t Kind) {
   const char *IsaStrings[3] = {"amdgcn-amd-amdhsa--gfx700",
-                               "amdgcn-amd-amdhsa--gfx908:xnack-",
-                               "amdgcn-amd-amdhsa--gfx904"};
+                               "amdgcn-amd-amdhsa--gfx904",
+                               "amdgcn-amd-amdhsa--gfx908:xnack-"};
 
   amd_comgr_code_object_info_t QueryList1[1] = {{IsaStrings[0], 0, 0}};
   amd_comgr_code_object_info_t QueryList2[1] = {{IsaStrings[2], 0, 0}};

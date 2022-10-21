@@ -1037,6 +1037,8 @@ amd_comgr_status_t lookUpCodeObject(DataObject *DataP,
     QueryList[I].size = 0;
   }
 
+  // For each code object, extract BundleEntryID information, and check that
+  // against each ISA in the QueryList
   for (uint64_t I = 0; I < NumOfCodeObjects; I++) {
     uint64_t BundleEntryCodeObjectSize;
     uint64_t BundleEntryCodeObjectOffset;
@@ -1067,10 +1069,15 @@ amd_comgr_status_t lookUpCodeObject(DataObject *DataP,
     }
 
     for (unsigned J = 0; J < QueryListSize; J++) {
+      // If this QueryList item has already been found to be compatible with
+      // another BundleEntryID, no need to check against the current
+      // BundleEntryID
       if (QueryList[J].size != 0) {
-        break;
+        continue;
       }
 
+      // If the QueryList Isa is compatible with the BundleEntryID, set the
+      // QueryList offset/size to this BundleEntryID
       if (isCompatibleIsaName(QueryList[J].isa, OffloadAndTargetId.second)) {
         QueryList[J].offset = BundleEntryCodeObjectOffset;
         QueryList[J].size = BundleEntryCodeObjectSize;
@@ -1079,6 +1086,8 @@ amd_comgr_status_t lookUpCodeObject(DataObject *DataP,
       }
     }
 
+    // Stop iterating over BundleEntryIDs once we have populated the entire
+    // QueryList
     if (Seen == (int) QueryListSize) {
       break;
     }
