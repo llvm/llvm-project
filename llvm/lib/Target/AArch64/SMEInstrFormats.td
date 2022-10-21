@@ -1339,6 +1339,86 @@ multiclass sme2_mla_add_sub_array_vg4_multi_D<string mnemonic, bits<2> op>{
 }
 
 //===----------------------------------------------------------------------===//
+// SME2 multiple vectors binary two or four  registers
+
+class sme2_multivec_accum_add_sub<string mnemonic, bit sz, bit is_int,
+                                  bit s, MatrixOperand matrix_ty,
+                                  RegisterOperand vector_ty,
+                                  string vg_acronym>
+    : I<(outs matrix_ty:$ZAdn),
+        (ins matrix_ty:$_ZAdn, MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3, vector_ty:$Zm),
+        mnemonic, "\t$ZAdn[$Rv, $imm3, " # vg_acronym # "], $Zm",
+        "", []>, Sched<[]> {
+  bits<2> Rv;
+  bits<3> imm3;
+  let Inst{31-23} = 0b110000011;
+  let Inst{22}    = sz;
+  let Inst{21-17} = 0b10000;
+  let Inst{15}    = 0b0;
+  let Inst{14-13} = Rv;
+  let Inst{12-10} = 0b111;
+  let Inst{5}     = 0b0;
+  let Inst{4}     = is_int;
+  let Inst{3}     = s;
+  let Inst{2-0}   = imm3;
+
+  let Constraints = "$ZAdn = $_ZAdn";
+}
+
+class sme2_multivec_accum_add_sub_vg2<string mnemonic, bit sz, bit is_int,
+                                      bit s, MatrixOperand matrix_ty,
+                                      RegisterOperand vector_ty>
+    : sme2_multivec_accum_add_sub<mnemonic, sz, is_int, s,
+                                  matrix_ty, vector_ty , "vgx2"> {
+  bits<4> Zm;
+  let Inst{16}  = 0b0;
+  let Inst{9-6} = Zm;
+}
+
+
+multiclass sme2_multivec_accum_add_sub_vg2_S<string mnemonic, bits<2> op> {
+  def NAME : sme2_multivec_accum_add_sub_vg2<mnemonic, 0b0, op{1}, op{0},
+                                             MatrixOp32, ZZ_s_mul_r>;
+
+  def : InstAlias<mnemonic # "\t$ZAdn[$Rv, $imm3], $Zm",
+                 (!cast<Instruction>(NAME) MatrixOp32:$ZAdn,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3, ZZ_s_mul_r:$Zm), 0>;
+}
+
+multiclass sme2_multivec_accum_add_sub_vg2_D<string mnemonic, bits<2> op> {
+  def NAME : sme2_multivec_accum_add_sub_vg2<mnemonic, 0b1, op{1}, op{0},
+                                             MatrixOp64, ZZ_d_mul_r>;
+  def : InstAlias<mnemonic # "\t$ZAdn[$Rv, $imm3], $Zm",
+                 (!cast<Instruction>(NAME) MatrixOp64:$ZAdn,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3, ZZ_d_mul_r:$Zm), 0>;
+
+}
+
+class sme2_multivec_accum_add_sub_vg4<string mnemonic, bit sz, bit is_int,
+                                      bit s, MatrixOperand matrix_ty,
+                                      RegisterOperand vector_ty>
+    : sme2_multivec_accum_add_sub<mnemonic, sz, is_int, s,
+                                  matrix_ty, vector_ty , "vgx4"> {
+  bits<3> Zm;
+  let Inst{16}  = 0b1;
+  let Inst{9-7} = Zm;
+  let Inst{6}   = 0b0;
+}
+
+multiclass sme2_multivec_accum_add_sub_vg4_S<string mnemonic, bits<2> op> {
+  def NAME : sme2_multivec_accum_add_sub_vg4<mnemonic, 0b0, op{1}, op{0},
+                                             MatrixOp32, ZZZZ_s_mul_r>;
+
+  def : InstAlias<mnemonic # "\t$ZAdn[$Rv, $imm3], $Zm",
+                 (!cast<Instruction>(NAME) MatrixOp32:$ZAdn,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3, ZZZZ_s_mul_r:$Zm), 0>;
+}
+
+multiclass sme2_multivec_accum_add_sub_vg4_D<string mnemonic, bits<2> op> {
+  def NAME : sme2_multivec_accum_add_sub_vg4<mnemonic, 0b1, op{1}, op{0},
+                                             MatrixOp64, ZZZZ_d_mul_r>;
+  def : InstAlias<mnemonic # "\t$ZAdn[$Rv, $imm3], $Zm",
+                 (!cast<Instruction>(NAME) MatrixOp64:$ZAdn,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3, ZZZZ_d_mul_r:$Zm), 0>;
+}
+
+//===----------------------------------------------------------------------===//
 // SME2 Multi-vector - Multiple and Single SVE Destructive
 // Two and Four registers
 

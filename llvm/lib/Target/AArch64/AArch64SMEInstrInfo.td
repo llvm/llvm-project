@@ -270,6 +270,18 @@ defm FMLS_VG4_M4Z4Z_S : sme2_mla_add_sub_array_vg4_multi_S<"fmls", 0b01>;
 defm ADD_VG2_2ZZ  : sme2_sqdmulh_add_vector_vg2_single<"add", 0b011000>;
 defm ADD_VG4_4ZZ  : sme2_sqdmulh_add_vector_vg4_single<"add", 0b011000>;
 
+defm ADDA_VG2_M2Z2Z_S : sme2_multivec_accum_add_sub_vg2_S<"add", 0b10>;
+defm ADDA_VG4_M4Z4Z_S : sme2_multivec_accum_add_sub_vg4_S<"add", 0b10>;
+
+defm SUBA_VG2_M2Z2Z_S : sme2_multivec_accum_add_sub_vg2_S<"sub", 0b11>;
+defm SUBA_VG4_M4Z4Z_S : sme2_multivec_accum_add_sub_vg4_S<"sub", 0b11>;
+
+defm FADD_VG2_M2Z2Z_S : sme2_multivec_accum_add_sub_vg2_S<"fadd", 0b00>;
+defm FADD_VG4_M4Z4Z_S : sme2_multivec_accum_add_sub_vg4_S<"fadd", 0b00>;
+
+defm FSUB_VG2_M2Z2Z_S : sme2_multivec_accum_add_sub_vg2_S<"fsub", 0b01>;
+defm FSUB_VG4_M4Z4Z_S : sme2_multivec_accum_add_sub_vg4_S<"fsub", 0b01>;
+
 defm SQDMULH_2ZZ : sme2_sqdmulh_add_vector_vg2_single<"sqdmulh", 0b100000>;
 defm SQDMULH_4ZZ : sme2_sqdmulh_add_vector_vg4_single<"sqdmulh", 0b100000>;
 
@@ -373,6 +385,12 @@ defm SUB_VG2_M2ZZ_D  : sme2_mla_add_sub_array_vg2_single_D<"sub", 0b11>;
 defm SUB_VG4_M4ZZ_D  : sme2_mla_add_sub_array_vg4_single_D<"sub", 0b11>;
 defm SUB_VG2_M2Z2Z_D : sme2_mla_add_sub_array_vg2_multi_D<"sub", 0b11>;
 defm SUB_VG4_M4Z4Z_D : sme2_mla_add_sub_array_vg4_multi_D<"sub", 0b11>;
+
+defm ADDA_VG2_M2Z2Z_D : sme2_multivec_accum_add_sub_vg2_D<"add", 0b10>;
+defm ADDA_VG4_M4Z4Z_D : sme2_multivec_accum_add_sub_vg4_D<"add", 0b10>;
+
+defm SUBA_VG2_M2Z2Z_D : sme2_multivec_accum_add_sub_vg2_D<"sub", 0b11>;
+defm SUBA_VG4_M4Z4Z_D : sme2_multivec_accum_add_sub_vg4_D<"sub", 0b11>;
 }
 
 let Predicates = [HasSME2, HasSMEF64F64] in {
@@ -385,4 +403,10 @@ defm FMLS_VG2_M2ZZ_D  : sme2_mla_add_sub_array_vg2_single_D<"fmls", 0b01>;
 defm FMLS_VG4_M4ZZ_D  : sme2_mla_add_sub_array_vg4_single_D<"fmls", 0b01>;
 defm FMLS_VG2_M2Z2Z_D : sme2_mla_add_sub_array_vg2_multi_D<"fmls", 0b01>;
 defm FMLS_VG4_M4Z4Z_D : sme2_mla_add_sub_array_vg4_multi_D<"fmls", 0b01>;
+
+defm FADD_VG2_M2Z2Z_D : sme2_multivec_accum_add_sub_vg2_D<"fadd", 0b00>;
+defm FADD_VG4_M4Z4Z_D : sme2_multivec_accum_add_sub_vg4_D<"fadd", 0b00>;
+
+defm FSUB_VG2_M2Z2Z_D : sme2_multivec_accum_add_sub_vg2_D<"fsub", 0b01>;
+defm FSUB_VG4_M4Z4Z_D : sme2_multivec_accum_add_sub_vg4_D<"fsub", 0b01>;
 }
