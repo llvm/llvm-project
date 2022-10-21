@@ -5190,6 +5190,38 @@ bool CombinerHelper::matchRedundantNegOperands(MachineInstr &MI,
   return true;
 }
 
+bool CombinerHelper::matchFsubToFneg(MachineInstr &MI, Register &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_FSUB);
+
+  Register LHS = MI.getOperand(1).getReg();
+  MatchInfo = MI.getOperand(2).getReg();
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+
+  const auto LHSCst = Ty.isVector()
+                          ? getFConstantSplat(LHS, MRI, /* allowUndef */ true)
+                          : getFConstantVRegValWithLookThrough(LHS, MRI);
+  if (!LHSCst)
+    return false;
+
+  // -0.0 is always allowed
+  if (LHSCst->Value.isNegZero())
+    return true;
+
+  // +0.0 is only allowed if nsz is set.
+  if (LHSCst->Value.isPosZero())
+    return MI.getFlag(MachineInstr::FmNsz);
+
+  return false;
+}
+
+void CombinerHelper::applyFsubToFneg(MachineInstr &MI, Register &MatchInfo) {
+  Builder.setInstrAndDebugLoc(MI);
+  Register Dst = MI.getOperand(0).getReg();
+  Builder.buildFNeg(
+      Dst, Builder.buildFCanonicalize(MRI.getType(Dst), MatchInfo).getReg(0));
+  eraseInst(MI);
+}
+
 /// Checks if \p MI is TargetOpcode::G_FMUL and contractable either
 /// due to global flags or MachineInstr flags.
 static bool isContractableFMul(MachineInstr &MI, bool AllowFusionGlobally) {
