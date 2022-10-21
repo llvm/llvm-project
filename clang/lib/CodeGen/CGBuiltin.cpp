@@ -18853,7 +18853,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
       IntNo = Intrinsic::wasm_extadd_pairwise_unsigned;
       break;
     default:
-      llvm_unreachable("unexptected builtin ID");
+      llvm_unreachable("unexpected builtin ID");
     }
 
     Function *Callee = CGM.getIntrinsic(IntNo, ConvertType(E->getType()));
