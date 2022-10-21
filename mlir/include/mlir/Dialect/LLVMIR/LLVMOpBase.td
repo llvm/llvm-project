@@ -87,6 +87,9 @@ def LLVM_Dialect : Dialect {
     /// can save us lots of verification time if there are many occurrences
     /// of some deeply-nested aggregate types in the program.
     ThreadLocalCache<DenseSet<Type>> compatibleTypes;
+
+    /// Register the attributes of this dialect.
+    void registerAttributes();
   }];
 }
 
