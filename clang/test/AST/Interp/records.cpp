@@ -5,8 +5,6 @@
 // RUN: %clang_cc1 -verify=ref -std=c++14 %s
 // RUN: %clang_cc1 -verify=ref -triple i686 %s
 
-// expected-no-diagnostics
-
 struct BoolPair {
   bool first;
   bool second;
@@ -181,3 +179,116 @@ static_assert(LT2.v[0].first == false, "");
 static_assert(LT2.v[0].second == false, "");
 static_assert(LT2.v[2].first == true, "");
 static_assert(LT2.v[2].second == false, "");
+
+class Base {
+public:
+  int i;
+  constexpr Base() : i(10) {}
+  constexpr Base(int i) : i(i) {}
+};
+
+class A : public Base {
+public:
+  constexpr A() : Base(100) {}
+  constexpr A(int a) : Base(a) {}
+};
+constexpr A a{};
+static_assert(a.i == 100, "");
+constexpr A a2{12};
+static_assert(a2.i == 12, "");
+static_assert(a2.i == 200, ""); // ref-error {{static assertion failed}} \
+                                // ref-note {{evaluates to '12 == 200'}} \
+                                // expected-error {{static assertion failed}} \
+                                // expected-note {{evaluates to '12 == 200'}}
+
+namespace MI {
+  class A {
+  public:
+    int a;
+    constexpr A(int a) : a(a) {}
+  };
+
+  class B {
+  public:
+    int b;
+    constexpr B(int b) : b(b) {}
+  };
+
+  class C : public A, public B {
+  public:
+    constexpr C() : A(10), B(20) {}
+  };
+  constexpr C c = {};
+  static_assert(c.a == 10, "");
+  static_assert(c.b == 20, "");
+
+
+  class D : private A, private B {
+    public:
+    constexpr D() : A(20), B(30) {}
+    constexpr int getA() const { return a; }
+    constexpr int getB() const { return b; }
+  };
+  constexpr D d = {};
+  static_assert(d.getA() == 20, "");
+  static_assert(d.getB() == 30, "");
+};
+
+namespace DeriveFailures {
+  struct Base { // ref-note 2{{declared here}}
+    int Val;
+  };
+
+  struct Derived : Base {
+    int OtherVal;
+
+    constexpr Derived(int i) : OtherVal(i) {} // ref-error {{never produces a constant expression}} \
+                                              // ref-note 2{{non-constexpr constructor 'Base' cannot be used in a constant expression}}
+  };
+
+  // FIXME: This is currently not being diagnosed with the new constant interpreter.
+  constexpr Derived D(12); // ref-error {{must be initialized by a constant expression}} \
+                           // ref-note {{in call to 'Derived(12)'}} \
+                           // ref-note {{declared here}} \
+                           // expected-error {{must be initialized by a constant expression}}
+  static_assert(D.Val == 0, ""); // ref-error {{not an integral constant expression}} \
+                                 // ref-note {{initializer of 'D' is not a constant expression}}
+
+#if 0
+  // FIXME: This test is currently disabled because the failing constructor call
+  //   causes us to run into an assertion later on in the new interpreter.
+  //   Once that is fixed, we fail successfully but the diagnostic uses the
+  //   wrong value.
+  struct AnotherBase {
+    int Val;
+    constexpr AnotherBase(int i) : Val(12 / i) {} //ref-note {{division by zero}} \
+                                                  //expected-note {{division by zero}}
+  };
+
+  struct AnotherDerived : AnotherBase {
+    constexpr AnotherDerived(int i) : AnotherBase(i) {}
+  };
+  constexpr AnotherBase Derp(0); // ref-error {{must be initialized by a constant expression}} \
+                                 // ref-note {{in call to 'AnotherBase(0)'}} \
+                                 // expected-error {{must be initialized by a constant expression}} \
+                                 // expected-note {{in call to 'AnotherBase(}}
+                                 // FIXME Previous note uses the wrong value
+#endif
+
+  struct YetAnotherBase {
+    int Val;
+    constexpr YetAnotherBase(int i) : Val(i) {}
+  };
+
+  struct YetAnotherDerived : YetAnotherBase {
+    using YetAnotherBase::YetAnotherBase; //ref-note {{declared here}}
+    int OtherVal;
+
+    constexpr bool doit() const { return Val == OtherVal; }
+  };
+
+  constexpr YetAnotherDerived Oops(0); // ref-error {{must be initialized by a constant expression}} \
+                                       // ref-note {{constructor inherited from base class 'YetAnotherBase' cannot be used in a constant expression}} \
+                                       // expected-error {{must be initialized by a constant expression}}
+                                       // FIXME: Missing reason for rejection.
+};

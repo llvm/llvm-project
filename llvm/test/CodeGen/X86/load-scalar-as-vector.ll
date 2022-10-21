@@ -255,7 +255,7 @@ define <2 x i64> @lshr_op0_constant(ptr %p) nounwind {
 ; SSE-NEXT:    movzbl (%rdi), %ecx
 ; SSE-NEXT:    movl $42, %eax
 ; SSE-NEXT:    shrq %cl, %rax
-; SSE-NEXT:    movq %rax, %xmm0
+; SSE-NEXT:    movd %eax, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: lshr_op0_constant:
@@ -263,7 +263,7 @@ define <2 x i64> @lshr_op0_constant(ptr %p) nounwind {
 ; AVX-NEXT:    movzbl (%rdi), %ecx
 ; AVX-NEXT:    movl $42, %eax
 ; AVX-NEXT:    shrq %cl, %rax
-; AVX-NEXT:    vmovq %rax, %xmm0
+; AVX-NEXT:    vmovd %eax, %xmm0
 ; AVX-NEXT:    retq
   %x = load i64, ptr %p
   %b = lshr i64 42, %x
