@@ -123,9 +123,9 @@ func.func @sparse_convert_2d(%arg0: tensor<2x4xf64>) -> tensor<2x4xf64, #CSR> {
 //       CHECK: %[[N:.*]] = memref.cast %[[M]] : memref<2xindex> to memref<?xindex>
 //       CHECK: %[[BUF:.*]] = memref.alloca() : memref<f32>
 //       CHECK: scf.for %[[I:.*]] = %[[C0]] to %[[C2]] step %[[C1]] {
-//       CHECK:   memref.store %{{.*}}, %[[M]][%[[C0]]] : memref<2xindex>
-//       CHECK:   memref.store %{{.*}}, %[[M]][%[[C1]]] : memref<2xindex>
-//       CHECK:   %[[V:.*]] = tensor.extract %{{.*}}[%[[I]]] : tensor<2xf32>
+//       CHECK-DAG:   memref.store %{{.*}}, %[[M]][%[[C0]]] : memref<2xindex>
+//       CHECK-DAG:   memref.store %{{.*}}, %[[M]][%[[C1]]] : memref<2xindex>
+//       CHECK-DAG:   %[[V:.*]] = tensor.extract %{{.*}}[%[[I]]] : tensor<2xf32>
 //       CHECK:   memref.store %[[V]], %[[BUF]][] : memref<f32>
 //       CHECK:   call @addEltF32(%{{.*}}, %[[BUF]], %[[N]], %{{.*}})
 //       CHECK: }
