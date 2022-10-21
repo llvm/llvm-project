@@ -28,7 +28,7 @@ using namespace mlir::LLVM;
 constexpr const static unsigned kBitsInByte = 8;
 
 //===----------------------------------------------------------------------===//
-// Array type.
+// LLVMArrayType
 //===----------------------------------------------------------------------===//
 
 bool LLVMArrayType::isValidElementType(Type type) {
@@ -49,12 +49,6 @@ LLVMArrayType::getChecked(function_ref<InFlightDiagnostic()> emitError,
                           numElements);
 }
 
-Type LLVMArrayType::getElementType() const { return getImpl()->elementType; }
-
-unsigned LLVMArrayType::getNumElements() const {
-  return getImpl()->numElements;
-}
-
 LogicalResult
 LLVMArrayType::verify(function_ref<InFlightDiagnostic()> emitError,
                       Type elementType, unsigned numElements) {
@@ -62,6 +56,9 @@ LLVMArrayType::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "invalid array element type: " << elementType;
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// DataLayoutTypeInterface
 
 unsigned LLVMArrayType::getTypeSizeInBits(const DataLayout &dataLayout,
                                           DataLayoutEntryListRef params) const {
@@ -85,6 +82,9 @@ LLVMArrayType::getPreferredAlignment(const DataLayout &dataLayout,
                                      DataLayoutEntryListRef params) const {
   return dataLayout.getTypePreferredAlignment(getElementType());
 }
+
+//===----------------------------------------------------------------------===//
+// SubElementTypeInterface
 
 void LLVMArrayType::walkImmediateSubElements(
     function_ref<void(Attribute)> walkAttrsFn,
@@ -1005,4 +1005,37 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
       });
 }
 
+//===----------------------------------------------------------------------===//
+// ODS-Generated Definitions
+//===----------------------------------------------------------------------===//
+
+/// These are unused for now.
+/// TODO: Move over to these once more types have been migrated to TypeDef.
+LLVM_ATTRIBUTE_UNUSED static OptionalParseResult
+generatedTypeParser(AsmParser &parser, StringRef *mnemonic, Type &value);
+LLVM_ATTRIBUTE_UNUSED static LogicalResult
+generatedTypePrinter(Type def, AsmPrinter &printer);
+
 #include "mlir/Dialect/LLVMIR/LLVMTypeInterfaces.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/LLVMIR/LLVMTypes.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// LLVMDialect
+//===----------------------------------------------------------------------===//
+
+void LLVMDialect::registerTypes() {
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/LLVMIR/LLVMTypes.cpp.inc"
+      >();
+}
+
+Type LLVMDialect::parseType(DialectAsmParser &parser) const {
+  return detail::parseType(parser);
+}
+
+void LLVMDialect::printType(Type type, DialectAsmPrinter &os) const {
+  return detail::printType(type, os);
+}

@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
 
   DEPENDS
   MLIRLLVMOpsIncGen
+  MLIRLLVMTypesIncGen
   MLIRLLVMIntrinsicOpsIncGen
   MLIRLLVMOpsInterfacesIncGen
   MLIROpenMPOpsIncGen
