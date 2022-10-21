@@ -107,6 +107,21 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
         });
   }
 
+  case CK_UncheckedDerivedToBase: {
+    if (!this->visit(SubExpr))
+      return false;
+
+    const CXXRecordDecl *FromDecl = getRecordDecl(SubExpr);
+    assert(FromDecl);
+    const CXXRecordDecl *ToDecl = getRecordDecl(CE);
+    assert(ToDecl);
+    const Record *R = getRecord(FromDecl);
+    const Record::Base *ToBase = R->getBase(ToDecl);
+    assert(ToBase);
+
+    return this->emitGetPtrBase(ToBase->Offset, CE);
+  }
+
   case CK_ArrayToPointerDecay:
   case CK_AtomicToNonAtomic:
   case CK_ConstructorConversion:
