@@ -42,6 +42,11 @@ class SubElementInterfaceBase<string interfaceName, string attrOrType,
         would replace the very first attribute given by `walkImmediateSubElements`.
         On success, the new instance with the values replaced is returned. If replacement
         fails, nullptr is returned.
+
+        Note that replacing the sub-elements of mutable types or attributes is
+        not currently supported by the interface. If an implementing type or
+        attribute is mutable, it should return `nullptr` if it has no mechanism
+        for replacing sub elements.
       }], attrOrType, "replaceImmediateSubElements", (ins
         "::llvm::ArrayRef<::mlir::Attribute>":$replAttrs,
         "::llvm::ArrayRef<::mlir::Type>":$replTypes
@@ -106,7 +111,7 @@ class SubElementInterfaceBase<string interfaceName, string attrOrType,
     void walkSubTypes(llvm::function_ref<void(mlir::Type)> walkFn) {
       walkSubElements(/*walkAttrsFn=*/[](mlir::Attribute) {}, walkFn);
     }
-    
+
     /// Recursively replace all of the nested sub-attributes using the provided
     /// map function. Returns nullptr in the case of failure.
     }] # attrOrType # [{ replaceSubElements(
