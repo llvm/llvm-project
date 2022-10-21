@@ -28,6 +28,16 @@ sqdmulh {z28.h-z29.h}, {z1.h-z2.h}, z15.b
 // CHECK-NEXT: sqdmulh {z28.h-z29.h}, {z1.h-z2.h}, z15.b
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+sqdmulh {z1.d-z4.d}, {z1.d-z4.d}, {z8.d-z11.d}
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Invalid vector list, expected list with 4 consecutive SVE vectors, where the first vector is a multiple of 4 and with matching element types
+// CHECK-NEXT: sqdmulh {z1.d-z4.d}, {z1.d-z4.d}, {z8.d-z11.d}
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+sqdmulh {z1.d-z2.d}, {z1.d-z2.d}, {z2.d-z3.d}
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Invalid vector list, expected list with 2 consecutive SVE vectors, where the first vector is a multiple of 2 and with matching element types
+// CHECK-NEXT: sqdmulh {z1.d-z2.d}, {z1.d-z2.d}, {z2.d-z3.d}
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}
+
 // --------------------------------------------------------------------------//
 // Invalid single vector register
 
@@ -77,3 +87,12 @@ sqdmulh {z0.s,z1.s}, {z0.d,z1.d}, z15.s
 // CHECK-NEXT: sqdmulh {z0.s,z1.s}, {z0.d,z1.d}, z15.s
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+sqdmulh {z2.d,z3.d}, {z0.d,z1.d}, {z4.d,z5.d}
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must match destination register list
+// CHECK-NEXT: sqdmulh {z2.d,z3.d}, {z0.d,z1.d}, {z4.d,z5.d}
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+sqdmulh {z0.d-z3.d}, {z4.d-z7.d}, {z0.d-z3.d}
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: operand must match destination register list
+// CHECK-NEXT: sqdmulh {z0.d-z3.d}, {z4.d-z7.d}, {z0.d-z3.d}
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

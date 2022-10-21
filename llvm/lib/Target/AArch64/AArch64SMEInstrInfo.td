@@ -272,6 +272,8 @@ defm FSUB_VG4_M4Z4Z_S : sme2_multivec_accum_add_sub_vg4_S<"fsub", 0b01>;
 
 defm SQDMULH_2ZZ : sme2_sqdmulh_add_vector_vg2_single<"sqdmulh", 0b100000>;
 defm SQDMULH_4ZZ : sme2_sqdmulh_add_vector_vg4_single<"sqdmulh", 0b100000>;
+defm SQDMULH_2Z2Z2Z : sme2_sqdmulh_vector_vg2_multi<"sqdmulh">;
+defm SQDMULH_4Z4Z4Z : sme2_sqdmulh_vector_vg4_multi<"sqdmulh">;
 
 defm FMLAL_MZZI      : sme2_mla_long_array_index<"fmlal",  0b10,   0b00>;
 defm FMLAL_VG2_M2ZZI : sme2_fp_mla_long_array_vg2_index<"fmlal",   0b00>;
