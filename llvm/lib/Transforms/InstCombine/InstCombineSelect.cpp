@@ -2847,12 +2847,12 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         return replaceOperand(SI, 0, A);
     }
 
-    // sel (sel c, a, false), true, (sel !c, b, false) -> sel c, a, b
-    // sel (sel !c, a, false), true, (sel c, b, false) -> sel c, b, a
+    // (c && a)  || (!c && b) --> sel c, a, b
+    // (!c && a) ||  (c && b) --> sel c, b, a
     Value *C1, *C2;
-    if (match(CondVal, m_Select(m_Value(C1), m_Value(A), m_Zero())) &&
+    if (match(CondVal, m_LogicalAnd(m_Value(C1), m_Value(A))) &&
         match(TrueVal, m_One()) &&
-        match(FalseVal, m_Select(m_Value(C2), m_Value(B), m_Zero()))) {
+        match(FalseVal, m_LogicalAnd(m_Value(C2), m_Value(B)))) {
       if (match(C2, m_Not(m_Specific(C1)))) // first case
         return SelectInst::Create(C1, A, B);
       else if (match(C1, m_Not(m_Specific(C2)))) // second case
