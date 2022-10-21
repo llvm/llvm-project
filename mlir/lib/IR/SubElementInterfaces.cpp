@@ -93,14 +93,6 @@ void SubElementTypeInterface::walkSubElements(
 //===----------------------------------------------------------------------===//
 // ReplaceSubElements
 
-/// Return if the given element is mutable.
-static bool isMutable(Attribute attr) {
-  return attr.hasTrait<AttributeTrait::IsMutable>();
-}
-static bool isMutable(Type type) {
-  return type.hasTrait<TypeTrait::IsMutable>();
-}
-
 template <typename InterfaceT, typename T, typename ReplaceSubElementFnT>
 static void updateSubElementImpl(
     T element, function_ref<std::pair<T, WalkResult>(T)> walkFn,
@@ -186,12 +178,6 @@ replaceSubElementsImpl(InterfaceT interface,
   // If the sub-elements didn't change, just return the original value.
   if (!*changed)
     return interface;
-
-  // If this element is mutable, we don't support changing its sub elements, the
-  // sub element walk doesn't give us a valid ordering for what we need here. If
-  // we want to support mutable elements, we'll need something more.
-  if (isMutable(interface))
-    return {};
 
   // Use the new elements during the replacement.
   return interface.replaceImmediateSubElements(newAttrs, newTypes);

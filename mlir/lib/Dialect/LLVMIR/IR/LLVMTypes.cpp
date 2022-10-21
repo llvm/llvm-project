@@ -698,9 +698,12 @@ void LLVMStructType::walkImmediateSubElements(
 
 Type LLVMStructType::replaceImmediateSubElements(
     ArrayRef<Attribute> replAttrs, ArrayRef<Type> replTypes) const {
-  // TODO: It's not clear how we support replacing sub-elements of mutable
-  // types.
-  return nullptr;
+  if (isIdentified()) {
+    // TODO: It's not clear how we support replacing sub-elements of mutable
+    // types.
+    return nullptr;
+  }
+  return getLiteral(getContext(), replTypes, isPacked());
 }
 
 //===----------------------------------------------------------------------===//
