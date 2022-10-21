@@ -3555,3 +3555,16 @@ let Predicates = [HasSVE2BitPerm] in {
   defm BDEP_ZZZ : sve2_misc_bitwise<0b1101, "bdep", int_aarch64_sve_bdep_x>;
   defm BGRP_ZZZ : sve2_misc_bitwise<0b1110, "bgrp", int_aarch64_sve_bgrp_x>;
 } // End HasSVE2BitPerm
+
+//===----------------------------------------------------------------------===//
+// SME or SVE2.1 instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasSVE2p1_or_HasSME] in {
+defm REVD_ZPmZ : sve2_int_perm_revd<"revd", AArch64revd_mt>;
+
+defm SCLAMP_ZZZ : sve2_clamp<"sclamp", 0b0, int_aarch64_sve_sclamp>;
+defm UCLAMP_ZZZ : sve2_clamp<"uclamp", 0b1, int_aarch64_sve_uclamp>;
+
+defm PSEL_PPPRI : sve2_int_perm_sel_p<"psel", int_aarch64_sve_psel>;
+} // End HasSVE2p1_or_HasSME
