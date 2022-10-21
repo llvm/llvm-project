@@ -2691,8 +2691,8 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (v2i16 (DivergentBinFrag<build_vector> (i16 0), (i16 SReg_32:$src1))),
-  (v2i16 (V_LSHLREV_B32_e64 (i16 16), SReg_32:$src1))
+  (v2i16 (DivergentBinFrag<build_vector> (i16 0), (i16 VGPR_32:$src1))),
+  (v2i16 (V_LSHLREV_B32_e64 (i16 16), VGPR_32:$src1))
 >;
 
 
@@ -2702,8 +2702,8 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (v2i16 (DivergentBinFrag<build_vector> (i16 SReg_32:$src1), (i16 0))),
-  (v2i16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), SReg_32:$src1))
+  (v2i16 (DivergentBinFrag<build_vector> (i16 VGPR_32:$src1), (i16 0))),
+  (v2i16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), VGPR_32:$src1))
 >;
 
 def : GCNPat <
@@ -2712,8 +2712,8 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (v2f16 (DivergentBinFrag<build_vector> (f16 SReg_32:$src1), (f16 FP_ZERO))),
-  (v2f16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), SReg_32:$src1))
+  (v2f16 (DivergentBinFrag<build_vector> (f16 VGPR_32:$src1), (f16 FP_ZERO))),
+  (v2f16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), VGPR_32:$src1))
 >;
 
 def : GCNPat <
@@ -2737,8 +2737,8 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (v2i16 (DivergentBinFrag<build_vector> (i16 undef), (i16 SReg_32:$src1))),
-  (v2i16 (V_LSHLREV_B32_e64 (i32 16), SReg_32:$src1))
+  (v2i16 (DivergentBinFrag<build_vector> (i16 undef), (i16 VGPR_32:$src1))),
+  (v2i16 (V_LSHLREV_B32_e64 (i32 16), VGPR_32:$src1))
 >;
 
 
@@ -2748,8 +2748,8 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (v2f16 (DivergentBinFrag<build_vector> (f16 undef), (f16 SReg_32:$src1))),
-  (v2f16 (V_LSHLREV_B32_e64 (i32 16), SReg_32:$src1))
+  (v2f16 (DivergentBinFrag<build_vector> (f16 undef), (f16 VGPR_32:$src1))),
+  (v2f16 (V_LSHLREV_B32_e64 (i32 16), VGPR_32:$src1))
 >;
 }
 
@@ -2760,7 +2760,7 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (v2i16 (DivergentBinFrag<build_vector> (i16 SReg_32:$src0), (i16 SReg_32:$src1))),
+  (v2i16 (DivergentBinFrag<build_vector> (i16 VGPR_32:$src0), (i16 VGPR_32:$src1))),
   (v2i16 (V_LSHL_OR_B32_e64 $src1, (i32 16), (i32 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), $src0))))
 >;
 
