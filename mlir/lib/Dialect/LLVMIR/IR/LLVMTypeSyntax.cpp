@@ -101,7 +101,7 @@ static void printStructType(AsmPrinter &printer, LLVMStructType type) {
 
 /// Prints a type containing a fixed number of elements.
 template <typename TypeTy>
-static void printArrayOrVectorType(AsmPrinter &printer, TypeTy type) {
+static void printVectorType(AsmPrinter &printer, TypeTy type) {
   printer << '<' << type.getNumElements() << " x ";
   dispatchPrint(printer, type.getElementType());
   printer << '>';
@@ -156,9 +156,9 @@ void mlir::LLVM::detail::printType(Type type, AsmPrinter &printer) {
   }
 
   if (auto arrayType = type.dyn_cast<LLVMArrayType>())
-    return printArrayOrVectorType(printer, arrayType);
+    return arrayType.print(printer);
   if (auto vectorType = type.dyn_cast<LLVMFixedVectorType>())
-    return printArrayOrVectorType(printer, vectorType);
+    return printVectorType(printer, vectorType);
 
   if (auto vectorType = type.dyn_cast<LLVMScalableVectorType>()) {
     printer << "<? x " << vectorType.getMinNumElements() << " x ";
@@ -286,26 +286,6 @@ static Type parseVectorType(AsmParser &parser) {
     return Type();
   }
   return parser.getChecked<LLVMFixedVectorType>(loc, elementType, dims[0]);
-}
-
-/// Parses an LLVM dialect array type.
-///   llvm-type ::= `array<` integer `x` llvm-type `>`
-static LLVMArrayType parseArrayType(AsmParser &parser) {
-  SmallVector<int64_t, 1> dims;
-  SMLoc sizePos;
-  Type elementType;
-  SMLoc loc = parser.getCurrentLocation();
-  if (parser.parseLess() || parser.getCurrentLocation(&sizePos) ||
-      parser.parseDimensionList(dims, /*allowDynamic=*/false) ||
-      dispatchParse(parser, elementType) || parser.parseGreater())
-    return LLVMArrayType();
-
-  if (dims.size() != 1) {
-    parser.emitError(sizePos) << "expected ? x <type>";
-    return LLVMArrayType();
-  }
-
-  return parser.getChecked<LLVMArrayType>(loc, elementType, dims[0]);
 }
 
 /// Attempts to set the body of an identified structure type. Reports a parsing
@@ -468,7 +448,7 @@ static Type dispatchParse(AsmParser &parser, bool allowAny = true) {
       .Case("func", [&] { return parseFunctionType(parser); })
       .Case("ptr", [&] { return parsePointerType(parser); })
       .Case("vec", [&] { return parseVectorType(parser); })
-      .Case("array", [&] { return parseArrayType(parser); })
+      .Case("array", [&] { return LLVMArrayType::parse(parser); })
       .Case("struct", [&] { return parseStructType(parser); })
       .Default([&] {
         parser.emitError(keyLoc) << "unknown LLVM type: " << key;
@@ -493,4 +473,13 @@ Type mlir::LLVM::detail::parseType(DialectAsmParser &parser) {
     return nullptr;
   }
   return type;
+}
+
+ParseResult LLVM::parsePrettyLLVMType(AsmParser &p, FailureOr<Type> &type) {
+  type.emplace();
+  return dispatchParse(p, *type);
+}
+
+void LLVM::printPrettyLLVMType(AsmPrinter &p, Type type) {
+  return dispatchPrint(p, type);
 }
