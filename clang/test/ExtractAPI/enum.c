@@ -120,13 +120,13 @@ enum {
       "kind": "memberOf",
       "source": "c:@Ea@Constant@Constant",
       "target": "c:@Ea@Constant",
-      "targetFallback": "(anonymous)"
+      "targetFallback": "enum (unnamed)"
     },
     {
       "kind": "memberOf",
       "source": "c:@Ea@OtherConstant@OtherConstant",
       "target": "c:@Ea@OtherConstant",
-      "targetFallback": "(anonymous)"
+      "targetFallback": "enum (unnamed)"
     }
   ],
   "symbols": [

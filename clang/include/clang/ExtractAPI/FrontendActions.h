@@ -15,6 +15,7 @@
 #define LLVM_CLANG_EXTRACTAPI_FRONTEND_ACTIONS_H
 
 #include "clang/ExtractAPI/API.h"
+#include "clang/ExtractAPI/APIIgnoresList.h"
 #include "clang/Frontend/FrontendAction.h"
 
 namespace clang {
@@ -38,6 +39,9 @@ private:
   /// The synthesized input buffer that contains all the provided input header
   /// files.
   std::unique_ptr<llvm::MemoryBuffer> Buffer;
+
+  /// The list of symbols to ignore during serialization
+  extractapi::APIIgnoresList IgnoresList;
 
   /// The input file originally provided on the command line.
   ///

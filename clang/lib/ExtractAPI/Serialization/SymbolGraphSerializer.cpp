@@ -14,6 +14,7 @@
 #include "clang/ExtractAPI/Serialization/SymbolGraphSerializer.h"
 #include "clang/Basic/Version.h"
 #include "clang/ExtractAPI/API.h"
+#include "clang/ExtractAPI/APIIgnoresList.h"
 #include "clang/ExtractAPI/DeclarationFragments.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
@@ -480,6 +481,10 @@ Object SymbolGraphSerializer::serializeModule() const {
 }
 
 bool SymbolGraphSerializer::shouldSkip(const APIRecord &Record) const {
+  // Skip explicitly ignored symbols.
+  if (IgnoresList.shouldIgnore(Record.Name))
+    return true;
+
   // Skip unconditionally unavailable symbols
   if (Record.Availabilities.isUnconditionallyUnavailable())
     return true;
