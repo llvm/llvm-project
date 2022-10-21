@@ -17,6 +17,7 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVElement.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLocation.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSort.h"
+#include <list>
 #include <map>
 #include <set>
 
@@ -56,7 +57,12 @@ using LVScopeKindSet = std::set<LVScopeKind>;
 using LVScopeDispatch = std::map<LVScopeKind, LVScopeGetFunction>;
 using LVScopeRequest = std::vector<LVScopeGetFunction>;
 
+using LVOffsetList = std::list<LVOffset>;
 using LVOffsetElementMap = std::map<LVOffset, LVElement *>;
+using LVOffsetLinesMap = std::map<LVOffset, LVLines *>;
+using LVOffsetLocationsMap = std::map<LVOffset, LVLocations *>;
+using LVOffsetSymbolMap = std::map<LVOffset, LVSymbol *>;
+using LVTagOffsetsMap = std::map<dwarf::Tag, LVOffsetList *>;
 
 // Class to represent a DWARF Scope.
 class LVScope : public LVElement {
@@ -266,6 +272,7 @@ public:
 
   void print(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override;
+  virtual void printWarnings(raw_ostream &OS, bool Full = true) const {}
   virtual void printMatchedElements(raw_ostream &OS, bool UseMatchedElements) {}
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -358,10 +365,38 @@ class LVScopeCompileUnit final : public LVScope {
   using LVAddressToLine = std::map<LVAddress, LVLine *>;
   LVAddressToLine AddressToLine;
 
+  // DWARF Tags (Tag, Element list).
+  LVTagOffsetsMap DebugTags;
+
+  // Offsets associated with objects being flagged as having invalid data
+  // (ranges, locations, lines zero or coverages).
+  LVOffsetElementMap WarningOffsets;
+
+  // Symbols with invalid locations. (Symbol, Location List).
+  LVOffsetLocationsMap InvalidLocations;
+
+  // Symbols with invalid coverage values.
+  LVOffsetSymbolMap InvalidCoverages;
+
+  // Scopes with invalid ranges (Scope, Range list).
+  LVOffsetLocationsMap InvalidRanges;
+
+  // Scopes with lines zero (Scope, Line list).
+  LVOffsetLinesMap LinesZero;
+
   // Record scopes contribution in bytes to the debug information.
   using LVSizesMap = std::map<const LVScope *, LVOffset>;
   LVSizesMap Sizes;
   LVOffset CUContributionSize = 0;
+
+  // Helper function to add an invalid location/range.
+  void addInvalidLocationOrRange(LVLocation *Location, LVElement *Element,
+                                 LVOffsetLocationsMap *Map) {
+    LVOffset Offset = Element->getOffset();
+    addInvalidOffset(Offset, Element);
+    addItem<LVOffsetLocationsMap, LVLocations, LVOffset, LVLocation *>(
+        Map, Offset, Location);
+  }
 
   // Record scope sizes indexed by lexical level.
   // Setting an initial size that will cover a very deep nested scopes.
@@ -388,7 +423,12 @@ public:
   }
   LVScopeCompileUnit(const LVScopeCompileUnit &) = delete;
   LVScopeCompileUnit &operator=(const LVScopeCompileUnit &) = delete;
-  ~LVScopeCompileUnit() = default;
+  ~LVScopeCompileUnit() {
+    deleteList<LVTagOffsetsMap>(DebugTags);
+    deleteList<LVOffsetLocationsMap>(InvalidLocations);
+    deleteList<LVOffsetLocationsMap>(InvalidRanges);
+    deleteList<LVOffsetLinesMap>(LinesZero);
+  }
 
   LVScope *getCompileUnitParent() const override {
     return static_cast<LVScope *>(const_cast<LVScopeCompileUnit *>(this));
@@ -416,6 +456,30 @@ public:
   void setProducer(StringRef ProducerName) override {
     ProducerIndex = getStringPool().getIndex(ProducerName);
   }
+
+  // Record DWARF tags.
+  void addDebugTag(dwarf::Tag Target, LVOffset Offset);
+  // Record elements with invalid offsets.
+  void addInvalidOffset(LVOffset Offset, LVElement *Element);
+  // Record symbols with invalid coverage values.
+  void addInvalidCoverage(LVSymbol *Symbol);
+  // Record symbols with invalid locations.
+  void addInvalidLocation(LVLocation *Location);
+  // Record scopes with invalid ranges.
+  void addInvalidRange(LVLocation *Location);
+  // Record line zero.
+  void addLineZero(LVLine *Line);
+
+  const LVTagOffsetsMap getDebugTags() const { return DebugTags; }
+  const LVOffsetElementMap getWarningOffsets() const { return WarningOffsets; }
+  const LVOffsetLocationsMap getInvalidLocations() const {
+    return InvalidLocations;
+  }
+  const LVOffsetSymbolMap getInvalidCoverages() const {
+    return InvalidCoverages;
+  }
+  const LVOffsetLocationsMap getInvalidRanges() const { return InvalidRanges; }
+  const LVOffsetLinesMap getLinesZero() const { return LinesZero; }
 
   // Process ranges, locations and calculate coverage.
   void processRangeLocationCoverage(
@@ -456,6 +520,7 @@ public:
 
   void print(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override;
+  void printWarnings(raw_ostream &OS, bool Full = true) const override;
   void printMatchedElements(raw_ostream &OS, bool UseMatchedElements) override;
 };
 

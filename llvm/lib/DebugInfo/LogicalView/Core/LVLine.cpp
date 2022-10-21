@@ -59,6 +59,8 @@ LVLineDispatch LVLine::Dispatch = {
 
 // String used as padding for printing elements with no line number.
 std::string LVLine::noLineAsString(bool ShowZero) const {
+  if (options().getInternalNone())
+    return LVObject::noLineAsString(ShowZero);
   return (ShowZero || options().getAttributeZero()) ? ("    0   ")
                                                     : ("    -   ");
 }
