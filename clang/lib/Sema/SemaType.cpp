@@ -2888,6 +2888,8 @@ bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
   if (T.isVolatileQualified() && getLangOpts().CPlusPlus20)
     Diag(Loc, diag::warn_deprecated_volatile_return) << T;
 
+  if (T.getAddressSpace() != LangAS::Default && getLangOpts().HLSL)
+    return true;
   return false;
 }
 
@@ -6774,6 +6776,8 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
     // The keyword-based type attributes imply which address space to use.
     ASIdx = S.getLangOpts().SYCLIsDevice ? Attr.asSYCLLangAS()
                                          : Attr.asOpenCLLangAS();
+    if (S.getLangOpts().HLSL)
+      ASIdx = Attr.asHLSLLangAS();
 
     if (ASIdx == LangAS::Default)
       llvm_unreachable("Invalid address space");
@@ -8518,6 +8522,7 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_OpenCLLocalAddressSpace:
     case ParsedAttr::AT_OpenCLConstantAddressSpace:
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
+    case ParsedAttr::AT_HLSLGroupSharedAddressSpace:
     case ParsedAttr::AT_AddressSpace:
       HandleAddressSpaceTypeAttribute(type, attr, state);
       attr.setUsedAsTypeAttr();

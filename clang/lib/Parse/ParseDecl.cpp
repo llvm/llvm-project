@@ -914,6 +914,17 @@ void Parser::ParseOpenCLQualifiers(ParsedAttributes &Attrs) {
                ParsedAttr::AS_Keyword);
 }
 
+bool Parser::isHLSLQualifier(const Token &Tok) const {
+  return Tok.is(tok::kw_groupshared);
+}
+
+void Parser::ParseHLSLQualifiers(ParsedAttributes &Attrs) {
+  IdentifierInfo *AttrName = Tok.getIdentifierInfo();
+  SourceLocation AttrNameLoc = ConsumeToken();
+  Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+               ParsedAttr::AS_Keyword);
+}
+
 void Parser::ParseNullabilityTypeSpecifiers(ParsedAttributes &attrs) {
   // Treat these like attributes, even though they're type specifiers.
   while (true) {
@@ -4367,6 +4378,11 @@ void Parser::ParseDeclarationSpecifiers(
       ParseOpenCLQualifiers(DS.getAttributes());
       break;
 
+    case tok::kw_groupshared:
+      // NOTE: ParseHLSLQualifiers will consume the qualifier token.
+      ParseHLSLQualifiers(DS.getAttributes());
+      continue;
+
     case tok::less:
       // GCC ObjC supports types like "<SomeProtocol>" as a synonym for
       // "id<SomeProtocol>".  This is hopelessly old fashioned and dangerous,
@@ -5391,6 +5407,8 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw___read_only:
   case tok::kw___read_write:
   case tok::kw___write_only:
+
+  case tok::kw_groupshared:
     return true;
 
   case tok::kw_private:
@@ -5634,6 +5652,7 @@ bool Parser::isDeclarationSpecifier(
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
 
+  case tok::kw_groupshared:
     return true;
 
   case tok::kw_private:
@@ -5865,6 +5884,11 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw___ptrauth:
       ParsePtrauthQualifier(DS.getAttributes());
       EndLoc = PrevTokLocation;
+      continue;
+
+    case tok::kw_groupshared:
+      // NOTE: ParseHLSLQualifiers will consume the qualifier token.
+      ParseHLSLQualifiers(DS.getAttributes());
       continue;
 
     case tok::kw___unaligned:
