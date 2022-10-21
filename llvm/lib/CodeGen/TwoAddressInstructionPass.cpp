@@ -1706,6 +1706,7 @@ bool TwoAddressInstructionPass::processStatepoint(
       LiveVariables::VarInfo &SrcInfo = LV->getVarInfo(RegB);
       LiveVariables::VarInfo &DstInfo = LV->getVarInfo(RegA);
       SrcInfo.AliveBlocks |= DstInfo.AliveBlocks;
+      DstInfo.AliveBlocks.clear();
       for (auto *KillMI : DstInfo.Kills)
         LV->addVirtualRegisterKilled(RegB, *KillMI, false);
     }
