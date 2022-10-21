@@ -984,7 +984,7 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     addRuntimePreemptionSpecifier(function.getDsoLocal(), llvmFunc);
 
     if (function->getAttrOfType<UnitAttr>(LLVMDialect::getReadnoneAttrName()))
-      llvmFunc->addFnAttr(llvm::Attribute::ReadNone);
+      llvmFunc->setDoesNotAccessMemory();
 
     // Forward the pass-through attributes to LLVM.
     if (failed(forwardPassthroughAttributes(
