@@ -480,13 +480,16 @@ public:
     for (int64_t i = 0; i < rank; i++)
       loopEmitter.enterLoopOverTensorAtDim(rewriter, loc, 0, i);
 
-    Value vals = loopEmitter.getTensorValueBuffer(0);
-    Value idx = loopEmitter.getLastLevelTensorPointerIndex(0);
-    Value val = rewriter.create<memref::LoadOp>(op.getLoc(), vals, idx);
-
     SmallVector<Value, 4> coords;
     coords.reserve(rank);
     loopEmitter.getCoordinateArray(coords);
+
+    Value vals = loopEmitter.getTensorValueBuffer(0);
+    Value pidx = loopEmitter.getLastLevelTensorPointerIndex(0);
+    // Loads the value from sparse tensor using pointer index;
+    // loads the value from dense tensor using coordinate array.
+    Value val = enc ? rewriter.create<memref::LoadOp>(loc, vals, pidx)
+                    : rewriter.create<memref::LoadOp>(loc, vals, coords);
 
     for (int64_t i = 0; i < rank; i++)
       loopEmitter.exitCurrentLoop();

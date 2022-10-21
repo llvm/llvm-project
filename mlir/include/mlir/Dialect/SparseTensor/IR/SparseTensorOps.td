@@ -834,16 +834,16 @@ def SparseTensor_YieldOp : SparseTensor_Op<"yield", [Pure, Terminator]>,
 
 def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
     [SingleBlockImplicitTerminator<"YieldOp">]>,
-    Arguments<(ins AnySparseTensor:$tensor)>{
-  let summary = "Iterates over non-zero elements in a sparse tensor";
+    Arguments<(ins AnyTensor:$tensor)>{
+  let summary = "Iterates over elements in a tensor";
   let description = [{
-     Iterates over every non-zero element in the given sparse tensor and executes
-     the block.
+     Iterates over stored elements in a tensor (which are typically, but not always,
+     non-zero for sparse tensors) and executes the block.
 
-     For a input sparse tensor with rank n, the block must take n + 1 arguments. The
+     For an input tensor with rank n, the block must take n + 1 arguments. The
      first n arguments must be Index type, together indicating the current coordinates
      of the element being visited. The last argument must have the same type as the
-     sparse tensor's element type, representing the actual value loaded from the input
+     tensor's element type, representing the actual value loaded from the input
      tensor at the given coordinates.
 
      Example:
