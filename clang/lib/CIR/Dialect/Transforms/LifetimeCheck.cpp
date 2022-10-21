@@ -45,8 +45,11 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkCtor(CallOp callOp, const clang::CXXConstructorDecl *ctor);
   void checkMoveAssignment(CallOp callOp, const clang::CXXMethodDecl *m);
   void checkCopyAssignment(CallOp callOp, const clang::CXXMethodDecl *m);
-  void checkNonConstUseOfOwner(CallOp callOp);
+  void checkNonConstUseOfOwner(mlir::Value ownerAddr, mlir::Location loc);
   void checkOperators(CallOp callOp, const clang::CXXMethodDecl *m);
+  void checkOtherMethodsAndFunctions(CallOp callOp,
+                                     const clang::CXXMethodDecl *m);
+  void checkForOwnerAndPointerArguments(CallOp callOp, unsigned firstArgIdx);
 
   // Tracks current module.
   ModuleOp theModule;
@@ -55,6 +58,8 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   bool isCtorInitPointerFromOwner(CallOp callOp,
                                   const clang::CXXConstructorDecl *ctor);
   bool isNonConstUseOfOwner(CallOp callOp, const clang::CXXMethodDecl *m);
+  bool isOwnerOrPointerClassMethod(mlir::Value firstParam,
+                                   const clang::CXXMethodDecl *m);
 
   // Diagnostic helpers.
   void emitInvalidHistory(mlir::InFlightDiagnostic &D, mlir::Value histKey);
@@ -987,7 +992,7 @@ void LifetimeCheckPass::checkMoveAssignment(CallOp callOp,
   // Copy assignments between pointer categories.
   if (owners.count(dst) && owners.count(src)) {
     // Handle as a non const use of owner, invalidating pointers.
-    checkNonConstUseOfOwner(callOp);
+    checkNonConstUseOfOwner(dst, callOp.getLoc());
 
     // 2.4.2 - It is an error to use a moved-from object.
     // To that intent we mark src's pset with invalid.
@@ -1003,7 +1008,7 @@ void LifetimeCheckPass::checkCopyAssignment(CallOp callOp,
 
   // Copy assignment between owner categories.
   if (owners.count(dst) && owners.count(src))
-    return checkNonConstUseOfOwner(callOp);
+    return checkNonConstUseOfOwner(dst, callOp.getLoc());
 
   // Copy assignment between pointer categories.
   if (ptrs.count(dst) && ptrs.count(src)) {
@@ -1094,7 +1099,7 @@ void LifetimeCheckPass::checkOperators(CallOp callOp,
     //
     // In P1179, section 2.5.7.12, the use of [[gsl::lifetime_const]] is
     // suggested, but it's not part of clang (will it ever?)
-    return checkNonConstUseOfOwner(callOp);
+    return checkNonConstUseOfOwner(addr, callOp.getLoc());
   }
 
   if (ptrs.count(addr)) {
@@ -1117,14 +1122,13 @@ bool LifetimeCheckPass::isNonConstUseOfOwner(CallOp callOp,
   return false;
 }
 
-void LifetimeCheckPass::checkNonConstUseOfOwner(CallOp callOp) {
-  auto ownerAddr = callOp.getOperand(0);
+void LifetimeCheckPass::checkNonConstUseOfOwner(mlir::Value ownerAddr,
+                                                mlir::Location loc) {
   // 2.4.2 - On every non-const use of a local Owner o:
   //
   // - For each entry e in pset(s): Remove e from pset(s), and if no other
   // Owner’s pset contains only e, then KILL(e).
-  kill(State::getOwnedBy(ownerAddr), InvalidStyle::NonConstUseOfOwner,
-       callOp.getLoc());
+  kill(State::getOwnedBy(ownerAddr), InvalidStyle::NonConstUseOfOwner, loc);
 
   // - Set pset(o) = {o__N'}, where N is one higher than the highest
   // previously used suffix. For example, initially pset(o) is {o__1'}, on
@@ -1134,19 +1138,63 @@ void LifetimeCheckPass::checkNonConstUseOfOwner(CallOp callOp) {
   return;
 }
 
+void LifetimeCheckPass::checkForOwnerAndPointerArguments(CallOp callOp,
+                                                         unsigned firstArgIdx) {
+  auto numOperands = callOp.getNumOperands();
+  if (firstArgIdx >= numOperands)
+    return;
+
+  llvm::SmallSetVector<mlir::Value, 8> ownersToInvalidate, ptrsToDeref;
+  for (unsigned i = firstArgIdx, e = numOperands; i != e; ++i) {
+    auto arg = callOp.getOperand(i);
+    // FIXME: apply p1179 rules as described in 2.5. Very conservative for now:
+    //
+    // - Owners: always invalidate.
+    // - Pointers: always check for deref.
+    //
+    // FIXME: even before 2.5 we should only invalidate non-const param types.
+    if (owners.count(arg))
+      ownersToInvalidate.insert(arg);
+    if (ptrs.count(arg))
+      ptrsToDeref.insert(arg);
+  }
+
+  // FIXME: CIR should track source info on the passed args, so we can get
+  // accurate location for why the invalidation happens.
+  for (auto o : ownersToInvalidate)
+    checkNonConstUseOfOwner(o, callOp.getLoc());
+  for (auto p : ptrsToDeref)
+    checkPointerDeref(p, callOp.getLoc());
+}
+
+void LifetimeCheckPass::checkOtherMethodsAndFunctions(
+    CallOp callOp, const clang::CXXMethodDecl *m) {
+  unsigned firstArgIdx = 0;
+  if (m) // Skip 'this' pointer
+    firstArgIdx++;
+  checkForOwnerAndPointerArguments(callOp, firstArgIdx);
+}
+
+bool LifetimeCheckPass::isOwnerOrPointerClassMethod(
+    mlir::Value firstParam, const clang::CXXMethodDecl *m) {
+  // For the sake of analysis, these behave like regular functions
+  if (!m || m->isStatic())
+    return false;
+  if (owners.count(firstParam) || ptrs.count(firstParam))
+    return true;
+  return false;
+}
+
 void LifetimeCheckPass::checkCall(CallOp callOp) {
   if (callOp.getNumOperands() == 0)
     return;
 
   const auto *methodDecl = getMethod(theModule, callOp.getCallee());
+  if (!isOwnerOrPointerClassMethod(callOp.getOperand(0), methodDecl))
+    return checkOtherMethodsAndFunctions(callOp, methodDecl);
 
-  // FIXME:
-  // Handle free functions and other methods that use non-const
-  // Owners parameters, those should also invalidate the necessary
-  // pointers.
-  if (!methodDecl)
-    return;
-
+  // From this point on only owner and pointer class methods handling,
+  // starting from special methods.
   if (const auto *ctor = dyn_cast<clang::CXXConstructorDecl>(methodDecl))
     return checkCtor(callOp, ctor);
   if (methodDecl->isMoveAssignmentOperator())
@@ -1160,7 +1208,7 @@ void LifetimeCheckPass::checkCall(CallOp callOp) {
 
   // Non-const member call to a Owner invalidates any of its users.
   if (isNonConstUseOfOwner(callOp, methodDecl))
-    return checkNonConstUseOfOwner(callOp);
+    return checkNonConstUseOfOwner(callOp.getOperand(0), callOp.getLoc());
 
   // Take a pset(Ptr) = { Ownr' } where Own got invalidated, this will become
   // invalid access to Ptr if any of its methods are used.
