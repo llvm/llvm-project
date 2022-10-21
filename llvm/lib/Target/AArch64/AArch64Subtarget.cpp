@@ -347,8 +347,11 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
     return AArch64II::MO_GOT;
 
   if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV)) {
-    if (GV->hasDLLImportStorageClass())
+    if (GV->hasDLLImportStorageClass()) {
+      if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy())
+        return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORTAUX;
       return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT;
+    }
     if (getTargetTriple().isOSWindows())
       return AArch64II::MO_GOT | AArch64II::MO_COFFSTUB;
     return AArch64II::MO_GOT;
@@ -385,9 +388,17 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
       !TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
     return AArch64II::MO_GOT;
 
-  // Use ClassifyGlobalReference for setting MO_DLLIMPORT/MO_COFFSTUB.
-  if (getTargetTriple().isOSWindows())
+  if (getTargetTriple().isOSWindows()) {
+    if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy() &&
+        GV->hasDLLImportStorageClass()) {
+      // On Arm64EC, if we're calling a function directly, use MO_DLLIMPORT,
+      // not MO_DLLIMPORTAUX.
+      return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT;
+    }
+
+    // Use ClassifyGlobalReference for setting MO_DLLIMPORT/MO_COFFSTUB.
     return ClassifyGlobalReference(GV, TM);
+  }
 
   return AArch64II::MO_NO_FLAG;
 }

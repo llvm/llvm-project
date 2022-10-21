@@ -7,9 +7,8 @@
 
 using hlsl::abs;
 
-// CHECK: define noundef signext i16 @
-// FIXME: int16_t is promoted to i32 now. Change to abs.i16 once it is fixed.
-// CHECK: call i32 @llvm.abs.i32(
+// CHECK: define noundef i16 @
+// CHECK: call i16 @llvm.abs.i16(
 int16_t test_abs_int16_t ( int16_t p0 ) {
   return abs ( p0 );
 }

@@ -46,6 +46,7 @@ executable("llvm-reduce") {
     "deltas/ReduceVirtualRegisters.cpp",
     "deltas/RunIRPasses.cpp",
     "deltas/SimplifyInstructions.cpp",
+    "deltas/StripDebugInfo.cpp",
     "deltas/Utils.cpp",
     "llvm-reduce.cpp",
   ]

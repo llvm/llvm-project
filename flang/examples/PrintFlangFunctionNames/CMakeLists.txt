@@ -6,5 +6,6 @@ add_llvm_library(flangPrintFunctionNames
 
     DEPENDS
     acc_gen
+    flangFrontend
     omp_gen
 )

@@ -71,6 +71,7 @@ enum class HighlightingModifier {
   DependentName,
   DefaultLibrary,
   UsedAsMutableReference,
+  ConstructorOrDestructor,
 
   FunctionScope,
   ClassScope,

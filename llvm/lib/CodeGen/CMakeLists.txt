@@ -255,6 +255,7 @@ add_llvm_component_library(LLVMCodeGen
   BitWriter
   Core
   MC
+  ObjCARC
   ProfileData
   Scalar
   Support

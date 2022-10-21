@@ -16,6 +16,7 @@
 #include <utility>
 
 namespace mlir {
+class Operation;
 
 /// This class acts as an owning reference to an op, and will automatically
 /// destroy the held op on destruction if the held op is valid.
@@ -50,6 +51,9 @@ public:
   OpTy operator*() const { return op; }
   OpTy *operator->() { return &op; }
   explicit operator bool() const { return op; }
+
+  /// Downcast to generic operation.
+  operator OwningOpRef<Operation *>() && { return release().getOperation(); }
 
   /// Release the referenced op.
   OpTy release() {

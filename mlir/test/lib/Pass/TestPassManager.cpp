@@ -228,13 +228,6 @@ void registerPassManagerTestPass() {
   PassPipelineRegistration<>("test-textual-pm-nested-pipeline",
                              "Test a nested pipeline in the pass manager",
                              testNestedPipelineTextual);
-  PassPipelineRegistration<>(
-      "test-dump-pipeline",
-      "Dumps the pipeline build so far for debugging purposes",
-      [](OpPassManager &pm) {
-        pm.printAsTextualPipeline(llvm::errs());
-        llvm::errs() << "\n";
-      });
 
   PassPipelineRegistration<TestOptionsPass::Options>
       registerOptionsPassPipeline(

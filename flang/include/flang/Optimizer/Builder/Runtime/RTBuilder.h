@@ -35,7 +35,10 @@ struct c_double_complex_t;
 
 namespace Fortran::runtime {
 class Descriptor;
+namespace typeInfo {
+class DerivedType;
 }
+} // namespace Fortran::runtime
 
 namespace fir::runtime {
 
@@ -277,6 +280,13 @@ constexpr TypeBuilderFunc getModel<Fortran::common::TypeCategory>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::IntegerType::get(context,
                                   sizeof(Fortran::common::TypeCategory) * 8);
+  };
+}
+template <>
+constexpr TypeBuilderFunc
+getModel<const Fortran::runtime::typeInfo::DerivedType &>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ReferenceType::get(mlir::NoneType::get(context));
   };
 }
 template <>

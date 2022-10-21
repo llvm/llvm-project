@@ -202,24 +202,32 @@ def simm21_lsl2 : Operand<OtherVT> {
   let DecoderMethod = "decodeSImmOperand<21, 2>";
 }
 
-// TODO: Need split the ParserMethod/PredicateMethod for call/jump/tailcall.
-def SImm26Operand: AsmOperandClass {
-  let Name = "SImm26Operand";
+def SImm26OperandB: AsmOperandClass {
+  let Name = "SImm26OperandB";
+  let PredicateMethod = "isSImm26Operand";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidSImm26Operand";
+  let ParserMethod = "parseImmediate";
+}
+
+// A symbol or an imm used in B/PseudoBR.
+def simm26_b : Operand<OtherVT> {
+  let ParserMatchClass = SImm26OperandB;
+  let EncoderMethod = "getImmOpValueAsr2";
+  let DecoderMethod = "decodeSImmOperand<26, 2>";
+}
+
+def SImm26OperandBL: AsmOperandClass {
+  let Name = "SImm26OperandBL";
+  let PredicateMethod = "isSImm26Operand";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidSImm26Operand";
   let ParserMethod = "parseSImm26Operand";
 }
 
-// A symbol or an imm used in B/PseudoBR.
-def simm26_b : Operand<OtherVT> {
-  let ParserMatchClass = SImm26Operand;
-  let EncoderMethod = "getImmOpValueAsr2";
-  let DecoderMethod = "decodeSImmOperand<26, 2>";
-}
-
 // A symbol or an imm used in BL/PseudoCALL.
 def simm26_bl : Operand<GRLenVT> {
-  let ParserMatchClass = SImm26Operand;
+  let ParserMatchClass = SImm26OperandBL;
   let EncoderMethod = "getImmOpValueAsr2";
   let DecoderMethod = "decodeSImmOperand<26, 2>";
 }

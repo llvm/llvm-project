@@ -17,6 +17,7 @@ add_flang_library(flangFrontend
   FIRDialect
   FIRSupport
   FIROptTransformsPassIncGen
+  HLFIRDialect
   MLIRIR
   ${dialect_libs}
 
@@ -33,6 +34,7 @@ add_flang_library(flangFrontend
   FIRBuilder
   FIRCodeGen
   FIRTransforms
+  HLFIRDialect
   MLIRTransforms
   MLIRLLVMToLLVMIRTranslation
   MLIRSCFToControlFlow

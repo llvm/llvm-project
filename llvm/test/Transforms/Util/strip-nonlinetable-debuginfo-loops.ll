@@ -1,4 +1,4 @@
-; RUN: opt -S -strip-nonlinetable-debuginfo %s -o %t
+; RUN: opt -S -passes=strip-nonlinetable-debuginfo %s -o %t
 ; RUN: cat %t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=NEGATIVE
 ; void f(volatile int *i) {

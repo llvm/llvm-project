@@ -137,29 +137,3 @@ AnalysisKey ObjCARCAA::Key;
 ObjCARCAAResult ObjCARCAA::run(Function &F, FunctionAnalysisManager &AM) {
   return ObjCARCAAResult(F.getParent()->getDataLayout());
 }
-
-char ObjCARCAAWrapperPass::ID = 0;
-INITIALIZE_PASS(ObjCARCAAWrapperPass, "objc-arc-aa",
-                "ObjC-ARC-Based Alias Analysis", false, true)
-
-ImmutablePass *llvm::createObjCARCAAWrapperPass() {
-  return new ObjCARCAAWrapperPass();
-}
-
-ObjCARCAAWrapperPass::ObjCARCAAWrapperPass() : ImmutablePass(ID) {
-  initializeObjCARCAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
-
-bool ObjCARCAAWrapperPass::doInitialization(Module &M) {
-  Result.reset(new ObjCARCAAResult(M.getDataLayout()));
-  return false;
-}
-
-bool ObjCARCAAWrapperPass::doFinalization(Module &M) {
-  Result.reset();
-  return false;
-}
-
-void ObjCARCAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.setPreservesAll();
-}

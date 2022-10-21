@@ -79,3 +79,17 @@ bstrins.d $a0, $a0, 1, 2
 # CHECK: :[[#@LINE+1]]:22: error: msb is less than lsb
 bstrpick.d $a0, $a0, 32, 63
 # CHECK:             ^~~~~~
+
+# CHECK: :[[#@LINE+1]]:10: error: $rd must be different from both $rk and $rj
+amadd.d $zero, $zero, $zero
+# CHECK: :[[#@LINE+1]]:10: error: $rd must be different from both $rk and $rj
+ammin.w $zero, $zero, $a0
+# CHECK: :[[#@LINE+1]]:10: error: $rd must be different from both $rk and $rj
+amxor.w $zero, $a0, $zero
+
+# CHECK: :[[#@LINE+1]]:10: error: $rd must be different from both $rk and $rj
+amadd.d $a0, $a0, $a0
+# CHECK: :[[#@LINE+1]]:10: error: $rd must be different from both $rk and $rj
+ammin.w $a0, $a0, $a1
+# CHECK: :[[#@LINE+1]]:10: error: $rd must be different from both $rk and $rj
+amxor.w $a0, $a1, $a0

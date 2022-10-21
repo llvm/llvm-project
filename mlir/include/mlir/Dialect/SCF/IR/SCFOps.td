@@ -235,7 +235,7 @@ def ForOp : SCF_Op<"for",
     }
     /// Return the `index`-th region iteration argument.
     BlockArgument getRegionIterArg(unsigned index) {
-      assert(index < getNumRegionIterArgs() && 
+      assert(index < getNumRegionIterArgs() &&
         "expected an index less than the number of region iter args");
       return getBody()->getArguments().drop_front(getNumInductionVars())[index];
     }
@@ -434,7 +434,7 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     ```
 
     Example with thread_dim_mapping attribute:
-    
+
     ```mlir
     //
     // Sequential context.
@@ -456,7 +456,7 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     ```
 
     Example with privatized tensors:
-    
+
     ```mlir
     %t0 = ...
     %t1 = ...
@@ -527,8 +527,8 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
       return getBody()->getArguments().drop_front(getRank());
     }
 
-    /// Return the thread indices in the order specified by the 
-    /// thread_dim_mapping attribute. Return failure is 
+    /// Return the thread indices in the order specified by the
+    /// thread_dim_mapping attribute. Return failure is
     /// thread_dim_mapping is not a valid permutation.
     FailureOr<SmallVector<Value>> getPermutedThreadIndices();
 
@@ -989,12 +989,76 @@ def WhileOp : SCF_Op<"while",
 }
 
 //===----------------------------------------------------------------------===//
+// IndexSwitchOp
+//===----------------------------------------------------------------------===//
+
+def IndexSwitchOp : SCF_Op<"index_switch", [RecursiveMemoryEffects,
+    SingleBlockImplicitTerminator<"scf::YieldOp">,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                              ["getRegionInvocationBounds"]>]> {
+  let summary = "switch-case operation on an index argument";
+  let description = [{
+    The `scf.index_switch` is a control-flow operation that branches to one of
+    the given regions based on the values of the argument and the cases. The
+    argument is always of type `index`.
+
+    The operation always has a "default" region and any number of case regions
+    denoted by integer constants. Control-flow transfers to the case region
+    whose constant value equals the value of the argument. If the argument does
+    not equal any of the case values, control-flow transfer to the "default"
+    region.
+
+    Example:
+
+    ```mlir
+    %0 = scf.index_switch %arg0 : index -> i32
+    case 2 {
+      %1 = arith.constant 10 : i32
+      scf.yield %1 : i32
+    }
+    case 5 {
+      %2 = arith.constant 20 : i32
+      scf.yield %2 : i32
+    }
+    default {
+      %3 = arith.constant 30 : i32
+      scf.yield %3 : i32
+    }
+    ```
+  }];
+
+  let arguments = (ins Index:$arg, DenseI64ArrayAttr:$cases);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$defaultRegion,
+                        VariadicRegion<SizedRegion<1>>:$caseRegions);
+
+  let assemblyFormat = [{
+    $arg attr-dict (`->` type($results)^)?
+    custom<SwitchCases>($cases, $caseRegions) `\n`
+    `` `default` $defaultRegion
+  }];
+
+  let extraClassDeclaration = [{
+    /// Get the number of cases.
+    unsigned getNumCases();
+
+    /// Get the default region body.
+    Block &getDefaultBlock();
+
+    /// Get the body of a case region.
+    Block &getCaseBlock(unsigned idx);
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // YieldOp
 //===----------------------------------------------------------------------===//
 
 def YieldOp : SCF_Op<"yield", [Pure, ReturnLike, Terminator,
-                               ParentOneOf<["ExecuteRegionOp, ForOp",
-                                            "IfOp, ParallelOp, WhileOp"]>]> {
+    ParentOneOf<["ExecuteRegionOp, ForOp", "IfOp", "IndexSwitchOp",
+                 "ParallelOp", "WhileOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "scf.yield" yields an SSA value from the SCF dialect op region and

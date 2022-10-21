@@ -6697,7 +6697,7 @@ def VDUPLN32q : VDUPLNQ<{?,1,0,0}, "vdup", "32", v4i32, v2i32, VectorIndex32> {
 
 let Predicates = [HasNEON] in {
 def : Pat<(v4f16 (ARMvduplane (v4f16 DPR:$Vm), imm:$lane)),
-          (VDUPLN32d DPR:$Vm, imm:$lane)>;
+          (VDUPLN16d DPR:$Vm, imm:$lane)>;
 
 def : Pat<(v2f32 (ARMvduplane (v2f32 DPR:$Vm), imm:$lane)),
           (VDUPLN32d DPR:$Vm, imm:$lane)>;

@@ -91,6 +91,19 @@ func.func @sparse_values(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xf64>
 
 // -----
 
+#SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
+
+// CHECK-LABEL: func @sparse_noe(
+//  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>)
+//       CHECK: %[[T:.*]] = sparse_tensor.number_of_entries %[[A]] : tensor<128xf64, #{{.*}}>
+//       CHECK: return %[[T]] : index
+func.func @sparse_noe(%arg0: tensor<128xf64, #SparseVector>) -> index {
+  %0 = sparse_tensor.number_of_entries %arg0 : tensor<128xf64, #SparseVector>
+  return %0 : index
+}
+
+// -----
+
 #DenseMatrix = #sparse_tensor.encoding<{dimLevelType = ["dense","dense"]}>
 
 // CHECK-LABEL: func @sparse_load(

@@ -91,7 +91,7 @@ add_executable(
 
 target_link_libraries(libc_str_to_float_comparison_test
   PRIVATE
-    llvmlibc
+    "${LIBC_TARGET}"
 )
 
 add_executable(

@@ -492,8 +492,7 @@ static void computeFunctionSummary(
       F.getLinkage(), F.getVisibility(), NotEligibleForImport,
       /* Live = */ false, F.isDSOLocal(), F.canBeOmittedFromSymbolTable());
   FunctionSummary::FFlags FunFlags{
-      F.hasFnAttribute(Attribute::ReadNone),
-      F.hasFnAttribute(Attribute::ReadOnly),
+      F.doesNotAccessMemory(), F.onlyReadsMemory() && !F.doesNotAccessMemory(),
       F.hasFnAttribute(Attribute::NoRecurse), F.returnDoesNotAlias(),
       // FIXME: refactor this to use the same code that inliner is using.
       // Don't try to import functions with noinline attribute.

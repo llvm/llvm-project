@@ -33,11 +33,14 @@ enum class LVLineKind {
   LastEntry
 };
 using LVLineKindSet = std::set<LVLineKind>;
+using LVLineDispatch = std::map<LVLineKind, LVLineGetFunction>;
+using LVLineRequest = std::vector<LVLineGetFunction>;
 
 // Class to represent a logical line.
 class LVLine : public LVElement {
   // Typed bitvector with kinds for this line.
   LVProperties<LVLineKind> Kinds;
+  static LVLineDispatch Dispatch;
 
 public:
   LVLine() : LVElement(LVSubclassID::LV_LINE) {
@@ -77,6 +80,8 @@ public:
   std::string lineNumberAsString(bool ShowZero = false) const override {
     return lineAsString(getLineNumber(), getDiscriminator(), ShowZero);
   }
+
+  static LVLineDispatch &getDispatch() { return Dispatch; }
 
   void print(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override {}
