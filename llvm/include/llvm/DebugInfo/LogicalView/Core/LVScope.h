@@ -53,6 +53,8 @@ enum class LVScopeKind {
   LastEntry
 };
 using LVScopeKindSet = std::set<LVScopeKind>;
+using LVScopeDispatch = std::map<LVScopeKind, LVScopeGetFunction>;
+using LVScopeRequest = std::vector<LVScopeGetFunction>;
 
 using LVOffsetElementMap = std::map<LVOffset, LVElement *>;
 
@@ -78,6 +80,7 @@ class LVScope : public LVElement {
   // Typed bitvector with kinds and properties for this scope.
   LVProperties<LVScopeKind> Kinds;
   LVProperties<Property> Properties;
+  static LVScopeDispatch Dispatch;
 
   // Coverage factor in units (bytes).
   unsigned CoverageFactor = 0;
@@ -118,8 +121,8 @@ protected:
   void printEncodedArgs(raw_ostream &OS, bool Full) const;
 
   void printActiveRanges(raw_ostream &OS, bool Full = true) const;
-  virtual void printSizes(raw_ostream &OS) const {};
-  virtual void printSummary(raw_ostream &OS) const {};
+  virtual void printSizes(raw_ostream &OS) const {}
+  virtual void printSummary(raw_ostream &OS) const {}
 
   // Encoded template arguments.
   virtual StringRef getEncodedArgs() const { return StringRef(); }
@@ -259,6 +262,8 @@ public:
 
   void resolveElements();
 
+  static LVScopeDispatch &getDispatch() { return Dispatch; }
+
   void print(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override;
   virtual void printMatchedElements(raw_ostream &OS, bool UseMatchedElements) {}
@@ -385,6 +390,10 @@ public:
   LVScopeCompileUnit &operator=(const LVScopeCompileUnit &) = delete;
   ~LVScopeCompileUnit() = default;
 
+  LVScope *getCompileUnitParent() const override {
+    return static_cast<LVScope *>(const_cast<LVScopeCompileUnit *>(this));
+  }
+
   // Get the line located at the given address.
   LVLine *lineLowerBound(LVAddress Address) const;
   LVLine *lineUpperBound(LVAddress Address) const;
@@ -411,6 +420,14 @@ public:
   // Process ranges, locations and calculate coverage.
   void processRangeLocationCoverage(
       LVValidLocation ValidLocation = &LVLocation::validateRanges);
+
+  // Add matched element.
+  void addMatched(LVElement *Element) { MatchedElements.push_back(Element); }
+  void addMatched(LVScope *Scope) { MatchedScopes.push_back(Scope); }
+  void propagatePatternMatch();
+
+  const LVElements &getMatchedElements() const { return MatchedElements; }
+  const LVScopes &getMatchedScopes() const { return MatchedScopes; }
 
   void printLocalNames(raw_ostream &OS, bool Full = true) const;
   void printSummary(raw_ostream &OS, const LVCounter &Counter,
