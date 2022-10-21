@@ -2797,54 +2797,6 @@ bool mlir::LLVM::satisfiesLLVMModule(Operation *op) {
          op->hasTrait<OpTrait::IsIsolatedFromAbove>();
 }
 
-void LinkageAttr::print(AsmPrinter &printer) const {
-  printer << "<";
-  if (static_cast<uint64_t>(getLinkage()) <= getMaxEnumValForLinkage())
-    printer << stringifyEnum(getLinkage());
-  else
-    printer << static_cast<uint64_t>(getLinkage());
-  printer << ">";
-}
-
-Attribute LinkageAttr::parse(AsmParser &parser, Type type) {
-  StringRef elemName;
-  if (parser.parseLess() || parser.parseKeyword(&elemName) ||
-      parser.parseGreater())
-    return {};
-  auto elem = linkage::symbolizeLinkage(elemName);
-  if (!elem) {
-    parser.emitError(parser.getNameLoc(), "Unknown linkage: ") << elemName;
-    return {};
-  }
-  Linkage linkage = *elem;
-  return LinkageAttr::get(parser.getContext(), linkage);
-}
-
-void CConvAttr::print(AsmPrinter &printer) const {
-  printer << "<";
-  if (static_cast<uint64_t>(getCallingConv()) <= cconv::getMaxEnumValForCConv())
-    printer << stringifyEnum(getCallingConv());
-  else
-    printer << "INVALID_cc_" << static_cast<uint64_t>(getCallingConv());
-  printer << ">";
-}
-
-Attribute CConvAttr::parse(AsmParser &parser, Type type) {
-  StringRef convName;
-
-  if (parser.parseLess() || parser.parseKeyword(&convName) ||
-      parser.parseGreater())
-    return {};
-  auto cconv = cconv::symbolizeCConv(convName);
-  if (!cconv) {
-    parser.emitError(parser.getNameLoc(), "unknown calling convention: ")
-        << convName;
-    return {};
-  }
-  CConv cconvVal = *cconv;
-  return CConvAttr::get(parser.getContext(), cconvVal);
-}
-
 LoopOptionsAttrBuilder::LoopOptionsAttrBuilder(LoopOptionsAttr attr)
     : options(attr.getOptions().begin(), attr.getOptions().end()) {}
 
