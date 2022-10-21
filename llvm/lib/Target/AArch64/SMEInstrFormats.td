@@ -1860,3 +1860,72 @@ class sme2_fp_cvt_vg4_multi<string mnemonic, bits<3> op>
   let Inst{4-2}   = Zd;
   let Inst{1-0}   = 0b00;
 }
+
+//===----------------------------------------------------------------------===//
+// SME2 multi-vec CLAMP registers
+
+class sme2_clamp_vector_vg24_multi<bits<2> sz, bits<2> op1, bit u,
+                                   RegisterOperand multi_vector_ty,
+                                   ZPRRegOp vector_ty, string mnemonic>
+    : I<(outs multi_vector_ty:$Zd),
+        (ins  multi_vector_ty:$_Zd, vector_ty:$Zn, vector_ty:$Zm),
+        mnemonic, "\t$Zd, $Zn, $Zm",
+        "", []>, Sched<[]>{
+  bits<5> Zm;
+  bits<5> Zn;
+  let Inst{31-24} = 0b11000001;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Zm;
+  let Inst{15-12} = 0b1100;
+  let Inst{11-10} = op1;
+  let Inst{9-5}   = Zn;
+  let Inst{0}     = u;
+
+  let Constraints = "$Zd = $_Zd";
+}
+
+class sme2_clamp_vector_vg2_multi<bits<2> sz, bits<2> op1, bit u,
+                                  RegisterOperand multi_vector_ty,
+                                  ZPRRegOp vector_ty, string mnemonic>
+    : sme2_clamp_vector_vg24_multi<sz, op1, u, multi_vector_ty, vector_ty,
+                                   mnemonic>{
+  bits<4> Zd;
+  let Inst{4-1} = Zd;
+}
+
+multiclass sme2_fp_clamp_vector_vg2_multi<string mnemonic>{
+  def _H : sme2_clamp_vector_vg2_multi<0b01, 0b00, 0b0, ZZ_h_mul_r, ZPR16, mnemonic>;
+  def _S : sme2_clamp_vector_vg2_multi<0b10, 0b00, 0b0, ZZ_s_mul_r, ZPR32, mnemonic>;
+  def _D : sme2_clamp_vector_vg2_multi<0b11, 0b00, 0b0, ZZ_d_mul_r, ZPR64, mnemonic>;
+}
+
+multiclass sme2_int_clamp_vector_vg2_multi<string mnemonic, bit u>{
+  def _B : sme2_clamp_vector_vg2_multi<0b00, 0b01, u, ZZ_b_mul_r, ZPR8, mnemonic>;
+  def _H : sme2_clamp_vector_vg2_multi<0b01, 0b01, u, ZZ_h_mul_r, ZPR16, mnemonic>;
+  def _S : sme2_clamp_vector_vg2_multi<0b10, 0b01, u, ZZ_s_mul_r, ZPR32, mnemonic>;
+  def _D : sme2_clamp_vector_vg2_multi<0b11, 0b01, u, ZZ_d_mul_r, ZPR64, mnemonic>;
+}
+
+class sme2_clamp_vector_vg4_multi<bits<2> sz, bits<2> op1, bit u,
+                                  RegisterOperand multi_vector_ty,
+                                  ZPRRegOp vector_ty, string mnemonic>
+    : sme2_clamp_vector_vg24_multi<sz, op1, u,  multi_vector_ty, vector_ty,
+                                   mnemonic>{
+  bits<3> Zd;
+  let Inst{4-2} = Zd;
+  let Inst{1}   = 0b0;
+}
+
+multiclass sme2_fp_clamp_vector_vg4_multi<string mnemonic>{
+  def _H : sme2_clamp_vector_vg4_multi<0b01, 0b10, 0b0, ZZZZ_h_mul_r, ZPR16, mnemonic>;
+  def _S : sme2_clamp_vector_vg4_multi<0b10, 0b10, 0b0, ZZZZ_s_mul_r, ZPR32, mnemonic>;
+  def _D : sme2_clamp_vector_vg4_multi<0b11, 0b10, 0b0, ZZZZ_d_mul_r, ZPR64, mnemonic>;
+}
+
+multiclass sme2_int_clamp_vector_vg4_multi<string mnemonic, bit u>{
+  def _B : sme2_clamp_vector_vg4_multi<0b00, 0b11, u, ZZZZ_b_mul_r, ZPR8, mnemonic>;
+  def _H : sme2_clamp_vector_vg4_multi<0b01, 0b11, u, ZZZZ_h_mul_r, ZPR16, mnemonic>;
+  def _S : sme2_clamp_vector_vg4_multi<0b10, 0b11, u, ZZZZ_s_mul_r, ZPR32, mnemonic>;
+  def _D : sme2_clamp_vector_vg4_multi<0b11, 0b11, u, ZZZZ_d_mul_r, ZPR64, mnemonic>;
+}
