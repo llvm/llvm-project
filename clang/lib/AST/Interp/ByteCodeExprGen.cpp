@@ -1150,6 +1150,19 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     if (Func->isFullyCompiled() && !Func->isConstexpr())
       return false;
 
+    QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
+    Optional<PrimType> T = classify(ReturnType);
+
+    if (Func->hasRVO() && DiscardResult) {
+      // If we need to discard the return value but the function returns its
+      // value via an RVO pointer, we need to create one such pointer just
+      // for this call.
+      if (Optional<unsigned> LocalIndex = allocateLocal(E)) {
+        if (!this->emitGetPtrLocal(*LocalIndex, E))
+          return false;
+      }
+    }
+
     // Put arguments on the stack.
     for (const auto *Arg : E->arguments()) {
       if (!this->visit(Arg))
@@ -1162,13 +1175,8 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     if (!this->emitCall(Func, E))
       return false;
 
-    QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
-    if (DiscardResult && !ReturnType->isVoidType()) {
-      Optional<PrimType> T = classify(ReturnType);
-      if (T)
-        return this->emitPop(*T, E);
-      // TODO: This is a RVO function and we need to ignore the return value.
-    }
+    if (DiscardResult && !ReturnType->isVoidType() && T)
+      return this->emitPop(*T, E);
 
     return true;
   } else {
