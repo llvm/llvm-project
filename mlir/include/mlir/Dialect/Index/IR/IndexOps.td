@@ -22,7 +22,7 @@ include "mlir/IR/OpBase.td"
 
 /// Base class for Index dialect operations.
 class IndexOp<string mnemonic, list<Trait> traits = []>
-    : Op<IndexDialect, mnemonic, [NoSideEffect] # traits>;
+    : Op<IndexDialect, mnemonic, [Pure] # traits>;
 
 //===----------------------------------------------------------------------===//
 // IndexBinaryOp
