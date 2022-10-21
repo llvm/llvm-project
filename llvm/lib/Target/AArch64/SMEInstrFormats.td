@@ -1929,3 +1929,169 @@ multiclass sme2_int_clamp_vector_vg4_multi<string mnemonic, bit u>{
   def _S : sme2_clamp_vector_vg4_multi<0b10, 0b11, u, ZZZZ_s_mul_r, ZPR32, mnemonic>;
   def _D : sme2_clamp_vector_vg4_multi<0b11, 0b11, u, ZZZZ_d_mul_r, ZPR64, mnemonic>;
 }
+
+//===----------------------------------------------------------------------===//
+// SME2 Dot Products and MLA
+
+// SME2 multi-vec ternary indexed two registers 32-bit
+class sme2_multi_vec_array_vg2_index_32b<bits<4> op,
+                                         RegisterOperand multi_vector_ty,
+                                         ZPRRegOp vector_ty,
+                                         string mnemonic>
+    : I<(outs MatrixOp32:$ZAda),
+        (ins MatrixOp32:$_ZAda, MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3,
+         multi_vector_ty:$Zn, vector_ty:$Zm, VectorIndexS:$i2),
+        mnemonic, "\t$ZAda[$Rv, $imm3, vgx2], $Zn, $Zm$i2",
+        "", []>, Sched<[]> {
+  bits<4> Zm;
+  bits<2> Rv;
+  bits<2> i2;
+  bits<4> Zn;
+  bits<3> imm3;
+  let Inst{31-20} = 0b110000010101;
+  let Inst{19-16} = Zm;
+  let Inst{15}    = 0b0;
+  let Inst{14-13} = Rv;
+  let Inst{12}    = op{3};
+  let Inst{11-10} = i2;
+  let Inst{9-6}   = Zn;
+  let Inst{5-3}   = op{2-0};
+  let Inst{2-0}   = imm3;
+
+  let Constraints = "$ZAda = $_ZAda";
+}
+
+multiclass sme2_multi_vec_array_vg2_index_32b<string mnemonic, bits<4> op,
+                                              RegisterOperand multi_vector_ty,
+                                              ZPRRegOp vector_ty> {
+  def NAME : sme2_multi_vec_array_vg2_index_32b<op, multi_vector_ty, vector_ty,
+                                                mnemonic>;
+
+  def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm3], $Zn, $Zm$i2",
+        (!cast<Instruction>(NAME) MatrixOp32:$ZAda,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3,
+        multi_vector_ty:$Zn, vector_ty:$Zm, VectorIndexS:$i2), 0>;
+}
+
+// SME2 multi-vec ternary indexed two registers 64-bit
+
+class sme2_multi_vec_array_vg2_index_64b<bits<2> op,
+                                         RegisterOperand multi_vector_ty,
+                                         ZPRRegOp vector_ty,
+                                         string mnemonic>
+    : I<(outs MatrixOp64:$ZAda),
+        (ins MatrixOp64:$_ZAda, MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3,
+         multi_vector_ty:$Zn, vector_ty:$Zm, VectorIndexD:$i1),
+        mnemonic, "\t$ZAda[$Rv, $imm3, vgx2], $Zn, $Zm$i1",
+        "", []>, Sched<[]> {
+  bits<4> Zm;
+  bits<2> Rv;
+  bits<1> i1;
+  bits<4> Zn;
+  bits<3> imm3;
+  let Inst{31-20} = 0b110000011101;
+  let Inst{19-16} = Zm;
+  let Inst{15}    = 0b0;
+  let Inst{14-13} = Rv;
+  let Inst{12-11} = 0b00;
+  let Inst{10}    = i1;
+  let Inst{9-6}   = Zn;
+  let Inst{5}     = 0b0;
+  let Inst{4-3}   = op;
+  let Inst{2-0}   = imm3;
+
+  let Constraints = "$ZAda = $_ZAda";
+}
+
+multiclass sme2_multi_vec_array_vg2_index_64b<string mnemonic, bits<2> op,
+                                              RegisterOperand multi_vector_ty,
+                                              ZPRRegOp vector_ty> {
+  def NAME : sme2_multi_vec_array_vg2_index_64b<op, multi_vector_ty, vector_ty,
+                                                mnemonic>;
+
+  def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm3], $Zn, $Zm$i1",
+        (!cast<Instruction>(NAME) MatrixOp64:$ZAda,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3,
+        multi_vector_ty:$Zn, vector_ty:$Zm, VectorIndexD:$i1), 0>;
+}
+
+// SME2 multi-vec ternary indexed four registers 32-bit
+
+class sme2_multi_vec_array_vg4_index_32b<bits<4> op,
+                                         RegisterOperand multi_vector_ty,
+                                         ZPRRegOp vector_ty,
+                                         string mnemonic>
+    : I<(outs MatrixOp32:$ZAda),
+        (ins MatrixOp32:$_ZAda, MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3,
+         multi_vector_ty:$Zn, vector_ty:$Zm, VectorIndexS:$i2),
+        mnemonic, "\t$ZAda[$Rv, $imm3, vgx4], $Zn, $Zm$i2",
+        "", []>, Sched<[]> {
+  bits<4> Zm;
+  bits<2> Rv;
+  bits<2> i2;
+  bits<3> Zn;
+  bits<3> imm3;
+  let Inst{31-20} = 0b110000010101;
+  let Inst{19-16} = Zm;
+  let Inst{15}    = 0b1;
+  let Inst{14-13} = Rv;
+  let Inst{12}    = op{3};
+  let Inst{11-10} = i2;
+  let Inst{9-7}   = Zn;
+  let Inst{6}     = 0b0;
+  let Inst{5-3}   = op{2-0};
+  let Inst{2-0}   = imm3;
+
+  let Constraints = "$ZAda = $_ZAda";
+}
+
+multiclass sme2_multi_vec_array_vg4_index_32b<string mnemonic, bits<4> op,
+                                              RegisterOperand multi_vector_ty,
+                                              ZPRRegOp vector_ty> {
+  def NAME : sme2_multi_vec_array_vg4_index_32b<op, multi_vector_ty, vector_ty,
+                                                mnemonic>;
+
+  def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm3], $Zn, $Zm$i2",
+        (!cast<Instruction>(NAME) MatrixOp32:$ZAda,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3,
+        multi_vector_ty:$Zn, vector_ty:$Zm, VectorIndexS:$i2), 0>;
+}
+
+// SME2 multi-vec ternary indexed four registers 64-bit
+class sme2_multi_vec_array_vg4_index_64b<bits<3> op,
+                                         RegisterOperand multi_vector_ty,
+                                         ZPRRegOp vector_ty,
+                                         string mnemonic>
+    : I<(outs MatrixOp64:$ZAda),
+        (ins MatrixOp64:$_ZAda, MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3,
+         multi_vector_ty:$Zn, vector_ty:$Zm, VectorIndexD:$i1),
+        mnemonic, "\t$ZAda[$Rv, $imm3, vgx4], $Zn, $Zm$i1",
+        "", []>, Sched<[]> {
+  bits<4> Zm;
+  bits<2> Rv;
+  bits<1> i1;
+  bits<3> Zn;
+  bits<3> imm3;
+  let Inst{31-20} = 0b110000011101;
+  let Inst{19-16} = Zm;
+  let Inst{15}    = 0b1;
+  let Inst{14-13} = Rv;
+  let Inst{12}    = 0b0;
+  let Inst{11}    = op{2};
+  let Inst{10}    = i1;
+  let Inst{9-7}   = Zn;
+  let Inst{6-5}   = 0b00;
+  let Inst{4-3}   = op{1-0};
+  let Inst{2-0}   = imm3;
+
+  let Constraints = "$ZAda = $_ZAda";
+}
+
+multiclass sme2_multi_vec_array_vg4_index_64b<string mnemonic, bits<3> op,
+                                              RegisterOperand multi_vector_ty,
+                                              ZPRRegOp vector_ty> {
+  def NAME : sme2_multi_vec_array_vg4_index_64b<op, multi_vector_ty, vector_ty,
+                                                mnemonic>;
+
+  def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm3], $Zn, $Zm$i1",
+        (!cast<Instruction>(NAME) MatrixOp64:$ZAda,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3,
+        multi_vector_ty:$Zn, vector_ty:$Zm, VectorIndexD:$i1), 0>;
+}
+
