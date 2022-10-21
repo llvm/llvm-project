@@ -184,6 +184,36 @@ void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
         .setMIFlag(MachineInstr::FrameSetup);
+
+    // Realign stack.
+    if (RI->hasStackRealignment(MF)) {
+      unsigned ShiftAmount = Log2(MFI.getMaxAlign());
+      Register VR =
+          MF.getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
+      BuildMI(MBB, MBBI, DL,
+              TII->get(STI.is64Bit() ? LoongArch::SRLI_D : LoongArch::SRLI_W),
+              VR)
+          .addReg(SPReg)
+          .addImm(ShiftAmount)
+          .setMIFlag(MachineInstr::FrameSetup);
+      BuildMI(MBB, MBBI, DL,
+              TII->get(STI.is64Bit() ? LoongArch::SLLI_D : LoongArch::SLLI_W),
+              SPReg)
+          .addReg(VR)
+          .addImm(ShiftAmount)
+          .setMIFlag(MachineInstr::FrameSetup);
+      // FP will be used to restore the frame in the epilogue, so we need
+      // another base register BP to record SP after re-alignment. SP will
+      // track the current stack after allocating variable sized objects.
+      if (hasBP(MF)) {
+        // move BP, $sp
+        BuildMI(MBB, MBBI, DL, TII->get(LoongArch::OR),
+                LoongArchABI::getBPReg())
+            .addReg(SPReg)
+            .addReg(LoongArch::R0)
+            .setMIFlag(MachineInstr::FrameSetup);
+      }
+    }
   }
 }
 
@@ -276,6 +306,7 @@ StackOffset LoongArchFrameLowering::getFrameIndexReference(
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
   auto *LoongArchFI = MF.getInfo<LoongArchMachineFunctionInfo>();
+  uint64_t StackSize = MFI.getStackSize();
 
   // Callee-saved registers should be referenced relative to the stack
   // pointer (positive offset), otherwise use the frame pointer (negative
@@ -292,12 +323,21 @@ StackOffset LoongArchFrameLowering::getFrameIndexReference(
     MaxCSFI = CSI[CSI.size() - 1].getFrameIdx();
   }
 
-  if ((FI >= MinCSFI && FI <= MaxCSFI) || !hasFP(MF)) {
+  if (FI >= MinCSFI && FI <= MaxCSFI) {
     FrameReg = LoongArch::R3;
-    Offset += StackOffset::getFixed(MFI.getStackSize());
+    Offset += StackOffset::getFixed(StackSize);
+  } else if (RI->hasStackRealignment(MF) && !MFI.isFixedObjectIndex(FI)) {
+    // If the stack was realigned, the frame pointer is set in order to allow
+    // SP to be restored, so we need another base register to record the stack
+    // after realignment.
+    FrameReg = hasBP(MF) ? LoongArchABI::getBPReg() : LoongArch::R3;
+    Offset += StackOffset::getFixed(StackSize);
   } else {
     FrameReg = RI->getFrameRegister(MF);
-    Offset += StackOffset::getFixed(LoongArchFI->getVarArgsSaveSize());
+    if (hasFP(MF))
+      Offset += StackOffset::getFixed(LoongArchFI->getVarArgsSaveSize());
+    else
+      Offset += StackOffset::getFixed(StackSize);
   }
 
   return Offset;
