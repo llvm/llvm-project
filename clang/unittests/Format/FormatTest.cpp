@@ -24334,6 +24334,12 @@ TEST_F(FormatTest, WebKitDefaultStyle) {
 TEST_F(FormatTest, Concepts) {
   EXPECT_EQ(getLLVMStyle().BreakBeforeConceptDeclarations,
             FormatStyle::BBCDS_Always);
+
+  // The default in LLVM style is REI_OuterScope, but these tests were written
+  // when the default was REI_Keyword.
+  FormatStyle Style = getLLVMStyle();
+  Style.RequiresExpressionIndentation = FormatStyle::REI_Keyword;
+
   verifyFormat("template <typename T>\n"
                "concept True = true;");
 
@@ -24350,13 +24356,15 @@ TEST_F(FormatTest, Concepts) {
                "concept DelayedCheck = true && requires(T t) {\n"
                "                                 t.bar();\n"
                "                                 t.baz();\n"
-               "                               } && sizeof(T) <= 8;");
+               "                               } && sizeof(T) <= 8;",
+               Style);
 
   verifyFormat("template <typename T>\n"
                "concept DelayedCheck = true && requires(T t) { // Comment\n"
                "                                 t.bar();\n"
                "                                 t.baz();\n"
-               "                               } && sizeof(T) <= 8;");
+               "                               } && sizeof(T) <= 8;",
+               Style);
 
   verifyFormat("template <typename T>\n"
                "concept DelayedCheck = false || requires(T t) { t.bar(); } && "
@@ -24458,26 +24466,30 @@ TEST_F(FormatTest, Concepts) {
                "concept Hashable = requires(T a) {\n"
                "                     { std::hash<T>{}(a) } -> "
                "std::convertible_to<std::size_t>;\n"
-               "                   };");
+               "                   };",
+               Style);
 
   verifyFormat(
       "template <typename T>\n"
       "concept EqualityComparable = requires(T a, T b) {\n"
       "                               { a == b } -> std::same_as<bool>;\n"
-      "                             };");
+      "                             };",
+      Style);
 
   verifyFormat(
       "template <typename T>\n"
       "concept EqualityComparable = requires(T a, T b) {\n"
       "                               { a == b } -> std::same_as<bool>;\n"
       "                               { a != b } -> std::same_as<bool>;\n"
-      "                             };");
+      "                             };",
+      Style);
 
   verifyFormat("template <typename T>\n"
                "concept WeakEqualityComparable = requires(T a, T b) {\n"
                "                                   { a == b };\n"
                "                                   { a != b };\n"
-               "                                 };");
+               "                                 };",
+               Style);
 
   verifyFormat("template <typename T>\n"
                "concept HasSizeT = requires { typename T::size_t; };");
@@ -24493,7 +24505,8 @@ TEST_F(FormatTest, Concepts) {
                "      requires Same<T *, decltype(new T[n])>;\n"
                "      { delete new T; };\n"
                "      { delete new T[n]; };\n"
-               "    };");
+               "    };",
+               Style);
 
   verifyFormat("template <typename T>\n"
                "concept Semiregular =\n"
@@ -24506,7 +24519,8 @@ TEST_F(FormatTest, Concepts) {
                "      { delete new T[n]; };\n"
                "      { new T } -> std::same_as<T *>;\n"
                "    } && DefaultConstructible<T> && CopyConstructible<T> && "
-               "CopyAssignable<T>;");
+               "CopyAssignable<T>;",
+               Style);
 
   verifyFormat(
       "template <typename T>\n"
@@ -24520,14 +24534,16 @@ TEST_F(FormatTest, Concepts) {
       "                                 { delete new T; };\n"
       "                                 { delete new T[n]; };\n"
       "                               } && CopyConstructible<T> && "
-      "CopyAssignable<T>;");
+      "CopyAssignable<T>;",
+      Style);
 
   verifyFormat("template <typename T>\n"
                "concept Two = requires(T t) {\n"
                "                { t.foo() } -> std::same_as<Bar>;\n"
                "              } && requires(T &&t) {\n"
                "                     { t.foo() } -> std::same_as<Bar &&>;\n"
-               "                   };");
+               "                   };",
+               Style);
 
   verifyFormat(
       "template <typename T>\n"
@@ -24535,7 +24551,8 @@ TEST_F(FormatTest, Concepts) {
       "              { *x } -> std::convertible_to<typename T::inner>;\n"
       "              { x + 1 } noexcept -> std::same_as<int>;\n"
       "              { x * 1 } -> std::convertible_to<T>;\n"
-      "            };");
+      "            };",
+      Style);
 
   verifyFormat("template <typename T>\n"
                "concept C = requires(T x) {\n"
@@ -24545,33 +24562,38 @@ TEST_F(FormatTest, Concepts) {
                "              {\n"
                "                long_long_long_function_call(1, 2, 3, 4, 5)\n"
                "              } noexcept -> long_long_concept_name<T>;\n"
-               "            };");
+               "            };",
+               Style);
 
   verifyFormat(
       "template <typename T, typename U = T>\n"
       "concept Swappable = requires(T &&t, U &&u) {\n"
       "                      swap(std::forward<T>(t), std::forward<U>(u));\n"
       "                      swap(std::forward<U>(u), std::forward<T>(t));\n"
-      "                    };");
+      "                    };",
+      Style);
 
   verifyFormat("template <typename T, typename U>\n"
                "concept Common = requires(T &&t, U &&u) {\n"
                "                   typename CommonType<T, U>;\n"
                "                   { CommonType<T, U>(std::forward<T>(t)) };\n"
-               "                 };");
+               "                 };",
+               Style);
 
   verifyFormat("template <typename T, typename U>\n"
                "concept Common = requires(T &&t, U &&u) {\n"
                "                   typename CommonType<T, U>;\n"
                "                   { CommonType<T, U>{std::forward<T>(t)} };\n"
-               "                 };");
+               "                 };",
+               Style);
 
   verifyFormat(
       "template <typename T>\n"
       "concept C = requires(T t) {\n"
       "              requires Bar<T> && Foo<T>;\n"
       "              requires((trait<T> && Baz) || (T2<T> && Foo<T>));\n"
-      "            };");
+      "            };",
+      Style);
 
   verifyFormat("template <typename T>\n"
                "concept HasFoo = requires(T t) {\n"
@@ -24582,7 +24604,8 @@ TEST_F(FormatTest, Concepts) {
                "concept HasBar = requires(T t) {\n"
                "                   { t.bar() };\n"
                "                   t.bar();\n"
-               "                 };");
+               "                 };",
+               Style);
 
   verifyFormat("template <typename T>\n"
                "concept Large = sizeof(T) > 10;");
@@ -24593,7 +24616,8 @@ TEST_F(FormatTest, Concepts) {
                "                        { t.foo(u) } -> typename T::foo_type;\n"
                "                        t++;\n"
                "                      };\n"
-               "void doFoo(FooableWith<int> auto t) { t.foo(3); }");
+               "void doFoo(FooableWith<int> auto t) { t.foo(3); }",
+               Style);
 
   verifyFormat("template <typename T>\n"
                "concept Context = is_specialization_of_v<context, T>;");
@@ -24619,7 +24643,6 @@ TEST_F(FormatTest, Concepts) {
       "    std::forward_iterator<_OutIt> &&\n"
       "    std::same_as<std::iter_value_t<_InIt>, std::iter_value_t<_OutIt>>;");
 
-  auto Style = getLLVMStyle();
   Style.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Allowed;
 
   verifyFormat(
@@ -24729,6 +24752,10 @@ TEST_F(FormatTest, RequiresClausesPositions) {
   auto Style = getLLVMStyle();
   EXPECT_EQ(Style.RequiresClausePosition, FormatStyle::RCPS_OwnLine);
   EXPECT_EQ(Style.IndentRequiresClause, true);
+
+  // The default in LLVM style is REI_OuterScope, but these tests were written
+  // when the default was REI_Keyword.
+  Style.RequiresExpressionIndentation = FormatStyle::REI_Keyword;
 
   verifyFormat("template <typename T>\n"
                "  requires(Foo<T> && std::trait<T>)\n"
@@ -25019,6 +25046,123 @@ TEST_F(FormatTest, RequiresClauses) {
                "foo();\n"
                "#endif\n"
                "bar(requires);");
+}
+
+TEST_F(FormatTest, RequiresExpressionIndentation) {
+  auto Style = getLLVMStyle();
+  EXPECT_EQ(Style.RequiresExpressionIndentation, FormatStyle::REI_OuterScope);
+
+  verifyFormat("template <typename T>\n"
+               "concept C = requires(T t) {\n"
+               "  typename T::value;\n"
+               "  requires requires(typename T::value v) {\n"
+               "    { t == v } -> std::same_as<bool>;\n"
+               "  };\n"
+               "};",
+               Style);
+
+  verifyFormat("template <typename T>\n"
+               "void bar(T)\n"
+               "  requires Foo<T> && requires(T t) {\n"
+               "    { t.foo() } -> std::same_as<int>;\n"
+               "  } && requires(T t) {\n"
+               "    { t.bar() } -> std::same_as<bool>;\n"
+               "    --t;\n"
+               "  };",
+               Style);
+
+  verifyFormat("template <typename T>\n"
+               "  requires Foo<T> &&\n"
+               "           requires(T t) {\n"
+               "             { t.foo() } -> std::same_as<int>;\n"
+               "           } && requires(T t) {\n"
+               "             { t.bar() } -> std::same_as<bool>;\n"
+               "             --t;\n"
+               "           }\n"
+               "void bar(T);",
+               Style);
+
+  verifyFormat("template <typename T> void f() {\n"
+               "  if constexpr (requires(T t) {\n"
+               "                  { t.bar() } -> std::same_as<bool>;\n"
+               "                }) {\n"
+               "  }\n"
+               "}",
+               Style);
+
+  verifyFormat("template <typename T> void f() {\n"
+               "  if constexpr (condition && requires(T t) {\n"
+               "                  { t.bar() } -> std::same_as<bool>;\n"
+               "                }) {\n"
+               "  }\n"
+               "}",
+               Style);
+
+  verifyFormat("template <typename T> struct C {\n"
+               "  void f()\n"
+               "    requires requires(T t) {\n"
+               "      { t.bar() } -> std::same_as<bool>;\n"
+               "    };\n"
+               "};",
+               Style);
+
+  Style.RequiresExpressionIndentation = FormatStyle::REI_Keyword;
+
+  verifyFormat("template <typename T>\n"
+               "concept C = requires(T t) {\n"
+               "              typename T::value;\n"
+               "              requires requires(typename T::value v) {\n"
+               "                         { t == v } -> std::same_as<bool>;\n"
+               "                       };\n"
+               "            };",
+               Style);
+
+  verifyFormat(
+      "template <typename T>\n"
+      "void bar(T)\n"
+      "  requires Foo<T> && requires(T t) {\n"
+      "                       { t.foo() } -> std::same_as<int>;\n"
+      "                     } && requires(T t) {\n"
+      "                            { t.bar() } -> std::same_as<bool>;\n"
+      "                            --t;\n"
+      "                          };",
+      Style);
+
+  verifyFormat("template <typename T>\n"
+               "  requires Foo<T> &&\n"
+               "           requires(T t) {\n"
+               "             { t.foo() } -> std::same_as<int>;\n"
+               "           } && requires(T t) {\n"
+               "                  { t.bar() } -> std::same_as<bool>;\n"
+               "                  --t;\n"
+               "                }\n"
+               "void bar(T);",
+               Style);
+
+  verifyFormat("template <typename T> void f() {\n"
+               "  if constexpr (requires(T t) {\n"
+               "                  { t.bar() } -> std::same_as<bool>;\n"
+               "                }) {\n"
+               "  }\n"
+               "}",
+               Style);
+
+  verifyFormat(
+      "template <typename T> void f() {\n"
+      "  if constexpr (condition && requires(T t) {\n"
+      "                               { t.bar() } -> std::same_as<bool>;\n"
+      "                             }) {\n"
+      "  }\n"
+      "}",
+      Style);
+
+  verifyFormat("template <typename T> struct C {\n"
+               "  void f()\n"
+               "    requires requires(T t) {\n"
+               "               { t.bar() } -> std::same_as<bool>;\n"
+               "             };\n"
+               "};",
+               Style);
 }
 
 TEST_F(FormatTest, StatementAttributeLikeMacros) {
