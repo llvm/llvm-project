@@ -508,6 +508,10 @@ _storebe_i64(void * __P, long long __D) {
     defined(__INVPCID__)
 #include <invpcidintrin.h>
 #endif
+#if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
+    defined(__AMXFP16__)
+#include <amxfp16intrin.h>
+#endif
 
 #if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
     defined(__KL__) || defined(__WIDEKL__)
