@@ -505,6 +505,9 @@ void LVPatterns::updateReportOptions() {
 // Match a general pattern.
 bool LVPatterns::matchPattern(StringRef Input, const LVMatchInfo &MatchInfo) {
   bool Matched = false;
+  // Do not match an empty 'Input'.
+  if (Input.empty())
+    return Matched;
   // Traverse all match specifications.
   for (const LVMatch &Match : MatchInfo) {
     switch (Match.Mode) {
