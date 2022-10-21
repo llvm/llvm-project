@@ -289,6 +289,7 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
     Users.push_back(cast<Instruction>(U));
   const Instruction *CtxI = findCommonDominator(Users, *DT);
   if (auto Ev = SE->evaluatePredicateAt(Pred, S, X, CtxI)) {
+    SE->forgetValue(ICmp);
     ICmp->replaceAllUsesWith(ConstantInt::getBool(ICmp->getContext(), *Ev));
     DeadInsts.emplace_back(ICmp);
     LLVM_DEBUG(dbgs() << "INDVARS: Eliminated comparison: " << *ICmp << '\n');

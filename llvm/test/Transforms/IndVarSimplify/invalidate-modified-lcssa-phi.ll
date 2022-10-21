@@ -120,3 +120,39 @@ exit:
   %lcssa = phi i32 [ %0, %loop.2.latch ]
   ret i32 %lcssa
 }
+
+
+define i16 @test_pr58515_invalidate_loop_disposition(ptr %a) {
+; CHECK-LABEL: @test_pr58515_invalidate_loop_disposition(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 true, i16 2, i16 0
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i16 [ 0, [[ENTRY]] ], [ [[SUM_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[SUM_NEXT]] = add i16 [[SEL]], [[SUM]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i16 [[IV]], 1
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i16 [[IV]], 9
+; CHECK-NEXT:    br i1 [[C_2]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[LCSSA:%.*]] = phi i16 [ [[SUM_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    ret i16 0
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i16 [ 1, %entry ], [ %iv.next, %loop ]
+  %sum = phi i16 [ 0, %entry ], [ %sum.next, %loop ]
+  %gep = getelementptr inbounds i16, ptr %a, i16 %iv
+  %c.1 = icmp ne ptr %a, %gep
+  %sel = select i1 %c.1, i16 2, i16 0
+  %sum.next = add i16 %sel, %sum
+  %iv.next = add nuw nsw i16 %iv, 1
+  %c.2 = icmp ult i16 %iv, 9
+  br i1 %c.2, label %loop, label %exit
+
+exit:
+  %lcssa = phi i16 [ %sum.next, %loop ]
+  ret i16 0
+}
