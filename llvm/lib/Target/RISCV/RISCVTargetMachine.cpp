@@ -268,7 +268,7 @@ void RISCVPassConfig::addPreEmitPass2() {
 
 void RISCVPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
-  if (TM->getOptLevel() == CodeGenOpt::Aggressive && EnableMachineCombiner)
+  if (EnableMachineCombiner)
     addPass(&MachineCombinerID);
 
   if (TM->getTargetTriple().getArch() == Triple::riscv64)

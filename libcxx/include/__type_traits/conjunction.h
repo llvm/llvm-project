@@ -20,26 +20,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
-
-template <class _Arg, class... _Args>
-struct __conjunction_impl {
-  using type = conditional_t<!bool(_Arg::value), _Arg, typename __conjunction_impl<_Args...>::type>;
-};
-
-template <class _Arg>
-struct __conjunction_impl<_Arg> {
-  using type = _Arg;
-};
-
-template <class... _Args>
-struct conjunction : __conjunction_impl<true_type, _Args...>::type {};
-
-template<class... _Args>
-inline constexpr bool conjunction_v = conjunction<_Args...>::value;
-
-#endif // _LIBCPP_STD_VER > 14
-
 template <class...>
 using __expand_to_true = true_type;
 
@@ -51,6 +31,22 @@ false_type __and_helper(...);
 
 template <class... _Pred>
 using _And _LIBCPP_NODEBUG = decltype(__and_helper<_Pred...>(0));
+
+#if _LIBCPP_STD_VER > 14
+
+template <class...>
+struct conjunction : true_type {};
+
+template <class _Arg>
+struct conjunction<_Arg> : _Arg {};
+
+template <class _Arg, class... _Args>
+struct conjunction<_Arg, _Args...> : conditional_t<!bool(_Arg::value), _Arg, conjunction<_Args...>> {};
+
+template <class... _Args>
+inline constexpr bool conjunction_v = conjunction<_Args...>::value;
+
+#endif // _LIBCPP_STD_VER > 14
 
 _LIBCPP_END_NAMESPACE_STD
 
