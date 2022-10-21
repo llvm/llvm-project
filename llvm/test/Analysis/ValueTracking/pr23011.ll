@@ -1,4 +1,4 @@
-; RUN: opt -indvars -S < %s | FileCheck %s
+; RUN: opt -passes=indvars -S < %s | FileCheck %s
 
 declare { i8, i1 } @llvm.smul.with.overflow.i8(i8, i8) nounwind readnone
 

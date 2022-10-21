@@ -1,4 +1,4 @@
-; RUN: opt -lint < %s
+; RUN: opt -passes=lint < %s
 
 ; lint shouldn't crash on any of the below functions
 
