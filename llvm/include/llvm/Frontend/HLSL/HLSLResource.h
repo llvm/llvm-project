@@ -21,6 +21,15 @@ class GlobalVariable;
 
 namespace hlsl {
 
+enum class ResourceClass : uint8_t {
+  SRV = 0,
+  UAV,
+  CBuffer,
+  Sampler,
+  Invalid,
+  NumClasses = Invalid,
+};
+
 // The value ordering of this enumeration is part of the DXIL ABI. Elements
 // can only be added to the end, and not removed.
 enum class ResourceKind : uint32_t {
