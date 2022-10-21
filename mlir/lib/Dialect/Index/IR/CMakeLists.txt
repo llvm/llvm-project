@@ -9,4 +9,7 @@ add_mlir_dialect_library(MLIRIndexDialect
   LINK_LIBS PUBLIC
   MLIRDialect
   MLIRIR
+  MLIRCastInterfaces
+  MLIRInferTypeOpInterface
+  MLIRSideEffectInterfaces
   )
