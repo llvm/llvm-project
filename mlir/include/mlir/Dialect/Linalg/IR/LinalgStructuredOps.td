@@ -284,6 +284,11 @@ def MapOp : LinalgStructuredBase_Op<"map", [
       return getInputOperands();
     }
 
+    bool payloadUsesValueFromOperand(OpOperand * opOperand) {
+      if (isOutput(opOperand)) return false;
+      return !getMatchingBlockArgument(opOperand).use_empty();
+    }
+
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
                               mlir::ArrayRef<mlir::NamedAttribute>)>
     getRegionBuilder() {
