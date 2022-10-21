@@ -158,7 +158,8 @@ Changes in existing checks
   The check now skips unions/union-like classes since in this case a default constructor
   with empty body is not equivalent to the explicitly defaulted one, variadic constructors
   since they cannot be explicitly defaulted. The check also skips copy assignment operators
-  with nonstandard return types. The check is restricted to c++11-or-later.
+  with nonstandard return types, private/protected default constructors for C++17 or earlier.
+  The check is restricted to C++11 or later.
 
 - Change the default behavior of :doc:`readability-avoid-const-params-in-decls
   <clang-tidy/checks/readability/avoid-const-params-in-decls>` to not
