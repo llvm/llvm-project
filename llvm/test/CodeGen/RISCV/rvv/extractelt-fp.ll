@@ -593,9 +593,13 @@ define double @extractelt_nxv16f64_0(<vscale x 16 x double> %v) {
 define double @extractelt_nxv16f64_neg1(<vscale x 16 x double> %v) {
 ; RV32-LABEL: extractelt_nxv16f64_neg1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -64
-; RV32-NEXT:    .cfi_def_cfa_offset 64
-; RV32-NEXT:    addi s0, sp, 64
+; RV32-NEXT:    addi sp, sp, -80
+; RV32-NEXT:    .cfi_def_cfa_offset 80
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    .cfi_offset s0, -8
+; RV32-NEXT:    addi s0, sp, 80
 ; RV32-NEXT:    .cfi_def_cfa s0, 0
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 4
@@ -610,15 +614,21 @@ define double @extractelt_nxv16f64_neg1(<vscale x 16 x double> %v) {
 ; RV32-NEXT:    slli a1, a1, 4
 ; RV32-NEXT:    add a0, a1, a0
 ; RV32-NEXT:    fld fa0, -8(a0)
-; RV32-NEXT:    addi sp, s0, -64
-; RV32-NEXT:    addi sp, sp, 64
+; RV32-NEXT:    addi sp, s0, -80
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 80
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: extractelt_nxv16f64_neg1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -64
-; RV64-NEXT:    .cfi_def_cfa_offset 64
-; RV64-NEXT:    addi s0, sp, 64
+; RV64-NEXT:    addi sp, sp, -80
+; RV64-NEXT:    .cfi_def_cfa_offset 80
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    .cfi_offset s0, -16
+; RV64-NEXT:    addi s0, sp, 80
 ; RV64-NEXT:    .cfi_def_cfa s0, 0
 ; RV64-NEXT:    csrr a0, vlenb
 ; RV64-NEXT:    slli a0, a0, 4
@@ -641,8 +651,10 @@ define double @extractelt_nxv16f64_neg1(<vscale x 16 x double> %v) {
 ; RV64-NEXT:    slli a1, a2, 3
 ; RV64-NEXT:    add a0, a0, a1
 ; RV64-NEXT:    fld fa0, 0(a0)
-; RV64-NEXT:    addi sp, s0, -64
-; RV64-NEXT:    addi sp, sp, 64
+; RV64-NEXT:    addi sp, s0, -80
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 80
 ; RV64-NEXT:    ret
   %r = extractelement <vscale x 16 x double> %v, i32 -1
   ret double %r
@@ -660,34 +672,75 @@ define double @extractelt_nxv16f64_imm(<vscale x 16 x double> %v) {
 }
 
 define double @extractelt_nxv16f64_idx(<vscale x 16 x double> %v, i32 zeroext %idx) {
-; CHECK-LABEL: extractelt_nxv16f64_idx:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a2, a1, 1
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    bltu a0, a2, .LBB54_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB54_2:
-; CHECK-NEXT:    addi sp, sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    addi s0, sp, 64
-; CHECK-NEXT:    .cfi_def_cfa s0, 0
-; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    slli a2, a2, 4
-; CHECK-NEXT:    sub sp, sp, a2
-; CHECK-NEXT:    andi sp, sp, -64
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    addi a2, sp, 64
-; CHECK-NEXT:    add a0, a2, a0
-; CHECK-NEXT:    vs8r.v v8, (a2)
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a1, a2, a1
-; CHECK-NEXT:    vs8r.v v16, (a1)
-; CHECK-NEXT:    fld fa0, 0(a0)
-; CHECK-NEXT:    addi sp, s0, -64
-; CHECK-NEXT:    addi sp, sp, 64
-; CHECK-NEXT:    ret
+; RV32-LABEL: extractelt_nxv16f64_idx:
+; RV32:       # %bb.0:
+; RV32-NEXT:    csrr a1, vlenb
+; RV32-NEXT:    slli a2, a1, 1
+; RV32-NEXT:    addi a2, a2, -1
+; RV32-NEXT:    bltu a0, a2, .LBB54_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    mv a0, a2
+; RV32-NEXT:  .LBB54_2:
+; RV32-NEXT:    addi sp, sp, -80
+; RV32-NEXT:    .cfi_def_cfa_offset 80
+; RV32-NEXT:    sw ra, 76(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    .cfi_offset s0, -8
+; RV32-NEXT:    addi s0, sp, 80
+; RV32-NEXT:    .cfi_def_cfa s0, 0
+; RV32-NEXT:    csrr a2, vlenb
+; RV32-NEXT:    slli a2, a2, 4
+; RV32-NEXT:    sub sp, sp, a2
+; RV32-NEXT:    andi sp, sp, -64
+; RV32-NEXT:    slli a0, a0, 3
+; RV32-NEXT:    addi a2, sp, 64
+; RV32-NEXT:    add a0, a2, a0
+; RV32-NEXT:    vs8r.v v8, (a2)
+; RV32-NEXT:    slli a1, a1, 3
+; RV32-NEXT:    add a1, a2, a1
+; RV32-NEXT:    vs8r.v v16, (a1)
+; RV32-NEXT:    fld fa0, 0(a0)
+; RV32-NEXT:    addi sp, s0, -80
+; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 80
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: extractelt_nxv16f64_idx:
+; RV64:       # %bb.0:
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    slli a2, a1, 1
+; RV64-NEXT:    addi a2, a2, -1
+; RV64-NEXT:    bltu a0, a2, .LBB54_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    mv a0, a2
+; RV64-NEXT:  .LBB54_2:
+; RV64-NEXT:    addi sp, sp, -80
+; RV64-NEXT:    .cfi_def_cfa_offset 80
+; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; RV64-NEXT:    .cfi_offset ra, -8
+; RV64-NEXT:    .cfi_offset s0, -16
+; RV64-NEXT:    addi s0, sp, 80
+; RV64-NEXT:    .cfi_def_cfa s0, 0
+; RV64-NEXT:    csrr a2, vlenb
+; RV64-NEXT:    slli a2, a2, 4
+; RV64-NEXT:    sub sp, sp, a2
+; RV64-NEXT:    andi sp, sp, -64
+; RV64-NEXT:    slli a0, a0, 3
+; RV64-NEXT:    addi a2, sp, 64
+; RV64-NEXT:    add a0, a2, a0
+; RV64-NEXT:    vs8r.v v8, (a2)
+; RV64-NEXT:    slli a1, a1, 3
+; RV64-NEXT:    add a1, a2, a1
+; RV64-NEXT:    vs8r.v v16, (a1)
+; RV64-NEXT:    fld fa0, 0(a0)
+; RV64-NEXT:    addi sp, s0, -80
+; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; RV64-NEXT:    addi sp, sp, 80
+; RV64-NEXT:    ret
   %r = extractelement <vscale x 16 x double> %v, i32 %idx
   ret double %r
 }
