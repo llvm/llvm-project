@@ -212,6 +212,9 @@ void LVSymbol::calculateCoverage() {
             ? rint((double(CoverageFactor) / CoverageParent) * 100.0 * 100.0) /
                   100.0
             : 0;
+    // Record invalid coverage entry.
+    if (options().getWarningCoverages() && CoveragePercentage > 100)
+      getReaderCompileUnit()->addInvalidCoverage(this);
   }
 }
 

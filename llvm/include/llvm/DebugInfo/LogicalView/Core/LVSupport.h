@@ -142,6 +142,27 @@ std::string formatAttributes(const StringRef First, Args... Others) {
   return Stream.str();
 }
 
+// Add an item to a map with second being a list.
+template <typename MapType, typename ListType, typename KeyType,
+          typename ValueType>
+void addItem(MapType *Map, KeyType Key, ValueType Value) {
+  ListType *List = nullptr;
+  typename MapType::const_iterator Iter = Map->find(Key);
+  if (Iter != Map->end())
+    List = Iter->second;
+  else {
+    List = new ListType();
+    Map->emplace(Key, List);
+  }
+  List->push_back(Value);
+}
+
+// Delete the map contained list.
+template <typename MapType> void deleteList(MapType &Map) {
+  for (typename MapType::const_reference Entry : Map)
+    delete Entry.second;
+}
+
 // Unified and flattened pathnames.
 std::string transformPath(StringRef Path);
 std::string flattenedFilePath(StringRef Path);
