@@ -626,7 +626,7 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
     // the buffer.
     SmallVector<Value, 4> dims;
     sizesForTensor(rewriter, dims, loc, srcTp, src);
-    for (int64_t i = 0; i < rank; i++) {
+    for (uint64_t i = 0; i < rank; i++) {
       rewriter.create<memref::StoreOp>(loc, dims[i], dimSizes,
                                        constantIndex(rewriter, loc, i));
     }
@@ -650,7 +650,7 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
     // For each element in the source tensor, output the element.
     rewriter.create<ForeachOp>(
         loc, src, [&](OpBuilder &builder, Location loc, ValueRange args) {
-          for (int64_t i = 0; i < rank; i++) {
+          for (uint64_t i = 0; i < rank; i++) {
             rewriter.create<memref::StoreOp>(loc, args[i], indices,
                                              constantIndex(builder, loc, i));
           }
