@@ -1,4 +1,4 @@
-; RUN: opt -reassociate -S < %s | FileCheck %s
+; RUN: opt -passes=reassociate -S < %s | FileCheck %s
 ; PR21205
 
 @a = common global i32 0, align 4

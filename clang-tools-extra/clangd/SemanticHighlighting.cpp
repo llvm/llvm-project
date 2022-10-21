@@ -649,6 +649,29 @@ public:
     return true;
   }
 
+  bool VisitCXXDestructorDecl(CXXDestructorDecl *D) {
+    if (auto *TI = D->getNameInfo().getNamedTypeInfo()) {
+      SourceLocation Loc = TI->getTypeLoc().getBeginLoc();
+      H.addExtraModifier(Loc, HighlightingModifier::ConstructorOrDestructor);
+      H.addExtraModifier(Loc, HighlightingModifier::Declaration);
+      if (D->isThisDeclarationADefinition())
+        H.addExtraModifier(Loc, HighlightingModifier::Definition);
+    }
+    return true;
+  }
+
+  bool VisitCXXMemberCallExpr(CXXMemberCallExpr *CE) {
+    if (isa<CXXDestructorDecl>(CE->getMethodDecl())) {
+      if (auto *ME = dyn_cast<MemberExpr>(CE->getCallee())) {
+        if (auto *TI = ME->getMemberNameInfo().getNamedTypeInfo()) {
+          H.addExtraModifier(TI->getTypeLoc().getBeginLoc(),
+                             HighlightingModifier::ConstructorOrDestructor);
+        }
+      }
+    }
+    return true;
+  }
+
   bool VisitDeclaratorDecl(DeclaratorDecl *D) {
     auto *AT = D->getType()->getContainedAutoType();
     if (!AT)
@@ -879,6 +902,8 @@ std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
             Tok.addModifier(HighlightingModifier::DefaultLibrary);
           if (Decl->isDeprecated())
             Tok.addModifier(HighlightingModifier::Deprecated);
+          if (isa<CXXConstructorDecl>(Decl))
+            Tok.addModifier(HighlightingModifier::ConstructorOrDestructor);
           if (R.IsDecl) {
             // Do not treat an UnresolvedUsingValueDecl as a declaration.
             // It's more common to think of it as a reference to the
@@ -960,6 +985,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingModifier K) {
     return OS << "decl"; // abbreviation for common case
   case HighlightingModifier::Definition:
     return OS << "def"; // abbrevation for common case
+  case HighlightingModifier::ConstructorOrDestructor:
+    return OS << "constrDestr";
   default:
     return OS << toSemanticTokenModifier(K);
   }
@@ -1111,6 +1138,8 @@ llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier) {
     return "defaultLibrary";
   case HighlightingModifier::UsedAsMutableReference:
     return "usedAsMutableReference"; // nonstandard
+  case HighlightingModifier::ConstructorOrDestructor:
+    return "constructorOrDestructor"; // nonstandard
   case HighlightingModifier::FunctionScope:
     return "functionScope"; // nonstandard
   case HighlightingModifier::ClassScope:

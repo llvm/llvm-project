@@ -118,7 +118,7 @@ public:
   virtual LogicalResult initializeOptions(StringRef options);
 
   /// Prints out the pass in the textual representation of pipelines. If this is
-  /// an adaptor pass, print with the op_name(sub_pass,...) format.
+  /// an adaptor pass, print its pass managers.
   void printAsTextualPipeline(raw_ostream &os);
 
   //===--------------------------------------------------------------------===//

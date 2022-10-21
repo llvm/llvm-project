@@ -40,7 +40,14 @@ struct LLVMTypeAndSizeStorage;
 } // namespace LLVM
 } // namespace mlir
 
+//===----------------------------------------------------------------------===//
+// ODS-Generated Declarations
+//===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/LLVMIR/LLVMTypeInterfaces.h.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h.inc"
 
 namespace mlir {
 namespace LLVM {
@@ -64,61 +71,6 @@ DEFINE_TRIVIAL_LLVM_TYPE(LLVMLabelType);
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType);
 
 #undef DEFINE_TRIVIAL_LLVM_TYPE
-
-//===----------------------------------------------------------------------===//
-// LLVMArrayType.
-//===----------------------------------------------------------------------===//
-
-/// LLVM dialect array type. It is an aggregate type representing consecutive
-/// elements in memory, parameterized by the number of elements and the element
-/// type.
-class LLVMArrayType
-    : public Type::TypeBase<LLVMArrayType, Type, detail::LLVMTypeAndSizeStorage,
-                            DataLayoutTypeInterface::Trait,
-                            SubElementTypeInterface::Trait> {
-public:
-  /// Inherit base constructors.
-  using Base::Base;
-  using Base::getChecked;
-
-  /// Checks if the given type can be used inside an array type.
-  static bool isValidElementType(Type type);
-
-  /// Gets or creates an instance of LLVM dialect array type containing
-  /// `numElements` of `elementType`, in the same context as `elementType`.
-  static LLVMArrayType get(Type elementType, unsigned numElements);
-  static LLVMArrayType getChecked(function_ref<InFlightDiagnostic()> emitError,
-                                  Type elementType, unsigned numElements);
-
-  /// Returns the element type of the array.
-  Type getElementType() const;
-
-  /// Returns the number of elements in the array type.
-  unsigned getNumElements() const;
-
-  /// Verifies that the type about to be constructed is well-formed.
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              Type elementType, unsigned numElements);
-
-  /// Hooks for DataLayoutTypeInterface. Should not be called directly. Obtain a
-  /// DataLayout instance and query it instead.
-  unsigned getTypeSizeInBits(const DataLayout &dataLayout,
-                             DataLayoutEntryListRef params) const;
-
-  unsigned getTypeSize(const DataLayout &dataLayout,
-                       DataLayoutEntryListRef params) const;
-
-  unsigned getABIAlignment(const DataLayout &dataLayout,
-                           DataLayoutEntryListRef params) const;
-
-  unsigned getPreferredAlignment(const DataLayout &dataLayout,
-                                 DataLayoutEntryListRef params) const;
-
-  void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
-                                function_ref<void(Type)> walkTypesFn) const;
-  Type replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
-                                   ArrayRef<Type> replTypes) const;
-};
 
 //===----------------------------------------------------------------------===//
 // LLVMFunctionType.
@@ -484,6 +436,11 @@ Type parseType(DialectAsmParser &parser);
 void printType(Type type, AsmPrinter &printer);
 } // namespace detail
 
+/// Parse any MLIR type or a concise syntax for LLVM types.
+ParseResult parsePrettyLLVMType(AsmParser &p, FailureOr<Type> &type);
+/// Print any MLIR type or a concise syntax for LLVM types.
+void printPrettyLLVMType(AsmPrinter &p, Type type);
+
 //===----------------------------------------------------------------------===//
 // Utility functions.
 //===----------------------------------------------------------------------===//
@@ -548,6 +505,7 @@ enum class PtrDLEntryPos { Size = 0, Abi = 1, Preferred = 2, Index = 3 };
 /// Currently only `PtrDLEntryPos::Index` is optional, and all other positions
 /// may be assumed to be present.
 Optional<unsigned> extractPointerSpecValue(Attribute attr, PtrDLEntryPos pos);
+
 } // namespace LLVM
 } // namespace mlir
 

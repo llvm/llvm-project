@@ -217,12 +217,22 @@ void UseEqualsDefaultCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
+namespace {
+AST_MATCHER(CXXMethodDecl, isOutOfLine) { return Node.isOutOfLine(); }
+} // namespace
+
 void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
   // Skip unions/union-like classes since their constructors behave differently
   // when defaulted vs. empty.
   auto IsUnionLikeClass = recordDecl(
       anyOf(isUnion(),
             has(fieldDecl(isImplicit(), hasType(cxxRecordDecl(isUnion()))))));
+
+  const LangOptions &LangOpts = getLangOpts();
+  auto IsPublicOrOutOfLineUntilCPP20 =
+      LangOpts.CPlusPlus20
+          ? cxxConstructorDecl()
+          : cxxConstructorDecl(anyOf(isOutOfLine(), isPublic()));
 
   // Destructor.
   Finder->addMatcher(
@@ -235,7 +245,8 @@ void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
           anyOf(
               // Default constructor.
               allOf(unless(hasAnyConstructorInitializer(isWritten())),
-                    unless(isVariadic()), parameterCountIs(0)),
+                    unless(isVariadic()), parameterCountIs(0),
+                    IsPublicOrOutOfLineUntilCPP20),
               // Copy constructor.
               allOf(isCopyConstructor(),
                     // Discard constructors that can be used as a copy

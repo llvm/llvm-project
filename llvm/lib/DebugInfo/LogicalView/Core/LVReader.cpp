@@ -129,6 +129,22 @@ Error LVReader::doLoad() {
   // Set current Reader instance.
   setInstance(this);
 
+  // Before any scopes creation, process any pattern specified by the
+  // --select and --select-offsets options.
+  patterns().addGenericPatterns(options().Select.Generic);
+  patterns().addOffsetPatterns(options().Select.Offsets);
+
+  // Add any specific element printing requests based on the element kind.
+  patterns().addRequest(options().Select.Elements);
+  patterns().addRequest(options().Select.Lines);
+  patterns().addRequest(options().Select.Scopes);
+  patterns().addRequest(options().Select.Symbols);
+  patterns().addRequest(options().Select.Types);
+
+  // Once we have processed the requests for any particular kind of elements,
+  // we need to update the report options, in order to have a default value.
+  patterns().updateReportOptions();
+
   // Delegate the scope tree creation to the specific reader.
   if (Error Err = createScopes())
     return Err;
@@ -150,6 +166,24 @@ Error LVReader::doPrint() {
   // Set current Reader instance.
   setInstance(this);
 
+  // Check for any '--report' request.
+  if (options().getReportExecute()) {
+    // Requested details.
+    if (options().getReportList())
+      if (Error Err = printMatchedElements(/*UseMatchedElements=*/true))
+        return Err;
+    // Requested only children.
+    if (options().getReportChildren() && !options().getReportParents())
+      if (Error Err = printMatchedElements(/*UseMatchedElements=*/false))
+        return Err;
+    // Requested (parents) or (parents and children).
+    if (options().getReportParents() || options().getReportView())
+      if (Error Err = printScopes())
+        return Err;
+
+    return Error::success();
+  }
+
   return printScopes();
 }
 
@@ -159,7 +193,9 @@ Error LVReader::printScopes() {
       return Err;
 
     // Start printing from the root.
-    bool DoMatch = false;
+    bool DoMatch = options().getSelectGenericPattern() ||
+                   options().getSelectGenericKind() ||
+                   options().getSelectOffsetPattern();
     return Root->doPrint(OutputSplit, DoMatch, DoPrint, OS);
   }
 

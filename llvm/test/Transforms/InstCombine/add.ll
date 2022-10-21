@@ -2334,3 +2334,14 @@ define i8 @mul_not_negpow2(i8 %x) {
   %a = add i8 %m, 42
   ret i8 %a
 }
+
+define <vscale x 1 x i32> @add_to_or_scalable(<vscale x 1 x i32> %in) {
+; CHECK-LABEL: @add_to_or_scalable(
+; CHECK-NEXT:    [[SHL:%.*]] = shl <vscale x 1 x i32> [[IN:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 1 x i32> [[SHL]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 1 x i32> [[ADD]]
+;
+  %shl = shl <vscale x 1 x i32> %in, shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+  %add = add <vscale x 1 x i32> %shl, shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 1, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+  ret <vscale x 1 x i32> %add
+}

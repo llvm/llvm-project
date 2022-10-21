@@ -50,17 +50,13 @@ void Pass::copyOptionValuesFrom(const Pass *other) {
 }
 
 /// Prints out the pass in the textual representation of pipelines. If this is
-/// an adaptor pass, print with the op_name(sub_pass,...) format.
+/// an adaptor pass, print its pass managers.
 void Pass::printAsTextualPipeline(raw_ostream &os) {
-  // Special case for adaptors to use the 'op_name(sub_passes)' format.
+  // Special case for adaptors to print its pass managers.
   if (auto *adaptor = dyn_cast<OpToOpPassAdaptor>(this)) {
     llvm::interleave(
         adaptor->getPassManagers(),
-        [&](OpPassManager &pm) {
-          os << pm.getOpAnchorName() << "(";
-          pm.printAsTextualPipeline(os);
-          os << ")";
-        },
+        [&](OpPassManager &pm) { pm.printAsTextualPipeline(os); },
         [&] { os << ","; });
     return;
   }
@@ -355,26 +351,22 @@ StringRef OpPassManager::getOpAnchorName() const {
   return impl->getOpAnchorName();
 }
 
-/// Prints out the given passes as the textual representation of a pipeline.
-static void printAsTextualPipeline(ArrayRef<std::unique_ptr<Pass>> passes,
-                                   raw_ostream &os) {
-  llvm::interleave(
-      passes,
-      [&](const std::unique_ptr<Pass> &pass) {
-        pass->printAsTextualPipeline(os);
-      },
-      [&] { os << ","; });
-}
-
 /// Prints out the passes of the pass manager as the textual representation
 /// of pipelines.
 void OpPassManager::printAsTextualPipeline(raw_ostream &os) const {
-  ::printAsTextualPipeline(impl->passes, os);
+  os << getOpAnchorName() << "(";
+  llvm::interleave(
+      impl->passes,
+      [&](const std::unique_ptr<Pass> &pass) {
+        pass->printAsTextualPipeline(os);
+      },
+      [&]() { os << ","; });
+  os << ")";
 }
 
 void OpPassManager::dump() {
-  llvm::errs() << "Pass Manager with " << impl->passes.size() << " passes: ";
-  ::printAsTextualPipeline(impl->passes, llvm::errs());
+  llvm::errs() << "Pass Manager with " << impl->passes.size() << " passes:\n";
+  printAsTextualPipeline(llvm::errs());
   llvm::errs() << "\n";
 }
 

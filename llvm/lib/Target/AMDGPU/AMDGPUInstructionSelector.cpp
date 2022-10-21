@@ -686,13 +686,19 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR(MachineInstr &MI) const {
   // TODO: Can be improved?
   if (IsVector) {
     Register TmpReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    BuildMI(*BB, MI, DL, TII.get(AMDGPU::V_AND_B32_e32), TmpReg)
-        .addImm(0xFFFF)
-        .addReg(Src0);
-    BuildMI(*BB, MI, DL, TII.get(AMDGPU::V_LSHL_OR_B32_e64), Dst)
-        .addReg(Src1)
-        .addImm(16)
-        .addReg(TmpReg);
+    auto MIB = BuildMI(*BB, MI, DL, TII.get(AMDGPU::V_AND_B32_e32), TmpReg)
+                   .addImm(0xFFFF)
+                   .addReg(Src0);
+    if (!constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI))
+      return false;
+
+    MIB = BuildMI(*BB, MI, DL, TII.get(AMDGPU::V_LSHL_OR_B32_e64), Dst)
+              .addReg(Src1)
+              .addImm(16)
+              .addReg(TmpReg);
+    if (!constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI))
+      return false;
+
     MI.eraseFromParent();
     return true;
   }

@@ -226,9 +226,15 @@ bool CPlusPlusNameParser::ConsumeTemplateArgs() {
       Advance();
       break;
     case tok::l_square:
-      if (!ConsumeBrackets(tok::l_square, tok::r_square))
+      // Handle templates tagged with an ABI tag.
+      // An example demangled/prettified version is:
+      //   func[abi:tag1][abi:tag2]<type[abi:tag3]>(int)
+      if (ConsumeAbiTag())
+        can_open_template = true;
+      else if (ConsumeBrackets(tok::l_square, tok::r_square))
+        can_open_template = false;
+      else
         return false;
-      can_open_template = false;
       break;
     case tok::l_paren:
       if (!ConsumeArguments())
@@ -245,6 +251,32 @@ bool CPlusPlusNameParser::ConsumeTemplateArgs() {
   if (template_counter != 0) {
     return false;
   }
+  start_position.Remove();
+  return true;
+}
+
+bool CPlusPlusNameParser::ConsumeAbiTag() {
+  Bookmark start_position = SetBookmark();
+  if (!ConsumeToken(tok::l_square))
+    return false;
+
+  if (HasMoreTokens() && Peek().is(tok::raw_identifier) &&
+      Peek().getRawIdentifier() == "abi")
+    Advance();
+  else
+    return false;
+
+  if (!ConsumeToken(tok::colon))
+    return false;
+
+  // Consume the actual tag string (and allow some special characters)
+  while (ConsumeToken(tok::raw_identifier, tok::comma, tok::period,
+                      tok::numeric_constant))
+    ;
+
+  if (!ConsumeToken(tok::r_square))
+    return false;
+
   start_position.Remove();
   return true;
 }
@@ -519,6 +551,22 @@ CPlusPlusNameParser::ParseFullNameImpl() {
       Advance();
       state = State::AfterIdentifier;
       break;
+    case tok::l_square: {
+      // Handles types or functions that were tagged
+      // with, e.g.,
+      //   [[gnu::abi_tag("tag1","tag2")]] func()
+      // and demangled/prettified into:
+      //   func[abi:tag1][abi:tag2]()
+
+      // ABI tags only appear after a method or type name
+      const bool valid_state =
+          state == State::AfterIdentifier || state == State::AfterOperator;
+      if (!valid_state || !ConsumeAbiTag()) {
+        continue_parsing = false;
+      }
+
+      break;
+    }
     case tok::l_paren: {
       if (state == State::Beginning || state == State::AfterTwoColons) {
         // (anonymous namespace)

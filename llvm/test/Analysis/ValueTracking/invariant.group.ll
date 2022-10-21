@@ -1,4 +1,4 @@
-; RUN: opt -S -instsimplify -instcombine < %s | FileCheck %s
+; RUN: opt -S -passes=instsimplify,instcombine < %s | FileCheck %s
 
 ; CHECK-LABEL: define void @checkNonnullLaunder()
 define void @checkNonnullLaunder() {

@@ -7211,7 +7211,7 @@ private:
       FunctionDecl *FD, llvm::Optional<ArrayRef<TemplateArgument>> TemplateArgs,
       MultiLevelTemplateArgumentList MLTAL, LocalInstantiationScope &Scope);
 
-  /// Used during constraint checking, sets up the constraint template arguemnt
+  /// Used during constraint checking, sets up the constraint template argument
   /// lists, and calls SetupConstraintScope to set up the
   /// LocalInstantiationScope to have the proper set of ParVarDecls configured.
   llvm::Optional<MultiLevelTemplateArgumentList>

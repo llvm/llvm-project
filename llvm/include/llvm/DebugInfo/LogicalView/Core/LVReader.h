@@ -141,11 +141,21 @@ public:
   LVSplitContext &getSplitContext() { return SplitContext; }
 
   // Conditions to print an object.
-  bool doPrintLine(const LVLine *Line) const { return true; }
-  bool doPrintLocation(const LVLocation *Location) const { return true; }
-  bool doPrintScope(const LVScope *Scope) const { return true; }
-  bool doPrintSymbol(const LVSymbol *Symbol) const { return true; }
-  bool doPrintType(const LVType *Type) const { return true; }
+  bool doPrintLine(const LVLine *Line) const {
+    return patterns().printElement(Line);
+  }
+  bool doPrintLocation(const LVLocation *Location) const {
+    return patterns().printObject(Location);
+  }
+  bool doPrintScope(const LVScope *Scope) const {
+    return patterns().printElement(Scope);
+  }
+  bool doPrintSymbol(const LVSymbol *Symbol) const {
+    return patterns().printElement(Symbol);
+  }
+  bool doPrintType(const LVType *Type) const {
+    return patterns().printElement(Type);
+  }
 
   static LVReader &getInstance();
   static void setInstance(LVReader *Reader);

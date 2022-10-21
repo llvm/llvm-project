@@ -38,14 +38,11 @@ class StepAvoidsRegexTestCase(TestBase):
         self.thread.StepInto()
         self.hit_correct_function("main")
 
-    @skipIfWindows
-    @skipIf(compiler="clang", compiler_version=['<', '11.0'])
-    @expectedFailureAll(bugnumber="rdar://100645742")
-    def test_step_avoid_regex_abi_tagged_template(self):
-        """Tests stepping into an ABI tagged function that matches the avoid regex"""
-        self.build()
-        (_, _, self.thread, _) = lldbutil.run_to_source_breakpoint(self, "with_tag_template", lldb.SBFileSpec('main.cpp'))
-
         # Try to step into ignore::with_tag_template
         self.thread.StepInto()
         self.hit_correct_function("main")
+
+        # Step into with_tag_template_returns_ignore which is outside the 'ignore::'
+        # namespace but returns a type from 'ignore::'
+        self.thread.StepInto()
+        self.hit_correct_function("with_tag_template_returns_ignore")

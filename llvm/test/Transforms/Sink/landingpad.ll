@@ -1,5 +1,5 @@
 ; Test that we don't sink landingpads
-; RUN: opt -sink -S < %s | FileCheck %s
+; RUN: opt -passes=sink -S < %s | FileCheck %s
 
 declare hidden void @g()
 declare void @h()

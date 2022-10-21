@@ -67,7 +67,7 @@ define void @print_widen_gep_and_select(i64 %n, float* noalias %y, float* noalia
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
 ; CHECK-NEXT:   WIDEN-GEP Inv[Var] ir<%arrayidx> = getelementptr ir<%y>, ir<%iv>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load ir<%arrayidx>
-; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ir<%arrayidx>, ir<%z>
+; CHECK-NEXT:   WIDEN ir<%cmp> = icmp eq ir<%arrayidx>, ir<%z>
 ; CHECK-NEXT:   WIDEN-SELECT ir<%sel> = select ir<%cmp>, ir<1.000000e+01>, ir<2.000000e+01>
 ; CHECK-NEXT:   WIDEN ir<%add> = fadd ir<%lv>, ir<%sel>
 ; CHECK-NEXT:   CLONE ir<%arrayidx2> = getelementptr ir<%x>, vp<[[STEPS]]>
@@ -205,7 +205,7 @@ define void @print_replicate_predicated_phi(i64 %n, i64* %x) {
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:   WIDEN-INDUCTION %i = phi 0, %i.next, ir<1>
 ; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<0>, ir<1>
-; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ir<%i>, ir<5>
+; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ult ir<%i>, ir<5>
 ; CHECK-NEXT: Successor(s): if.then
 ; CHECK-EMPTY:
 ; CHECK-NEXT: if.then:
@@ -402,11 +402,11 @@ define void @debug_loc_vpinstruction(i32* nocapture %asd, i32* nocapture %bsd) !
 ; CHECK-NEXT:    CLONE ir<%isd> = getelementptr ir<%asd>, vp<[[STEPS]]>
 ; CHECK-NEXT:    WIDEN ir<%lsd> = load ir<%isd>
 ; CHECK-NEXT:    WIDEN ir<%psd> = add ir<%lsd>, ir<23>
-; CHECK-NEXT:    WIDEN ir<%cmp1> = icmp ir<%lsd>, ir<100>
+; CHECK-NEXT:    WIDEN ir<%cmp1> = icmp slt ir<%lsd>, ir<100>
 ; CHECK-NEXT:  Successor(s): check
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  check:
-; CHECK-NEXT:    WIDEN ir<%cmp2> = icmp ir<%lsd>, ir<200>
+; CHECK-NEXT:    WIDEN ir<%cmp2> = icmp sge ir<%lsd>, ir<200>
 ; CHECK-NEXT:  Successor(s): if.then
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  if.then:

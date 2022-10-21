@@ -132,18 +132,19 @@ static RankedTensorType getUnorderedCOOFromType(RankedTensorType src) {
   auto rank = src.getRank();
   SmallVector<DimLevelType, 4> dims;
 
-  // An unordered and non-unique compressed dim at beginning unless the tensor
-  // is a 1D tensor.
-  if (rank > 1)
-    dims.push_back(DimLevelType::CompressedNuNo);
+  // An unordered and non-unique compressed dim at beginning.
+  dims.push_back(DimLevelType::CompressedNuNo);
 
-  // TODO: it is actually ordered at the level for ordered input.
-  // Followed by unordered non-unique n-2 singleton levels.
-  std::fill_n(std::back_inserter(dims), rank - 2, DimLevelType::SingletonNuNo);
-  // TODO: only if all the inputs (for concatentate) are unique at the last
-  // level should the COO has a unique level at the end. Ends by a unordered
-  // unique singleton level.
-  dims.push_back(DimLevelType::SingletonNo);
+  if (rank > 1) {
+    // TODO: it is actually ordered at the level for ordered input.
+    // Followed by unordered non-unique n-2 singleton levels.
+    std::fill_n(std::back_inserter(dims), rank - 2,
+                DimLevelType::SingletonNuNo);
+    // TODO: only if all the inputs (for concatentate) are unique at the last
+    // level should the COO has a unique level at the end. Ends by a unordered
+    // unique singleton level unless the tensor rank is 1.
+    dims.push_back(DimLevelType::SingletonNo);
+  }
   SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(src);
   // TODO: Maybe pick the bitwidth based on input/output tensors (probably the
   // largest one among them) in the original operation instead of using the
@@ -479,13 +480,16 @@ public:
     for (int64_t i = 0; i < rank; i++)
       loopEmitter.enterLoopOverTensorAtDim(rewriter, loc, 0, i);
 
-    Value vals = loopEmitter.getTensorValueBuffer(0);
-    Value idx = loopEmitter.getLastLevelTensorPointerIndex(0);
-    Value val = rewriter.create<memref::LoadOp>(op.getLoc(), vals, idx);
-
     SmallVector<Value, 4> coords;
     coords.reserve(rank);
     loopEmitter.getCoordinateArray(coords);
+
+    Value vals = loopEmitter.getTensorValueBuffer(0);
+    Value pidx = loopEmitter.getLastLevelTensorPointerIndex(0);
+    // Loads the value from sparse tensor using pointer index;
+    // loads the value from dense tensor using coordinate array.
+    Value val = enc ? rewriter.create<memref::LoadOp>(loc, vals, pidx)
+                    : rewriter.create<memref::LoadOp>(loc, vals, coords);
 
     for (int64_t i = 0; i < rank; i++)
       loopEmitter.exitCurrentLoop();
@@ -532,12 +536,10 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
                                   {opaqueTp}, {fileName}, EmitCInterface::Off)
                        .getResult(0);
 
-    // Allocate a buffer for storing dimension sizes and indices.
+    // Allocate a temporary buffer for storing dimension sizes and indices.
     Type indexTp = rewriter.getIndexType();
-    auto memTp = MemRefType::get({ShapedType::kDynamicSize}, indexTp);
     uint64_t rank = dstTp.getRank();
-    Value dimSizes = rewriter.create<memref::AllocOp>(
-        loc, memTp, ValueRange{constantIndex(rewriter, loc, rank)});
+    Value dimSizes = genAlloca(rewriter, loc, rank, indexTp);
 
     // If the result tensor has dynamic dimensions, get the dynamic sizes from
     // the sparse tensor reader.
@@ -571,26 +573,27 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
     Value nnz = createFuncCall(rewriter, loc, "getSparseTensorReaderNNZ",
                                {indexTp}, {reader}, EmitCInterface::Off)
                     .getResult(0);
+    Type eltTp = dstTp.getElementType();
+    Value value = genAllocaScalar(rewriter, loc, eltTp);
     scf::ForOp forOp = rewriter.create<scf::ForOp>(loc, c0, nnz, c1);
     rewriter.setInsertionPointToStart(forOp.getBody());
 
-    Type eltTp = dstTp.getElementType();
     SmallString<18> getNextFuncName{"getSparseTensorReaderNext",
                                     primaryTypeFunctionSuffix(eltTp)};
     Value indices = dimSizes; // Reuse the indices memref to store indices.
-    Value value = createFuncCall(rewriter, loc, getNextFuncName, {eltTp},
-                                 {reader, indices}, EmitCInterface::On)
-                      .getResult(0);
+    createFuncCall(rewriter, loc, getNextFuncName, {eltTp},
+                   {reader, indices, value}, EmitCInterface::On)
+        .getResult(0);
     SmallVector<Value, 4> indicesArray;
     for (uint64_t i = 0; i < rank; i++) {
       indicesArray.push_back(rewriter.create<memref::LoadOp>(
           loc, indices, constantIndex(rewriter, loc, i)));
     }
-    rewriter.create<InsertOp>(loc, value, cooBuffer, indicesArray);
+    Value v = rewriter.create<memref::LoadOp>(loc, value);
+    rewriter.create<InsertOp>(loc, v, cooBuffer, indicesArray);
     rewriter.setInsertionPointAfter(forOp);
 
-    // Release the indices buffer and the sparse tensor reader.
-    rewriter.create<memref::DeallocOp>(loc, indices);
+    // Release the sparse tensor reader.
     createFuncCall(rewriter, loc, "delSparseTensorReader", {}, {reader},
                    EmitCInterface::Off);
 
@@ -600,6 +603,70 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
     rewriter.setInsertionPointAfterValue(newOp);
     rewriter.create<DeallocTensorOp>(loc, cooBuffer);
 
+    return success();
+  }
+};
+
+struct OutRewriter : public OpRewritePattern<OutOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(OutOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    // Calculate NNZ.
+    Value src = op.getTensor();
+    Value nnz = rewriter.create<NumberOfEntriesOp>(loc, src);
+
+    // Allocate a temporary buffer for storing dimension sizes and indices.
+    auto srcTp = src.getType().template cast<RankedTensorType>();
+    uint64_t rank = srcTp.getRank();
+    Type indexTp = rewriter.getIndexType();
+    Value dimSizes = genAlloca(rewriter, loc, rank, indexTp);
+
+    // Generate code to calculate dimension size values and store the values to
+    // the buffer.
+    SmallVector<Value, 4> dims;
+    sizesForTensor(rewriter, dims, loc, srcTp, src);
+    for (uint64_t i = 0; i < rank; i++) {
+      rewriter.create<memref::StoreOp>(loc, dims[i], dimSizes,
+                                       constantIndex(rewriter, loc, i));
+    }
+
+    // Create a sparse tensor writer and output meta data.
+    Type opaqueTp = getOpaquePointerType(rewriter);
+    Value writer =
+        createFuncCall(rewriter, loc, "createSparseTensorWriter", {opaqueTp},
+                       {op.getDest()}, EmitCInterface::Off)
+            .getResult(0);
+    Value rankValue = constantIndex(rewriter, loc, rank);
+    createFuncCall(rewriter, loc, "outSparseTensorWriterMetaData", {},
+                   {writer, rankValue, nnz, dimSizes}, EmitCInterface::On);
+
+    Value indices = dimSizes; // Reuse the dimSizes buffer for indices.
+    Type eltTp = srcTp.getElementType();
+    SmallString<18> outNextFuncName{"outSparseTensorWriterNext",
+                                    primaryTypeFunctionSuffix(eltTp)};
+    Value value = genAllocaScalar(rewriter, loc, eltTp);
+    ModuleOp module = op->getParentOfType<ModuleOp>();
+    // For each element in the source tensor, output the element.
+    rewriter.create<ForeachOp>(
+        loc, src, [&](OpBuilder &builder, Location loc, ValueRange args) {
+          for (uint64_t i = 0; i < rank; i++) {
+            rewriter.create<memref::StoreOp>(loc, args[i], indices,
+                                             constantIndex(builder, loc, i));
+          }
+          rewriter.create<memref::StoreOp>(loc, args.back(), value);
+          SmallVector<Value, 4> operands{writer, rankValue, indices, value};
+          FlatSymbolRefAttr fn = getFunc(module, outNextFuncName, {}, operands,
+                                         EmitCInterface::On);
+          builder.create<func::CallOp>(loc, TypeRange(), fn, operands);
+          builder.create<sparse_tensor::YieldOp>(loc);
+        });
+
+    // Release the writer.
+    createFuncCall(rewriter, loc, "delSparseTensorWriter", {}, {writer},
+                   EmitCInterface::Off);
+
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -620,7 +687,7 @@ void mlir::populateSparseTensorRewriting(RewritePatternSet &patterns,
 
   // TODO: If RT not enabled, rewrite concatenate ops, etc here.
   if (!enableRT)
-    patterns.add<ConcatenateRewriter, NewRewriter,
+    patterns.add<ConcatenateRewriter, NewRewriter, OutRewriter,
                  Sparse2SparseReshapeRewriter<tensor::ExpandShapeOp>,
                  Sparse2SparseReshapeRewriter<tensor::CollapseShapeOp>>(
         patterns.getContext());

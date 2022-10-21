@@ -1,4 +1,4 @@
-; RUN: opt < %s -lint -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=lint -disable-output 2>&1 | FileCheck %s
 
 %s = type { i8 }
 

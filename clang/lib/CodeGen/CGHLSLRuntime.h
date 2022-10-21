@@ -70,8 +70,6 @@ public:
 
 protected:
   CodeGenModule &CGM;
-  uint32_t ResourceCounters[static_cast<uint32_t>(
-      llvm::hlsl::ResourceClass::NumClasses)] = {0};
 
   llvm::Value *emitInputSemantic(llvm::IRBuilder<> &B, const ParmVarDecl &D,
                                  llvm::Type *Ty);
