@@ -228,6 +228,10 @@ struct S {
     this->a; // expected-warning {{expression result unused}} \
              // ref-warning {{expression result unused}}
     get5();
+#if __cplusplus >= 201703L
+    // FIXME: Enable once we support MaterializeConstantExpr properly.
+    getInts();
+#endif
   }
 
   constexpr int m() const {
