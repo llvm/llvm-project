@@ -3294,6 +3294,13 @@ void Verifier::visitCallBase(CallBase &Call) {
   Check(verifyAttributeCount(Attrs, Call.arg_size()),
         "Attribute after last parameter!", Call);
 
+  Function *Callee =
+      dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
+  bool IsIntrinsic = Callee && Callee->isIntrinsic();
+  if (IsIntrinsic)
+    Check(Callee->getValueType() == FTy,
+          "Intrinsic called with incompatible signature", Call);
+
   auto VerifyTypeAlign = [&](Type *Ty, const Twine &Message) {
     if (!Ty->isSized())
       return;
@@ -3303,18 +3310,13 @@ void Verifier::visitCallBase(CallBase &Call) {
           "Incorrect alignment of " + Message + " to called function!", Call);
   };
 
-  VerifyTypeAlign(FTy->getReturnType(), "return type");
-  for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i) {
-    Type *Ty = FTy->getParamType(i);
-    VerifyTypeAlign(Ty, "argument passed");
+  if (!IsIntrinsic) {
+    VerifyTypeAlign(FTy->getReturnType(), "return type");
+    for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i) {
+      Type *Ty = FTy->getParamType(i);
+      VerifyTypeAlign(Ty, "argument passed");
+    }
   }
-
-  Function *Callee =
-      dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
-  bool IsIntrinsic = Callee && Callee->isIntrinsic();
-  if (IsIntrinsic)
-    Check(Callee->getValueType() == FTy,
-          "Intrinsic called with incompatible signature", Call);
 
   if (Attrs.hasFnAttr(Attribute::Speculatable)) {
     // Don't allow speculatable on call sites, unless the underlying function
