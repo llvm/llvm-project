@@ -17,7 +17,9 @@ endif()
 # Older versions of cmake (< 3.19) require INTERFACE libraries to separate
 # the `add_library` and `target_sources` calls.
 add_library(MLIRSparseTensorEnums INTERFACE)
-target_sources(MLIRSparseTensorEnums INTERFACE ${MLIRSparseTensorEnums_srcs})
+target_sources(MLIRSparseTensorEnums INTERFACE
+	$<BUILD_INTERFACE:${MLIRSparseTensorEnums_srcs}>
+	$<INSTALL_INTERFACE:mlir/Dialect/SparseTensor/IR/Enums.h>)
 # The `add_mlir_library_install` is required for other libraries to
 # depend on this one, but the conditional itself and the phony target
 # are copypasta from `add_mlir_library`.  Afaict (wrengr), the version
