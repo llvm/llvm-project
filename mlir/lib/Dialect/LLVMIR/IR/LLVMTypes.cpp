@@ -450,7 +450,7 @@ void LLVMPointerType::walkImmediateSubElements(
 
 Type LLVMPointerType::replaceImmediateSubElements(
     ArrayRef<Attribute> replAttrs, ArrayRef<Type> replTypes) const {
-  return get(replTypes.front(), getAddressSpace());
+  return get(getContext(), replTypes.front(), getAddressSpace());
 }
 
 //===----------------------------------------------------------------------===//
