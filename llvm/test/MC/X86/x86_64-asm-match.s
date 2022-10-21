@@ -5,16 +5,16 @@
 // CHECK: Trying to match opcode MMX_PSHUFBrr
 // CHECK:   Matching formal operand class MCK_VR64 against actual operand at index 1 (Memory: ModeSize=64,BaseReg=rip,Scale=1,Disp=CPI1_0): Opcode result: multiple operand mismatches, ignoring this opcode
 // CHECK: Trying to match opcode PSHUFBrr
-// CHECK:   Matching formal operand class MCK_FR32 against actual operand at index 1 (Memory: ModeSize=64,BaseReg=rip,Scale=1,Disp=CPI1_0): Opcode result: multiple operand mismatches, ignoring this opcode
+// CHECK:   Matching formal operand class MCK_FR16 against actual operand at index 1 (Memory: ModeSize=64,BaseReg=rip,Scale=1,Disp=CPI1_0): Opcode result: multiple operand mismatches, ignoring this opcode
 // CHECK: Trying to match opcode PSHUFBrm
 // CHECK:   Matching formal operand class MCK_Mem128 against actual operand at index 1 (Memory: ModeSize=64,BaseReg=rip,Scale=1,Disp=CPI1_0): match success using generic matcher
-// CHECK:   Matching formal operand class MCK_FR32 against actual operand at index 2 (Reg:xmm1): match success using generic matcher
+// CHECK:   Matching formal operand class MCK_FR16 against actual operand at index 2 (Reg:xmm1): match success using generic matcher
 // CHECK:   Matching formal operand class InvalidMatchClass against actual operand at index 3: actual operand index out of range Opcode result: complete match, selecting this opcode
 // CHECK: AsmMatcher: found 2 encodings with mnemonic 'sha1rnds4'
 // CHECK: Trying to match opcode SHA1RNDS4rri
 // CHECK:   Matching formal operand class MCK_ImmUnsignedi8 against actual operand at index 1 (Imm:1): match success using generic matcher
-// CHECK:   Matching formal operand class MCK_FR32 against actual operand at index 2 (Reg:xmm1): match success using generic matcher
-// CHECK:   Matching formal operand class MCK_FR32 against actual operand at index 3 (Reg:xmm2): match success using generic matcher
+// CHECK:   Matching formal operand class MCK_FR16 against actual operand at index 2 (Reg:xmm1): match success using generic matcher
+// CHECK:   Matching formal operand class MCK_FR16 against actual operand at index 3 (Reg:xmm2): match success using generic matcher
 // CHECK:   Matching formal operand class InvalidMatchClass against actual operand at index 4: actual operand index out of range Opcode result: complete match, selecting this opcode
 // CHECK: AsmMatcher: found 4 encodings with mnemonic 'pinsrw'
 // CHECK: Trying to match opcode MMX_PINSRWrr
@@ -24,7 +24,7 @@
 // CHECK: Trying to match opcode PINSRWrr
 // CHECK:   Matching formal operand class MCK_ImmUnsignedi8 against actual operand at index 1 (Imm:3): match success using generic matcher
 // CHECK:   Matching formal operand class MCK_GR32orGR64 against actual operand at index 2 (Reg:ecx): match success using generic matcher
-// CHECK:   Matching formal operand class MCK_FR32 against actual operand at index 3 (Reg:xmm5): match success using generic matcher
+// CHECK:   Matching formal operand class MCK_FR16 against actual operand at index 3 (Reg:xmm5): match success using generic matcher
 // CHECK:   Matching formal operand class InvalidMatchClass against actual operand at index 4: actual operand index out of range Opcode result: complete match, selecting this opcode
 // CHECK: AsmMatcher: found 2 encodings with mnemonic 'crc32l'
 // CHECK: Trying to match opcode CRC32r32r32

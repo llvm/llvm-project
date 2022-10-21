@@ -9,18 +9,22 @@ entry:
 }
 
 define zeroext i16 @test2_fast(x86_fp80 %d) #0 {
+; ALL-LABEL: test2_fast:
+; ALL:       # %bb.0: # %entry
+; ALL-NEXT:    subq $24, %rsp
+; ALL-NEXT:    fldt {{[0-9]+}}(%rsp)
+; ALL-NEXT:    fstpt (%rsp)
+; ALL-NEXT:    callq __truncxfhf2@PLT
+; ALL-NEXT:    vpextrw $0, %xmm0, %eax
+; ALL-NEXT:    # kill: def $ax killed $ax killed $eax
+; ALL-NEXT:    addq $24, %rsp
+; ALL-NEXT:    retq
 entry:
   %0 = tail call i16 @llvm.convert.to.fp16.f80(x86_fp80 %d)
   ret i16 %0
 }
 
 define zeroext i16 @test1(double %d) #1 {
-; ALL-LABEL: test1:
-; ALL:       # %bb.0: # %entry
-; ALL-NEXT:    pushq %rax
-; ALL-NEXT:    callq __truncdfhf2@PLT
-; ALL-NEXT:    popq %rcx
-; ALL-NEXT:    retq
 entry:
   %0 = tail call i16 @llvm.convert.to.fp16.f64(double %d)
   ret i16 %0
@@ -33,6 +37,8 @@ define zeroext i16 @test2(x86_fp80 %d) #1 {
 ; ALL-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; ALL-NEXT:    fstpt (%rsp)
 ; ALL-NEXT:    callq __truncxfhf2@PLT
+; ALL-NEXT:    vpextrw $0, %xmm0, %eax
+; ALL-NEXT:    # kill: def $ax killed $ax killed $eax
 ; ALL-NEXT:    addq $24, %rsp
 ; ALL-NEXT:    retq
 entry:

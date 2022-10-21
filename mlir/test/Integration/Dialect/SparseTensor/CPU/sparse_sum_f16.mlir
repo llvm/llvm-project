@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+// FIXME: The runtime needs support for _Float16 on X86, see PR55992
+// UNSUPPORTED: i386, x86_64
+>>>>>>> 655ba9c8a1d2... Reland "Reland "Reland "Reland "[X86][RFC] Enable `_Float16` type support on X86 following the psABI""""
 // RUN: mlir-opt %s --sparse-compiler | \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \

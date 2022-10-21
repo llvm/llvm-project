@@ -4,12 +4,21 @@
 define void @f(<4 x half>* %a, <4 x half>* %b, <8 x half>* %c) {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movdqa -{{[0-9]+}}(%rsp), %xmm0
-; CHECK-NEXT:    movq (%rsi), %rax
-; CHECK-NEXT:    movq %rax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1],xmm0[2],mem[2],xmm0[3],mem[3]
+; CHECK-NEXT:    pinsrw $0, (%rdi), %xmm0
+; CHECK-NEXT:    pinsrw $0, 2(%rdi), %xmm1
+; CHECK-NEXT:    pinsrw $0, 4(%rdi), %xmm2
+; CHECK-NEXT:    pinsrw $0, 6(%rdi), %xmm3
+; CHECK-NEXT:    pinsrw $0, (%rsi), %xmm4
+; CHECK-NEXT:    pinsrw $0, 2(%rsi), %xmm5
+; CHECK-NEXT:    pinsrw $0, 4(%rsi), %xmm6
+; CHECK-NEXT:    pinsrw $0, 6(%rsi), %xmm7
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm7[0],xmm3[1],xmm7[1],xmm3[2],xmm7[2],xmm3[3],xmm7[3]
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm6[0],xmm2[1],xmm6[1],xmm2[2],xmm6[2],xmm2[3],xmm6[3]
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm5[0],xmm1[1],xmm5[1],xmm1[2],xmm5[2],xmm1[3],xmm5[3]
+; CHECK-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
+; CHECK-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; CHECK-NEXT:    movdqa %xmm0, (%rdx)
 ; CHECK-NEXT:    retq
   %tmp4 = load <4 x half>, <4 x half>* %a

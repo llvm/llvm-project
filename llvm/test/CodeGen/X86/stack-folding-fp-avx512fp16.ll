@@ -50,7 +50,7 @@ define <32 x half> @stack_fold_addph_zmm_kz(<32 x half> %a0, <32 x half> %a1, i3
 
 define half @stack_fold_addsh(half %a0, half %a1) {
   ;CHECK-LABEL: stack_fold_addsh
-  ;CHECK:       vaddsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
+  ;CHECK:       vaddsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fadd half %a0, %a1
   ret half %2
@@ -107,7 +107,7 @@ define <32 x half> @stack_fold_cmpph_mask_commuted(<32 x half> %a0, <32 x half> 
 
 define half @stack_fold_divsh(half %a0, half %a1) {
   ;CHECK-LABEL: stack_fold_divsh
-  ;CHECK:       vdivsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
+  ;CHECK:       vdivsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fdiv half %a0, %a1
   ret half %2
@@ -390,7 +390,7 @@ define <32 x half> @stack_fold_maxph_zmm_commutable_kz_commuted(<32 x half> %a0,
 
 define half @stack_fold_maxsh(half %a0, half %a1) #0 {
   ;CHECK-LABEL: stack_fold_maxsh:
-  ;CHECK:       vmaxsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
+  ;CHECK:       vmaxsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fcmp ogt half %a0, %a1
   %3 = select i1 %2, half %a0, half %a1
@@ -399,7 +399,7 @@ define half @stack_fold_maxsh(half %a0, half %a1) #0 {
 
 define half @stack_fold_maxsh_commuted(half %a0, half %a1) #0 {
   ;CHECK-LABEL: stack_fold_maxsh_commuted:
-  ;CHECK-NOT:       vmaxsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
+  ;CHECK-NOT:       vmaxsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fcmp ogt half %a1, %a0
   %3 = select i1 %2, half %a1, half %a0
@@ -408,7 +408,7 @@ define half @stack_fold_maxsh_commuted(half %a0, half %a1) #0 {
 
 define half @stack_fold_maxsh_commutable(half %a0, half %a1) #1 {
   ;CHECK-LABEL: stack_fold_maxsh_commutable:
-  ;CHECK:       vmaxsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
+  ;CHECK:       vmaxsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fcmp ogt half %a0, %a1
   %3 = select i1 %2, half %a0, half %a1
@@ -417,7 +417,7 @@ define half @stack_fold_maxsh_commutable(half %a0, half %a1) #1 {
 
 define half @stack_fold_maxsh_commutable_commuted(half %a0, half %a1) #1 {
   ;CHECK-LABEL: stack_fold_maxsh_commutable_commuted:
-  ;CHECK:       vmaxsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
+  ;CHECK:       vmaxsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fcmp ogt half %a1, %a0
   %3 = select i1 %2, half %a1, half %a0
@@ -569,7 +569,7 @@ define <32 x half> @stack_fold_minph_zmm_commutable_kz_commuted(<32 x half> %a0,
 
 define half @stack_fold_minsh(half %a0, half %a1) #0 {
   ;CHECK-LABEL: stack_fold_minsh:
-  ;CHECK:       vminsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
+  ;CHECK:       vminsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fcmp olt half %a0, %a1
   %3 = select i1 %2, half %a0, half %a1
@@ -578,7 +578,7 @@ define half @stack_fold_minsh(half %a0, half %a1) #0 {
 
 define half @stack_fold_minsh_commuted(half %a0, half %a1) #0 {
   ;CHECK-LABEL: stack_fold_minsh_commuted:
-  ;CHECK-NOT:       vminsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
+  ;CHECK-NOT:       vminsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fcmp olt half %a1, %a0
   %3 = select i1 %2, half %a1, half %a0
@@ -587,7 +587,7 @@ define half @stack_fold_minsh_commuted(half %a0, half %a1) #0 {
 
 define half @stack_fold_minsh_commutable(half %a0, half %a1) #1 {
   ;CHECK-LABEL: stack_fold_minsh_commutable:
-  ;CHECK:       vminsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
+  ;CHECK:       vminsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fcmp olt half %a0, %a1
   %3 = select i1 %2, half %a0, half %a1
@@ -596,7 +596,7 @@ define half @stack_fold_minsh_commutable(half %a0, half %a1) #1 {
 
 define half @stack_fold_minsh_commutable_commuted(half %a0, half %a1) #1 {
   ;CHECK-LABEL: stack_fold_minsh_commutable_commuted:
-  ;CHECK:       vminsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
+  ;CHECK:       vminsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fcmp olt half %a1, %a0
   %3 = select i1 %2, half %a1, half %a0
@@ -671,7 +671,7 @@ define <32 x half> @stack_fold_mulph_zmm_kz(<32 x half> %a0, <32 x half> %a1, i3
 
 define half @stack_fold_mulsh(half %a0, half %a1) {
   ;CHECK-LABEL: stack_fold_mulsh
-  ;CHECK-NOT:       vmulss {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
+  ;CHECK-NOT:       vmulss {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fmul half %a0, %a1
   ret half %2
@@ -972,7 +972,7 @@ define <32 x half> @stack_fold_subph_zmm(<32 x half> %a0, <32 x half> %a1) {
 
 define half @stack_fold_subsh(half %a0, half %a1) {
   ;CHECK-LABEL: stack_fold_subsh
-  ;CHECK:       vsubsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 2-byte Folded Reload
+  ;CHECK:       vsubsh {{-?[0-9]*}}(%rsp), {{%xmm[0-9][0-9]*}}, {{%xmm[0-9][0-9]*}} {{.*#+}} 4-byte Folded Reload
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   %2 = fsub half %a0, %a1
   ret half %2
