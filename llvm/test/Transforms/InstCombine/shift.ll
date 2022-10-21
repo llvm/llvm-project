@@ -1358,6 +1358,16 @@ define <2 x i8> @ashr_demanded_bits_splat(<2 x i8> %x) {
   ret <2 x i8> %shr
 }
 
+define <vscale x 8 x i8> @ashr_demanded_bits_splat2(<vscale x 8 x i8> %x) {
+; CHECK-LABEL: @ashr_demanded_bits_splat2(
+; CHECK-NEXT:    [[AND:%.*]] = ashr <vscale x 8 x i8> [[X:%.*]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 8 x i8> [[AND]]
+;
+  %and = and <vscale x 8 x i8> %x, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 128, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+  %shr = ashr <vscale x 8 x i8> %and, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+  ret <vscale x 8 x i8> %shr
+}
+
 define <2 x i8> @lshr_demanded_bits_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_demanded_bits_splat(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i8> [[X:%.*]], <i8 7, i8 7>
@@ -1366,6 +1376,16 @@ define <2 x i8> @lshr_demanded_bits_splat(<2 x i8> %x) {
   %and = and <2 x i8> %x, <i8 128, i8 128>
   %shr = lshr <2 x i8> %and, <i8 7, i8 7>
   ret <2 x i8> %shr
+}
+
+define <vscale x 8 x i8> @lshr_demanded_bits_splat2(<vscale x 8 x i8> %x) {
+; CHECK-LABEL: @lshr_demanded_bits_splat2(
+; CHECK-NEXT:    [[AND:%.*]] = lshr <vscale x 8 x i8> [[X:%.*]], shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 8 x i8> [[AND]]
+;
+  %and = and <vscale x 8 x i8> %x, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 128, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+  %shr = lshr <vscale x 8 x i8> %and, shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 7, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer)
+  ret <vscale x 8 x i8> %shr
 }
 
 ; Make sure known bits works correctly with non power of 2 bit widths.

@@ -46,7 +46,7 @@ def testParseSuccess():
 
     # A registered pass should parse successfully.
     pm = PassManager.parse("builtin.module(func.func(print-op-stats{json=false}))")
-    # CHECK: Roundtrip: builtin.module(func.func(print-op-stats{json=false}))
+    # CHECK: Roundtrip: builtin.module(builtin.module(func.func(print-op-stats{json=false})))
     log("Roundtrip: ", pm)
 run(testParseSuccess)
 

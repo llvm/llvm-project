@@ -1730,6 +1730,46 @@ example:
     a new pointer for the original function, which means that code that depends
     on function-pointer identity can break. So, any function annotated with
     ``jumptable`` must also be ``unnamed_addr``.
+``memory(...)``
+    This attribute specifies the possible memory effects of the call-site or
+    function. It allows specifying the possible access kinds (``none``,
+    ``read``, ``write``, or ``readwrite``) for the possible memory location
+    kinds (``argmem``, ``inaccessiblemem``, as well as a default). It is best
+    understood by example:
+
+    - ``memory(none)``: Does not access any memory.
+    - ``memory(read)``: May read (but not write) any memory.
+    - ``memory(write)``: May write (but not read) any memory.
+    - ``memory(readwrite)``: May read or write any memory.
+    - ``memory(argmem: read)``: May only read argument memory.
+    - ``memory(argmem: read, inaccessiblemem: write)``: May only read argument
+      memory and only write inaccessible memory.
+    - ``memory(read, argmem: readwrite)``: May read any memory (default mode)
+      and additionally write argument memory.
+    - ``memory(readwrite, argmem: none)``: May access any memory apart from
+      argument memory.
+
+    The supported memory location kinds are:
+
+    - ``argmem``: This refers to accesses that are based on pointer arguments
+      to the function.
+    - ``inaccessiblemem``: This refers to accesses to memory which is not
+      accessible by the current module (before return from the function -- an
+      allocator function may return newly accessible memory while only
+      accessing inaccessible memory itself). Inaccessible memory is often used
+      to model control dependencies of intrinsics.
+    - The default access kind (specified without a location prefix) applies to
+      all locations that haven't been specified explicitly, including those that
+      don't currently have a dedicated location kind (e.g. accesses to globals
+      or captured pointers).
+
+    If the ``memory`` attribute is not specified, then ``memory(readwrite)``
+    is implied (all memory effects are possible).
+
+    The memory effects of a call can be computed as
+    ``CallSiteEffects & (FunctionEffects | OperandBundleEffects)``. Thus, the
+    call-site annotation takes precedence over the potential effects described
+    by either the function annotation or the operand bundles.
 ``minsize``
     This attribute suggests that optimization passes and code generator
     passes make choices that keep the code size of this function as small

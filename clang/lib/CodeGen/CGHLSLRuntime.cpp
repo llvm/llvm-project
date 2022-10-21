@@ -197,7 +197,6 @@ void CGHLSLRuntime::addBufferResourceAnnotation(llvm::GlobalVariable *GV,
                                                 llvm::hlsl::ResourceClass RC,
                                                 llvm::hlsl::ResourceKind RK,
                                                 BufferResBinding &Binding) {
-  uint32_t Counter = ResourceCounters[static_cast<uint32_t>(RC)]++;
   llvm::Module &M = CGM.getModule();
 
   NamedMDNode *ResourceMD = nullptr;
@@ -220,7 +219,7 @@ void CGHLSLRuntime::addBufferResourceAnnotation(llvm::GlobalVariable *GV,
          "ResourceMD must have been set by the switch above.");
 
   llvm::hlsl::FrontendResource Res(
-      GV, TyName, Counter, RK, Binding.Reg.value_or(UINT_MAX), Binding.Space);
+      GV, TyName, RK, Binding.Reg.value_or(UINT_MAX), Binding.Space);
   ResourceMD->addOperand(Res.getMetadata());
 }
 

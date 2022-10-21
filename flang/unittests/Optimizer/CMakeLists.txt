@@ -5,6 +5,7 @@ set(LIBS
   FIRCodeGen
   FIRDialect
   FIRSupport
+  HLFIRDialect
   ${dialect_libs}
 )
 
@@ -13,6 +14,7 @@ add_flang_unittest(FlangOptimizerTests
   Builder/ComplexTest.cpp
   Builder/DoLoopHelperTest.cpp
   Builder/FIRBuilderTest.cpp
+  Builder/HLFIRToolsTest.cpp
   Builder/Runtime/AssignTest.cpp
   Builder/Runtime/CommandTest.cpp
   Builder/Runtime/CharacterTest.cpp

@@ -16,6 +16,7 @@
 // CHECK-NEXT: emitc
 // CHECK-NEXT: func
 // CHECK-NEXT: gpu
+// CHECK-NEXT: index
 // CHECK-NEXT: linalg
 // CHECK-NEXT: llvm
 // CHECK-NEXT: math

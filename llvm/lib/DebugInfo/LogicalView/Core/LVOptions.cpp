@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/LogicalView/Core/LVOptions.h"
+#include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
+#include "llvm/Support/Errc.h"
 
 using namespace llvm;
 using namespace llvm::logicalview;
@@ -393,4 +395,185 @@ void LVOptions::print(raw_ostream &OS) const {
      << "None:      " << Options.getInternalNone() << "\n"
      << "Tag:       " << Options.getInternalTag() << "\n"
      << "\n";
+}
+
+//===----------------------------------------------------------------------===//
+// Logical element selection using patterns.
+//===----------------------------------------------------------------------===//
+LVPatterns *LVPatterns::getPatterns() {
+  static LVPatterns Patterns;
+  return &Patterns;
+}
+
+Error LVPatterns::createMatchEntry(LVMatchInfo &Filters, StringRef Pattern,
+                                   bool IgnoreCase, bool UseRegex) {
+  LVMatch Match;
+  // Process pattern as regular expression.
+  if (UseRegex) {
+    Match.Pattern = std::string(Pattern);
+    if (Pattern.size()) {
+      Match.RE = std::make_shared<Regex>(Pattern, IgnoreCase ? Regex::IgnoreCase
+                                                             : Regex::NoFlags);
+      std::string Error;
+      if (!Match.RE->isValid(Error))
+        return createStringError(errc::invalid_argument,
+                                 "Error in regular expression: %s",
+                                 Error.c_str());
+
+      Match.Mode = LVMatchMode::Regex;
+      Filters.push_back(Match);
+      return Error::success();
+    }
+  }
+
+  // Process pattern as an exact string match, depending on the case.
+  Match.Pattern = std::string(Pattern);
+  if (Match.Pattern.size()) {
+    Match.Mode = IgnoreCase ? LVMatchMode::NoCase : LVMatchMode::Match;
+    Filters.push_back(Match);
+  }
+
+  return Error::success();
+}
+
+void LVPatterns::addGenericPatterns(StringSet<> &Patterns) {
+  addPatterns(Patterns, GenericMatchInfo);
+  if (GenericMatchInfo.size()) {
+    options().setSelectGenericPattern();
+    options().setSelectExecute();
+  }
+}
+
+void LVPatterns::addOffsetPatterns(const LVOffsetSet &Patterns) {
+  for (const LVOffset &Entry : Patterns)
+    OffsetMatchInfo.push_back(Entry);
+  if (OffsetMatchInfo.size()) {
+    options().setSelectOffsetPattern();
+    options().setSelectExecute();
+  }
+}
+
+void LVPatterns::addPatterns(StringSet<> &Patterns, LVMatchInfo &Filters) {
+  bool IgnoreCase = options().getSelectIgnoreCase();
+  bool UseRegex = options().getSelectUseRegex();
+  for (const StringSet<>::value_type &Entry : Patterns) {
+    StringRef Pattern = Entry.first();
+    if (Error Err = createMatchEntry(Filters, Pattern, IgnoreCase, UseRegex))
+      consumeError(std::move(Err));
+  }
+
+  LLVM_DEBUG({
+    dbgs() << "\nPattern Information:\n";
+    for (LVMatch &Match : Filters)
+      dbgs() << "Mode: "
+             << (Match.Mode == LVMatchMode::Match ? "Match" : "Regex")
+             << " Pattern: '" << Match.Pattern << "'\n";
+  });
+}
+
+void LVPatterns::addElement(LVElement *Element) {
+  // Mark any element that matches a given pattern.
+  Element->setIsMatched();
+  options().setSelectExecute();
+  if (options().getReportList())
+    getReaderCompileUnit()->addMatched(Element);
+  if (options().getReportAnyView()) {
+    getReaderCompileUnit()->addMatched(Element->getIsScope()
+                                           ? static_cast<LVScope *>(Element)
+                                           : Element->getParentScope());
+    // Mark element as matched.
+    if (!Element->getIsScope())
+      Element->setHasPattern();
+  }
+}
+
+void LVPatterns::updateReportOptions() {
+  if (ElementRequest.size() || LineRequest.size() || ScopeRequest.size() ||
+      SymbolRequest.size() || TypeRequest.size()) {
+    options().setSelectGenericKind();
+    options().setSelectExecute();
+  }
+
+  // If we have selected requests and there are no specified report options,
+  // assume the 'details' option.
+  if (options().getSelectExecute() && !options().getReportExecute()) {
+    options().setReportExecute();
+    options().setReportList();
+  }
+}
+
+// Match a general pattern.
+bool LVPatterns::matchPattern(StringRef Input, const LVMatchInfo &MatchInfo) {
+  bool Matched = false;
+  // Do not match an empty 'Input'.
+  if (Input.empty())
+    return Matched;
+  // Traverse all match specifications.
+  for (const LVMatch &Match : MatchInfo) {
+    switch (Match.Mode) {
+    case LVMatchMode::Match:
+      Matched = Input.equals(Match.Pattern);
+      break;
+    case LVMatchMode::NoCase:
+      Matched = Input.equals_insensitive(Match.Pattern);
+      break;
+    case LVMatchMode::Regex:
+      Matched = Match.RE->match(Input);
+      break;
+    default:
+      break;
+    }
+    // Return if we have a match.
+    if (Matched)
+      return true;
+  }
+  return Matched;
+}
+
+bool LVPatterns::printElement(const LVLine *Line) const {
+  return (options().getPrintLines() && Line->getIsLineDebug()) ||
+         (options().getPrintInstructions() && Line->getIsLineAssembler());
+}
+
+bool LVPatterns::printObject(const LVLocation *Location) const {
+  if (options().getAttributeAll())
+    return true;
+  bool DoPrint = options().getAttributeAnyLocation();
+  // Consider the case of filler locations.
+  if (DoPrint && Location && Location->getIsGapEntry())
+    DoPrint = options().getAttributeGaps();
+  return DoPrint;
+}
+
+bool LVPatterns::printElement(const LVScope *Scope) const {
+  // A scope will be printed depending on the following rules:
+  // - Request to print scopes.
+  // - Request to print any of its children.
+  // - If the scope is Root or CompileUnit:
+  //     Request to print summary, sizes or warnings.
+  return options().getPrintScopes() ||
+         (options().getPrintSymbols() && Scope->getHasSymbols()) ||
+         (options().getPrintAnyLine() && Scope->getHasLines()) ||
+         (options().getPrintTypes() && Scope->getHasTypes()) ||
+         ((options().getPrintSizesSummary() || options().getPrintWarnings()) &&
+          (Scope->getIsRoot() || Scope->getIsCompileUnit()));
+}
+
+bool LVPatterns::printElement(const LVSymbol *Symbol) const {
+  // Print compiler generated symbols only if command line option.
+  if (Symbol->getIsArtificial())
+    return options().getAttributeGenerated() && options().getPrintSymbols();
+  return options().getPrintSymbols();
+}
+
+bool LVPatterns::printElement(const LVType *Type) const {
+  // Print array subranges only if print types is requested.
+  if (Type->getIsSubrange())
+    return options().getAttributeSubrange() && options().getPrintTypes();
+  return options().getPrintTypes();
+}
+
+void LVPatterns::print(raw_ostream &OS) const {
+  OS << "LVPatterns\n";
+  LLVM_DEBUG(dbgs() << "Print Patterns\n");
 }

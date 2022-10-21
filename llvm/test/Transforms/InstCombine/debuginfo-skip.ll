@@ -1,5 +1,5 @@
-; RUN: opt -instcombine-lower-dbg-declare=0 < %s -instcombine -S | FileCheck %s
-; RUN: opt -instcombine-lower-dbg-declare=1 < %s -instcombine -S | FileCheck %s
+; RUN: opt -instcombine-lower-dbg-declare=0 < %s -passes=instcombine -S | FileCheck %s
+; RUN: opt -instcombine-lower-dbg-declare=1 < %s -passes=instcombine -S | FileCheck %s
 
 define i32 @foo(i32 %j) #0 !dbg !7 {
 entry:

@@ -360,6 +360,9 @@ Non-comprehensive list of changes in this release
   timestamp to be used in replacement of the current date and time in
   the ``__DATE__``, ``__TIME__``, and ``__TIMESTAMP__`` macros. See
   `<https://reproducible-builds.org/docs/source-date-epoch/>`_.
+- Clang now supports ``__has_constexpr_builtin`` function-like macro that
+  evaluates to 1 if the builtin is supported and can be constant evaluated.
+  It can be used to writing conditionally constexpr code that uses builtins.
 
 New Compiler Flags
 ------------------
@@ -629,7 +632,10 @@ AST Matchers
 
 clang-format
 ------------
-- Add `RemoveSemicolon` option for removing `;` after a non-empty function definition.
+- Add ``RemoveSemicolon`` option for removing ``;`` after a non-empty function definition.
+- Add ``RequiresExpressionIndentation`` option for configuring the alignment of requires-expressions.
+  The default value of this option is ``OuterScope``, which differs in behavior from clang-format 15.
+  To match the default behavior of clang-format 15, use the ``Keyword`` value.
 
 clang-extdef-mapping
 --------------------

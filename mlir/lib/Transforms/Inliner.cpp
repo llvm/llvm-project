@@ -639,17 +639,10 @@ private:
 } // namespace
 
 InlinerPass::InlinerPass() : InlinerPass(defaultInlinerOptPipeline) {}
-InlinerPass::InlinerPass(std::function<void(OpPassManager &)> defaultPipeline)
-    : defaultPipeline(std::move(defaultPipeline)) {
+InlinerPass::InlinerPass(
+    std::function<void(OpPassManager &)> defaultPipelineArg)
+    : defaultPipeline(std::move(defaultPipelineArg)) {
   opPipelines.push_back({});
-
-  // Initialize the pass options with the provided arguments.
-  if (defaultPipeline) {
-    OpPassManager fakePM("__mlir_fake_pm_op");
-    defaultPipeline(fakePM);
-    llvm::raw_string_ostream strStream(defaultPipelineStr);
-    fakePM.printAsTextualPipeline(strStream);
-  }
 }
 
 InlinerPass::InlinerPass(std::function<void(OpPassManager &)> defaultPipeline,

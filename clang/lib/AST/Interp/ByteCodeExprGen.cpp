@@ -107,6 +107,21 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
         });
   }
 
+  case CK_UncheckedDerivedToBase: {
+    if (!this->visit(SubExpr))
+      return false;
+
+    const CXXRecordDecl *FromDecl = getRecordDecl(SubExpr);
+    assert(FromDecl);
+    const CXXRecordDecl *ToDecl = getRecordDecl(CE);
+    assert(ToDecl);
+    const Record *R = getRecord(FromDecl);
+    const Record::Base *ToBase = R->getBase(ToDecl);
+    assert(ToBase);
+
+    return this->emitGetPtrBase(ToBase->Offset, CE);
+  }
+
   case CK_ArrayToPointerDecay:
   case CK_AtomicToNonAtomic:
   case CK_ConstructorConversion:
@@ -721,6 +736,27 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
       if (!this->emitPopPtr(Initializer))
         return false;
     }
+    return true;
+  } else if (const auto *IVIE = dyn_cast<ImplicitValueInitExpr>(Initializer)) {
+    const ArrayType *AT = IVIE->getType()->getAsArrayTypeUnsafe();
+    assert(AT);
+    const auto *CAT = cast<ConstantArrayType>(AT);
+    size_t NumElems = CAT->getSize().getZExtValue();
+
+    if (Optional<PrimType> ElemT = classify(CAT->getElementType())) {
+      // TODO(perf): For int and bool types, we can probably just skip this
+      //   since we memset our Block*s to 0 and so we have the desired value
+      //   without this.
+      for (size_t I = 0; I != NumElems; ++I) {
+        if (!this->emitZero(*ElemT, Initializer))
+          return false;
+        if (!this->emitInitElem(*ElemT, I, Initializer))
+          return false;
+      }
+    } else {
+      assert(false && "default initializer for non-primitive type");
+    }
+
     return true;
   }
 
