@@ -2661,6 +2661,7 @@ cc_library(
         ":GPUToROCDLTransforms",
         ":GPUToSPIRV",
         ":GPUToVulkanTransforms",
+        ":IndexToLLVM",
         ":LinalgToLLVM",
         ":LinalgToSPIRV",
         ":LinalgToStandard",
@@ -3563,6 +3564,7 @@ cc_library(
         ":LLVMDialectInterfaceIncGen",
         ":LLVMIntrinsicOpsIncGen",
         ":LLVMOpsIncGen",
+        ":LLVMTypesIncGen",
         ":SideEffectInterfaces",
         ":Support",
         "//llvm:AsmParser",
@@ -3864,15 +3866,18 @@ td_library(
         "include/mlir/Dialect/LLVMIR/LLVMOpBase.td",
         "include/mlir/Dialect/LLVMIR/LLVMOps.td",
         "include/mlir/Dialect/LLVMIR/LLVMOpsInterfaces.td",
+        "include/mlir/Dialect/LLVMIR/LLVMTypes.td",
     ],
     includes = ["include"],
     deps = [
         ":CallInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
+        ":DataLayoutInterfacesTdFiles",
         ":FunctionInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
+        ":SubElementInterfacesTdFiles",
     ],
 )
 
@@ -4227,16 +4232,46 @@ gentbl_cc_library(
             "include/mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc",
         ),
         (
-            ["--gen-attrdef-decls", "-attrdefs-dialect=llvm"],
+            [
+                "--gen-attrdef-decls",
+                "-attrdefs-dialect=llvm",
+            ],
             "include/mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.h.inc",
         ),
         (
-            ["--gen-attrdef-defs", "-attrdefs-dialect=llvm"],
+            [
+                "--gen-attrdef-defs",
+                "-attrdefs-dialect=llvm",
+            ],
             "include/mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/LLVMOps.td",
+    deps = [":LLVMOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "LLVMTypesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            [
+                "-gen-typedef-decls",
+                "-typedefs-dialect=llvm",
+            ],
+            "include/mlir/Dialect/LLVMIR/LLVMTypes.h.inc",
+        ),
+        (
+            [
+                "-gen-typedef-defs",
+                "-typedefs-dialect=llvm",
+            ],
+            "include/mlir/Dialect/LLVMIR/LLVMTypes.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/LLVMTypes.td",
     deps = [":LLVMOpsTdFiles"],
 )
 
@@ -6546,6 +6581,7 @@ cc_library(
         ":GPUTransformOps",
         ":GPUTransforms",
         ":IR",
+        ":IndexDialect",
         ":LLVMDialect",
         ":LLVMIRTransforms",
         ":LLVMPassIncGen",
@@ -7442,8 +7478,8 @@ gentbl_cc_library(
 cc_library(
     name = "QuantOps",
     srcs = [
-        "lib/Dialect/Quant/IR/QuantDialectBytecode.h",
         "lib/Dialect/Quant/IR/QuantDialectBytecode.cpp",
+        "lib/Dialect/Quant/IR/QuantDialectBytecode.h",
         "lib/Dialect/Quant/IR/QuantOps.cpp",
         "lib/Dialect/Quant/IR/QuantTypes.cpp",
         "lib/Dialect/Quant/IR/TypeDetail.h",
@@ -7468,6 +7504,135 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "IndexOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Index/IR/IndexDialect.td",
+        "include/mlir/Dialect/Index/IR/IndexEnums.td",
+        "include/mlir/Dialect/Index/IR/IndexOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":CastInterfacesTdFiles",
+        ":InferTypeOpInterfaceTdFiles",
+        ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "IndexOpsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/Index/IR/IndexOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/Index/IR/IndexOps.cpp.inc",
+        ),
+        (
+            [
+                "-gen-dialect-decls",
+                "-dialect=index",
+            ],
+            "include/mlir/Dialect/Index/IR/IndexOpsDialect.h.inc",
+        ),
+        (
+            [
+                "-gen-dialect-defs",
+                "-dialect=index",
+            ],
+            "include/mlir/Dialect/Index/IR/IndexOpsDialect.cpp.inc",
+        ),
+        (
+            ["-gen-attrdef-decls"],
+            "include/mlir/Dialect/Index/IR/IndexOpsAttrDefs.h.inc",
+        ),
+        (
+            ["-gen-attrdef-defs"],
+            "include/mlir/Dialect/Index/IR/IndexOpsAttrDefs.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Index/IR/IndexOps.td",
+    deps = [":IndexOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "IndexEnumsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/Index/IR/IndexEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/Index/IR/IndexEnums.cpp.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-decls",
+                "-attrdefs-dialect=index",
+            ],
+            "include/mlir/Dialect/Index/IR/IndexAttrs.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-attrdefs-dialect=index",
+            ],
+            "include/mlir/Dialect/Index/IR/IndexAttrs.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Index/IR/IndexEnums.td",
+    deps = [":IndexOpsTdFiles"],
+)
+
+cc_library(
+    name = "IndexToLLVM",
+    srcs = glob([
+        "lib/Conversion/IndexToLLVM/*.cpp",
+        "lib/Conversion/IndexToLLVM/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/IndexToLLVM/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":IndexDialect",
+        ":Analysis",
+        ":ConversionPassIncGen",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":Pass",
+        ":Support",
+        ":Transforms",
+
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+
+cc_library(
+    name = "IndexDialect",
+    srcs = glob(["lib/Dialect/Index/IR/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Index/IR/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":IndexEnumsIncGen",
+        ":IndexOpsIncGen",
+        ":InferTypeOpInterface",
         "//llvm:Support",
     ],
 )
