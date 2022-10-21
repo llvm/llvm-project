@@ -322,33 +322,6 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-// LLVMPointerTypeStorage.
-//===----------------------------------------------------------------------===//
-
-/// Storage type for LLVM dialect pointer types. These are uniqued by a pair of
-/// element type and address space. The element type may be null indicating that
-/// the pointer is opaque.
-struct LLVMPointerTypeStorage : public TypeStorage {
-  using KeyTy = std::tuple<Type, unsigned>;
-
-  LLVMPointerTypeStorage(const KeyTy &key)
-      : pointeeType(std::get<0>(key)), addressSpace(std::get<1>(key)) {}
-
-  static LLVMPointerTypeStorage *construct(TypeStorageAllocator &allocator,
-                                           const KeyTy &key) {
-    return new (allocator.allocate<LLVMPointerTypeStorage>())
-        LLVMPointerTypeStorage(key);
-  }
-
-  bool operator==(const KeyTy &key) const {
-    return std::make_tuple(pointeeType, addressSpace) == key;
-  }
-
-  Type pointeeType;
-  unsigned addressSpace;
-};
-
-//===----------------------------------------------------------------------===//
 // LLVMTypeAndSizeStorage.
 //===----------------------------------------------------------------------===//
 

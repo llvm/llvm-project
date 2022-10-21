@@ -1,3 +1,4 @@
+//===- LLVMTypes.cpp - MLIR LLVM dialect types ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -73,6 +74,41 @@ static void printFunctionTypes(AsmPrinter &p, ArrayRef<Type> params,
     p << "...";
   }
   p << ')';
+}
+
+//===----------------------------------------------------------------------===//
+// custom<Pointer>
+//===----------------------------------------------------------------------===//
+
+static ParseResult parsePointer(AsmParser &p, FailureOr<Type> &elementType,
+                                FailureOr<unsigned> &addressSpace) {
+  addressSpace = 0;
+  // `<` addressSpace `>`
+  OptionalParseResult result = p.parseOptionalInteger(*addressSpace);
+  if (result.has_value()) {
+    if (failed(result.value()))
+      return failure();
+    elementType = Type();
+    return success();
+  }
+
+  if (parsePrettyLLVMType(p, elementType))
+    return failure();
+  if (succeeded(p.parseOptionalComma()))
+    return p.parseInteger(*addressSpace);
+
+  return success();
+}
+
+static void printPointer(AsmPrinter &p, Type elementType,
+                         unsigned addressSpace) {
+  if (elementType)
+    printPrettyLLVMType(p, elementType);
+  if (addressSpace != 0) {
+    if (elementType)
+      p << ", ";
+    p << addressSpace;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -228,7 +264,7 @@ Type LLVMFunctionType::replaceImmediateSubElements(
 }
 
 //===----------------------------------------------------------------------===//
-// Pointer type.
+// LLVMPointerType
 //===----------------------------------------------------------------------===//
 
 bool LLVMPointerType::isValidElementType(Type type) {
@@ -246,32 +282,6 @@ LLVMPointerType LLVMPointerType::get(Type pointee, unsigned addressSpace) {
   return Base::get(pointee.getContext(), pointee, addressSpace);
 }
 
-LLVMPointerType LLVMPointerType::get(MLIRContext *context,
-                                     unsigned addressSpace) {
-  return Base::get(context, Type(), addressSpace);
-}
-
-LLVMPointerType
-LLVMPointerType::getChecked(function_ref<InFlightDiagnostic()> emitError,
-                            Type pointee, unsigned addressSpace) {
-  return Base::getChecked(emitError, pointee.getContext(), pointee,
-                          addressSpace);
-}
-
-LLVMPointerType
-LLVMPointerType::getChecked(function_ref<InFlightDiagnostic()> emitError,
-                            MLIRContext *context, unsigned addressSpace) {
-  return Base::getChecked(emitError, context, Type(), addressSpace);
-}
-
-Type LLVMPointerType::getElementType() const { return getImpl()->pointeeType; }
-
-bool LLVMPointerType::isOpaque() const { return !getImpl()->pointeeType; }
-
-unsigned LLVMPointerType::getAddressSpace() const {
-  return getImpl()->addressSpace;
-}
-
 LogicalResult
 LLVMPointerType::verify(function_ref<InFlightDiagnostic()> emitError,
                         Type pointee, unsigned) {
@@ -279,6 +289,9 @@ LLVMPointerType::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "invalid pointer element type: " << pointee;
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// DataLayoutTypeInterface
 
 constexpr const static unsigned kDefaultPointerSizeBits = 64;
 constexpr const static unsigned kDefaultPointerAlignment = 8;
@@ -425,6 +438,9 @@ LogicalResult LLVMPointerType::verifyEntries(DataLayoutEntryListRef entries,
   }
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// SubElementTypeInterface
 
 void LLVMPointerType::walkImmediateSubElements(
     function_ref<void(Attribute)> walkAttrsFn,
