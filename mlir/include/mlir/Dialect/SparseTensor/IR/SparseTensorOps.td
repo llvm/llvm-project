@@ -834,17 +834,46 @@ def SparseTensor_YieldOp : SparseTensor_Op<"yield", [Pure, Terminator]>,
 
 def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
     [SingleBlockImplicitTerminator<"YieldOp">]>,
-    Arguments<(ins AnySparseTensor:$tensor)>{
-  let summary = "Iterates over non-zero elements in a sparse tensor";
+    Arguments<(ins AnyTensor:$tensor)>{
+  let summary = "Iterates over elements in a tensor";
   let description = [{
-     Iterates over every non-zero element in the given sparse tensor and executes
-     the block.
+     Iterates over stored elements in a tensor (which are typically, but not always,
+     non-zero for sparse tensors) and executes the block.
 
-     For a input sparse tensor with rank n, the block must take n + 1 arguments. The
+     For an input tensor with rank n, the block must take n + 1 arguments. The
      first n arguments must be Index type, together indicating the current coordinates
      of the element being visited. The last argument must have the same type as the
-     sparse tensor's element type, representing the actual value loaded from the input
+     tensor's element type, representing the actual value loaded from the input
      tensor at the given coordinates.
+
+     Note that foreach generated loop iterates over the stored elements in the storage
+     order. However, no matter what storage order is used, the indices passed to the block
+     always obey the original dimension order.
+
+     For example:
+     ```mlir
+     #COL_MAJOR = #sparse_tensor.encoding<{
+       dimLevelType = [ "compressed", "compressed" ],
+       dimOrdering = affine_map<(i,j) -> (j,i)>
+     }>
+     
+     // foreach on a column-major sparse tensor
+     sparse_tensor.foreach in %0 : tensor<2x3xf64, #COL_MAJOR> do {
+      ^bb0(%row: index, %col: index, %arg3: f64): 
+         // [%row, %col] -> [0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]
+     }
+
+     #ROW_MAJOR = #sparse_tensor.encoding<{
+       dimLevelType = [ "compressed", "compressed" ],
+     }>
+
+     // foreach on a row-major sparse tensor
+     sparse_tensor.foreach in %0 : tensor<2x3xf64, #ROW_MAJOR> do {
+      ^bb0(%row: index, %col: index, %arg3: f64): 
+         // [%row, %col] -> [0, 0], [0, 1], [1, 0], [1, 1], [2, 0], [2, 1]
+     }
+
+     ```
 
      Example:
 
