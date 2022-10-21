@@ -73,69 +73,6 @@ DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType);
 #undef DEFINE_TRIVIAL_LLVM_TYPE
 
 //===----------------------------------------------------------------------===//
-// LLVMFunctionType.
-//===----------------------------------------------------------------------===//
-
-/// LLVM dialect function type. It consists of a single return type (unlike MLIR
-/// which can have multiple), a list of parameter types and can optionally be
-/// variadic.
-class LLVMFunctionType : public Type::TypeBase<LLVMFunctionType, Type,
-                                               detail::LLVMFunctionTypeStorage,
-                                               SubElementTypeInterface::Trait> {
-public:
-  /// Inherit base constructors.
-  using Base::Base;
-  using Base::getChecked;
-
-  /// Checks if the given type can be used an argument in a function type.
-  static bool isValidArgumentType(Type type);
-
-  /// Checks if the given type can be used as a result in a function type.
-  static bool isValidResultType(Type type);
-
-  /// Returns whether the function is variadic.
-  bool isVarArg() const;
-
-  /// Gets or creates an instance of LLVM dialect function in the same context
-  /// as the `result` type.
-  static LLVMFunctionType get(Type result, ArrayRef<Type> arguments,
-                              bool isVarArg = false);
-  static LLVMFunctionType
-  getChecked(function_ref<InFlightDiagnostic()> emitError, Type result,
-             ArrayRef<Type> arguments, bool isVarArg = false);
-
-  /// Returns a clone of this function type with the given argument
-  /// and result types.
-  LLVMFunctionType clone(TypeRange inputs, TypeRange results) const;
-
-  /// Returns the result type of the function.
-  Type getReturnType() const;
-
-  /// Returns the result type of the function as an ArrayRef, enabling better
-  /// integration with generic MLIR utilities.
-  ArrayRef<Type> getReturnTypes() const;
-
-  /// Returns the number of arguments to the function.
-  unsigned getNumParams();
-
-  /// Returns `i`-th argument of the function. Asserts on out-of-bounds.
-  Type getParamType(unsigned i);
-
-  /// Returns a list of argument types of the function.
-  ArrayRef<Type> getParams() const;
-  ArrayRef<Type> params() { return getParams(); }
-
-  /// Verifies that the type about to be constructed is well-formed.
-  static LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
-                              Type result, ArrayRef<Type> arguments, bool);
-
-  void walkImmediateSubElements(function_ref<void(Attribute)> walkAttrsFn,
-                                function_ref<void(Type)> walkTypesFn) const;
-  Type replaceImmediateSubElements(ArrayRef<Attribute> replAttrs,
-                                   ArrayRef<Type> replTypes) const;
-};
-
-//===----------------------------------------------------------------------===//
 // LLVMPointerType.
 //===----------------------------------------------------------------------===//
 

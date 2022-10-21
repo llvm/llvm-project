@@ -58,4 +58,64 @@ def LLVMArrayType : LLVMType<"LLVMArray", "array", [
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// LLVMFunctionType
+//===----------------------------------------------------------------------===//
+
+def LLVMFunctionType : LLVMType<"LLVMFunction", "func", [
+    DeclareTypeInterfaceMethods<SubElementTypeInterface>]> {
+  let summary = "LLVM function type";
+  let description = [{
+    The `!llvm.func` is a function type. It consists of a single return type
+    (unlike MLIR which can have multiple), a list of parameter types and can
+    optionally be variadic.
+
+    Example:
+
+    ```mlir
+    !llvm.func<i32 (i32)>
+    ```
+  }];
+
+  let parameters = (ins "Type":$returnType, ArrayRefParameter<"Type">:$params,
+                        "bool":$varArg);
+  let assemblyFormat = [{
+    `<` custom<PrettyLLVMType>($returnType) ` ` `(`
+    custom<FunctionTypes>($params, $varArg) `>`
+  }];
+
+  let genVerifyDecl = 1;
+
+  let builders = [
+    TypeBuilderWithInferredContext<(ins
+      "Type":$result, "ArrayRef<Type>":$arguments,
+      CArg<"bool", "false">:$isVarArg)>
+  ];
+
+  let extraClassDeclaration = [{
+    /// Checks if the given type can be used an argument in a function type.
+    static bool isValidArgumentType(Type type);
+
+    /// Checks if the given type can be used as a result in a function type.
+    static bool isValidResultType(Type type);
+
+    /// Returns whether the function is variadic.
+    bool isVarArg() const { return getVarArg(); }
+
+    /// Returns a clone of this function type with the given argument
+    /// and result types.
+    LLVMFunctionType clone(TypeRange inputs, TypeRange results) const;
+
+    /// Returns the result type of the function as an ArrayRef, enabling better
+    /// integration with generic MLIR utilities.
+    ArrayRef<Type> getReturnTypes() const;
+
+    /// Returns the number of arguments to the function.
+    unsigned getNumParams() const { return getParams().size(); }
+
+    /// Returns `i`-th argument of the function. Asserts on out-of-bounds.
+    Type getParamType(unsigned i) { return getParams()[i]; }
+  }];
+}
+
 #endif // LLVMTYPES_TD
