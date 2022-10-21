@@ -1040,7 +1040,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                Name, F->getParent());
 
       // The new function may also need remangling.
-      if (auto Result = llvm::Intrinsic::remangleIntrinsicFunction(F))
+      if (auto Result = llvm::Intrinsic::remangleIntrinsicFunction(NewFn))
         NewFn = *Result;
       return true;
     }
