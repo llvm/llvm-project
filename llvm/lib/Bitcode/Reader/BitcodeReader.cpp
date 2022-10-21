@@ -627,8 +627,6 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
   // stored here with their replacement function.
   using UpdatedIntrinsicMap = DenseMap<Function *, Function *>;
   UpdatedIntrinsicMap UpgradedIntrinsics;
-  // Intrinsics which were remangled because of types rename
-  UpdatedIntrinsicMap RemangledIntrinsics;
 
   // Several operations happen after the module header has been read, but
   // before function bodies are processed. This keeps track of whether
@@ -3570,11 +3568,6 @@ Error BitcodeReader::globalCleanup() {
     Function *NewFn;
     if (UpgradeIntrinsicFunction(&F, NewFn))
       UpgradedIntrinsics[&F] = NewFn;
-    else if (auto Remangled = Intrinsic::remangleIntrinsicFunction(&F))
-      // Some types could be renamed during loading if several modules are
-      // loaded in the same LLVMContext (LTO scenario). In this case we should
-      // remangle intrinsics names as well.
-      RemangledIntrinsics[&F] = *Remangled;
     // Look for functions that rely on old function attribute behavior.
     UpgradeFunctionAttributes(F);
   }
@@ -6461,12 +6454,6 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
         UpgradeIntrinsicCall(CI, I.second);
   }
 
-  // Update calls to the remangled intrinsics
-  for (auto &I : RemangledIntrinsics)
-    for (User *U : llvm::make_early_inc_range(I.first->materialized_users()))
-      // Don't expect any other users than call sites
-      cast<CallBase>(U)->setCalledFunction(I.second);
-
   // Finish fn->subprogram upgrade for materialized functions.
   if (DISubprogram *SP = MDLoader->lookupSubprogramForFunction(F))
     F->setSubprogram(SP);
@@ -6571,12 +6558,6 @@ Error BitcodeReader::materializeModule() {
     I.first->eraseFromParent();
   }
   UpgradedIntrinsics.clear();
-  // Do the same for remangled intrinsics
-  for (auto &I : RemangledIntrinsics) {
-    I.first->replaceAllUsesWith(I.second);
-    I.first->eraseFromParent();
-  }
-  RemangledIntrinsics.clear();
 
   UpgradeDebugInfo(*TheModule);
 
