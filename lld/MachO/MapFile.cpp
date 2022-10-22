@@ -45,32 +45,41 @@ using namespace llvm::sys;
 using namespace lld;
 using namespace lld::macho;
 
-using Symbols = std::vector<Defined *>;
-// Returns a pair where the left element is a container of all live Symbols and
-// the right element is a container of all dead symbols.
-static std::pair<Symbols, Symbols> getSymbols() {
-  Symbols liveSymbols, deadSymbols;
+struct MapInfo {
+  SmallVector<InputFile *> files;
+  SmallVector<Defined *> liveSymbols;
+  SmallVector<Defined *> deadSymbols;
+};
+
+static MapInfo gatherMapInfo() {
+  MapInfo info;
   for (InputFile *file : inputFiles)
-    if (isa<ObjFile>(file))
-      for (Symbol *sym : file->symbols)
+    if (isa<ObjFile>(file) || isa<BitcodeFile>(file)) {
+      bool hasEmittedSymbol = false;
+      for (Symbol *sym : file->symbols) {
         if (auto *d = dyn_cast_or_null<Defined>(sym))
           if (d->isec && d->getFile() == file) {
             if (d->isLive()) {
               assert(!shouldOmitFromOutput(d->isec));
-              liveSymbols.push_back(d);
+              info.liveSymbols.push_back(d);
             } else {
-              deadSymbols.push_back(d);
+              info.deadSymbols.push_back(d);
             }
+            hasEmittedSymbol = true;
           }
-  parallelSort(liveSymbols.begin(), liveSymbols.end(),
+      }
+      if (hasEmittedSymbol)
+        info.files.push_back(file);
+    }
+  parallelSort(info.liveSymbols.begin(), info.liveSymbols.end(),
                [](Defined *a, Defined *b) {
                  return a->getVA() != b->getVA() ? a->getVA() < b->getVA()
                                                  : a->getName() < b->getName();
                });
   parallelSort(
-      deadSymbols.begin(), deadSymbols.end(),
+      info.deadSymbols.begin(), info.deadSymbols.end(),
       [](Defined *a, Defined *b) { return a->getName() < b->getName(); });
-  return {std::move(liveSymbols), std::move(deadSymbols)};
+  return info;
 }
 
 // Construct a map from symbols to their stringified representations.
@@ -128,16 +137,16 @@ void macho::writeMapFile() {
   os << format("# Arch: %s\n",
                getArchitectureName(config->arch()).str().c_str());
 
+  MapInfo info = gatherMapInfo();
+
   // Dump table of object files.
   os << "# Object files:\n";
   os << format("[%3u] %s\n", 0, (const char *)"linker synthesized");
   uint32_t fileIndex = 1;
   DenseMap<lld::macho::InputFile *, uint32_t> readerToFileOrdinal;
-  for (InputFile *file : inputFiles) {
-    if (isa<ObjFile>(file)) {
-      os << format("[%3u] %s\n", fileIndex, file->getName().str().c_str());
-      readerToFileOrdinal[file] = fileIndex++;
-    }
+  for (InputFile *file : info.files) {
+    os << format("[%3u] %s\n", fileIndex, file->getName().str().c_str());
+    readerToFileOrdinal[file] = fileIndex++;
   }
 
   // Dump table of sections
@@ -153,13 +162,11 @@ void macho::writeMapFile() {
     }
 
   // Dump table of symbols
-  auto [liveSymbols, deadSymbols] = getSymbols();
-
   DenseMap<Symbol *, std::string> liveSymbolStrings =
-      getSymbolStrings(liveSymbols);
+      getSymbolStrings(info.liveSymbols);
   os << "# Symbols:\n";
   os << "# Address\tSize    \tFile  Name\n";
-  for (Defined *sym : liveSymbols) {
+  for (Defined *sym : info.liveSymbols) {
     assert(sym->isLive());
     os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(), sym->size,
                  readerToFileOrdinal[sym->getFile()],
@@ -168,10 +175,10 @@ void macho::writeMapFile() {
 
   if (config->deadStrip) {
     DenseMap<Symbol *, std::string> deadSymbolStrings =
-        getSymbolStrings(deadSymbols);
+        getSymbolStrings(info.deadSymbols);
     os << "# Dead Stripped Symbols:\n";
     os << "#        \tSize    \tFile  Name\n";
-    for (Defined *sym : deadSymbols) {
+    for (Defined *sym : info.deadSymbols) {
       assert(!sym->isLive());
       os << format("<<dead>>\t0x%08llX\t[%3u] %s\n", sym->size,
                    readerToFileOrdinal[sym->getFile()],
