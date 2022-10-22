@@ -370,7 +370,9 @@ Error ELFDebugObject::recordSection(
     return Err;
   auto ItInserted = Sections.try_emplace(Name, std::move(Section));
   if (!ItInserted.second)
-    return make_error<StringError>("Duplicate section",
+    return make_error<StringError>("In " + Buffer->getBufferIdentifier() +
+				   ", encountered duplicate section \"" +
+				   Name + "\" while building debug object",
                                    inconvertibleErrorCode());
   return Error::success();
 }
