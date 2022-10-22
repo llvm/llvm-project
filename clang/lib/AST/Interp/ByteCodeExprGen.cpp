@@ -237,6 +237,10 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
       return Discard(this->emitBitAnd(*T, BO));
     case BO_Or:
       return Discard(this->emitBitOr(*T, BO));
+    case BO_Shl:
+      return Discard(this->emitShl(*LT, *RT, BO));
+    case BO_Shr:
+      return Discard(this->emitShr(*LT, *RT, BO));
     case BO_LAnd:
     case BO_LOr:
     default:
@@ -451,7 +455,13 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
   case BO_DivAssign:
   case BO_RemAssign:
   case BO_ShlAssign:
+    if (!this->emitShl(*LT, *RT, E))
+      return false;
+    break;
   case BO_ShrAssign:
+    if (!this->emitShr(*LT, *RT, E))
+      return false;
+    break;
   case BO_AndAssign:
   case BO_XorAssign:
   case BO_OrAssign:

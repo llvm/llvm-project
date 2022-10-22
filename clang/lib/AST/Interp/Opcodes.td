@@ -402,6 +402,17 @@ def Rem : Opcode {
   let Types = [NumberTypeClass];
   let HasGroup = 1;
 }
+
+def Shl : Opcode {
+  let Types = [IntegerTypeClass, IntegerTypeClass];
+  let HasGroup = 1;
+}
+
+def Shr : Opcode {
+  let Types = [IntegerTypeClass, IntegerTypeClass];
+  let HasGroup = 1;
+}
+
 def BitAnd : IntegerOpcode;
 def BitOr : IntegerOpcode;
 def Div : Opcode {
