@@ -2557,6 +2557,28 @@ OpFoldResult LLVM::GEPOp::fold(ArrayRef<Attribute> operands) {
 }
 
 //===----------------------------------------------------------------------===//
+// OpAsmDialectInterface
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
+  using OpAsmDialectInterface::OpAsmDialectInterface;
+
+  AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
+    return TypeSwitch<Attribute, AliasResult>(attr)
+        .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
+              DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
+              DILexicalBlockFileAttr, DILocalVariableAttr, DISubprogramAttr,
+              DISubroutineTypeAttr>([&](auto attr) {
+          os << decltype(attr)::getMnemonic();
+          return AliasResult::OverridableAlias;
+        })
+        .Default([](Attribute) { return AliasResult::NoAlias; });
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // LLVMDialect initialization, type parsing, and registration.
 //===----------------------------------------------------------------------===//
 
@@ -2584,6 +2606,7 @@ void LLVMDialect::initialize() {
 
   // Support unknown operations because not all LLVM operations are registered.
   allowUnknownOperations();
+  addInterfaces<LLVMOpAsmDialectInterface>();
 }
 
 #define GET_OP_CLASSES
