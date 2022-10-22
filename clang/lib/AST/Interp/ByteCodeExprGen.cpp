@@ -414,6 +414,57 @@ bool ByteCodeExprGen<Emitter>::VisitCharacterLiteral(
   return this->emitConst(E, E->getValue());
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
+    const CompoundAssignOperator *E) {
+  const Expr *LHS = E->getLHS();
+  const Expr *RHS = E->getRHS();
+  Optional<PrimType> LT = classify(E->getLHS()->getType());
+  Optional<PrimType> RT = classify(E->getRHS()->getType());
+
+  if (!LT || !RT)
+    return false;
+
+  assert(!E->getType()->isPointerType() &&
+         "Support pointer arithmethic in compound assignment operators");
+
+  // Get LHS pointer, load its value and get RHS value.
+  if (!visit(LHS))
+    return false;
+  if (!this->emitLoad(*LT, E))
+    return false;
+  if (!visit(RHS))
+    return false;
+
+  // Perform operation.
+  switch (E->getOpcode()) {
+  case BO_AddAssign:
+    if (!this->emitAdd(*LT, E))
+      return false;
+    break;
+  case BO_SubAssign:
+    if (!this->emitSub(*LT, E))
+      return false;
+    break;
+
+  case BO_MulAssign:
+  case BO_DivAssign:
+  case BO_RemAssign:
+  case BO_ShlAssign:
+  case BO_ShrAssign:
+  case BO_AndAssign:
+  case BO_XorAssign:
+  case BO_OrAssign:
+  default:
+    llvm_unreachable("Unimplemented compound assign operator");
+  }
+
+  // And store the result in LHS.
+  if (DiscardResult)
+    return this->emitStorePop(*LT, E);
+  return this->emitStore(*LT, E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true);
   return this->Visit(E);

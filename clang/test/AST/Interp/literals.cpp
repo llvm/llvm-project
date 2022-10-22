@@ -415,5 +415,43 @@ namespace IncDec {
                                          // expected-note {{in call to 'UnderFlow()'}} \
                                          // ref-error {{not an integral constant expression}} \
                                          // ref-note {{in call to 'UnderFlow()'}}
+
+  constexpr int getTwo() {
+    int i = 1;
+    return (i += 1);
+  }
+  static_assert(getTwo() == 2, "");
+
+  constexpr int sub(int a) {
+    return (a -= 2);
+  }
+  static_assert(sub(7) == 5, "");
+
+  constexpr int add(int a, int b) {
+    a += b; // expected-note {{is outside the range of representable values}} \
+            // ref-note {{is outside the range of representable values}} 
+    return a;
+  }
+  static_assert(add(1, 2) == 3, "");
+  static_assert(add(INT_MAX, 1) == 0, ""); // expected-error {{not an integral constant expression}} \
+                                           // expected-note {{in call to 'add}} \
+                                           // ref-error {{not an integral constant expression}} \
+                                           // ref-note {{in call to 'add}}
+
+  constexpr int sub(int a, int b) {
+    a -= b; // expected-note {{is outside the range of representable values}} \
+            // ref-note {{is outside the range of representable values}} 
+    return a;
+  }
+  static_assert(sub(10, 20) == -10, "");
+  static_assert(sub(INT_MIN, 1) == 0, ""); // expected-error {{not an integral constant expression}} \
+                                           // expected-note {{in call to 'sub}} \
+                                           // ref-error {{not an integral constant expression}} \
+                                           // ref-note {{in call to 'sub}}
+
+  constexpr int subAll(int a) {
+    return (a -= a);
+  }
+  static_assert(subAll(213) == 0, "");
 };
 #endif
