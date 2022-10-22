@@ -279,6 +279,23 @@ namespace bitOr {
   static_assert((12 | true) == 13, "");
 };
 
+namespace bitXor {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wxor-used-as-pow"
+  static_assert((10 ^ 1) == 11, "");
+  static_assert((10 ^ 10) == 0, "");
+
+  enum {
+    ONE = 1,
+  };
+
+  static_assert((1337 ^ -1) == -1338, "");
+  static_assert((0 | gimme(12)) == 12, "");
+  static_assert((12 ^ true) == 13, "");
+  static_assert((12 ^ ONE) == 13, "");
+#pragma clang diagnostic pop
+};
+
 #if __cplusplus >= 201402L
 constexpr bool IgnoredUnary() {
   bool bo = true;
