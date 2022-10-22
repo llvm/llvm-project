@@ -1,10 +1,10 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s
 // RUN: mlir-opt %s --mlir-print-op-generic | mlir-opt | FileCheck %s
 
-// CHECK-DAG: #[[$BASE_MAP1:map[0-9]+]] = affine_map<(d0)[s0] -> (d0 + s0)>
-// CHECK-DAG: #[[$SUBVIEW_MAP1:map[0-9]+]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-// CHECK-DAG: #[[$SUBVIEW_MAP11:map[0-9]+]] = affine_map<() -> (4)>
-// CHECK-DAG: #[[$SUBVIEW_MAP12:map[0-9]+]] = affine_map<()[s0] -> (s0)>
+// CHECK-DAG: #[[$BASE_MAP1:map[0-9]*]] = affine_map<(d0)[s0] -> (d0 + s0)>
+// CHECK-DAG: #[[$SUBVIEW_MAP1:map[0-9]*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
+// CHECK-DAG: #[[$SUBVIEW_MAP11:map[0-9]*]] = affine_map<() -> (4)>
+// CHECK-DAG: #[[$SUBVIEW_MAP12:map[0-9]*]] = affine_map<()[s0] -> (s0)>
 
 // CHECK-LABEL: func @memref_subview(%arg0
 func.func @memref_subview(%arg0 : index, %arg1 : index, %arg2 : index) {
