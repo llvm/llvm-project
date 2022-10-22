@@ -1986,8 +1986,8 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
           Simplify(CallBuilder(B, CreateSub(Idx0, Idx1)))))
     return Diff->getSExtValue() * Scale;
 
-  KnownBits Known0 = computeKnownBits(Idx0, DL, 0, &AC, Gep0, &DT);
-  KnownBits Known1 = computeKnownBits(Idx1, DL, 0, &AC, Gep1, &DT);
+  KnownBits Known0 = getKnownBits(Idx0, Gep0);
+  KnownBits Known1 = getKnownBits(Idx1, Gep1);
   APInt Unknown = ~(Known0.Zero | Known0.One) | ~(Known1.Zero | Known1.One);
   if (Unknown.isAllOnes())
     return std::nullopt;
