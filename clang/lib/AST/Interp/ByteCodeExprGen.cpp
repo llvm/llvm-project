@@ -241,6 +241,8 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
       return Discard(this->emitShl(*LT, *RT, BO));
     case BO_Shr:
       return Discard(this->emitShr(*LT, *RT, BO));
+    case BO_Xor:
+      return Discard(this->emitBitXor(*T, BO));
     case BO_LAnd:
     case BO_LOr:
     default:
