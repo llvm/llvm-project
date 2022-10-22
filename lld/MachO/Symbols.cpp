@@ -105,6 +105,10 @@ uint64_t Defined::getVA() const {
   return isec->getVA(value);
 }
 
+ObjFile *Defined::getObjectFile() const {
+  return isec ? dyn_cast_or_null<ObjFile>(isec->getFile()) : nullptr;
+}
+
 void Defined::canonicalize() {
   if (unwindEntry)
     unwindEntry = unwindEntry->canonical();
