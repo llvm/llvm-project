@@ -13,6 +13,34 @@ define <4 x i32> @freeze_insert_subvector(<8 x i32> %a0) nounwind {
   ret <4 x i32> %z
 }
 
+define <2 x i64> @freeze_sign_extend_vector_inreg(<16 x i8> %a0) nounwind {
+; CHECK-LABEL: freeze_sign_extend_vector_inreg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovsxbd %xmm0, %xmm0
+; CHECK-NEXT:    vpmovsxdq %xmm0, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %x = sext <16 x i8> %a0 to <16 x i32>
+  %y = shufflevector <16 x i32> %x, <16 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %z = freeze <4 x i32> %y
+  %w = sext <4 x i32> %z to <4 x i64>
+  %r = shufflevector <4 x i64> %w, <4 x i64> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @freeze_zero_extend_vector_inreg(<16 x i8> %a0) nounwind {
+; CHECK-LABEL: freeze_zero_extend_vector_inreg:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; CHECK-NEXT:    ret{{[l|q]}}
+  %x = zext <16 x i8> %a0 to <16 x i32>
+  %y = shufflevector <16 x i32> %x, <16 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %z = freeze <4 x i32> %y
+  %w = zext <4 x i32> %z to <4 x i64>
+  %r = shufflevector <4 x i64> %w, <4 x i64> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x i64> %r
+}
+
 define <4 x i32> @freeze_pshufd(<4 x i32> %a0) nounwind {
 ; CHECK-LABEL: freeze_pshufd:
 ; CHECK:       # %bb.0:
