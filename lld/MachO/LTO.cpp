@@ -108,7 +108,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // load the ObjFile emitted by LTO compilation.
     if (r.Prevailing)
       replaceSymbol<Undefined>(sym, sym->getName(), sym->getFile(),
-                               RefState::Strong);
+                               RefState::Strong, /*wasBitcodeSymbol=*/true);
 
     // TODO: set the other resolution configs properly
   }
