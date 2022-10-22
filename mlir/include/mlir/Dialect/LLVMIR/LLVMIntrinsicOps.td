@@ -3,6 +3,7 @@
 
 include "mlir/IR/OpBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 
 // Operations that correspond to LLVM intrinsics. With MLIR operation set being
@@ -226,6 +227,31 @@ def LLVM_CoroFreeOp : LLVM_IntrOp<"coro.free", [], [], [], 1> {
 def LLVM_CoroResumeOp : LLVM_IntrOp<"coro.resume", [], [], [], 0> {
   let arguments = (ins LLVM_i8Ptr:$handle);
   let assemblyFormat = "$handle attr-dict";
+}
+
+//
+// Debug function intrinsics.
+//
+
+def LLVM_DbgAddrOp : LLVM_Op<"dbg.addr"> {
+  let summary = "Describe the current address of a local debug info variable.";
+  let arguments = (ins LLVM_AnyPointer:$addr, LLVM_DILocalVariableAttr:$varInfo);
+
+  let assemblyFormat = "qualified($varInfo) `=` $addr `:` type($addr) attr-dict";
+}
+
+def LLVM_DbgDeclareOp : LLVM_Op<"dbg.declare"> {
+  let summary = "Declare the address of a local debug info variable.";
+  let arguments = (ins LLVM_AnyPointer:$addr, LLVM_DILocalVariableAttr:$varInfo);
+
+  let assemblyFormat = "qualified($varInfo) `=` $addr `:` type($addr) attr-dict";
+}
+
+def LLVM_DbgValueOp : LLVM_Op<"dbg.value"> {
+  let summary = "Describe the current value of a local debug info variable.";
+  let arguments = (ins LLVM_Type:$value, LLVM_DILocalVariableAttr:$varInfo);
+
+  let assemblyFormat = "qualified($varInfo) `=` $value `:` type($value) attr-dict";
 }
 
 //
