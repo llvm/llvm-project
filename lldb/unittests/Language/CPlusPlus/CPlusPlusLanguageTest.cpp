@@ -116,6 +116,12 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "const volatile &&", "llvm::Optional<llvm::MCFixupKind>::operator*"},
       {"void foo<Dummy<char [10]>>()", "", "foo<Dummy<char [10]>>", "()", "",
        "foo<Dummy<char [10]>>"},
+      {"void foo<Bar<Bar<int>[10]>>()", "", "foo<Bar<Bar<int>[10]>>", "()", "",
+       "foo<Bar<Bar<int>[10]>>"},
+      {"void foo<Bar[10]>()", "", "foo<Bar[10]>", "()", "",
+       "foo<Bar[10]>"},
+      {"void foo<Bar[]>()", "", "foo<Bar[]>", "()", "",
+       "foo<Bar[]>"},
 
       // auto return type
       {"auto std::test_return_auto<int>() const", "std",
