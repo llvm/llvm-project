@@ -70,6 +70,10 @@ def StackTPtr : PtrType<StackT>;
 def RestrictedStackTPtr : RestrictedPtrType<StackT>;
 def ConstRestrictedStackTPtr : ConstType<RestrictedStackTPtr>;
 
+def FdSet : NamedType<"fd_set">;
+def FdSetPtr : PtrType<FdSet>;
+def RestrictedFdSetPtr : RestrictedPtrType<FdSet>;
+
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
   RestrictedPtrType RestrictedCharPtr = RestrictedPtrType<CharType>;
@@ -1184,6 +1188,23 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  HeaderSpec SysSelect = HeaderSpec<
+    "sys/select.h",
+    [], // Macros
+    [FdSet, SigSetType, StructTimevalType, StructTimeSpec, SuSecondsT, TimeTType],
+    [], // Enumerations
+    [
+      FunctionSpec<
+        "select",
+        RetValSpec<IntType>,
+        [
+            ArgSpec<IntType>, ArgSpec<RestrictedFdSetPtr>, ArgSpec<RestrictedFdSetPtr>,
+            ArgSpec<RestrictedFdSetPtr>, ArgSpec<RestrictedStructTimevalPtr>
+        ]
+      >
+    ]
+  >;
+
   let Headers = [
     CType,
     Dirent,
@@ -1197,6 +1218,7 @@ def POSIX : StandardSpec<"POSIX"> {
     SysIOctl,
     SysMMan,
     SysResource,
+    SysSelect,
     SysStat,
     SysUtsName,
     SysWait,

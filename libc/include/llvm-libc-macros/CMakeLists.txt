@@ -84,6 +84,12 @@ add_header(
 )
 
 add_header(
+  sys_select_macros
+  HDR
+    sys-select-macros.h
+)
+
+add_header(
   sys_time_macros
   HDR
     sys-time-macros.h

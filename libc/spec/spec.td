@@ -121,6 +121,12 @@ def RestrictedPidTPtr : RestrictedPtrType<PidT>;
 def StructRUsage : NamedType<"struct rusage">;
 def StructRUsagePtr : PtrType<StructRUsage>;
 
+def StructTimevalType : NamedType<"struct timeval">;
+def StructTimevalPtr : PtrType<StructTimevalType>;
+def RestrictedStructTimevalPtr : RestrictedPtrType<StructTimevalType>;
+
+def SuSecondsT : NamedType<"suseconds_t">;
+
 //added because __assert_fail needs it.
 def UnsignedType : NamedType<"unsigned">;
 
