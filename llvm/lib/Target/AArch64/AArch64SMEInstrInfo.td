@@ -235,30 +235,30 @@ def : Pat<(i64 (AArch64ObscureCopy (i64 GPR64:$idx))),
 // SME2 Instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSME2] in {
-defm ADD_VG2_M2ZZ_S  : sme2_mla_add_sub_array_vg2_single_S<"add", 0b10>;
-defm ADD_VG4_M4ZZ_S  : sme2_mla_add_sub_array_vg4_single_S<"add", 0b10>;
-defm ADD_VG2_M2Z2Z_S : sme2_mla_add_sub_array_vg2_multi_S<"add", 0b10>;
-defm ADD_VG4_M4Z4Z_S : sme2_mla_add_sub_array_vg4_multi_S<"add", 0b10>;
+defm ADD_VG2_M2ZZ_S  : sme2_dot_mla_add_sub_array_vg24_single<"add", 0b0011010, MatrixOp32, ZZ_s, ZPR4b32>;
+defm ADD_VG4_M4ZZ_S  : sme2_dot_mla_add_sub_array_vg24_single<"add", 0b0111010, MatrixOp32, ZZZZ_s, ZPR4b32>;
+defm ADD_VG2_M2Z2Z_S : sme2_dot_mla_add_sub_array_vg2_multi<"add", 0b011010, MatrixOp32, ZZ_s_mul_r>;
+defm ADD_VG4_M4Z4Z_S : sme2_dot_mla_add_sub_array_vg4_multi<"add", 0b011010, MatrixOp32, ZZZZ_s_mul_r>;
 
 defm ADD_VG2_2ZZ  : sme2_int_sve_destructive_vector_vg2_single<"add", 0b0110000>;
 defm ADD_VG4_4ZZ  : sme2_int_sve_destructive_vector_vg4_single<"add", 0b0110000>;
 
-defm SUB_VG2_M2ZZ_S  : sme2_mla_add_sub_array_vg2_single_S<"sub", 0b11>;
-defm SUB_VG4_M4ZZ_S  : sme2_mla_add_sub_array_vg4_single_S<"sub", 0b11>;
-defm SUB_VG2_M2Z2Z_S : sme2_mla_add_sub_array_vg2_multi_S<"sub", 0b11>;
-defm SUB_VG4_M4Z4Z_S : sme2_mla_add_sub_array_vg4_multi_S<"sub", 0b11>;
+defm SUB_VG2_M2ZZ_S  : sme2_dot_mla_add_sub_array_vg24_single<"sub", 0b0011011, MatrixOp32, ZZ_s, ZPR4b32>;
+defm SUB_VG4_M4ZZ_S  : sme2_dot_mla_add_sub_array_vg24_single<"sub", 0b0111011, MatrixOp32, ZZZZ_s, ZPR4b32>;
+defm SUB_VG2_M2Z2Z_S : sme2_dot_mla_add_sub_array_vg2_multi<"sub", 0b011011, MatrixOp32, ZZ_s_mul_r>;
+defm SUB_VG4_M4Z4Z_S : sme2_dot_mla_add_sub_array_vg4_multi<"sub", 0b011011, MatrixOp32, ZZZZ_s_mul_r>;
 
-defm FMLA_VG2_M2ZZ_S  : sme2_mla_add_sub_array_vg2_single_S<"fmla", 0b00>;
-defm FMLA_VG4_M4ZZ_S  : sme2_mla_add_sub_array_vg4_single_S<"fmla", 0b00>;
-defm FMLA_VG2_M2Z2Z_S : sme2_mla_add_sub_array_vg2_multi_S<"fmla", 0b00>;
-defm FMLA_VG4_M4Z4Z_S : sme2_mla_add_sub_array_vg4_multi_S<"fmla", 0b00>;
+defm FMLA_VG2_M2ZZ_S  : sme2_dot_mla_add_sub_array_vg24_single<"fmla", 0b0011000, MatrixOp32, ZZ_s, ZPR4b32>;
+defm FMLA_VG4_M4ZZ_S  : sme2_dot_mla_add_sub_array_vg24_single<"fmla", 0b0111000, MatrixOp32, ZZZZ_s, ZPR4b32>;
+defm FMLA_VG2_M2Z2Z_S : sme2_dot_mla_add_sub_array_vg2_multi<"fmla", 0b011000, MatrixOp32, ZZ_s_mul_r>;
+defm FMLA_VG4_M4Z4Z_S : sme2_dot_mla_add_sub_array_vg4_multi<"fmla", 0b011000, MatrixOp32, ZZZZ_s_mul_r>;
 defm FMLA_VG2_M2ZZI_S : sme2_multi_vec_array_vg2_index_32b<"fmla", 0b0000, ZZ_s_mul_r, ZPR4b32>;
 defm FMLA_VG4_M4ZZI_S : sme2_multi_vec_array_vg4_index_32b<"fmla", 0b0000, ZZZZ_s_mul_r, ZPR4b32>;
 
-defm FMLS_VG2_M2ZZ_S  : sme2_mla_add_sub_array_vg2_single_S<"fmls", 0b01>;
-defm FMLS_VG4_M4ZZ_S  : sme2_mla_add_sub_array_vg4_single_S<"fmls", 0b01>;
-defm FMLS_VG2_M2Z2Z_S : sme2_mla_add_sub_array_vg2_multi_S<"fmls", 0b01>;
-defm FMLS_VG4_M4Z4Z_S : sme2_mla_add_sub_array_vg4_multi_S<"fmls", 0b01>;
+defm FMLS_VG2_M2ZZ_S  : sme2_dot_mla_add_sub_array_vg24_single<"fmls", 0b0011001, MatrixOp32, ZZ_s, ZPR4b32>;
+defm FMLS_VG4_M4ZZ_S  : sme2_dot_mla_add_sub_array_vg24_single<"fmls", 0b0111001, MatrixOp32, ZZZZ_s, ZPR4b32>;
+defm FMLS_VG2_M2Z2Z_S : sme2_dot_mla_add_sub_array_vg2_multi<"fmls", 0b011001, MatrixOp32, ZZ_s_mul_r>;
+defm FMLS_VG4_M4Z4Z_S : sme2_dot_mla_add_sub_array_vg4_multi<"fmls", 0b011001, MatrixOp32, ZZZZ_s_mul_r>;
 defm FMLS_VG2_M2ZZI_S : sme2_multi_vec_array_vg2_index_32b<"fmls", 0b0010, ZZ_s_mul_r, ZPR4b32>;
 defm FMLS_VG4_M4ZZI_S : sme2_multi_vec_array_vg4_index_32b<"fmls", 0b0010, ZZZZ_s_mul_r, ZPR4b32>;
 
@@ -436,9 +436,17 @@ defm UCLAMP_VG4_4Z4Z : sme2_int_clamp_vector_vg4_multi<"uclamp", 0b1>;
 
 defm FDOT_VG2_M2ZZI_HtoS : sme2_multi_vec_array_vg2_index_32b<"fdot", 0b1001, ZZ_h_mul_r, ZPR4b16>;
 defm FDOT_VG4_M4ZZI_HtoS : sme2_multi_vec_array_vg4_index_32b<"fdot", 0b1001, ZZZZ_h_mul_r, ZPR4b16>;
+defm FDOT_VG2_M2ZZ_HtoS  : sme2_dot_mla_add_sub_array_vg24_single<"fdot", 0b0010000, MatrixOp32, ZZ_h, ZPR4b16>;
+defm FDOT_VG4_M4ZZ_HtoS  : sme2_dot_mla_add_sub_array_vg24_single<"fdot", 0b0110000, MatrixOp32, ZZZZ_h, ZPR4b16>;
+defm FDOT_VG2_M2Z2Z_HtoS : sme2_dot_mla_add_sub_array_vg2_multi<"fdot",  0b010000, MatrixOp32, ZZ_h_mul_r>;
+defm FDOT_VG4_M4Z4Z_HtoS : sme2_dot_mla_add_sub_array_vg4_multi<"fdot",  0b010000, MatrixOp32, ZZZZ_h_mul_r>;
 
 defm BFDOT_VG2_M2ZZI_HtoS : sme2_multi_vec_array_vg2_index_32b<"bfdot", 0b1011, ZZ_h_mul_r, ZPR4b16>;
 defm BFDOT_VG4_M4ZZI_HtoS : sme2_multi_vec_array_vg4_index_32b<"bfdot", 0b1011, ZZZZ_h_mul_r, ZPR4b16>;
+defm BFDOT_VG2_M2ZZ_HtoS  : sme2_dot_mla_add_sub_array_vg24_single<"bfdot", 0b0010010, MatrixOp32, ZZ_h, ZPR4b16>;
+defm BFDOT_VG4_M4ZZ_HtoS  : sme2_dot_mla_add_sub_array_vg24_single<"bfdot", 0b0110010, MatrixOp32, ZZZZ_h, ZPR4b16>;
+defm BFDOT_VG2_M2Z2Z_HtoS : sme2_dot_mla_add_sub_array_vg2_multi<"bfdot",  0b010010, MatrixOp32, ZZ_h_mul_r>;
+defm BFDOT_VG4_M4Z4Z_HtoS : sme2_dot_mla_add_sub_array_vg4_multi<"bfdot",  0b010010, MatrixOp32, ZZZZ_h_mul_r>;
 
 defm BFVDOT_VG2_M2ZZI_HtoS : sme2_multi_vec_array_vg2_index_32b<"bfvdot", 0b0011, ZZ_h_mul_r, ZPR4b16>;
 
@@ -448,9 +456,15 @@ defm SDOT_VG2_M2ZZI_HToS : sme2_multi_vec_array_vg2_index_32b<"sdot", 0b1000, ZZ
 defm SDOT_VG2_M2ZZI_BToS : sme2_multi_vec_array_vg2_index_32b<"sdot", 0b1100, ZZ_b_mul_r, ZPR4b8>;
 defm SDOT_VG4_M4ZZI_HToS : sme2_multi_vec_array_vg4_index_32b<"sdot", 0b1000, ZZZZ_h_mul_r, ZPR4b16>;
 defm SDOT_VG4_M4ZZI_BToS : sme2_multi_vec_array_vg4_index_32b<"sdot", 0b1100, ZZZZ_b_mul_r, ZPR4b8>;
+defm SDOT_VG2_M2ZZ_HtoS  : sme2_dot_mla_add_sub_array_vg24_single<"sdot", 0b1010101, MatrixOp32, ZZ_h, ZPR4b16>;
+defm SDOT_VG4_M4ZZ_HtoS  : sme2_dot_mla_add_sub_array_vg24_single<"sdot", 0b1110101, MatrixOp32, ZZZZ_h, ZPR4b16>;
+defm SDOT_VG2_M2Z2Z_HtoS : sme2_dot_mla_add_sub_array_vg2_multi<"sdot", 0b110101, MatrixOp32, ZZ_h_mul_r>;
+defm SDOT_VG4_M4Z4Z_HtoS : sme2_dot_mla_add_sub_array_vg4_multi<"sdot", 0b110101, MatrixOp32, ZZZZ_h_mul_r>;
 
 defm SUDOT_VG2_M2ZZI_BToS : sme2_multi_vec_array_vg2_index_32b<"sudot", 0b1111, ZZ_b_mul_r, ZPR4b8>;
 defm SUDOT_VG4_M4ZZI_BToS : sme2_multi_vec_array_vg4_index_32b<"sudot", 0b1111, ZZZZ_b_mul_r, ZPR4b8>;
+defm SUDOT_VG2_M2ZZ_BToS  : sme2_dot_mla_add_sub_array_vg24_single<"sudot", 0b0010111, MatrixOp32, ZZ_b, ZPR4b8>;
+defm SUDOT_VG4_M4ZZ_BToS  : sme2_dot_mla_add_sub_array_vg24_single<"sudot", 0b0110111, MatrixOp32, ZZZZ_b, ZPR4b8>;
 
 defm SVDOT_VG2_M2ZZI_HtoS : sme2_multi_vec_array_vg2_index_32b<"svdot", 0b0100, ZZ_h_mul_r, ZPR4b16>;
 defm SVDOT_VG4_M4ZZI_BtoS : sme2_multi_vec_array_vg4_index_32b<"svdot", 0b0100, ZZZZ_b_mul_r, ZPR4b8>;
@@ -461,28 +475,35 @@ defm UDOT_VG2_M2ZZI_HToS : sme2_multi_vec_array_vg2_index_32b<"udot", 0b1010, ZZ
 defm UDOT_VG2_M2ZZI_BToS : sme2_multi_vec_array_vg2_index_32b<"udot", 0b1110, ZZ_b_mul_r, ZPR4b8>;
 defm UDOT_VG4_M4ZZI_BtoS : sme2_multi_vec_array_vg4_index_32b<"udot", 0b1110, ZZZZ_b_mul_r, ZPR4b8>;
 defm UDOT_VG4_M4ZZI_HToS : sme2_multi_vec_array_vg4_index_32b<"udot", 0b1010, ZZZZ_h_mul_r, ZPR4b16>;
+defm UDOT_VG2_M2ZZ_HtoS  : sme2_dot_mla_add_sub_array_vg24_single<"udot", 0b1010111, MatrixOp32, ZZ_h, ZPR4b16>;
+defm UDOT_VG4_M4ZZ_HtoS  : sme2_dot_mla_add_sub_array_vg24_single<"udot", 0b1110111, MatrixOp32, ZZZZ_h, ZPR4b16>;
+defm UDOT_VG2_M2Z2Z_HtoS : sme2_dot_mla_add_sub_array_vg2_multi<"udot", 0b110111, MatrixOp32, ZZ_h_mul_r>;
+defm UDOT_VG4_M4Z4Z_HtoS : sme2_dot_mla_add_sub_array_vg4_multi<"udot", 0b110111, MatrixOp32, ZZZZ_h_mul_r>;
 
-defm USDOT_VG2_M2ZZI_BToS : sme2_multi_vec_array_vg2_index_32b<"usdot", 0b1101, ZZ_b_mul_r, ZPR4b8>;
-defm USDOT_VG4_M4ZZI_BToS : sme2_multi_vec_array_vg4_index_32b<"usdot", 0b1101, ZZZZ_b_mul_r, ZPR4b8>;
+defm USDOT_VG2_M2ZZI_BToS: sme2_multi_vec_array_vg2_index_32b<"usdot", 0b1101, ZZ_b_mul_r, ZPR4b8>;
+defm USDOT_VG4_M4ZZI_BToS: sme2_multi_vec_array_vg4_index_32b<"usdot", 0b1101, ZZZZ_b_mul_r, ZPR4b8>;
+defm USDOT_VG2_M2ZZ_BToS : sme2_dot_mla_add_sub_array_vg24_single<"usdot",  0b0010101, MatrixOp32, ZZ_b, ZPR4b8>;
+defm USDOT_VG4_M4ZZ_BToS  : sme2_dot_mla_add_sub_array_vg24_single<"usdot", 0b0110101, MatrixOp32, ZZZZ_b, ZPR4b8>;
+defm USDOT_VG2_M2Z2Z_BToS : sme2_dot_mla_add_sub_array_vg2_multi<"usdot", 0b010101, MatrixOp32, ZZ_b_mul_r>;
+defm USDOT_VG4_M4Z4Z_BToS : sme2_dot_mla_add_sub_array_vg4_multi<"usdot", 0b010101, MatrixOp32, ZZZZ_b_mul_r>;
 
 defm USVDOT_VG4_M4ZZI_BToS : sme2_multi_vec_array_vg4_index_32b<"usvdot", 0b0101, ZZZZ_b_mul_r, ZPR4b8>;
 
 defm UVDOT_VG2_M2ZZI_HtoS : sme2_multi_vec_array_vg2_index_32b<"uvdot", 0b0110, ZZ_h_mul_r, ZPR4b16>;
 defm UVDOT_VG4_M4ZZI_BtoS : sme2_multi_vec_array_vg4_index_32b<"uvdot", 0b0110, ZZZZ_b_mul_r, ZPR4b8>;
-
 }
 
 
 let Predicates = [HasSME2, HasSMEI16I64] in {
-defm ADD_VG2_M2ZZ_D  : sme2_mla_add_sub_array_vg2_single_D<"add", 0b10>;
-defm ADD_VG4_M4ZZ_D  : sme2_mla_add_sub_array_vg4_single_D<"add", 0b10>;
-defm ADD_VG2_M2Z2Z_D : sme2_mla_add_sub_array_vg2_multi_D<"add", 0b10>;
-defm ADD_VG4_M4Z4Z_D : sme2_mla_add_sub_array_vg4_multi_D<"add", 0b10>;
+defm ADD_VG2_M2ZZ_D  : sme2_dot_mla_add_sub_array_vg24_single<"add", 0b1011010, MatrixOp64, ZZ_d, ZPR4b64>;
+defm ADD_VG4_M4ZZ_D  : sme2_dot_mla_add_sub_array_vg24_single<"add", 0b1111010, MatrixOp64, ZZZZ_d, ZPR4b64>;
+defm ADD_VG2_M2Z2Z_D : sme2_dot_mla_add_sub_array_vg2_multi<"add", 0b111010, MatrixOp64, ZZ_d_mul_r>;
+defm ADD_VG4_M4Z4Z_D : sme2_dot_mla_add_sub_array_vg4_multi<"add", 0b111010, MatrixOp64, ZZZZ_d_mul_r>;
 
-defm SUB_VG2_M2ZZ_D  : sme2_mla_add_sub_array_vg2_single_D<"sub", 0b11>;
-defm SUB_VG4_M4ZZ_D  : sme2_mla_add_sub_array_vg4_single_D<"sub", 0b11>;
-defm SUB_VG2_M2Z2Z_D : sme2_mla_add_sub_array_vg2_multi_D<"sub", 0b11>;
-defm SUB_VG4_M4Z4Z_D : sme2_mla_add_sub_array_vg4_multi_D<"sub", 0b11>;
+defm SUB_VG2_M2ZZ_D  : sme2_dot_mla_add_sub_array_vg24_single<"sub", 0b1011011, MatrixOp64, ZZ_d, ZPR4b64>;
+defm SUB_VG4_M4ZZ_D  : sme2_dot_mla_add_sub_array_vg24_single<"sub", 0b1111011, MatrixOp64, ZZZZ_d, ZPR4b64>;
+defm SUB_VG2_M2Z2Z_D : sme2_dot_mla_add_sub_array_vg2_multi<"sub", 0b111011, MatrixOp64, ZZ_d_mul_r>;
+defm SUB_VG4_M4Z4Z_D : sme2_dot_mla_add_sub_array_vg4_multi<"sub", 0b111011, MatrixOp64, ZZZZ_d_mul_r>;
 
 defm ADDA_VG2_M2Z2Z_D : sme2_multivec_accum_add_sub_vg2_D<"add", 0b10>;
 defm ADDA_VG4_M4Z4Z_D : sme2_multivec_accum_add_sub_vg4_D<"add", 0b10>;
@@ -502,19 +523,19 @@ defm UVDOT_VG4_M4ZZI_HtoD : sme2_multi_vec_array_vg4_index_64b<"uvdot", 0b111, Z
 }
 
 let Predicates = [HasSME2, HasSMEF64F64] in {
-defm FMLA_VG2_M2ZZ_D  : sme2_mla_add_sub_array_vg2_single_D<"fmla", 0b00>;
-defm FMLA_VG4_M4ZZ_D  : sme2_mla_add_sub_array_vg4_single_D<"fmla", 0b00>;
-defm FMLA_VG2_M2Z2Z_D : sme2_mla_add_sub_array_vg2_multi_D<"fmla", 0b00>;
-defm FMLA_VG4_M4Z4Z_D : sme2_mla_add_sub_array_vg4_multi_D<"fmla", 0b00>;
 defm FMLA_VG2_M2ZZI_D : sme2_multi_vec_array_vg2_index_64b<"fmla", 0b00, ZZ_d_mul_r, ZPR4b64>;
 defm FMLA_VG4_M4ZZI_D : sme2_multi_vec_array_vg4_index_64b<"fmla", 0b000, ZZZZ_d_mul_r, ZPR4b64>;
+defm FMLA_VG2_M2ZZ_D  : sme2_dot_mla_add_sub_array_vg24_single<"fmla", 0b1011000, MatrixOp64, ZZ_d, ZPR4b64>;
+defm FMLA_VG4_M4ZZ_D  : sme2_dot_mla_add_sub_array_vg24_single<"fmla", 0b1111000, MatrixOp64, ZZZZ_d, ZPR4b64>;
+defm FMLA_VG2_M2Z2Z_D : sme2_dot_mla_add_sub_array_vg2_multi<"fmla", 0b111000, MatrixOp64, ZZ_d_mul_r>;
+defm FMLA_VG4_M4Z4Z_D : sme2_dot_mla_add_sub_array_vg4_multi<"fmla", 0b111000, MatrixOp64, ZZZZ_d_mul_r>;
 
-defm FMLS_VG2_M2ZZ_D  : sme2_mla_add_sub_array_vg2_single_D<"fmls", 0b01>;
-defm FMLS_VG4_M4ZZ_D  : sme2_mla_add_sub_array_vg4_single_D<"fmls", 0b01>;
-defm FMLS_VG2_M2Z2Z_D : sme2_mla_add_sub_array_vg2_multi_D<"fmls", 0b01>;
-defm FMLS_VG4_M4Z4Z_D : sme2_mla_add_sub_array_vg4_multi_D<"fmls", 0b01>;
 defm FMLS_VG2_M2ZZI_D : sme2_multi_vec_array_vg2_index_64b<"fmls", 0b10, ZZ_d_mul_r, ZPR4b64>;
 defm FMLS_VG4_M4ZZI_D : sme2_multi_vec_array_vg4_index_64b<"fmls", 0b010, ZZZZ_d_mul_r, ZPR4b64>;
+defm FMLS_VG2_M2ZZ_D  : sme2_dot_mla_add_sub_array_vg24_single<"fmls", 0b1011001, MatrixOp64, ZZ_d, ZPR4b64>;
+defm FMLS_VG4_M4ZZ_D  : sme2_dot_mla_add_sub_array_vg24_single<"fmls", 0b1111001, MatrixOp64, ZZZZ_d, ZPR4b64>;
+defm FMLS_VG2_M2Z2Z_D : sme2_dot_mla_add_sub_array_vg2_multi<"fmls", 0b111001, MatrixOp64, ZZ_d_mul_r>;
+defm FMLS_VG4_M4Z4Z_D : sme2_dot_mla_add_sub_array_vg4_multi<"fmls", 0b111001, MatrixOp64, ZZZZ_d_mul_r>;
 
 defm FADD_VG2_M2Z2Z_D : sme2_multivec_accum_add_sub_vg2_D<"fadd", 0b00>;
 defm FADD_VG4_M4Z4Z_D : sme2_multivec_accum_add_sub_vg4_D<"fadd", 0b00>;
