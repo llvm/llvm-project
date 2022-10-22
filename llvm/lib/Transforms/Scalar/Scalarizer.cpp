@@ -113,7 +113,7 @@ private:
   unsigned Size;
 };
 
-// FCmpSpliiter(FCI)(Builder, X, Y, Name) uses Builder to create an FCmp
+// FCmpSplitter(FCI)(Builder, X, Y, Name) uses Builder to create an FCmp
 // called Name that compares X and Y in the same way as FCI.
 struct FCmpSplitter {
   FCmpSplitter(FCmpInst &fci) : FCI(fci) {}
@@ -126,7 +126,7 @@ struct FCmpSplitter {
   FCmpInst &FCI;
 };
 
-// ICmpSpliiter(ICI)(Builder, X, Y, Name) uses Builder to create an ICmp
+// ICmpSplitter(ICI)(Builder, X, Y, Name) uses Builder to create an ICmp
 // called Name that compares X and Y in the same way as ICI.
 struct ICmpSplitter {
   ICmpSplitter(ICmpInst &ici) : ICI(ici) {}
@@ -139,7 +139,7 @@ struct ICmpSplitter {
   ICmpInst &ICI;
 };
 
-// UnarySpliiter(UO)(Builder, X, Name) uses Builder to create
+// UnarySplitter(UO)(Builder, X, Name) uses Builder to create
 // a unary operator like UO called Name with operand X.
 struct UnarySplitter {
   UnarySplitter(UnaryOperator &uo) : UO(uo) {}
@@ -151,7 +151,7 @@ struct UnarySplitter {
   UnaryOperator &UO;
 };
 
-// BinarySpliiter(BO)(Builder, X, Y, Name) uses Builder to create
+// BinarySplitter(BO)(Builder, X, Y, Name) uses Builder to create
 // a binary operator like BO called Name with operands X and Y.
 struct BinarySplitter {
   BinarySplitter(BinaryOperator &bo) : BO(bo) {}

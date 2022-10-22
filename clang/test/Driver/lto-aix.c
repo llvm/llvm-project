@@ -5,7 +5,33 @@
 // LTOPATH: "-bplugin:{{.*}}libLTO.{{so|dll|dylib}}"
 // MCPUOPTLEVEL: "-bplugin_opt:-mcpu={{.*}}" "-bplugin_opt:-O3"
 //
+// More opt level option tests
+// RUN: %clang --target=powerpc-ibm-aix --sysroot %S/Inputs/aix_ppc_tree %s \
+// RUN:   -fuse-ld=ld -flto -O -### 2>&1 | FileCheck --check-prefix=O1 %s
+// RUN: %clang --target=powerpc-ibm-aix --sysroot %S/Inputs/aix_ppc_tree %s \
+// RUN:   -fuse-ld=ld -flto -O1 -### 2>&1 | FileCheck --check-prefix=O1 %s
+// RUN: %clang --target=powerpc-ibm-aix --sysroot %S/Inputs/aix_ppc_tree %s \
+// RUN:   -fuse-ld=ld -flto -Og -### 2>&1 | FileCheck --check-prefix=O1 %s
+// RUN: %clang --target=powerpc-ibm-aix --sysroot %S/Inputs/aix_ppc_tree %s \
+// RUN:   -fuse-ld=ld -flto -O2 -### 2>&1 | FileCheck --check-prefix=O2 %s
+// RUN: %clang --target=powerpc-ibm-aix --sysroot %S/Inputs/aix_ppc_tree %s \
+// RUN:   -fuse-ld=ld -flto -Os -### 2>&1 | FileCheck --check-prefix=O2 %s
+// RUN: %clang --target=powerpc-ibm-aix --sysroot %S/Inputs/aix_ppc_tree %s \
+// RUN:   -fuse-ld=ld -flto -Oz -### 2>&1 | FileCheck --check-prefix=O2 %s
+// RUN: %clang --target=powerpc-ibm-aix --sysroot %S/Inputs/aix_ppc_tree %s \
+// RUN:   -fuse-ld=ld -flto -O3 -### 2>&1 | FileCheck --check-prefix=O3 %s
+// RUN: %clang --target=powerpc-ibm-aix --sysroot %S/Inputs/aix_ppc_tree %s \
+// RUN:   -fuse-ld=ld -flto -Ofast -### 2>&1 | FileCheck --check-prefix=O3 %s
+//
+// O1: "-bplugin_opt:-O1"
+// O2: "-bplugin_opt:-O2"
+// O3: "-bplugin_opt:-O3"
+//
 // Test debugging options
+// RUN: %clang --target=powerpc-ibm-aix -### %s -flto -fuse-ld=ld -gdbx 2>&1 \
+// RUN:   | FileCheck -check-prefix=DBX %s
+// RUN: %clang --target=powerpc-ibm-aix -### %s -flto -fuse-ld=ld -g 2>&1 \
+// RUN:   | FileCheck -check-prefix=NODEBUGGER-TUNE %s
 // RUN: %clang --target=powerpc-ibm-aix-xcoff -### %s -flto -g 2>&1 \
 // RUN:   | FileCheck -check-prefixes=STRICT,NODEBUGGER-TUNE %s
 // RUN: %clang --target=powerpc64-ibm-aix-xcoff -### %s -flto -g 2>&1 \

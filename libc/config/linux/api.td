@@ -149,6 +149,7 @@ def StringAPI : PublicAPI<"string.h"> {
 def StdIOAPI : PublicAPI<"stdio.h"> {
   let Macros = [
     SimpleMacroDef<"stderr", "stderr">,
+    SimpleMacroDef<"stdin", "stdin">,
     SimpleMacroDef<"stdout", "stdout">,
     SimpleMacroDef<"_IOFBF", "0">,
     SimpleMacroDef<"_IOLBF", "1">,
@@ -272,6 +273,10 @@ def UniStdAPI : PublicAPI<"unistd.h"> {
 
 def SysRandomAPI : PublicAPI<"sys/random.h"> {
   let Types = ["size_t", "ssize_t"];
+}
+
+def SysSelectAPI : PublicAPI<"sys/select.h"> {
+  let Types = ["fd_set", "sigset_t", "suseconds_t", "time_t", "struct timespec", "struct timeval"];
 }
 
 def SysResourceAPI : PublicAPI<"sys/resource.h"> {

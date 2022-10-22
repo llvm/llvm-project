@@ -290,6 +290,13 @@
 // AMX-INT8: "-target-feature" "+amx-int8"
 // NO-AMX-INT8: "-target-feature" "-amx-int8"
 
+// RUN: %clang --target=x86_64 -mamx-fp16 %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-FP16 %s
+// RUN: %clang --target=x86_64 -mno-amx-fp16 \
+// RUN: %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-FP16 %s
+// AMX-FP16: "-target-feature" "+amx-fp16"
+// NO-AMX-FP16: "-target-feature" "-amx-fp16"
+
 // RUN: %clang --target=i386 -march=i386 -mhreset %s -### 2>&1 | FileCheck -check-prefix=HRESET %s
 // RUN: %clang --target=i386 -march=i386 -mno-hreset %s -### 2>&1 | FileCheck -check-prefix=NO-HRESET %s
 // HRESET: "-target-feature" "+hreset"

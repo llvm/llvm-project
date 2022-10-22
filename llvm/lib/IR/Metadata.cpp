@@ -1461,10 +1461,15 @@ void Instruction::addAnnotationMetadata(StringRef Name) {
 
 AAMDNodes Instruction::getAAMetadata() const {
   AAMDNodes Result;
-  Result.TBAA = getMetadata(LLVMContext::MD_tbaa);
-  Result.TBAAStruct = getMetadata(LLVMContext::MD_tbaa_struct);
-  Result.Scope = getMetadata(LLVMContext::MD_alias_scope);
-  Result.NoAlias = getMetadata(LLVMContext::MD_noalias);
+  // Not using Instruction::hasMetadata() because we're not interested in
+  // DebugInfoMetadata.
+  if (Value::hasMetadata()) {
+    const auto &Info = getContext().pImpl->ValueMetadata[this];
+    Result.TBAA = Info.lookup(LLVMContext::MD_tbaa);
+    Result.TBAAStruct = Info.lookup(LLVMContext::MD_tbaa_struct);
+    Result.Scope = Info.lookup(LLVMContext::MD_alias_scope);
+    Result.NoAlias = Info.lookup(LLVMContext::MD_noalias);
+  }
   return Result;
 }
 

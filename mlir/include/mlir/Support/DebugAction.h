@@ -190,14 +190,12 @@ private:
 /// This class provides a handler class that can be derived from to handle
 /// instances of this action. The parameters to its query methods map 1-1 to the
 /// types on the action type.
-template <typename... ParameterTs>
+template <typename Derived, typename... ParameterTs>
 class DebugAction {
 public:
   class Handler : public DebugActionManager::HandlerBase {
   public:
-    Handler()
-        : HandlerBase(
-              TypeID::get<typename DebugAction<ParameterTs...>::Handler>()) {}
+    Handler() : HandlerBase(TypeID::get<Derived>()) {}
 
     /// This hook allows for controlling whether an action should execute or
     /// not. `parameters` correspond to the set of values provided by the
@@ -209,8 +207,7 @@ public:
 
     /// Provide classof to allow casting between handler types.
     static bool classof(const DebugActionManager::HandlerBase *handler) {
-      return handler->getHandlerID() ==
-             TypeID::get<typename DebugAction<ParameterTs...>::Handler>();
+      return handler->getHandlerID() == TypeID::get<Derived>();
     }
   };
 
