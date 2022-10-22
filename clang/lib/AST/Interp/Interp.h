@@ -1106,8 +1106,7 @@ inline bool ExpandPtr(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-template <PrimType Name, class T = typename PrimConv<Name>::T>
-static bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
+inline bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
   auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
   if (Func->hasThisPointer()) {
     if (!CheckInvoke(S, PC, NewFrame->getThis())) {
