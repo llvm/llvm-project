@@ -8,7 +8,7 @@
 //
 // This file implements the -map option. It shows lists in order and
 // hierarchically the outputFile, arch, input files, output sections and
-// symbol:
+// symbols:
 //
 // # Path: test
 // # Arch: x86_84
@@ -16,11 +16,14 @@
 // [  0] linker synthesized
 // [  1] a.o
 // # Sections:
-// # Address  Size      Segment  Section
-// 0x1000005C0  0x0000004C  __TEXT  __text
+// # Address    Size       Segment  Section
+// 0x1000005C0  0x0000004C __TEXT   __text
 // # Symbols:
-// # Address  File  Name
-// 0x1000005C0  [  1] _main
+// # Address    Size       File  Name
+// 0x1000005C0  0x00000001 [  1] _main
+// # Dead Stripped Symbols:
+// #            Size       File  Name
+// <<dead>>     0x00000001 [  1] _foo
 //
 //===----------------------------------------------------------------------===//
 
