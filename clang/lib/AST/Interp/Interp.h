@@ -91,7 +91,31 @@ bool CheckThis(InterpState &S, CodePtr OpPC, const Pointer &This);
 /// Checks if a method is pure virtual.
 bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD);
 
+/// Checks if Div/Rem operation on LHS and RHS is valid.
+template <typename T>
+bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
+  if (RHS.isZero()) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_expr_divide_by_zero);
+    return false;
+  }
+
+  if (LHS.isSigned() && LHS.isMin() && RHS.isNegative() && RHS.isMinusOne()) {
+    APSInt LHSInt = LHS.toAPSInt();
+    SmallString<32> Trunc;
+    (-LHSInt.extend(LHSInt.getBitWidth() + 1)).toString(Trunc, 10);
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    const Expr *E = S.Current->getExpr(OpPC);
+    S.CCEDiag(Loc, diag::note_constexpr_overflow) << Trunc << E->getType();
+    return false;
+  }
+  return true;
+}
+
 template <typename T> inline bool IsTrue(const T &V) { return !V.isZero(); }
+
+/// Interpreter entry point.
+bool Interpret(InterpState &S, APValue &Result);
 
 //===----------------------------------------------------------------------===//
 // Add, Sub, Mul
@@ -195,21 +219,8 @@ bool Rem(InterpState &S, CodePtr OpPC) {
   const T &RHS = S.Stk.pop<T>();
   const T &LHS = S.Stk.pop<T>();
 
-  if (RHS.isZero()) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_expr_divide_by_zero);
+  if (!CheckDivRem(S, OpPC, LHS, RHS))
     return false;
-  }
-
-  if (LHS.isSigned() && LHS.isMin() && RHS.isNegative() && RHS.isMinusOne()) {
-    APSInt LHSInt = LHS.toAPSInt();
-    SmallString<32> Trunc;
-    (-LHSInt.extend(LHSInt.getBitWidth() + 1)).toString(Trunc, 10);
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    const Expr *E = S.Current->getExpr(OpPC);
-    S.CCEDiag(Loc, diag::note_constexpr_overflow) << Trunc << E->getType();
-    return false;
-  }
 
   const unsigned Bits = RHS.bitWidth() * 2;
   T Result;
@@ -228,21 +239,8 @@ bool Div(InterpState &S, CodePtr OpPC) {
   const T &RHS = S.Stk.pop<T>();
   const T &LHS = S.Stk.pop<T>();
 
-  if (RHS.isZero()) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_expr_divide_by_zero);
+  if (!CheckDivRem(S, OpPC, LHS, RHS))
     return false;
-  }
-
-  if (LHS.isSigned() && LHS.isMin() && RHS.isNegative() && RHS.isMinusOne()) {
-    APSInt LHSInt = LHS.toAPSInt();
-    SmallString<32> Trunc;
-    (-LHSInt.extend(LHSInt.getBitWidth() + 1)).toString(Trunc, 10);
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    const Expr *E = S.Current->getExpr(OpPC);
-    S.CCEDiag(Loc, diag::note_constexpr_overflow) << Trunc << E->getType();
-    return false;
-  }
 
   const unsigned Bits = RHS.bitWidth() * 2;
   T Result;
@@ -1108,6 +1106,34 @@ inline bool ExpandPtr(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+inline bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
+  auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
+  if (Func->hasThisPointer()) {
+    if (!CheckInvoke(S, PC, NewFrame->getThis())) {
+      return false;
+    }
+    // TODO: CheckCallable
+  }
+
+  InterpFrame *FrameBefore = S.Current;
+  S.Current = NewFrame.get();
+
+  APValue CallResult;
+  // Note that we cannot assert(CallResult.hasValue()) here since
+  // Ret() above only sets the APValue if the curent frame doesn't
+  // have a caller set.
+  if (Interpret(S, CallResult)) {
+    NewFrame.release(); // Frame was delete'd already.
+    assert(S.Current == FrameBefore);
+    return true;
+  }
+
+  // Interpreting the function failed somehow. Reset to
+  // previous state.
+  S.Current = FrameBefore;
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Read opcode arguments
 //===----------------------------------------------------------------------===//
@@ -1120,9 +1146,6 @@ template <typename T> inline T ReadArg(InterpState &S, CodePtr &OpPC) {
     return OpPC.read<T>();
   }
 }
-
-/// Interpreter entry point.
-bool Interpret(InterpState &S, APValue &Result);
 
 } // namespace interp
 } // namespace clang
