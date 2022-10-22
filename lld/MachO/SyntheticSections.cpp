@@ -1157,8 +1157,7 @@ void SymtabSection::emitStabs() {
       if (defined->wasIdenticalCodeFolded)
         continue;
 
-      InputSection *isec = defined->isec;
-      ObjFile *file = dyn_cast_or_null<ObjFile>(isec->getFile());
+      ObjFile *file = defined->getObjectFile();
       if (!file || !file->compileUnit)
         continue;
 

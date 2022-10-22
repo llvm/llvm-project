@@ -491,6 +491,7 @@ def StdC : StandardSpec<"stdc"> {
   HeaderSpec StdIO = HeaderSpec<
       "stdio.h",
       [
+          Macro<"stdin">,
           Macro<"stderr">,
           Macro<"stdout">,
           Macro<"_IOFBF">,
@@ -521,6 +522,11 @@ def StdC : StandardSpec<"stdc"> {
           >,
           FunctionSpec<
               "ferror",
+              RetValSpec<IntType>,
+              [ArgSpec<FILEPtr>]
+          >,
+          FunctionSpec<
+              "fgetc",
               RetValSpec<IntType>,
               [ArgSpec<FILEPtr>]
           >,
@@ -621,6 +627,10 @@ def StdC : StandardSpec<"stdc"> {
           >,
       ],
       [
+          ObjectSpec<
+              "stdin",
+              "FILE *"
+          >,
           ObjectSpec<
               "stdout",
               "FILE *"
