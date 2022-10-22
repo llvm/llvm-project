@@ -91,7 +91,7 @@ constexpr int addThreeElements(const int v[3]) {
   return v[0] + v[1] + v[2];
 }
 constexpr int is[] = {10, 20, 30 };
-static_assert(addThreeElements(is) == 60);
+static_assert(addThreeElements(is) == 60, "");
 
 struct fred {
   char s [6];
