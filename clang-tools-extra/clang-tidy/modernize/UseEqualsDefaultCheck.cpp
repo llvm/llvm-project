@@ -337,10 +337,13 @@ void UseEqualsDefaultCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << MemberType;
 
   if (ApplyFix) {
+    SourceLocation UnifiedEnd = utils::lexer::getUnifiedEndLoc(
+        *Body, Result.Context->getSourceManager(),
+        Result.Context->getLangOpts());
     // Skipping comments, check for a semicolon after Body->getSourceRange()
     Optional<Token> Token = utils::lexer::findNextTokenSkippingComments(
-        Body->getSourceRange().getEnd().getLocWithOffset(1),
-        Result.Context->getSourceManager(), Result.Context->getLangOpts());
+        UnifiedEnd, Result.Context->getSourceManager(),
+        Result.Context->getLangOpts());
     StringRef Replacement =
         Token && Token->is(tok::semi) ? "= default" : "= default;";
     Diag << FixItHint::CreateReplacement(Body->getSourceRange(), Replacement)
