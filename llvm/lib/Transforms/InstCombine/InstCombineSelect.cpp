@@ -2852,18 +2852,23 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
       // (C && A) || (!C && B) --> sel C, A, B
       // (A && C) || (!C && B) --> sel C, A, B
-      if (match(FalseVal, m_LogicalAnd(m_Not(m_Value(C)), m_Value(B))) &&
-          match(CondVal, m_c_LogicalAnd(m_Specific(C), m_Value(A))))
-        return SelectInst::Create(C, A, B);
-
       // (C && A) || (B && !C) --> sel C, A, B
-      // TODO: (A && C) || (B && !C) is safe to transform with real 'and' ops.
-      if (match(FalseVal, m_LogicalAnd(m_Value(B), m_Not(m_Value(C)))) &&
-          match(CondVal, m_LogicalAnd(m_Specific(C), m_Value(A))))
+      // (A && C) || (B && !C) --> sel C, A, B (may require freeze)
+      if (match(FalseVal, m_c_LogicalAnd(m_Not(m_Value(C)), m_Value(B))) &&
+          match(CondVal, m_c_LogicalAnd(m_Specific(C), m_Value(A)))) {
+        auto *SelCond = dyn_cast<SelectInst>(CondVal);
+        auto *SelFVal = dyn_cast<SelectInst>(FalseVal);
+        bool MayNeedFreeze = SelCond && SelFVal &&
+                             match(SelFVal->getTrueValue(),
+                                   m_Not(m_Specific(SelCond->getTrueValue())));
+        if (MayNeedFreeze)
+          C = Builder.CreateFreeze(C);
         return SelectInst::Create(C, A, B);
+      }
 
       // (!C && A) || (C && B) --> sel C, B, A
       // (!C && A) || (B && C) --> sel C, B, A
+      // TODO: Allow more commutes as with the previous fold.
       if (match(CondVal, m_LogicalAnd(m_Not(m_Value(C)), m_Value(A))) &&
           match(FalseVal, m_c_LogicalAnd(m_Specific(C), m_Value(B))))
         return SelectInst::Create(C, B, A);

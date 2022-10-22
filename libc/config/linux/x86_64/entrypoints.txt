@@ -370,6 +370,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.feof_unlocked
     libc.src.stdio.ferror
     libc.src.stdio.ferror_unlocked
+    libc.src.stdio.fgetc
     libc.src.stdio.fflush
     libc.src.stdio.fopen
     libc.src.stdio.fputc
@@ -387,6 +388,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.putchar
     libc.src.stdio.puts
     libc.src.stdio.stderr
+    libc.src.stdio.stdin
     libc.src.stdio.stdout
 
     # stdlib.h entrypoints
@@ -452,6 +454,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.unistd.execv
     libc.src.unistd.fork
     libc.src.unistd.__llvm_libc_syscall
+
+    # sys/select.h entrypoints
+    libc.src.sys.select.select
   )
 endif()
 

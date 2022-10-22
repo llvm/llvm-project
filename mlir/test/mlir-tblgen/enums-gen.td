@@ -28,6 +28,24 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 // DECL: std::string stringifyMyBitEnum(MyBitEnum);
 // DECL: ::llvm::Optional<MyBitEnum> symbolizeMyBitEnum(::llvm::StringRef);
 
+// DECL: struct FieldParser<::MyBitEnum, ::MyBitEnum> {
+// DECL:   template <typename ParserT>
+// DECL:   static FailureOr<::MyBitEnum> parse(ParserT &parser) {
+// DECL:     // Parse the keyword/string containing the enum.
+// DECL:     std::string enumKeyword;
+// DECL:     auto loc = parser.getCurrentLocation();
+// DECL:     if (failed(parser.parseOptionalKeywordOrString(&enumKeyword)))
+// DECL:       return parser.emitError(loc, "expected keyword for An example bit enum");
+// DECL:     // Symbolize the keyword.
+// DECL:     if (::llvm::Optional<::MyBitEnum> attr = ::symbolizeEnum<::MyBitEnum>(enumKeyword))
+// DECL:       return *attr;
+// DECL:     return parser.emitError(loc, "invalid An example bit enum specification: ") << enumKeyword;
+// DECL:   }
+
+// DECL: inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, ::MyBitEnum value) {
+// DECL:   auto valueStr = stringifyEnum(value);
+// DECL:   return p << valueStr;
+
 // DEF-LABEL: std::string stringifyMyBitEnum
 // DEF: auto val = static_cast<uint32_t>
 // DEF: if (val == 0) return "None";
@@ -40,3 +58,34 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 // DEF: if (str == "None") return MyBitEnum::None;
 // DEF: .Case("tagged", 1)
 // DEF: .Case("Bit1", 2)
+
+// Test enum printer generation for non non-keyword enums.
+
+def NonKeywordBit: I32BitEnumAttrCaseBit<"Bit0", 0, "tag-ged">;
+def MyMixedNonKeywordBitEnum: I32BitEnumAttr<"MyMixedNonKeywordBitEnum", "An example bit enum", [
+    NonKeywordBit,
+    Bit1
+  ]> {
+  let genSpecializedAttr = 0;
+}
+
+def MyNonKeywordBitEnum: I32BitEnumAttr<"MyNonKeywordBitEnum", "An example bit enum", [
+    NonKeywordBit
+  ]> {
+  let genSpecializedAttr = 0;
+}
+
+// DECL: inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, ::MyMixedNonKeywordBitEnum value) {
+// DECL: auto valueStr = stringifyEnum(value);
+// DECL:   switch (value) {
+// DECL:   case ::MyMixedNonKeywordBitEnum::Bit1:
+// DECL:     break;
+// DECL:   default:
+// DECL:     return p << '"' << valueStr << '"';
+// DECL:   }
+// DECL:   return p << valueStr;
+// DECL: }
+
+// DECL: inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, ::MyNonKeywordBitEnum value) {
+// DECL:   auto valueStr = stringifyEnum(value);
+// DECL:   return p << '"' << valueStr << '"';

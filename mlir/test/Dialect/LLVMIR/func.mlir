@@ -273,8 +273,9 @@ module {
 // -----
 
 module {
-  // expected-error@+2 {{unknown calling convention: cc_12}}
   "llvm.func"() ({
+  // expected-error @below {{invalid Calling Conventions specification: cc_12}}
+  // expected-error @below {{failed to parse CConvAttr parameter 'CallingConv' which is to be a `CConv`}}
   }) {sym_name = "generic_unknown_calling_convention", CConv = #llvm.cconv<cc_12>, function_type = !llvm.func<i64 (i64, i64)>} : () -> ()
 }
 

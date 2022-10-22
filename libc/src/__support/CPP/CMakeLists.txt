@@ -17,6 +17,14 @@ add_header_library(
 )
 
 add_header_library(
+  cstddef
+  HDRS
+    cstddef.h
+  DEPENDS
+    .type_traits
+)
+
+add_header_library(
   functional
   HDRS
     functional.h

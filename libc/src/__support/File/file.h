@@ -233,6 +233,7 @@ private:
 // library.
 File *openfile(const char *path, const char *mode);
 
+extern File *stdin;
 extern File *stdout;
 extern File *stderr;
 

@@ -460,6 +460,58 @@ private:
   llvm::SmallBitVector linearizedDimensions;
   llvm::SmallBitVector slicedDimensions;
 };
+
+/// Parameters required to simplify a collapsing reshape op with a rank-reducing
+/// slice operation. See `getSimplifyCollapseShapeWithRankReducingSliceInfo`.
+struct CollapseShapeRankReducingSliceSimplificationInfo {
+  /// The shape of the output of the rank-reducing slice.
+  RankedTensorType sliceResultType;
+  /// The reassociation indices for the new collapse shape op, if required. If
+  /// `None`, the slice should replace the collapse shape op.
+  Optional<SmallVector<ReassociationIndices>> newReassociationIndices;
+};
+
+/// A collapsing reshape operation can sometimes be simplified or eliminated by
+/// inserting a single rank-reducing slice operation between it and the source
+/// tensor. The slice op will either take the place of the source, allowing for
+/// a new, simpler reshape op to replace the original, or the reshape op will be
+/// completely replaced by the slice result.
+///
+/// This function returns the parameters required to implement this pattern. If
+/// the pattern is not applicable, then failure is returned.
+///
+/// ### Example:
+/// ```
+/// %result = tensor.collapse_shape %0 [[0, 1], [2, 3]]
+///    : tensor<?x1x30x10xf32> to tensor<?x300xf32>
+/// ```
+/// can be transformed to
+/// ```
+/// %tmp = tensor.extract_slice %0 [0, 0, 0, 0]
+///                         [0, %dim1, 30, 30]
+///                         [1, 1, 1 1]
+///   : tensor<?x1x30x10xf32> to tensor<?x30x10xf32>
+/// %result = tensor.collapse_shape %tmp [[0], [1, 2]]
+///   : tensor<?x30x10xf32> to tensor<?x300xf32>
+/// ```
+///
+/// ### Example:
+/// ```
+/// %result = tensor.collapse_shape %1 [[0, 1], [2]]
+///    : tensor<?x1x30xf32> to tensor<?x30xf32>
+/// ```
+/// can be transformed to
+/// ```
+/// %result = tensor.extract_slice %1 [0, 0, 0]
+///                                   [%dim2, 1, 30]
+///                                   [1, 1, 1]
+///    : tensor<?x1x30xf32> to tensor<?x30xf32>
+/// ```
+FailureOr<CollapseShapeRankReducingSliceSimplificationInfo>
+getSimplifyCollapseShapeWithRankReducingSliceInfo(
+    RankedTensorType sourceType,
+    ArrayRef<ReassociationIndices> reassociationIndices);
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H

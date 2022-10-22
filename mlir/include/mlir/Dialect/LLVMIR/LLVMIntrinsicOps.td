@@ -122,7 +122,7 @@ class LLVM_LifetimeBaseOp<string opName> : LLVM_ZeroResultIntrOp<opName> {
                             moduleTranslation.lookupValue(op.getPtr())});
   }];
 
-  let assemblyFormat = "$size `,` $ptr attr-dict `:` type($ptr)";
+  let assemblyFormat = "$size `,` $ptr attr-dict `:` qualified(type($ptr))";
 }
 
 def LLVM_LifetimeStartOp : LLVM_LifetimeBaseOp<"lifetime.start"> {

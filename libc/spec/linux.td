@@ -1,5 +1,3 @@
-def StructTimevalType : NamedType<"struct timeval">;
-
 def Linux : StandardSpec<"Linux"> {
   HeaderSpec Errno = HeaderSpec<
       "errno.h",

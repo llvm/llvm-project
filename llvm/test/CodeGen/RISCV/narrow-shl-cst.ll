@@ -189,9 +189,8 @@ define signext i32 @test11(i32 signext %x) nounwind {
 ;
 ; RV64-LABEL: test11:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    andi a0, a0, -241
 ; RV64-NEXT:    slliw a0, a0, 17
-; RV64-NEXT:    lui a1, 1040864
-; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    ret
   %or = shl i32 %x, 17
   %shl = and i32 %or, -31588352
