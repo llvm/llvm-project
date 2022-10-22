@@ -529,14 +529,12 @@ define i1 @bools2_logical_commute2_and1_and2(i1 %a, i1 %c) {
   ret i1 %or
 }
 
-; This is not safe to transform if 'c' could be poison.
+; Freeze 'c' to prevent poison from leaking.
 
 define i1 @bools2_logical_commute3(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @bools2_logical_commute3(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[C:%.*]], true
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[A:%.*]], i1 [[C]], i1 false
-; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[B:%.*]], i1 [[NOT]], i1 false
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[AND1]], i1 true, i1 [[AND2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[C:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[TMP1]], i1 [[A:%.*]], i1 [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %not = xor i1 %c, -1
@@ -545,6 +543,9 @@ define i1 @bools2_logical_commute3(i1 %a, i1 %b, i1 %c) {
   %or = select i1 %and1, i1 true, i1 %and2
   ret i1 %or
 }
+
+; No freeze needed when 'c' is guaranteed not be poison.
+; Intermediate logic folds may already reduce this.
 
 define i1 @bools2_logical_commute3_nopoison(i1 %a, i1 %b, i1 noundef %c) {
 ; CHECK-LABEL: @bools2_logical_commute3_nopoison(
