@@ -42550,6 +42550,46 @@ SDValue X86TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
       Op, DemandedBits, DemandedElts, DAG, Depth);
 }
 
+bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    bool PoisonOnly, unsigned Depth) const {
+  unsigned EltsBits = Op.getScalarValueSizeInBits();
+  unsigned NumElts = DemandedElts.getBitWidth();
+
+  // TODO: Add more target shuffles.
+  switch (Op.getOpcode()) {
+  case X86ISD::PSHUFD:
+  case X86ISD::VPERMILPI: {
+    SmallVector<int, 8> Mask;
+    DecodePSHUFMask(NumElts, EltsBits, Op.getConstantOperandVal(1), Mask);
+
+    APInt DemandedSrcElts = APInt::getZero(NumElts);
+    for (unsigned I = 0; I != NumElts; ++I)
+      if (DemandedElts[I])
+        DemandedSrcElts.setBit(Mask[I]);
+
+    return DAG.isGuaranteedNotToBeUndefOrPoison(
+        Op.getOperand(0), DemandedSrcElts, PoisonOnly, Depth + 1);
+  }
+  }
+  return TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
+      Op, DemandedElts, DAG, PoisonOnly, Depth);
+}
+
+bool X86TargetLowering::canCreateUndefOrPoisonForTargetNode(
+    SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+    bool PoisonOnly, bool ConsiderFlags, unsigned Depth) const {
+
+  // TODO: Add more target shuffles.
+  switch (Op.getOpcode()) {
+  case X86ISD::PSHUFD:
+  case X86ISD::VPERMILPI:
+    return false;
+  }
+  return TargetLowering::canCreateUndefOrPoisonForTargetNode(
+      Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
+}
+
 bool X86TargetLowering::isSplatValueForTargetNode(SDValue Op,
                                                   const APInt &DemandedElts,
                                                   APInt &UndefElts,
