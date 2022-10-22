@@ -1013,12 +1013,11 @@ template <class LP> void ObjFile::parseLazy() {
                         c->nsyms);
   const char *strtab = reinterpret_cast<const char *>(buf) + c->stroff;
   symbols.resize(nList.size());
-  for (auto it : llvm::enumerate(nList)) {
-    const NList &sym = it.value();
+  for (const auto &[i, sym] : llvm::enumerate(nList)) {
     if ((sym.n_type & N_EXT) && !isUndef(sym)) {
       // TODO: Bound checking
       StringRef name = strtab + sym.n_strx;
-      symbols[it.index()] = symtab->addLazyObject(name, *this);
+      symbols[i] = symtab->addLazyObject(name, *this);
       if (!lazy)
         break;
     }
@@ -2204,11 +2203,9 @@ void BitcodeFile::parse() {
 
 void BitcodeFile::parseLazy() {
   symbols.resize(obj->symbols().size());
-  for (auto it : llvm::enumerate(obj->symbols())) {
-    const lto::InputFile::Symbol &objSym = it.value();
+  for (const auto &[i, objSym] : llvm::enumerate(obj->symbols())) {
     if (!objSym.isUndefined()) {
-      symbols[it.index()] =
-          symtab->addLazyObject(saver().save(objSym.getName()), *this);
+      symbols[i] = symtab->addLazyObject(saver().save(objSym.getName()), *this);
       if (!lazy)
         break;
     }

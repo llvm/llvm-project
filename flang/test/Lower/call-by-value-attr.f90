@@ -16,7 +16,6 @@ program call_by_value_attr
   integer, dimension(15) :: b
   v = 17
   call subri(v)
-  !CHECK: %[[COPY:.*]] = fir.alloca i32
   !CHECK: %[[ARRAY_A:.*]] = fir.address_of(@_QFEa)
   !CHECK: %[[CONST_10_1:.*]] = arith.constant 10 : index
   !CHECK: %[[ARRAY_B:.*]] = fir.address_of(@_QFEb)
@@ -25,8 +24,7 @@ program call_by_value_attr
   !CHECK: %[[CONST:.*]] = arith.constant 17
   !CHECK: fir.store %[[CONST]] to %[[VALUE]]
   !CHECK: %[[LOAD:.*]] = fir.load %[[VALUE]]
-  !CHECK: fir.store %[[LOAD]] to %[[COPY]]
-  !CHECK: fir.call @_QPsubri(%[[COPY]]) : {{.*}}
+  !CHECK: fir.call @_QPsubri(%[[LOAD]]) : {{.*}}
   a = (/ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 /)
   !CHECK: %[[SHAPE_1:.*]] = fir.shape %[[CONST_10_1]]
   !CHECK: %[[ARRAY_LOAD_1:.*]] = fir.array_load %[[ARRAY_A]](%[[SHAPE_1]]) : {{.*}}
@@ -87,6 +85,18 @@ program call_by_value_attr
   call subra(b(5:15))
 end program call_by_value_attr
 
+! CHECK-LABEL: func.func @_QPsubri(
+! CHECK-SAME:                      %[[VAL_0:.*]]: i32 {fir.bindc_name = "val"}) {
+! CHECK:         %[[VAL_1:.*]] = fir.alloca i32
+! CHECK:         fir.store %[[VAL_0]] to %[[VAL_1]] : !fir.ref<i32>
+! CHECK:         fir.call @_QPtest_numeric_scalar_value(%[[VAL_1]]) : (!fir.ref<i32>) -> ()
+! CHECK:         return
+! CHECK:       }
+
+subroutine subri(val)
+  integer, value :: val
+  call test_numeric_scalar_value(val)
+end subroutine subri
 
 ! CHECK-LABEL: func @_QPtest_litteral_copies_1
 subroutine test_litteral_copies_1

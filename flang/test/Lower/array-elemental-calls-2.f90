@@ -131,37 +131,31 @@ end subroutine
 ! CHECK-LABEL: func @_QMtest_opsPcheck_pow() {
 subroutine check_pow()
   print *,  elem_func_real(x**y)
-! CHECK:  %[[VAL_0:.*]] = fir.alloca f64
 ! CHECK:  fir.do_loop
 ! CHECK:  %[[VAL_25:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xf64>, index) -> f64
 ! CHECK:  %[[VAL_26:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xf64>, index) -> f64
 ! CHECK:  %[[VAL_27:.*]] = math.powf %[[VAL_25]], %[[VAL_26]] : f64
-! CHECK:  fir.store %[[VAL_27]] to %[[VAL_0]] : !fir.ref<f64>
-! CHECK:  %[[VAL_28:.*]] = fir.call @_QPelem_func_real(%[[VAL_0]]) : (!fir.ref<f64>) -> i32
+! CHECK:  %[[VAL_28:.*]] = fir.call @_QPelem_func_real(%[[VAL_27]]) : (f64) -> i32
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest_opsPcheck_cmplx_part() {
 subroutine check_cmplx_part()
   print *,  elem_func_real(AIMAG(z1 + z2))
-! CHECK:  %[[VAL_0:.*]] = fir.alloca f64
 ! CHECK:  %[[VAL_13:.*]] = fir.load %{{.*}} : !fir.ref<!fir.complex<8>>
 ! CHECK:  fir.do_loop
 ! CHECK:  %[[VAL_23:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10x!fir.complex<8>>, index) -> !fir.complex<8>
 ! CHECK:  %[[VAL_24:.*]] = fir.addc %[[VAL_23]], %[[VAL_13]] : !fir.complex<8>
 ! CHECK:  %[[VAL_25:.*]] = fir.extract_value %[[VAL_24]], [1 : index] : (!fir.complex<8>) -> f64
-! CHECK:  fir.store %[[VAL_25]] to %[[VAL_0]] : !fir.ref<f64>
-! CHECK:  fir.call @_QPelem_func_real(%[[VAL_0]]) : (!fir.ref<f64>) -> i32
+! CHECK:  fir.call @_QPelem_func_real(%[[VAL_25]]) : (f64) -> i32
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest_opsPcheck_parentheses() {
 subroutine check_parentheses()
   print *,  elem_func_real((x))
-! CHECK:  %[[VAL_0:.*]] = fir.alloca f64
 ! CHECK:  fir.do_loop
 ! CHECK:  %[[VAL_21:.*]] = fir.array_fetch %{{.*}}, %{{.*}} : (!fir.array<10xf64>, index) -> f64
 ! CHECK:  %[[VAL_22:.*]] = fir.no_reassoc %[[VAL_21]] : f64
-! CHECK:  fir.store %[[VAL_22]] to %[[VAL_0]] : !fir.ref<f64>
-! CHECK:  fir.call @_QPelem_func_real(%[[VAL_0]]) : (!fir.ref<f64>) -> i32
+! CHECK:  fir.call @_QPelem_func_real(%[[VAL_22]]) : (f64) -> i32
 end subroutine
 
 ! CHECK-LABEL: func @_QMtest_opsPcheck_parentheses_logical() {

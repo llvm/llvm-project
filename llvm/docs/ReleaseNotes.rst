@@ -138,6 +138,7 @@ Changes to the X86 Backend
 
 * Add support for the ``RDMSRLIST and WRMSRLIST`` instructions.
 * Add support for the ``WRMSRNS`` instruction.
+* Support ISA of ``AMX-FP16`` which contains ``tdpfp16ps`` instruction.
 
 Changes to the OCaml bindings
 -----------------------------

@@ -363,6 +363,8 @@ Non-comprehensive list of changes in this release
 - Clang now supports ``__has_constexpr_builtin`` function-like macro that
   evaluates to 1 if the builtin is supported and can be constant evaluated.
   It can be used to writing conditionally constexpr code that uses builtins.
+- The time profiler (using ``-ftime-trace`` option) now traces various constant
+  evaluation events.
 
 New Compiler Flags
 ------------------
@@ -593,6 +595,7 @@ X86 Support in Clang
 --------------------
 - Support ``-mindirect-branch-cs-prefix`` for call and jmp to indirect thunk.
 - Fix 32-bit ``__fastcall`` and ``__vectorcall`` ABI mismatch with MSVC.
+- Add ISA of ``AMX-FP16`` which support ``_tile_dpfp16ps``.
 - Switch ``AVX512-BF16`` intrinsics types from ``short`` to ``__bf16``.
 - Add support for ``PREFETCHI`` instructions.
 

@@ -156,11 +156,14 @@ namespace thisPointer {
 
   constexpr int foo() { // ref-error {{never produces a constant expression}}
     S *s = nullptr;
-    return s->get12(); // ref-note 2{{member call on dereferenced null pointer}}
+    return s->get12(); // ref-note 2{{member call on dereferenced null pointer}} \
+                       // expected-note {{member call on dereferenced null pointer}}
+
   }
-  // FIXME: The new interpreter doesn't reject this currently.
   static_assert(foo() == 12, ""); // ref-error {{not an integral constant expression}} \
-                                  // ref-note {{in call to 'foo()'}}
+                                  // ref-note {{in call to 'foo()'}} \
+                                  // expected-error {{not an integral constant expression}} \
+                                  // expected-note {{in call to 'foo()'}}
 };
 
 struct FourBoolPairs {

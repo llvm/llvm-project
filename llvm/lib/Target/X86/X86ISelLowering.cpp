@@ -36925,7 +36925,8 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case X86::PTDPBSUD:
   case X86::PTDPBUSD:
   case X86::PTDPBUUD:
-  case X86::PTDPBF16PS: {
+  case X86::PTDPBF16PS:
+  case X86::PTDPFP16PS: {
     unsigned Opc;
     switch (MI.getOpcode()) {
     default: llvm_unreachable("illegal opcode!");
@@ -36934,6 +36935,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     case X86::PTDPBUSD: Opc = X86::TDPBUSD; break;
     case X86::PTDPBUUD: Opc = X86::TDPBUUD; break;
     case X86::PTDPBF16PS: Opc = X86::TDPBF16PS; break;
+    case X86::PTDPFP16PS: Opc = X86::TDPFP16PS; break;
     }
 
     MachineInstrBuilder MIB = BuildMI(*BB, MI, DL, TII->get(Opc));
@@ -39615,7 +39617,7 @@ static SDValue combineX86ShufflesRecursively(
   if (all_of(Mask, [](int Idx) { return Idx < 0; }))
     return getZeroVector(RootVT, Subtarget, DAG, SDLoc(Root));
   if (Ops.size() == 1 && ISD::isBuildVectorAllOnes(Ops[0].getNode()) &&
-      none_of(Mask, [](int M) { return M == SM_SentinelZero; }))
+      !llvm::is_contained(Mask, SM_SentinelZero))
     return getOnesVector(RootVT, DAG, SDLoc(Root));
 
   assert(!Ops.empty() && "Shuffle with no inputs detected");

@@ -598,8 +598,7 @@ public:
     return matchPattern(Input, GenericMatchInfo);
   }
   bool matchOffsetPattern(LVOffset Offset) {
-    return std::find(OffsetMatchInfo.begin(), OffsetMatchInfo.end(), Offset) !=
-           OffsetMatchInfo.end();
+    return llvm::is_contained(OffsetMatchInfo, Offset);
   }
 
   void resolvePatternMatch(LVLine *Line) {

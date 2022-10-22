@@ -1742,7 +1742,7 @@ static void genCustomDirectiveParameterPrinter(FormatElement *element,
     if (var->isVariadic())
       body << name << "().getTypes()";
     else if (var->isOptional())
-      body << llvm::formatv("({0}() ? {0}().getType() : Type())", name);
+      body << llvm::formatv("({0}() ? {0}().getType() : ::mlir::Type())", name);
     else
       body << name << "().getType()";
 

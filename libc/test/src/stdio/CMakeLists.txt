@@ -153,5 +153,22 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
   )
 endif()
 
+add_libc_unittest(
+  fgetc_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fgetc_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.stdio
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fgetc
+    libc.src.stdio.fopen
+    libc.src.stdio.fwrite
+)
+
 add_subdirectory(printf_core)
 add_subdirectory(testdata)
