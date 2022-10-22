@@ -712,16 +712,15 @@ define i32 @freeze_fshl(i32 %a0, i32 %a1, i32 %a2) nounwind {
 ; X86-LABEL: freeze_fshl:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrdl $27, %ecx, %eax
-; X86-NEXT:    shldl $27, %edx, %eax
+; X86-NEXT:    shrl $27, %eax
+; X86-NEXT:    shldl $27, %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_fshl:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shldl $5, %esi, %eax
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    shrl $27, %eax
 ; X64-NEXT:    shldl $27, %edx, %eax
 ; X64-NEXT:    retq
   %f1 = freeze i32 %a1
@@ -736,16 +735,15 @@ define i32 @freeze_fshr(i32 %a0, i32 %a1, i32 %a2) nounwind {
 ; X86-LABEL: freeze_fshr:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    shrdl $1, %ecx, %eax
-; X86-NEXT:    shldl $1, %edx, %eax
+; X86-NEXT:    shrl %eax
+; X86-NEXT:    shldl $1, %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: freeze_fshr:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    shldl $31, %esi, %eax
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    shrl %eax
 ; X64-NEXT:    shldl $1, %edx, %eax
 ; X64-NEXT:    retq
   %f1 = freeze i32 %a1
