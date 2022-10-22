@@ -114,6 +114,9 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
 
 template <typename T> inline bool IsTrue(const T &V) { return !V.isZero(); }
 
+/// Interpreter entry point.
+bool Interpret(InterpState &S, APValue &Result);
+
 //===----------------------------------------------------------------------===//
 // Add, Sub, Mul
 //===----------------------------------------------------------------------===//
@@ -1103,6 +1106,35 @@ inline bool ExpandPtr(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+static bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
+  auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
+  if (Func->hasThisPointer()) {
+    if (!CheckInvoke(S, PC, NewFrame->getThis())) {
+      return false;
+    }
+    // TODO: CheckCallable
+  }
+
+  InterpFrame *FrameBefore = S.Current;
+  S.Current = NewFrame.get();
+
+  APValue CallResult;
+  // Note that we cannot assert(CallResult.hasValue()) here since
+  // Ret() above only sets the APValue if the curent frame doesn't
+  // have a caller set.
+  if (Interpret(S, CallResult)) {
+    NewFrame.release(); // Frame was delete'd already.
+    assert(S.Current == FrameBefore);
+    return true;
+  }
+
+  // Interpreting the function failed somehow. Reset to
+  // previous state.
+  S.Current = FrameBefore;
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // Read opcode arguments
 //===----------------------------------------------------------------------===//
@@ -1115,9 +1147,6 @@ template <typename T> inline T ReadArg(InterpState &S, CodePtr &OpPC) {
     return OpPC.read<T>();
   }
 }
-
-/// Interpreter entry point.
-bool Interpret(InterpState &S, APValue &Result);
 
 } // namespace interp
 } // namespace clang
