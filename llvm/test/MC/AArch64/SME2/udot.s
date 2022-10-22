@@ -1461,3 +1461,1166 @@ udot    za.d[w9, 7], {z12.h - z15.h}, z11.h[0]  // 11000001-11011011-10100001-10
 // CHECK-ERROR: instruction requires: sme2
 // CHECK-UNKNOWN: c1dba19f <unknown>
 
+
+udot    za.s[w8, 0, vgx2], {z0.b, z1.b}, z0.b  // 11000001-00100000-00010100-00010000
+// CHECK-INST: udot    za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b
+// CHECK-ENCODING: [0x10,0x14,0x20,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1201410 <unknown>
+
+udot    za.s[w8, 0], {z0.b - z1.b}, z0.b  // 11000001-00100000-00010100-00010000
+// CHECK-INST: udot    za.s[w8, 0, vgx2], { z0.b, z1.b }, z0.b
+// CHECK-ENCODING: [0x10,0x14,0x20,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1201410 <unknown>
+
+udot    za.s[w10, 5, vgx2], {z10.b, z11.b}, z5.b  // 11000001-00100101-01010101-01010101
+// CHECK-INST: udot    za.s[w10, 5, vgx2], { z10.b, z11.b }, z5.b
+// CHECK-ENCODING: [0x55,0x55,0x25,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1255555 <unknown>
+
+udot    za.s[w10, 5], {z10.b - z11.b}, z5.b  // 11000001-00100101-01010101-01010101
+// CHECK-INST: udot    za.s[w10, 5, vgx2], { z10.b, z11.b }, z5.b
+// CHECK-ENCODING: [0x55,0x55,0x25,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1255555 <unknown>
+
+udot    za.s[w11, 7, vgx2], {z13.b, z14.b}, z8.b  // 11000001-00101000-01110101-10110111
+// CHECK-INST: udot    za.s[w11, 7, vgx2], { z13.b, z14.b }, z8.b
+// CHECK-ENCODING: [0xb7,0x75,0x28,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c12875b7 <unknown>
+
+udot    za.s[w11, 7], {z13.b - z14.b}, z8.b  // 11000001-00101000-01110101-10110111
+// CHECK-INST: udot    za.s[w11, 7, vgx2], { z13.b, z14.b }, z8.b
+// CHECK-ENCODING: [0xb7,0x75,0x28,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c12875b7 <unknown>
+
+udot    za.s[w11, 7, vgx2], {z31.b, z0.b}, z15.b  // 11000001-00101111-01110111-11110111
+// CHECK-INST: udot    za.s[w11, 7, vgx2], { z31.b, z0.b }, z15.b
+// CHECK-ENCODING: [0xf7,0x77,0x2f,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c12f77f7 <unknown>
+
+udot    za.s[w11, 7], {z31.b - z0.b}, z15.b  // 11000001-00101111-01110111-11110111
+// CHECK-INST: udot    za.s[w11, 7, vgx2], { z31.b, z0.b }, z15.b
+// CHECK-ENCODING: [0xf7,0x77,0x2f,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c12f77f7 <unknown>
+
+udot    za.s[w8, 5, vgx2], {z17.b, z18.b}, z0.b  // 11000001-00100000-00010110-00110101
+// CHECK-INST: udot    za.s[w8, 5, vgx2], { z17.b, z18.b }, z0.b
+// CHECK-ENCODING: [0x35,0x16,0x20,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1201635 <unknown>
+
+udot    za.s[w8, 5], {z17.b - z18.b}, z0.b  // 11000001-00100000-00010110-00110101
+// CHECK-INST: udot    za.s[w8, 5, vgx2], { z17.b, z18.b }, z0.b
+// CHECK-ENCODING: [0x35,0x16,0x20,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1201635 <unknown>
+
+udot    za.s[w8, 1, vgx2], {z1.b, z2.b}, z14.b  // 11000001-00101110-00010100-00110001
+// CHECK-INST: udot    za.s[w8, 1, vgx2], { z1.b, z2.b }, z14.b
+// CHECK-ENCODING: [0x31,0x14,0x2e,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c12e1431 <unknown>
+
+udot    za.s[w8, 1], {z1.b - z2.b}, z14.b  // 11000001-00101110-00010100-00110001
+// CHECK-INST: udot    za.s[w8, 1, vgx2], { z1.b, z2.b }, z14.b
+// CHECK-ENCODING: [0x31,0x14,0x2e,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c12e1431 <unknown>
+
+udot    za.s[w10, 0, vgx2], {z19.b, z20.b}, z4.b  // 11000001-00100100-01010110-01110000
+// CHECK-INST: udot    za.s[w10, 0, vgx2], { z19.b, z20.b }, z4.b
+// CHECK-ENCODING: [0x70,0x56,0x24,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1245670 <unknown>
+
+udot    za.s[w10, 0], {z19.b - z20.b}, z4.b  // 11000001-00100100-01010110-01110000
+// CHECK-INST: udot    za.s[w10, 0, vgx2], { z19.b, z20.b }, z4.b
+// CHECK-ENCODING: [0x70,0x56,0x24,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1245670 <unknown>
+
+udot    za.s[w8, 0, vgx2], {z12.b, z13.b}, z2.b  // 11000001-00100010-00010101-10010000
+// CHECK-INST: udot    za.s[w8, 0, vgx2], { z12.b, z13.b }, z2.b
+// CHECK-ENCODING: [0x90,0x15,0x22,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1221590 <unknown>
+
+udot    za.s[w8, 0], {z12.b - z13.b}, z2.b  // 11000001-00100010-00010101-10010000
+// CHECK-INST: udot    za.s[w8, 0, vgx2], { z12.b, z13.b }, z2.b
+// CHECK-ENCODING: [0x90,0x15,0x22,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1221590 <unknown>
+
+udot    za.s[w10, 1, vgx2], {z1.b, z2.b}, z10.b  // 11000001-00101010-01010100-00110001
+// CHECK-INST: udot    za.s[w10, 1, vgx2], { z1.b, z2.b }, z10.b
+// CHECK-ENCODING: [0x31,0x54,0x2a,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c12a5431 <unknown>
+
+udot    za.s[w10, 1], {z1.b - z2.b}, z10.b  // 11000001-00101010-01010100-00110001
+// CHECK-INST: udot    za.s[w10, 1, vgx2], { z1.b, z2.b }, z10.b
+// CHECK-ENCODING: [0x31,0x54,0x2a,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c12a5431 <unknown>
+
+udot    za.s[w8, 5, vgx2], {z22.b, z23.b}, z14.b  // 11000001-00101110-00010110-11010101
+// CHECK-INST: udot    za.s[w8, 5, vgx2], { z22.b, z23.b }, z14.b
+// CHECK-ENCODING: [0xd5,0x16,0x2e,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c12e16d5 <unknown>
+
+udot    za.s[w8, 5], {z22.b - z23.b}, z14.b  // 11000001-00101110-00010110-11010101
+// CHECK-INST: udot    za.s[w8, 5, vgx2], { z22.b, z23.b }, z14.b
+// CHECK-ENCODING: [0xd5,0x16,0x2e,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c12e16d5 <unknown>
+
+udot    za.s[w11, 2, vgx2], {z9.b, z10.b}, z1.b  // 11000001-00100001-01110101-00110010
+// CHECK-INST: udot    za.s[w11, 2, vgx2], { z9.b, z10.b }, z1.b
+// CHECK-ENCODING: [0x32,0x75,0x21,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1217532 <unknown>
+
+udot    za.s[w11, 2], {z9.b - z10.b}, z1.b  // 11000001-00100001-01110101-00110010
+// CHECK-INST: udot    za.s[w11, 2, vgx2], { z9.b, z10.b }, z1.b
+// CHECK-ENCODING: [0x32,0x75,0x21,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1217532 <unknown>
+
+udot    za.s[w9, 7, vgx2], {z12.b, z13.b}, z11.b  // 11000001-00101011-00110101-10010111
+// CHECK-INST: udot    za.s[w9, 7, vgx2], { z12.b, z13.b }, z11.b
+// CHECK-ENCODING: [0x97,0x35,0x2b,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c12b3597 <unknown>
+
+udot    za.s[w9, 7], {z12.b - z13.b}, z11.b  // 11000001-00101011-00110101-10010111
+// CHECK-INST: udot    za.s[w9, 7, vgx2], { z12.b, z13.b }, z11.b
+// CHECK-ENCODING: [0x97,0x35,0x2b,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c12b3597 <unknown>
+
+udot    za.s[w8, 0, vgx2], {z0.b, z1.b}, {z0.b, z1.b}  // 11000001-10100000-00010100-00010000
+// CHECK-INST: udot    za.s[w8, 0, vgx2], { z0.b, z1.b }, { z0.b, z1.b }
+// CHECK-ENCODING: [0x10,0x14,0xa0,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a01410 <unknown>
+
+udot    za.s[w8, 0], {z0.b - z1.b}, {z0.b - z1.b}  // 11000001-10100000-00010100-00010000
+// CHECK-INST: udot    za.s[w8, 0, vgx2], { z0.b, z1.b }, { z0.b, z1.b }
+// CHECK-ENCODING: [0x10,0x14,0xa0,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a01410 <unknown>
+
+udot    za.s[w10, 5, vgx2], {z10.b, z11.b}, {z20.b, z21.b}  // 11000001-10110100-01010101-01010101
+// CHECK-INST: udot    za.s[w10, 5, vgx2], { z10.b, z11.b }, { z20.b, z21.b }
+// CHECK-ENCODING: [0x55,0x55,0xb4,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1b45555 <unknown>
+
+udot    za.s[w10, 5], {z10.b - z11.b}, {z20.b - z21.b}  // 11000001-10110100-01010101-01010101
+// CHECK-INST: udot    za.s[w10, 5, vgx2], { z10.b, z11.b }, { z20.b, z21.b }
+// CHECK-ENCODING: [0x55,0x55,0xb4,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1b45555 <unknown>
+
+udot    za.s[w11, 7, vgx2], {z12.b, z13.b}, {z8.b, z9.b}  // 11000001-10101000-01110101-10010111
+// CHECK-INST: udot    za.s[w11, 7, vgx2], { z12.b, z13.b }, { z8.b, z9.b }
+// CHECK-ENCODING: [0x97,0x75,0xa8,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a87597 <unknown>
+
+udot    za.s[w11, 7], {z12.b - z13.b}, {z8.b - z9.b}  // 11000001-10101000-01110101-10010111
+// CHECK-INST: udot    za.s[w11, 7, vgx2], { z12.b, z13.b }, { z8.b, z9.b }
+// CHECK-ENCODING: [0x97,0x75,0xa8,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a87597 <unknown>
+
+udot    za.s[w11, 7, vgx2], {z30.b, z31.b}, {z30.b, z31.b}  // 11000001-10111110-01110111-11010111
+// CHECK-INST: udot    za.s[w11, 7, vgx2], { z30.b, z31.b }, { z30.b, z31.b }
+// CHECK-ENCODING: [0xd7,0x77,0xbe,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1be77d7 <unknown>
+
+udot    za.s[w11, 7], {z30.b - z31.b}, {z30.b - z31.b}  // 11000001-10111110-01110111-11010111
+// CHECK-INST: udot    za.s[w11, 7, vgx2], { z30.b, z31.b }, { z30.b, z31.b }
+// CHECK-ENCODING: [0xd7,0x77,0xbe,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1be77d7 <unknown>
+
+udot    za.s[w8, 5, vgx2], {z16.b, z17.b}, {z16.b, z17.b}  // 11000001-10110000-00010110-00010101
+// CHECK-INST: udot    za.s[w8, 5, vgx2], { z16.b, z17.b }, { z16.b, z17.b }
+// CHECK-ENCODING: [0x15,0x16,0xb0,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1b01615 <unknown>
+
+udot    za.s[w8, 5], {z16.b - z17.b}, {z16.b - z17.b}  // 11000001-10110000-00010110-00010101
+// CHECK-INST: udot    za.s[w8, 5, vgx2], { z16.b, z17.b }, { z16.b, z17.b }
+// CHECK-ENCODING: [0x15,0x16,0xb0,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1b01615 <unknown>
+
+udot    za.s[w8, 1, vgx2], {z0.b, z1.b}, {z30.b, z31.b}  // 11000001-10111110-00010100-00010001
+// CHECK-INST: udot    za.s[w8, 1, vgx2], { z0.b, z1.b }, { z30.b, z31.b }
+// CHECK-ENCODING: [0x11,0x14,0xbe,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1be1411 <unknown>
+
+udot    za.s[w8, 1], {z0.b - z1.b}, {z30.b - z31.b}  // 11000001-10111110-00010100-00010001
+// CHECK-INST: udot    za.s[w8, 1, vgx2], { z0.b, z1.b }, { z30.b, z31.b }
+// CHECK-ENCODING: [0x11,0x14,0xbe,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1be1411 <unknown>
+
+udot    za.s[w10, 0, vgx2], {z18.b, z19.b}, {z20.b, z21.b}  // 11000001-10110100-01010110-01010000
+// CHECK-INST: udot    za.s[w10, 0, vgx2], { z18.b, z19.b }, { z20.b, z21.b }
+// CHECK-ENCODING: [0x50,0x56,0xb4,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1b45650 <unknown>
+
+udot    za.s[w10, 0], {z18.b - z19.b}, {z20.b - z21.b}  // 11000001-10110100-01010110-01010000
+// CHECK-INST: udot    za.s[w10, 0, vgx2], { z18.b, z19.b }, { z20.b, z21.b }
+// CHECK-ENCODING: [0x50,0x56,0xb4,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1b45650 <unknown>
+
+udot    za.s[w8, 0, vgx2], {z12.b, z13.b}, {z2.b, z3.b}  // 11000001-10100010-00010101-10010000
+// CHECK-INST: udot    za.s[w8, 0, vgx2], { z12.b, z13.b }, { z2.b, z3.b }
+// CHECK-ENCODING: [0x90,0x15,0xa2,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a21590 <unknown>
+
+udot    za.s[w8, 0], {z12.b - z13.b}, {z2.b - z3.b}  // 11000001-10100010-00010101-10010000
+// CHECK-INST: udot    za.s[w8, 0, vgx2], { z12.b, z13.b }, { z2.b, z3.b }
+// CHECK-ENCODING: [0x90,0x15,0xa2,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a21590 <unknown>
+
+udot    za.s[w10, 1, vgx2], {z0.b, z1.b}, {z26.b, z27.b}  // 11000001-10111010-01010100-00010001
+// CHECK-INST: udot    za.s[w10, 1, vgx2], { z0.b, z1.b }, { z26.b, z27.b }
+// CHECK-ENCODING: [0x11,0x54,0xba,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1ba5411 <unknown>
+
+udot    za.s[w10, 1], {z0.b - z1.b}, {z26.b - z27.b}  // 11000001-10111010-01010100-00010001
+// CHECK-INST: udot    za.s[w10, 1, vgx2], { z0.b, z1.b }, { z26.b, z27.b }
+// CHECK-ENCODING: [0x11,0x54,0xba,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1ba5411 <unknown>
+
+udot    za.s[w8, 5, vgx2], {z22.b, z23.b}, {z30.b, z31.b}  // 11000001-10111110-00010110-11010101
+// CHECK-INST: udot    za.s[w8, 5, vgx2], { z22.b, z23.b }, { z30.b, z31.b }
+// CHECK-ENCODING: [0xd5,0x16,0xbe,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1be16d5 <unknown>
+
+udot    za.s[w8, 5], {z22.b - z23.b}, {z30.b - z31.b}  // 11000001-10111110-00010110-11010101
+// CHECK-INST: udot    za.s[w8, 5, vgx2], { z22.b, z23.b }, { z30.b, z31.b }
+// CHECK-ENCODING: [0xd5,0x16,0xbe,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1be16d5 <unknown>
+
+udot    za.s[w11, 2, vgx2], {z8.b, z9.b}, {z0.b, z1.b}  // 11000001-10100000-01110101-00010010
+// CHECK-INST: udot    za.s[w11, 2, vgx2], { z8.b, z9.b }, { z0.b, z1.b }
+// CHECK-ENCODING: [0x12,0x75,0xa0,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a07512 <unknown>
+
+udot    za.s[w11, 2], {z8.b - z9.b}, {z0.b - z1.b}  // 11000001-10100000-01110101-00010010
+// CHECK-INST: udot    za.s[w11, 2, vgx2], { z8.b, z9.b }, { z0.b, z1.b }
+// CHECK-ENCODING: [0x12,0x75,0xa0,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a07512 <unknown>
+
+udot    za.s[w9, 7, vgx2], {z12.b, z13.b}, {z10.b, z11.b}  // 11000001-10101010-00110101-10010111
+// CHECK-INST: udot    za.s[w9, 7, vgx2], { z12.b, z13.b }, { z10.b, z11.b }
+// CHECK-ENCODING: [0x97,0x35,0xaa,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1aa3597 <unknown>
+
+udot    za.s[w9, 7], {z12.b - z13.b}, {z10.b - z11.b}  // 11000001-10101010-00110101-10010111
+// CHECK-INST: udot    za.s[w9, 7, vgx2], { z12.b, z13.b }, { z10.b, z11.b }
+// CHECK-ENCODING: [0x97,0x35,0xaa,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1aa3597 <unknown>
+
+
+udot    za.d[w8, 0, vgx2], {z0.h, z1.h}, z0.h  // 11000001-01100000-00010100-00010000
+// CHECK-INST: udot    za.d[w8, 0, vgx2], { z0.h, z1.h }, z0.h
+// CHECK-ENCODING: [0x10,0x14,0x60,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1601410 <unknown>
+
+udot    za.d[w8, 0], {z0.h - z1.h}, z0.h  // 11000001-01100000-00010100-00010000
+// CHECK-INST: udot    za.d[w8, 0, vgx2], { z0.h, z1.h }, z0.h
+// CHECK-ENCODING: [0x10,0x14,0x60,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1601410 <unknown>
+
+udot    za.d[w10, 5, vgx2], {z10.h, z11.h}, z5.h  // 11000001-01100101-01010101-01010101
+// CHECK-INST: udot    za.d[w10, 5, vgx2], { z10.h, z11.h }, z5.h
+// CHECK-ENCODING: [0x55,0x55,0x65,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1655555 <unknown>
+
+udot    za.d[w10, 5], {z10.h - z11.h}, z5.h  // 11000001-01100101-01010101-01010101
+// CHECK-INST: udot    za.d[w10, 5, vgx2], { z10.h, z11.h }, z5.h
+// CHECK-ENCODING: [0x55,0x55,0x65,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1655555 <unknown>
+
+udot    za.d[w11, 7, vgx2], {z13.h, z14.h}, z8.h  // 11000001-01101000-01110101-10110111
+// CHECK-INST: udot    za.d[w11, 7, vgx2], { z13.h, z14.h }, z8.h
+// CHECK-ENCODING: [0xb7,0x75,0x68,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c16875b7 <unknown>
+
+udot    za.d[w11, 7], {z13.h - z14.h}, z8.h  // 11000001-01101000-01110101-10110111
+// CHECK-INST: udot    za.d[w11, 7, vgx2], { z13.h, z14.h }, z8.h
+// CHECK-ENCODING: [0xb7,0x75,0x68,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c16875b7 <unknown>
+
+udot    za.d[w11, 7, vgx2], {z31.h, z0.h}, z15.h  // 11000001-01101111-01110111-11110111
+// CHECK-INST: udot    za.d[w11, 7, vgx2], { z31.h, z0.h }, z15.h
+// CHECK-ENCODING: [0xf7,0x77,0x6f,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c16f77f7 <unknown>
+
+udot    za.d[w11, 7], {z31.h - z0.h}, z15.h  // 11000001-01101111-01110111-11110111
+// CHECK-INST: udot    za.d[w11, 7, vgx2], { z31.h, z0.h }, z15.h
+// CHECK-ENCODING: [0xf7,0x77,0x6f,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c16f77f7 <unknown>
+
+udot    za.d[w8, 5, vgx2], {z17.h, z18.h}, z0.h  // 11000001-01100000-00010110-00110101
+// CHECK-INST: udot    za.d[w8, 5, vgx2], { z17.h, z18.h }, z0.h
+// CHECK-ENCODING: [0x35,0x16,0x60,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1601635 <unknown>
+
+udot    za.d[w8, 5], {z17.h - z18.h}, z0.h  // 11000001-01100000-00010110-00110101
+// CHECK-INST: udot    za.d[w8, 5, vgx2], { z17.h, z18.h }, z0.h
+// CHECK-ENCODING: [0x35,0x16,0x60,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1601635 <unknown>
+
+udot    za.d[w8, 1, vgx2], {z1.h, z2.h}, z14.h  // 11000001-01101110-00010100-00110001
+// CHECK-INST: udot    za.d[w8, 1, vgx2], { z1.h, z2.h }, z14.h
+// CHECK-ENCODING: [0x31,0x14,0x6e,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c16e1431 <unknown>
+
+udot    za.d[w8, 1], {z1.h - z2.h}, z14.h  // 11000001-01101110-00010100-00110001
+// CHECK-INST: udot    za.d[w8, 1, vgx2], { z1.h, z2.h }, z14.h
+// CHECK-ENCODING: [0x31,0x14,0x6e,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c16e1431 <unknown>
+
+udot    za.d[w10, 0, vgx2], {z19.h, z20.h}, z4.h  // 11000001-01100100-01010110-01110000
+// CHECK-INST: udot    za.d[w10, 0, vgx2], { z19.h, z20.h }, z4.h
+// CHECK-ENCODING: [0x70,0x56,0x64,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1645670 <unknown>
+
+udot    za.d[w10, 0], {z19.h - z20.h}, z4.h  // 11000001-01100100-01010110-01110000
+// CHECK-INST: udot    za.d[w10, 0, vgx2], { z19.h, z20.h }, z4.h
+// CHECK-ENCODING: [0x70,0x56,0x64,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1645670 <unknown>
+
+udot    za.d[w8, 0, vgx2], {z12.h, z13.h}, z2.h  // 11000001-01100010-00010101-10010000
+// CHECK-INST: udot    za.d[w8, 0, vgx2], { z12.h, z13.h }, z2.h
+// CHECK-ENCODING: [0x90,0x15,0x62,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1621590 <unknown>
+
+udot    za.d[w8, 0], {z12.h - z13.h}, z2.h  // 11000001-01100010-00010101-10010000
+// CHECK-INST: udot    za.d[w8, 0, vgx2], { z12.h, z13.h }, z2.h
+// CHECK-ENCODING: [0x90,0x15,0x62,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1621590 <unknown>
+
+udot    za.d[w10, 1, vgx2], {z1.h, z2.h}, z10.h  // 11000001-01101010-01010100-00110001
+// CHECK-INST: udot    za.d[w10, 1, vgx2], { z1.h, z2.h }, z10.h
+// CHECK-ENCODING: [0x31,0x54,0x6a,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c16a5431 <unknown>
+
+udot    za.d[w10, 1], {z1.h - z2.h}, z10.h  // 11000001-01101010-01010100-00110001
+// CHECK-INST: udot    za.d[w10, 1, vgx2], { z1.h, z2.h }, z10.h
+// CHECK-ENCODING: [0x31,0x54,0x6a,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c16a5431 <unknown>
+
+udot    za.d[w8, 5, vgx2], {z22.h, z23.h}, z14.h  // 11000001-01101110-00010110-11010101
+// CHECK-INST: udot    za.d[w8, 5, vgx2], { z22.h, z23.h }, z14.h
+// CHECK-ENCODING: [0xd5,0x16,0x6e,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c16e16d5 <unknown>
+
+udot    za.d[w8, 5], {z22.h - z23.h}, z14.h  // 11000001-01101110-00010110-11010101
+// CHECK-INST: udot    za.d[w8, 5, vgx2], { z22.h, z23.h }, z14.h
+// CHECK-ENCODING: [0xd5,0x16,0x6e,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c16e16d5 <unknown>
+
+udot    za.d[w11, 2, vgx2], {z9.h, z10.h}, z1.h  // 11000001-01100001-01110101-00110010
+// CHECK-INST: udot    za.d[w11, 2, vgx2], { z9.h, z10.h }, z1.h
+// CHECK-ENCODING: [0x32,0x75,0x61,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1617532 <unknown>
+
+udot    za.d[w11, 2], {z9.h - z10.h}, z1.h  // 11000001-01100001-01110101-00110010
+// CHECK-INST: udot    za.d[w11, 2, vgx2], { z9.h, z10.h }, z1.h
+// CHECK-ENCODING: [0x32,0x75,0x61,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1617532 <unknown>
+
+udot    za.d[w9, 7, vgx2], {z12.h, z13.h}, z11.h  // 11000001-01101011-00110101-10010111
+// CHECK-INST: udot    za.d[w9, 7, vgx2], { z12.h, z13.h }, z11.h
+// CHECK-ENCODING: [0x97,0x35,0x6b,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c16b3597 <unknown>
+
+udot    za.d[w9, 7], {z12.h - z13.h}, z11.h  // 11000001-01101011-00110101-10010111
+// CHECK-INST: udot    za.d[w9, 7, vgx2], { z12.h, z13.h }, z11.h
+// CHECK-ENCODING: [0x97,0x35,0x6b,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c16b3597 <unknown>
+
+udot    za.d[w9, 7], {z12.h - z13.h}, z11.h  // 11000001-01101011-00110101-10010111
+// CHECK-INST: udot    za.d[w9, 7, vgx2], { z12.h, z13.h }, z11.h
+// CHECK-ENCODING: [0x97,0x35,0x6b,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c16b3597 <unknown>
+
+
+udot    za.d[w8, 0, vgx2], {z0.h, z1.h}, {z0.h, z1.h}  // 11000001-11100000-00010100-00010000
+// CHECK-INST: udot    za.d[w8, 0, vgx2], { z0.h, z1.h }, { z0.h, z1.h }
+// CHECK-ENCODING: [0x10,0x14,0xe0,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e01410 <unknown>
+
+udot    za.d[w8, 0], {z0.h - z1.h}, {z0.h - z1.h}  // 11000001-11100000-00010100-00010000
+// CHECK-INST: udot    za.d[w8, 0, vgx2], { z0.h, z1.h }, { z0.h, z1.h }
+// CHECK-ENCODING: [0x10,0x14,0xe0,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e01410 <unknown>
+
+udot    za.d[w10, 5, vgx2], {z10.h, z11.h}, {z20.h, z21.h}  // 11000001-11110100-01010101-01010101
+// CHECK-INST: udot    za.d[w10, 5, vgx2], { z10.h, z11.h }, { z20.h, z21.h }
+// CHECK-ENCODING: [0x55,0x55,0xf4,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1f45555 <unknown>
+
+udot    za.d[w10, 5], {z10.h - z11.h}, {z20.h - z21.h}  // 11000001-11110100-01010101-01010101
+// CHECK-INST: udot    za.d[w10, 5, vgx2], { z10.h, z11.h }, { z20.h, z21.h }
+// CHECK-ENCODING: [0x55,0x55,0xf4,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1f45555 <unknown>
+
+udot    za.d[w11, 7, vgx2], {z12.h, z13.h}, {z8.h, z9.h}  // 11000001-11101000-01110101-10010111
+// CHECK-INST: udot    za.d[w11, 7, vgx2], { z12.h, z13.h }, { z8.h, z9.h }
+// CHECK-ENCODING: [0x97,0x75,0xe8,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e87597 <unknown>
+
+udot    za.d[w11, 7], {z12.h - z13.h}, {z8.h - z9.h}  // 11000001-11101000-01110101-10010111
+// CHECK-INST: udot    za.d[w11, 7, vgx2], { z12.h, z13.h }, { z8.h, z9.h }
+// CHECK-ENCODING: [0x97,0x75,0xe8,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e87597 <unknown>
+
+udot    za.d[w11, 7, vgx2], {z30.h, z31.h}, {z30.h, z31.h}  // 11000001-11111110-01110111-11010111
+// CHECK-INST: udot    za.d[w11, 7, vgx2], { z30.h, z31.h }, { z30.h, z31.h }
+// CHECK-ENCODING: [0xd7,0x77,0xfe,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1fe77d7 <unknown>
+
+udot    za.d[w11, 7], {z30.h - z31.h}, {z30.h - z31.h}  // 11000001-11111110-01110111-11010111
+// CHECK-INST: udot    za.d[w11, 7, vgx2], { z30.h, z31.h }, { z30.h, z31.h }
+// CHECK-ENCODING: [0xd7,0x77,0xfe,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1fe77d7 <unknown>
+
+udot    za.d[w8, 5, vgx2], {z16.h, z17.h}, {z16.h, z17.h}  // 11000001-11110000-00010110-00010101
+// CHECK-INST: udot    za.d[w8, 5, vgx2], { z16.h, z17.h }, { z16.h, z17.h }
+// CHECK-ENCODING: [0x15,0x16,0xf0,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1f01615 <unknown>
+
+udot    za.d[w8, 5], {z16.h - z17.h}, {z16.h - z17.h}  // 11000001-11110000-00010110-00010101
+// CHECK-INST: udot    za.d[w8, 5, vgx2], { z16.h, z17.h }, { z16.h, z17.h }
+// CHECK-ENCODING: [0x15,0x16,0xf0,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1f01615 <unknown>
+
+udot    za.d[w8, 1, vgx2], {z0.h, z1.h}, {z30.h, z31.h}  // 11000001-11111110-00010100-00010001
+// CHECK-INST: udot    za.d[w8, 1, vgx2], { z0.h, z1.h }, { z30.h, z31.h }
+// CHECK-ENCODING: [0x11,0x14,0xfe,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1fe1411 <unknown>
+
+udot    za.d[w8, 1], {z0.h - z1.h}, {z30.h - z31.h}  // 11000001-11111110-00010100-00010001
+// CHECK-INST: udot    za.d[w8, 1, vgx2], { z0.h, z1.h }, { z30.h, z31.h }
+// CHECK-ENCODING: [0x11,0x14,0xfe,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1fe1411 <unknown>
+
+udot    za.d[w10, 0, vgx2], {z18.h, z19.h}, {z20.h, z21.h}  // 11000001-11110100-01010110-01010000
+// CHECK-INST: udot    za.d[w10, 0, vgx2], { z18.h, z19.h }, { z20.h, z21.h }
+// CHECK-ENCODING: [0x50,0x56,0xf4,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1f45650 <unknown>
+
+udot    za.d[w10, 0], {z18.h - z19.h}, {z20.h - z21.h}  // 11000001-11110100-01010110-01010000
+// CHECK-INST: udot    za.d[w10, 0, vgx2], { z18.h, z19.h }, { z20.h, z21.h }
+// CHECK-ENCODING: [0x50,0x56,0xf4,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1f45650 <unknown>
+
+udot    za.d[w8, 0, vgx2], {z12.h, z13.h}, {z2.h, z3.h}  // 11000001-11100010-00010101-10010000
+// CHECK-INST: udot    za.d[w8, 0, vgx2], { z12.h, z13.h }, { z2.h, z3.h }
+// CHECK-ENCODING: [0x90,0x15,0xe2,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e21590 <unknown>
+
+udot    za.d[w8, 0], {z12.h - z13.h}, {z2.h - z3.h}  // 11000001-11100010-00010101-10010000
+// CHECK-INST: udot    za.d[w8, 0, vgx2], { z12.h, z13.h }, { z2.h, z3.h }
+// CHECK-ENCODING: [0x90,0x15,0xe2,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e21590 <unknown>
+
+udot    za.d[w10, 1, vgx2], {z0.h, z1.h}, {z26.h, z27.h}  // 11000001-11111010-01010100-00010001
+// CHECK-INST: udot    za.d[w10, 1, vgx2], { z0.h, z1.h }, { z26.h, z27.h }
+// CHECK-ENCODING: [0x11,0x54,0xfa,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1fa5411 <unknown>
+
+udot    za.d[w10, 1], {z0.h - z1.h}, {z26.h - z27.h}  // 11000001-11111010-01010100-00010001
+// CHECK-INST: udot    za.d[w10, 1, vgx2], { z0.h, z1.h }, { z26.h, z27.h }
+// CHECK-ENCODING: [0x11,0x54,0xfa,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1fa5411 <unknown>
+
+udot    za.d[w8, 5, vgx2], {z22.h, z23.h}, {z30.h, z31.h}  // 11000001-11111110-00010110-11010101
+// CHECK-INST: udot    za.d[w8, 5, vgx2], { z22.h, z23.h }, { z30.h, z31.h }
+// CHECK-ENCODING: [0xd5,0x16,0xfe,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1fe16d5 <unknown>
+
+udot    za.d[w8, 5], {z22.h - z23.h}, {z30.h - z31.h}  // 11000001-11111110-00010110-11010101
+// CHECK-INST: udot    za.d[w8, 5, vgx2], { z22.h, z23.h }, { z30.h, z31.h }
+// CHECK-ENCODING: [0xd5,0x16,0xfe,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1fe16d5 <unknown>
+
+udot    za.d[w11, 2, vgx2], {z8.h, z9.h}, {z0.h, z1.h}  // 11000001-11100000-01110101-00010010
+// CHECK-INST: udot    za.d[w11, 2, vgx2], { z8.h, z9.h }, { z0.h, z1.h }
+// CHECK-ENCODING: [0x12,0x75,0xe0,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e07512 <unknown>
+
+udot    za.d[w11, 2], {z8.h - z9.h}, {z0.h - z1.h}  // 11000001-11100000-01110101-00010010
+// CHECK-INST: udot    za.d[w11, 2, vgx2], { z8.h, z9.h }, { z0.h, z1.h }
+// CHECK-ENCODING: [0x12,0x75,0xe0,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e07512 <unknown>
+
+udot    za.d[w9, 7, vgx2], {z12.h, z13.h}, {z10.h, z11.h}  // 11000001-11101010-00110101-10010111
+// CHECK-INST: udot    za.d[w9, 7, vgx2], { z12.h, z13.h }, { z10.h, z11.h }
+// CHECK-ENCODING: [0x97,0x35,0xea,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1ea3597 <unknown>
+
+udot    za.d[w9, 7], {z12.h - z13.h}, {z10.h - z11.h}  // 11000001-11101010-00110101-10010111
+// CHECK-INST: udot    za.d[w9, 7, vgx2], { z12.h, z13.h }, { z10.h, z11.h }
+// CHECK-ENCODING: [0x97,0x35,0xea,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1ea3597 <unknown>
+
+
+udot    za.s[w8, 0, vgx4], {z0.b - z3.b}, z0.b  // 11000001-00110000-00010100-00010000
+// CHECK-INST: udot    za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b
+// CHECK-ENCODING: [0x10,0x14,0x30,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1301410 <unknown>
+
+udot    za.s[w8, 0], {z0.b - z3.b}, z0.b  // 11000001-00110000-00010100-00010000
+// CHECK-INST: udot    za.s[w8, 0, vgx4], { z0.b - z3.b }, z0.b
+// CHECK-ENCODING: [0x10,0x14,0x30,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1301410 <unknown>
+
+udot    za.s[w10, 5, vgx4], {z10.b - z13.b}, z5.b  // 11000001-00110101-01010101-01010101
+// CHECK-INST: udot    za.s[w10, 5, vgx4], { z10.b - z13.b }, z5.b
+// CHECK-ENCODING: [0x55,0x55,0x35,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1355555 <unknown>
+
+udot    za.s[w10, 5], {z10.b - z13.b}, z5.b  // 11000001-00110101-01010101-01010101
+// CHECK-INST: udot    za.s[w10, 5, vgx4], { z10.b - z13.b }, z5.b
+// CHECK-ENCODING: [0x55,0x55,0x35,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1355555 <unknown>
+
+udot    za.s[w11, 7, vgx4], {z13.b - z16.b}, z8.b  // 11000001-00111000-01110101-10110111
+// CHECK-INST: udot    za.s[w11, 7, vgx4], { z13.b - z16.b }, z8.b
+// CHECK-ENCODING: [0xb7,0x75,0x38,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c13875b7 <unknown>
+
+udot    za.s[w11, 7], {z13.b - z16.b}, z8.b  // 11000001-00111000-01110101-10110111
+// CHECK-INST: udot    za.s[w11, 7, vgx4], { z13.b - z16.b }, z8.b
+// CHECK-ENCODING: [0xb7,0x75,0x38,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c13875b7 <unknown>
+
+udot    za.s[w11, 7, vgx4], {z31.b - z2.b}, z15.b  // 11000001-00111111-01110111-11110111
+// CHECK-INST: udot    za.s[w11, 7, vgx4], { z31.b, z0.b, z1.b, z2.b }, z15.b
+// CHECK-ENCODING: [0xf7,0x77,0x3f,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c13f77f7 <unknown>
+
+udot    za.s[w11, 7], {z31.b - z2.b}, z15.b  // 11000001-00111111-01110111-11110111
+// CHECK-INST: udot    za.s[w11, 7, vgx4], { z31.b, z0.b, z1.b, z2.b }, z15.b
+// CHECK-ENCODING: [0xf7,0x77,0x3f,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c13f77f7 <unknown>
+
+udot    za.s[w8, 5, vgx4], {z17.b - z20.b}, z0.b  // 11000001-00110000-00010110-00110101
+// CHECK-INST: udot    za.s[w8, 5, vgx4], { z17.b - z20.b }, z0.b
+// CHECK-ENCODING: [0x35,0x16,0x30,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1301635 <unknown>
+
+udot    za.s[w8, 5], {z17.b - z20.b}, z0.b  // 11000001-00110000-00010110-00110101
+// CHECK-INST: udot    za.s[w8, 5, vgx4], { z17.b - z20.b }, z0.b
+// CHECK-ENCODING: [0x35,0x16,0x30,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1301635 <unknown>
+
+udot    za.s[w8, 1, vgx4], {z1.b - z4.b}, z14.b  // 11000001-00111110-00010100-00110001
+// CHECK-INST: udot    za.s[w8, 1, vgx4], { z1.b - z4.b }, z14.b
+// CHECK-ENCODING: [0x31,0x14,0x3e,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c13e1431 <unknown>
+
+udot    za.s[w8, 1], {z1.b - z4.b}, z14.b  // 11000001-00111110-00010100-00110001
+// CHECK-INST: udot    za.s[w8, 1, vgx4], { z1.b - z4.b }, z14.b
+// CHECK-ENCODING: [0x31,0x14,0x3e,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c13e1431 <unknown>
+
+udot    za.s[w10, 0, vgx4], {z19.b - z22.b}, z4.b  // 11000001-00110100-01010110-01110000
+// CHECK-INST: udot    za.s[w10, 0, vgx4], { z19.b - z22.b }, z4.b
+// CHECK-ENCODING: [0x70,0x56,0x34,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1345670 <unknown>
+
+udot    za.s[w10, 0], {z19.b - z22.b}, z4.b  // 11000001-00110100-01010110-01110000
+// CHECK-INST: udot    za.s[w10, 0, vgx4], { z19.b - z22.b }, z4.b
+// CHECK-ENCODING: [0x70,0x56,0x34,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1345670 <unknown>
+
+udot    za.s[w8, 0, vgx4], {z12.b - z15.b}, z2.b  // 11000001-00110010-00010101-10010000
+// CHECK-INST: udot    za.s[w8, 0, vgx4], { z12.b - z15.b }, z2.b
+// CHECK-ENCODING: [0x90,0x15,0x32,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1321590 <unknown>
+
+udot    za.s[w8, 0], {z12.b - z15.b}, z2.b  // 11000001-00110010-00010101-10010000
+// CHECK-INST: udot    za.s[w8, 0, vgx4], { z12.b - z15.b }, z2.b
+// CHECK-ENCODING: [0x90,0x15,0x32,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1321590 <unknown>
+
+udot    za.s[w10, 1, vgx4], {z1.b - z4.b}, z10.b  // 11000001-00111010-01010100-00110001
+// CHECK-INST: udot    za.s[w10, 1, vgx4], { z1.b - z4.b }, z10.b
+// CHECK-ENCODING: [0x31,0x54,0x3a,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c13a5431 <unknown>
+
+udot    za.s[w10, 1], {z1.b - z4.b}, z10.b  // 11000001-00111010-01010100-00110001
+// CHECK-INST: udot    za.s[w10, 1, vgx4], { z1.b - z4.b }, z10.b
+// CHECK-ENCODING: [0x31,0x54,0x3a,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c13a5431 <unknown>
+
+udot    za.s[w8, 5, vgx4], {z22.b - z25.b}, z14.b  // 11000001-00111110-00010110-11010101
+// CHECK-INST: udot    za.s[w8, 5, vgx4], { z22.b - z25.b }, z14.b
+// CHECK-ENCODING: [0xd5,0x16,0x3e,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c13e16d5 <unknown>
+
+udot    za.s[w8, 5], {z22.b - z25.b}, z14.b  // 11000001-00111110-00010110-11010101
+// CHECK-INST: udot    za.s[w8, 5, vgx4], { z22.b - z25.b }, z14.b
+// CHECK-ENCODING: [0xd5,0x16,0x3e,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c13e16d5 <unknown>
+
+udot    za.s[w11, 2, vgx4], {z9.b - z12.b}, z1.b  // 11000001-00110001-01110101-00110010
+// CHECK-INST: udot    za.s[w11, 2, vgx4], { z9.b - z12.b }, z1.b
+// CHECK-ENCODING: [0x32,0x75,0x31,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1317532 <unknown>
+
+udot    za.s[w11, 2], {z9.b - z12.b}, z1.b  // 11000001-00110001-01110101-00110010
+// CHECK-INST: udot    za.s[w11, 2, vgx4], { z9.b - z12.b }, z1.b
+// CHECK-ENCODING: [0x32,0x75,0x31,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1317532 <unknown>
+
+udot    za.s[w9, 7, vgx4], {z12.b - z15.b}, z11.b  // 11000001-00111011-00110101-10010111
+// CHECK-INST: udot    za.s[w9, 7, vgx4], { z12.b - z15.b }, z11.b
+// CHECK-ENCODING: [0x97,0x35,0x3b,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c13b3597 <unknown>
+
+udot    za.s[w9, 7], {z12.b - z15.b}, z11.b  // 11000001-00111011-00110101-10010111
+// CHECK-INST: udot    za.s[w9, 7, vgx4], { z12.b - z15.b }, z11.b
+// CHECK-ENCODING: [0x97,0x35,0x3b,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c13b3597 <unknown>
+
+
+udot    za.s[w8, 0, vgx4], {z0.b - z3.b}, {z0.b - z3.b}  // 11000001-10100001-00010100-00010000
+// CHECK-INST: udot    za.s[w8, 0, vgx4], { z0.b - z3.b }, { z0.b - z3.b }
+// CHECK-ENCODING: [0x10,0x14,0xa1,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a11410 <unknown>
+
+udot    za.s[w8, 0], {z0.b - z3.b}, {z0.b - z3.b}  // 11000001-10100001-00010100-00010000
+// CHECK-INST: udot    za.s[w8, 0, vgx4], { z0.b - z3.b }, { z0.b - z3.b }
+// CHECK-ENCODING: [0x10,0x14,0xa1,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a11410 <unknown>
+
+udot    za.s[w10, 5, vgx4], {z8.b - z11.b}, {z20.b - z23.b}  // 11000001-10110101-01010101-00010101
+// CHECK-INST: udot    za.s[w10, 5, vgx4], { z8.b - z11.b }, { z20.b - z23.b }
+// CHECK-ENCODING: [0x15,0x55,0xb5,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1b55515 <unknown>
+
+udot    za.s[w10, 5], {z8.b - z11.b}, {z20.b - z23.b}  // 11000001-10110101-01010101-00010101
+// CHECK-INST: udot    za.s[w10, 5, vgx4], { z8.b - z11.b }, { z20.b - z23.b }
+// CHECK-ENCODING: [0x15,0x55,0xb5,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1b55515 <unknown>
+
+udot    za.s[w11, 7, vgx4], {z12.b - z15.b}, {z8.b - z11.b}  // 11000001-10101001-01110101-10010111
+// CHECK-INST: udot    za.s[w11, 7, vgx4], { z12.b - z15.b }, { z8.b - z11.b }
+// CHECK-ENCODING: [0x97,0x75,0xa9,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a97597 <unknown>
+
+udot    za.s[w11, 7], {z12.b - z15.b}, {z8.b - z11.b}  // 11000001-10101001-01110101-10010111
+// CHECK-INST: udot    za.s[w11, 7, vgx4], { z12.b - z15.b }, { z8.b - z11.b }
+// CHECK-ENCODING: [0x97,0x75,0xa9,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a97597 <unknown>
+
+udot    za.s[w11, 7, vgx4], {z28.b - z31.b}, {z28.b - z31.b}  // 11000001-10111101-01110111-10010111
+// CHECK-INST: udot    za.s[w11, 7, vgx4], { z28.b - z31.b }, { z28.b - z31.b }
+// CHECK-ENCODING: [0x97,0x77,0xbd,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1bd7797 <unknown>
+
+udot    za.s[w11, 7], {z28.b - z31.b}, {z28.b - z31.b}  // 11000001-10111101-01110111-10010111
+// CHECK-INST: udot    za.s[w11, 7, vgx4], { z28.b - z31.b }, { z28.b - z31.b }
+// CHECK-ENCODING: [0x97,0x77,0xbd,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1bd7797 <unknown>
+
+udot    za.s[w8, 5, vgx4], {z16.b - z19.b}, {z16.b - z19.b}  // 11000001-10110001-00010110-00010101
+// CHECK-INST: udot    za.s[w8, 5, vgx4], { z16.b - z19.b }, { z16.b - z19.b }
+// CHECK-ENCODING: [0x15,0x16,0xb1,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1b11615 <unknown>
+
+udot    za.s[w8, 5], {z16.b - z19.b}, {z16.b - z19.b}  // 11000001-10110001-00010110-00010101
+// CHECK-INST: udot    za.s[w8, 5, vgx4], { z16.b - z19.b }, { z16.b - z19.b }
+// CHECK-ENCODING: [0x15,0x16,0xb1,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1b11615 <unknown>
+
+udot    za.s[w8, 1, vgx4], {z0.b - z3.b}, {z28.b - z31.b}  // 11000001-10111101-00010100-00010001
+// CHECK-INST: udot    za.s[w8, 1, vgx4], { z0.b - z3.b }, { z28.b - z31.b }
+// CHECK-ENCODING: [0x11,0x14,0xbd,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1bd1411 <unknown>
+
+udot    za.s[w8, 1], {z0.b - z3.b}, {z28.b - z31.b}  // 11000001-10111101-00010100-00010001
+// CHECK-INST: udot    za.s[w8, 1, vgx4], { z0.b - z3.b }, { z28.b - z31.b }
+// CHECK-ENCODING: [0x11,0x14,0xbd,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1bd1411 <unknown>
+
+udot    za.s[w10, 0, vgx4], {z16.b - z19.b}, {z20.b - z23.b}  // 11000001-10110101-01010110-00010000
+// CHECK-INST: udot    za.s[w10, 0, vgx4], { z16.b - z19.b }, { z20.b - z23.b }
+// CHECK-ENCODING: [0x10,0x56,0xb5,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1b55610 <unknown>
+
+udot    za.s[w10, 0], {z16.b - z19.b}, {z20.b - z23.b}  // 11000001-10110101-01010110-00010000
+// CHECK-INST: udot    za.s[w10, 0, vgx4], { z16.b - z19.b }, { z20.b - z23.b }
+// CHECK-ENCODING: [0x10,0x56,0xb5,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1b55610 <unknown>
+
+udot    za.s[w8, 0, vgx4], {z12.b - z15.b}, {z0.b - z3.b}  // 11000001-10100001-00010101-10010000
+// CHECK-INST: udot    za.s[w8, 0, vgx4], { z12.b - z15.b }, { z0.b - z3.b }
+// CHECK-ENCODING: [0x90,0x15,0xa1,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a11590 <unknown>
+udot    za.s[w8, 0], {z12.b - z15.b}, {z0.b - z3.b}  // 11000001-10100001-00010101-10010000
+// CHECK-INST: udot    za.s[w8, 0, vgx4], { z12.b - z15.b }, { z0.b - z3.b }
+// CHECK-ENCODING: [0x90,0x15,0xa1,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a11590 <unknown>
+
+udot    za.s[w10, 1, vgx4], {z0.b - z3.b}, {z24.b - z27.b}  // 11000001-10111001-01010100-00010001
+// CHECK-INST: udot    za.s[w10, 1, vgx4], { z0.b - z3.b }, { z24.b - z27.b }
+// CHECK-ENCODING: [0x11,0x54,0xb9,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1b95411 <unknown>
+
+udot    za.s[w10, 1], {z0.b - z3.b}, {z24.b - z27.b}  // 11000001-10111001-01010100-00010001
+// CHECK-INST: udot    za.s[w10, 1, vgx4], { z0.b - z3.b }, { z24.b - z27.b }
+// CHECK-ENCODING: [0x11,0x54,0xb9,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1b95411 <unknown>
+
+udot    za.s[w8, 5, vgx4], {z20.b - z23.b}, {z28.b - z31.b}  // 11000001-10111101-00010110-10010101
+// CHECK-INST: udot    za.s[w8, 5, vgx4], { z20.b - z23.b }, { z28.b - z31.b }
+// CHECK-ENCODING: [0x95,0x16,0xbd,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1bd1695 <unknown>
+
+udot    za.s[w8, 5], {z20.b - z23.b}, {z28.b - z31.b}  // 11000001-10111101-00010110-10010101
+// CHECK-INST: udot    za.s[w8, 5, vgx4], { z20.b - z23.b }, { z28.b - z31.b }
+// CHECK-ENCODING: [0x95,0x16,0xbd,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1bd1695 <unknown>
+
+udot    za.s[w11, 2, vgx4], {z8.b - z11.b}, {z0.b - z3.b}  // 11000001-10100001-01110101-00010010
+// CHECK-INST: udot    za.s[w11, 2, vgx4], { z8.b - z11.b }, { z0.b - z3.b }
+// CHECK-ENCODING: [0x12,0x75,0xa1,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a17512 <unknown>
+
+udot    za.s[w11, 2], {z8.b - z11.b}, {z0.b - z3.b}  // 11000001-10100001-01110101-00010010
+// CHECK-INST: udot    za.s[w11, 2, vgx4], { z8.b - z11.b }, { z0.b - z3.b }
+// CHECK-ENCODING: [0x12,0x75,0xa1,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a17512 <unknown>
+
+udot    za.s[w9, 7, vgx4], {z12.b - z15.b}, {z8.b - z11.b}  // 11000001-10101001-00110101-10010111
+// CHECK-INST: udot    za.s[w9, 7, vgx4], { z12.b - z15.b }, { z8.b - z11.b }
+// CHECK-ENCODING: [0x97,0x35,0xa9,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a93597 <unknown>
+
+udot    za.s[w9, 7], {z12.b - z15.b}, {z8.b - z11.b}  // 11000001-10101001-00110101-10010111
+// CHECK-INST: udot    za.s[w9, 7, vgx4], { z12.b - z15.b }, { z8.b - z11.b }
+// CHECK-ENCODING: [0x97,0x35,0xa9,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1a93597 <unknown>
+
+
+udot    za.d[w8, 0, vgx4], {z0.h - z3.h}, z0.h  // 11000001-01110000-00010100-00010000
+// CHECK-INST: udot    za.d[w8, 0, vgx4], { z0.h - z3.h }, z0.h
+// CHECK-ENCODING: [0x10,0x14,0x70,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1701410 <unknown>
+
+udot    za.d[w8, 0], {z0.h - z3.h}, z0.h  // 11000001-01110000-00010100-00010000
+// CHECK-INST: udot    za.d[w8, 0, vgx4], { z0.h - z3.h }, z0.h
+// CHECK-ENCODING: [0x10,0x14,0x70,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1701410 <unknown>
+
+udot    za.d[w10, 5, vgx4], {z10.h - z13.h}, z5.h  // 11000001-01110101-01010101-01010101
+// CHECK-INST: udot    za.d[w10, 5, vgx4], { z10.h - z13.h }, z5.h
+// CHECK-ENCODING: [0x55,0x55,0x75,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1755555 <unknown>
+
+udot    za.d[w10, 5], {z10.h - z13.h}, z5.h  // 11000001-01110101-01010101-01010101
+// CHECK-INST: udot    za.d[w10, 5, vgx4], { z10.h - z13.h }, z5.h
+// CHECK-ENCODING: [0x55,0x55,0x75,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1755555 <unknown>
+
+udot    za.d[w11, 7, vgx4], {z13.h - z16.h}, z8.h  // 11000001-01111000-01110101-10110111
+// CHECK-INST: udot    za.d[w11, 7, vgx4], { z13.h - z16.h }, z8.h
+// CHECK-ENCODING: [0xb7,0x75,0x78,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c17875b7 <unknown>
+
+udot    za.d[w11, 7], {z13.h - z16.h}, z8.h  // 11000001-01111000-01110101-10110111
+// CHECK-INST: udot    za.d[w11, 7, vgx4], { z13.h - z16.h }, z8.h
+// CHECK-ENCODING: [0xb7,0x75,0x78,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c17875b7 <unknown>
+
+udot    za.d[w11, 7, vgx4], {z31.h - z2.h}, z15.h  // 11000001-01111111-01110111-11110111
+// CHECK-INST: udot    za.d[w11, 7, vgx4], { z31.h, z0.h, z1.h, z2.h }, z15.h
+// CHECK-ENCODING: [0xf7,0x77,0x7f,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c17f77f7 <unknown>
+
+udot    za.d[w11, 7], {z31.h - z2.h}, z15.h  // 11000001-01111111-01110111-11110111
+// CHECK-INST: udot    za.d[w11, 7, vgx4], { z31.h, z0.h, z1.h, z2.h }, z15.h
+// CHECK-ENCODING: [0xf7,0x77,0x7f,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c17f77f7 <unknown>
+
+udot    za.d[w8, 5, vgx4], {z17.h - z20.h}, z0.h  // 11000001-01110000-00010110-00110101
+// CHECK-INST: udot    za.d[w8, 5, vgx4], { z17.h - z20.h }, z0.h
+// CHECK-ENCODING: [0x35,0x16,0x70,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1701635 <unknown>
+
+udot    za.d[w8, 5], {z17.h - z20.h}, z0.h  // 11000001-01110000-00010110-00110101
+// CHECK-INST: udot    za.d[w8, 5, vgx4], { z17.h - z20.h }, z0.h
+// CHECK-ENCODING: [0x35,0x16,0x70,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1701635 <unknown>
+
+udot    za.d[w8, 1, vgx4], {z1.h - z4.h}, z14.h  // 11000001-01111110-00010100-00110001
+// CHECK-INST: udot    za.d[w8, 1, vgx4], { z1.h - z4.h }, z14.h
+// CHECK-ENCODING: [0x31,0x14,0x7e,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c17e1431 <unknown>
+
+udot    za.d[w8, 1], {z1.h - z4.h}, z14.h  // 11000001-01111110-00010100-00110001
+// CHECK-INST: udot    za.d[w8, 1, vgx4], { z1.h - z4.h }, z14.h
+// CHECK-ENCODING: [0x31,0x14,0x7e,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c17e1431 <unknown>
+
+udot    za.d[w10, 0, vgx4], {z19.h - z22.h}, z4.h  // 11000001-01110100-01010110-01110000
+// CHECK-INST: udot    za.d[w10, 0, vgx4], { z19.h - z22.h }, z4.h
+// CHECK-ENCODING: [0x70,0x56,0x74,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1745670 <unknown>
+
+udot    za.d[w10, 0], {z19.h - z22.h}, z4.h  // 11000001-01110100-01010110-01110000
+// CHECK-INST: udot    za.d[w10, 0, vgx4], { z19.h - z22.h }, z4.h
+// CHECK-ENCODING: [0x70,0x56,0x74,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1745670 <unknown>
+
+udot    za.d[w8, 0, vgx4], {z12.h - z15.h}, z2.h  // 11000001-01110010-00010101-10010000
+// CHECK-INST: udot    za.d[w8, 0, vgx4], { z12.h - z15.h }, z2.h
+// CHECK-ENCODING: [0x90,0x15,0x72,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1721590 <unknown>
+
+udot    za.d[w8, 0], {z12.h - z15.h}, z2.h  // 11000001-01110010-00010101-10010000
+// CHECK-INST: udot    za.d[w8, 0, vgx4], { z12.h - z15.h }, z2.h
+// CHECK-ENCODING: [0x90,0x15,0x72,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1721590 <unknown>
+
+udot    za.d[w10, 1, vgx4], {z1.h - z4.h}, z10.h  // 11000001-01111010-01010100-00110001
+// CHECK-INST: udot    za.d[w10, 1, vgx4], { z1.h - z4.h }, z10.h
+// CHECK-ENCODING: [0x31,0x54,0x7a,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c17a5431 <unknown>
+
+udot    za.d[w10, 1], {z1.h - z4.h}, z10.h  // 11000001-01111010-01010100-00110001
+// CHECK-INST: udot    za.d[w10, 1, vgx4], { z1.h - z4.h }, z10.h
+// CHECK-ENCODING: [0x31,0x54,0x7a,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c17a5431 <unknown>
+
+udot    za.d[w8, 5, vgx4], {z22.h - z25.h}, z14.h  // 11000001-01111110-00010110-11010101
+// CHECK-INST: udot    za.d[w8, 5, vgx4], { z22.h - z25.h }, z14.h
+// CHECK-ENCODING: [0xd5,0x16,0x7e,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c17e16d5 <unknown>
+
+udot    za.d[w8, 5], {z22.h - z25.h}, z14.h  // 11000001-01111110-00010110-11010101
+// CHECK-INST: udot    za.d[w8, 5, vgx4], { z22.h - z25.h }, z14.h
+// CHECK-ENCODING: [0xd5,0x16,0x7e,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c17e16d5 <unknown>
+
+udot    za.d[w11, 2, vgx4], {z9.h - z12.h}, z1.h  // 11000001-01110001-01110101-00110010
+// CHECK-INST: udot    za.d[w11, 2, vgx4], { z9.h - z12.h }, z1.h
+// CHECK-ENCODING: [0x32,0x75,0x71,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1717532 <unknown>
+
+udot    za.d[w11, 2], {z9.h - z12.h}, z1.h  // 11000001-01110001-01110101-00110010
+// CHECK-INST: udot    za.d[w11, 2, vgx4], { z9.h - z12.h }, z1.h
+// CHECK-ENCODING: [0x32,0x75,0x71,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1717532 <unknown>
+
+udot    za.d[w9, 7, vgx4], {z12.h - z15.h}, z11.h  // 11000001-01111011-00110101-10010111
+// CHECK-INST: udot    za.d[w9, 7, vgx4], { z12.h - z15.h }, z11.h
+// CHECK-ENCODING: [0x97,0x35,0x7b,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c17b3597 <unknown>
+
+udot    za.d[w9, 7], {z12.h - z15.h}, z11.h  // 11000001-01111011-00110101-10010111
+// CHECK-INST: udot    za.d[w9, 7, vgx4], { z12.h - z15.h }, z11.h
+// CHECK-ENCODING: [0x97,0x35,0x7b,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c17b3597 <unknown>
+
+udot    za.d[w8, 0, vgx4], {z0.h - z3.h}, {z0.h - z3.h}  // 11000001-11100001-00010100-00010000
+// CHECK-INST: udot    za.d[w8, 0, vgx4], { z0.h - z3.h }, { z0.h - z3.h }
+// CHECK-ENCODING: [0x10,0x14,0xe1,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e11410 <unknown>
+
+udot    za.d[w8, 0], {z0.h - z3.h}, {z0.h - z3.h}  // 11000001-11100001-00010100-00010000
+// CHECK-INST: udot    za.d[w8, 0, vgx4], { z0.h - z3.h }, { z0.h - z3.h }
+// CHECK-ENCODING: [0x10,0x14,0xe1,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e11410 <unknown>
+
+udot    za.d[w10, 5, vgx4], {z8.h - z11.h}, {z20.h - z23.h}  // 11000001-11110101-01010101-00010101
+// CHECK-INST: udot    za.d[w10, 5, vgx4], { z8.h - z11.h }, { z20.h - z23.h }
+// CHECK-ENCODING: [0x15,0x55,0xf5,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1f55515 <unknown>
+
+udot    za.d[w10, 5], {z8.h - z11.h}, {z20.h - z23.h}  // 11000001-11110101-01010101-00010101
+// CHECK-INST: udot    za.d[w10, 5, vgx4], { z8.h - z11.h }, { z20.h - z23.h }
+// CHECK-ENCODING: [0x15,0x55,0xf5,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1f55515 <unknown>
+
+udot    za.d[w11, 7, vgx4], {z12.h - z15.h}, {z8.h - z11.h}  // 11000001-11101001-01110101-10010111
+// CHECK-INST: udot    za.d[w11, 7, vgx4], { z12.h - z15.h }, { z8.h - z11.h }
+// CHECK-ENCODING: [0x97,0x75,0xe9,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e97597 <unknown>
+
+udot    za.d[w11, 7], {z12.h - z15.h}, {z8.h - z11.h}  // 11000001-11101001-01110101-10010111
+// CHECK-INST: udot    za.d[w11, 7, vgx4], { z12.h - z15.h }, { z8.h - z11.h }
+// CHECK-ENCODING: [0x97,0x75,0xe9,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e97597 <unknown>
+
+udot    za.d[w11, 7, vgx4], {z28.h - z31.h}, {z28.h - z31.h}  // 11000001-11111101-01110111-10010111
+// CHECK-INST: udot    za.d[w11, 7, vgx4], { z28.h - z31.h }, { z28.h - z31.h }
+// CHECK-ENCODING: [0x97,0x77,0xfd,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1fd7797 <unknown>
+
+udot    za.d[w11, 7], {z28.h - z31.h}, {z28.h - z31.h}  // 11000001-11111101-01110111-10010111
+// CHECK-INST: udot    za.d[w11, 7, vgx4], { z28.h - z31.h }, { z28.h - z31.h }
+// CHECK-ENCODING: [0x97,0x77,0xfd,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1fd7797 <unknown>
+
+udot    za.d[w8, 5, vgx4], {z16.h - z19.h}, {z16.h - z19.h}  // 11000001-11110001-00010110-00010101
+// CHECK-INST: udot    za.d[w8, 5, vgx4], { z16.h - z19.h }, { z16.h - z19.h }
+// CHECK-ENCODING: [0x15,0x16,0xf1,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1f11615 <unknown>
+
+udot    za.d[w8, 5], {z16.h - z19.h}, {z16.h - z19.h}  // 11000001-11110001-00010110-00010101
+// CHECK-INST: udot    za.d[w8, 5, vgx4], { z16.h - z19.h }, { z16.h - z19.h }
+// CHECK-ENCODING: [0x15,0x16,0xf1,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1f11615 <unknown>
+
+udot    za.d[w8, 1, vgx4], {z0.h - z3.h}, {z28.h - z31.h}  // 11000001-11111101-00010100-00010001
+// CHECK-INST: udot    za.d[w8, 1, vgx4], { z0.h - z3.h }, { z28.h - z31.h }
+// CHECK-ENCODING: [0x11,0x14,0xfd,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1fd1411 <unknown>
+
+udot    za.d[w8, 1], {z0.h - z3.h}, {z28.h - z31.h}  // 11000001-11111101-00010100-00010001
+// CHECK-INST: udot    za.d[w8, 1, vgx4], { z0.h - z3.h }, { z28.h - z31.h }
+// CHECK-ENCODING: [0x11,0x14,0xfd,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1fd1411 <unknown>
+
+udot    za.d[w10, 0, vgx4], {z16.h - z19.h}, {z20.h - z23.h}  // 11000001-11110101-01010110-00010000
+// CHECK-INST: udot    za.d[w10, 0, vgx4], { z16.h - z19.h }, { z20.h - z23.h }
+// CHECK-ENCODING: [0x10,0x56,0xf5,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1f55610 <unknown>
+udot    za.d[w10, 0], {z16.h - z19.h}, {z20.h - z23.h}  // 11000001-11110101-01010110-00010000
+// CHECK-INST: udot    za.d[w10, 0, vgx4], { z16.h - z19.h }, { z20.h - z23.h }
+// CHECK-ENCODING: [0x10,0x56,0xf5,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1f55610 <unknown>
+
+udot    za.d[w8, 0, vgx4], {z12.h - z15.h}, {z0.h - z3.h}  // 11000001-11100001-00010101-10010000
+// CHECK-INST: udot    za.d[w8, 0, vgx4], { z12.h - z15.h }, { z0.h - z3.h }
+// CHECK-ENCODING: [0x90,0x15,0xe1,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e11590 <unknown>
+
+udot    za.d[w8, 0], {z12.h - z15.h}, {z0.h - z3.h}  // 11000001-11100001-00010101-10010000
+// CHECK-INST: udot    za.d[w8, 0, vgx4], { z12.h - z15.h }, { z0.h - z3.h }
+// CHECK-ENCODING: [0x90,0x15,0xe1,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e11590 <unknown>
+
+udot    za.d[w10, 1, vgx4], {z0.h - z3.h}, {z24.h - z27.h}  // 11000001-11111001-01010100-00010001
+// CHECK-INST: udot    za.d[w10, 1, vgx4], { z0.h - z3.h }, { z24.h - z27.h }
+// CHECK-ENCODING: [0x11,0x54,0xf9,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1f95411 <unknown>
+
+udot    za.d[w10, 1], {z0.h - z3.h}, {z24.h - z27.h}  // 11000001-11111001-01010100-00010001
+// CHECK-INST: udot    za.d[w10, 1, vgx4], { z0.h - z3.h }, { z24.h - z27.h }
+// CHECK-ENCODING: [0x11,0x54,0xf9,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1f95411 <unknown>
+
+udot    za.d[w8, 5, vgx4], {z20.h - z23.h}, {z28.h - z31.h}  // 11000001-11111101-00010110-10010101
+// CHECK-INST: udot    za.d[w8, 5, vgx4], { z20.h - z23.h }, { z28.h - z31.h }
+// CHECK-ENCODING: [0x95,0x16,0xfd,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1fd1695 <unknown>
+
+udot    za.d[w8, 5], {z20.h - z23.h}, {z28.h - z31.h}  // 11000001-11111101-00010110-10010101
+// CHECK-INST: udot    za.d[w8, 5, vgx4], { z20.h - z23.h }, { z28.h - z31.h }
+// CHECK-ENCODING: [0x95,0x16,0xfd,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1fd1695 <unknown>
+
+udot    za.d[w11, 2, vgx4], {z8.h - z11.h}, {z0.h - z3.h}  // 11000001-11100001-01110101-00010010
+// CHECK-INST: udot    za.d[w11, 2, vgx4], { z8.h - z11.h }, { z0.h - z3.h }
+// CHECK-ENCODING: [0x12,0x75,0xe1,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e17512 <unknown>
+
+udot    za.d[w11, 2], {z8.h - z11.h}, {z0.h - z3.h}  // 11000001-11100001-01110101-00010010
+// CHECK-INST: udot    za.d[w11, 2, vgx4], { z8.h - z11.h }, { z0.h - z3.h }
+// CHECK-ENCODING: [0x12,0x75,0xe1,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e17512 <unknown>
+
+udot    za.d[w9, 7, vgx4], {z12.h - z15.h}, {z8.h - z11.h}  // 11000001-11101001-00110101-10010111
+// CHECK-INST: udot    za.d[w9, 7, vgx4], { z12.h - z15.h }, { z8.h - z11.h }
+// CHECK-ENCODING: [0x97,0x35,0xe9,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e93597 <unknown>
+
+udot    za.d[w9, 7], {z12.h - z15.h}, {z8.h - z11.h}  // 11000001-11101001-00110101-10010111
+// CHECK-INST: udot    za.d[w9, 7, vgx4], { z12.h - z15.h }, { z8.h - z11.h }
+// CHECK-ENCODING: [0x97,0x35,0xe9,0xc1]
+// CHECK-ERROR: instruction requires: sme2
+// CHECK-UNKNOWN: c1e93597 <unknown>
+
+
