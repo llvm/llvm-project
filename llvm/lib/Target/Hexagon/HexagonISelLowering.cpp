@@ -1904,6 +1904,9 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::MFSHR:         return "HexagonISD::MFSHR";
   case HexagonISD::SSAT:          return "HexagonISD::SSAT";
   case HexagonISD::USAT:          return "HexagonISD::USAT";
+  case HexagonISD::SMUL_LOHI:     return "HexagonISD::SMUL_LOHI";
+  case HexagonISD::UMUL_LOHI:     return "HexagonISD::UMUL_LOHI";
+  case HexagonISD::USMUL_LOHI:    return "HexagonISD::USMUL_LOHI";
   case HexagonISD::VEXTRACTW:     return "HexagonISD::VEXTRACTW";
   case HexagonISD::VINSERTW0:     return "HexagonISD::VINSERTW0";
   case HexagonISD::VROR:          return "HexagonISD::VROR";
@@ -2187,6 +2190,16 @@ HexagonTargetLowering::getPreferredVectorAction(MVT VT) const {
     return TargetLoweringBase::TypeWidenVector;
 
   return TargetLoweringBase::TypeSplitVector;
+}
+
+TargetLoweringBase::LegalizeAction
+HexagonTargetLowering::getCustomOperationAction(SDNode &Op) const {
+  if (Subtarget.useHVXOps()) {
+    unsigned Action = getCustomHvxOperationAction(Op);
+    if (Action != ~0u)
+      return static_cast<TargetLoweringBase::LegalizeAction>(Action);
+  }
+  return TargetLoweringBase::Legal;
 }
 
 std::pair<SDValue, int>
