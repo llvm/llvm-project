@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -triple x86_64-unknown-linux-gnu
 ! C716 If both kind-param and exponent-letter appear, exponent-letter
 ! shall be E. (As an extension we also allow an exponent-letter which matches
 ! the kind-param)
@@ -9,9 +9,7 @@
 ! 10-byte extended precision
 ! REQUIRES: x86-registered-target
 ! UNSUPPORTED: system-windows
-! klausler: Currently failing due to unexpected or missing warnings in some
-! configurations like aarch64, so disabling test.
-! XFAIL: *
+
 subroutine s(var)
   real :: realvar1 = 4.0E6_4
   real :: realvar2 = 4.0D6
