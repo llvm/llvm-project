@@ -11,6 +11,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  cstddef_test
+  SUITE
+    libc_cpp_utils_unittests
+  SRCS
+    cstddef_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.cstddef
+)
+
+add_libc_unittest(
   stringview_test
   SUITE
     libc_cpp_utils_unittests

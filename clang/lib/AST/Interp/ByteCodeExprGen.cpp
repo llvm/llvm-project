@@ -786,7 +786,7 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
         return false;
     }
 
-    return this->emitCallVoid(Func, Initializer);
+    return this->emitCall(Func, Initializer);
   } else if (const auto *InitList = dyn_cast<InitListExpr>(Initializer)) {
     const Record *R = getRecord(InitList->getType());
 
@@ -982,18 +982,10 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
         return false;
     }
 
-    // Primitive return value, just call it.
-    if (T)
-      return this->emitCall(*T, Func, E);
-
-    // Void Return value, easy.
-    if (ReturnType->isVoidType())
-      return this->emitCallVoid(Func, E);
-
-    // Non-primitive return value with Return Value Optimization,
-    // we already have a pointer on the stack to write the result into.
-    if (Func->hasRVO())
-      return this->emitCallVoid(Func, E);
+    // In any case call the function. The return value will end up on the stack and
+    // if the function has RVO, we already have the pointer on the stack to write
+    // the result into.
+    return this->emitCall(Func, E);
   } else {
     assert(false && "We don't support non-FunctionDecl callees right now.");
   }

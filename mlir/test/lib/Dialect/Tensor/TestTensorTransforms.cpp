@@ -128,7 +128,22 @@ struct RewriteExtractSliceFromCollapseShapeBase
       return rewriter.notifyMatchFailure(
           op, "producer is not a tensor.collapse_shape op");
 
-    // Materialize the output shape values of the slice operation.a
+    // Try to simplify the collapse shape using a rank-reducing slice, if
+    // possible.
+    FailureOr<Operation *> simplifiedCollapseShapeResult =
+        tensor::simplifyCollapseShapeWithRankReducingExtractSlice(collapseOp,
+                                                                  rewriter);
+    if (succeeded(simplifiedCollapseShapeResult)) {
+      auto newCollapseOp =
+          dyn_cast<tensor::CollapseShapeOp>(*simplifiedCollapseShapeResult);
+      // The collapse shape op might have been simplified away, so we can just
+      // return.
+      if (!newCollapseOp)
+        return success();
+      collapseOp = newCollapseOp;
+    }
+
+    // Materialize the output shape values of the slice operation.
     ReifiedRankedShapedTypeDims reifiedShapes;
     if (failed(op.reifyResultShapes(rewriter, reifiedShapes)))
       return rewriter.notifyMatchFailure(op, "failed to reify result shapes");

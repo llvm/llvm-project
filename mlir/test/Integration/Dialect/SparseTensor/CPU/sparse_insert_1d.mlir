@@ -44,9 +44,10 @@ module {
     %c0    = arith.constant 0 : index
     %c1    = arith.constant 1 : index
     %c3    = arith.constant 3 : index
+    %c8    = arith.constant 8 : index
     %c1023 = arith.constant 1023 : index
 
-    // Build the sparse vector from code.
+    // Build the sparse vector from straightline code.
     %0 = bufferization.alloc_tensor() : tensor<1024xf32, #SparseVector>
     %1 = sparse_tensor.insert %f1 into %0[%c0] : tensor<1024xf32, #SparseVector>
     %2 = sparse_tensor.insert %f2 into %1[%c1] : tensor<1024xf32, #SparseVector>
@@ -59,7 +60,31 @@ module {
     // CHECK-NEXT: ( 1, 2, 1, 2, 99, 99, 99, 99 )
     call @dump(%5) : (tensor<1024xf32, #SparseVector>) -> ()
 
+    // Build another sparse vector in a loop.
+    %6 = bufferization.alloc_tensor() : tensor<1024xf32, #SparseVector>
+    %7 = scf.for %i = %c0 to %c8 step %c1 iter_args(%vin = %6) -> tensor<1024xf32, #SparseVector> {
+      %ii = arith.muli %i, %c3 : index
+      %vout = sparse_tensor.insert %f1 into %vin[%ii] : tensor<1024xf32, #SparseVector>
+      scf.yield %vout : tensor<1024xf32, #SparseVector>
+    }
+    %8 = sparse_tensor.load %7 hasInserts : tensor<1024xf32, #SparseVector>
+
+    // CHECK:      ( 0, 8, 99, 99, 99, 99, 99, 99 )
+    // CHECK-NEXT: ( 0, 3, 6, 9, 12, 15, 18, 21 )
+    // CHECK-NEXT: ( 1, 1, 1, 1, 1, 1, 1, 1 )
+    //
+    call @dump(%8) : (tensor<1024xf32, #SparseVector>) -> ()
+
+    // CHECK-NEXT: 4
+    // CHECK-NEXT: 8
+    %noe1 = sparse_tensor.number_of_entries %5 : tensor<1024xf32, #SparseVector>
+    %noe2 = sparse_tensor.number_of_entries %8 : tensor<1024xf32, #SparseVector>
+    vector.print %noe1 : index
+    vector.print %noe2 : index
+
+    // Free resources.
     bufferization.dealloc_tensor %5 : tensor<1024xf32, #SparseVector>
+    bufferization.dealloc_tensor %8 : tensor<1024xf32, #SparseVector>
     return
   }
 }

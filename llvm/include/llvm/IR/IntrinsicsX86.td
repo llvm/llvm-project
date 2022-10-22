@@ -5116,6 +5116,14 @@ let TargetPrefix = "x86" in {
 }
 
 //===----------------------------------------------------------------------===//
+let TargetPrefix = "x86" in {
+// AMX_FP16 - Intel FP16 AMX extensions
+  def int_x86_tdpfp16ps : ClangBuiltin<"__builtin_ia32_tdpfp16ps">,
+                          Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
+                                    [ImmArg<ArgIndex<0>>,
+                                    ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+}
+//===----------------------------------------------------------------------===//
 // UINTR - User Level Interrupt
 
 let TargetPrefix = "x86" in {

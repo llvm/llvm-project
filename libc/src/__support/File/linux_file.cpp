@@ -164,6 +164,12 @@ File *openfile(const char *path, const char *mode) {
   return file;
 }
 
+constexpr size_t STDIN_BUFFER_SIZE = 512;
+char stdin_buffer[STDIN_BUFFER_SIZE];
+static LinuxFile StdIn(0, stdin_buffer, STDIN_BUFFER_SIZE, _IOFBF, false,
+                       File::ModeFlags(File::OpenMode::READ));
+File *stdin = &StdIn;
+
 constexpr size_t STDOUT_BUFFER_SIZE = 1024;
 char stdout_buffer[STDOUT_BUFFER_SIZE];
 static LinuxFile StdOut(1, stdout_buffer, STDOUT_BUFFER_SIZE, _IOLBF, false,

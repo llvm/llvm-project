@@ -10,32 +10,47 @@
 #define LLVMIR_ATTRDEFS
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/Dialect/LLVMIR/LLVMEnums.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 
 // All of the attributes will extend this class.
-class LLVM_Attr<string name> : AttrDef<LLVM_Dialect, name>;
-
-// Attribute definition for the LLVM Linkage enum.
-def LinkageAttr : LLVM_Attr<"Linkage"> {
-  let mnemonic = "linkage";
-  let parameters = (ins
-    "linkage::Linkage":$linkage
-  );
-  let hasCustomAssemblyFormat = 1;
+class LLVM_Attr<string name, string attrMnemonic>
+    : AttrDef<LLVM_Dialect, name, /*traits=*/[]> {
+  let mnemonic = attrMnemonic;
 }
 
-// Attribute definition for the LLVM Linkage enum.
-def CConvAttr : LLVM_Attr<"CConv"> {
-  let mnemonic = "cconv";
-  let parameters = (ins
-    "CConv":$CallingConv
-  );
-  let hasCustomAssemblyFormat = 1;
+//===----------------------------------------------------------------------===//
+// CConvAttr
+//===----------------------------------------------------------------------===//
+
+def CConvAttr : LLVM_Attr<"CConv", "cconv"> {
+  let parameters = (ins "CConv":$CallingConv);
+  let assemblyFormat = "`<` $CallingConv `>`";
 }
 
-def LoopOptionsAttr : LLVM_Attr<"LoopOptions"> {
-  let mnemonic = "loopopts";
+//===----------------------------------------------------------------------===//
+// FastmathFlagsAttr
+//===----------------------------------------------------------------------===//
 
+def LLVM_FastmathFlagsAttr :
+    EnumAttr<LLVM_Dialect, FastmathFlags, "fastmath"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// LinkageAttr
+//===----------------------------------------------------------------------===//
+
+def LinkageAttr : LLVM_Attr<"Linkage", "linkage"> {
+  let parameters = (ins "linkage::Linkage":$linkage);
+  let assemblyFormat = "`<` $linkage `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// LoopOptionsAttr
+//===----------------------------------------------------------------------===//
+
+def LoopOptionsAttr : LLVM_Attr<"LoopOptions", "loopopts"> {
   let description = [{
     This attributes encapsulates "loop options". It is means to decorate
     branches that are "latches" (loop backedges) and maps to the `!llvm.loop`
@@ -45,7 +60,6 @@ def LoopOptionsAttr : LLVM_Attr<"LoopOptions"> {
     example).
   }];
 
-  // List of type parameters.
   let parameters = (ins
     ArrayRefParameter<"std::pair<LoopOptionCase, int64_t>", "">:$options
   );

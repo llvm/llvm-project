@@ -26,8 +26,8 @@ using namespace mlir;
 using namespace mlir::tensor;
 
 /// Get the dimension size of a value of RankedTensor type at the
-OpFoldResult getShapeDimSize(OpBuilder &b, Location loc, Value rankedTensor,
-                             int64_t dimIdx) {
+static OpFoldResult getShapeDimSize(OpBuilder &b, Location loc,
+                                    Value rankedTensor, int64_t dimIdx) {
   RankedTensorType tensorType = rankedTensor.getType().cast<RankedTensorType>();
   if (!tensorType.isDynamicDim(dimIdx)) {
     return b.getIndexAttr(tensorType.getDimSize(dimIdx));
@@ -103,6 +103,11 @@ FailureOr<ExtractSliceFromCollapseHelper>
 tensor::ExtractSliceFromCollapseHelper::create(OpBuilder &b,
                                                tensor::CollapseShapeOp op,
                                                ArrayRef<Range> sliceParams) {
+  // Don't perform this pattern if the collapse op can be simplified by
+  // a rank-reducing extract slice.
+  if (succeeded(mlir::getSimplifyCollapseShapeWithRankReducingSliceInfo(
+          op.getSrcType(), op.getReassociationIndices())))
+    return failure();
 
   // Materialize the output shape of the collapse_shape operation. This will
   // create IR describing the output shape in terms of the input shape.
@@ -124,9 +129,6 @@ tensor::ExtractSliceFromCollapseHelper::create(OpBuilder &b,
       getSlicedDimensions(collapseShapeOutputShape, sliceParams);
 
   auto collapseShapeInputShape = getShapeDimSizes(b, op.getLoc(), op.getSrc());
-
-  SmallVector<OpFoldResult> srcShape =
-      getShapeDimSizes(b, op->getLoc(), op.getSrc());
 
   SmallVector<Value> tileSizes;
   for (unsigned i = 0; i < sliceParams.size(); i++) {
@@ -177,4 +179,37 @@ tensor::ExtractSliceFromCollapseHelper::emitLoopNestBody(
   Value collapsedResult = builder.create<tensor::CollapseShapeOp>(
       loc, subTileResult, reassociationIndices);
   return std::make_pair(collapsedResult, insertParams);
+}
+
+FailureOr<Operation *>
+tensor::simplifyCollapseShapeWithRankReducingExtractSlice(
+    tensor::CollapseShapeOp op, RewriterBase &rewriter) {
+  SmallVector<ReassociationIndices> reassociationIndices =
+      op.getReassociationIndices();
+  RankedTensorType sourceType = op.getSrcType();
+  FailureOr<CollapseShapeRankReducingSliceSimplificationInfo> info =
+      getSimplifyCollapseShapeWithRankReducingSliceInfo(sourceType,
+                                                        reassociationIndices);
+  if (failed(info))
+    return failure();
+
+  // Create the rank-reducing extract slice op.
+  auto zero = rewriter.getIndexAttr(0);
+  auto one = rewriter.getIndexAttr(1);
+  SmallVector<OpFoldResult> offsets(sourceType.getRank(), zero);
+  SmallVector<OpFoldResult> sizes =
+      getShapeDimSizes(rewriter, op.getLoc(), op.getSrc());
+  SmallVector<OpFoldResult> strides(sourceType.getRank(), one);
+  auto sliceOp = rewriter.create<tensor::ExtractSliceOp>(
+      op.getLoc(), info->sliceResultType, op.getSrc(), offsets, sizes, strides);
+
+  if (!info->newReassociationIndices.has_value()) {
+    rewriter.replaceOp(op, sliceOp.getResult());
+    return sliceOp.getOperation();
+  }
+
+  return rewriter
+      .replaceOpWithNewOp<tensor::CollapseShapeOp>(
+          op, sliceOp.getResult(), info->newReassociationIndices.value())
+      .getOperation();
 }
