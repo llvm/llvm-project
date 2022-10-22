@@ -54,10 +54,12 @@ rewrite patterns.
 /// * The Tag is specified via a static `StringRef getTag()` method.
 /// * The Description is specified via a static `StringRef getDescription()`
 ///   method.
-/// * The parameters for the action are provided via template parameters when
-///   inheriting from `DebugAction`.
+/// * `DebugAction` is a CRTP class, so the first template parameter is the
+///   action type class itself.
+/// * The parameters for the action are provided via additional template
+///   parameters when inheriting from `DebugAction`.
 struct ApplyPatternAction
-    : public DebugAction<Operation *, const Pattern &> {
+    : public DebugAction<ApplyPatternAction, Operation *, const Pattern &> {
   static StringRef getTag() { return "apply-pattern"; }
   static StringRef getDescription() {
     return "Control the application of rewrite patterns";
@@ -95,7 +97,7 @@ usage of the `shouldExecute` query is shown below:
 ```c++
 /// A debug action that allows for controlling the application of patterns.
 struct ApplyPatternAction
-    : public DebugAction<Operation *, const Pattern &> {
+    : public DebugAction<ApplyPatternAction, Operation *, const Pattern &> {
   static StringRef getTag() { return "apply-pattern"; }
   static StringRef getDescription() {
     return "Control the application of rewrite patterns";
