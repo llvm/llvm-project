@@ -6194,7 +6194,11 @@ cc_library(
 
 cc_library(
     name = "TranslateLib",
-    srcs = glob(["lib/Tools/mlir-translate/*.cpp"]),
+    srcs = glob([
+        "lib/Tools/mlir-translate/*.cpp",
+    ]) + [
+        "include/mlir/Tools/ParseUtilties.h",
+    ],
     hdrs = glob(["include/mlir/Tools/mlir-translate/*.h"]),
     includes = ["include"],
     deps = [
