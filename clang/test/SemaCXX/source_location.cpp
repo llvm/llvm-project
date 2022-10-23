@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++1z -fcxx-exceptions -fexceptions -verify %s
+// RUN: %clang_cc1 -std=c++2a -fcxx-exceptions -DUSE_CONSTEVAL -fexceptions -verify %s
 // expected-no-diagnostics
 
 #define assert(...) ((__VA_ARGS__) ? ((void)0) : throw 42)
@@ -8,15 +9,22 @@
 template <unsigned>
 struct Printer;
 
+#ifdef USE_CONSTEVAL
+#define SOURCE_LOC_EVAL_KIND consteval
+#else
+#define SOURCE_LOC_EVAL_KIND constexpr
+#endif
+
 namespace std {
 class source_location {
   struct __impl;
 
 public:
-  static constexpr source_location current(const __impl *__p = __builtin_source_location()) noexcept {
-    source_location __loc;
-    __loc.__m_impl = __p;
-    return __loc;
+  static SOURCE_LOC_EVAL_KIND source_location
+    current(const __impl *__p = __builtin_source_location()) noexcept {
+      source_location __loc;
+      __loc.__m_impl = __p;
+      return __loc;
   }
   constexpr source_location() = default;
   constexpr source_location(source_location const &) = default;
@@ -593,3 +601,51 @@ namespace TestConstexprContext {
   }
   static_assert(test());
 }
+
+namespace Lambda {
+#line 8000 "TestLambda.cpp"
+constexpr int nested_lambda(int l = []{
+  return SL::current().line();
+}()) {
+  return l;
+}
+static_assert(nested_lambda() == __LINE__ - 4);
+
+constexpr int lambda_param(int l = [](int l = SL::current().line()) {
+  return l;
+}()) {
+  return l;
+}
+static_assert(lambda_param() == __LINE__);
+
+
+}
+
+constexpr int compound_literal_fun(int a =
+                  (int){ SL::current().line() }
+) { return a ;}
+static_assert(compound_literal_fun() == __LINE__);
+
+struct CompoundLiteral {
+  int a = (int){ SL::current().line() };
+};
+static_assert(CompoundLiteral{}.a == __LINE__);
+
+
+// FIXME
+// Init captures are subexpressions of the lambda expression
+// so according to the standard immediate invocations in init captures
+// should be evaluated at the call site.
+// However Clang does not yet implement this as it would introduce
+// a fair bit of complexity.
+// We intend to implement that functionality once we find real world
+// use cases that require it.
+constexpr int test_init_capture(int a =
+                [b = SL::current().line()] { return b; }()) {
+  return a;
+}
+#ifdef USE_CONSTEVAL
+static_assert(test_init_capture() == __LINE__ - 4);
+#else
+static_assert(test_init_capture() == __LINE__ );
+#endif
