@@ -15905,9 +15905,7 @@ bool Expr::isIntegerConstantExpr(const ASTContext &Ctx,
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
 
-  llvm::TimeTraceScope TimeScope("isIntegerConstantExpr", [&] {
-    return Loc->printToString(Ctx.getSourceManager());
-  });
+  ExprTimeTraceScope TimeScope(this, Ctx, "isIntegerConstantExpr");
 
   if (Ctx.getLangOpts().CPlusPlus11)
     return EvaluateCPlusPlus11IntegralConstantExpr(Ctx, this, nullptr, Loc);
