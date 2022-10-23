@@ -430,6 +430,8 @@ To use the new PM:
 .. code-block:: shell
 
   $ opt -passes='pass1,pass2' /tmp/a.ll -S
+  # -p is an alias for -passes
+  $ opt -p pass1,pass2 /tmp/a.ll -S
 
 The new PM typically requires explicit pass nesting. For example, to run a
 function pass, then a module pass, we need to wrap the function pass in a module
