@@ -1067,7 +1067,7 @@ class Foo final {})cpp";
          HI.LocalScope = "";
          HI.Kind = index::SymbolKind::TypeAlias;
          HI.Definition = "template <typename T> using AA = A<T>";
-         HI.Type = {"A<T>", "type-parameter-0-0"}; // FIXME: should be 'T'
+         HI.Type = {"A<T>", "T"};
          HI.TemplateParameters = {{{"typename"}, std::string("T"), llvm::None}};
        }},
       {// Constant array
