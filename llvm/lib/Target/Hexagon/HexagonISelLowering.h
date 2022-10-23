@@ -61,6 +61,12 @@ enum NodeType : unsigned {
 
   SSAT,        // Signed saturate.
   USAT,        // Unsigned saturate.
+  SMUL_LOHI,   // Same as ISD::SMUL_LOHI, but opaque to the combiner.
+  UMUL_LOHI,   // Same as ISD::UMUL_LOHI, but opaque to the combiner.
+               // We want to legalize MULH[SU] to [SU]MUL_LOHI, but the
+               // combiner will keep rewriting it back to MULH[SU].
+  USMUL_LOHI,  // Like SMUL_LOHI, but unsigned*signed.
+
   TSTBIT,
   INSERT,
   EXTRACTU,
@@ -164,8 +170,8 @@ public:
       unsigned Index) const override;
 
   bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override;
-  TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(MVT VT)
-      const override;
+  LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
+  LegalizeAction getCustomOperationAction(SDNode &Op) const override;
 
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   void LowerOperationWrapper(SDNode *N, SmallVectorImpl<SDValue> &Results,
@@ -355,6 +361,7 @@ public:
 private:
   void initializeHVXLowering();
   unsigned getPreferredHvxVectorAction(MVT VecTy) const;
+  unsigned getCustomHvxOperationAction(SDNode &Op) const;
 
   bool validateConstPtrAlignment(SDValue Ptr, Align NeedAlign, const SDLoc &dl,
                                  SelectionDAG &DAG) const;
@@ -485,6 +492,12 @@ private:
                                     bool Signed, SelectionDAG &DAG) const;
   VectorPair emitHvxShiftRightRnd(SDValue Val, unsigned Amt, bool Signed,
                                   SelectionDAG &DAG) const;
+  SDValue emitHvxMulHsV60(SDValue A, SDValue B, const SDLoc &dl,
+                          SelectionDAG &DAG) const;
+  SDValue emitHvxMulLoHiV60(SDValue A, bool SignedA, SDValue B, bool SignedB,
+                            const SDLoc &dl, SelectionDAG &DAG) const;
+  SDValue emitHvxMulLoHiV62(SDValue A, bool SignedA, SDValue B, bool SignedB,
+                            const SDLoc &dl, SelectionDAG &DAG) const;
 
   SDValue LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxSplatVector(SDValue Op, SelectionDAG &DAG) const;
@@ -499,6 +512,7 @@ private:
   SDValue LowerHvxZeroExt(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxCttz(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxMulh(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxMulLoHi(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxSetCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxSelect(SDValue Op, SelectionDAG &DAG) const;

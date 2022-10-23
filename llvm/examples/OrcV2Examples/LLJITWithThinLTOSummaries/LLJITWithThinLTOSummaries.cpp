@@ -37,7 +37,6 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
@@ -171,12 +170,6 @@ Expected<ThreadSafeModule> loadModule(StringRef Path,
     return M.takeError();
 
   return ThreadSafeModule(std::move(*M), std::move(TSCtx));
-}
-
-// Make sure the eh-frame registration functions get linked into the binary.
-LLVM_ATTRIBUTE_USED void linkComponents() {
-  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
-         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper;
 }
 
 int main(int Argc, char *Argv[]) {

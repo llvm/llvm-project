@@ -8,5 +8,8 @@ add_clang_unittest(ClangSupportTests
 
 clang_target_link_libraries(ClangSupportTests
   PRIVATE
+  clangAST
+  clangBasic
   clangFrontend
+  clangSerialization
   )
