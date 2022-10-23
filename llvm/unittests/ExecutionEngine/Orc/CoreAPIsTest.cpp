@@ -237,6 +237,27 @@ TEST_F(CoreAPIsStandardTest, RemoveSymbolsTest) {
   EXPECT_TRUE(OnCompletionRun) << "OnCompletion should have been run";
 }
 
+TEST_F(CoreAPIsStandardTest, DiscardInitSymbol) {
+  SymbolStringPtr ForwardedDiscardSym = nullptr;
+
+  auto MU = std::make_unique<SimpleMaterializationUnit>(
+      SymbolFlagsMap({{Foo, FooSym.getFlags()}, {Bar, BarSym.getFlags()}}),
+      [](std::unique_ptr<MaterializationResponsibility> R) {
+        llvm_unreachable("Materialize called unexpectedly?");
+      },
+      Foo,
+      [&](const JITDylib &, SymbolStringPtr Sym) {
+        ForwardedDiscardSym = std::move(Sym);
+      });
+
+  MU->doDiscard(JD, Foo);
+
+  EXPECT_EQ(ForwardedDiscardSym, Foo);
+  EXPECT_EQ(MU->getSymbols().size(), 1U);
+  EXPECT_TRUE(MU->getSymbols().count(Bar));
+  EXPECT_EQ(MU->getInitializerSymbol(), nullptr);
+}
+
 TEST_F(CoreAPIsStandardTest, LookupWithHiddenSymbols) {
   auto BarHiddenFlags = BarSym.getFlags() & ~JITSymbolFlags::Exported;
   auto BarHiddenSym = JITEvaluatedSymbol(BarSym.getAddress(), BarHiddenFlags);
