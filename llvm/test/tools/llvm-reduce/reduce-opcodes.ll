@@ -1,56 +1,56 @@
-; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=opcodes --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
-; RUN: FileCheck -check-prefix=RESULT %s < %t
+; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=opcodes --test FileCheck --test-arg %s --test-arg --input-file %s -o %t
+; RUN: FileCheck -check-prefixes=CHECK,RESULT %s < %t
 
-; CHECK-INTERESTINGNESS: @fdiv_fast(
+; CHECK-LABEL: @fdiv_fast(
 ; RESULT: %op = fmul fast float %a, %b, !dbg !7, !fpmath !13
 define float @fdiv_fast(float %a, float %b) {
   %op = fdiv fast float %a, %b, !dbg !7, !fpmath !13
   ret float %op
 }
 
-; CHECK-INTERESTINGNESS: @frem_nnan(
+; CHECK-LABEL: @frem_nnan(
 ; RESULT: %op = fmul nnan float %a, %b, !dbg !7, !fpmath !13
 define float @frem_nnan(float %a, float %b) {
   %op = frem nnan float %a, %b, !dbg !7, !fpmath !13
   ret float %op
 }
 
-; CHECK-INTERESTINGNESS: @udiv(
+; CHECK-LABEL: @udiv(
 ; RESULT: %op = mul i32 %a, %b, !dbg !7
 define i32 @udiv(i32 %a, i32 %b) {
   %op = udiv i32 %a, %b, !dbg !7
   ret i32 %op
 }
 
-; CHECK-INTERESTINGNESS: @udiv_vec(
+; CHECK-LABEL: @udiv_vec(
 ; RESULT: %op = mul <2 x i32> %a, %b, !dbg !7
 define <2 x i32> @udiv_vec(<2 x i32> %a, <2 x i32> %b) {
   %op = udiv <2 x i32> %a, %b, !dbg !7
   ret <2 x i32> %op
 }
 
-; CHECK-INTERESTINGNESS: @sdiv(
+; CHECK-LABEL: @sdiv(
 ; RESULT: %op = mul i32 %a, %b{{$}}
 define i32 @sdiv(i32 %a, i32 %b) {
   %op = sdiv i32 %a, %b
   ret i32 %op
 }
 
-; CHECK-INTERESTINGNESS: @sdiv_exact(
+; CHECK-LABEL: @sdiv_exact(
 ; RESULT: %op = mul i32 %a, %b, !dbg !7
 define i32 @sdiv_exact(i32 %a, i32 %b) {
   %op = sdiv exact i32 %a, %b, !dbg !7
   ret i32 %op
 }
 
-; CHECK-INTERESTINGNESS: @urem(
+; CHECK-LABEL: @urem(
 ; RESULT: %op = mul i32 %a, %b, !dbg !7
 define i32 @urem(i32 %a, i32 %b) {
   %op = urem i32 %a, %b, !dbg !7
   ret i32 %op
 }
 
-; CHECK-INTERESTINGNESS: @srem(
+; CHECK-LABEL: @srem(
 ; RESULT: %op = mul i32 %a, %b, !dbg !7
 define i32 @srem(i32 %a, i32 %b) {
   %op = srem i32 %a, %b, !dbg !7
@@ -58,63 +58,63 @@ define i32 @srem(i32 %a, i32 %b) {
 }
 
 ; Make sure there's no crash if the IRBuilder decided to constant fold something
-; CHECK-INTERESTINGNESS: @add_constant_fold(
+; CHECK-LABEL: @add_constant_fold(
 ; RESULT: %op = add i32 0, 0, !dbg !7
 define i32 @add_constant_fold() {
   %op = add i32 0, 0, !dbg !7
   ret i32 %op
 }
 
-; CHECK-INTERESTINGNESS: @add(
+; CHECK-LABEL: @add(
 ; RESULT: %op = or i32 %a, %b, !dbg !7
 define i32 @add(i32 %a, i32 %b) {
   %op = add i32 %a, %b, !dbg !7
   ret i32 %op
 }
 
-; CHECK-INTERESTINGNESS: @add_nuw(
+; CHECK-LABEL: @add_nuw(
 ; RESULT: %op = or i32 %a, %b, !dbg !7
 define i32 @add_nuw(i32 %a, i32 %b) {
   %op = add nuw i32 %a, %b, !dbg !7
   ret i32 %op
 }
 
-; CHECK-INTERESTINGNESS: @add_nsw(
+; CHECK-LABEL: @add_nsw(
 ; RESULT: %op = or i32 %a, %b, !dbg !7
 define i32 @add_nsw(i32 %a, i32 %b) {
   %op = add nsw i32 %a, %b, !dbg !7
   ret i32 %op
 }
 
-; CHECK-INTERESTINGNESS: @sub_nuw_nsw(
+; CHECK-LABEL: @sub_nuw_nsw(
 ; RESULT: %op = or i32 %a, %b, !dbg !7
 define i32 @sub_nuw_nsw(i32 %a, i32 %b) {
   %op = sub nuw nsw i32 %a, %b, !dbg !7
   ret i32 %op
 }
 
-; CHECK-INTERESTINGNESS: @workitem_id_y(
+; CHECK-LABEL: @workitem_id_y(
 ; RESULT: %id = call i32 @llvm.amdgcn.workitem.id.x(), !dbg !7
 define i32 @workitem_id_y() {
   %id = call i32 @llvm.amdgcn.workitem.id.y(), !dbg !7
   ret i32 %id
 }
 
-; CHECK-INTERESTINGNESS: @workitem_id_z(
+; CHECK-LABEL: @workitem_id_z(
 ; RESULT: %id = call i32 @llvm.amdgcn.workitem.id.x(), !dbg !7
 define i32 @workitem_id_z() {
   %id = call i32 @llvm.amdgcn.workitem.id.z(), !dbg !7
   ret i32 %id
 }
 
-; CHECK-INTERESTINGNESS: @workgroup_id_y(
+; CHECK-LABEL: @workgroup_id_y(
 ; RESULT: %id = call i32 @llvm.amdgcn.workgroup.id.x(), !dbg !7
 define i32 @workgroup_id_y() {
   %id = call i32 @llvm.amdgcn.workgroup.id.y(), !dbg !7
   ret i32 %id
 }
 
-; CHECK-INTERESTINGNESS: @workgroup_id_z(
+; CHECK-LABEL: @workgroup_id_z(
 ; RESULT: %id = call i32 @llvm.amdgcn.workgroup.id.x(), !dbg !7
 define i32 @workgroup_id_z() {
   %id = call i32 @llvm.amdgcn.workgroup.id.z(), !dbg !7
@@ -135,14 +135,14 @@ define float @maxnum_nsz(float %a, float %b) {
   ret float %op
 }
 
-; CHECK-LABEL: @minimum(
+; CHECK-LABEL: @minimum_nsz(
 ; RESULT: %op = fmul nsz float %a, %b, !dbg !7
 define float @minimum_nsz(float %a, float %b) {
   %op = call nsz float @llvm.minimum.f32(float %a, float %b), !dbg !7
   ret float %op
 }
 
-; CHECK-LABEL: @maximum(
+; CHECK-LABEL: @maximum_nsz(
 ; RESULT: %op = fmul nsz float %a, %b, !dbg !7
 define float @maximum_nsz(float %a, float %b) {
   %op = call nsz float @llvm.maximum.f32(float %a, float %b), !dbg !7
