@@ -2687,12 +2687,12 @@ static bool ConvertDeducedTemplateArgument(
     // itself, in case that substitution fails.
     if (SugaredPackedArgsBuilder.empty()) {
       LocalInstantiationScope Scope(S);
-      MultiLevelTemplateArgumentList Args(Template, CanonicalOutput,
-                                          /*Final=*/false);
+      MultiLevelTemplateArgumentList Args(Template, SugaredOutput,
+                                          /*Final=*/true);
 
       if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param)) {
         Sema::InstantiatingTemplate Inst(S, Template->getLocation(), Template,
-                                         NTTP, CanonicalOutput,
+                                         NTTP, SugaredOutput,
                                          Template->getSourceRange());
         if (Inst.isInvalid() ||
             S.SubstType(NTTP->getType(), Args, NTTP->getLocation(),
@@ -2700,7 +2700,7 @@ static bool ConvertDeducedTemplateArgument(
           return true;
       } else if (auto *TTP = dyn_cast<TemplateTemplateParmDecl>(Param)) {
         Sema::InstantiatingTemplate Inst(S, Template->getLocation(), Template,
-                                         TTP, CanonicalOutput,
+                                         TTP, SugaredOutput,
                                          Template->getSourceRange());
         if (Inst.isInvalid() || !S.SubstDecl(TTP, S.CurContext, Args))
           return true;
@@ -2810,7 +2810,7 @@ static Sema::TemplateDeductionResult ConvertDeducedTemplateArguments(
 
       DefArg = S.SubstDefaultTemplateArgumentIfAvailable(
           TD, TD->getLocation(), TD->getSourceRange().getEnd(), Param,
-          CanonicalBuilder, HasDefaultArg);
+          SugaredBuilder, CanonicalBuilder, HasDefaultArg);
     }
 
     // If there was no default argument, deduction is incomplete.
@@ -2960,10 +2960,9 @@ FinishTemplateArgumentDeduction(
                                     PartialTemplArgInfo->RAngleLoc);
 
   if (S.SubstTemplateArguments(PartialTemplArgInfo->arguments(),
-                               MultiLevelTemplateArgumentList(
-                                   Partial,
-                                   CanonicalDeducedArgumentList->asArray(),
-                                   /*Final=*/false),
+                               MultiLevelTemplateArgumentList(Partial,
+                                                              SugaredBuilder,
+                                                              /*Final=*/true),
                                InstArgs)) {
     unsigned ArgIdx = InstArgs.size(), ParamIdx = ArgIdx;
     if (ParamIdx >= Partial->getTemplateParameters()->size())
@@ -3303,8 +3302,8 @@ Sema::TemplateDeductionResult Sema::SubstituteExplicitTemplateArguments(
   ExtParameterInfoBuilder ExtParamInfos;
 
   MultiLevelTemplateArgumentList MLTAL(FunctionTemplate,
-                                       CanonicalExplicitArgumentList->asArray(),
-                                       /*Final=*/false);
+                                       SugaredExplicitArgumentList->asArray(),
+                                       /*Final=*/true);
 
   // Instantiate the types of each of the function parameters given the
   // explicitly-specified template arguments. If the function has a trailing
