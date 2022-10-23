@@ -6520,7 +6520,7 @@ SDValue RISCVTargetLowering::lowerFixedLengthVectorSelectToRVV(
       convertToScalableVector(ContainerVT, Op.getOperand(2), DAG, Subtarget);
 
   SDLoc DL(Op);
-  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+  SDValue VL = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget).second;
 
   SDValue Select =
       DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, CC, Op1, Op2, VL);

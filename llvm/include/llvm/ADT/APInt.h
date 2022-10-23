@@ -19,7 +19,6 @@
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <climits>
-#include <cmath>
 #include <cstring>
 #include <utility>
 
@@ -860,8 +859,7 @@ public:
 
   /// relative logical shift right
   APInt relativeLShr(int RelativeShift) const {
-    int Shift = std::abs(RelativeShift);
-    return RelativeShift > 0 ? lshr(Shift) : shl(Shift);
+    return RelativeShift > 0 ? lshr(RelativeShift) : shl(-RelativeShift);
   }
 
   /// relative logical shift left
@@ -871,8 +869,7 @@ public:
 
   /// relative arithmetic shift right
   APInt relativeAShr(int RelativeShift) const {
-    int Shift = std::abs(RelativeShift);
-    return RelativeShift > 0 ? ashr(Shift) : shl(Shift);
+    return RelativeShift > 0 ? ashr(RelativeShift) : shl(-RelativeShift);
   }
 
   /// relative arithmetic shift left

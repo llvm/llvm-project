@@ -44,23 +44,8 @@ template<C T, E auto M, int W, A S,
          typename... Z>
 void foo(T, U<T, M, W, S, Z...>);
 
-// check auto template parameter pack.
-template<C T, auto M, int W, A S,
-         template<typename, auto, int, A, auto...> class U,
-         C auto... Z>
-void foo2(T, U<T, M, W, S, Z...>) = delete;
-template<C T, auto M, int W, A S,
-         template<typename, auto, int, A, auto...> class U,
-         D auto... Z>
-void foo2(T, U<T, M, W, S, Z...>) = delete;
-template<C T, auto M, int W, A S,
-         template<typename, auto, int, A, auto...> class U,
-         E auto... Z>
-void foo2(T, U<T, M, W, S, Z...>);
-
 void bar(S<int, 1, 1, A{}, int> s, S2<int, 1, 1, A{}, 0, 0u> s2) {
   foo(0, s);
-  foo2(0, s2);
 }
 
 template<C auto... T> void bar2();
@@ -110,8 +95,9 @@ template<D T, C V> struct Y4<V, T>; // expected-error {{class template partial s
 template<C auto T> struct W1;
 template<D auto T> struct W1<T> {};
 
-template<C auto... T> struct W2;
-template<D auto... T> struct W2<T...> {};
+// See http://cplusplus.github.io/concepts-ts/ts-active.html#28
+// template<C auto... T> struct W2;
+// template<D auto... T> struct W2<T...> {};
 
 template<class T, class U>
 concept C1 = C<T> && C<U>;
@@ -121,8 +107,9 @@ concept D1 = D<T> && C<U>;
 template<C1<A> auto T> struct W3;
 template<D1<A> auto T> struct W3<T> {};
 
-template<C1<A> auto... T> struct W4;
-template<D1<A> auto... T> struct W4<T...> {};
+// See http://cplusplus.github.io/concepts-ts/ts-active.html#28
+// template<C1<A> auto... T> struct W4;
+// template<D1<A> auto... T> struct W4<T...> {};
 
 // FIXME: enable once Clang support non-trivial auto on NTTP.
 // template<C auto* T> struct W5;
@@ -133,9 +120,9 @@ template<D1<A> auto... T> struct W4<T...> {};
 // template<D auto& T> struct W6<T> {};
 
 struct W1<0> w1;
-struct W2<0> w2;
+// struct W2<0> w2;
 struct W3<0> w3;
-struct W4<0> w4;
+// struct W4<0> w4;
 // FIXME: enable once Clang support non-trivial auto on NTTP.
 // struct W5<(int*)nullptr> w5;
 // struct W6<w5> w6;

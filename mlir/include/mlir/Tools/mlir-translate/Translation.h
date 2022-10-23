@@ -90,7 +90,7 @@ struct TranslateFromMLIRRegistration {
                      << "expected a '" << OpTy::getOperationName()
                      << "' op, got '" << op->getName().getStringRef() << "'";
             },
-            dialectRegistration){};
+            dialectRegistration){}
 };
 struct TranslateRegistration {
   TranslateRegistration(llvm::StringRef name, llvm::StringRef description,

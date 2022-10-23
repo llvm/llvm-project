@@ -1742,7 +1742,8 @@ bool isNullOrNullSplat(SDValue V, bool AllowUndefs = false);
 
 /// Return true if the value is a constant 1 integer or a splatted vector of a
 /// constant 1 integer (with no undefs).
-/// Does not permit build vector implicit truncation.
+/// Build vector implicit truncation is allowed, but the truncated bits need to
+/// be zero.
 bool isOneOrOneSplat(SDValue V, bool AllowUndefs = false);
 
 /// Return true if the value is a constant -1 integer or a splatted vector of a

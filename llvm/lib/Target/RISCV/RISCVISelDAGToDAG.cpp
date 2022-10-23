@@ -2061,11 +2061,13 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
 
 bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
                                         SDValue &ShAmt) {
+  ShAmt = N;
+
   // Shift instructions on RISCV only read the lower 5 or 6 bits of the shift
   // amount. If there is an AND on the shift amount, we can bypass it if it
   // doesn't affect any of those bits.
-  if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1))) {
-    const APInt &AndMask = N->getConstantOperandAPInt(1);
+  if (ShAmt.getOpcode() == ISD::AND && isa<ConstantSDNode>(ShAmt.getOperand(1))) {
+    const APInt &AndMask = ShAmt.getConstantOperandAPInt(1);
 
     // Since the max shift amount is a power of 2 we can subtract 1 to make a
     // mask that covers the bits needed to represent all shift amounts.
@@ -2073,35 +2075,34 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
     APInt ShMask(AndMask.getBitWidth(), ShiftWidth - 1);
 
     if (ShMask.isSubsetOf(AndMask)) {
-      ShAmt = N.getOperand(0);
-      return true;
+      ShAmt = ShAmt.getOperand(0);
+    } else {
+      // SimplifyDemandedBits may have optimized the mask so try restoring any
+      // bits that are known zero.
+      KnownBits Known = CurDAG->computeKnownBits(ShAmt.getOperand(0));
+      if (!ShMask.isSubsetOf(AndMask | Known.Zero))
+        return true;
+      ShAmt = ShAmt.getOperand(0);
     }
+  }
 
-    // SimplifyDemandedBits may have optimized the mask so try restoring any
-    // bits that are known zero.
-    KnownBits Known = CurDAG->computeKnownBits(N->getOperand(0));
-    if (ShMask.isSubsetOf(AndMask | Known.Zero)) {
-      ShAmt = N.getOperand(0);
-      return true;
-    }
-  } else if (N.getOpcode() == ISD::SUB &&
-             isa<ConstantSDNode>(N.getOperand(0))) {
-    uint64_t Imm = N.getConstantOperandVal(0);
+  if (ShAmt.getOpcode() == ISD::SUB &&
+      isa<ConstantSDNode>(ShAmt.getOperand(0))) {
+    uint64_t Imm = ShAmt.getConstantOperandVal(0);
     // If we are shifting by N-X where N == 0 mod Size, then just shift by -X to
     // generate a NEG instead of a SUB of a constant.
     if (Imm != 0 && Imm % ShiftWidth == 0) {
-      SDLoc DL(N);
-      EVT VT = N.getValueType();
+      SDLoc DL(ShAmt);
+      EVT VT = ShAmt.getValueType();
       SDValue Zero = CurDAG->getRegister(RISCV::X0, VT);
       unsigned NegOpc = VT == MVT::i64 ? RISCV::SUBW : RISCV::SUB;
       MachineSDNode *Neg = CurDAG->getMachineNode(NegOpc, DL, VT, Zero,
-                                                  N.getOperand(1));
+                                                  ShAmt.getOperand(1));
       ShAmt = SDValue(Neg, 0);
       return true;
     }
   }
 
-  ShAmt = N;
   return true;
 }
 
