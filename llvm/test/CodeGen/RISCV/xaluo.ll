@@ -961,8 +961,10 @@ define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, i64* %res) {
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s2, 4(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset s0, -4
 ; RV32-NEXT:    .cfi_offset s1, -8
+; RV32-NEXT:    .cfi_offset s2, -12
 ; RV32-NEXT:    mulhu a5, a0, a2
 ; RV32-NEXT:    mul a6, a1, a2
 ; RV32-NEXT:    add a5, a6, a5
@@ -978,33 +980,34 @@ define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, i64* %res) {
 ; RV32-NEXT:    mul t0, a1, a3
 ; RV32-NEXT:    add t1, t0, a7
 ; RV32-NEXT:    srai t2, a1, 31
-; RV32-NEXT:    mul t3, a2, t2
+; RV32-NEXT:    and t3, t2, a2
 ; RV32-NEXT:    srai t4, a3, 31
-; RV32-NEXT:    mul t5, t4, a0
-; RV32-NEXT:    add t6, t5, t3
-; RV32-NEXT:    add s0, t1, t6
-; RV32-NEXT:    sltu s1, s0, t1
+; RV32-NEXT:    and t5, t4, a0
+; RV32-NEXT:    neg t6, t5
+; RV32-NEXT:    sub s0, t6, t3
+; RV32-NEXT:    add s1, t1, s0
+; RV32-NEXT:    sltu s2, s1, t1
 ; RV32-NEXT:    sltu t0, t1, t0
 ; RV32-NEXT:    sltu a6, a7, a6
 ; RV32-NEXT:    mulhu a7, a1, a3
 ; RV32-NEXT:    add a6, a7, a6
 ; RV32-NEXT:    add a6, a6, t0
 ; RV32-NEXT:    mulhu a7, a2, t2
-; RV32-NEXT:    add a7, a7, t3
-; RV32-NEXT:    mul a3, a3, t2
-; RV32-NEXT:    add a3, a7, a3
-; RV32-NEXT:    mul a1, t4, a1
+; RV32-NEXT:    sub a7, a7, t3
+; RV32-NEXT:    and a3, t2, a3
+; RV32-NEXT:    sub a3, a7, a3
+; RV32-NEXT:    and a1, t4, a1
 ; RV32-NEXT:    mulhu a7, t4, a0
-; RV32-NEXT:    add a1, a7, a1
-; RV32-NEXT:    add a1, a1, t5
+; RV32-NEXT:    sub a1, a7, a1
+; RV32-NEXT:    sub a1, a1, t5
 ; RV32-NEXT:    add a1, a1, a3
-; RV32-NEXT:    sltu a3, t6, t5
+; RV32-NEXT:    sltu a3, s0, t6
 ; RV32-NEXT:    add a1, a1, a3
 ; RV32-NEXT:    add a1, a6, a1
-; RV32-NEXT:    add a1, a1, s1
+; RV32-NEXT:    add a1, a1, s2
 ; RV32-NEXT:    srai a3, a5, 31
 ; RV32-NEXT:    xor a1, a1, a3
-; RV32-NEXT:    xor a3, s0, a3
+; RV32-NEXT:    xor a3, s1, a3
 ; RV32-NEXT:    or a1, a3, a1
 ; RV32-NEXT:    snez a1, a1
 ; RV32-NEXT:    mul a0, a0, a2
@@ -1013,6 +1016,7 @@ define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, i64* %res) {
 ; RV32-NEXT:    mv a0, a1
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -1032,8 +1036,10 @@ define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, i64* %res) {
 ; RV32ZBA-NEXT:    .cfi_def_cfa_offset 16
 ; RV32ZBA-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
 ; RV32ZBA-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
+; RV32ZBA-NEXT:    sw s2, 4(sp) # 4-byte Folded Spill
 ; RV32ZBA-NEXT:    .cfi_offset s0, -4
 ; RV32ZBA-NEXT:    .cfi_offset s1, -8
+; RV32ZBA-NEXT:    .cfi_offset s2, -12
 ; RV32ZBA-NEXT:    mulhu a5, a0, a2
 ; RV32ZBA-NEXT:    mul a6, a1, a2
 ; RV32ZBA-NEXT:    add a5, a6, a5
@@ -1049,33 +1055,34 @@ define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, i64* %res) {
 ; RV32ZBA-NEXT:    mul t0, a1, a3
 ; RV32ZBA-NEXT:    add t1, t0, a7
 ; RV32ZBA-NEXT:    srai t2, a1, 31
-; RV32ZBA-NEXT:    mul t3, a2, t2
+; RV32ZBA-NEXT:    and t3, t2, a2
 ; RV32ZBA-NEXT:    srai t4, a3, 31
-; RV32ZBA-NEXT:    mul t5, t4, a0
-; RV32ZBA-NEXT:    add t6, t5, t3
-; RV32ZBA-NEXT:    add s0, t1, t6
-; RV32ZBA-NEXT:    sltu s1, s0, t1
+; RV32ZBA-NEXT:    and t5, t4, a0
+; RV32ZBA-NEXT:    neg t6, t5
+; RV32ZBA-NEXT:    sub s0, t6, t3
+; RV32ZBA-NEXT:    add s1, t1, s0
+; RV32ZBA-NEXT:    sltu s2, s1, t1
 ; RV32ZBA-NEXT:    sltu t0, t1, t0
 ; RV32ZBA-NEXT:    sltu a6, a7, a6
 ; RV32ZBA-NEXT:    mulhu a7, a1, a3
 ; RV32ZBA-NEXT:    add a6, a7, a6
 ; RV32ZBA-NEXT:    add a6, a6, t0
 ; RV32ZBA-NEXT:    mulhu a7, a2, t2
-; RV32ZBA-NEXT:    add a7, a7, t3
-; RV32ZBA-NEXT:    mul a3, a3, t2
-; RV32ZBA-NEXT:    add a3, a7, a3
-; RV32ZBA-NEXT:    mul a1, t4, a1
+; RV32ZBA-NEXT:    sub a7, a7, t3
+; RV32ZBA-NEXT:    and a3, t2, a3
+; RV32ZBA-NEXT:    sub a3, a7, a3
+; RV32ZBA-NEXT:    and a1, t4, a1
 ; RV32ZBA-NEXT:    mulhu a7, t4, a0
-; RV32ZBA-NEXT:    add a1, a7, a1
-; RV32ZBA-NEXT:    add a1, a1, t5
+; RV32ZBA-NEXT:    sub a1, a7, a1
+; RV32ZBA-NEXT:    sub a1, a1, t5
 ; RV32ZBA-NEXT:    add a1, a1, a3
-; RV32ZBA-NEXT:    sltu a3, t6, t5
+; RV32ZBA-NEXT:    sltu a3, s0, t6
 ; RV32ZBA-NEXT:    add a1, a1, a3
 ; RV32ZBA-NEXT:    add a1, a6, a1
-; RV32ZBA-NEXT:    add a1, a1, s1
+; RV32ZBA-NEXT:    add a1, a1, s2
 ; RV32ZBA-NEXT:    srai a3, a5, 31
 ; RV32ZBA-NEXT:    xor a1, a1, a3
-; RV32ZBA-NEXT:    xor a3, s0, a3
+; RV32ZBA-NEXT:    xor a3, s1, a3
 ; RV32ZBA-NEXT:    or a1, a3, a1
 ; RV32ZBA-NEXT:    snez a1, a1
 ; RV32ZBA-NEXT:    mul a0, a0, a2
@@ -1084,6 +1091,7 @@ define zeroext i1 @smulo.i64(i64 %v1, i64 %v2, i64* %res) {
 ; RV32ZBA-NEXT:    mv a0, a1
 ; RV32ZBA-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
 ; RV32ZBA-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    lw s2, 4(sp) # 4-byte Folded Reload
 ; RV32ZBA-NEXT:    addi sp, sp, 16
 ; RV32ZBA-NEXT:    ret
 ;
@@ -1115,8 +1123,8 @@ define zeroext i1 @smulo2.i64(i64 %v1, i64* %res) {
 ; RV32-NEXT:    mulhu a6, a1, a3
 ; RV32-NEXT:    add a5, a6, a5
 ; RV32-NEXT:    srai a1, a1, 31
-; RV32-NEXT:    mul a6, a1, a3
-; RV32-NEXT:    add a6, a5, a6
+; RV32-NEXT:    andi a6, a1, 13
+; RV32-NEXT:    sub a6, a5, a6
 ; RV32-NEXT:    srai a7, a4, 31
 ; RV32-NEXT:    xor t0, a6, a7
 ; RV32-NEXT:    sltu a5, a6, a5
@@ -1152,8 +1160,8 @@ define zeroext i1 @smulo2.i64(i64 %v1, i64* %res) {
 ; RV32ZBA-NEXT:    mulhu a6, a1, a3
 ; RV32ZBA-NEXT:    add a5, a6, a5
 ; RV32ZBA-NEXT:    srai a1, a1, 31
-; RV32ZBA-NEXT:    mul a6, a1, a3
-; RV32ZBA-NEXT:    add a6, a5, a6
+; RV32ZBA-NEXT:    andi a6, a1, 13
+; RV32ZBA-NEXT:    sub a6, a5, a6
 ; RV32ZBA-NEXT:    srai a7, a4, 31
 ; RV32ZBA-NEXT:    xor t0, a6, a7
 ; RV32ZBA-NEXT:    sltu a5, a6, a5
@@ -2352,7 +2360,9 @@ define i64 @smulo.select.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset s0, -4
+; RV32-NEXT:    .cfi_offset s1, -8
 ; RV32-NEXT:    mulhu a4, a0, a2
 ; RV32-NEXT:    mul a5, a1, a2
 ; RV32-NEXT:    add a4, a5, a4
@@ -2368,33 +2378,34 @@ define i64 @smulo.select.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    mul a7, a1, a3
 ; RV32-NEXT:    add t0, a7, a6
 ; RV32-NEXT:    srai t1, a1, 31
-; RV32-NEXT:    mul t2, a2, t1
+; RV32-NEXT:    and t2, t1, a2
 ; RV32-NEXT:    srai t3, a3, 31
-; RV32-NEXT:    mul t4, t3, a0
-; RV32-NEXT:    add t5, t4, t2
-; RV32-NEXT:    add t6, t0, t5
-; RV32-NEXT:    sltu s0, t6, t0
+; RV32-NEXT:    and t4, t3, a0
+; RV32-NEXT:    neg t5, t4
+; RV32-NEXT:    sub t6, t5, t2
+; RV32-NEXT:    add s0, t0, t6
+; RV32-NEXT:    sltu s1, s0, t0
 ; RV32-NEXT:    sltu a7, t0, a7
 ; RV32-NEXT:    sltu a5, a6, a5
 ; RV32-NEXT:    mulhu a6, a1, a3
 ; RV32-NEXT:    add a5, a6, a5
 ; RV32-NEXT:    add a5, a5, a7
 ; RV32-NEXT:    mulhu a6, a2, t1
-; RV32-NEXT:    add a6, a6, t2
-; RV32-NEXT:    mul a7, a3, t1
-; RV32-NEXT:    add a6, a6, a7
-; RV32-NEXT:    mul a7, t3, a1
+; RV32-NEXT:    sub a6, a6, t2
+; RV32-NEXT:    and a7, t1, a3
+; RV32-NEXT:    sub a6, a6, a7
+; RV32-NEXT:    and a7, t3, a1
 ; RV32-NEXT:    mulhu t0, t3, a0
-; RV32-NEXT:    add a7, t0, a7
-; RV32-NEXT:    add a7, a7, t4
+; RV32-NEXT:    sub a7, t0, a7
+; RV32-NEXT:    sub a7, a7, t4
 ; RV32-NEXT:    add a6, a7, a6
-; RV32-NEXT:    sltu a7, t5, t4
+; RV32-NEXT:    sltu a7, t6, t5
 ; RV32-NEXT:    add a6, a6, a7
 ; RV32-NEXT:    add a5, a5, a6
-; RV32-NEXT:    add a5, a5, s0
+; RV32-NEXT:    add a5, a5, s1
 ; RV32-NEXT:    srai a4, a4, 31
 ; RV32-NEXT:    xor a5, a5, a4
-; RV32-NEXT:    xor a4, t6, a4
+; RV32-NEXT:    xor a4, s0, a4
 ; RV32-NEXT:    or a4, a4, a5
 ; RV32-NEXT:    bnez a4, .LBB46_2
 ; RV32-NEXT:  # %bb.1: # %entry
@@ -2402,6 +2413,7 @@ define i64 @smulo.select.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    mv a1, a3
 ; RV32-NEXT:  .LBB46_2: # %entry
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -2421,7 +2433,9 @@ define i64 @smulo.select.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:    addi sp, sp, -16
 ; RV32ZBA-NEXT:    .cfi_def_cfa_offset 16
 ; RV32ZBA-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32ZBA-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; RV32ZBA-NEXT:    .cfi_offset s0, -4
+; RV32ZBA-NEXT:    .cfi_offset s1, -8
 ; RV32ZBA-NEXT:    mulhu a4, a0, a2
 ; RV32ZBA-NEXT:    mul a5, a1, a2
 ; RV32ZBA-NEXT:    add a4, a5, a4
@@ -2437,33 +2451,34 @@ define i64 @smulo.select.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:    mul a7, a1, a3
 ; RV32ZBA-NEXT:    add t0, a7, a6
 ; RV32ZBA-NEXT:    srai t1, a1, 31
-; RV32ZBA-NEXT:    mul t2, a2, t1
+; RV32ZBA-NEXT:    and t2, t1, a2
 ; RV32ZBA-NEXT:    srai t3, a3, 31
-; RV32ZBA-NEXT:    mul t4, t3, a0
-; RV32ZBA-NEXT:    add t5, t4, t2
-; RV32ZBA-NEXT:    add t6, t0, t5
-; RV32ZBA-NEXT:    sltu s0, t6, t0
+; RV32ZBA-NEXT:    and t4, t3, a0
+; RV32ZBA-NEXT:    neg t5, t4
+; RV32ZBA-NEXT:    sub t6, t5, t2
+; RV32ZBA-NEXT:    add s0, t0, t6
+; RV32ZBA-NEXT:    sltu s1, s0, t0
 ; RV32ZBA-NEXT:    sltu a7, t0, a7
 ; RV32ZBA-NEXT:    sltu a5, a6, a5
 ; RV32ZBA-NEXT:    mulhu a6, a1, a3
 ; RV32ZBA-NEXT:    add a5, a6, a5
 ; RV32ZBA-NEXT:    add a5, a5, a7
 ; RV32ZBA-NEXT:    mulhu a6, a2, t1
-; RV32ZBA-NEXT:    add a6, a6, t2
-; RV32ZBA-NEXT:    mul a7, a3, t1
-; RV32ZBA-NEXT:    add a6, a6, a7
-; RV32ZBA-NEXT:    mul a7, t3, a1
+; RV32ZBA-NEXT:    sub a6, a6, t2
+; RV32ZBA-NEXT:    and a7, t1, a3
+; RV32ZBA-NEXT:    sub a6, a6, a7
+; RV32ZBA-NEXT:    and a7, t3, a1
 ; RV32ZBA-NEXT:    mulhu t0, t3, a0
-; RV32ZBA-NEXT:    add a7, t0, a7
-; RV32ZBA-NEXT:    add a7, a7, t4
+; RV32ZBA-NEXT:    sub a7, t0, a7
+; RV32ZBA-NEXT:    sub a7, a7, t4
 ; RV32ZBA-NEXT:    add a6, a7, a6
-; RV32ZBA-NEXT:    sltu a7, t5, t4
+; RV32ZBA-NEXT:    sltu a7, t6, t5
 ; RV32ZBA-NEXT:    add a6, a6, a7
 ; RV32ZBA-NEXT:    add a5, a5, a6
-; RV32ZBA-NEXT:    add a5, a5, s0
+; RV32ZBA-NEXT:    add a5, a5, s1
 ; RV32ZBA-NEXT:    srai a4, a4, 31
 ; RV32ZBA-NEXT:    xor a5, a5, a4
-; RV32ZBA-NEXT:    xor a4, t6, a4
+; RV32ZBA-NEXT:    xor a4, s0, a4
 ; RV32ZBA-NEXT:    or a4, a4, a5
 ; RV32ZBA-NEXT:    bnez a4, .LBB46_2
 ; RV32ZBA-NEXT:  # %bb.1: # %entry
@@ -2471,6 +2486,7 @@ define i64 @smulo.select.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:    mv a1, a3
 ; RV32ZBA-NEXT:  .LBB46_2: # %entry
 ; RV32ZBA-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32ZBA-NEXT:    addi sp, sp, 16
 ; RV32ZBA-NEXT:    ret
 ;
@@ -2497,7 +2513,9 @@ define i1 @smulo.not.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset s0, -4
+; RV32-NEXT:    .cfi_offset s1, -8
 ; RV32-NEXT:    mulhu a4, a0, a2
 ; RV32-NEXT:    mul a5, a1, a2
 ; RV32-NEXT:    add a4, a5, a4
@@ -2513,36 +2531,38 @@ define i1 @smulo.not.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    mul a7, a1, a3
 ; RV32-NEXT:    add t0, a7, a6
 ; RV32-NEXT:    srai t1, a1, 31
-; RV32-NEXT:    mul t2, a2, t1
+; RV32-NEXT:    and t2, t1, a2
 ; RV32-NEXT:    srai t3, a3, 31
-; RV32-NEXT:    mul t4, t3, a0
-; RV32-NEXT:    add t5, t4, t2
-; RV32-NEXT:    add t6, t0, t5
-; RV32-NEXT:    sltu s0, t6, t0
+; RV32-NEXT:    and t4, t3, a0
+; RV32-NEXT:    neg t5, t4
+; RV32-NEXT:    sub t6, t5, t2
+; RV32-NEXT:    add s0, t0, t6
+; RV32-NEXT:    sltu s1, s0, t0
 ; RV32-NEXT:    sltu a7, t0, a7
 ; RV32-NEXT:    sltu a5, a6, a5
 ; RV32-NEXT:    mulhu a6, a1, a3
 ; RV32-NEXT:    add a5, a6, a5
 ; RV32-NEXT:    add a5, a5, a7
 ; RV32-NEXT:    mulhu a2, a2, t1
-; RV32-NEXT:    add a2, a2, t2
-; RV32-NEXT:    mul a3, a3, t1
-; RV32-NEXT:    add a2, a2, a3
-; RV32-NEXT:    mul a1, t3, a1
+; RV32-NEXT:    sub a2, a2, t2
+; RV32-NEXT:    and a3, t1, a3
+; RV32-NEXT:    sub a2, a2, a3
+; RV32-NEXT:    and a1, t3, a1
 ; RV32-NEXT:    mulhu a0, t3, a0
-; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    add a0, a0, t4
+; RV32-NEXT:    sub a0, a0, a1
+; RV32-NEXT:    sub a0, a0, t4
 ; RV32-NEXT:    add a0, a0, a2
-; RV32-NEXT:    sltu a1, t5, t4
+; RV32-NEXT:    sltu a1, t6, t5
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    add a0, a5, a0
-; RV32-NEXT:    add a0, a0, s0
+; RV32-NEXT:    add a0, a0, s1
 ; RV32-NEXT:    srai a1, a4, 31
 ; RV32-NEXT:    xor a0, a0, a1
-; RV32-NEXT:    xor a1, t6, a1
+; RV32-NEXT:    xor a1, s0, a1
 ; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    seqz a0, a0
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -2560,7 +2580,9 @@ define i1 @smulo.not.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:    addi sp, sp, -16
 ; RV32ZBA-NEXT:    .cfi_def_cfa_offset 16
 ; RV32ZBA-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32ZBA-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; RV32ZBA-NEXT:    .cfi_offset s0, -4
+; RV32ZBA-NEXT:    .cfi_offset s1, -8
 ; RV32ZBA-NEXT:    mulhu a4, a0, a2
 ; RV32ZBA-NEXT:    mul a5, a1, a2
 ; RV32ZBA-NEXT:    add a4, a5, a4
@@ -2576,36 +2598,38 @@ define i1 @smulo.not.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:    mul a7, a1, a3
 ; RV32ZBA-NEXT:    add t0, a7, a6
 ; RV32ZBA-NEXT:    srai t1, a1, 31
-; RV32ZBA-NEXT:    mul t2, a2, t1
+; RV32ZBA-NEXT:    and t2, t1, a2
 ; RV32ZBA-NEXT:    srai t3, a3, 31
-; RV32ZBA-NEXT:    mul t4, t3, a0
-; RV32ZBA-NEXT:    add t5, t4, t2
-; RV32ZBA-NEXT:    add t6, t0, t5
-; RV32ZBA-NEXT:    sltu s0, t6, t0
+; RV32ZBA-NEXT:    and t4, t3, a0
+; RV32ZBA-NEXT:    neg t5, t4
+; RV32ZBA-NEXT:    sub t6, t5, t2
+; RV32ZBA-NEXT:    add s0, t0, t6
+; RV32ZBA-NEXT:    sltu s1, s0, t0
 ; RV32ZBA-NEXT:    sltu a7, t0, a7
 ; RV32ZBA-NEXT:    sltu a5, a6, a5
 ; RV32ZBA-NEXT:    mulhu a6, a1, a3
 ; RV32ZBA-NEXT:    add a5, a6, a5
 ; RV32ZBA-NEXT:    add a5, a5, a7
 ; RV32ZBA-NEXT:    mulhu a2, a2, t1
-; RV32ZBA-NEXT:    add a2, a2, t2
-; RV32ZBA-NEXT:    mul a3, a3, t1
-; RV32ZBA-NEXT:    add a2, a2, a3
-; RV32ZBA-NEXT:    mul a1, t3, a1
+; RV32ZBA-NEXT:    sub a2, a2, t2
+; RV32ZBA-NEXT:    and a3, t1, a3
+; RV32ZBA-NEXT:    sub a2, a2, a3
+; RV32ZBA-NEXT:    and a1, t3, a1
 ; RV32ZBA-NEXT:    mulhu a0, t3, a0
-; RV32ZBA-NEXT:    add a0, a0, a1
-; RV32ZBA-NEXT:    add a0, a0, t4
+; RV32ZBA-NEXT:    sub a0, a0, a1
+; RV32ZBA-NEXT:    sub a0, a0, t4
 ; RV32ZBA-NEXT:    add a0, a0, a2
-; RV32ZBA-NEXT:    sltu a1, t5, t4
+; RV32ZBA-NEXT:    sltu a1, t6, t5
 ; RV32ZBA-NEXT:    add a0, a0, a1
 ; RV32ZBA-NEXT:    add a0, a5, a0
-; RV32ZBA-NEXT:    add a0, a0, s0
+; RV32ZBA-NEXT:    add a0, a0, s1
 ; RV32ZBA-NEXT:    srai a1, a4, 31
 ; RV32ZBA-NEXT:    xor a0, a0, a1
-; RV32ZBA-NEXT:    xor a1, t6, a1
+; RV32ZBA-NEXT:    xor a1, s0, a1
 ; RV32ZBA-NEXT:    or a0, a1, a0
 ; RV32ZBA-NEXT:    seqz a0, a0
 ; RV32ZBA-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32ZBA-NEXT:    addi sp, sp, 16
 ; RV32ZBA-NEXT:    ret
 ;
@@ -3453,7 +3477,9 @@ define zeroext i1 @smulo.br.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset s0, -4
+; RV32-NEXT:    .cfi_offset s1, -8
 ; RV32-NEXT:    mulhu a4, a0, a2
 ; RV32-NEXT:    mul a5, a1, a2
 ; RV32-NEXT:    add a4, a5, a4
@@ -3469,33 +3495,34 @@ define zeroext i1 @smulo.br.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    mul a7, a1, a3
 ; RV32-NEXT:    add t0, a7, a6
 ; RV32-NEXT:    srai t1, a1, 31
-; RV32-NEXT:    mul t2, a2, t1
+; RV32-NEXT:    and t2, t1, a2
 ; RV32-NEXT:    srai t3, a3, 31
-; RV32-NEXT:    mul t4, t3, a0
-; RV32-NEXT:    add t5, t4, t2
-; RV32-NEXT:    add t6, t0, t5
-; RV32-NEXT:    sltu s0, t6, t0
+; RV32-NEXT:    and t4, t3, a0
+; RV32-NEXT:    neg t5, t4
+; RV32-NEXT:    sub t6, t5, t2
+; RV32-NEXT:    add s0, t0, t6
+; RV32-NEXT:    sltu s1, s0, t0
 ; RV32-NEXT:    sltu a7, t0, a7
 ; RV32-NEXT:    sltu a5, a6, a5
 ; RV32-NEXT:    mulhu a6, a1, a3
 ; RV32-NEXT:    add a5, a6, a5
 ; RV32-NEXT:    add a5, a5, a7
 ; RV32-NEXT:    mulhu a2, a2, t1
-; RV32-NEXT:    add a2, a2, t2
-; RV32-NEXT:    mul a3, a3, t1
-; RV32-NEXT:    add a2, a2, a3
-; RV32-NEXT:    mul a1, t3, a1
+; RV32-NEXT:    sub a2, a2, t2
+; RV32-NEXT:    and a3, t1, a3
+; RV32-NEXT:    sub a2, a2, a3
+; RV32-NEXT:    and a1, t3, a1
 ; RV32-NEXT:    mulhu a0, t3, a0
-; RV32-NEXT:    add a0, a0, a1
-; RV32-NEXT:    add a0, a0, t4
+; RV32-NEXT:    sub a0, a0, a1
+; RV32-NEXT:    sub a0, a0, t4
 ; RV32-NEXT:    add a0, a0, a2
-; RV32-NEXT:    sltu a1, t5, t4
+; RV32-NEXT:    sltu a1, t6, t5
 ; RV32-NEXT:    add a0, a0, a1
 ; RV32-NEXT:    add a0, a5, a0
-; RV32-NEXT:    add a0, a0, s0
+; RV32-NEXT:    add a0, a0, s1
 ; RV32-NEXT:    srai a1, a4, 31
 ; RV32-NEXT:    xor a0, a0, a1
-; RV32-NEXT:    xor a1, t6, a1
+; RV32-NEXT:    xor a1, s0, a1
 ; RV32-NEXT:    or a0, a1, a0
 ; RV32-NEXT:    beqz a0, .LBB61_2
 ; RV32-NEXT:  # %bb.1: # %overflow
@@ -3505,6 +3532,7 @@ define zeroext i1 @smulo.br.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    li a0, 1
 ; RV32-NEXT:  .LBB61_3: # %overflow
 ; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
 ;
@@ -3526,7 +3554,9 @@ define zeroext i1 @smulo.br.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:    addi sp, sp, -16
 ; RV32ZBA-NEXT:    .cfi_def_cfa_offset 16
 ; RV32ZBA-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
+; RV32ZBA-NEXT:    sw s1, 8(sp) # 4-byte Folded Spill
 ; RV32ZBA-NEXT:    .cfi_offset s0, -4
+; RV32ZBA-NEXT:    .cfi_offset s1, -8
 ; RV32ZBA-NEXT:    mulhu a4, a0, a2
 ; RV32ZBA-NEXT:    mul a5, a1, a2
 ; RV32ZBA-NEXT:    add a4, a5, a4
@@ -3542,33 +3572,34 @@ define zeroext i1 @smulo.br.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:    mul a7, a1, a3
 ; RV32ZBA-NEXT:    add t0, a7, a6
 ; RV32ZBA-NEXT:    srai t1, a1, 31
-; RV32ZBA-NEXT:    mul t2, a2, t1
+; RV32ZBA-NEXT:    and t2, t1, a2
 ; RV32ZBA-NEXT:    srai t3, a3, 31
-; RV32ZBA-NEXT:    mul t4, t3, a0
-; RV32ZBA-NEXT:    add t5, t4, t2
-; RV32ZBA-NEXT:    add t6, t0, t5
-; RV32ZBA-NEXT:    sltu s0, t6, t0
+; RV32ZBA-NEXT:    and t4, t3, a0
+; RV32ZBA-NEXT:    neg t5, t4
+; RV32ZBA-NEXT:    sub t6, t5, t2
+; RV32ZBA-NEXT:    add s0, t0, t6
+; RV32ZBA-NEXT:    sltu s1, s0, t0
 ; RV32ZBA-NEXT:    sltu a7, t0, a7
 ; RV32ZBA-NEXT:    sltu a5, a6, a5
 ; RV32ZBA-NEXT:    mulhu a6, a1, a3
 ; RV32ZBA-NEXT:    add a5, a6, a5
 ; RV32ZBA-NEXT:    add a5, a5, a7
 ; RV32ZBA-NEXT:    mulhu a2, a2, t1
-; RV32ZBA-NEXT:    add a2, a2, t2
-; RV32ZBA-NEXT:    mul a3, a3, t1
-; RV32ZBA-NEXT:    add a2, a2, a3
-; RV32ZBA-NEXT:    mul a1, t3, a1
+; RV32ZBA-NEXT:    sub a2, a2, t2
+; RV32ZBA-NEXT:    and a3, t1, a3
+; RV32ZBA-NEXT:    sub a2, a2, a3
+; RV32ZBA-NEXT:    and a1, t3, a1
 ; RV32ZBA-NEXT:    mulhu a0, t3, a0
-; RV32ZBA-NEXT:    add a0, a0, a1
-; RV32ZBA-NEXT:    add a0, a0, t4
+; RV32ZBA-NEXT:    sub a0, a0, a1
+; RV32ZBA-NEXT:    sub a0, a0, t4
 ; RV32ZBA-NEXT:    add a0, a0, a2
-; RV32ZBA-NEXT:    sltu a1, t5, t4
+; RV32ZBA-NEXT:    sltu a1, t6, t5
 ; RV32ZBA-NEXT:    add a0, a0, a1
 ; RV32ZBA-NEXT:    add a0, a5, a0
-; RV32ZBA-NEXT:    add a0, a0, s0
+; RV32ZBA-NEXT:    add a0, a0, s1
 ; RV32ZBA-NEXT:    srai a1, a4, 31
 ; RV32ZBA-NEXT:    xor a0, a0, a1
-; RV32ZBA-NEXT:    xor a1, t6, a1
+; RV32ZBA-NEXT:    xor a1, s0, a1
 ; RV32ZBA-NEXT:    or a0, a1, a0
 ; RV32ZBA-NEXT:    beqz a0, .LBB61_2
 ; RV32ZBA-NEXT:  # %bb.1: # %overflow
@@ -3578,6 +3609,7 @@ define zeroext i1 @smulo.br.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:    li a0, 1
 ; RV32ZBA-NEXT:  .LBB61_3: # %overflow
 ; RV32ZBA-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
+; RV32ZBA-NEXT:    lw s1, 8(sp) # 4-byte Folded Reload
 ; RV32ZBA-NEXT:    addi sp, sp, 16
 ; RV32ZBA-NEXT:    ret
 ;
@@ -3625,8 +3657,8 @@ define zeroext i1 @smulo2.br.i64(i64 %v1) {
 ; RV32-NEXT:    add a6, a4, a6
 ; RV32-NEXT:    sub t1, a6, a1
 ; RV32-NEXT:    srai t2, a1, 31
-; RV32-NEXT:    mul t3, t2, a2
-; RV32-NEXT:    sub t3, t3, a0
+; RV32-NEXT:    andi t3, t2, -13
+; RV32-NEXT:    sub t3, a5, t3
 ; RV32-NEXT:    add t4, t1, t3
 ; RV32-NEXT:    sltu t5, t4, t1
 ; RV32-NEXT:    neg t6, a1
@@ -3687,8 +3719,8 @@ define zeroext i1 @smulo2.br.i64(i64 %v1) {
 ; RV32ZBA-NEXT:    add a6, a4, a6
 ; RV32ZBA-NEXT:    sub t1, a6, a1
 ; RV32ZBA-NEXT:    srai t2, a1, 31
-; RV32ZBA-NEXT:    mul t3, t2, a2
-; RV32ZBA-NEXT:    sub t3, t3, a0
+; RV32ZBA-NEXT:    andi t3, t2, -13
+; RV32ZBA-NEXT:    sub t3, a5, t3
 ; RV32ZBA-NEXT:    add t4, t1, t3
 ; RV32ZBA-NEXT:    sltu t5, t4, t1
 ; RV32ZBA-NEXT:    neg t6, a1

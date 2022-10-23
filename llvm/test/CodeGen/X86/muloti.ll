@@ -7,34 +7,39 @@
 define %0 @x(i64 %a.coerce0, i64 %a.coerce1, i64 %b.coerce0, i64 %b.coerce1) nounwind uwtable ssp {
 ; CHECK-LABEL: x:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
-; CHECK-NEXT:    .cfi_offset %rbx, -24
-; CHECK-NEXT:    .cfi_offset %r14, -16
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset %rbx, -32
+; CHECK-NEXT:    .cfi_offset %r14, -24
+; CHECK-NEXT:    .cfi_offset %r15, -16
 ; CHECK-NEXT:    movq %rdx, %r11
 ; CHECK-NEXT:    movq %rdi, %r9
-; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    sarq $63, %rbx
-; CHECK-NEXT:    movq %rdx, %rdi
-; CHECK-NEXT:    imulq %rbx, %rdi
-; CHECK-NEXT:    movq %rdx, %rax
-; CHECK-NEXT:    mulq %rbx
-; CHECK-NEXT:    movq %rax, %r8
-; CHECK-NEXT:    addq %rdi, %rdx
-; CHECK-NEXT:    imulq %rcx, %rbx
-; CHECK-NEXT:    addq %rdx, %rbx
-; CHECK-NEXT:    movq %rcx, %rdi
+; CHECK-NEXT:    movq %rsi, %rdi
 ; CHECK-NEXT:    sarq $63, %rdi
-; CHECK-NEXT:    movq %rdi, %r14
-; CHECK-NEXT:    imulq %rsi, %r14
-; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movq %rdi, %r10
+; CHECK-NEXT:    andq %rdx, %r10
+; CHECK-NEXT:    movq %rdx, %rax
+; CHECK-NEXT:    mulq %rdi
+; CHECK-NEXT:    movq %rax, %r8
+; CHECK-NEXT:    movq %rdx, %rbx
+; CHECK-NEXT:    subq %r10, %rbx
+; CHECK-NEXT:    andq %rcx, %rdi
+; CHECK-NEXT:    subq %rdi, %rbx
+; CHECK-NEXT:    movq %rcx, %r14
+; CHECK-NEXT:    sarq $63, %r14
+; CHECK-NEXT:    movq %r14, %r15
+; CHECK-NEXT:    andq %rsi, %r15
+; CHECK-NEXT:    movq %r14, %rax
 ; CHECK-NEXT:    mulq %r9
 ; CHECK-NEXT:    movq %rax, %r10
-; CHECK-NEXT:    addq %r14, %rdx
-; CHECK-NEXT:    imulq %r9, %rdi
-; CHECK-NEXT:    addq %rdx, %rdi
+; CHECK-NEXT:    movq %rdx, %rdi
+; CHECK-NEXT:    subq %r15, %rdi
+; CHECK-NEXT:    andq %r9, %r14
+; CHECK-NEXT:    subq %r14, %rdi
 ; CHECK-NEXT:    addq %r8, %r10
 ; CHECK-NEXT:    adcq %rbx, %rdi
 ; CHECK-NEXT:    movq %r9, %rax
@@ -72,6 +77,7 @@ define %0 @x(i64 %a.coerce0, i64 %a.coerce1, i64 %b.coerce0, i64 %b.coerce1) nou
 ; CHECK-NEXT:    movq %r9, %rdx
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  LBB0_1: ## %overflow
 ; CHECK-NEXT:    ud2
