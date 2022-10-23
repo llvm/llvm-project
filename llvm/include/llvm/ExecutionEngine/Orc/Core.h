@@ -709,8 +709,8 @@ public:
     SymbolFlags.erase(Name);
     if (InitSymbol == Name) {
       DEBUG_WITH_TYPE("orc", {
-        dbgs() << "In " << JD.getName() << ", " << getName()
-               << ": discarding init symbol \"" << *Name << "\"\n";
+        dbgs() << "In " << getName() << ": discarding init symbol \""
+               << *Name << "\"\n";
       });
       InitSymbol = nullptr;
     }
