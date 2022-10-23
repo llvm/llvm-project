@@ -3577,17 +3577,10 @@ void Sema::NoteAllFoundTemplates(TemplateName Name) {
 
 static QualType
 checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
-                           const SmallVectorImpl<TemplateArgument> &Converted,
+                           ArrayRef<TemplateArgument> Converted,
                            SourceLocation TemplateLoc,
                            TemplateArgumentListInfo &TemplateArgs) {
   ASTContext &Context = SemaRef.getASTContext();
-
-  // Wrap the type in substitution sugar.
-  auto getSubstType = [&](QualType Replacement, unsigned IndexReplaced,
-                          Optional<unsigned> PackIndexReplaced) {
-    return SemaRef.Context.getSubstTemplateTypeParmType(
-        Replacement, BTD, IndexReplaced, PackIndexReplaced);
-  };
 
   switch (BTD->getBuiltinTemplateKind()) {
   case BTK__make_integer_seq: {
@@ -3611,19 +3604,18 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     TemplateArgumentListInfo SyntheticTemplateArgs;
     // The type argument, wrapped in substitution sugar, gets reused as the
     // first template argument in the synthetic template argument list.
-    QualType SyntheticType = getSubstType(OrigType, 1, None);
     SyntheticTemplateArgs.addArgument(
-        TemplateArgumentLoc(TemplateArgument(SyntheticType),
+        TemplateArgumentLoc(TemplateArgument(OrigType),
                             SemaRef.Context.getTrivialTypeSourceInfo(
-                                SyntheticType, TemplateArgs[1].getLocation())));
+                                OrigType, TemplateArgs[1].getLocation())));
 
     if (llvm::APSInt NumArgs = NumArgsArg.getAsIntegral(); NumArgs >= 0) {
       // Expand N into 0 ... N-1.
       for (llvm::APSInt I(NumArgs.getBitWidth(), NumArgs.isUnsigned());
            I < NumArgs; ++I) {
-        TemplateArgument TA(Context, I, SyntheticType);
+        TemplateArgument TA(Context, I, OrigType);
         SyntheticTemplateArgs.addArgument(SemaRef.getTrivialTemplateArgumentLoc(
-            TA, SyntheticType, TemplateArgs[2].getLocation()));
+            TA, OrigType, TemplateArgs[2].getLocation()));
       }
     } else {
       // C++14 [inteseq.make]p1:
@@ -3633,13 +3625,10 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
       return QualType();
     }
 
-    // Wrap the template in substitution sugar.
-    TemplateName TN = SemaRef.Context.getSubstTemplateTemplateParm(
-        Converted[0].getAsTemplate(), BTD, 0, None);
-
     // The first template argument will be reused as the template decl that
     // our synthetic template arguments will be applied to.
-    return SemaRef.CheckTemplateIdType(TN, TemplateLoc, SyntheticTemplateArgs);
+    return SemaRef.CheckTemplateIdType(Converted[0].getAsTemplate(),
+                                       TemplateLoc, SyntheticTemplateArgs);
   }
 
   case BTK__type_pack_element:
@@ -3666,8 +3655,7 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
 
     // We simply return the type at index `Index`.
     int64_t N = Index.getExtValue();
-    return getSubstType(Ts.getPackAsArray()[N].getAsType(), 1,
-                        Ts.pack_size() - 1 - N);
+    return Ts.getPackAsArray()[N].getAsType();
   }
   llvm_unreachable("unexpected BuiltinTemplateDecl!");
 }
@@ -3915,7 +3903,7 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
       return QualType();
     }
   } else if (auto *BTD = dyn_cast<BuiltinTemplateDecl>(Template)) {
-    CanonType = checkBuiltinTemplateIdType(*this, BTD, CanonicalConverted,
+    CanonType = checkBuiltinTemplateIdType(*this, BTD, SugaredConverted,
                                            TemplateLoc, TemplateArgs);
   } else if (Name.isDependent() ||
              TemplateSpecializationType::anyDependentTemplateArguments(
