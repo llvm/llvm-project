@@ -2889,8 +2889,7 @@ Expr *ParmVarDecl::getDefaultArg() {
 
   Expr *Arg = getInit();
   if (auto *E = dyn_cast_or_null<FullExpr>(Arg))
-    if (!isa<ConstantExpr>(E))
-      return E->getSubExpr();
+    return E->getSubExpr();
 
   return Arg;
 }
