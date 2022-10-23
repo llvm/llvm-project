@@ -13,6 +13,7 @@
 
 namespace llvm {
 void reduceVolatileInstructionsDeltaPass(TestRunner &Test);
+void reduceAtomicSyncScopesDeltaPass(TestRunner &Test);
 } // namespace llvm
 
 #endif
