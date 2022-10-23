@@ -33,7 +33,7 @@ void test_Def2(Def2<int, int const*> *d2) {
 }
 
 typedef int& int_ref_t;
-Def2<int_ref_t> *d2; // expected-note{{in instantiation of default argument for 'Def2<int &>' required here}}
+Def2<int_ref_t> *d2; // expected-note{{in instantiation of default argument for 'Def2<int_ref_t>' required here}}
 
 
 template<> struct Def1<const int> { }; // expected-error{{redefinition of 'Def1<const int>'}}
