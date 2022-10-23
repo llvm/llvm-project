@@ -125,7 +125,6 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     Type llvm4xI32 = this->typeConverter->convertType(VectorType::get(4, i32));
     MemRefDescriptor memrefDescriptor(memref);
     Type llvmI64 = this->typeConverter->convertType(rewriter.getI64Type());
-    Type llvm2xI32 = this->typeConverter->convertType(VectorType::get(2, i32));
     Value c32I64 = rewriter.create<LLVM::ConstantOp>(
         loc, llvmI64, rewriter.getI64IntegerAttr(32));
 
