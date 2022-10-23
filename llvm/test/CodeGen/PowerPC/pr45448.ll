@@ -25,8 +25,7 @@ define hidden void @julia_tryparse_internal_45896() #0 {
 ; CHECK-NEXT:    rldic r5, r5, 4, 32
 ; CHECK-NEXT:    crnot 4*cr5+lt, eq
 ; CHECK-NEXT:    mulhdu r3, r3, r5
-; CHECK-NEXT:    and r6, r4, r5
-; CHECK-NEXT:    sub r6, r3, r6
+; CHECK-NEXT:    maddld r6, r4, r5, r3
 ; CHECK-NEXT:    cmpld cr1, r6, r3
 ; CHECK-NEXT:    mulhdu. r3, r4, r5
 ; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_10

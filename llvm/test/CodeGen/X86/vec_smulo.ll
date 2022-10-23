@@ -3297,33 +3297,31 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSE2-NEXT:    pushq %r12
 ; SSE2-NEXT:    pushq %rbx
 ; SSE2-NEXT:    movq %r8, %r14
-; SSE2-NEXT:    movq %rcx, %rbp
 ; SSE2-NEXT:    movq %rdx, %r8
 ; SSE2-NEXT:    movq %rsi, %r11
 ; SSE2-NEXT:    movq %rdi, %r10
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
-; SSE2-NEXT:    movq %r11, %rbx
-; SSE2-NEXT:    sarq $63, %rbx
-; SSE2-NEXT:    movq %rbx, %r15
-; SSE2-NEXT:    andq %r14, %r15
+; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rbp
+; SSE2-NEXT:    movq %r11, %r12
+; SSE2-NEXT:    sarq $63, %r12
+; SSE2-NEXT:    movq %r14, %rbx
+; SSE2-NEXT:    imulq %r12, %rbx
 ; SSE2-NEXT:    movq %r14, %rax
-; SSE2-NEXT:    mulq %rbx
+; SSE2-NEXT:    mulq %r12
 ; SSE2-NEXT:    movq %rax, %rdi
-; SSE2-NEXT:    movq %rdx, %r12
-; SSE2-NEXT:    subq %r15, %r12
-; SSE2-NEXT:    andq %r9, %rbx
-; SSE2-NEXT:    subq %rbx, %r12
-; SSE2-NEXT:    movq %r9, %r13
-; SSE2-NEXT:    sarq $63, %r13
-; SSE2-NEXT:    movq %r13, %rcx
-; SSE2-NEXT:    andq %r11, %rcx
-; SSE2-NEXT:    movq %r13, %rax
+; SSE2-NEXT:    addq %rbx, %rdx
+; SSE2-NEXT:    imulq %r9, %r12
+; SSE2-NEXT:    addq %rdx, %r12
+; SSE2-NEXT:    movq %r9, %rbx
+; SSE2-NEXT:    sarq $63, %rbx
+; SSE2-NEXT:    movq %rbx, %r13
+; SSE2-NEXT:    imulq %r11, %r13
+; SSE2-NEXT:    movq %rbx, %rax
 ; SSE2-NEXT:    mulq %r10
 ; SSE2-NEXT:    movq %rax, %r15
-; SSE2-NEXT:    movq %rdx, %rbx
-; SSE2-NEXT:    subq %rcx, %rbx
-; SSE2-NEXT:    andq %r10, %r13
-; SSE2-NEXT:    subq %r13, %rbx
+; SSE2-NEXT:    addq %r13, %rdx
+; SSE2-NEXT:    imulq %r10, %rbx
+; SSE2-NEXT:    addq %rdx, %rbx
 ; SSE2-NEXT:    addq %rdi, %r15
 ; SSE2-NEXT:    adcq %r12, %rbx
 ; SSE2-NEXT:    movq %r10, %rax
@@ -3343,11 +3341,11 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSE2-NEXT:    addq %r13, %r10
 ; SSE2-NEXT:    adcq %r14, %r12
 ; SSE2-NEXT:    setb %al
-; SSE2-NEXT:    movzbl %al, %ecx
+; SSE2-NEXT:    movzbl %al, %r14d
 ; SSE2-NEXT:    movq %r11, %rax
 ; SSE2-NEXT:    mulq %r9
 ; SSE2-NEXT:    addq %r12, %rax
-; SSE2-NEXT:    adcq %rcx, %rdx
+; SSE2-NEXT:    adcq %r14, %rdx
 ; SSE2-NEXT:    addq %r15, %rax
 ; SSE2-NEXT:    adcq %rbx, %rdx
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %r12
@@ -3358,56 +3356,52 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSE2-NEXT:    xorl %r15d, %r15d
 ; SSE2-NEXT:    orq %rdx, %r10
 ; SSE2-NEXT:    setne %r15b
-; SSE2-NEXT:    movq %rbp, %rcx
-; SSE2-NEXT:    sarq $63, %rcx
-; SSE2-NEXT:    movq %rcx, %r11
-; SSE2-NEXT:    andq %rsi, %r11
+; SSE2-NEXT:    movq %rcx, %rbx
+; SSE2-NEXT:    sarq $63, %rbx
+; SSE2-NEXT:    movq %rsi, %r10
+; SSE2-NEXT:    imulq %rbx, %r10
 ; SSE2-NEXT:    movq %rsi, %rax
-; SSE2-NEXT:    mulq %rcx
+; SSE2-NEXT:    mulq %rbx
 ; SSE2-NEXT:    movq %rax, %r9
-; SSE2-NEXT:    movq %rdx, %r10
-; SSE2-NEXT:    subq %r11, %r10
-; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSE2-NEXT:    andq %rax, %rcx
-; SSE2-NEXT:    subq %rcx, %r10
-; SSE2-NEXT:    movq %rax, %r11
-; SSE2-NEXT:    movq %rax, %r13
-; SSE2-NEXT:    sarq $63, %r11
-; SSE2-NEXT:    movq %r11, %rcx
-; SSE2-NEXT:    andq %rbp, %rcx
-; SSE2-NEXT:    movq %r11, %rax
+; SSE2-NEXT:    addq %r10, %rdx
+; SSE2-NEXT:    imulq %rbp, %rbx
+; SSE2-NEXT:    addq %rdx, %rbx
+; SSE2-NEXT:    movq %rbp, %r10
+; SSE2-NEXT:    sarq $63, %r10
+; SSE2-NEXT:    movq %r10, %r14
+; SSE2-NEXT:    imulq %rcx, %r14
+; SSE2-NEXT:    movq %r10, %rax
 ; SSE2-NEXT:    mulq %r8
-; SSE2-NEXT:    movq %rax, %rbx
-; SSE2-NEXT:    movq %rdx, %r14
-; SSE2-NEXT:    subq %rcx, %r14
-; SSE2-NEXT:    andq %r8, %r11
-; SSE2-NEXT:    subq %r11, %r14
-; SSE2-NEXT:    addq %r9, %rbx
-; SSE2-NEXT:    adcq %r10, %r14
+; SSE2-NEXT:    movq %rax, %r11
+; SSE2-NEXT:    addq %r14, %rdx
+; SSE2-NEXT:    imulq %r8, %r10
+; SSE2-NEXT:    addq %rdx, %r10
+; SSE2-NEXT:    addq %r9, %r11
+; SSE2-NEXT:    adcq %rbx, %r10
 ; SSE2-NEXT:    movq %r8, %rax
 ; SSE2-NEXT:    mulq %rsi
 ; SSE2-NEXT:    movq %rdx, %r9
-; SSE2-NEXT:    movq %rax, %r10
-; SSE2-NEXT:    movq %rbp, %rax
+; SSE2-NEXT:    movq %rax, %rbx
+; SSE2-NEXT:    movq %rcx, %rax
 ; SSE2-NEXT:    mulq %rsi
 ; SSE2-NEXT:    movq %rdx, %rsi
-; SSE2-NEXT:    movq %rax, %r11
-; SSE2-NEXT:    addq %r9, %r11
+; SSE2-NEXT:    movq %rax, %r14
+; SSE2-NEXT:    addq %r9, %r14
 ; SSE2-NEXT:    adcq $0, %rsi
 ; SSE2-NEXT:    movq %r8, %rax
-; SSE2-NEXT:    mulq %r13
+; SSE2-NEXT:    mulq %rbp
 ; SSE2-NEXT:    movq %rdx, %r8
 ; SSE2-NEXT:    movq %rax, %r9
-; SSE2-NEXT:    addq %r11, %r9
+; SSE2-NEXT:    addq %r14, %r9
 ; SSE2-NEXT:    adcq %rsi, %r8
 ; SSE2-NEXT:    setb %al
-; SSE2-NEXT:    movzbl %al, %ecx
-; SSE2-NEXT:    movq %rbp, %rax
-; SSE2-NEXT:    mulq %r13
+; SSE2-NEXT:    movzbl %al, %esi
+; SSE2-NEXT:    movq %rcx, %rax
+; SSE2-NEXT:    mulq %rbp
 ; SSE2-NEXT:    addq %r8, %rax
-; SSE2-NEXT:    adcq %rcx, %rdx
-; SSE2-NEXT:    addq %rbx, %rax
-; SSE2-NEXT:    adcq %r14, %rdx
+; SSE2-NEXT:    adcq %rsi, %rdx
+; SSE2-NEXT:    addq %r11, %rax
+; SSE2-NEXT:    adcq %r10, %rdx
 ; SSE2-NEXT:    movq %r9, 24(%r12)
 ; SSE2-NEXT:    sarq $63, %r9
 ; SSE2-NEXT:    xorq %r9, %rdx
@@ -3420,7 +3414,7 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSE2-NEXT:    negl %r15d
 ; SSE2-NEXT:    movd %r15d, %xmm0
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE2-NEXT:    movq %r10, 16(%r12)
+; SSE2-NEXT:    movq %rbx, 16(%r12)
 ; SSE2-NEXT:    movq %rdi, (%r12)
 ; SSE2-NEXT:    popq %rbx
 ; SSE2-NEXT:    popq %r12
@@ -3439,33 +3433,31 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSSE3-NEXT:    pushq %r12
 ; SSSE3-NEXT:    pushq %rbx
 ; SSSE3-NEXT:    movq %r8, %r14
-; SSSE3-NEXT:    movq %rcx, %rbp
 ; SSSE3-NEXT:    movq %rdx, %r8
 ; SSSE3-NEXT:    movq %rsi, %r11
 ; SSSE3-NEXT:    movq %rdi, %r10
 ; SSSE3-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
-; SSSE3-NEXT:    movq %r11, %rbx
-; SSSE3-NEXT:    sarq $63, %rbx
-; SSSE3-NEXT:    movq %rbx, %r15
-; SSSE3-NEXT:    andq %r14, %r15
+; SSSE3-NEXT:    movq {{[0-9]+}}(%rsp), %rbp
+; SSSE3-NEXT:    movq %r11, %r12
+; SSSE3-NEXT:    sarq $63, %r12
+; SSSE3-NEXT:    movq %r14, %rbx
+; SSSE3-NEXT:    imulq %r12, %rbx
 ; SSSE3-NEXT:    movq %r14, %rax
-; SSSE3-NEXT:    mulq %rbx
+; SSSE3-NEXT:    mulq %r12
 ; SSSE3-NEXT:    movq %rax, %rdi
-; SSSE3-NEXT:    movq %rdx, %r12
-; SSSE3-NEXT:    subq %r15, %r12
-; SSSE3-NEXT:    andq %r9, %rbx
-; SSSE3-NEXT:    subq %rbx, %r12
-; SSSE3-NEXT:    movq %r9, %r13
-; SSSE3-NEXT:    sarq $63, %r13
-; SSSE3-NEXT:    movq %r13, %rcx
-; SSSE3-NEXT:    andq %r11, %rcx
-; SSSE3-NEXT:    movq %r13, %rax
+; SSSE3-NEXT:    addq %rbx, %rdx
+; SSSE3-NEXT:    imulq %r9, %r12
+; SSSE3-NEXT:    addq %rdx, %r12
+; SSSE3-NEXT:    movq %r9, %rbx
+; SSSE3-NEXT:    sarq $63, %rbx
+; SSSE3-NEXT:    movq %rbx, %r13
+; SSSE3-NEXT:    imulq %r11, %r13
+; SSSE3-NEXT:    movq %rbx, %rax
 ; SSSE3-NEXT:    mulq %r10
 ; SSSE3-NEXT:    movq %rax, %r15
-; SSSE3-NEXT:    movq %rdx, %rbx
-; SSSE3-NEXT:    subq %rcx, %rbx
-; SSSE3-NEXT:    andq %r10, %r13
-; SSSE3-NEXT:    subq %r13, %rbx
+; SSSE3-NEXT:    addq %r13, %rdx
+; SSSE3-NEXT:    imulq %r10, %rbx
+; SSSE3-NEXT:    addq %rdx, %rbx
 ; SSSE3-NEXT:    addq %rdi, %r15
 ; SSSE3-NEXT:    adcq %r12, %rbx
 ; SSSE3-NEXT:    movq %r10, %rax
@@ -3485,11 +3477,11 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSSE3-NEXT:    addq %r13, %r10
 ; SSSE3-NEXT:    adcq %r14, %r12
 ; SSSE3-NEXT:    setb %al
-; SSSE3-NEXT:    movzbl %al, %ecx
+; SSSE3-NEXT:    movzbl %al, %r14d
 ; SSSE3-NEXT:    movq %r11, %rax
 ; SSSE3-NEXT:    mulq %r9
 ; SSSE3-NEXT:    addq %r12, %rax
-; SSSE3-NEXT:    adcq %rcx, %rdx
+; SSSE3-NEXT:    adcq %r14, %rdx
 ; SSSE3-NEXT:    addq %r15, %rax
 ; SSSE3-NEXT:    adcq %rbx, %rdx
 ; SSSE3-NEXT:    movq {{[0-9]+}}(%rsp), %r12
@@ -3500,56 +3492,52 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSSE3-NEXT:    xorl %r15d, %r15d
 ; SSSE3-NEXT:    orq %rdx, %r10
 ; SSSE3-NEXT:    setne %r15b
-; SSSE3-NEXT:    movq %rbp, %rcx
-; SSSE3-NEXT:    sarq $63, %rcx
-; SSSE3-NEXT:    movq %rcx, %r11
-; SSSE3-NEXT:    andq %rsi, %r11
+; SSSE3-NEXT:    movq %rcx, %rbx
+; SSSE3-NEXT:    sarq $63, %rbx
+; SSSE3-NEXT:    movq %rsi, %r10
+; SSSE3-NEXT:    imulq %rbx, %r10
 ; SSSE3-NEXT:    movq %rsi, %rax
-; SSSE3-NEXT:    mulq %rcx
+; SSSE3-NEXT:    mulq %rbx
 ; SSSE3-NEXT:    movq %rax, %r9
-; SSSE3-NEXT:    movq %rdx, %r10
-; SSSE3-NEXT:    subq %r11, %r10
-; SSSE3-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSSE3-NEXT:    andq %rax, %rcx
-; SSSE3-NEXT:    subq %rcx, %r10
-; SSSE3-NEXT:    movq %rax, %r11
-; SSSE3-NEXT:    movq %rax, %r13
-; SSSE3-NEXT:    sarq $63, %r11
-; SSSE3-NEXT:    movq %r11, %rcx
-; SSSE3-NEXT:    andq %rbp, %rcx
-; SSSE3-NEXT:    movq %r11, %rax
+; SSSE3-NEXT:    addq %r10, %rdx
+; SSSE3-NEXT:    imulq %rbp, %rbx
+; SSSE3-NEXT:    addq %rdx, %rbx
+; SSSE3-NEXT:    movq %rbp, %r10
+; SSSE3-NEXT:    sarq $63, %r10
+; SSSE3-NEXT:    movq %r10, %r14
+; SSSE3-NEXT:    imulq %rcx, %r14
+; SSSE3-NEXT:    movq %r10, %rax
 ; SSSE3-NEXT:    mulq %r8
-; SSSE3-NEXT:    movq %rax, %rbx
-; SSSE3-NEXT:    movq %rdx, %r14
-; SSSE3-NEXT:    subq %rcx, %r14
-; SSSE3-NEXT:    andq %r8, %r11
-; SSSE3-NEXT:    subq %r11, %r14
-; SSSE3-NEXT:    addq %r9, %rbx
-; SSSE3-NEXT:    adcq %r10, %r14
+; SSSE3-NEXT:    movq %rax, %r11
+; SSSE3-NEXT:    addq %r14, %rdx
+; SSSE3-NEXT:    imulq %r8, %r10
+; SSSE3-NEXT:    addq %rdx, %r10
+; SSSE3-NEXT:    addq %r9, %r11
+; SSSE3-NEXT:    adcq %rbx, %r10
 ; SSSE3-NEXT:    movq %r8, %rax
 ; SSSE3-NEXT:    mulq %rsi
 ; SSSE3-NEXT:    movq %rdx, %r9
-; SSSE3-NEXT:    movq %rax, %r10
-; SSSE3-NEXT:    movq %rbp, %rax
+; SSSE3-NEXT:    movq %rax, %rbx
+; SSSE3-NEXT:    movq %rcx, %rax
 ; SSSE3-NEXT:    mulq %rsi
 ; SSSE3-NEXT:    movq %rdx, %rsi
-; SSSE3-NEXT:    movq %rax, %r11
-; SSSE3-NEXT:    addq %r9, %r11
+; SSSE3-NEXT:    movq %rax, %r14
+; SSSE3-NEXT:    addq %r9, %r14
 ; SSSE3-NEXT:    adcq $0, %rsi
 ; SSSE3-NEXT:    movq %r8, %rax
-; SSSE3-NEXT:    mulq %r13
+; SSSE3-NEXT:    mulq %rbp
 ; SSSE3-NEXT:    movq %rdx, %r8
 ; SSSE3-NEXT:    movq %rax, %r9
-; SSSE3-NEXT:    addq %r11, %r9
+; SSSE3-NEXT:    addq %r14, %r9
 ; SSSE3-NEXT:    adcq %rsi, %r8
 ; SSSE3-NEXT:    setb %al
-; SSSE3-NEXT:    movzbl %al, %ecx
-; SSSE3-NEXT:    movq %rbp, %rax
-; SSSE3-NEXT:    mulq %r13
+; SSSE3-NEXT:    movzbl %al, %esi
+; SSSE3-NEXT:    movq %rcx, %rax
+; SSSE3-NEXT:    mulq %rbp
 ; SSSE3-NEXT:    addq %r8, %rax
-; SSSE3-NEXT:    adcq %rcx, %rdx
-; SSSE3-NEXT:    addq %rbx, %rax
-; SSSE3-NEXT:    adcq %r14, %rdx
+; SSSE3-NEXT:    adcq %rsi, %rdx
+; SSSE3-NEXT:    addq %r11, %rax
+; SSSE3-NEXT:    adcq %r10, %rdx
 ; SSSE3-NEXT:    movq %r9, 24(%r12)
 ; SSSE3-NEXT:    sarq $63, %r9
 ; SSSE3-NEXT:    xorq %r9, %rdx
@@ -3562,7 +3550,7 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSSE3-NEXT:    negl %r15d
 ; SSSE3-NEXT:    movd %r15d, %xmm0
 ; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSSE3-NEXT:    movq %r10, 16(%r12)
+; SSSE3-NEXT:    movq %rbx, 16(%r12)
 ; SSSE3-NEXT:    movq %rdi, (%r12)
 ; SSSE3-NEXT:    popq %rbx
 ; SSSE3-NEXT:    popq %r12
@@ -3581,33 +3569,31 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSE41-NEXT:    pushq %r12
 ; SSE41-NEXT:    pushq %rbx
 ; SSE41-NEXT:    movq %r8, %r14
-; SSE41-NEXT:    movq %rcx, %rbp
 ; SSE41-NEXT:    movq %rdx, %r8
 ; SSE41-NEXT:    movq %rsi, %r11
 ; SSE41-NEXT:    movq %rdi, %r10
 ; SSE41-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
-; SSE41-NEXT:    movq %r11, %rbx
-; SSE41-NEXT:    sarq $63, %rbx
-; SSE41-NEXT:    movq %rbx, %r15
-; SSE41-NEXT:    andq %r14, %r15
+; SSE41-NEXT:    movq {{[0-9]+}}(%rsp), %rbp
+; SSE41-NEXT:    movq %r11, %r12
+; SSE41-NEXT:    sarq $63, %r12
+; SSE41-NEXT:    movq %r14, %rbx
+; SSE41-NEXT:    imulq %r12, %rbx
 ; SSE41-NEXT:    movq %r14, %rax
-; SSE41-NEXT:    mulq %rbx
+; SSE41-NEXT:    mulq %r12
 ; SSE41-NEXT:    movq %rax, %rdi
-; SSE41-NEXT:    movq %rdx, %r12
-; SSE41-NEXT:    subq %r15, %r12
-; SSE41-NEXT:    andq %r9, %rbx
-; SSE41-NEXT:    subq %rbx, %r12
-; SSE41-NEXT:    movq %r9, %r13
-; SSE41-NEXT:    sarq $63, %r13
-; SSE41-NEXT:    movq %r13, %rcx
-; SSE41-NEXT:    andq %r11, %rcx
-; SSE41-NEXT:    movq %r13, %rax
+; SSE41-NEXT:    addq %rbx, %rdx
+; SSE41-NEXT:    imulq %r9, %r12
+; SSE41-NEXT:    addq %rdx, %r12
+; SSE41-NEXT:    movq %r9, %rbx
+; SSE41-NEXT:    sarq $63, %rbx
+; SSE41-NEXT:    movq %rbx, %r13
+; SSE41-NEXT:    imulq %r11, %r13
+; SSE41-NEXT:    movq %rbx, %rax
 ; SSE41-NEXT:    mulq %r10
 ; SSE41-NEXT:    movq %rax, %r15
-; SSE41-NEXT:    movq %rdx, %rbx
-; SSE41-NEXT:    subq %rcx, %rbx
-; SSE41-NEXT:    andq %r10, %r13
-; SSE41-NEXT:    subq %r13, %rbx
+; SSE41-NEXT:    addq %r13, %rdx
+; SSE41-NEXT:    imulq %r10, %rbx
+; SSE41-NEXT:    addq %rdx, %rbx
 ; SSE41-NEXT:    addq %rdi, %r15
 ; SSE41-NEXT:    adcq %r12, %rbx
 ; SSE41-NEXT:    movq %r10, %rax
@@ -3627,11 +3613,11 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSE41-NEXT:    addq %r13, %r10
 ; SSE41-NEXT:    adcq %r14, %r12
 ; SSE41-NEXT:    setb %al
-; SSE41-NEXT:    movzbl %al, %ecx
+; SSE41-NEXT:    movzbl %al, %r14d
 ; SSE41-NEXT:    movq %r11, %rax
 ; SSE41-NEXT:    mulq %r9
 ; SSE41-NEXT:    addq %r12, %rax
-; SSE41-NEXT:    adcq %rcx, %rdx
+; SSE41-NEXT:    adcq %r14, %rdx
 ; SSE41-NEXT:    addq %r15, %rax
 ; SSE41-NEXT:    adcq %rbx, %rdx
 ; SSE41-NEXT:    movq {{[0-9]+}}(%rsp), %r12
@@ -3642,56 +3628,52 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSE41-NEXT:    xorl %r15d, %r15d
 ; SSE41-NEXT:    orq %rdx, %r10
 ; SSE41-NEXT:    setne %r15b
-; SSE41-NEXT:    movq %rbp, %rcx
-; SSE41-NEXT:    sarq $63, %rcx
-; SSE41-NEXT:    movq %rcx, %r11
-; SSE41-NEXT:    andq %rsi, %r11
+; SSE41-NEXT:    movq %rcx, %rbx
+; SSE41-NEXT:    sarq $63, %rbx
+; SSE41-NEXT:    movq %rsi, %r10
+; SSE41-NEXT:    imulq %rbx, %r10
 ; SSE41-NEXT:    movq %rsi, %rax
-; SSE41-NEXT:    mulq %rcx
+; SSE41-NEXT:    mulq %rbx
 ; SSE41-NEXT:    movq %rax, %r9
-; SSE41-NEXT:    movq %rdx, %r10
-; SSE41-NEXT:    subq %r11, %r10
-; SSE41-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSE41-NEXT:    andq %rax, %rcx
-; SSE41-NEXT:    subq %rcx, %r10
-; SSE41-NEXT:    movq %rax, %r11
-; SSE41-NEXT:    movq %rax, %r13
-; SSE41-NEXT:    sarq $63, %r11
-; SSE41-NEXT:    movq %r11, %rcx
-; SSE41-NEXT:    andq %rbp, %rcx
-; SSE41-NEXT:    movq %r11, %rax
+; SSE41-NEXT:    addq %r10, %rdx
+; SSE41-NEXT:    imulq %rbp, %rbx
+; SSE41-NEXT:    addq %rdx, %rbx
+; SSE41-NEXT:    movq %rbp, %r10
+; SSE41-NEXT:    sarq $63, %r10
+; SSE41-NEXT:    movq %r10, %r14
+; SSE41-NEXT:    imulq %rcx, %r14
+; SSE41-NEXT:    movq %r10, %rax
 ; SSE41-NEXT:    mulq %r8
-; SSE41-NEXT:    movq %rax, %rbx
-; SSE41-NEXT:    movq %rdx, %r14
-; SSE41-NEXT:    subq %rcx, %r14
-; SSE41-NEXT:    andq %r8, %r11
-; SSE41-NEXT:    subq %r11, %r14
-; SSE41-NEXT:    addq %r9, %rbx
-; SSE41-NEXT:    adcq %r10, %r14
+; SSE41-NEXT:    movq %rax, %r11
+; SSE41-NEXT:    addq %r14, %rdx
+; SSE41-NEXT:    imulq %r8, %r10
+; SSE41-NEXT:    addq %rdx, %r10
+; SSE41-NEXT:    addq %r9, %r11
+; SSE41-NEXT:    adcq %rbx, %r10
 ; SSE41-NEXT:    movq %r8, %rax
 ; SSE41-NEXT:    mulq %rsi
 ; SSE41-NEXT:    movq %rdx, %r9
-; SSE41-NEXT:    movq %rax, %r10
-; SSE41-NEXT:    movq %rbp, %rax
+; SSE41-NEXT:    movq %rax, %rbx
+; SSE41-NEXT:    movq %rcx, %rax
 ; SSE41-NEXT:    mulq %rsi
 ; SSE41-NEXT:    movq %rdx, %rsi
-; SSE41-NEXT:    movq %rax, %r11
-; SSE41-NEXT:    addq %r9, %r11
+; SSE41-NEXT:    movq %rax, %r14
+; SSE41-NEXT:    addq %r9, %r14
 ; SSE41-NEXT:    adcq $0, %rsi
 ; SSE41-NEXT:    movq %r8, %rax
-; SSE41-NEXT:    mulq %r13
+; SSE41-NEXT:    mulq %rbp
 ; SSE41-NEXT:    movq %rdx, %r8
 ; SSE41-NEXT:    movq %rax, %r9
-; SSE41-NEXT:    addq %r11, %r9
+; SSE41-NEXT:    addq %r14, %r9
 ; SSE41-NEXT:    adcq %rsi, %r8
 ; SSE41-NEXT:    setb %al
-; SSE41-NEXT:    movzbl %al, %ecx
-; SSE41-NEXT:    movq %rbp, %rax
-; SSE41-NEXT:    mulq %r13
+; SSE41-NEXT:    movzbl %al, %esi
+; SSE41-NEXT:    movq %rcx, %rax
+; SSE41-NEXT:    mulq %rbp
 ; SSE41-NEXT:    addq %r8, %rax
-; SSE41-NEXT:    adcq %rcx, %rdx
-; SSE41-NEXT:    addq %rbx, %rax
-; SSE41-NEXT:    adcq %r14, %rdx
+; SSE41-NEXT:    adcq %rsi, %rdx
+; SSE41-NEXT:    addq %r11, %rax
+; SSE41-NEXT:    adcq %r10, %rdx
 ; SSE41-NEXT:    movq %r9, 24(%r12)
 ; SSE41-NEXT:    sarq $63, %r9
 ; SSE41-NEXT:    xorq %r9, %rdx
@@ -3703,7 +3685,7 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSE41-NEXT:    negl %r15d
 ; SSE41-NEXT:    movd %r15d, %xmm0
 ; SSE41-NEXT:    pinsrd $1, %eax, %xmm0
-; SSE41-NEXT:    movq %r10, 16(%r12)
+; SSE41-NEXT:    movq %rbx, 16(%r12)
 ; SSE41-NEXT:    movq %rdi, (%r12)
 ; SSE41-NEXT:    popq %rbx
 ; SSE41-NEXT:    popq %r12
@@ -3722,33 +3704,31 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX-NEXT:    pushq %r12
 ; AVX-NEXT:    pushq %rbx
 ; AVX-NEXT:    movq %r8, %r14
-; AVX-NEXT:    movq %rcx, %rbp
 ; AVX-NEXT:    movq %rdx, %r8
 ; AVX-NEXT:    movq %rsi, %r11
 ; AVX-NEXT:    movq %rdi, %r10
 ; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
-; AVX-NEXT:    movq %r11, %rbx
-; AVX-NEXT:    sarq $63, %rbx
-; AVX-NEXT:    movq %rbx, %r15
-; AVX-NEXT:    andq %r14, %r15
+; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rbp
+; AVX-NEXT:    movq %r11, %r12
+; AVX-NEXT:    sarq $63, %r12
+; AVX-NEXT:    movq %r14, %rbx
+; AVX-NEXT:    imulq %r12, %rbx
 ; AVX-NEXT:    movq %r14, %rax
-; AVX-NEXT:    mulq %rbx
+; AVX-NEXT:    mulq %r12
 ; AVX-NEXT:    movq %rax, %rdi
-; AVX-NEXT:    movq %rdx, %r12
-; AVX-NEXT:    subq %r15, %r12
-; AVX-NEXT:    andq %r9, %rbx
-; AVX-NEXT:    subq %rbx, %r12
-; AVX-NEXT:    movq %r9, %r13
-; AVX-NEXT:    sarq $63, %r13
-; AVX-NEXT:    movq %r13, %rcx
-; AVX-NEXT:    andq %r11, %rcx
-; AVX-NEXT:    movq %r13, %rax
+; AVX-NEXT:    addq %rbx, %rdx
+; AVX-NEXT:    imulq %r9, %r12
+; AVX-NEXT:    addq %rdx, %r12
+; AVX-NEXT:    movq %r9, %rbx
+; AVX-NEXT:    sarq $63, %rbx
+; AVX-NEXT:    movq %rbx, %r13
+; AVX-NEXT:    imulq %r11, %r13
+; AVX-NEXT:    movq %rbx, %rax
 ; AVX-NEXT:    mulq %r10
 ; AVX-NEXT:    movq %rax, %r15
-; AVX-NEXT:    movq %rdx, %rbx
-; AVX-NEXT:    subq %rcx, %rbx
-; AVX-NEXT:    andq %r10, %r13
-; AVX-NEXT:    subq %r13, %rbx
+; AVX-NEXT:    addq %r13, %rdx
+; AVX-NEXT:    imulq %r10, %rbx
+; AVX-NEXT:    addq %rdx, %rbx
 ; AVX-NEXT:    addq %rdi, %r15
 ; AVX-NEXT:    adcq %r12, %rbx
 ; AVX-NEXT:    movq %r10, %rax
@@ -3768,11 +3748,11 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX-NEXT:    addq %r13, %r10
 ; AVX-NEXT:    adcq %r14, %r12
 ; AVX-NEXT:    setb %al
-; AVX-NEXT:    movzbl %al, %ecx
+; AVX-NEXT:    movzbl %al, %r14d
 ; AVX-NEXT:    movq %r11, %rax
 ; AVX-NEXT:    mulq %r9
 ; AVX-NEXT:    addq %r12, %rax
-; AVX-NEXT:    adcq %rcx, %rdx
+; AVX-NEXT:    adcq %r14, %rdx
 ; AVX-NEXT:    addq %r15, %rax
 ; AVX-NEXT:    adcq %rbx, %rdx
 ; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %r12
@@ -3783,56 +3763,52 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX-NEXT:    xorl %r15d, %r15d
 ; AVX-NEXT:    orq %rdx, %r10
 ; AVX-NEXT:    setne %r15b
-; AVX-NEXT:    movq %rbp, %rcx
-; AVX-NEXT:    sarq $63, %rcx
-; AVX-NEXT:    movq %rcx, %r11
-; AVX-NEXT:    andq %rsi, %r11
+; AVX-NEXT:    movq %rcx, %rbx
+; AVX-NEXT:    sarq $63, %rbx
+; AVX-NEXT:    movq %rsi, %r10
+; AVX-NEXT:    imulq %rbx, %r10
 ; AVX-NEXT:    movq %rsi, %rax
-; AVX-NEXT:    mulq %rcx
+; AVX-NEXT:    mulq %rbx
 ; AVX-NEXT:    movq %rax, %r9
-; AVX-NEXT:    movq %rdx, %r10
-; AVX-NEXT:    subq %r11, %r10
-; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX-NEXT:    andq %rax, %rcx
-; AVX-NEXT:    subq %rcx, %r10
-; AVX-NEXT:    movq %rax, %r11
-; AVX-NEXT:    movq %rax, %r13
-; AVX-NEXT:    sarq $63, %r11
-; AVX-NEXT:    movq %r11, %rcx
-; AVX-NEXT:    andq %rbp, %rcx
-; AVX-NEXT:    movq %r11, %rax
+; AVX-NEXT:    addq %r10, %rdx
+; AVX-NEXT:    imulq %rbp, %rbx
+; AVX-NEXT:    addq %rdx, %rbx
+; AVX-NEXT:    movq %rbp, %r10
+; AVX-NEXT:    sarq $63, %r10
+; AVX-NEXT:    movq %r10, %r14
+; AVX-NEXT:    imulq %rcx, %r14
+; AVX-NEXT:    movq %r10, %rax
 ; AVX-NEXT:    mulq %r8
-; AVX-NEXT:    movq %rax, %rbx
-; AVX-NEXT:    movq %rdx, %r14
-; AVX-NEXT:    subq %rcx, %r14
-; AVX-NEXT:    andq %r8, %r11
-; AVX-NEXT:    subq %r11, %r14
-; AVX-NEXT:    addq %r9, %rbx
-; AVX-NEXT:    adcq %r10, %r14
+; AVX-NEXT:    movq %rax, %r11
+; AVX-NEXT:    addq %r14, %rdx
+; AVX-NEXT:    imulq %r8, %r10
+; AVX-NEXT:    addq %rdx, %r10
+; AVX-NEXT:    addq %r9, %r11
+; AVX-NEXT:    adcq %rbx, %r10
 ; AVX-NEXT:    movq %r8, %rax
 ; AVX-NEXT:    mulq %rsi
 ; AVX-NEXT:    movq %rdx, %r9
-; AVX-NEXT:    movq %rax, %r10
-; AVX-NEXT:    movq %rbp, %rax
+; AVX-NEXT:    movq %rax, %rbx
+; AVX-NEXT:    movq %rcx, %rax
 ; AVX-NEXT:    mulq %rsi
 ; AVX-NEXT:    movq %rdx, %rsi
-; AVX-NEXT:    movq %rax, %r11
-; AVX-NEXT:    addq %r9, %r11
+; AVX-NEXT:    movq %rax, %r14
+; AVX-NEXT:    addq %r9, %r14
 ; AVX-NEXT:    adcq $0, %rsi
 ; AVX-NEXT:    movq %r8, %rax
-; AVX-NEXT:    mulq %r13
+; AVX-NEXT:    mulq %rbp
 ; AVX-NEXT:    movq %rdx, %r8
 ; AVX-NEXT:    movq %rax, %r9
-; AVX-NEXT:    addq %r11, %r9
+; AVX-NEXT:    addq %r14, %r9
 ; AVX-NEXT:    adcq %rsi, %r8
 ; AVX-NEXT:    setb %al
-; AVX-NEXT:    movzbl %al, %ecx
-; AVX-NEXT:    movq %rbp, %rax
-; AVX-NEXT:    mulq %r13
+; AVX-NEXT:    movzbl %al, %esi
+; AVX-NEXT:    movq %rcx, %rax
+; AVX-NEXT:    mulq %rbp
 ; AVX-NEXT:    addq %r8, %rax
-; AVX-NEXT:    adcq %rcx, %rdx
-; AVX-NEXT:    addq %rbx, %rax
-; AVX-NEXT:    adcq %r14, %rdx
+; AVX-NEXT:    adcq %rsi, %rdx
+; AVX-NEXT:    addq %r11, %rax
+; AVX-NEXT:    adcq %r10, %rdx
 ; AVX-NEXT:    movq %r9, 24(%r12)
 ; AVX-NEXT:    sarq $63, %r9
 ; AVX-NEXT:    xorq %r9, %rdx
@@ -3844,7 +3820,7 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX-NEXT:    negl %r15d
 ; AVX-NEXT:    vmovd %r15d, %xmm0
 ; AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
-; AVX-NEXT:    movq %r10, 16(%r12)
+; AVX-NEXT:    movq %rbx, 16(%r12)
 ; AVX-NEXT:    movq %rdi, (%r12)
 ; AVX-NEXT:    popq %rbx
 ; AVX-NEXT:    popq %r12
@@ -3862,35 +3838,32 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX512F-NEXT:    pushq %r13
 ; AVX512F-NEXT:    pushq %r12
 ; AVX512F-NEXT:    pushq %rbx
-; AVX512F-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; AVX512F-NEXT:    movq %r9, %rbp
 ; AVX512F-NEXT:    movq %rcx, %r11
 ; AVX512F-NEXT:    movq %rdx, %r10
-; AVX512F-NEXT:    movq %rsi, %rbp
-; AVX512F-NEXT:    movq %rdi, %r9
+; AVX512F-NEXT:    movq %rsi, %r9
 ; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
-; AVX512F-NEXT:    movq %rcx, %rbx
-; AVX512F-NEXT:    sarq $63, %rbx
-; AVX512F-NEXT:    movq %rbx, %r14
-; AVX512F-NEXT:    andq %r15, %r14
+; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
+; AVX512F-NEXT:    movq %rcx, %r12
+; AVX512F-NEXT:    sarq $63, %r12
+; AVX512F-NEXT:    movq %r15, %rbx
+; AVX512F-NEXT:    imulq %r12, %rbx
 ; AVX512F-NEXT:    movq %r15, %rax
-; AVX512F-NEXT:    mulq %rbx
+; AVX512F-NEXT:    mulq %r12
 ; AVX512F-NEXT:    movq %rax, %rcx
-; AVX512F-NEXT:    movq %rdx, %r12
-; AVX512F-NEXT:    subq %r14, %r12
-; AVX512F-NEXT:    andq %rdi, %rbx
-; AVX512F-NEXT:    subq %rbx, %r12
-; AVX512F-NEXT:    movq %rdi, %r13
-; AVX512F-NEXT:    sarq $63, %r13
-; AVX512F-NEXT:    movq %r13, %rsi
-; AVX512F-NEXT:    andq %r11, %rsi
-; AVX512F-NEXT:    movq %r13, %rax
+; AVX512F-NEXT:    addq %rbx, %rdx
+; AVX512F-NEXT:    imulq %rsi, %r12
+; AVX512F-NEXT:    addq %rdx, %r12
+; AVX512F-NEXT:    movq %rsi, %rbx
+; AVX512F-NEXT:    sarq $63, %rbx
+; AVX512F-NEXT:    movq %rbx, %r13
+; AVX512F-NEXT:    imulq %r11, %r13
+; AVX512F-NEXT:    movq %rbx, %rax
 ; AVX512F-NEXT:    mulq %r10
 ; AVX512F-NEXT:    movq %rax, %r14
-; AVX512F-NEXT:    movq %rdx, %rbx
-; AVX512F-NEXT:    subq %rsi, %rbx
-; AVX512F-NEXT:    andq %r10, %r13
-; AVX512F-NEXT:    subq %r13, %rbx
+; AVX512F-NEXT:    addq %r13, %rdx
+; AVX512F-NEXT:    imulq %r10, %rbx
+; AVX512F-NEXT:    addq %rdx, %rbx
 ; AVX512F-NEXT:    addq %rcx, %r14
 ; AVX512F-NEXT:    adcq %r12, %rbx
 ; AVX512F-NEXT:    movq %r10, %rax
@@ -3904,78 +3877,74 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX512F-NEXT:    addq %r12, %r13
 ; AVX512F-NEXT:    adcq $0, %r15
 ; AVX512F-NEXT:    movq %r10, %rax
-; AVX512F-NEXT:    mulq %rdi
+; AVX512F-NEXT:    mulq %rsi
 ; AVX512F-NEXT:    movq %rdx, %r12
 ; AVX512F-NEXT:    movq %rax, %r10
 ; AVX512F-NEXT:    addq %r13, %r10
 ; AVX512F-NEXT:    adcq %r15, %r12
 ; AVX512F-NEXT:    setb %al
-; AVX512F-NEXT:    movzbl %al, %esi
+; AVX512F-NEXT:    movzbl %al, %r15d
 ; AVX512F-NEXT:    movq %r11, %rax
-; AVX512F-NEXT:    mulq %rdi
+; AVX512F-NEXT:    mulq %rsi
 ; AVX512F-NEXT:    addq %r12, %rax
-; AVX512F-NEXT:    adcq %rsi, %rdx
+; AVX512F-NEXT:    adcq %r15, %rdx
 ; AVX512F-NEXT:    addq %r14, %rax
 ; AVX512F-NEXT:    adcq %rbx, %rdx
-; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %r13
-; AVX512F-NEXT:    movq %r10, 24(%r13)
+; AVX512F-NEXT:    movq {{[0-9]+}}(%rsp), %r12
+; AVX512F-NEXT:    movq %r10, 24(%r12)
 ; AVX512F-NEXT:    sarq $63, %r10
 ; AVX512F-NEXT:    xorq %r10, %rdx
 ; AVX512F-NEXT:    xorq %rax, %r10
 ; AVX512F-NEXT:    orq %rdx, %r10
 ; AVX512F-NEXT:    setne %al
 ; AVX512F-NEXT:    kmovw %eax, %k0
-; AVX512F-NEXT:    movq %rbp, %rsi
+; AVX512F-NEXT:    movq %r9, %rsi
 ; AVX512F-NEXT:    sarq $63, %rsi
-; AVX512F-NEXT:    movq %rsi, %rdi
-; AVX512F-NEXT:    andq %r8, %rdi
+; AVX512F-NEXT:    movq %r8, %r11
+; AVX512F-NEXT:    imulq %rsi, %r11
 ; AVX512F-NEXT:    movq %r8, %rax
 ; AVX512F-NEXT:    mulq %rsi
 ; AVX512F-NEXT:    movq %rax, %r10
-; AVX512F-NEXT:    movq %rdx, %r11
-; AVX512F-NEXT:    subq %rdi, %r11
-; AVX512F-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; AVX512F-NEXT:    andq %rax, %rsi
-; AVX512F-NEXT:    subq %rsi, %r11
+; AVX512F-NEXT:    addq %r11, %rdx
+; AVX512F-NEXT:    imulq %rbp, %rsi
+; AVX512F-NEXT:    addq %rdx, %rsi
+; AVX512F-NEXT:    movq %rbp, %r11
+; AVX512F-NEXT:    sarq $63, %r11
+; AVX512F-NEXT:    movq %r11, %r14
+; AVX512F-NEXT:    imulq %r9, %r14
+; AVX512F-NEXT:    movq %r11, %rax
+; AVX512F-NEXT:    mulq %rdi
 ; AVX512F-NEXT:    movq %rax, %rbx
-; AVX512F-NEXT:    movq %rax, %r12
-; AVX512F-NEXT:    sarq $63, %rbx
-; AVX512F-NEXT:    movq %rbx, %rsi
-; AVX512F-NEXT:    andq %rbp, %rsi
-; AVX512F-NEXT:    movq %rbx, %rax
-; AVX512F-NEXT:    mulq %r9
-; AVX512F-NEXT:    movq %rax, %r14
-; AVX512F-NEXT:    movq %rdx, %r15
-; AVX512F-NEXT:    subq %rsi, %r15
-; AVX512F-NEXT:    andq %r9, %rbx
-; AVX512F-NEXT:    subq %rbx, %r15
-; AVX512F-NEXT:    addq %r10, %r14
-; AVX512F-NEXT:    adcq %r11, %r15
-; AVX512F-NEXT:    movq %r9, %rax
+; AVX512F-NEXT:    addq %r14, %rdx
+; AVX512F-NEXT:    imulq %rdi, %r11
+; AVX512F-NEXT:    addq %rdx, %r11
+; AVX512F-NEXT:    addq %r10, %rbx
+; AVX512F-NEXT:    adcq %rsi, %r11
+; AVX512F-NEXT:    movq %rdi, %rax
 ; AVX512F-NEXT:    mulq %r8
 ; AVX512F-NEXT:    movq %rdx, %r10
-; AVX512F-NEXT:    movq %rax, %r11
-; AVX512F-NEXT:    movq %rbp, %rax
+; AVX512F-NEXT:    movq %rax, %r14
+; AVX512F-NEXT:    movq %r9, %rax
 ; AVX512F-NEXT:    mulq %r8
 ; AVX512F-NEXT:    movq %rdx, %r8
-; AVX512F-NEXT:    movq %rax, %rbx
-; AVX512F-NEXT:    addq %r10, %rbx
+; AVX512F-NEXT:    movq %rax, %r15
+; AVX512F-NEXT:    addq %r10, %r15
 ; AVX512F-NEXT:    adcq $0, %r8
-; AVX512F-NEXT:    movq %r9, %rax
-; AVX512F-NEXT:    mulq %r12
+; AVX512F-NEXT:    movq %rdi, %rax
+; AVX512F-NEXT:    mulq %rbp
 ; AVX512F-NEXT:    movq %rdx, %rdi
 ; AVX512F-NEXT:    movq %rax, %r10
-; AVX512F-NEXT:    addq %rbx, %r10
+; AVX512F-NEXT:    addq %r15, %r10
 ; AVX512F-NEXT:    adcq %r8, %rdi
 ; AVX512F-NEXT:    setb %al
 ; AVX512F-NEXT:    movzbl %al, %esi
-; AVX512F-NEXT:    movq %rbp, %rax
-; AVX512F-NEXT:    mulq %r12
+; AVX512F-NEXT:    movq %r9, %rax
+; AVX512F-NEXT:    mulq %rbp
 ; AVX512F-NEXT:    addq %rdi, %rax
 ; AVX512F-NEXT:    adcq %rsi, %rdx
-; AVX512F-NEXT:    addq %r14, %rax
-; AVX512F-NEXT:    adcq %r15, %rdx
-; AVX512F-NEXT:    movq %r10, 8(%r13)
+; AVX512F-NEXT:    addq %rbx, %rax
+; AVX512F-NEXT:    adcq %r11, %rdx
+; AVX512F-NEXT:    movq %r10, 8(%r12)
 ; AVX512F-NEXT:    sarq $63, %r10
 ; AVX512F-NEXT:    xorq %r10, %rdx
 ; AVX512F-NEXT:    xorq %rax, %r10
@@ -3987,8 +3956,8 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX512F-NEXT:    korw %k0, %k1, %k1
 ; AVX512F-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512F-NEXT:    movq %rcx, 16(%r13)
-; AVX512F-NEXT:    movq %r11, (%r13)
+; AVX512F-NEXT:    movq %rcx, 16(%r12)
+; AVX512F-NEXT:    movq %r14, (%r12)
 ; AVX512F-NEXT:    popq %rbx
 ; AVX512F-NEXT:    popq %r12
 ; AVX512F-NEXT:    popq %r13
@@ -4005,35 +3974,32 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX512BW-NEXT:    pushq %r13
 ; AVX512BW-NEXT:    pushq %r12
 ; AVX512BW-NEXT:    pushq %rbx
-; AVX512BW-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; AVX512BW-NEXT:    movq %r9, %rbp
 ; AVX512BW-NEXT:    movq %rcx, %r11
 ; AVX512BW-NEXT:    movq %rdx, %r10
-; AVX512BW-NEXT:    movq %rsi, %rbp
-; AVX512BW-NEXT:    movq %rdi, %r9
+; AVX512BW-NEXT:    movq %rsi, %r9
 ; AVX512BW-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; AVX512BW-NEXT:    movq {{[0-9]+}}(%rsp), %rdi
-; AVX512BW-NEXT:    movq %rcx, %rbx
-; AVX512BW-NEXT:    sarq $63, %rbx
-; AVX512BW-NEXT:    movq %rbx, %r14
-; AVX512BW-NEXT:    andq %r15, %r14
+; AVX512BW-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
+; AVX512BW-NEXT:    movq %rcx, %r12
+; AVX512BW-NEXT:    sarq $63, %r12
+; AVX512BW-NEXT:    movq %r15, %rbx
+; AVX512BW-NEXT:    imulq %r12, %rbx
 ; AVX512BW-NEXT:    movq %r15, %rax
-; AVX512BW-NEXT:    mulq %rbx
+; AVX512BW-NEXT:    mulq %r12
 ; AVX512BW-NEXT:    movq %rax, %rcx
-; AVX512BW-NEXT:    movq %rdx, %r12
-; AVX512BW-NEXT:    subq %r14, %r12
-; AVX512BW-NEXT:    andq %rdi, %rbx
-; AVX512BW-NEXT:    subq %rbx, %r12
-; AVX512BW-NEXT:    movq %rdi, %r13
-; AVX512BW-NEXT:    sarq $63, %r13
-; AVX512BW-NEXT:    movq %r13, %rsi
-; AVX512BW-NEXT:    andq %r11, %rsi
-; AVX512BW-NEXT:    movq %r13, %rax
+; AVX512BW-NEXT:    addq %rbx, %rdx
+; AVX512BW-NEXT:    imulq %rsi, %r12
+; AVX512BW-NEXT:    addq %rdx, %r12
+; AVX512BW-NEXT:    movq %rsi, %rbx
+; AVX512BW-NEXT:    sarq $63, %rbx
+; AVX512BW-NEXT:    movq %rbx, %r13
+; AVX512BW-NEXT:    imulq %r11, %r13
+; AVX512BW-NEXT:    movq %rbx, %rax
 ; AVX512BW-NEXT:    mulq %r10
 ; AVX512BW-NEXT:    movq %rax, %r14
-; AVX512BW-NEXT:    movq %rdx, %rbx
-; AVX512BW-NEXT:    subq %rsi, %rbx
-; AVX512BW-NEXT:    andq %r10, %r13
-; AVX512BW-NEXT:    subq %r13, %rbx
+; AVX512BW-NEXT:    addq %r13, %rdx
+; AVX512BW-NEXT:    imulq %r10, %rbx
+; AVX512BW-NEXT:    addq %rdx, %rbx
 ; AVX512BW-NEXT:    addq %rcx, %r14
 ; AVX512BW-NEXT:    adcq %r12, %rbx
 ; AVX512BW-NEXT:    movq %r10, %rax
@@ -4047,78 +4013,74 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX512BW-NEXT:    addq %r12, %r13
 ; AVX512BW-NEXT:    adcq $0, %r15
 ; AVX512BW-NEXT:    movq %r10, %rax
-; AVX512BW-NEXT:    mulq %rdi
+; AVX512BW-NEXT:    mulq %rsi
 ; AVX512BW-NEXT:    movq %rdx, %r12
 ; AVX512BW-NEXT:    movq %rax, %r10
 ; AVX512BW-NEXT:    addq %r13, %r10
 ; AVX512BW-NEXT:    adcq %r15, %r12
 ; AVX512BW-NEXT:    setb %al
-; AVX512BW-NEXT:    movzbl %al, %esi
+; AVX512BW-NEXT:    movzbl %al, %r15d
 ; AVX512BW-NEXT:    movq %r11, %rax
-; AVX512BW-NEXT:    mulq %rdi
+; AVX512BW-NEXT:    mulq %rsi
 ; AVX512BW-NEXT:    addq %r12, %rax
-; AVX512BW-NEXT:    adcq %rsi, %rdx
+; AVX512BW-NEXT:    adcq %r15, %rdx
 ; AVX512BW-NEXT:    addq %r14, %rax
 ; AVX512BW-NEXT:    adcq %rbx, %rdx
-; AVX512BW-NEXT:    movq {{[0-9]+}}(%rsp), %r13
-; AVX512BW-NEXT:    movq %r10, 24(%r13)
+; AVX512BW-NEXT:    movq {{[0-9]+}}(%rsp), %r12
+; AVX512BW-NEXT:    movq %r10, 24(%r12)
 ; AVX512BW-NEXT:    sarq $63, %r10
 ; AVX512BW-NEXT:    xorq %r10, %rdx
 ; AVX512BW-NEXT:    xorq %rax, %r10
 ; AVX512BW-NEXT:    orq %rdx, %r10
 ; AVX512BW-NEXT:    setne %al
 ; AVX512BW-NEXT:    kmovd %eax, %k0
-; AVX512BW-NEXT:    movq %rbp, %rsi
+; AVX512BW-NEXT:    movq %r9, %rsi
 ; AVX512BW-NEXT:    sarq $63, %rsi
-; AVX512BW-NEXT:    movq %rsi, %rdi
-; AVX512BW-NEXT:    andq %r8, %rdi
+; AVX512BW-NEXT:    movq %r8, %r11
+; AVX512BW-NEXT:    imulq %rsi, %r11
 ; AVX512BW-NEXT:    movq %r8, %rax
 ; AVX512BW-NEXT:    mulq %rsi
 ; AVX512BW-NEXT:    movq %rax, %r10
-; AVX512BW-NEXT:    movq %rdx, %r11
-; AVX512BW-NEXT:    subq %rdi, %r11
-; AVX512BW-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; AVX512BW-NEXT:    andq %rax, %rsi
-; AVX512BW-NEXT:    subq %rsi, %r11
+; AVX512BW-NEXT:    addq %r11, %rdx
+; AVX512BW-NEXT:    imulq %rbp, %rsi
+; AVX512BW-NEXT:    addq %rdx, %rsi
+; AVX512BW-NEXT:    movq %rbp, %r11
+; AVX512BW-NEXT:    sarq $63, %r11
+; AVX512BW-NEXT:    movq %r11, %r14
+; AVX512BW-NEXT:    imulq %r9, %r14
+; AVX512BW-NEXT:    movq %r11, %rax
+; AVX512BW-NEXT:    mulq %rdi
 ; AVX512BW-NEXT:    movq %rax, %rbx
-; AVX512BW-NEXT:    movq %rax, %r12
-; AVX512BW-NEXT:    sarq $63, %rbx
-; AVX512BW-NEXT:    movq %rbx, %rsi
-; AVX512BW-NEXT:    andq %rbp, %rsi
-; AVX512BW-NEXT:    movq %rbx, %rax
-; AVX512BW-NEXT:    mulq %r9
-; AVX512BW-NEXT:    movq %rax, %r14
-; AVX512BW-NEXT:    movq %rdx, %r15
-; AVX512BW-NEXT:    subq %rsi, %r15
-; AVX512BW-NEXT:    andq %r9, %rbx
-; AVX512BW-NEXT:    subq %rbx, %r15
-; AVX512BW-NEXT:    addq %r10, %r14
-; AVX512BW-NEXT:    adcq %r11, %r15
-; AVX512BW-NEXT:    movq %r9, %rax
+; AVX512BW-NEXT:    addq %r14, %rdx
+; AVX512BW-NEXT:    imulq %rdi, %r11
+; AVX512BW-NEXT:    addq %rdx, %r11
+; AVX512BW-NEXT:    addq %r10, %rbx
+; AVX512BW-NEXT:    adcq %rsi, %r11
+; AVX512BW-NEXT:    movq %rdi, %rax
 ; AVX512BW-NEXT:    mulq %r8
 ; AVX512BW-NEXT:    movq %rdx, %r10
-; AVX512BW-NEXT:    movq %rax, %r11
-; AVX512BW-NEXT:    movq %rbp, %rax
+; AVX512BW-NEXT:    movq %rax, %r14
+; AVX512BW-NEXT:    movq %r9, %rax
 ; AVX512BW-NEXT:    mulq %r8
 ; AVX512BW-NEXT:    movq %rdx, %r8
-; AVX512BW-NEXT:    movq %rax, %rbx
-; AVX512BW-NEXT:    addq %r10, %rbx
+; AVX512BW-NEXT:    movq %rax, %r15
+; AVX512BW-NEXT:    addq %r10, %r15
 ; AVX512BW-NEXT:    adcq $0, %r8
-; AVX512BW-NEXT:    movq %r9, %rax
-; AVX512BW-NEXT:    mulq %r12
+; AVX512BW-NEXT:    movq %rdi, %rax
+; AVX512BW-NEXT:    mulq %rbp
 ; AVX512BW-NEXT:    movq %rdx, %rdi
 ; AVX512BW-NEXT:    movq %rax, %r10
-; AVX512BW-NEXT:    addq %rbx, %r10
+; AVX512BW-NEXT:    addq %r15, %r10
 ; AVX512BW-NEXT:    adcq %r8, %rdi
 ; AVX512BW-NEXT:    setb %al
 ; AVX512BW-NEXT:    movzbl %al, %esi
-; AVX512BW-NEXT:    movq %rbp, %rax
-; AVX512BW-NEXT:    mulq %r12
+; AVX512BW-NEXT:    movq %r9, %rax
+; AVX512BW-NEXT:    mulq %rbp
 ; AVX512BW-NEXT:    addq %rdi, %rax
 ; AVX512BW-NEXT:    adcq %rsi, %rdx
-; AVX512BW-NEXT:    addq %r14, %rax
-; AVX512BW-NEXT:    adcq %r15, %rdx
-; AVX512BW-NEXT:    movq %r10, 8(%r13)
+; AVX512BW-NEXT:    addq %rbx, %rax
+; AVX512BW-NEXT:    adcq %r11, %rdx
+; AVX512BW-NEXT:    movq %r10, 8(%r12)
 ; AVX512BW-NEXT:    sarq $63, %r10
 ; AVX512BW-NEXT:    xorq %r10, %rdx
 ; AVX512BW-NEXT:    xorq %rax, %r10
@@ -4130,8 +4092,8 @@ define <2 x i32> @smulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX512BW-NEXT:    korw %k0, %k1, %k1
 ; AVX512BW-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
-; AVX512BW-NEXT:    movq %rcx, 16(%r13)
-; AVX512BW-NEXT:    movq %r11, (%r13)
+; AVX512BW-NEXT:    movq %rcx, 16(%r12)
+; AVX512BW-NEXT:    movq %r14, (%r12)
 ; AVX512BW-NEXT:    popq %rbx
 ; AVX512BW-NEXT:    popq %r12
 ; AVX512BW-NEXT:    popq %r13
