@@ -912,6 +912,20 @@ let Predicates = [UseHVXV68, UseHVXFloatingPoint] in {
            (V6_pred_not (V6_veqw HvxVR:$Vt, HvxVR:$Vu))>;
 }
 
+// Multiply high for non-i32 types
+def: Pat<(VecI8  (mulhs  HVI8:$Vu,  HVI8:$Vv)),
+         (V6_vshuffob (HiVec (V6_vmpybv $Vu, $Vv)),
+                      (LoVec (V6_vmpybv $Vu, $Vv)))>;
+def: Pat<(VecI16 (mulhs HVI16:$Vu, HVI16:$Vv)),
+         (V6_vshufoh (HiVec (V6_vmpyhv $Vu, $Vv)),
+                     (LoVec (V6_vmpyhv $Vu, $Vv)))>;
+def: Pat<(VecI8  (mulhu  HVI8:$Vu,  HVI8:$Vv)),
+         (V6_vshuffob (HiVec (V6_vmpyubv $Vu, $Vv)),
+                      (LoVec (V6_vmpyubv $Vu, $Vv)))>;
+def: Pat<(VecI16 (mulhu HVI16:$Vu, HVI16:$Vv)),
+         (V6_vshufoh (HiVec (V6_vmpyuhv $Vu, $Vv)),
+                     (LoVec (V6_vmpyuhv $Vu, $Vv)))>;
+
 let Predicates = [UseHVXV60] in {
   // V60 doesn't have vabsb or byte shifts.
   // Do the "mask = x >> width-1; abs = (x + mask) ^ mask" trick.

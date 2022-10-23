@@ -86,19 +86,16 @@ define <32 x i32> @mulhu(<32 x i32> %a0, <32 x i32> %a1) #0 {
 ; V60-NEXT:     v1:0.uw = vmpy(v0.uh,v1.uh)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v1:0.w = vadd(v0.uh,v1.uh)
+; V60-NEXT:     v1:0.w = vadd(v1.uh,v0.uh)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v0.w = vadd(v2.w,v0.w)
+; V60-NEXT:     v0.w = vadd(v0.w,v2.w)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v1.w = vadd(v3.w,v1.w)
+; V60-NEXT:     v1.w += vasr(v0.w,r2)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v0.uw = vlsr(v0.uw,r2)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v0.w = vadd(v0.w,v1.w)
+; V60-NEXT:     v0.w = vadd(v3.w,v1.w)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     jumpr r31
@@ -107,40 +104,28 @@ define <32 x i32> @mulhu(<32 x i32> %a0, <32 x i32> %a1) #0 {
 ; V65-LABEL: mulhu:
 ; V65:       // %bb.0:
 ; V65-NEXT:    {
-; V65-NEXT:     r0 = ##33686018
+; V65-NEXT:     v2 = vxor(v2,v2)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
-; V65-NEXT:     v3:2.uw = vmpy(v0.uh,v1.uh)
+; V65-NEXT:     v5:4 = vmpye(v0.w,v1.uh)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
-; V65-NEXT:     r2 = #16
+; V65-NEXT:     q0 = vcmp.gt(v2.w,v0.w)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
-; V65-NEXT:     v4 = vsplat(r0)
+; V65-NEXT:     q1 = vcmp.gt(v2.w,v1.w)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
-; V65-NEXT:     v2.uw = vlsr(v2.uw,r2)
+; V65-NEXT:     v5:4 += vmpyo(v0.w,v1.h)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
-; V65-NEXT:     v1 = vdelta(v1,v4)
+; V65-NEXT:     v31 = vand(q0,v1)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
-; V65-NEXT:     v1:0.uw = vmpy(v0.uh,v1.uh)
+; V65-NEXT:     if (q1) v31.w += v0.w
 ; V65-NEXT:    }
 ; V65-NEXT:    {
-; V65-NEXT:     v1:0.w = vadd(v0.uh,v1.uh)
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     v0.w = vadd(v2.w,v0.w)
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     v1.w = vadd(v3.w,v1.w)
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     v0.uw = vlsr(v0.uw,r2)
-; V65-NEXT:    }
-; V65-NEXT:    {
-; V65-NEXT:     v0.w = vadd(v0.w,v1.w)
+; V65-NEXT:     v0.w = vadd(v5.w,v31.w)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
 ; V65-NEXT:     jumpr r31

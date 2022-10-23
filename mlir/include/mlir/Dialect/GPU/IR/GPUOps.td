@@ -1246,19 +1246,35 @@ def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
   }];
 }
 
-def GPU_ElementwiseOpAdd  : I32EnumAttrCase<"ADDF", 0, "addf">;
-def GPU_ElementwiseOpMul  : I32EnumAttrCase<"MULF", 1, "mulf">;
-def GPU_ElementwiseOpMaxF : I32EnumAttrCase<"MAXF", 2, "maxf">;
-def GPU_ElementwiseOpMinF : I32EnumAttrCase<"MINF", 3, "minf">;
-def GPU_ElementwiseOpDivF : I32EnumAttrCase<"DIVF", 4, "divf">;
+def GPU_ElementwiseOpAddF  : I32EnumAttrCase<"ADDF", 0, "addf">;
+def GPU_ElementwiseOpMulF  : I32EnumAttrCase<"MULF", 1, "mulf">;
+def GPU_ElementwiseOpSUBF  : I32EnumAttrCase<"SUBF", 2, "subf">;
+def GPU_ElementwiseOpMaxF : I32EnumAttrCase<"MAXF", 3, "maxf">;
+def GPU_ElementwiseOpMinF : I32EnumAttrCase<"MINF", 4, "minf">;
+def GPU_ElementwiseOpDivF : I32EnumAttrCase<"DIVF", 5, "divf">;
+def GPU_ElementwiseOpAddI  : I32EnumAttrCase<"ADDI", 6, "addi">;
+def GPU_ElementwiseOpMulI  : I32EnumAttrCase<"MULI", 7, "muli">;
+def GPU_ElementwiseOpSUBI  : I32EnumAttrCase<"SUBI", 8, "subi">;
+def GPU_ElementwiseOpDivS : I32EnumAttrCase<"DIVS", 9, "divs">;
+def GPU_ElementwiseOpDivU : I32EnumAttrCase<"DIVU", 10, "divu">;
+def GPU_ElementwiseOpNEGF : I32EnumAttrCase<"NEGATEF", 11, "negatef">;
+def GPU_ElementwiseOpNEGS : I32EnumAttrCase<"NEGATES", 12, "negates">;
 
 def MMAElementWise : I32EnumAttr<"MMAElementwiseOp",
   "elementwise operation to apply to mma matrix", [
-    GPU_ElementwiseOpAdd,
-    GPU_ElementwiseOpMul,
+    GPU_ElementwiseOpAddF,
+    GPU_ElementwiseOpMulF,
+    GPU_ElementwiseOpSUBF,
     GPU_ElementwiseOpMaxF,
     GPU_ElementwiseOpMinF,
-    GPU_ElementwiseOpDivF
+    GPU_ElementwiseOpDivF,
+    GPU_ElementwiseOpAddI,
+    GPU_ElementwiseOpMulI,
+    GPU_ElementwiseOpSUBI,
+    GPU_ElementwiseOpDivS,
+    GPU_ElementwiseOpDivU,
+    GPU_ElementwiseOpNEGF,
+    GPU_ElementwiseOpNEGS
   ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::gpu";
