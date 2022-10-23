@@ -86,9 +86,12 @@ void GPUToSPIRVPass::runOnOperation() {
         SPIRVConversionTarget::get(targetAttr);
 
     SPIRVTypeConverter typeConverter(targetAttr);
+    typeConverter.addConversion([&](gpu::MMAMatrixType type) -> Type {
+      return convertMMAToSPIRVType(type);
+    });
     RewritePatternSet patterns(context);
     populateGPUToSPIRVPatterns(typeConverter, patterns);
-
+    populateGpuWMMAToSPIRVConversionPatterns(typeConverter, patterns);
     // TODO: Change SPIR-V conversion to be progressive and remove the following
     // patterns.
     mlir::arith::populateArithToSPIRVPatterns(typeConverter, patterns);

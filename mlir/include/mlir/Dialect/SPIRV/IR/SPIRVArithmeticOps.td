@@ -42,7 +42,18 @@ class SPIRV_ArithmeticUnaryOp<string mnemonic, Type type,
       // Operand type same as result type.
       SPIRV_UnaryOp<mnemonic, type, type,
                    !listconcat(traits,
-                               [Pure, SameOperandsAndResultType])>;
+                               [Pure, SameOperandsAndResultType])> {
+  // In addition to normal types arithmetic instructions can support cooperative
+  // matrix.
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOrCoopMatrixOf<type>:$operand
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOrCoopMatrixOf<type>:$result
+  );
+  let assemblyFormat = "operands attr-dict `:` type($result)";
+  }
 
 // -----
 
