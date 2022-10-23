@@ -105,6 +105,14 @@ template <typename T> struct is_signed {
 };
 template <typename T> inline constexpr bool is_signed_v = is_signed<T>::value;
 
+template <typename T> struct is_unsigned {
+  static constexpr bool value = is_arithmetic<T>::value && (T(-1) > T(0));
+  constexpr operator bool() const { return value; }
+  constexpr bool operator()() const { return value; }
+};
+template <typename T>
+inline constexpr bool is_unsigned_v = is_unsigned<T>::value;
+
 template <typename T> struct make_unsigned;
 template <> struct make_unsigned<char> { using type = unsigned char; };
 template <> struct make_unsigned<signed char> { using type = unsigned char; };
