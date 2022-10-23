@@ -311,8 +311,9 @@ static Value createScalarOp(OpBuilder &builder, Location loc,
   case gpu::MMAElementwiseOp::MINF:
     return createMinMaxF(builder, loc, operands[0], operands[1],
                          /*isMin=*/true);
+  default:
+    llvm_unreachable("unknown op");
   }
-  llvm_unreachable("unknown op");
 }
 
 /// Convert GPU MMA elementwise ops to extract + op + insert.
