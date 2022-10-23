@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -no-opaque-pointers -std=c++2a -fblocks %s -triple x86_64-unknown-unknown -emit-llvm -o %t.ll
+// RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -fblocks %s -triple x86_64-unknown-unknown -emit-llvm -o %t.ll
+
 
 // This needs to be performed before #line directives which alter filename
 // RUN: %clang_cc1 -no-opaque-pointers -fno-file-reproducible -fmacro-prefix-map=%p=/UNLIKELY/PATH -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-PREFIX-MAP
