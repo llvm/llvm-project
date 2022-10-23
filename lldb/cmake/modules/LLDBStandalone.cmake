@@ -97,6 +97,12 @@ include(LLVMDistributionSupport)
 set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
 set(LLVM_INCLUDE_TESTS ON CACHE INTERNAL "")
 
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+include_directories(
+  "${CMAKE_BINARY_DIR}/include"
+  "${LLVM_INCLUDE_DIRS}"
+  "${CLANG_INCLUDE_DIRS}")
+
 # Build the gtest library needed for unittests, if we have LLVM sources
 # handy.
 if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/unittest AND NOT TARGET llvm_gtest)
@@ -116,12 +122,6 @@ endif()
 
 set_target_properties(clang-tablegen-targets PROPERTIES FOLDER "lldb misc")
 set_target_properties(intrinsics_gen PROPERTIES FOLDER "lldb misc")
-
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-include_directories(
-  "${CMAKE_BINARY_DIR}/include"
-  "${LLVM_INCLUDE_DIRS}"
-  "${CLANG_INCLUDE_DIRS}")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
