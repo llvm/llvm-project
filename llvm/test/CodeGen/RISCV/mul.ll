@@ -1480,18 +1480,18 @@ define i64 @mulhsu_i64(i64 %a, i64 %b) nounwind {
 ; RV32IM-NEXT:    add a5, a6, a2
 ; RV32IM-NEXT:    mul a7, a1, a3
 ; RV32IM-NEXT:    add t0, a7, a5
-; RV32IM-NEXT:    and t1, a4, a0
-; RV32IM-NEXT:    sub a2, t0, t1
+; RV32IM-NEXT:    mul t1, a4, a0
+; RV32IM-NEXT:    add a2, t0, t1
 ; RV32IM-NEXT:    sltu t2, a2, t0
 ; RV32IM-NEXT:    sltu a7, t0, a7
 ; RV32IM-NEXT:    sltu a5, a5, a6
 ; RV32IM-NEXT:    mulhu a3, a1, a3
 ; RV32IM-NEXT:    add a3, a3, a5
 ; RV32IM-NEXT:    add a3, a3, a7
-; RV32IM-NEXT:    and a1, a4, a1
+; RV32IM-NEXT:    mul a1, a4, a1
 ; RV32IM-NEXT:    mulhu a0, a4, a0
-; RV32IM-NEXT:    sub a0, a0, a1
-; RV32IM-NEXT:    sub a0, a0, t1
+; RV32IM-NEXT:    add a0, a0, a1
+; RV32IM-NEXT:    add a0, a0, t1
 ; RV32IM-NEXT:    add a0, a3, a0
 ; RV32IM-NEXT:    add a1, a0, t2
 ; RV32IM-NEXT:    mv a0, a2

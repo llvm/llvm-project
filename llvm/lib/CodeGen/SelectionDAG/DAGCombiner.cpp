@@ -3957,30 +3957,6 @@ SDValue DAGCombiner::visitMULFIX(SDNode *N) {
   return SDValue();
 }
 
-// Fold (mul (sra X, BW-1), Y) -> (neg (and (sra X, BW-1), Y))
-static SDValue foldSraMulToAndNeg(SDNode *N, SDValue N0, SDValue N1,
-                                  SelectionDAG &DAG) {
-  if (N0.getOpcode() != ISD::SRA)
-    return SDValue();
-
-  EVT VT = N->getValueType(0);
-
-  // TODO: Use computeNumSignBits() == BitWidth?
-  unsigned BitWidth = VT.getScalarSizeInBits();
-  ConstantSDNode *ShiftAmt = isConstOrConstSplat(N0.getOperand(1));
-  if (!ShiftAmt || ShiftAmt->getAPIntValue() != (BitWidth - 1))
-    return SDValue();
-
-  // If optimizing for minsize, we don't want to increase the number of
-  // instructions.
-  if (DAG.getMachineFunction().getFunction().hasMinSize())
-    return SDValue();
-
-  SDLoc dl(N);
-  SDValue And = DAG.getNode(ISD::AND, dl, VT, N0, N1);
-  return DAG.getNode(ISD::SUB, dl, VT, DAG.getConstant(0, dl, VT), And);
-}
-
 SDValue DAGCombiner::visitMUL(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
@@ -4190,11 +4166,6 @@ SDValue DAGCombiner::visitMUL(SDNode *N) {
       return DAG.getNode(ISD::AND, DL, VT, N0, DAG.getBuildVector(VT, DL, Mask));
     }
   }
-
-  if (SDValue V = foldSraMulToAndNeg(N, N0, N1, DAG))
-    return V;
-  if (SDValue V = foldSraMulToAndNeg(N, N1, N0, DAG))
-    return V;
 
   // reassociate mul
   if (SDValue RMUL = reassociateOps(ISD::MUL, DL, N0, N1, N->getFlags()))
