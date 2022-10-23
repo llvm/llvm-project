@@ -1475,53 +1475,57 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
   // C++2b:
   //   Otherwise, if the type contains a placeholder type, it is replaced by the
   //   type determined by placeholder type deduction.
-  DeducedType *Deduced = Ty->getContainedDeducedType();
-  if (Deduced && isa<DeducedTemplateSpecializationType>(Deduced)) {
-    Ty = DeduceTemplateSpecializationFromInitializer(TInfo, Entity,
-                                                     Kind, Exprs);
-    if (Ty.isNull())
-      return ExprError();
-    Entity = InitializedEntity::InitializeTemporary(TInfo, Ty);
-  } else if (Deduced) {
-    MultiExprArg Inits = Exprs;
-    if (ListInitialization) {
-      auto *ILE = cast<InitListExpr>(Exprs[0]);
-      Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
-    }
+  if (const DeducedType *Deduced = Ty->getContainedDeducedType();
+      Deduced && !Deduced->isDeduced()) {
+    if (isa<DeducedTemplateSpecializationType>(Deduced)) {
+      Ty = DeduceTemplateSpecializationFromInitializer(TInfo, Entity, Kind,
+                                                       Exprs);
+      if (Ty.isNull())
+        return ExprError();
+      Entity = InitializedEntity::InitializeTemporary(TInfo, Ty);
+    } else {
+      assert(isa<AutoType>(Deduced));
+      MultiExprArg Inits = Exprs;
+      if (ListInitialization) {
+        auto *ILE = cast<InitListExpr>(Exprs[0]);
+        Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
+      }
 
-    if (Inits.empty())
-      return ExprError(Diag(TyBeginLoc, diag::err_auto_expr_init_no_expression)
-                       << Ty << FullRange);
-    if (Inits.size() > 1) {
-      Expr *FirstBad = Inits[1];
-      return ExprError(Diag(FirstBad->getBeginLoc(),
-                            diag::err_auto_expr_init_multiple_expressions)
-                       << Ty << FullRange);
-    }
-    if (getLangOpts().CPlusPlus2b) {
-      if (Ty->getAs<AutoType>())
-        Diag(TyBeginLoc, diag::warn_cxx20_compat_auto_expr) << FullRange;
-    }
-    Expr *Deduce = Inits[0];
-    if (isa<InitListExpr>(Deduce))
-      return ExprError(
-          Diag(Deduce->getBeginLoc(), diag::err_auto_expr_init_paren_braces)
-          << ListInitialization << Ty << FullRange);
-    QualType DeducedType;
-    TemplateDeductionInfo Info(Deduce->getExprLoc());
-    TemplateDeductionResult Result =
-        DeduceAutoType(TInfo->getTypeLoc(), Deduce, DeducedType, Info);
-    if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed)
-      return ExprError(Diag(TyBeginLoc, diag::err_auto_expr_deduction_failure)
-                       << Ty << Deduce->getType() << FullRange
-                       << Deduce->getSourceRange());
-    if (DeducedType.isNull()) {
-      assert(Result == TDK_AlreadyDiagnosed);
-      return ExprError();
-    }
+      if (Inits.empty())
+        return ExprError(
+            Diag(TyBeginLoc, diag::err_auto_expr_init_no_expression)
+            << Ty << FullRange);
+      if (Inits.size() > 1) {
+        Expr *FirstBad = Inits[1];
+        return ExprError(Diag(FirstBad->getBeginLoc(),
+                              diag::err_auto_expr_init_multiple_expressions)
+                         << Ty << FullRange);
+      }
+      if (getLangOpts().CPlusPlus2b) {
+        if (Ty->getAs<AutoType>())
+          Diag(TyBeginLoc, diag::warn_cxx20_compat_auto_expr) << FullRange;
+      }
+      Expr *Deduce = Inits[0];
+      if (isa<InitListExpr>(Deduce))
+        return ExprError(
+            Diag(Deduce->getBeginLoc(), diag::err_auto_expr_init_paren_braces)
+            << ListInitialization << Ty << FullRange);
+      QualType DeducedType;
+      TemplateDeductionInfo Info(Deduce->getExprLoc());
+      TemplateDeductionResult Result =
+          DeduceAutoType(TInfo->getTypeLoc(), Deduce, DeducedType, Info);
+      if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed)
+        return ExprError(Diag(TyBeginLoc, diag::err_auto_expr_deduction_failure)
+                         << Ty << Deduce->getType() << FullRange
+                         << Deduce->getSourceRange());
+      if (DeducedType.isNull()) {
+        assert(Result == TDK_AlreadyDiagnosed);
+        return ExprError();
+      }
 
-    Ty = DeducedType;
-    Entity = InitializedEntity::InitializeTemporary(TInfo, Ty);
+      Ty = DeducedType;
+      Entity = InitializedEntity::InitializeTemporary(TInfo, Ty);
+    }
   }
 
   if (Ty->isDependentType() || CallExpr::hasAnyTypeDependentArguments(Exprs)) {
@@ -2011,59 +2015,62 @@ Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                                                      DirectInitRange.getEnd());
 
   // C++11 [dcl.spec.auto]p6. Deduce the type which 'auto' stands in for.
-  auto *Deduced = AllocType->getContainedDeducedType();
-  if (Deduced && isa<DeducedTemplateSpecializationType>(Deduced)) {
-    if (ArraySize)
-      return ExprError(
-          Diag(*ArraySize ? (*ArraySize)->getExprLoc() : TypeRange.getBegin(),
-               diag::err_deduced_class_template_compound_type)
-          << /*array*/ 2
-          << (*ArraySize ? (*ArraySize)->getSourceRange() : TypeRange));
+  if (const DeducedType *Deduced = AllocType->getContainedDeducedType();
+      Deduced && !Deduced->isDeduced()) {
+    if (isa<DeducedTemplateSpecializationType>(Deduced)) {
+      if (ArraySize)
+        return ExprError(
+            Diag(*ArraySize ? (*ArraySize)->getExprLoc() : TypeRange.getBegin(),
+                 diag::err_deduced_class_template_compound_type)
+            << /*array*/ 2
+            << (*ArraySize ? (*ArraySize)->getSourceRange() : TypeRange));
 
-    InitializedEntity Entity
-      = InitializedEntity::InitializeNew(StartLoc, AllocType);
-    AllocType = DeduceTemplateSpecializationFromInitializer(
-        AllocTypeInfo, Entity, Kind, Exprs);
-    if (AllocType.isNull())
-      return ExprError();
-  } else if (Deduced) {
-    MultiExprArg Inits = Exprs;
-    bool Braced = (initStyle == CXXNewExpr::ListInit);
-    if (Braced) {
-      auto *ILE = cast<InitListExpr>(Exprs[0]);
-      Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
-    }
+      InitializedEntity Entity =
+          InitializedEntity::InitializeNew(StartLoc, AllocType);
+      AllocType = DeduceTemplateSpecializationFromInitializer(
+          AllocTypeInfo, Entity, Kind, Exprs);
+      if (AllocType.isNull())
+        return ExprError();
+    } else {
+      assert(isa<AutoType>(Deduced));
+      MultiExprArg Inits = Exprs;
+      bool Braced = (initStyle == CXXNewExpr::ListInit);
+      if (Braced) {
+        auto *ILE = cast<InitListExpr>(Exprs[0]);
+        Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
+      }
 
-    if (initStyle == CXXNewExpr::NoInit || Inits.empty())
-      return ExprError(Diag(StartLoc, diag::err_auto_new_requires_ctor_arg)
-                       << AllocType << TypeRange);
-    if (Inits.size() > 1) {
-      Expr *FirstBad = Inits[1];
-      return ExprError(Diag(FirstBad->getBeginLoc(),
-                            diag::err_auto_new_ctor_multiple_expressions)
-                       << AllocType << TypeRange);
+      if (initStyle == CXXNewExpr::NoInit || Inits.empty())
+        return ExprError(Diag(StartLoc, diag::err_auto_new_requires_ctor_arg)
+                         << AllocType << TypeRange);
+      if (Inits.size() > 1) {
+        Expr *FirstBad = Inits[1];
+        return ExprError(Diag(FirstBad->getBeginLoc(),
+                              diag::err_auto_new_ctor_multiple_expressions)
+                         << AllocType << TypeRange);
+      }
+      if (Braced && !getLangOpts().CPlusPlus17)
+        Diag(Initializer->getBeginLoc(), diag::ext_auto_new_list_init)
+            << AllocType << TypeRange;
+      Expr *Deduce = Inits[0];
+      if (isa<InitListExpr>(Deduce))
+        return ExprError(
+            Diag(Deduce->getBeginLoc(), diag::err_auto_expr_init_paren_braces)
+            << Braced << AllocType << TypeRange);
+      QualType DeducedType;
+      TemplateDeductionInfo Info(Deduce->getExprLoc());
+      TemplateDeductionResult Result = DeduceAutoType(
+          AllocTypeInfo->getTypeLoc(), Deduce, DeducedType, Info);
+      if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed)
+        return ExprError(Diag(StartLoc, diag::err_auto_new_deduction_failure)
+                         << AllocType << Deduce->getType() << TypeRange
+                         << Deduce->getSourceRange());
+      if (DeducedType.isNull()) {
+        assert(Result == TDK_AlreadyDiagnosed);
+        return ExprError();
+      }
+      AllocType = DeducedType;
     }
-    if (Braced && !getLangOpts().CPlusPlus17)
-      Diag(Initializer->getBeginLoc(), diag::ext_auto_new_list_init)
-          << AllocType << TypeRange;
-    Expr *Deduce = Inits[0];
-    if (isa<InitListExpr>(Deduce))
-      return ExprError(
-          Diag(Deduce->getBeginLoc(), diag::err_auto_expr_init_paren_braces)
-          << Braced << AllocType << TypeRange);
-    QualType DeducedType;
-    TemplateDeductionInfo Info(Deduce->getExprLoc());
-    TemplateDeductionResult Result =
-        DeduceAutoType(AllocTypeInfo->getTypeLoc(), Deduce, DeducedType, Info);
-    if (Result != TDK_Success && Result != TDK_AlreadyDiagnosed)
-      return ExprError(Diag(StartLoc, diag::err_auto_new_deduction_failure)
-                       << AllocType << Deduce->getType() << TypeRange
-                       << Deduce->getSourceRange());
-    if (DeducedType.isNull()) {
-      assert(Result == TDK_AlreadyDiagnosed);
-      return ExprError();
-    }
-    AllocType = DeducedType;
   }
 
   // Per C++0x [expr.new]p5, the type being constructed may be a
@@ -8956,8 +8963,7 @@ Sema::BuildExprRequirement(
     //     be satisfied.
     TemplateParameterList *TPL =
         ReturnTypeRequirement.getTypeConstraintTemplateParameterList();
-    QualType MatchedType =
-        Context.getReferenceQualifiedType(E).getCanonicalType();
+    QualType MatchedType = Context.getReferenceQualifiedType(E);
     llvm::SmallVector<TemplateArgument, 1> Args;
     Args.push_back(TemplateArgument(MatchedType));
 
@@ -8965,7 +8971,7 @@ Sema::BuildExprRequirement(
 
     TemplateArgumentList TAL(TemplateArgumentList::OnStack, Args);
     MultiLevelTemplateArgumentList MLTAL(Param, TAL.asArray(),
-                                         /*Final=*/false);
+                                         /*Final=*/true);
     MLTAL.addOuterRetainedLevels(TPL->getDepth());
     Expr *IDC = Param->getTypeConstraint()->getImmediatelyDeclaredConstraint();
     ExprResult Constraint = SubstExpr(IDC, MLTAL);

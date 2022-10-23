@@ -2886,10 +2886,10 @@ CheckDeducedArgumentConstraints(Sema &S, TemplateDeclT *Template,
 
   bool NeedsReplacement = DeducedArgsNeedReplacement(Template);
   TemplateArgumentList DeducedTAL{TemplateArgumentList::OnStack,
-                                  CanonicalDeducedArgs};
+                                  SugaredDeducedArgs};
 
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      Template, /*Final=*/false,
+      Template, /*Final=*/true,
       /*InnerMost=*/NeedsReplacement ? nullptr : &DeducedTAL,
       /*RelativeToPrimary=*/true, /*Pattern=*/
       nullptr, /*ForConstraintInstantiation=*/true);
@@ -2899,7 +2899,7 @@ CheckDeducedArgumentConstraints(Sema &S, TemplateDeclT *Template,
   // not class-scope explicit specialization, so replace with Deduced Args
   // instead of adding to inner-most.
   if (NeedsReplacement)
-    MLTAL.replaceInnermostTemplateArguments(CanonicalDeducedArgs);
+    MLTAL.replaceInnermostTemplateArguments(SugaredDeducedArgs);
 
   if (S.CheckConstraintSatisfaction(Template, AssociatedConstraints, MLTAL,
                                     Info.getLocation(),
@@ -4672,8 +4672,8 @@ static bool CheckDeducedPlaceholderConstraints(Sema &S, const AutoType &Type,
                                   /*PartialTemplateArgs=*/false,
                                   SugaredConverted, CanonicalConverted))
     return true;
-  MultiLevelTemplateArgumentList MLTAL(Concept, CanonicalConverted,
-                                       /*Final=*/false);
+  MultiLevelTemplateArgumentList MLTAL(Concept, SugaredConverted,
+                                       /*Final=*/true);
   if (S.CheckConstraintSatisfaction(Concept, {Concept->getConstraintExpr()},
                                     MLTAL, TypeLoc.getLocalSourceRange(),
                                     Satisfaction))
