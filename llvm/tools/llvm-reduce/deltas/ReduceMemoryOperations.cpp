@@ -73,3 +73,35 @@ void llvm::reduceAtomicSyncScopesDeltaPass(TestRunner &Test) {
   runDeltaPass(Test, reduceAtomicSyncScopesInModule,
                "Reducing Atomic Sync Scopes");
 }
+
+// TODO: Might be helpful to incrementally relax orders
+static void reduceAtomicOrderingInFunction(Oracle &O, Function &F) {
+  for (Instruction &I : instructions(F)) {
+    if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
+      if (LI->getOrdering() != AtomicOrdering::NotAtomic && !O.shouldKeep())
+        LI->setAtomic(AtomicOrdering::NotAtomic);
+    } else if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
+      if (SI->getOrdering() != AtomicOrdering::NotAtomic && !O.shouldKeep())
+        SI->setAtomic(AtomicOrdering::NotAtomic);
+    } else if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(&I)) {
+      if (RMW->getOrdering() != AtomicOrdering::Monotonic && !O.shouldKeep())
+        RMW->setOrdering(AtomicOrdering::Monotonic);
+    } else if (AtomicCmpXchgInst *CmpXChg = dyn_cast<AtomicCmpXchgInst>(&I)) {
+      if (CmpXChg->getSuccessOrdering() != AtomicOrdering::Monotonic &&
+          !O.shouldKeep())
+        CmpXChg->setSuccessOrdering(AtomicOrdering::Monotonic);
+      if (CmpXChg->getFailureOrdering() != AtomicOrdering::Monotonic &&
+          !O.shouldKeep())
+        CmpXChg->setFailureOrdering(AtomicOrdering::Monotonic);
+    }
+  }
+}
+
+static void reduceAtomicOrderingInModule(Oracle &O, Module &Mod) {
+  for (Function &F : Mod)
+    reduceAtomicOrderingInFunction(O, F);
+}
+
+void llvm::reduceAtomicOrderingDeltaPass(TestRunner &Test) {
+  runDeltaPass(Test, reduceAtomicOrderingInModule, "Reducing Atomic Odering");
+}
