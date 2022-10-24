@@ -20,6 +20,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "llvm/Support/Debug.h"
 
@@ -274,6 +275,12 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
         op, "missing tile size computation function");
   }
 
+  // Get destination tensors.
+  SmallVector<Value> destinationTensors;
+  if (failed(tensor::getOrCreateDestinations(rewriter, op.getLoc(), op,
+                                             destinationTensors)))
+    return rewriter.notifyMatchFailure(op, "failed to get destinations");
+
   // 1. Get the range of the loops that are represented by the operation.
   SmallVector<Range> iterationDomain = op.getIterationDomain(rewriter);
   size_t numLoops = iterationDomain.size();
@@ -378,17 +385,21 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
     }
   }
 
-  FailureOr<SmallVector<Value>> replacementOr =
-      yieldTiledValues(rewriter, op.getDestinationOperands(rewriter),
-                       tilingResult.tiledOp->getResults(), resultOffsetsList,
-                       resultSizesList, tilingResult.loops);
+  FailureOr<SmallVector<Value>> replacementOr = yieldTiledValues(
+      rewriter, destinationTensors, tilingResult.tiledOp->getResults(),
+      resultOffsetsList, resultSizesList, tilingResult.loops);
   if (failed(replacementOr))
     return rewriter.notifyMatchFailure(op, "failed to yield replacement");
-  if (auto tiledInterfaceOp = dyn_cast<TilingInterface>(tilingResult.tiledOp)) {
+
+  if (auto dstOp =
+          dyn_cast<DestinationStyleOpInterface>(tilingResult.tiledOp)) {
     auto innerMostLoop = tilingResult.loops.back();
-    updateDestinationOperandsForTiledOp(
-        rewriter, tiledInterfaceOp.getDestinationOperands(rewriter),
-        innerMostLoop.getRegionIterArgs());
+    SmallVector<Value> destinationTensors = dstOp.getOutputOperands();
+    assert(destinationTensors.size() ==
+               innerMostLoop.getRegionIterArgs().size() &&
+           "unexpected number of outputs");
+    updateDestinationOperandsForTiledOp(rewriter, destinationTensors,
+                                        innerMostLoop.getRegionIterArgs());
   }
 
   tilingResult.replacements = replacementOr.value();
@@ -567,20 +578,17 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
     }
     if (iterArgNumber) {
       int64_t resultNumber = fusableProducer.getResultNumber();
-      if (auto producerOp =
-              dyn_cast<TilingInterface>(fusableProducer.getOwner())) {
-        SmallVector<Value> destination =
-            producerOp.getDestinationOperands(rewriter);
-        outerMostLoop.setIterArg(iterArgNumber.value(),
-                                 destination[resultNumber]);
+      if (auto dstOp = dyn_cast<DestinationStyleOpInterface>(
+              fusableProducer.getOwner())) {
+        outerMostLoop.setIterArg(
+            iterArgNumber.value(),
+            dstOp.getTiedOpOperand(fusableProducer)->get());
       }
-      if (auto tiledAndFusedInterfaceOp =
-              fusedProducerValue.value().getDefiningOp<TilingInterface>()) {
+      if (auto dstOp = fusedProducerValue.value()
+                           .getDefiningOp<DestinationStyleOpInterface>()) {
         scf::ForOp innerMostLoop = tileAndFuseResult.loops.back();
-        SmallVector<Value> destination =
-            tiledAndFusedInterfaceOp.getDestinationOperands(rewriter);
         updateDestinationOperandsForTiledOp(
-            rewriter, destination[resultNumber],
+            rewriter, dstOp.getOutputOperand(resultNumber)->get(),
             innerMostLoop.getRegionIterArgs()[iterArgNumber.value()]);
       }
     }

@@ -1,5 +1,4 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! XFAIL: *
 ! This test checks for semantic errors in atomic_define subroutine calls based on
 ! the interface defined in section 16.9.23 of the Fortran 2018 standard.
 
@@ -44,37 +43,43 @@ program test_atomic_define
 
   !___ non-standard-conforming calls ___
 
-  !ERROR: 'atom=' argument must be a scalar coarray for intrinsic 'atomic_define'
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_define'
   call atomic_define(non_scalar_coarray, val)
 
-  !ERROR: 'atom=' argument must be a scalar coarray for intrinsic 'atomic_define'
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_define'
+  call atomic_define(non_scalar_coarray[1], val)
+
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_define'
   call atomic_define(non_scalar_logical_coarray, val_logical)
 
-  !ERROR: 'atom=' argument must be a coarray or a coindexed object for intrinsic 'atomic_define'
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_define'
+  call atomic_define(non_scalar_logical_coarray[1], val_logical)
+
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_define'
   call atomic_define(non_coarray, val)
 
-  !ERROR: 'atom=' argument must be a coarray or a coindexed object for intrinsic 'atomic_define'
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_define'
   call atomic_define(non_coarray_logical, val_logical)
 
-  !ERROR: 'atom=' argument must be a coarray or a coindexed object for intrinsic 'atomic_define'
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_define'
   call atomic_define(array, val)
 
-  ! 'atom=' argument not of 'atomic_int_kind' or 'atomic_logical_kind'
+  !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind or atomic_logical_kind, but is 'INTEGER(4)'
   call atomic_define(default_kind_coarray, val)
 
-  ! 'atom=' argument not of 'atomic_int_kind' or 'atomic_logical_kind'
+  !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind or atomic_logical_kind, but is 'INTEGER(1)'
   call atomic_define(kind1_coarray, val)
 
-  ! 'atom=' argument not of 'atomic_int_kind' or 'atomic_logical_kind'
+  !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind or atomic_logical_kind, but is 'LOGICAL(4)'
   call atomic_define(default_kind_logical_coarray, val_logical)
 
-  ! 'atom=' argument not of 'atomic_int_kind' or 'atomic_logical_kind'
+  !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind or atomic_logical_kind, but is 'LOGICAL(1)'
   call atomic_define(kind1_logical_coarray, val_logical)
 
-  ! 'value=' argument not same type as 'atom=' argument
+  !ERROR: 'value=' argument to 'atomic_define' must have same type as 'atom=', but is 'LOGICAL(8)'
   call atomic_define(scalar_coarray, val_logical)
 
-  ! 'value=' argument not same type as 'atom=' argument
+  !ERROR: 'value=' argument to 'atomic_define' must have same type as 'atom=', but is 'INTEGER(8)'
   call atomic_define(atom_logical, val)
 
   !ERROR: Actual argument for 'atom=' has bad type 'REAL(4)'
@@ -95,7 +100,7 @@ program test_atomic_define
   !ERROR: 'stat=' argument has unacceptable rank 1
   call atomic_define(scalar_coarray, val, status_array)
 
-  ! status shall not be coindexed
+  !ERROR: 'stat' argument to 'atomic_define' may not be a coindexed object
   call atomic_define(scalar_coarray, val, coindexed_status[1])
 
   !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'stat=' must be definable

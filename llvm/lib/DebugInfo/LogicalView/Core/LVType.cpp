@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
+#include "llvm/DebugInfo/LogicalView/Core/LVCompare.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
 
@@ -169,6 +170,124 @@ StringRef LVType::resolveReferencesChain() {
   return getName();
 }
 
+void LVType::markMissingParents(const LVTypes *References,
+                                const LVTypes *Targets) {
+  if (!(References && Targets))
+    return;
+
+  LLVM_DEBUG({
+    dbgs() << "\n[LVType::markMissingParents]\n";
+    for (const LVType *Reference : *References)
+      dbgs() << "References: "
+             << "Kind = " << formattedKind(Reference->kind()) << ", "
+             << "Name = " << formattedName(Reference->getName()) << "\n";
+    for (const LVType *Target : *Targets)
+      dbgs() << "Targets   : "
+             << "Kind = " << formattedKind(Target->kind()) << ", "
+             << "Name = " << formattedName(Target->getName()) << "\n";
+  });
+
+  for (LVType *Reference : *References) {
+    LLVM_DEBUG({
+      dbgs() << "Search Reference: Name = "
+             << formattedName(Reference->getName()) << "\n";
+    });
+    if (!Reference->findIn(Targets))
+      Reference->markBranchAsMissing();
+  }
+}
+
+LVType *LVType::findIn(const LVTypes *Targets) const {
+  if (!Targets)
+    return nullptr;
+
+  LLVM_DEBUG({
+    dbgs() << "\n[LVType::findIn]\n"
+           << "Reference: "
+           << "Level = " << getLevel() << ", "
+           << "Kind = " << formattedKind(kind()) << ", "
+           << "Name = " << formattedName(getName()) << "\n";
+    for (const LVType *Target : *Targets)
+      dbgs() << "Target   : "
+             << "Level = " << Target->getLevel() << ", "
+             << "Kind = " << formattedKind(Target->kind()) << ", "
+             << "Name = " << formattedName(Target->getName()) << "\n";
+  });
+
+  for (LVType *Target : *Targets)
+    if (equals(Target))
+      return Target;
+
+  return nullptr;
+}
+
+// Check for a match on the arguments of a function.
+bool LVType::parametersMatch(const LVTypes *References,
+                             const LVTypes *Targets) {
+  if (!References && !Targets)
+    return true;
+  if (References && Targets) {
+    LVTypes ReferenceTypes;
+    LVScopes ReferenceScopes;
+    getParameters(References, &ReferenceTypes, &ReferenceScopes);
+    LVTypes TargetTypes;
+    LVScopes TargetScopes;
+    getParameters(Targets, &TargetTypes, &TargetScopes);
+    if (!LVType::equals(&ReferenceTypes, &TargetTypes) ||
+        !LVScope::equals(&ReferenceScopes, &TargetScopes))
+      return false;
+    return true;
+  }
+  return false;
+}
+
+// Return the types which are parameters.
+void LVType::getParameters(const LVTypes *Types, LVTypes *TypesParam,
+                           LVScopes *ScopesParam) {
+  if (!Types)
+    return;
+
+  // During a compare task, the template parameters are expanded to
+  // point to their real types, to avoid compare conflicts.
+  for (LVType *Type : *Types) {
+    if (!Type->getIsTemplateParam())
+      continue;
+    if (options().getAttributeArgument()) {
+      LVScope *Scope = nullptr;
+      if (Type->getIsKindType())
+        Type = Type->getTypeAsType();
+      else {
+        if (Type->getIsKindScope()) {
+          Scope = Type->getTypeAsScope();
+          Type = nullptr;
+        }
+      }
+      Type ? TypesParam->push_back(Type) : ScopesParam->push_back(Scope);
+    } else
+      TypesParam->push_back(Type);
+  }
+}
+
+bool LVType::equals(const LVType *Type) const {
+  return LVElement::equals(Type);
+}
+
+bool LVType::equals(const LVTypes *References, const LVTypes *Targets) {
+  if (!References && !Targets)
+    return true;
+  if (References && Targets && References->size() == Targets->size()) {
+    for (const LVType *Reference : *References)
+      if (!Reference->findIn(Targets))
+        return false;
+    return true;
+  }
+  return false;
+}
+
+void LVType::report(LVComparePass Pass) {
+  getComparator().printItem(this, Pass);
+}
+
 void LVType::print(raw_ostream &OS, bool Full) const {
   if (getIncludeInPrint() &&
       (getIsReference() || getReader().doPrintType(this))) {
@@ -229,6 +348,10 @@ void LVTypeDefinition::resolveExtra() {
     Aggregate->setName(getName());
 }
 
+bool LVTypeDefinition::equals(const LVType *Type) const {
+  return LVType::equals(Type);
+}
+
 void LVTypeDefinition::printExtra(raw_ostream &OS, bool Full) const {
   OS << formattedKind(kind()) << " " << formattedName(getName()) << " -> "
      << typeOffsetAsString()
@@ -238,6 +361,10 @@ void LVTypeDefinition::printExtra(raw_ostream &OS, bool Full) const {
 //===----------------------------------------------------------------------===//
 // DWARF enumerator (DW_TAG_enumerator).
 //===----------------------------------------------------------------------===//
+bool LVTypeEnumerator::equals(const LVType *Type) const {
+  return LVType::equals(Type);
+}
+
 void LVTypeEnumerator::printExtra(raw_ostream &OS, bool Full) const {
   OS << formattedKind(kind()) << " '" << getName()
      << "' = " << formattedName(getValue()) << "\n";
@@ -246,6 +373,10 @@ void LVTypeEnumerator::printExtra(raw_ostream &OS, bool Full) const {
 //===----------------------------------------------------------------------===//
 // DWARF import (DW_TAG_imported_module / DW_TAG_imported_declaration).
 //===----------------------------------------------------------------------===//
+bool LVTypeImport::equals(const LVType *Type) const {
+  return LVType::equals(Type);
+}
+
 void LVTypeImport::printExtra(raw_ostream &OS, bool Full) const {
   std::string Attributes =
       formatAttributes(virtualityString(), accessibilityString());
@@ -316,6 +447,21 @@ void LVTypeParam::encodeTemplateArgument(std::string &Name) const {
     Name.append(getValue());
 }
 
+bool LVTypeParam::equals(const LVType *Type) const {
+  if (!LVType::equals(Type))
+    return false;
+
+  // Checks the kind of template argument.
+  if (getIsTemplateTypeParam() && Type->getIsTemplateTypeParam())
+    return getType()->equals(Type->getType());
+
+  if ((getIsTemplateValueParam() && Type->getIsTemplateValueParam()) ||
+      (getIsTemplateTemplateParam() && Type->getIsTemplateTemplateParam()))
+    return getValueIndex() == Type->getValueIndex();
+
+  return false;
+}
+
 void LVTypeParam::printExtra(raw_ostream &OS, bool Full) const {
   OS << formattedKind(kind()) << " " << formattedName(getName()) << " -> "
      << typeOffsetAsString();
@@ -363,6 +509,13 @@ void LVTypeSubrange::resolveExtra() {
         << "[" << getLowerBound() << ".." << getUpperBound() << "]";
 
   setName(String);
+}
+
+bool LVTypeSubrange::equals(const LVType *Type) const {
+  if (!LVType::equals(Type))
+    return false;
+
+  return getTypeName() == Type->getTypeName() && getName() == Type->getName();
 }
 
 void LVTypeSubrange::printExtra(raw_ostream &OS, bool Full) const {

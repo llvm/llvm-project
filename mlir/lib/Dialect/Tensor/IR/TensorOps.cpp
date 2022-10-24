@@ -17,6 +17,7 @@
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -52,6 +53,59 @@ SmallVector<OpFoldResult> tensor::getMixedSizes(OpBuilder &builder,
     }
   }
   return result;
+}
+
+FailureOr<Value> tensor::getOrCreateDestination(OpBuilder &b, Location loc,
+                                                OpResult opResult) {
+  auto tensorType = opResult.getType().dyn_cast<TensorType>();
+  assert(tensorType && "expected tensor type");
+
+  // If the op has a destination, it implements DestinationStyleOpInterface and
+  // we can query the destination operand from that interface.
+  auto destOp = opResult.getDefiningOp<DestinationStyleOpInterface>();
+  if (destOp)
+    return destOp.getTiedOpOperand(opResult)->get();
+
+  // Otherwise, create a new destination tensor with the same shape.
+  OpBuilder::InsertionGuard g(b);
+  b.setInsertionPoint(opResult.getDefiningOp());
+
+  // Compute sizes.
+  SmallVector<OpFoldResult> mixedSizes;
+  if (!tensorType.hasStaticShape()) {
+    // Dynamic shape: Query ReifyRankedShapedTypeOpInterface.
+    ReifiedRankedShapedTypeDims reifiedShapes;
+    ReifyRankedShapedTypeOpInterface reifyShapedTypeInterface =
+        dyn_cast<ReifyRankedShapedTypeOpInterface>(opResult.getDefiningOp());
+    if (!reifyShapedTypeInterface)
+      return failure();
+    if (failed(reifyShapedTypeInterface.reifyResultShapes(b, reifiedShapes)))
+      return failure();
+    mixedSizes = getAsOpFoldResult(reifiedShapes[opResult.getResultNumber()]);
+  } else {
+    // Static shape: Take static sizes directly.
+    for (int64_t sz : tensorType.getShape())
+      mixedSizes.push_back(b.getIndexAttr(sz));
+  }
+
+  // Create empty tensor.
+  Value emptyTensor =
+      b.create<tensor::EmptyOp>(loc, mixedSizes, tensorType.getElementType());
+  return emptyTensor;
+}
+
+LogicalResult tensor::getOrCreateDestinations(OpBuilder &b, Location loc,
+                                              Operation *op,
+                                              SmallVector<Value> &result) {
+  for (OpResult opResult : op->getResults()) {
+    if (opResult.getType().isa<TensorType>()) {
+      FailureOr<Value> destination = getOrCreateDestination(b, loc, opResult);
+      if (failed(destination))
+        return failure();
+      result.push_back(*destination);
+    }
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

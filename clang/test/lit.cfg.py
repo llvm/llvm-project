@@ -177,7 +177,7 @@ if re.match(r'.*-(windows-msvc)$', config.target_triple):
     config.available_features.add('ms-sdk')
 
 # [PR8833] LLP64-incompatible tests
-if not re.match(r'^x86_64.*-(windows-msvc|windows-gnu)$', config.target_triple):
+if not re.match(r'^(aarch64|x86_64).*-(windows-msvc|windows-gnu)$', config.target_triple):
     config.available_features.add('LP64')
 
 # Tests that are specific to the Apple Silicon macOS.

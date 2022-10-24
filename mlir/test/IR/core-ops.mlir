@@ -4,7 +4,7 @@
 // Verify the generic form can be parsed.
 // RUN: mlir-opt -allow-unregistered-dialect -mlir-print-op-generic %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
 
-// CHECK: #map0 = affine_map<(d0) -> (d0 + 1)>
+// CHECK: #map = affine_map<(d0) -> (d0 + 1)>
 
 // CHECK: #map1 = affine_map<()[s0] -> (s0 + 1)>
 
@@ -161,7 +161,7 @@ func.func @affine_apply() {
   %i = "arith.constant"() {value = 0: index} : () -> index
   %j = "arith.constant"() {value = 1: index} : () -> index
 
-  // CHECK: affine.apply #map0(%c0)
+  // CHECK: affine.apply #map(%c0)
   %a = "affine.apply" (%i) { map = affine_map<(d0) -> (d0 + 1)> } :
     (index) -> (index)
 

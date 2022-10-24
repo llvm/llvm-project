@@ -50,7 +50,7 @@ func.func @loop_with_load_and_store(%a1: !arr_d1, %a2: !arr_d1, %a3: !arr_d1) {
 // CHECK:    %[[VAL_3:.*]] = arith.constant 1 : index
 // CHECK:    %[[VAL_4:.*]] = arith.constant 100 : index
 // CHECK:    %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
-// CHECK:    %[[VAL_6:.*]] = affine.apply #map0(){{\[}}%[[VAL_3]], %[[VAL_4]]]
+// CHECK:    %[[VAL_6:.*]] = affine.apply #map(){{\[}}%[[VAL_3]], %[[VAL_4]]]
 // CHECK:    %[[VAL_7:.*]] = fir.alloca !fir.array<?xf32>, %[[VAL_6]]
 // CHECK:    %[[VAL_8:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
 // CHECK:    %[[VAL_9:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
@@ -114,15 +114,15 @@ func.func @loop_with_if(%a: !arr_d1, %v: f32) {
 // CHECK:   %[[VAL_5:.*]] = arith.constant 100 : index
 // CHECK:   %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 // CHECK:   %[[VAL_7:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<?xf32>>) -> memref<?xf32>
-// CHECK:   affine.for %[[VAL_8:.*]] = %[[VAL_3]] to #map0(){{\[}}%[[VAL_5]]] {
+// CHECK:   affine.for %[[VAL_8:.*]] = %[[VAL_3]] to #map(){{\[}}%[[VAL_5]]] {
 // CHECK:     %[[VAL_9:.*]] = affine.apply #map1(%[[VAL_8]]){{\[}}%[[VAL_3]], %[[VAL_5]], %[[VAL_3]]]
 // CHECK:     affine.store %[[VAL_1]], %[[VAL_7]]{{\[}}%[[VAL_9]]] : memref<?xf32>
 // CHECK:   }
-// CHECK:   affine.for %[[VAL_10:.*]] = %[[VAL_3]] to #map0(){{\[}}%[[VAL_5]]] {
+// CHECK:   affine.for %[[VAL_10:.*]] = %[[VAL_3]] to #map(){{\[}}%[[VAL_5]]] {
 // CHECK:     %[[VAL_11:.*]] = affine.apply #map1(%[[VAL_10]]){{\[}}%[[VAL_3]], %[[VAL_5]], %[[VAL_3]]]
 // CHECK:     affine.store %[[VAL_1]], %[[VAL_7]]{{\[}}%[[VAL_11]]] : memref<?xf32>
 // CHECK:   }
-// CHECK:   affine.for %[[VAL_12:.*]] = %[[VAL_3]] to #map0(){{\[}}%[[VAL_5]]] {
+// CHECK:   affine.for %[[VAL_12:.*]] = %[[VAL_3]] to #map(){{\[}}%[[VAL_5]]] {
 // CHECK:     %[[VAL_13:.*]] = arith.subi %[[VAL_12]], %[[VAL_4]] : index
 // CHECK:     affine.if #set(%[[VAL_12]]) {
 // CHECK:       %[[VAL_14:.*]] = affine.apply #map1(%[[VAL_12]]){{\[}}%[[VAL_3]], %[[VAL_5]], %[[VAL_3]]]
