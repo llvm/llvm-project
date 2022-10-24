@@ -568,17 +568,14 @@ DependentTemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
   setTemplateNameLoc(Loc);
   setLAngleLoc(Loc);
   setRAngleLoc(Loc);
-  TemplateSpecializationTypeLoc::initializeArgLocs(Context, getNumArgs(),
-                                                   getTypePtr()->getArgs(),
-                                                   getArgInfos(), Loc);
+  TemplateSpecializationTypeLoc::initializeArgLocs(
+      Context, getTypePtr()->template_arguments(), getArgInfos(), Loc);
 }
 
-void TemplateSpecializationTypeLoc::initializeArgLocs(ASTContext &Context,
-                                                      unsigned NumArgs,
-                                                  const TemplateArgument *Args,
-                                              TemplateArgumentLocInfo *ArgInfos,
-                                                      SourceLocation Loc) {
-  for (unsigned i = 0, e = NumArgs; i != e; ++i) {
+void TemplateSpecializationTypeLoc::initializeArgLocs(
+    ASTContext &Context, ArrayRef<TemplateArgument> Args,
+    TemplateArgumentLocInfo *ArgInfos, SourceLocation Loc) {
+  for (unsigned i = 0, e = Args.size(); i != e; ++i) {
     switch (Args[i].getKind()) {
     case TemplateArgument::Null:
       llvm_unreachable("Impossible TemplateArgument");
@@ -635,9 +632,8 @@ void AutoTypeLoc::initializeLocal(ASTContext &Context, SourceLocation Loc) {
   setRAngleLoc(Loc);
   setLAngleLoc(Loc);
   setRParenLoc(Loc);
-  TemplateSpecializationTypeLoc::initializeArgLocs(Context, getNumArgs(),
-                                                   getTypePtr()->getArgs(),
-                                                   getArgInfos(), Loc);
+  TemplateSpecializationTypeLoc::initializeArgLocs(
+      Context, getTypePtr()->getTypeConstraintArguments(), getArgInfos(), Loc);
   setNameLoc(Loc);
 }
 
