@@ -734,6 +734,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::FMAXNUM,
                        ISD::FMINNUM_IEEE,
                        ISD::FMAXNUM_IEEE,
+                       ISD::FMINIMUM,
+                       ISD::FMAXIMUM,
                        ISD::FMA,
                        ISD::SMIN,
                        ISD::SMAX,
@@ -10155,7 +10157,9 @@ bool SITargetLowering::isCanonicalized(SelectionDAG &DAG, SDValue Op,
   case AMDGPUISD::CLAMP:
   case AMDGPUISD::FMED3:
   case AMDGPUISD::FMAX3:
-  case AMDGPUISD::FMIN3: {
+  case AMDGPUISD::FMIN3:
+  case AMDGPUISD::FMAXIMUM3:
+  case AMDGPUISD::FMINIMUM3: {
     // FIXME: Shouldn't treat the generic operations different based these.
     // However, we aren't really required to flush the result from
     // minnum/maxnum..
@@ -10478,6 +10482,8 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
   case ISD::FMAXNUM:
   case ISD::FMAXNUM_IEEE:
     return AMDGPUISD::FMAX3;
+  case ISD::FMAXIMUM:
+    return AMDGPUISD::FMAXIMUM3;
   case ISD::SMAX:
     return AMDGPUISD::SMAX3;
   case ISD::UMAX:
@@ -10485,6 +10491,8 @@ static unsigned minMaxOpcToMin3Max3Opc(unsigned Opc) {
   case ISD::FMINNUM:
   case ISD::FMINNUM_IEEE:
     return AMDGPUISD::FMIN3;
+  case ISD::FMINIMUM:
+    return AMDGPUISD::FMINIMUM3;
   case ISD::SMIN:
     return AMDGPUISD::SMIN3;
   case ISD::UMIN:
@@ -11614,6 +11622,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FMINNUM:
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINNUM_IEEE:
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUM:
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::UMAX:

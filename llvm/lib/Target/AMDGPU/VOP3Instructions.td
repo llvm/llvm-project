@@ -220,6 +220,11 @@ let mayRaiseFPException = 0 in {
   defm V_MED3_F32 : VOP3Inst <"v_med3_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, AMDGPUfmed3>;
 } // End mayRaiseFPException = 0
 
+let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
+  defm V_MINIMUM3_F32 : VOP3Inst <"v_minimum3_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, AMDGPUfminimum3>;
+  defm V_MAXIMUM3_F32 : VOP3Inst <"v_maximum3_f32", VOP3_Profile<VOP_F32_F32_F32_F32>, AMDGPUfmaximum3>;
+} // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
+
 let isCommutable = 1 in {
   defm V_SAD_U8 : VOP3Inst <"v_sad_u8", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
   defm V_SAD_HI_U8 : VOP3Inst <"v_sad_hi_u8", VOP3_Profile<VOP_I32_I32_I32_I32, VOP3_CLAMP>>;
@@ -548,6 +553,11 @@ defm V_MAX3_F16 : VOP3Inst <"v_max3_f16", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3
 defm V_MAX3_I16 : VOP3Inst <"v_max3_i16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_OPSEL>, AMDGPUsmax3>;
 defm V_MAX3_U16 : VOP3Inst <"v_max3_u16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_OPSEL>, AMDGPUumax3>;
 
+let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
+  defm V_MINIMUM3_F16 : VOP3Inst <"v_minimum3_f16", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, AMDGPUfminimum3>;
+  defm V_MAXIMUM3_F16 : VOP3Inst <"v_maximum3_f16", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, AMDGPUfmaximum3>;
+} // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
+
 defm V_ADD_I16 : VOP3Inst <"v_add_i16", VOP3_Profile<VOP_I16_I16_I16, VOP3_OPSEL>>;
 defm V_SUB_I16 : VOP3Inst <"v_sub_i16", VOP3_Profile<VOP_I16_I16_I16, VOP3_OPSEL>>;
 
@@ -866,6 +876,10 @@ defm V_MIN3_NUM_F32       : VOP3_Realtriple_with_name_gfx12<0x229, "V_MIN3_F32",
 defm V_MAX3_NUM_F32       : VOP3_Realtriple_with_name_gfx12<0x22a, "V_MAX3_F32", "v_max3_num_f32">;
 defm V_MIN3_NUM_F16       : VOP3_Realtriple_with_name_gfx12<0x22b, "V_MIN3_F16", "v_min3_num_f16">;
 defm V_MAX3_NUM_F16       : VOP3_Realtriple_with_name_gfx12<0x22c, "V_MAX3_F16", "v_max3_num_f16">;
+defm V_MINIMUM3_F32       : VOP3Only_Realtriple_gfx12<0x22d>;
+defm V_MAXIMUM3_F32       : VOP3Only_Realtriple_gfx12<0x22e>;
+defm V_MINIMUM3_F16       : VOP3Only_Realtriple_t16_gfx12<0x22f>;
+defm V_MAXIMUM3_F16       : VOP3Only_Realtriple_t16_gfx12<0x230>;
 defm V_MED3_NUM_F32       : VOP3_Realtriple_with_name_gfx12<0x231, "V_MED3_F32", "v_med3_num_f32">;
 defm V_MED3_NUM_F16       : VOP3_Realtriple_with_name_gfx12<0x232, "V_MED3_F16", "v_med3_num_f16">;
 defm V_MINMAX_NUM_F32     : VOP3_Realtriple_with_name_gfx12<0x268, "V_MINMAX_F32", "v_minmax_num_f32">;
