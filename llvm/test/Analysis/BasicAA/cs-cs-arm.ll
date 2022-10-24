@@ -1,5 +1,8 @@
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
-; REQUIRES: arm
+; REQUIRES: arm-registered-target
+; This hasn't been run in a long time and it no longer matches reality.
+; Filed issue #58738.
+; XFAIL: *
 
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:32:64-v128:32:128-a0:0:32-n32"
 target triple = "arm-apple-ios"
