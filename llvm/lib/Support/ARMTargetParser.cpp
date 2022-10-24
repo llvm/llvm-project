@@ -487,7 +487,7 @@ ARM::ArchKind ARM::parseCPUArch(StringRef CPU) {
 }
 
 void ARM::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
-  for (const CpuNames<ArchKind> &Arch : CPUNames) {
+  for (const auto &Arch : CPUNames) {
     if (Arch.ArchID != ArchKind::INVALID)
       Values.push_back(Arch.getName());
   }
