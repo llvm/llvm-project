@@ -8,6 +8,7 @@ add_llvm_unittest(DebugInfoLogicalViewTests
   LocationRangesTest.cpp
   LogicalElementsTest.cpp
   StringPoolTest.cpp
+  WarningInternalTest.cpp
   )
 
 target_link_libraries(DebugInfoLogicalViewTests PRIVATE LLVMTestingSupport)

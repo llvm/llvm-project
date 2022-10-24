@@ -336,7 +336,6 @@ public:
   virtual void resolveReferences() {}
   void resolveParents();
 
-public:
   static LVElementDispatch &getDispatch() { return Dispatch; }
 };
 

@@ -559,6 +559,12 @@ void LVScope::encodeTemplateArguments(std::string &Name,
 }
 
 bool LVScope::resolvePrinting() const {
+  // The warnings collected during the scope creation as per compile unit.
+  // If there is a request for printing warnings, always print its associate
+  // Compile Unit.
+  if (options().getPrintWarnings() && (getIsRoot() || getIsCompileUnit()))
+    return true;
+
   // In selection mode, always print the root scope regardless of the
   // number of matched elements. If no matches, the root by itself will
   // indicate no matches.
@@ -650,6 +656,10 @@ Error LVScope::doPrint(bool Split, bool Match, bool Print, raw_ostream &OS,
                   Line->doPrint(Split, Match, Print, *StreamSplit, Full))
             return Err;
         }
+
+      // Print the warnings.
+      if (options().getPrintWarnings())
+        printWarnings(*StreamSplit, Full);
     }
   }
 
@@ -664,6 +674,10 @@ Error LVScope::doPrint(bool Split, bool Match, bool Print, raw_ostream &OS,
       getReaderSplitContext().close();
       StreamSplit = &getReader().outputStream();
     }
+  }
+
+  if (getIsRoot() && options().getPrintWarnings()) {
+    getReader().printRecords(*StreamSplit);
   }
 
   return Error::success();
@@ -1001,15 +1015,25 @@ void LVScopeCompileUnit::processRangeLocationCoverage(
   if (options().getAttributeRange()) {
     // Traverse the scopes to get scopes that have invalid ranges.
     LVLocations Locations;
-    bool RecordInvalid = false;
+    bool RecordInvalid = options().getWarningRanges();
     getRanges(Locations, ValidLocation, RecordInvalid);
+
+    // Validate ranges associated with scopes.
+    if (RecordInvalid)
+      for (LVLocation *Location : Locations)
+        addInvalidRange(Location);
   }
 
   if (options().getAttributeLocation()) {
     // Traverse the scopes to get locations that have invalid ranges.
     LVLocations Locations;
-    bool RecordInvalid = false;
+    bool RecordInvalid = options().getWarningLocations();
     getLocations(Locations, ValidLocation, RecordInvalid);
+
+    // Validate ranges associated with locations.
+    if (RecordInvalid)
+      for (LVLocation *Location : Locations)
+        addInvalidLocation(Location);
   }
 }
 
@@ -1019,10 +1043,12 @@ LVLine *LVScopeCompileUnit::lineLowerBound(LVAddress Address) const {
 }
 
 LVLine *LVScopeCompileUnit::lineUpperBound(LVAddress Address) const {
+  if (AddressToLine.empty())
+    return nullptr;
   LVAddressToLine::const_iterator Iter = AddressToLine.upper_bound(Address);
   if (Iter != AddressToLine.begin())
     Iter = std::prev(Iter);
-  return (Iter != AddressToLine.end()) ? Iter->second : nullptr;
+  return Iter->second;
 }
 
 StringRef LVScopeCompileUnit::getFilename(size_t Index) const {
@@ -1069,6 +1095,46 @@ void LVScopeCompileUnit::addedElement(LVScope *Scope) { increment(Scope); }
 void LVScopeCompileUnit::addedElement(LVSymbol *Symbol) { increment(Symbol); }
 void LVScopeCompileUnit::addedElement(LVType *Type) { increment(Type); }
 
+// Record unsuported DWARF tags.
+void LVScopeCompileUnit::addDebugTag(dwarf::Tag Target, LVOffset Offset) {
+  addItem<LVTagOffsetsMap, LVOffsetList, dwarf::Tag, LVOffset>(&DebugTags,
+                                                               Target, Offset);
+}
+
+// Record elements with invalid offsets.
+void LVScopeCompileUnit::addInvalidOffset(LVOffset Offset, LVElement *Element) {
+  if (WarningOffsets.find(Offset) == WarningOffsets.end())
+    WarningOffsets.emplace(Offset, Element);
+}
+
+// Record symbols with invalid coverage values.
+void LVScopeCompileUnit::addInvalidCoverage(LVSymbol *Symbol) {
+  LVOffset Offset = Symbol->getOffset();
+  if (InvalidCoverages.find(Offset) == InvalidCoverages.end())
+    InvalidCoverages.emplace(Offset, Symbol);
+}
+
+// Record symbols with invalid locations.
+void LVScopeCompileUnit::addInvalidLocation(LVLocation *Location) {
+  addInvalidLocationOrRange(Location, Location->getParentSymbol(),
+                            &InvalidLocations);
+}
+
+// Record scopes with invalid ranges.
+void LVScopeCompileUnit::addInvalidRange(LVLocation *Location) {
+  addInvalidLocationOrRange(Location, Location->getParentScope(),
+                            &InvalidRanges);
+}
+
+// Record line zero.
+void LVScopeCompileUnit::addLineZero(LVLine *Line) {
+  LVScope *Scope = Line->getParentScope();
+  LVOffset Offset = Scope->getOffset();
+  addInvalidOffset(Offset, Scope);
+  addItem<LVOffsetLinesMap, LVLines, LVOffset, LVLine *>(&LinesZero, Offset,
+                                                         Line);
+}
+
 void LVScopeCompileUnit::printLocalNames(raw_ostream &OS, bool Full) const {
   if (!options().getPrintFormatting())
     return;
@@ -1102,6 +1168,86 @@ void LVScopeCompileUnit::printLocalNames(raw_ostream &OS, bool Full) const {
     PrintNames(Option::Directory);
   if (options().getAttributeFiles())
     PrintNames(Option::File);
+}
+
+void LVScopeCompileUnit::printWarnings(raw_ostream &OS, bool Full) const {
+  auto PrintHeader = [&](const char *Header) { OS << "\n" << Header << ":\n"; };
+  auto PrintFooter = [&](auto &Set) {
+    if (Set.empty())
+      OS << "None\n";
+  };
+  auto PrintOffset = [&](unsigned &Count, LVOffset Offset) {
+    if (Count == 5) {
+      Count = 0;
+      OS << "\n";
+    }
+    ++Count;
+    OS << hexSquareString(Offset) << " ";
+  };
+  auto PrintElement = [&](const LVOffsetElementMap &Map, LVOffset Offset) {
+    LVOffsetElementMap::const_iterator Iter = Map.find(Offset);
+    LVElement *Element = Iter != Map.end() ? Iter->second : nullptr;
+    OS << "[" << hexString(Offset) << "]";
+    if (Element)
+      OS << " " << formattedKind(Element->kind()) << " "
+         << formattedName(Element->getName());
+    OS << "\n";
+  };
+  auto PrintInvalidLocations = [&](const LVOffsetLocationsMap &Map,
+                                   const char *Header) {
+    PrintHeader(Header);
+    for (LVOffsetLocationsMap::const_reference Entry : Map) {
+      PrintElement(WarningOffsets, Entry.first);
+      for (const LVLocation *Location : *Entry.second)
+        OS << hexSquareString(Location->getOffset()) << " "
+           << Location->getIntervalInfo() << "\n";
+    }
+    PrintFooter(Map);
+  };
+
+  if (options().getInternalTag() && getReader().isBinaryTypeELF()) {
+    PrintHeader("Unsupported DWARF Tags");
+    for (LVTagOffsetsMap::const_reference Entry : DebugTags) {
+      OS << format("\n0x%02x", (unsigned)Entry.first) << ", "
+         << dwarf::TagString(Entry.first) << "\n";
+      unsigned Count = 0;
+      for (const LVOffset &Offset : *Entry.second)
+        PrintOffset(Count, Offset);
+      OS << "\n";
+    }
+    PrintFooter(DebugTags);
+  }
+
+  if (options().getWarningCoverages()) {
+    PrintHeader("Symbols Invalid Coverages");
+    for (LVOffsetSymbolMap::const_reference Entry : InvalidCoverages) {
+      // Symbol basic information.
+      LVSymbol *Symbol = Entry.second;
+      OS << hexSquareString(Entry.first) << " {Coverage} "
+         << format("%.2f%%", Symbol->getCoveragePercentage()) << " "
+         << formattedKind(Symbol->kind()) << " "
+         << formattedName(Symbol->getName()) << "\n";
+    }
+    PrintFooter(InvalidCoverages);
+  }
+
+  if (options().getWarningLines()) {
+    PrintHeader("Lines Zero References");
+    for (LVOffsetLinesMap::const_reference Entry : LinesZero) {
+      PrintElement(WarningOffsets, Entry.first);
+      unsigned Count = 0;
+      for (const LVLine *Line : *Entry.second)
+        PrintOffset(Count, Line->getOffset());
+      OS << "\n";
+    }
+    PrintFooter(LinesZero);
+  }
+
+  if (options().getWarningLocations())
+    PrintInvalidLocations(InvalidLocations, "Invalid Location Ranges");
+
+  if (options().getWarningRanges())
+    PrintInvalidLocations(InvalidRanges, "Invalid Code Ranges");
 }
 
 void LVScopeCompileUnit::printTotals(raw_ostream &OS) const {

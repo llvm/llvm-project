@@ -21,6 +21,10 @@ using namespace llvm::logicalview;
 
 #define DEBUG_TYPE "Object"
 
+#ifndef NDEBUG
+uint64_t LVObject::GID = 0;
+#endif
+
 StringRef llvm::logicalview::typeNone() { return StringRef(); }
 StringRef llvm::logicalview::typeVoid() { return "void"; }
 StringRef llvm::logicalview::typeInt() { return "int"; }
@@ -60,6 +64,9 @@ std::string LVObject::lineAsString(uint32_t LineNumber, LVHalf Discriminator,
       Stream << std::setw(5) << LineNumber << "   ";
   } else
     Stream << noLineAsString(ShowZero);
+
+  if (options().getInternalNone())
+    Stream.str(noLineAsString(ShowZero));
 
   return Stream.str();
 }
@@ -118,6 +125,10 @@ void LVObject::printAttributes(raw_ostream &OS, bool Full, StringRef Name,
 }
 
 void LVObject::printAttributes(raw_ostream &OS, bool Full) const {
+#ifndef NDEBUG
+  if (options().getInternalID())
+    OS << hexSquareString(getID());
+#endif
   if (options().getAttributeOffset())
     OS << hexSquareString(getOffset());
   if (options().getAttributeLevel()) {
