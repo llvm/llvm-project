@@ -28,6 +28,9 @@
  *
  * WG14 DR312: yes
  * Meaning of "known constant size"
+ *
+ * WG14 DR333: yes
+ * Missing Predefined Macro Name
  */
 
 
@@ -189,10 +192,39 @@ _Static_assert(!DR321, "__STDC_MB_MIGHT_NEQ_WC__ but all basic source characters
 _Static_assert(DR321, "!__STDC_MB_MIGHT_NEQ_WC__ but some character differs");
 #endif
 
-/* WG14 DR328: yes
+/* WG14 DR328: partial
  * String literals in compound literal initialization
+ *
+ * DR328 is implemented properly in terms of allowing string literals, but is
+ * not implemented. See DR339 (marked as a duplicate of this one) for details.
  */
 const char *dr328_v = (const char *){"this is a string literal"}; /* c89only-warning {{compound literals are a C99-specific feature}} */
 void dr328(void) {
   const char *val = (const char *){"also a string literal"}; /* c89only-warning {{compound literals are a C99-specific feature}} */
 }
+
+/* WG14 DR335: yes
+ * _Bool bit-fields
+ *
+ * See dr335.c also, which tests the runtime behavior of the part of the DR
+ * which will compile.
+ */
+void dr335(void) {
+  struct bits_ {
+    _Bool bbf3 : 3; /* expected-error {{width of bit-field 'bbf3' (3 bits) exceeds the width of its type (1 bit)}}
+                       c89only-warning {{'_Bool' is a C99 extension}}
+                     */
+  };
+}
+
+/* WG14 DR339: partial
+ * Variably modified compound literals
+ *
+ * This DR is marked as a duplicate of DR328, see that DR for further
+ * details.
+ *
+ * FIXME: we should be diagnosing this compound literal as creating a variably-
+ * modified type at file scope, as we would do for a file scope variable.
+ */
+extern int dr339_v;
+void *dr339 = &(int (*)[dr339_v]){ 0 };
