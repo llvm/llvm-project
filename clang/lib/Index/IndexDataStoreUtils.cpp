@@ -133,6 +133,8 @@ SymbolKind index::getSymbolKind(indexstore_symbol_kind_t K) {
     return SymbolKind::Using;
   case INDEXSTORE_SYMBOL_KIND_COMMENTTAG:
     return SymbolKind::CommentTag;
+  case INDEXSTORE_SYMBOL_KIND_CONCEPT:
+    return SymbolKind::Concept;
   }
 }
 
@@ -359,6 +361,8 @@ indexstore_symbol_kind_t index::getIndexStoreKind(SymbolKind K) {
     return INDEXSTORE_SYMBOL_KIND_USING;
   case SymbolKind::CommentTag:
     return INDEXSTORE_SYMBOL_KIND_COMMENTTAG;
+  case SymbolKind::Concept:
+    return INDEXSTORE_SYMBOL_KIND_CONCEPT;
   }
   llvm_unreachable("unexpected symbol kind");
 }
