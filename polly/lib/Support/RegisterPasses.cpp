@@ -74,7 +74,6 @@ static cl::opt<bool> PollyDetectOnly(
 
 enum PassPositionChoice {
   POSITION_EARLY,
-  POSITION_AFTER_LOOPOPT,
   POSITION_BEFORE_VECTORIZER
 };
 
@@ -84,8 +83,6 @@ static cl::opt<PassPositionChoice> PassPosition(
     "polly-position", cl::desc("Where to run polly in the pass pipeline"),
     cl::values(
         clEnumValN(POSITION_EARLY, "early", "Before everything"),
-        clEnumValN(POSITION_AFTER_LOOPOPT, "after-loopopt",
-                   "After the loop optimizer (but within the inline cycle)"),
         clEnumValN(POSITION_BEFORE_VECTORIZER, "before-vectorizer",
                    "Right before the vectorizer")),
     cl::Hidden, cl::init(POSITION_BEFORE_VECTORIZER), cl::cat(PollyCategory));
@@ -104,19 +101,6 @@ static cl::opt<CodeGenChoice> CodeGeneration(
                clEnumValN(CODEGEN_AST, "ast", "Only AST generation"),
                clEnumValN(CODEGEN_NONE, "none", "No code generation")),
     cl::Hidden, cl::init(CODEGEN_FULL), cl::cat(PollyCategory));
-
-enum TargetChoice { TARGET_CPU, TARGET_GPU, TARGET_HYBRID };
-static cl::opt<TargetChoice>
-    Target("polly-target", cl::desc("The hardware to target"),
-           cl::values(clEnumValN(TARGET_CPU, "cpu", "generate CPU code")
-#ifdef GPU_CODEGEN
-                          ,
-                      clEnumValN(TARGET_GPU, "gpu", "generate GPU code"),
-                      clEnumValN(TARGET_HYBRID, "hybrid",
-                                 "generate GPU code (preferably) or CPU code")
-#endif
-                          ),
-           cl::init(TARGET_CPU), cl::cat(PollyCategory));
 
 VectorizerChoice PollyVectorizerChoice;
 
@@ -177,11 +161,6 @@ static cl::opt<bool>
     CFGPrinter("polly-view-cfg",
                cl::desc("Show the Polly CFG right after code generation"),
                cl::Hidden, cl::init(false), cl::cat(PollyCategory));
-
-static cl::opt<bool>
-    EnablePolyhedralInfo("polly-enable-polyhedralinfo",
-                         cl::desc("Enable polyhedral interface of Polly"),
-                         cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
 static cl::opt<bool>
     EnableForwardOpTree("polly-enable-optree",
@@ -289,6 +268,18 @@ void initializePollyPasses(llvm::PassRegistry &Registry) {
   initializePruneUnprofitableWrapperPassPass(Registry);
 }
 
+static bool shouldEnablePollyForOptimization() { return PollyEnabled; }
+
+static bool shouldEnablePollyForDiagnostic() {
+  // FIXME: PollyTrackFailures is user-controlled, should not be set
+  // programmatically.
+  if (PollyOnlyPrinter || PollyPrinter || PollyOnlyViewer || PollyViewer)
+    PollyTrackFailures = true;
+
+  return PollyOnlyPrinter || PollyPrinter || PollyOnlyViewer || PollyViewer ||
+         ExportJScop;
+}
+
 /// Register Polly passes such that they form a polyhedral optimizer.
 ///
 /// The individual Polly passes are registered in the pass manager such that
@@ -315,170 +306,6 @@ void initializePollyPasses(llvm::PassRegistry &Registry) {
 /// scheduling optimizer.
 ///
 /// Polly supports the isl internal code generator.
-static void registerPollyPasses(llvm::legacy::PassManagerBase &PM,
-                                bool EnableForOpt) {
-  if (DumpBefore)
-    PM.add(polly::createDumpModuleWrapperPass("-before", true));
-  for (auto &Filename : DumpBeforeFile)
-    PM.add(polly::createDumpModuleWrapperPass(Filename, false));
-
-  PM.add(polly::createCodePreparationPass());
-  PM.add(polly::createScopDetectionWrapperPassPass());
-
-  if (PollyDetectOnly)
-    return;
-
-  if (PollyViewer)
-    PM.add(polly::createDOTViewerWrapperPass());
-  if (PollyOnlyViewer)
-    PM.add(polly::createDOTOnlyViewerWrapperPass());
-  if (PollyPrinter)
-    PM.add(polly::createDOTPrinterWrapperPass());
-  if (PollyOnlyPrinter)
-    PM.add(polly::createDOTOnlyPrinterWrapperPass());
-  PM.add(polly::createScopInfoRegionPassPass());
-  if (EnablePolyhedralInfo)
-    PM.add(polly::createPolyhedralInfoPass());
-
-  if (EnableSimplify)
-    PM.add(polly::createSimplifyWrapperPass(0));
-  if (EnableForwardOpTree)
-    PM.add(polly::createForwardOpTreeWrapperPass());
-  if (EnableDeLICM)
-    PM.add(polly::createDeLICMWrapperPass());
-  if (EnableSimplify)
-    PM.add(polly::createSimplifyWrapperPass(1));
-
-  if (ImportJScop)
-    PM.add(polly::createJSONImporterPass());
-
-  if (DeadCodeElim)
-    PM.add(polly::createDeadCodeElimWrapperPass());
-
-  if (FullyIndexedStaticExpansion)
-    PM.add(polly::createMaximalStaticExpansionPass());
-
-  if (EnablePruneUnprofitable)
-    PM.add(polly::createPruneUnprofitableWrapperPass());
-
-#ifdef GPU_CODEGEN
-  if (Target == TARGET_HYBRID)
-    PM.add(
-        polly::createPPCGCodeGenerationPass(GPUArchChoice, GPURuntimeChoice));
-#endif
-  if (Target == TARGET_CPU || Target == TARGET_HYBRID)
-    switch (Optimizer) {
-    case OPTIMIZER_NONE:
-      break; /* Do nothing */
-
-    case OPTIMIZER_ISL:
-      PM.add(polly::createIslScheduleOptimizerWrapperPass());
-      break;
-    }
-
-  if (ExportJScop)
-    PM.add(polly::createJSONExporterPass());
-
-  if (!EnableForOpt)
-    return;
-
-  if (Target == TARGET_CPU || Target == TARGET_HYBRID)
-    switch (CodeGeneration) {
-    case CODEGEN_AST:
-      PM.add(polly::createIslAstInfoWrapperPassPass());
-      break;
-    case CODEGEN_FULL:
-      PM.add(polly::createCodeGenerationPass());
-      break;
-    case CODEGEN_NONE:
-      break;
-    }
-#ifdef GPU_CODEGEN
-  else {
-    PM.add(
-        polly::createPPCGCodeGenerationPass(GPUArchChoice, GPURuntimeChoice));
-    PM.add(polly::createManagedMemoryRewritePassPass());
-  }
-#endif
-
-#ifdef GPU_CODEGEN
-  if (Target == TARGET_HYBRID)
-    PM.add(polly::createManagedMemoryRewritePassPass(GPUArchChoice,
-                                                     GPURuntimeChoice));
-#endif
-
-  // FIXME: This dummy ModulePass keeps some programs from miscompiling,
-  // probably some not correctly preserved analyses. It acts as a barrier to
-  // force all analysis results to be recomputed.
-  PM.add(llvm::createBarrierNoopPass());
-
-  if (DumpAfter)
-    PM.add(polly::createDumpModuleWrapperPass("-after", true));
-  for (auto &Filename : DumpAfterFile)
-    PM.add(polly::createDumpModuleWrapperPass(Filename, false));
-
-  if (CFGPrinter)
-    PM.add(llvm::createCFGPrinterLegacyPassPass());
-}
-
-static bool shouldEnablePollyForOptimization() { return PollyEnabled; }
-
-static bool shouldEnablePollyForDiagnostic() {
-  // FIXME: PollyTrackFailures is user-controlled, should not be set
-  // programmatically.
-  if (PollyOnlyPrinter || PollyPrinter || PollyOnlyViewer || PollyViewer)
-    PollyTrackFailures = true;
-
-  return PollyOnlyPrinter || PollyPrinter || PollyOnlyViewer || PollyViewer ||
-         ExportJScop;
-}
-
-static void
-registerPollyEarlyAsPossiblePasses(const llvm::PassManagerBuilder &Builder,
-                                   llvm::legacy::PassManagerBase &PM) {
-  if (PassPosition != POSITION_EARLY)
-    return;
-
-  bool EnableForOpt = shouldEnablePollyForOptimization() &&
-                      Builder.OptLevel >= 1 && Builder.SizeLevel == 0;
-  if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
-    return;
-
-  registerCanonicalicationPasses(PM);
-  registerPollyPasses(PM, EnableForOpt);
-}
-
-static void
-registerPollyLoopOptimizerEndPasses(const llvm::PassManagerBuilder &Builder,
-                                    llvm::legacy::PassManagerBase &PM) {
-  if (PassPosition != POSITION_AFTER_LOOPOPT)
-    return;
-
-  bool EnableForOpt = shouldEnablePollyForOptimization() &&
-                      Builder.OptLevel >= 1 && Builder.SizeLevel == 0;
-  if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
-    return;
-
-  registerPollyPasses(PM, EnableForOpt);
-  if (EnableForOpt)
-    PM.add(createCodegenCleanupPass());
-}
-
-static void
-registerPollyScalarOptimizerLatePasses(const llvm::PassManagerBuilder &Builder,
-                                       llvm::legacy::PassManagerBase &PM) {
-  if (PassPosition != POSITION_BEFORE_VECTORIZER)
-    return;
-
-  bool EnableForOpt = shouldEnablePollyForOptimization() &&
-                      Builder.OptLevel >= 1 && Builder.SizeLevel == 0;
-  if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
-    return;
-
-  polly::registerPollyPasses(PM, EnableForOpt);
-  if (EnableForOpt)
-    PM.add(createCodegenCleanupPass());
-}
 
 /// Add the pass sequence required for Polly to the New Pass Manager.
 ///
@@ -513,10 +340,6 @@ static void buildCommonPollyPipeline(FunctionPassManager &PM,
     PM.addPass(ScopPrinter());
   if (PollyOnlyPrinter)
     PM.addPass(ScopOnlyPrinter());
-  if (EnablePolyhedralInfo)
-    llvm::report_fatal_error(
-        "Option -polly-enable-polyhedralinfo not supported with NPM", false);
-
   if (EnableSimplify)
     SPM.addPass(SimplifyPass(0));
   if (EnableForwardOpTree)
@@ -538,14 +361,12 @@ static void buildCommonPollyPipeline(FunctionPassManager &PM,
   if (EnablePruneUnprofitable)
     SPM.addPass(PruneUnprofitablePass());
 
-  if (Target == TARGET_CPU || Target == TARGET_HYBRID) {
-    switch (Optimizer) {
-    case OPTIMIZER_NONE:
-      break; /* Do nothing */
-    case OPTIMIZER_ISL:
-      SPM.addPass(IslScheduleOptimizerPass());
-      break;
-    }
+  switch (Optimizer) {
+  case OPTIMIZER_NONE:
+    break; /* Do nothing */
+  case OPTIMIZER_ISL:
+    SPM.addPass(IslScheduleOptimizerPass());
+    break;
   }
 
   if (ExportJScop)
@@ -554,32 +375,19 @@ static void buildCommonPollyPipeline(FunctionPassManager &PM,
   if (!EnableForOpt)
     return;
 
-  if (Target == TARGET_CPU || Target == TARGET_HYBRID) {
-    switch (CodeGeneration) {
-    case CODEGEN_AST:
-      SPM.addPass(
-          llvm::RequireAnalysisPass<IslAstAnalysis, Scop, ScopAnalysisManager,
-                                    ScopStandardAnalysisResults &,
-                                    SPMUpdater &>());
-      break;
-    case CODEGEN_FULL:
-      SPM.addPass(CodeGenerationPass());
-      break;
-    case CODEGEN_NONE:
-      break;
-    }
+  switch (CodeGeneration) {
+  case CODEGEN_AST:
+    SPM.addPass(
+        llvm::RequireAnalysisPass<IslAstAnalysis, Scop, ScopAnalysisManager,
+                                  ScopStandardAnalysisResults &,
+                                  SPMUpdater &>());
+    break;
+  case CODEGEN_FULL:
+    SPM.addPass(CodeGenerationPass());
+    break;
+  case CODEGEN_NONE:
+    break;
   }
-#ifdef GPU_CODEGEN
-  else
-    llvm::report_fatal_error("Option -polly-target=gpu not supported for NPM",
-                             false);
-#endif
-
-#ifdef GPU_CODEGEN
-  if (Target == TARGET_HYBRID)
-    llvm::report_fatal_error(
-        "Option -polly-target=hybrid not supported for NPM", false);
-#endif
 
   PM.addPass(createFunctionToScopPassAdaptor(std::move(SPM)));
   PM.addPass(PB.buildFunctionSimplificationPipeline(
@@ -643,55 +451,6 @@ static void buildLatePollyPipeline(FunctionPassManager &PM,
         "not supported with NPM",
         false);
 }
-
-/// Register Polly to be available as an optimizer
-///
-///
-/// We can currently run Polly at three different points int the pass manager.
-/// a) very early, b) after the canonicalizing loop transformations and c) right
-/// before the vectorizer.
-///
-/// The default is currently a), to register Polly such that it runs as early as
-/// possible. This has several implications:
-///
-///   1) We need to schedule more canonicalization passes
-///
-///   As nothing is run before Polly, it is necessary to run a set of preparing
-///   transformations before Polly to canonicalize the LLVM-IR and to allow
-///   Polly to detect and understand the code.
-///
-///   2) LICM and LoopIdiom pass have not yet been run
-///
-///   Loop invariant code motion as well as the loop idiom recognition pass make
-///   it more difficult for Polly to transform code. LICM may introduce
-///   additional data dependences that are hard to eliminate and the loop idiom
-///   recognition pass may introduce calls to memset that we currently do not
-///   understand. By running Polly early enough (meaning before these passes) we
-///   avoid difficulties that may be introduced by these passes.
-///
-///   3) We get the full -O3 optimization sequence after Polly
-///
-///   The LLVM-IR that is generated by Polly has been optimized on a high level,
-///   but it may be rather inefficient on the lower/scalar level. By scheduling
-///   Polly before all other passes, we have the full sequence of -O3
-///   optimizations behind us, such that inefficiencies on the low level can
-///   be optimized away.
-///
-/// We are currently evaluating the benefit or running Polly at position b) or
-/// c). b) is likely too early as it interacts with the inliner. c) is nice
-/// as everything is fully inlined and canonicalized, but we need to be able
-/// to handle LICMed code to make it useful.
-static llvm::RegisterStandardPasses RegisterPollyOptimizerEarly(
-    llvm::PassManagerBuilder::EP_ModuleOptimizerEarly,
-    registerPollyEarlyAsPossiblePasses);
-
-static llvm::RegisterStandardPasses
-    RegisterPollyOptimizerLoopEnd(llvm::PassManagerBuilder::EP_LoopOptimizerEnd,
-                                  registerPollyLoopOptimizerEndPasses);
-
-static llvm::RegisterStandardPasses RegisterPollyOptimizerScalarLate(
-    llvm::PassManagerBuilder::EP_VectorizerStart,
-    registerPollyScalarOptimizerLatePasses);
 
 static OwningScopAnalysisManagerFunctionProxy
 createScopAnalyses(FunctionAnalysisManager &FAM,
@@ -821,6 +580,32 @@ parseTopLevelPipeline(llvm::ModulePassManager &MPM,
   return true;
 }
 
+/// Register Polly to be available as an optimizer
+///
+///
+/// We can currently run Polly at two different points int the pass manager.
+/// a) very early, b) right before the vectorizer.
+///
+/// The default is currently a), to register Polly such that it runs as early as
+/// possible. This has several implications:
+///
+///   1) We need to schedule more canonicalization passes
+///
+///   As nothing is run before Polly, it is necessary to run a set of preparing
+///   transformations before Polly to canonicalize the LLVM-IR and to allow
+///   Polly to detect and understand the code.
+///
+///   2) We get the full -O3 optimization sequence after Polly
+///
+///   The LLVM-IR that is generated by Polly has been optimized on a high level,
+///   but it may be rather inefficient on the lower/scalar level. By scheduling
+///   Polly before all other passes, we have the full sequence of -O3
+///   optimizations behind us, such that inefficiencies on the low level can
+///   be optimized away.
+///
+/// We are currently evaluating the benefit or running Polly at b). b) is nice
+/// as everything is fully inlined and canonicalized, but we need to be able to
+/// handle LICMed code to make it useful.
 void registerPollyPasses(PassBuilder &PB) {
   PassInstrumentationCallbacks *PIC = PB.getPassInstrumentationCallbacks();
   PB.registerAnalysisRegistrationCallback([PIC](FunctionAnalysisManager &FAM) {
@@ -841,10 +626,6 @@ void registerPollyPasses(PassBuilder &PB) {
   switch (PassPosition) {
   case POSITION_EARLY:
     PB.registerPipelineStartEPCallback(buildEarlyPollyPipeline);
-    break;
-  case POSITION_AFTER_LOOPOPT:
-    llvm::report_fatal_error(
-        "Option -polly-position=after-loopopt not supported with NPM", false);
     break;
   case POSITION_BEFORE_VECTORIZER:
     PB.registerVectorizerStartEPCallback(buildLatePollyPipeline);
