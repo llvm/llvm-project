@@ -642,13 +642,15 @@ def trunc_ext_fold: GICombineRule <
   (apply [{ Helper.applyCombineTruncOfExt(*${root}, ${matchinfo}); }])
 >;
 
-// Fold trunc (shl x, K) -> shl (trunc x), K => K < VT.getScalarSizeInBits().
-def trunc_shl_matchinfo : GIDefMatchData<"std::pair<Register, Register>">;
-def trunc_shl: GICombineRule <
-  (defs root:$root, trunc_shl_matchinfo:$matchinfo),
+// Under certain conditions, transform:
+//  trunc (shl x, K)     -> shl (trunc x), K//
+//  trunc ([al]shr x, K) -> (trunc ([al]shr (trunc x), K))
+def trunc_shift_matchinfo : GIDefMatchData<"std::pair<MachineInstr*, LLT>">;
+def trunc_shift: GICombineRule <
+  (defs root:$root, trunc_shift_matchinfo:$matchinfo),
   (match (wip_match_opcode G_TRUNC):$root,
-         [{ return Helper.matchCombineTruncOfShl(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyCombineTruncOfShl(*${root}, ${matchinfo}); }])
+         [{ return Helper.matchCombineTruncOfShift(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyCombineTruncOfShift(*${root}, ${matchinfo}); }])
 >;
 
 // Transform (mul x, -1) -> (sub 0, x)
@@ -1076,7 +1078,7 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     known_bits_simplifications, ext_ext_fold,
     not_cmp_fold, opt_brcond_by_inverting_cond,
     unmerge_merge, unmerge_cst, unmerge_dead_to_trunc,
-    unmerge_zext_to_zext, merge_unmerge, trunc_ext_fold, trunc_shl,
+    unmerge_zext_to_zext, merge_unmerge, trunc_ext_fold, trunc_shift,
     const_combines, xor_of_and_with_same_reg, ptr_add_with_zero,
     shift_immed_chain, shift_of_shifted_logic_chain, load_or_combine,
     truncstore_merge, div_rem_to_divrem, funnel_shift_combines,

@@ -406,12 +406,17 @@ public:
   void applyCombineTruncOfExt(MachineInstr &MI,
                               std::pair<Register, unsigned> &MatchInfo);
 
-  /// Transform trunc (shl x, K) to shl (trunc x),
-  /// K => K < VT.getScalarSizeInBits().
-  bool matchCombineTruncOfShl(MachineInstr &MI,
-                              std::pair<Register, Register> &MatchInfo);
-  void applyCombineTruncOfShl(MachineInstr &MI,
-                              std::pair<Register, Register> &MatchInfo);
+  /// Transform trunc (shl x, K) to shl (trunc x), K
+  ///    if K < VT.getScalarSizeInBits().
+  ///
+  /// Transforms trunc ([al]shr x, K) to (trunc ([al]shr (MidVT (trunc x)), K))
+  ///    if K <= (MidVT.getScalarSizeInBits() - VT.getScalarSizeInBits())
+  /// MidVT is obtained by finding a legal type between the trunc's src and dst
+  /// types.
+  bool matchCombineTruncOfShift(MachineInstr &MI,
+                                std::pair<MachineInstr *, LLT> &MatchInfo);
+  void applyCombineTruncOfShift(MachineInstr &MI,
+                                std::pair<MachineInstr *, LLT> &MatchInfo);
 
   /// Transform G_MUL(x, -1) to G_SUB(0, x)
   void applyCombineMulByNegativeOne(MachineInstr &MI);
