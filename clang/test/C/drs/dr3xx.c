@@ -227,4 +227,7 @@ void dr335(void) {
  * modified type at file scope, as we would do for a file scope variable.
  */
 extern int dr339_v;
-void *dr339 = &(int (*)[dr339_v]){ 0 };
+void *dr339 = &(int (*)[dr339_v]){ 0 }; /* c89only-warning {{variable length arrays are a C99 feature}}
+                                           c99andup-warning {{variable length array used}}
+                                           c89only-warning {{compound literals are a C99-specific feature}}
+                                         */
