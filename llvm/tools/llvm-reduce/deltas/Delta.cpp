@@ -136,7 +136,7 @@ static std::unique_ptr<ReducerWorkItem>
 CheckChunk(Chunk &ChunkToCheckForUninterestingness,
            std::unique_ptr<ReducerWorkItem> Clone, TestRunner &Test,
            ReductionFunc ExtractChunksFromModule,
-           std::set<Chunk> &UninterestingChunks,
+           DenseSet<Chunk> &UninterestingChunks,
            std::vector<Chunk> &ChunksStillConsideredInteresting) {
   // Take all of ChunksStillConsideredInteresting chunks, except those we've
   // already deemed uninteresting (UninterestingChunks) but didn't remove
@@ -188,7 +188,7 @@ CheckChunk(Chunk &ChunkToCheckForUninterestingness,
 
 static SmallString<0> ProcessChunkFromSerializedBitcode(
     Chunk &ChunkToCheckForUninterestingness, TestRunner &Test,
-    ReductionFunc ExtractChunksFromModule, std::set<Chunk> &UninterestingChunks,
+    ReductionFunc ExtractChunksFromModule, DenseSet<Chunk> &UninterestingChunks,
     std::vector<Chunk> &ChunksStillConsideredInteresting,
     SmallString<0> &OriginalBC, std::atomic<bool> &AnyReduced) {
   LLVMContext Ctx;
@@ -270,7 +270,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
   do {
     FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity = false;
 
-    std::set<Chunk> UninterestingChunks;
+    DenseSet<Chunk> UninterestingChunks;
 
     // When running with more than one thread, serialize the original bitcode
     // to OriginalBC.
