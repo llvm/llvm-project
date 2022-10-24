@@ -79,24 +79,17 @@ bool isReduced(ReducerWorkItem &M, TestRunner &Test) {
     exit(1);
   }
 
-  if (TmpFilesAsBitcode) {
-    llvm::raw_fd_ostream OutStream(FD, true);
-    writeBitcode(M, OutStream);
-    OutStream.close();
-    if (OutStream.has_error()) {
-      errs() << "Error emitting bitcode to file '" << CurrentFilepath << "'!\n";
-      sys::fs::remove(CurrentFilepath);
-      exit(1);
-    }
-    bool Res = Test.run(CurrentFilepath);
-    sys::fs::remove(CurrentFilepath);
-    return Res;
-  }
   ToolOutputFile Out(CurrentFilepath, FD);
-  M.print(Out.os(), /*AnnotationWriter=*/nullptr);
+
+  if (TmpFilesAsBitcode)
+    writeBitcode(M, Out.os());
+  else
+    M.print(Out.os(), /*AnnotationWriter=*/nullptr);
+
   Out.os().close();
   if (Out.os().has_error()) {
-    errs() << "Error emitting bitcode to file '" << CurrentFilepath << "'!\n";
+    errs() << "Error emitting bitcode to file '" << CurrentFilepath
+           << "': " << Out.os().error().message();
     exit(1);
   }
 
