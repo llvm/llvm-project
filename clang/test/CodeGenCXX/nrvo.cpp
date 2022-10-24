@@ -2531,7 +2531,7 @@ X test18(int i) { // http://wg21.link/p2025r2#ex-11
 // CHECK-EH-11-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
 // CHECK-EH-11-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[CLASS_ANON_0]], ptr [[REF_TMP]], i32 0, i32 0
 // CHECK-EH-11-NEXT:    store ptr [[AGG_RESULT]], ptr [[TMP1]], align 4
-// CHECK-EH-11-NEXT:    invoke void @"_ZZ6test19vENK3$_1clEv"(ptr sret([[CLASS_X]]) align 1 [[L]], ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]])
+// CHECK-EH-11-NEXT:    invoke void @"_ZZ6test19vENK3$_0clEv"(ptr sret([[CLASS_X]]) align 1 [[L]], ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]])
 // CHECK-EH-11-NEXT:    to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK-EH-11:       invoke.cont:
 // CHECK-EH-11-NEXT:    store i1 true, ptr [[NRVO]], align 1
