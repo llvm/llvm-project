@@ -111,17 +111,17 @@ enum class ArchKind {
 // When finding the Arch for a CPU, first-found prevails. Sort them accordingly.
 // When this becomes table-generated, we'd probably need two tables.
 // FIXME: TableGen this.
-template <typename T> struct CpuNames {
+struct CpuNames {
   const char *NameCStr;
   size_t NameLength;
-  T ArchID;
+  ArchKind ArchID;
   bool Default; // is $Name the default CPU for $ArchID ?
   uint64_t DefaultExtensions;
 
   StringRef getName() const { return StringRef(NameCStr, NameLength); }
 };
 
-const CpuNames<ArchKind> CPUNames[] = {
+const CpuNames CPUNames[] = {
 #define ARM_CPU_NAME(NAME, ID, DEFAULT_FPU, IS_DEFAULT, DEFAULT_EXT)           \
   {NAME, sizeof(NAME) - 1, ARM::ArchKind::ID, IS_DEFAULT, DEFAULT_EXT},
 #include "ARMTargetParser.def"
@@ -192,7 +192,7 @@ static const FPUName FPUNames[] = {
 // of the triples and are not conforming with their official names.
 // Check to see if the expectation should be changed.
 // FIXME: TableGen this.
-template <typename T> struct ArchNames {
+struct ArchNames {
   const char *NameCStr;
   size_t NameLength;
   const char *CPUAttrCStr;
@@ -201,7 +201,7 @@ template <typename T> struct ArchNames {
   size_t SubArchLength;
   unsigned DefaultFPU;
   uint64_t ArchBaseExtensions;
-  T ID;
+  ArchKind ID;
   ARMBuildAttrs::CPUArch ArchAttr; // Arch ID in build attributes.
 
   StringRef getName() const { return StringRef(NameCStr, NameLength); }
@@ -220,7 +220,7 @@ template <typename T> struct ArchNames {
   }
 };
 
-static const ArchNames<ArchKind> ARMArchNames[] = {
+static const ArchNames ARMArchNames[] = {
 #define ARM_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU,            \
                  ARCH_BASE_EXT)                                                \
   {NAME,         sizeof(NAME) - 1,                                             \
@@ -251,7 +251,6 @@ FPUVersion getFPUVersion(unsigned FPUKind);
 NeonSupportLevel getFPUNeonSupportLevel(unsigned FPUKind);
 FPURestriction getFPURestriction(unsigned FPUKind);
 
-// FIXME: These should be moved to TargetTuple once it exists
 bool getFPUFeatures(unsigned FPUKind, std::vector<StringRef> &Features);
 bool getHWDivFeatures(uint64_t HWDivKind, std::vector<StringRef> &Features);
 bool getExtensionFeatures(uint64_t Extensions,
