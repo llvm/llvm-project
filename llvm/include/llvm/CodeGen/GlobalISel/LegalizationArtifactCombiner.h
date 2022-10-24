@@ -901,6 +901,39 @@ public:
         return true;
       }
 
+      // Recognize when multiple unmerged sources with UnmergeSrcTy type
+      // can be merged into Dst with DstTy type directly.
+      // Types have to be either both vector or both non-vector types.
+
+      // %0:_(EltTy), %1 = G_UNMERGE_VALUES %UnmergeSrc:_(UnmergeSrcTy)
+      // %2:_(EltTy), %3 = G_UNMERGE_VALUES %AnotherUnmergeSrc:_(UnmergeSrcTy)
+      // %Dst:_(DstTy) = G_merge_like_opcode %0:_(EltTy), %1, %2, %3
+      //
+      // %Dst:_(DstTy) = G_merge_like_opcode %UnmergeSrc, %AnotherUnmergeSrc
+
+      if ((DstTy.isVector() == UnmergeSrcTy.isVector()) &&
+          getCoverTy(DstTy, UnmergeSrcTy) == DstTy) {
+        SmallVector<Register, 4> ConcatSources;
+        unsigned NumElts = Unmerge->getNumDefs();
+        for (unsigned i = 0; i < MI.getNumSources(); i += NumElts) {
+          unsigned EltUnmergeIdx;
+          auto *UnmergeI = findUnmergeThatDefinesReg(MI.getSourceReg(i),
+                                                     EltSize, EltUnmergeIdx);
+          // All unmerges have to be the same size.
+          if ((!UnmergeI) || (UnmergeI->getNumDefs() != NumElts) ||
+              (EltUnmergeIdx != 0))
+            return false;
+          if (!isSequenceFromUnmerge(MI, i, UnmergeI, 0, NumElts, EltSize))
+            return false;
+          ConcatSources.push_back(UnmergeI->getSourceReg());
+        }
+
+        MIB.setInstrAndDebugLoc(MI);
+        MIB.buildMerge(Dst, ConcatSources);
+        DeadInsts.push_back(&MI);
+        return true;
+      }
+
       return false;
     }
   };
