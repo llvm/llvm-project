@@ -2396,9 +2396,8 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
         // thread) is holding a read lock to the scratch context and
         // replacing it could cause a use-after-free later on.
         if (GetSwiftScratchContextLock().try_lock()) {
-          auto unlock = llvm::make_scope_exit([this] {
-            GetSwiftScratchContextLock().unlock();
-          });
+          auto unlock = llvm::make_scope_exit(
+              [this] { GetSwiftScratchContextLock().unlock(); });
           if (m_use_scratch_typesystem_per_module)
             DisplayFallbackSwiftContextErrors(swift_ast_ctx);
           else if (StreamSP errs = GetDebugger().GetAsyncErrorStream()) {
@@ -2418,35 +2417,38 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
               errs->Flush();
             }
           }
-        }
 
-        m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
-        type_system_or_err = m_scratch_type_system_map.GetTypeSystemForLanguage(
-            language, this, create_on_demand, compiler_options);
-        if (!type_system_or_err)
-          return type_system_or_err.takeError();
+          m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
+          type_system_or_err =
+              m_scratch_type_system_map.GetTypeSystemForLanguage(
+                  language, this, create_on_demand, compiler_options);
+          if (!type_system_or_err)
+            return type_system_or_err.takeError();
 
-        if (auto *new_swift_scratch_ctx =
-                llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
-                    &*type_system_or_err)) {
-          auto *new_swift_ast_ctx = new_swift_scratch_ctx->GetSwiftASTContext();
-          if (!new_swift_ast_ctx || new_swift_ast_ctx->HasFatalErrors()) {
-            if (StreamSP error_stream_sp =
-                    GetDebugger().GetAsyncErrorStream()) {
-              error_stream_sp->PutCString("Can't construct shared Swift state "
-                                          "for this process after repeated "
-                                          "attempts.\n");
-              error_stream_sp->PutCString("Giving up.  Fatal errors:\n");
-              DiagnosticManager diag_mgr;
-              new_swift_ast_ctx->PrintDiagnostics(diag_mgr);
-              error_stream_sp->PutCString(diag_mgr.GetString().c_str());
-              error_stream_sp->Flush();
+          if (auto *new_swift_scratch_ctx =
+                  llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
+                      &*type_system_or_err)) {
+            auto *new_swift_ast_ctx =
+                new_swift_scratch_ctx->GetSwiftASTContext();
+            if (!new_swift_ast_ctx || new_swift_ast_ctx->HasFatalErrors()) {
+              if (StreamSP error_stream_sp =
+                      GetDebugger().GetAsyncErrorStream()) {
+                error_stream_sp->PutCString(
+                    "Can't construct shared Swift state "
+                    "for this process after repeated "
+                    "attempts.\n");
+                error_stream_sp->PutCString("Giving up.  Fatal errors:\n");
+                DiagnosticManager diag_mgr;
+                new_swift_ast_ctx->PrintDiagnostics(diag_mgr);
+                error_stream_sp->PutCString(diag_mgr.GetString().c_str());
+                error_stream_sp->Flush();
+              }
+
+              m_cant_make_scratch_type_system[language] = true;
+              m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
+              type_system_or_err = llvm::make_error<llvm::StringError>(
+                  "DIAF", llvm::inconvertibleErrorCode());
             }
-
-            m_cant_make_scratch_type_system[language] = true;
-            m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
-            type_system_or_err = llvm::make_error<llvm::StringError>(
-                "DIAF", llvm::inconvertibleErrorCode());
           }
         }
       }
