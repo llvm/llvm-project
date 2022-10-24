@@ -1588,7 +1588,9 @@ void CXXNameMangler::mangleUnqualifiedName(
 
     // Get a unique id for the anonymous struct. If it is not a real output
     // ID doesn't matter so use fake one.
-    unsigned AnonStructId = NullOut ? 0 : Context.getAnonymousStructId(TD);
+    unsigned AnonStructId =
+        NullOut ? 0
+                : Context.getAnonymousStructId(TD, dyn_cast<FunctionDecl>(DC));
 
     // Mangle it as a source name in the form
     // [n] $_<id>
