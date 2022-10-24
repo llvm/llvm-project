@@ -21,13 +21,6 @@ namespace tensor {
 PadOp createPadHighOp(RankedTensorType type, Value source, Value pad,
                       bool nofold, Location loc, OpBuilder &builder);
 
-// Return a PadOp that pads `source to `type` size with `pad` value.
-// I.e., a block will be created and the `pad` value will be yielded
-// directly. If the type passed is nullptr, it is inferred.
-PadOp createPadScalarOp(Type type, Value source, Value pad,
-                        ArrayRef<OpFoldResult> low, ArrayRef<OpFoldResult> high,
-                        bool nofold, Location loc, OpBuilder &builder);
-
 // Creates dim ops for each dynamic dimension of the ranked tensor argument and
 // returns these as values.
 SmallVector<Value> createDynamicDimValues(OpBuilder &b, Location loc,
