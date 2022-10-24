@@ -4,24 +4,24 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-factor=1" | FileCheck %s --check-prefix UNROLL-BY-1
 // RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-factor=5 cleanup-unroll=true" | FileCheck %s --check-prefix UNROLL-CLEANUP-LOOP
 
-// UNROLL-FULL-DAG: [[$MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
-// UNROLL-FULL-DAG: [[$MAP1:#map[0-9]+]] = affine_map<(d0) -> (d0 + 2)>
-// UNROLL-FULL-DAG: [[$MAP2:#map[0-9]+]] = affine_map<(d0) -> (d0 + 3)>
-// UNROLL-FULL-DAG: [[$MAP3:#map[0-9]+]] = affine_map<(d0) -> (d0 + 4)>
-// UNROLL-FULL-DAG: [[$MAP4:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 + 1)>
-// UNROLL-FULL-DAG: [[$MAP5:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 + 3)>
-// UNROLL-FULL-DAG: [[$MAP6:#map[0-9]+]] = affine_map<(d0)[s0] -> (d0 + s0 + 1)>
+// UNROLL-FULL-DAG: [[$MAP0:#map[0-9]*]] = affine_map<(d0) -> (d0 + 1)>
+// UNROLL-FULL-DAG: [[$MAP1:#map[0-9]*]] = affine_map<(d0) -> (d0 + 2)>
+// UNROLL-FULL-DAG: [[$MAP2:#map[0-9]*]] = affine_map<(d0) -> (d0 + 3)>
+// UNROLL-FULL-DAG: [[$MAP3:#map[0-9]*]] = affine_map<(d0) -> (d0 + 4)>
+// UNROLL-FULL-DAG: [[$MAP4:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 + 1)>
+// UNROLL-FULL-DAG: [[$MAP5:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 + 3)>
+// UNROLL-FULL-DAG: [[$MAP6:#map[0-9]*]] = affine_map<(d0)[s0] -> (d0 + s0 + 1)>
 
-// SHORT-DAG: [[$MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
+// SHORT-DAG: [[$MAP0:#map[0-9]*]] = affine_map<(d0) -> (d0 + 1)>
 
-// UNROLL-BY-4-DAG: [[$MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
-// UNROLL-BY-4-DAG: [[$MAP1:#map[0-9]+]] = affine_map<(d0) -> (d0 + 2)>
-// UNROLL-BY-4-DAG: [[$MAP2:#map[0-9]+]] = affine_map<(d0) -> (d0 + 3)>
-// UNROLL-BY-4-DAG: [[$MAP3:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 + 1)>
-// UNROLL-BY-4-DAG: [[$MAP4:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 + 3)>
-// UNROLL-BY-4-DAG: [[$MAP5:#map[0-9]+]] = affine_map<(d0)[s0] -> (d0 + s0 + 1)>
-// UNROLL-BY-4-DAG: [[$MAP6:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 16 + d1)>
-// UNROLL-BY-4-DAG: [[$MAP11:#map[0-9]+]] = affine_map<(d0) -> (d0)>
+// UNROLL-BY-4-DAG: [[$MAP0:#map[0-9]*]] = affine_map<(d0) -> (d0 + 1)>
+// UNROLL-BY-4-DAG: [[$MAP1:#map[0-9]*]] = affine_map<(d0) -> (d0 + 2)>
+// UNROLL-BY-4-DAG: [[$MAP2:#map[0-9]*]] = affine_map<(d0) -> (d0 + 3)>
+// UNROLL-BY-4-DAG: [[$MAP3:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 + 1)>
+// UNROLL-BY-4-DAG: [[$MAP4:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 + 3)>
+// UNROLL-BY-4-DAG: [[$MAP5:#map[0-9]*]] = affine_map<(d0)[s0] -> (d0 + s0 + 1)>
+// UNROLL-BY-4-DAG: [[$MAP6:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 * 16 + d1)>
+// UNROLL-BY-4-DAG: [[$MAP11:#map[0-9]*]] = affine_map<(d0) -> (d0)>
 
 // UNROLL-FULL-LABEL: func @loop_nest_simplest() {
 func.func @loop_nest_simplest() {
@@ -323,13 +323,13 @@ func.func @unroll_unit_stride_no_cleanup() {
     // UNROLL-BY-4: for [[L1:%arg[0-9]+]] = 0 to 8 step 4 {
     // UNROLL-BY-4-NEXT: %0 = "addi32"([[L1]], [[L1]]) : (index, index) -> i32
     // UNROLL-BY-4-NEXT: %1 = "addi32"(%0, %0) : (i32, i32) -> i32
-    // UNROLL-BY-4-NEXT: %2 = affine.apply #map{{[0-9]+}}([[L1]])
+    // UNROLL-BY-4-NEXT: %2 = affine.apply #map{{[0-9]*}}([[L1]])
     // UNROLL-BY-4-NEXT: %3 = "addi32"(%2, %2) : (index, index) -> i32
     // UNROLL-BY-4-NEXT: %4 = "addi32"(%3, %3) : (i32, i32) -> i32
-    // UNROLL-BY-4-NEXT: %5 = affine.apply #map{{[0-9]+}}([[L1]])
+    // UNROLL-BY-4-NEXT: %5 = affine.apply #map{{[0-9]*}}([[L1]])
     // UNROLL-BY-4-NEXT: %6 = "addi32"(%5, %5) : (index, index) -> i32
     // UNROLL-BY-4-NEXT: %7 = "addi32"(%6, %6) : (i32, i32) -> i32
-    // UNROLL-BY-4-NEXT: %8 = affine.apply #map{{[0-9]+}}([[L1]])
+    // UNROLL-BY-4-NEXT: %8 = affine.apply #map{{[0-9]*}}([[L1]])
     // UNROLL-BY-4-NEXT: %9 = "addi32"(%8, %8) : (index, index) -> i32
     // UNROLL-BY-4-NEXT: %10 = "addi32"(%9, %9) : (i32, i32) -> i32
     // UNROLL-BY-4-NEXT: }
@@ -352,13 +352,13 @@ func.func @unroll_unit_stride_cleanup() {
     // UNROLL-BY-4: for [[L1:%arg[0-9]+]] = 0 to 8 step 4 {
     // UNROLL-BY-4-NEXT:   %0 = "addi32"([[L1]], [[L1]]) : (index, index) -> i32
     // UNROLL-BY-4-NEXT:   %1 = "addi32"(%0, %0) : (i32, i32) -> i32
-    // UNROLL-BY-4-NEXT:   %2 = affine.apply #map{{[0-9]+}}([[L1]])
+    // UNROLL-BY-4-NEXT:   %2 = affine.apply #map{{[0-9]*}}([[L1]])
     // UNROLL-BY-4-NEXT:   %3 = "addi32"(%2, %2) : (index, index) -> i32
     // UNROLL-BY-4-NEXT:   %4 = "addi32"(%3, %3) : (i32, i32) -> i32
-    // UNROLL-BY-4-NEXT:   %5 = affine.apply #map{{[0-9]+}}([[L1]])
+    // UNROLL-BY-4-NEXT:   %5 = affine.apply #map{{[0-9]*}}([[L1]])
     // UNROLL-BY-4-NEXT:   %6 = "addi32"(%5, %5) : (index, index) -> i32
     // UNROLL-BY-4-NEXT:   %7 = "addi32"(%6, %6) : (i32, i32) -> i32
-    // UNROLL-BY-4-NEXT:   %8 = affine.apply #map{{[0-9]+}}([[L1]])
+    // UNROLL-BY-4-NEXT:   %8 = affine.apply #map{{[0-9]*}}([[L1]])
     // UNROLL-BY-4-NEXT:   %9 = "addi32"(%8, %8) : (index, index) -> i32
     // UNROLL-BY-4-NEXT:   %10 = "addi32"(%9, %9) : (i32, i32) -> i32
     // UNROLL-BY-4-NEXT: }
@@ -381,13 +381,13 @@ func.func @unroll_non_unit_stride_cleanup() {
     // UNROLL-BY-4: for [[L1:%arg[0-9]+]] = 2 to 42 step 20 {
     // UNROLL-BY-4-NEXT: %0 = "addi32"([[L1]], [[L1]]) : (index, index) -> i32
     // UNROLL-BY-4-NEXT: %1 = "addi32"(%0, %0) : (i32, i32) -> i32
-    // UNROLL-BY-4-NEXT: %2 = affine.apply #map{{[0-9]+}}([[L1]])
+    // UNROLL-BY-4-NEXT: %2 = affine.apply #map{{[0-9]*}}([[L1]])
     // UNROLL-BY-4-NEXT: %3 = "addi32"(%2, %2) : (index, index) -> i32
     // UNROLL-BY-4-NEXT: %4 = "addi32"(%3, %3) : (i32, i32) -> i32
-    // UNROLL-BY-4-NEXT: %5 = affine.apply #map{{[0-9]+}}([[L1]])
+    // UNROLL-BY-4-NEXT: %5 = affine.apply #map{{[0-9]*}}([[L1]])
     // UNROLL-BY-4-NEXT: %6 = "addi32"(%5, %5) : (index, index) -> i32
     // UNROLL-BY-4-NEXT: %7 = "addi32"(%6, %6) : (i32, i32) -> i32
-    // UNROLL-BY-4-NEXT: %8 = affine.apply #map{{[0-9]+}}([[L1]])
+    // UNROLL-BY-4-NEXT: %8 = affine.apply #map{{[0-9]*}}([[L1]])
     // UNROLL-BY-4-NEXT: %9 = "addi32"(%8, %8) : (index, index) -> i32
     // UNROLL-BY-4-NEXT: %10 = "addi32"(%9, %9) : (i32, i32) -> i32
     // UNROLL-BY-4-NEXT: }
@@ -432,7 +432,7 @@ func.func @loop_nest_single_iteration_after_unroll(%N: index) {
 // UNROLL-BY-4-LABEL: func @loop_nest_operand1() {
 func.func @loop_nest_operand1() {
 // UNROLL-BY-4:      affine.for %arg0 = 0 to 100 step 2 {
-// UNROLL-BY-4-NEXT:   affine.for %arg1 = 0 to #map{{[0-9]+}}(%arg0) step 4
+// UNROLL-BY-4-NEXT:   affine.for %arg1 = 0 to #map{{[0-9]*}}(%arg0) step 4
 // UNROLL-BY-4-NEXT:      %0 = "foo"() : () -> i32
 // UNROLL-BY-4-NEXT:      %1 = "foo"() : () -> i32
 // UNROLL-BY-4-NEXT:      %2 = "foo"() : () -> i32
@@ -452,7 +452,7 @@ func.func @loop_nest_operand1() {
 // UNROLL-BY-4-LABEL: func @loop_nest_operand2() {
 func.func @loop_nest_operand2() {
 // UNROLL-BY-4:      affine.for %arg0 = 0 to 100 step 2 {
-// UNROLL-BY-4-NEXT:   affine.for %arg1 = [[$MAP11]](%arg0) to #map{{[0-9]+}}(%arg0) step 4 {
+// UNROLL-BY-4-NEXT:   affine.for %arg1 = [[$MAP11]](%arg0) to #map{{[0-9]*}}(%arg0) step 4 {
 // UNROLL-BY-4-NEXT:     %0 = "foo"() : () -> i32
 // UNROLL-BY-4-NEXT:     %1 = "foo"() : () -> i32
 // UNROLL-BY-4-NEXT:     %2 = "foo"() : () -> i32
@@ -498,7 +498,7 @@ func.func @floordiv_mod_ub(%M : index, %N : index) {
 func.func @loop_nest_operand3() {
   // UNROLL-BY-4: affine.for %arg0 = 0 to 100 step 2 {
   affine.for %i = 0 to 100 step 2 {
-    // UNROLL-BY-4: affine.for %arg1 = [[$MAP11]](%arg0) to #map{{[0-9]+}}(%arg0) step 4 {
+    // UNROLL-BY-4: affine.for %arg1 = [[$MAP11]](%arg0) to #map{{[0-9]*}}(%arg0) step 4 {
     // UNROLL-BY-4-NEXT: %1 = "foo"() : () -> i32
     // UNROLL-BY-4-NEXT: %2 = "foo"() : () -> i32
     // UNROLL-BY-4-NEXT: %3 = "foo"() : () -> i32
@@ -516,14 +516,14 @@ func.func @loop_nest_operand3() {
 func.func @loop_nest_symbolic_bound(%N : index) {
   // UNROLL-BY-4: affine.for %arg1 = 0 to 100 {
   affine.for %i = 0 to 100 {
-    // UNROLL-BY-4: affine.for %arg2 = 0 to #map{{[0-9]+}}()[%arg0] step 4 {
+    // UNROLL-BY-4: affine.for %arg2 = 0 to #map{{[0-9]*}}()[%arg0] step 4 {
     // UNROLL-BY-4: %0 = "foo"() : () -> i32
     // UNROLL-BY-4-NEXT: %1 = "foo"() : () -> i32
     // UNROLL-BY-4-NEXT: %2 = "foo"() : () -> i32
     // UNROLL-BY-4-NEXT: %3 = "foo"() : () -> i32
     // UNROLL-BY-4-NEXT: }
     // A cleanup loop will be be generated here.
-    // UNROLL-BY-4-NEXT: affine.for %arg2 = #map{{[0-9]+}}()[%arg0] to %arg0 {
+    // UNROLL-BY-4-NEXT: affine.for %arg2 = #map{{[0-9]*}}()[%arg0] to %arg0 {
     // UNROLL-BY-4-NEXT: %0 = "foo"() : () -> i32
     // UNROLL-BY-4-NEXT: }
     affine.for %j = 0 to %N {
@@ -541,14 +541,14 @@ func.func @loop_nest_symbolic_bound_with_step(%N : index) {
     affine.for %j = 0 to %N step 3 {
       %x = "foo"() : () -> i32
     }
-// UNROLL-BY-4:      affine.for %{{.*}} = 0 to #map{{[0-9]+}}()[%[[N]]] step 12 {
+// UNROLL-BY-4:      affine.for %{{.*}} = 0 to #map{{[0-9]*}}()[%[[N]]] step 12 {
 // UNROLL-BY-4:        "foo"()
 // UNROLL-BY-4-NEXT:   "foo"()
 // UNROLL-BY-4-NEXT:   "foo"()
 // UNROLL-BY-4-NEXT:   "foo"()
 // UNROLL-BY-4-NEXT: }
 // A cleanup loop will be be generated here.
-// UNROLL-BY-4-NEXT: affine.for %{{.*}} = #map{{[0-9]+}}()[%[[N]]] to %[[N]] step 3 {
+// UNROLL-BY-4-NEXT: affine.for %{{.*}} = #map{{[0-9]*}}()[%[[N]]] to %[[N]] step 3 {
 // UNROLL-BY-4-NEXT:   "foo"()
 // UNROLL-BY-4-NEXT: }
   }
