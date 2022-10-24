@@ -1902,6 +1902,7 @@ cc_library(
         ":ArithUtils",
         ":BufferizationDialect",
         ":BufferizationTransforms",
+        ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":FuncDialect",
         ":IR",
@@ -3568,6 +3569,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":Support",
         "//llvm:AsmParser",
+        "//llvm:BinaryFormat",
         "//llvm:BitReader",
         "//llvm:BitWriter",
         "//llvm:Core",
@@ -5188,6 +5190,7 @@ cc_library(
         ":CastOpInterfaces",
         ":ComplexDialect",
         ":ControlFlowInterfaces",
+        ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
@@ -7612,21 +7615,19 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
-        ":IndexDialect",
         ":Analysis",
         ":ConversionPassIncGen",
         ":IR",
+        ":IndexDialect",
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":Pass",
         ":Support",
         ":Transforms",
-
         "//llvm:Core",
         "//llvm:Support",
     ],
 )
-
 
 cc_library(
     name = "IndexDialect",

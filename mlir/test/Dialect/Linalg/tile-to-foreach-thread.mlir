@@ -96,7 +96,7 @@ transform.sequence failures(propagate) {
 func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>) -> tensor<?x?xf32> {
   //      CHECK: %[[M:.+]] = tensor.dim %[[A]], %c0 :
   //      CHECK: %[[N:.+]] = tensor.dim %[[B]], %c1 :
-  //      CHECK: %[[NT0:.+]] = affine.apply #map0()[%[[M]]]
+  //      CHECK: %[[NT0:.+]] = affine.apply #map()[%[[M]]]
   //      CHECK: %[[NT1:.+]] = affine.apply #map1()[%[[N]]]
   //      CHECK: scf.foreach_thread (%[[IV0:.+]], %[[IV1:.+]]) in (%[[NT0]], %[[NT1]]) shared_outs(%[[C_BLK:.*]] = %[[C]])
   //      CHECK:   %[[TS0:.+]] = affine.min #[[$map2]](%[[IV0]])[%[[M]]]

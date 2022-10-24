@@ -375,10 +375,18 @@ static Operation *tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
   int64_t resultNumber = pUse->get().cast<OpResult>().getResultNumber();
   LLVM_DEBUG(llvm::dbgs() << "resultNumber: " << resultNumber << "\n");
 
-  auto destinationOperands = tileableProducer.getDestinationOperands(rewriter);
+  // Gather destination tensors.
+  SmallVector<Value> destinationTensors;
+  if (failed(tensor::getOrCreateDestinations(
+          rewriter, tileableProducer->getLoc(), tileableProducer,
+          destinationTensors))) {
+    diag.attachNote(tileableProducer->getLoc())
+        << "failed to get destination tensors for: " << *tileableProducer;
+    return nullptr;
+  }
 
   BlockAndValueMapping bvm;
-  bvm.map(destinationOperands[resultNumber], bbArg);
+  bvm.map(destinationTensors[resultNumber], bbArg);
   auto tileableProducerClone =
       cast<TilingInterface>(rewriter.clone(*tileableProducer, bvm));
   auto scopeGuard =
@@ -403,7 +411,7 @@ static Operation *tileAndFuseFirstExtractUseThroughContainingOpBlockArgument(
   // Replace the use in containingOp.
   rewriter.updateRootInPlace(containingOp, [&]() {
     containingOp->setOperand(pUse->getOperandNumber(),
-                             destinationOperands.front());
+                             destinationTensors.front());
   });
 
   return fusedOp;

@@ -129,6 +129,18 @@ Value createCanonicalRankReducingExtractSliceOp(OpBuilder &b, Location loc,
 Value createCanonicalRankReducingInsertSliceOp(OpBuilder &b, Location loc,
                                                Value tensor, Value dest);
 
+/// This is a helper function for DestinationStyleOpInterface. If there is a
+/// destination operand for the given OpResult, return that operand. Otherwise,
+/// return an empty tensor (`tensor.empty`) with the shape of the OpResult.
+/// Dynamic dimensions are queried via ReifyRankedShapedTypeOpInterface.
+FailureOr<Value> getOrCreateDestination(OpBuilder &b, Location loc,
+                                        OpResult opResult);
+
+/// This is a helper function for DestinationStyleOpInterface. Get or create
+/// destinations for every tensor OpResult of the given op.
+LogicalResult getOrCreateDestinations(OpBuilder &b, Location loc, Operation *op,
+                                      SmallVector<Value> &result);
+
 /// Function to control the folding of constant and extract slice
 using ControlConstantExtractSliceFusionFn = std::function<bool(ExtractSliceOp)>;
 

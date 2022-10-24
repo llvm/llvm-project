@@ -1102,6 +1102,7 @@ void assertArgs(PatternRewriter &rewriter, ArrayRef<PDLValue> values,
                         verifyAsArg(errorFn, values[I], I)) &&
           ...));
 #endif
+  (void)values;
 }
 
 //===----------------------------------------------------------------------===//

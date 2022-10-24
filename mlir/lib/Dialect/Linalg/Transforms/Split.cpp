@@ -97,12 +97,18 @@ linalg::splitOp(RewriterBase &rewriter, TilingInterface op, unsigned dimension,
       return {op, TilingInterface()};
   }
 
+  // Compute destination tensors.
+  SmallVector<Value> destinationTensors;
+  LogicalResult destStatus = tensor::getOrCreateDestinations(
+      rewriter, op.getLoc(), op, destinationTensors);
+  (void)destStatus;
+  assert(succeeded(destStatus) && "failed to get destination tensors");
+
   // Create the first part.
   SmallVector<Value> firstResults;
   TilingInterface firstPart = createSplitPart(
-      rewriter, op.getLoc(), op, offsets, sizes,
-      op.getDestinationOperands(rewriter), dimension, minSplitPoint,
-      iterationSpace[dimension].offset, firstResults);
+      rewriter, op.getLoc(), op, offsets, sizes, destinationTensors, dimension,
+      minSplitPoint, iterationSpace[dimension].offset, firstResults);
 
   // Need to pretend that the original op now takes as operands firstResults,
   // otherwise tiling interface implementation will take the wrong value to
