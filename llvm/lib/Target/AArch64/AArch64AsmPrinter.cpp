@@ -1693,6 +1693,11 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(const MachineInstr *MI) {
   // In the checked sequence, we only trap if explicitly requested.
   bool ShouldTrap = MF->getFunction().hasFnAttribute("ptrauth-auth-traps");
 
+  // On an FPAC CPU, you get traps whether you want them or not: there's
+  // no point in emitting checks or traps.
+  if (STI->hasFPAC())
+    ShouldCheck = ShouldTrap = false;
+
   // However, command-line flags can override this, for experimentation.
   switch (PtrauthAuthChecks) {
   case PtrauthCheckMode::Default:
