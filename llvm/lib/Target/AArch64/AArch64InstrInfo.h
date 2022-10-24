@@ -508,6 +508,7 @@ static inline unsigned getXPACOpcodeForKey(AArch64PACKey::ID K) {
   case IA: case IB: return AArch64::XPACI;
   case DA: case DB: return AArch64::XPACD;
   }
+  llvm_unreachable("Unhandled AArch64PACKey::ID enum");
 }
 
 /// Return AUT opcode to be used for a ptrauth auth using the given key, or its
