@@ -61,6 +61,12 @@ class LVReader {
   using LVCompileUnits = std::map<LVOffset, LVScopeCompileUnit *>;
   LVCompileUnits CompileUnits;
 
+  // Added elements to be used during elements comparison.
+  LVLines Lines;
+  LVScopes Scopes;
+  LVSymbols Symbols;
+  LVTypes Types;
+
   // Create split folder.
   Error createSplitFolder();
   bool OutputSplit = false;
@@ -139,6 +145,29 @@ public:
 
   // Access to split context.
   LVSplitContext &getSplitContext() { return SplitContext; }
+
+  // In the case of element comparison, register that added element.
+  void notifyAddedElement(LVLine *Line) {
+    if (!options().getCompareContext() && options().getCompareLines())
+      Lines.push_back(Line);
+  }
+  void notifyAddedElement(LVScope *Scope) {
+    if (!options().getCompareContext() && options().getCompareScopes())
+      Scopes.push_back(Scope);
+  }
+  void notifyAddedElement(LVSymbol *Symbol) {
+    if (!options().getCompareContext() && options().getCompareSymbols())
+      Symbols.push_back(Symbol);
+  }
+  void notifyAddedElement(LVType *Type) {
+    if (!options().getCompareContext() && options().getCompareTypes())
+      Types.push_back(Type);
+  }
+
+  const LVLines &getLines() const { return Lines; }
+  const LVScopes &getScopes() const { return Scopes; }
+  const LVSymbols &getSymbols() const { return Symbols; }
+  const LVTypes &getTypes() const { return Types; }
 
   // Conditions to print an object.
   bool doPrintLine(const LVLine *Line) const {
