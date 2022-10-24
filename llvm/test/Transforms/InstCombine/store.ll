@@ -336,12 +336,10 @@ define void @store_to_constant() {
   ret void
 }
 
-; We can't delete stores to readonly noalias pointers yet.
+; Delete stores to readonly noalias pointers.
 define void @store_to_readonly_noalias(ptr readonly noalias %0) {
 ; CHECK-LABEL: @store_to_readonly_noalias(
-; CHECK-NEXT:    store i32 3, ptr [[TMP0:%.*]], align 4
 ; CHECK-NEXT:    ret void
-;
   store i32 3, ptr %0, align 4
   ret void
 }
