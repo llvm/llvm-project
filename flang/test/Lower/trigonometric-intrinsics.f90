@@ -1,4 +1,5 @@
-! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX-FAST"
+! RUN: bbc --math-runtime=precise -emit-fir -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX-PRECISE"
 ! RUN: %flang_fc1 -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s
 
 ! CHECK-LABEL: tan_testr
@@ -176,10 +177,12 @@ end subroutine
 ! CHECK: math.tan %{{.*}} : f64
 
 ! CHECK-LABEL: @fir.tan.z4.z4
-! CHECK: fir.call @ctanf
+! CMPLX-FAST: complex.tan %{{.*}} : complex<f32>
+! CMPLX-PRECISE: fir.call @ctanf
 
 ! CHECK-LABEL: @fir.tan.z8.z8
-! CHECK: fir.call @ctan
+! CMPLX-FAST: complex.tan %{{.*}} : complex<f64>
+! CMPLX-PRECISE: fir.call @ctan
 
 ! CHECK-LABEL: @fir.atan.f32.f32
 ! CHECK: math.atan %{{.*}} : f32
@@ -200,10 +203,12 @@ end subroutine
 ! CHECK: math.cos %{{.*}} : f64
 
 ! CHECK-LABEL: @fir.cos.z4.z4
-! CHECK: fir.call @ccosf
+! CMPLX-FAST: complex.cos %{{.*}} : complex<f32>
+! CMPLX-PRECISE: fir.call @ccosf
 
 ! CHECK-LABEL: @fir.cos.z8.z8
-! CHECK: fir.call @ccos
+! CMPLX-FAST: complex.cos %{{.*}} : complex<f64>
+! CMPLX-PRECISE: fir.call @ccos
 
 ! CHECK-LABEL: @fir.cosh.f32.f32
 ! CHECK: fir.call {{.*}}cosh
@@ -224,10 +229,12 @@ end subroutine
 ! CHECK: math.sin %{{.*}} : f64
 
 ! CHECK-LABEL: @fir.sin.z4.z4
-! CHECK: fir.call @csinf
+! CMPLX-FAST: complex.sin %{{.*}} : complex<f32>
+! CMPLX-PRECISE: fir.call @csinf
 
 ! CHECK-LABEL: @fir.sin.z8.z8
-! CHECK: fir.call @csin
+! CMPLX-FAST: complex.sin %{{.*}} : complex<f64>
+! CMPLX-PRECISE: fir.call @csin
 
 ! CHECK-LABEL: @fir.sinh.f32.f32
 ! CHECK: fir.call {{.*}}sinh
