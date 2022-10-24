@@ -38,6 +38,8 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
     CPU = Mcpu.split("+").first.lower();
   }
 
+  CPU = llvm::AArch64::resolveCPUAlias(CPU);
+
   // Handle CPU name is 'native'.
   if (CPU == "native")
     return std::string(llvm::sys::getHostCPUName());
@@ -120,6 +122,8 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   std::pair<StringRef, StringRef> Split = Mcpu.split("+");
   CPU = Split.first;
   llvm::AArch64::ArchKind ArchKind = llvm::AArch64::ArchKind::ARMV8A;
+
+  CPU = llvm::AArch64::resolveCPUAlias(CPU);
 
   if (CPU == "native")
     CPU = llvm::sys::getHostCPUName();

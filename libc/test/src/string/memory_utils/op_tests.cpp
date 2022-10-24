@@ -58,6 +58,10 @@ static void Copy(cpp::span<char> dst, const cpp::span<char> src) {
     dst[i] = src[i];
 }
 
+cpp::byte *as_byte(cpp::span<char> span) {
+  return reinterpret_cast<cpp::byte *>(span.data());
+}
+
 // Simple structure to allocate a buffer of a particular size.
 struct PoisonedBuffer {
   PoisonedBuffer(size_t size) : ptr((char *)malloc(size)) {
@@ -131,7 +135,7 @@ bool CheckMemcpy(cpp::span<char> dst, cpp::span<char> src, size_t size) {
   assert(dst.size() == src.size());
   assert(dst.size() == size);
   Randomize(dst);
-  FnImpl(dst.data(), src.data(), size);
+  FnImpl(as_byte(dst), as_byte(src), size);
   for (size_t i = 0; i < size; ++i)
     if (dst[i] != src[i])
       return false;
@@ -216,7 +220,7 @@ using MemsetImplementations = testing::TypeList<
 template <auto FnImpl>
 bool CheckMemset(cpp::span<char> dst, uint8_t value, size_t size) {
   Randomize(dst);
-  FnImpl(dst.data(), value, size);
+  FnImpl(as_byte(dst), value, size);
   for (char c : dst)
     if (c != (char)value)
       return false;
@@ -296,14 +300,14 @@ bool CheckBcmp(cpp::span<char> span1, cpp::span<char> span2, size_t size) {
   assert(span1.size() == span2.size());
   Copy(span2, span1);
   // Compare equal
-  if (int cmp = (int)FnImpl(span1.data(), span2.data(), size); cmp != 0)
+  if (int cmp = (int)FnImpl(as_byte(span1), as_byte(span2), size); cmp != 0)
     return false;
   // Compare not equal if any byte differs
   for (size_t i = 0; i < size; ++i) {
     ++span2[i];
-    if (int cmp = (int)FnImpl(span1.data(), span2.data(), size); cmp == 0)
+    if (int cmp = (int)FnImpl(as_byte(span1), as_byte(span2), size); cmp == 0)
       return false;
-    if (int cmp = (int)FnImpl(span2.data(), span1.data(), size); cmp == 0)
+    if (int cmp = (int)FnImpl(as_byte(span2), as_byte(span1), size); cmp == 0)
       return false;
     --span2[i];
   }
@@ -385,21 +389,21 @@ bool CheckMemcmp(cpp::span<char> span1, cpp::span<char> span2, size_t size) {
   assert(span1.size() == span2.size());
   Copy(span2, span1);
   // Compare equal
-  if (int cmp = (int)FnImpl(span1.data(), span2.data(), size); cmp != 0)
+  if (int cmp = (int)FnImpl(as_byte(span1), as_byte(span2), size); cmp != 0)
     return false;
   // Compare not equal if any byte differs
   for (size_t i = 0; i < size; ++i) {
     ++span2[i];
     int ground_truth = __builtin_memcmp(span1.data(), span2.data(), size);
     if (ground_truth > 0) {
-      if (int cmp = (int)FnImpl(span1.data(), span2.data(), size); cmp <= 0)
+      if (int cmp = (int)FnImpl(as_byte(span1), as_byte(span2), size); cmp <= 0)
         return false;
-      if (int cmp = (int)FnImpl(span2.data(), span1.data(), size); cmp >= 0)
+      if (int cmp = (int)FnImpl(as_byte(span2), as_byte(span1), size); cmp >= 0)
         return false;
     } else {
-      if (int cmp = (int)FnImpl(span1.data(), span2.data(), size); cmp >= 0)
+      if (int cmp = (int)FnImpl(as_byte(span1), as_byte(span2), size); cmp >= 0)
         return false;
-      if (int cmp = (int)FnImpl(span2.data(), span1.data(), size); cmp <= 0)
+      if (int cmp = (int)FnImpl(as_byte(span2), as_byte(span1), size); cmp <= 0)
         return false;
     }
     --span2[i];

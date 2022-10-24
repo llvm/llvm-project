@@ -501,6 +501,7 @@ static inline bool isPTrueOpcode(unsigned Opc) {
 /// Return opcode to be used for indirect calls.
 unsigned getBLRCallOpcode(const MachineFunction &MF);
 
+/// Return XPAC opcode to be used for a ptrauth strip using the given key.
 static inline unsigned getXPACOpcodeForKey(AArch64PACKey::ID K) {
   using namespace AArch64PACKey;
   switch (K) {
@@ -509,6 +510,8 @@ static inline unsigned getXPACOpcodeForKey(AArch64PACKey::ID K) {
   }
 }
 
+/// Return AUT opcode to be used for a ptrauth auth using the given key, or its
+/// AUT*Z variant that doesn't take a discriminator operand, using zero instead.
 static inline unsigned getAUTOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   using namespace AArch64PACKey;
   switch (K) {
@@ -519,6 +522,8 @@ static inline unsigned getAUTOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   }
 }
 
+/// Return PAC opcode to be used for a ptrauth sign using the given key, or its
+/// PAC*Z variant that doesn't take a discriminator operand, using zero instead.
 static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
   using namespace AArch64PACKey;
   switch (K) {

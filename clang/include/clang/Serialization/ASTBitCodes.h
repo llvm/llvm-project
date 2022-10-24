@@ -1520,7 +1520,10 @@ enum DeclCode {
   /// A HLSLBufferDecl record.
   DECL_HLSL_BUFFER,
 
-  DECL_LAST = DECL_HLSL_BUFFER
+  /// An ImplicitConceptSpecializationDecl record.
+  DECL_IMPLICIT_CONCEPT_SPECIALIZATION,
+
+  DECL_LAST = DECL_IMPLICIT_CONCEPT_SPECIALIZATION
 };
 
 /// Record codes for each kind of statement or expression.
