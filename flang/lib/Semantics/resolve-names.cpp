@@ -598,7 +598,8 @@ public:
             d->set_derivedType(*derivedType);
           } else if (derivedType->CanReplaceDetails(details)) {
             // was forward-referenced
-            derivedType->attrs() |= attrs;
+            CheckDuplicatedAttrs(name, *symbol, attrs);
+            SetExplicitAttrs(*derivedType, attrs);
             derivedType->set_details(std::move(details));
           } else {
             SayAlreadyDeclared(name, *derivedType);
@@ -609,7 +610,8 @@ public:
     }
     if (symbol->CanReplaceDetails(details)) {
       // update the existing symbol
-      symbol->attrs() |= attrs;
+      CheckDuplicatedAttrs(name, *symbol, attrs);
+      SetExplicitAttrs(*symbol, attrs);
       if constexpr (std::is_same_v<SubprogramDetails, D>) {
         // Dummy argument defined by explicit interface?
         details.set_isDummy(IsDummy(*symbol));
@@ -617,7 +619,8 @@ public:
       symbol->set_details(std::move(details));
       return *symbol;
     } else if constexpr (std::is_same_v<UnknownDetails, D>) {
-      symbol->attrs() |= attrs;
+      CheckDuplicatedAttrs(name, *symbol, attrs);
+      SetExplicitAttrs(*symbol, attrs);
       return *symbol;
     } else {
       if (!CheckPossibleBadForwardRef(*symbol)) {
@@ -636,6 +639,23 @@ public:
   }
 
   void MakeExternal(Symbol &);
+
+  // C815 duplicated attribute checking; returns false on error
+  bool CheckDuplicatedAttr(SourceName, const Symbol &, Attr);
+  bool CheckDuplicatedAttrs(SourceName, const Symbol &, Attrs);
+
+  void SetExplicitAttr(Symbol &symbol, Attr attr) const {
+    symbol.attrs().set(attr);
+    symbol.implicitAttrs().reset(attr);
+  }
+  void SetExplicitAttrs(Symbol &symbol, Attrs attrs) const {
+    symbol.attrs() |= attrs;
+    symbol.implicitAttrs() &= ~attrs;
+  }
+  void SetImplicitAttr(Symbol &symbol, Attr attr) const {
+    symbol.attrs().set(attr);
+    symbol.implicitAttrs().set(attr);
+  }
 
 protected:
   FuncResultStack &funcResultStack() { return funcResultStack_; }
@@ -2284,7 +2304,8 @@ Symbol *ScopeHandler::FindSymbol(const Scope &scope, const parser::Name &name) {
 Symbol &ScopeHandler::MakeSymbol(
     Scope &scope, const SourceName &name, Attrs attrs) {
   if (Symbol * symbol{FindInScope(scope, name)}) {
-    symbol->attrs() |= attrs;
+    CheckDuplicatedAttrs(name, *symbol, attrs);
+    SetExplicitAttrs(*symbol, attrs);
     return *symbol;
   } else {
     const auto pair{scope.try_emplace(name, attrs, UnknownDetails{})};
@@ -2430,17 +2451,17 @@ bool ScopeHandler::ImplicitlyTypeForwardRef(Symbol &symbol) {
 // the INTRINSIC attribute.  Also set PURE &/or ELEMENTAL as
 // appropriate.
 void ScopeHandler::AcquireIntrinsicProcedureFlags(Symbol &symbol) {
-  symbol.attrs().set(Attr::INTRINSIC);
+  SetImplicitAttr(symbol, Attr::INTRINSIC);
   switch (context().intrinsics().GetIntrinsicClass(symbol.name().ToString())) {
   case evaluate::IntrinsicClass::elementalFunction:
   case evaluate::IntrinsicClass::elementalSubroutine:
-    symbol.attrs().set(Attr::ELEMENTAL);
-    symbol.attrs().set(Attr::PURE);
+    SetExplicitAttr(symbol, Attr::ELEMENTAL);
+    SetExplicitAttr(symbol, Attr::PURE);
     break;
   case evaluate::IntrinsicClass::impureSubroutine:
     break;
   default:
-    symbol.attrs().set(Attr::PURE);
+    SetExplicitAttr(symbol, Attr::PURE);
   }
 }
 
@@ -2586,13 +2607,37 @@ bool ScopeHandler::CheckPossibleBadForwardRef(const Symbol &symbol) {
 
 void ScopeHandler::MakeExternal(Symbol &symbol) {
   if (!symbol.attrs().test(Attr::EXTERNAL)) {
-    symbol.attrs().set(Attr::EXTERNAL);
+    SetImplicitAttr(symbol, Attr::EXTERNAL);
     if (symbol.attrs().test(Attr::INTRINSIC)) { // C840
       Say(symbol.name(),
           "Symbol '%s' cannot have both EXTERNAL and INTRINSIC attributes"_err_en_US,
           symbol.name());
     }
   }
+}
+
+bool ScopeHandler::CheckDuplicatedAttr(
+    SourceName name, const Symbol &symbol, Attr attr) {
+  if (attr == Attr::SAVE || attr == Attr::BIND_C) {
+    // these are checked elsewhere
+  } else if (symbol.attrs().test(attr)) { // C815
+    if (symbol.implicitAttrs().test(attr)) {
+      // Implied attribute is now confirmed explicitly
+    } else {
+      Say(name, "%s attribute was already specified on '%s'"_err_en_US,
+          EnumToString(attr), name);
+      return false;
+    }
+  }
+  return true;
+}
+
+bool ScopeHandler::CheckDuplicatedAttrs(
+    SourceName name, const Symbol &symbol, Attrs attrs) {
+  bool ok{true};
+  attrs.IterateOverMembers(
+      [&](Attr x) { ok &= CheckDuplicatedAttr(name, symbol, x); });
+  return ok;
 }
 
 // ModuleVisitor implementation
@@ -2782,6 +2827,8 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     localSymbol.set_details(UseDetails{localName, useSymbol});
     localSymbol.attrs() =
         useSymbol.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE};
+    localSymbol.implicitAttrs() =
+        localSymbol.attrs() & Attrs{Attr::ASYNCHRONOUS, Attr::VOLATILE};
     localSymbol.flags() = useSymbol.flags();
     return;
   }
@@ -3051,7 +3098,7 @@ void ModuleVisitor::ApplyDefaultAccess() {
   for (auto &pair : currScope()) {
     Symbol &symbol = *pair.second;
     if (!symbol.attrs().HasAny({Attr::PUBLIC, Attr::PRIVATE})) {
-      symbol.attrs().set(defaultAccess_);
+      SetImplicitAttr(symbol, defaultAccess_);
     }
   }
 }
@@ -3095,7 +3142,7 @@ bool InterfaceVisitor::Pre(const parser::GenericStmt &) {
 }
 void InterfaceVisitor::Post(const parser::GenericStmt &x) {
   if (auto &accessSpec{std::get<std::optional<parser::AccessSpec>>(x.t)}) {
-    GetGenericInfo().symbol->attrs().set(AccessSpecToAttr(*accessSpec));
+    SetExplicitAttr(*GetGenericInfo().symbol, AccessSpecToAttr(*accessSpec));
   }
   const auto &names{std::get<std::list<parser::Name>>(x.t)};
   AddSpecificProcs(names, ProcedureKind::Procedure);
@@ -3447,9 +3494,10 @@ void SubprogramVisitor::Post(const parser::FunctionStmt &stmt) {
 SubprogramDetails &SubprogramVisitor::PostSubprogramStmt(
     const parser::Name &name) {
   Symbol &symbol{*currScope().symbol()};
-  symbol.attrs() |= EndAttrs();
+  SetExplicitAttrs(symbol, EndAttrs());
   if (symbol.attrs().test(Attr::MODULE)) {
     symbol.attrs().set(Attr::EXTERNAL, false);
+    symbol.implicitAttrs().set(Attr::EXTERNAL, false);
   }
   return symbol.get<SubprogramDetails>();
 }
@@ -3528,7 +3576,8 @@ void SubprogramVisitor::CreateEntry(
         if (auto *specific{generic->specific()}) {
           // Forward reference to ENTRY from a generic interface
           entrySymbol = specific;
-          entrySymbol->attrs() |= attrs;
+          CheckDuplicatedAttrs(entryName.source, *entrySymbol, attrs);
+          SetExplicitAttrs(*entrySymbol, attrs);
         }
       }
     } else {
@@ -3715,9 +3764,9 @@ bool SubprogramVisitor::BeginSubprogram(const parser::Name &name,
   if (moduleInterface) {
     newSymbol.get<SubprogramDetails>().set_moduleInterface(*moduleInterface);
     if (moduleInterface->attrs().test(Attr::PRIVATE)) {
-      newSymbol.attrs().set(Attr::PRIVATE);
+      SetImplicitAttr(newSymbol, Attr::PRIVATE);
     } else if (moduleInterface->attrs().test(Attr::PUBLIC)) {
-      newSymbol.attrs().set(Attr::PUBLIC);
+      SetImplicitAttr(newSymbol, Attr::PUBLIC);
     }
   }
   if (entryStmts) {
@@ -3835,7 +3884,7 @@ Symbol &SubprogramVisitor::PushSubprogramScope(const parser::Name &name,
     auto &details{symbol->get<SubprogramDetails>()};
     details.set_isInterface();
     if (isAbstract()) {
-      symbol->attrs().set(Attr::ABSTRACT);
+      SetExplicitAttr(*symbol, Attr::ABSTRACT);
     } else {
       MakeExternal(*symbol);
     }
@@ -4026,7 +4075,7 @@ bool DeclarationVisitor::Pre(const parser::BindEntity &x) {
     symbol = &HandleAttributeStmt(Attr::BIND_C, name);
   } else {
     symbol = &MakeCommonBlockSymbol(name);
-    symbol->attrs().set(Attr::BIND_C);
+    SetExplicitAttr(*symbol, Attr::BIND_C);
   }
   // 8.6.4(1)
   // Some entities such as named constant or module name need to checked
@@ -4274,8 +4323,10 @@ Symbol &DeclarationVisitor::HandleAttributeStmt(
   if (!symbol) {
     symbol = &MakeSymbol(name, EntityDetails{});
   }
-  symbol->attrs().set(attr);
-  symbol->attrs() = HandleSaveName(name.source, symbol->attrs());
+  if (CheckDuplicatedAttr(name.source, *symbol, attr)) {
+    SetExplicitAttr(*symbol, attr);
+    symbol->attrs() = HandleSaveName(name.source, symbol->attrs());
+  }
   return *symbol;
 }
 // C1107
@@ -4684,6 +4735,8 @@ void DeclarationVisitor::Post(const parser::DerivedTypeStmt &x) {
       auto &comp{DeclareEntity<ObjectEntityDetails>(*extendsName, Attrs{})};
       comp.attrs().set(
           Attr::PRIVATE, extendsSymbol.attrs().test(Attr::PRIVATE));
+      comp.implicitAttrs().set(
+          Attr::PRIVATE, extendsSymbol.implicitAttrs().test(Attr::PRIVATE));
       comp.set(Symbol::Flag::ParentComp);
       DeclTypeSpec &type{currScope().MakeDerivedType(
           DeclTypeSpec::TypeDerived, std::move(*extendsType))};
@@ -5072,7 +5125,7 @@ bool DeclarationVisitor::Pre(const parser::TypeBoundGenericStmt &x) {
       return false;
     }
     if (isPrivate) {
-      genericSymbol->attrs().set(Attr::PRIVATE);
+      SetExplicitAttr(*genericSymbol, Attr::PRIVATE);
     }
   }
   for (const parser::Name &bindingName : bindingNames) {
@@ -5482,7 +5535,7 @@ void DeclarationVisitor::AddSaveName(
 // Set the SAVE attribute on symbol unless it is implicitly saved anyway.
 void DeclarationVisitor::SetSaveAttr(Symbol &symbol) {
   if (!IsSaved(symbol)) {
-    symbol.attrs().set(Attr::SAVE);
+    SetImplicitAttr(symbol, Attr::SAVE);
   }
 }
 
@@ -5612,10 +5665,10 @@ bool DeclarationVisitor::HandleUnrestrictedSpecificIntrinsicFunction(
     symbol.set_details(std::move(details));
     symbol.set(Symbol::Flag::Function);
     if (interface->IsElemental()) {
-      symbol.attrs().set(Attr::ELEMENTAL);
+      SetExplicitAttr(symbol, Attr::ELEMENTAL);
     }
     if (interface->IsPure()) {
-      symbol.attrs().set(Attr::PURE);
+      SetExplicitAttr(symbol, Attr::PURE);
     }
     Resolve(name, symbol);
     return true;
@@ -6437,7 +6490,7 @@ void ConstructVisitor::SetAttrsFromAssociation(Symbol &symbol) {
   symbol.attrs() |= attrs &
       Attrs{Attr::TARGET, Attr::ASYNCHRONOUS, Attr::VOLATILE, Attr::CONTIGUOUS};
   if (attrs.test(Attr::POINTER)) {
-    symbol.attrs().set(Attr::TARGET);
+    SetImplicitAttr(symbol, Attr::TARGET);
   }
 }
 
@@ -7037,7 +7090,7 @@ void ResolveNamesVisitor::NoteExecutablePartCall(
         if (symbol->has<ProcEntityDetails>()) {
           symbol->set(flag);
           if (IsDummy(*symbol)) {
-            symbol->attrs().set(Attr::EXTERNAL);
+            SetImplicitAttr(*symbol, Attr::EXTERNAL);
           }
           ApplyImplicitRules(*symbol);
         }
@@ -7590,7 +7643,7 @@ void ResolveNamesVisitor::AddSubpNames(ProgramTree &node) {
   for (auto &child : node.children()) {
     auto &symbol{MakeSymbol(child.name(), SubprogramNameDetails{kind, child})};
     if (child.HasModulePrefix()) {
-      symbol.attrs().set(Attr::MODULE);
+      SetExplicitAttr(symbol, Attr::MODULE);
     }
     auto childKind{child.GetKind()};
     if (childKind == ProgramTree::Kind::Function) {
@@ -7606,7 +7659,7 @@ void ResolveNamesVisitor::AddSubpNames(ProgramTree &node) {
           MakeSymbol(std::get<parser::Name>(entryStmt->t), std::move(details))};
       symbol.set(child.GetSubpFlag());
       if (child.HasModulePrefix()) {
-        symbol.attrs().set(Attr::MODULE);
+        SetExplicitAttr(symbol, Attr::MODULE);
       }
     }
   }

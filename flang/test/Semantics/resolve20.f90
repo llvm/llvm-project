@@ -40,6 +40,10 @@ module m
   type :: m ! the name of a module can be used as a local identifier
   end type m
 
+  !ERROR: EXTERNAL attribute was already specified on 'a'
+  !ERROR: EXTERNAL attribute was already specified on 'b'
+  !ERROR: EXTERNAL attribute was already specified on 'c'
+  !ERROR: EXTERNAL attribute was already specified on 'd'
   external :: a, b, c, d
   !ERROR: EXTERNAL attribute not allowed on 'm'
   external :: m
