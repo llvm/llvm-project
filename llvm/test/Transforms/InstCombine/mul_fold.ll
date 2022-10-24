@@ -32,8 +32,8 @@ define i8 @mul8_low_A0_B0(i8 %in0, i8 %in1) {
   %In0Hi = lshr i8 %in0, 4
   %In1Lo = and i8 %in1, 15
   %In1Hi = lshr i8 %in1, 4
-  %m10 = mul i8 %In1Hi, %In0Lo
-  %m01 = mul i8 %In1Lo, %In0Hi
+  %m10 = mul i8 %In1Hi, %in0
+  %m01 = mul i8 %In0Hi, %in1
   %m00 = mul i8 %In1Lo, %In0Lo
   %addc = add i8 %m10, %m01
   %shl = shl i8 %addc, 4
@@ -59,8 +59,8 @@ define i8 @mul8_low_A0_B1(i8 %in0, i8 %in1) {
   %In0Hi = lshr i8 %in0, 4
   %In1Lo = and i8 %in1, 15
   %In1Hi = lshr i8 %in1, 4
-  %m10 = mul i8 %In1Hi, %In0Lo
-  %m01 = mul i8 %In1Lo, %In0Hi
+  %m10 = mul i8 %In1Hi, %in0
+  %m01 = mul i8 %In0Hi, %in1
   %m00 = mul i8 %In1Lo, %In0Lo
   %addc = add i8 %m10, %m01
   %shl = shl i8 %addc, 4
@@ -86,8 +86,8 @@ define i8 @mul8_low_A0_B2(i8 %in0, i8 %in1) {
   %In0Hi = lshr i8 %in0, 4
   %In1Lo = and i8 %in1, 15
   %In1Hi = lshr i8 %in1, 4
-  %m10 = mul i8 %In1Hi, %In0Lo
-  %m01 = mul i8 %In1Lo, %In0Hi
+  %m10 = mul i8 %In1Hi, %in0
+  %m01 = mul i8 %In0Hi, %in1
   %m00 = mul i8 %In1Lo, %In0Lo
   %addc = add i8 %m01, %m10
   %shl = shl i8 %addc, 4
@@ -113,8 +113,8 @@ define i8 @mul8_low_A0_B3(i8 %in0, i8 %in1) {
   %In0Hi = lshr i8 %in0, 4
   %In1Lo = and i8 %in1, 15
   %In1Hi = lshr i8 %in1, 4
-  %m10 = mul i8 %In1Hi, %In0Lo
-  %m01 = mul i8 %In1Lo, %In0Hi
+  %m10 = mul i8 %In1Hi, %in0
+  %m01 = mul i8 %In0Hi, %in1
   %m00 = mul i8 %In1Lo, %In0Lo
   %addc = add i8 %m01, %m10
   %shl = shl i8 %addc, 4
@@ -269,7 +269,7 @@ define i32 @mul32_low_A2_B0(i32 %in0, i32 %in1) {
   %In1Hi = lshr i32 %in1, 16
   %m10 = mul i32 %In1Hi, %In0Lo
   call void @use32(i32 %m10)
-  %m01 = mul i32 %In0Hi, %In1Lo
+  %m01 = mul i32 %In0Hi, %in1
   %m00 = mul i32 %In1Lo, %In0Lo
   %addc = add i32 %m10, %m01
   %shl = shl i32 %addc, 16
@@ -298,7 +298,7 @@ define i32 @mul32_low_A2_B1(i32 %in0, i32 %in1) {
   %In1Hi = lshr i32 %in1, 16
   %m10 = mul i32 %In1Hi, %In0Lo
   call void @use32(i32 %m10)
-  %m01 = mul i32 %In0Hi, %In1Lo
+  %m01 = mul i32 %In0Hi, %in1
   %m00 = mul i32 %In1Lo, %In0Lo
   %addc = add i32 %m10, %m01
   %shl = shl i32 %addc, 16
@@ -327,7 +327,7 @@ define i32 @mul32_low_A2_B2(i32 %in0, i32 %in1) {
   %In1Hi = lshr i32 %in1, 16
   %m10 = mul i32 %In1Hi, %In0Lo
   call void @use32(i32 %m10)
-  %m01 = mul i32 %In0Hi, %In1Lo
+  %m01 = mul i32 %In0Hi, %in1
   %m00 = mul i32 %In1Lo, %In0Lo
   %addc = add i32 %m01, %m10
   %shl = shl i32 %addc, 16
@@ -356,7 +356,7 @@ define i32 @mul32_low_A2_B3(i32 %in0, i32 %in1) {
   %In1Hi = lshr i32 %in1, 16
   %m10 = mul i32 %In1Hi, %In0Lo
   call void @use32(i32 %m10)
-  %m01 = mul i32 %In0Hi, %In1Lo
+  %m01 = mul i32 %In0Hi, %in1
   %m00 = mul i32 %In1Lo, %In0Lo
   %addc = add i32 %m01, %m10
   %shl = shl i32 %addc, 16
@@ -384,7 +384,7 @@ define i64 @mul64_low_A3_B0(i64 %in0, i64 %in1) {
   %In0Hi = lshr i64 %in0, 32
   %In1Lo = and i64 %in1, 4294967295
   %In1Hi = lshr i64 %in1, 32
-  %m10 = mul i64 %In0Lo, %In1Hi
+  %m10 = mul i64 %In1Hi, %in0
   %m01 = mul i64 %In0Hi, %In1Lo
   call void @use64(i64 %m01)
   %m00 = mul i64 %In1Lo, %In0Lo
@@ -413,7 +413,7 @@ define i64 @mul64_low_A3_B1(i64 %in0, i64 %in1) {
   %In0Hi = lshr i64 %in0, 32
   %In1Lo = and i64 %in1, 4294967295
   %In1Hi = lshr i64 %in1, 32
-  %m10 = mul i64 %In0Lo, %In1Hi
+  %m10 = mul i64 %In1Hi, %in0
   %m01 = mul i64 %In0Hi, %In1Lo
   call void @use64(i64 %m01)
   %m00 = mul i64 %In1Lo, %In0Lo
@@ -442,7 +442,7 @@ define i64 @mul64_low_A3_B2(i64 %in0, i64 %in1) {
   %In0Hi = lshr i64 %in0, 32
   %In1Lo = and i64 %in1, 4294967295
   %In1Hi = lshr i64 %in1, 32
-  %m10 = mul i64 %In0Lo, %In1Hi
+  %m10 = mul i64 %In1Hi, %in0
   %m01 = mul i64 %In0Hi, %In1Lo
   call void @use64(i64 %m01)
   %m00 = mul i64 %In1Lo, %In0Lo
@@ -471,7 +471,7 @@ define i64 @mul64_low_A3_B3(i64 %in0, i64 %in1) {
   %In0Hi = lshr i64 %in0, 32
   %In1Lo = and i64 %in1, 4294967295
   %In1Hi = lshr i64 %in1, 32
-  %m10 = mul i64 %In0Lo, %In1Hi
+  %m10 = mul i64 %In1Hi, %in0
   %m01 = mul i64 %In0Hi, %In1Lo
   call void @use64(i64 %m01)
   %m00 = mul i64 %In1Lo, %In0Lo
