@@ -1059,16 +1059,20 @@ void CIRGenModule::buildTopLevelDecl(Decl *decl) {
     //       EmitGlobal(HD);
     break;
 
-  // C++ Decls
-  case Decl::Namespace:
-    buildDeclContext(cast<NamespaceDecl>(decl));
-    break;
-
   case Decl::CXXMethod:
   case Decl::Function:
     buildGlobal(cast<FunctionDecl>(decl));
     assert(!codeGenOpts.CoverageMapping && "Coverage Mapping NYI");
     break;
+  // C++ Decls
+  case Decl::Namespace:
+    buildDeclContext(cast<NamespaceDecl>(decl));
+    break;
+  case Decl::ClassTemplateSpecialization: {
+    // const auto *Spec = cast<ClassTemplateSpecializationDecl>(decl);
+    assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
+  }
+    [[fallthrough]];
   case Decl::CXXRecord: {
     CXXRecordDecl *crd = cast<CXXRecordDecl>(decl);
     // TODO: Handle debug info as CodeGenModule.cpp does
