@@ -4,6 +4,7 @@ macro(add_lv_impl_folder group)
 endmacro()
 
 add_lv_impl_folder(Core
+  Core/LVCompare.cpp
   Core/LVElement.cpp
   Core/LVLine.cpp
   Core/LVLocation.cpp
@@ -30,7 +31,9 @@ add_llvm_component_library(LLVMDebugInfoLogicalView
   ${LIBLV_ADDITIONAL_HEADER_DIRS}
 
   LINK_COMPONENTS
+  BinaryFormat
   Object
   MC
   Support
+  DebugInfoDWARF
   )

@@ -29,8 +29,8 @@ int ARBSizeOf(int n) {
 
 int a() { return []{ return 1; }(); }
 // CHECK-LABEL: define{{.*}} i32 @_Z1av
-// CHECK: call noundef i32 @"_ZZ1avENK3$_1clEv"
-// CHECK-LABEL: define internal noundef i32 @"_ZZ1avENK3$_1clEv"
+// CHECK: call noundef i32 @"_ZZ1avENK3$_0clEv"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ1avENK3$_0clEv"
 // CHECK: ret i32 1
 
 int b(int x) { return [x]{return x;}(); }
@@ -38,8 +38,8 @@ int b(int x) { return [x]{return x;}(); }
 // CHECK: store i32
 // CHECK: load i32, ptr
 // CHECK: store i32
-// CHECK: call noundef i32 @"_ZZ1biENK3$_2clEv"
-// CHECK-LABEL: define internal noundef i32 @"_ZZ1biENK3$_2clEv"
+// CHECK: call noundef i32 @"_ZZ1biENK3$_0clEv"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ1biENK3$_0clEv"
 // CHECK: load i32, ptr
 // CHECK: ret i32
 
@@ -47,8 +47,8 @@ int c(int x) { return [&x]{return x;}(); }
 // CHECK-LABEL: define{{.*}} i32 @_Z1ci
 // CHECK: store i32
 // CHECK: store ptr
-// CHECK: call noundef i32 @"_ZZ1ciENK3$_3clEv"
-// CHECK-LABEL: define internal noundef i32 @"_ZZ1ciENK3$_3clEv"
+// CHECK: call noundef i32 @"_ZZ1ciENK3$_0clEv"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ1ciENK3$_0clEv"
 // CHECK: load ptr, ptr
 // CHECK: load i32, ptr
 // CHECK: ret i32
@@ -62,8 +62,8 @@ int d(int x) { D y[10]; return [x,y] { return y[x].x; }(); }
 // CHECK: call void @_ZN1DC1ERKS_
 // CHECK: icmp eq i64 %{{.*}}, 10
 // CHECK: br i1
-// CHECK: call noundef i32 @"_ZZ1diENK3$_4clEv"
-// CHECK-LABEL: define internal noundef i32 @"_ZZ1diENK3$_4clEv"
+// CHECK: call noundef i32 @"_ZZ1diENK3$_0clEv"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ1diENK3$_0clEv"
 // CHECK: load i32, ptr
 // CHECK: load i32, ptr
 // CHECK: ret i32
@@ -73,18 +73,18 @@ int e(E a, E b, bool cond) { return [a,b,cond](){ return (cond ? a : b).x; }(); 
 // CHECK-LABEL: define{{.*}} i32 @_Z1e1ES_b
 // CHECK: call void @_ZN1EC1ERKS_
 // CHECK: invoke void @_ZN1EC1ERKS_
-// CHECK: invoke noundef i32 @"_ZZ1e1ES_bENK3$_5clEv"
-// CHECK: call void @"_ZZ1e1ES_bEN3$_5D1Ev"
-// CHECK: call void @"_ZZ1e1ES_bEN3$_5D1Ev"
+// CHECK: invoke noundef i32 @"_ZZ1e1ES_bENK3$_0clEv"
+// CHECK: call void @"_ZZ1e1ES_bEN3$_0D1Ev"
+// CHECK: call void @"_ZZ1e1ES_bEN3$_0D1Ev"
 
-// CHECK-LABEL: define internal noundef i32 @"_ZZ1e1ES_bENK3$_5clEv"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ1e1ES_bENK3$_0clEv"
 // CHECK: trunc i8
 // CHECK: load i32, ptr
 // CHECK: ret i32
 
 void f() {
   // CHECK-LABEL: define{{.*}} void @_Z1fv()
-  // CHECK: @"_ZZ1fvENK3$_6cvPFiiiEEv"
+  // CHECK: @"_ZZ1fvENK3$_0cvPFiiiEEv"
   // CHECK-NEXT: store ptr
   // CHECK-NEXT: ret void
   int (*fp)(int, int) = [](int x, int y){ return x + y; };
@@ -93,7 +93,7 @@ void f() {
 static int k;
 int g() {
   int &r = k;
-  // CHECK-LABEL: define internal noundef i32 @"_ZZ1gvENK3$_7clEv"(
+  // CHECK-LABEL: define internal noundef i32 @"_ZZ1gvENK3$_0clEv"(
   // CHECK-NOT: }
   // CHECK: load i32, ptr @_ZL1k,
   return [] { return r; } ();
@@ -110,7 +110,7 @@ void staticarrayref(){
   }();
 }
 
-// CHECK-LABEL: define internal noundef ptr @"_ZZ11PR22071_funvENK3$_9clEv"
+// CHECK-LABEL: define internal noundef ptr @"_ZZ11PR22071_funvENK3$_0clEv"
 // CHECK: ret ptr @PR22071_var
 int PR22071_var;
 int *PR22071_fun() {
@@ -183,18 +183,18 @@ namespace pr28595 {
   }
 }
 
-// CHECK-LABEL: define internal void @"_ZZ1e1ES_bEN3$_5D2Ev"
+// CHECK-LABEL: define internal void @"_ZZ1e1ES_bEN3$_0D2Ev"
 
-// CHECK-LABEL: define internal noundef i32 @"_ZZ1fvEN3$_68__invokeEii"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ1fvEN3$_08__invokeEii"
 // CHECK: store i32
 // CHECK-NEXT: store i32
 // CHECK-NEXT: load i32, ptr
 // CHECK-NEXT: load i32, ptr
-// CHECK-NEXT: call noundef i32 @"_ZZ1fvENK3$_6clEii"
+// CHECK-NEXT: call noundef i32 @"_ZZ1fvENK3$_0clEii"
 // CHECK-NEXT: ret i32
 
-// CHECK-LABEL: define internal void @"_ZZ1hvEN4$_118__invokeEv"(ptr noalias sret(%struct.A) align 1 %agg.result) {{.*}} {
-// CHECK: call void @"_ZZ1hvENK4$_11clEv"(ptr sret(%struct.A) align 1 %agg.result,
+// CHECK-LABEL: define internal void @"_ZZ1hvEN3$_08__invokeEv"(ptr noalias sret(%struct.A) align 1 %agg.result) {{.*}} {
+// CHECK: call void @"_ZZ1hvENK3$_0clEv"(ptr sret(%struct.A) align 1 %agg.result,
 // CHECK-NEXT: ret void
 struct A { ~A(); };
 void h() {

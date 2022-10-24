@@ -176,7 +176,7 @@ void func_template(T = []{ return T(); }());
 
 // CHECK-LABEL: define{{.*}} void @_Z17use_func_templatev()
 void use_func_template() {
-  // CHECK: call noundef i32 @"_ZZ13func_templateIiEvT_ENK3$_3clEv"
+  // CHECK: call noundef i32 @"_ZZ13func_templateIiEvT_ENK3$_0clEv"
   func_template<int>();
 }
 
@@ -216,12 +216,12 @@ void ft1(int = [](int p = [] { return 42; } ()) {
                  return p;
                } ());
 void test_ft1() {
-  // CHECK: call noundef i32 @"_ZZZ3ft1IiEviENK3$_4clEiEd_NKUlvE_clEv"
-  // CHECK: call noundef i32 @"_ZZ3ft1IiEviENK3$_4clEi"
+  // CHECK: call noundef i32 @"_ZZZ3ft1IiEviENK3$_0clEiEd_NKUlvE_clEv"
+  // CHECK: call noundef i32 @"_ZZ3ft1IiEviENK3$_0clEi"
   ft1();
 }
-// CHECK-LABEL: define internal noundef i32 @"_ZZ3ft1IiEviENK3$_4clEi"
-// CHECK-LABEL: define internal noundef i32 @"_ZZZ3ft1IiEviENK3$_4clEiEd_NKUlvE_clEv"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ3ft1IiEviENK3$_0clEi"
+// CHECK-LABEL: define internal noundef i32 @"_ZZZ3ft1IiEviENK3$_0clEiEd_NKUlvE_clEv"
 
 struct c1 {
   template<typename = int>
@@ -273,8 +273,8 @@ void ft3() {
   f();
 }
 template void ft3<int>();
-// CHECK: call noundef i32 @"_ZZ1fiENK3$_5clEv"
-// CHECK-LABEL: define internal noundef i32 @"_ZZ1fiENK3$_5clEv"
+// CHECK: call noundef i32 @"_ZZ1fiENK3$_0clEv"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ1fiENK3$_0clEv"
 
 template<typename>
 void ft4() {

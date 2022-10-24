@@ -2,8 +2,8 @@
 
 // -----
 
-// CHECK-DAG: [[$MOD_2:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0 mod 2)>
-// CHECK-DAG: [[$MAP_MINUS_1:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0 - 1)>
+// CHECK-DAG: [[$MOD_2:#map[0-9a-zA-Z_]*]] = affine_map<(d0) -> (d0 mod 2)>
+// CHECK-DAG: [[$MAP_MINUS_1:#map[0-9a-zA-Z_]*]] = affine_map<(d0) -> (d0 - 1)>
 
 // CHECK-LABEL: func @loop_nest_dma() {
 func.func @loop_nest_dma() {
@@ -64,8 +64,8 @@ func.func @loop_nest_dma() {
 
 // -----
 
-// CHECK-DAG: [[$FLOOR_MOD_2:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> ((d0 floordiv 4) mod 2)>
-// CHECK-DAG: [[$REMAP_SHIFT_MINUS_4:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0 - 4)>
+// CHECK-DAG: [[$FLOOR_MOD_2:#map[0-9a-zA-Z_]*]] = affine_map<(d0) -> ((d0 floordiv 4) mod 2)>
+// CHECK-DAG: [[$REMAP_SHIFT_MINUS_4:#map[0-9a-zA-Z_]*]] = affine_map<(d0) -> (d0 - 4)>
 
 // CHECK-LABEL: @loop_step
 func.func @loop_step(%arg0: memref<512xf32>,

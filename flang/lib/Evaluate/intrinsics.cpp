@@ -66,6 +66,7 @@ static constexpr CategorySet CharType{TypeCategory::Character};
 static constexpr CategorySet LogicalType{TypeCategory::Logical};
 static constexpr CategorySet IntOrRealType{IntType | RealType};
 static constexpr CategorySet IntOrRealOrCharType{IntType | RealType | CharType};
+static constexpr CategorySet IntOrLogicalType{IntType | LogicalType};
 static constexpr CategorySet FloatingType{RealType | ComplexType};
 static constexpr CategorySet NumericType{IntType | RealType | ComplexType};
 static constexpr CategorySet RelatableType{IntType | RealType | CharType};
@@ -96,6 +97,7 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
     nullPointerType, // for ASSOCIATED(NULL())
     exactKind, // a single explicit exactKindValue
     atomicIntKind, // atomic_int_kind from iso_fortran_env
+    atomicIntOrLogicalKind, // atomic_int_kind or atomic_logical_kind
     sameAtom, // same type and kind as atom
 )
 
@@ -130,6 +132,7 @@ static constexpr TypePattern AnyReal{RealType, KindCode::any};
 static constexpr TypePattern AnyIntOrReal{IntOrRealType, KindCode::any};
 static constexpr TypePattern AnyIntOrRealOrChar{
     IntOrRealOrCharType, KindCode::any};
+static constexpr TypePattern AnyIntOrLogical{IntOrLogicalType, KindCode::any};
 static constexpr TypePattern AnyComplex{ComplexType, KindCode::any};
 static constexpr TypePattern AnyFloating{FloatingType, KindCode::any};
 static constexpr TypePattern AnyNumeric{NumericType, KindCode::any};
@@ -185,8 +188,9 @@ static constexpr TypePattern KINDChar{CharType, KindCode::effectiveKind};
 static constexpr TypePattern KINDLogical{LogicalType, KindCode::effectiveKind};
 
 static constexpr TypePattern AtomicInt{IntType, KindCode::atomicIntKind};
-static constexpr TypePattern SameAtom{
-    IntType | LogicalType, KindCode::sameAtom};
+static constexpr TypePattern AtomicIntOrLogical{
+    IntOrLogicalType, KindCode::atomicIntOrLogicalKind};
+static constexpr TypePattern SameAtom{IntOrLogicalType, KindCode::sameAtom};
 
 // The default rank pattern for dummy arguments and function results is
 // "elemental".
@@ -1112,6 +1116,14 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"stat", AnyInt, Rank::scalar, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
+    {"atomic_define",
+        {{"atom", AtomicIntOrLogical, Rank::atom, Optionality::required,
+             common::Intent::Out},
+            {"value", AnyIntOrLogical, Rank::scalar, Optionality::required,
+                common::Intent::In},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
     {"atomic_fetch_or",
         {{"atom", AtomicInt, Rank::atom, Optionality::required,
              common::Intent::InOut},
@@ -1119,6 +1131,14 @@ static const IntrinsicInterface intrinsicSubroutine[]{
                 common::Intent::In},
             {"old", AtomicInt, Rank::scalar, Optionality::required,
                 common::Intent::Out},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
+    {"atomic_ref",
+        {{"value", AnyIntOrLogical, Rank::scalar, Optionality::required,
+             common::Intent::Out},
+            {"atom", AtomicIntOrLogical, Rank::atom, Optionality::required,
+                common::Intent::In},
             {"stat", AnyInt, Rank::scalar, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
@@ -1634,6 +1654,11 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             d.keyword, type->AsFortran());
         return std::nullopt;
       }
+      break;
+    case KindCode::atomicIntOrLogicalKind:
+      argOk = CheckAtomicKind(DEREF(arg), builtinsScope, messages);
+      if (!argOk)
+        return std::nullopt;
       break;
     default:
       CRASH_NO_CASE;
@@ -2592,6 +2617,26 @@ static bool CheckForCoindexedObject(FoldingContext &context,
   return ok;
 }
 
+static bool CheckAtomicDefineAndRef(FoldingContext &context,
+    const std::optional<ActualArgument> &atomArg,
+    const std::optional<ActualArgument> &valueArg,
+    const std::optional<ActualArgument> &statArg, const std::string &procName) {
+  bool sameType{true};
+  if (valueArg && atomArg) {
+    // for atomic_define and atomic_ref, 'value' arg must be the same type as
+    // 'atom', but it doesn't have to be the same kind
+    if (valueArg->GetType()->category() != atomArg->GetType()->category()) {
+      sameType = false;
+      context.messages().Say(valueArg->sourceLocation(),
+          "'value=' argument to '%s' must have same type as 'atom=', but is '%s'"_err_en_US,
+          procName, valueArg->GetType()->AsFortran());
+    }
+  }
+
+  return sameType &&
+      CheckForCoindexedObject(context, statArg, procName, "stat");
+}
+
 // Applies any semantic checks peculiar to an intrinsic.
 static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
   bool ok{true};
@@ -2612,8 +2657,14 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     return CheckAssociated(call, context);
   } else if (name == "atomic_cas") {
     return CheckForCoindexedObject(context, call.arguments[4], name, "stat");
+  } else if (name == "atomic_define") {
+    return CheckAtomicDefineAndRef(
+        context, call.arguments[0], call.arguments[1], call.arguments[2], name);
   } else if (name == "atomic_fetch_or") {
     return CheckForCoindexedObject(context, call.arguments[3], name, "stat");
+  } else if (name == "atomic_ref") {
+    return CheckAtomicDefineAndRef(
+        context, call.arguments[1], call.arguments[0], call.arguments[2], name);
   } else if (name == "co_broadcast" || name == "co_max" || name == "co_min" ||
       name == "co_sum") {
     bool aOk{CheckForCoindexedObject(context, call.arguments[0], name, "a")};

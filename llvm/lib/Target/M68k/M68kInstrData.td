@@ -15,7 +15,7 @@
 ///
 ///     EXG   [ ]     FMOVE [ ]     FSMOVE [ ]     FDMOVE [ ]     FMOVEM [ ]
 ///     LEA   [~]     PEA   [ ]     MOVE   [~]     MOVE16 [ ]     MOVEA  [ ]
-///     MOVEM [ ]     MOVEP [ ]     MOVEQ  [ ]     LINK   [ ]     UNLK   [ ]
+///     MOVEM [ ]     MOVEP [ ]     MOVEQ  [ ]     LINK   [~]     UNLK   [~]
 ///
 ///  Pseudo:
 ///

@@ -10,9 +10,12 @@ def Bit0: I32BitEnumAttrCaseBit<"Bit0", 0, "tagged">;
 def Bit1: I32BitEnumAttrCaseBit<"Bit1", 1>;
 def Bit2: I32BitEnumAttrCaseBit<"Bit2", 2>;
 def Bit3: I32BitEnumAttrCaseBit<"Bit3", 3>;
+def BitGroup: I32BitEnumAttrCaseGroup<"BitGroup", [
+  Bit0, Bit1
+]>;
 
 def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
-                           [None, Bit0, Bit1, Bit2, Bit3]> {
+                           [None, Bit0, Bit1, Bit2, Bit3, BitGroup]> {
   let genSpecializedAttr = 0;
 }
 
@@ -44,6 +47,15 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 
 // DECL: inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, ::MyBitEnum value) {
 // DECL:   auto valueStr = stringifyEnum(value);
+// DECL:   switch (value) {
+// DECL:   case ::MyBitEnum::BitGroup:
+// DECL:     return p << valueStr;
+// DECL:   default:
+// DECL:     break;
+// DECL:   }
+// DECL:   auto underlyingValue = static_cast<std::make_unsigned_t<::MyBitEnum>>(value);
+// DECL:   if (underlyingValue && !llvm::has_single_bit(underlyingValue))
+// DECL:     return p << '"' << valueStr << '"';
 // DECL:   return p << valueStr;
 
 // DEF-LABEL: std::string stringifyMyBitEnum

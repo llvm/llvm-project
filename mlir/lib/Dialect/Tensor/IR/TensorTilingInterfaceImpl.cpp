@@ -21,21 +21,6 @@ namespace {
 
 struct PadOpTiling : public TilingInterface::ExternalModel<PadOpTiling, PadOp> {
 
-  SmallVector<Value> getDestinationOperands(Operation *op, OpBuilder &b) const {
-    OpBuilder::InsertionGuard g(b);
-    b.setInsertionPoint(op);
-    ReifiedRankedShapedTypeDims reifiedShapes;
-    ReifyRankedShapedTypeOpInterface reifyShapedTypeInterface =
-        dyn_cast<ReifyRankedShapedTypeOpInterface>(op);
-    (void)reifyShapedTypeInterface.reifyResultShapes(b, reifiedShapes);
-
-    auto padOp = cast<PadOp>(op);
-    SmallVector<OpFoldResult> mixedSizes = getAsOpFoldResult(reifiedShapes[0]);
-    Value emptyTensor = b.create<EmptyOp>(
-        op->getLoc(), mixedSizes, padOp.getResultType().getElementType());
-    return {emptyTensor};
-  }
-
   SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     auto padOp = cast<PadOp>(op);
     SmallVector<utils::IteratorType> iteratorTypes(

@@ -205,6 +205,61 @@ def CConv : DialectAttr<
 }
 
 //===----------------------------------------------------------------------===//
+// DIEmissionKind
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIEmissionNone                : I64EnumAttrCase<"None", 0>;
+def LLVM_DIEmissionFull                : I64EnumAttrCase<"Full", 1>;
+def LLVM_DIEmissionLineTablesOnly      : I64EnumAttrCase<"LineTablesOnly", 2>;
+def LLVM_DIEmissionDebugDirectivesOnly : I64EnumAttrCase<"DebugDirectivesOnly", 3>;
+
+def LLVM_DIEmissionKind : I64EnumAttr<
+    "DIEmissionKind",
+    "LLVM debug emission kind", [
+      LLVM_DIEmissionNone,
+      LLVM_DIEmissionFull,
+      LLVM_DIEmissionLineTablesOnly,
+      LLVM_DIEmissionDebugDirectivesOnly,
+    ]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
+// DISubprogramFlags
+//===----------------------------------------------------------------------===//
+
+def LLVM_DISPVirtual        : I32BitEnumAttrCaseBit<"Virtual", 0>;
+def LLVM_DISPPureVirtual    : I32BitEnumAttrCaseBit<"PureVirtual", 1>;
+def LLVM_DISPLocalToUnit    : I32BitEnumAttrCaseBit<"LocalToUnit", 2>;
+def LLVM_DISPDefinition     : I32BitEnumAttrCaseBit<"Definition", 3>;
+def LLVM_DISPOptimized      : I32BitEnumAttrCaseBit<"Optimized", 4>;
+def LLVM_DISPPure           : I32BitEnumAttrCaseBit<"Pure", 5>;
+def LLVM_DISPElemental      : I32BitEnumAttrCaseBit<"Elemental", 6>;
+def LLVM_DISPRecursive      : I32BitEnumAttrCaseBit<"Recursive", 7>;
+def LLVM_DISPMainSubprogram : I32BitEnumAttrCaseBit<"MainSubprogram", 8>;
+def LLVM_DISPDeleted        : I32BitEnumAttrCaseBit<"Deleted", 9>;
+def LLVM_DISPObjCDirect     : I32BitEnumAttrCaseBit<"ObjCDirect", 11>;
+
+def DISubprogramFlags : I32BitEnumAttr<
+    "DISubprogramFlags",
+    "LLVM DISubprogram flags", [
+      LLVM_DISPVirtual,
+      LLVM_DISPPureVirtual,
+      LLVM_DISPLocalToUnit,
+      LLVM_DISPDefinition,
+      LLVM_DISPOptimized,
+      LLVM_DISPPure, 
+      LLVM_DISPElemental,
+      LLVM_DISPRecursive,
+      LLVM_DISPMainSubprogram,
+      LLVM_DISPDeleted,
+      LLVM_DISPObjCDirect
+    ]> {
+  let cppNamespace = "::mlir::LLVM";
+  let printBitEnumPrimaryGroups = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // FastmathFlags
 //===----------------------------------------------------------------------===//
 
