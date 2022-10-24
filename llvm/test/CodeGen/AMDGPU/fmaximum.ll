@@ -129,102 +129,62 @@ define amdgpu_ps half @test_fmaximum_f16_ss(half inreg %a, half inreg %b) {
   ret half %val
 }
 
-define amdgpu_ps <2 x half> @test_fmaximum_v2f16_ss(<2 x half> inreg %a, <2 x half> inreg %b) {
-; GFX12-SDAG-LABEL: test_fmaximum_v2f16_ss:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_lshr_b32 s2, s1, 16
-; GFX12-SDAG-NEXT:    s_lshr_b32 s3, s0, 16
-; GFX12-SDAG-NEXT:    s_maximum_f16 s0, s0, s1
-; GFX12-SDAG-NEXT:    s_maximum_f16 s2, s3, s2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-SDAG-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: test_fmaximum_v2f16_ss:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX12-GISEL-NEXT:    s_lshr_b32 s3, s1, 16
-; GFX12-GISEL-NEXT:    s_maximum_f16 s0, s0, s1
-; GFX12-GISEL-NEXT:    s_maximum_f16 s1, s2, s3
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+define amdgpu_ps <2 x half> @test_fmaximum_v2f16_vv(<2 x half> %a, <2 x half> %b) {
+; GCN-LABEL: test_fmaximum_v2f16_vv:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_pk_maximum_f16 v0, v0, v1
+; GCN-NEXT:    ; return to shader part epilog
   %val = call <2 x half> @llvm.maximum.v2f16(<2 x half> %a, <2 x half> %b)
   ret <2 x half> %val
 }
 
+define amdgpu_ps <2 x half> @test_fmaximum_v2f16_ss(<2 x half> inreg %a, <2 x half> inreg %b) {
+; GCN-LABEL: test_fmaximum_v2f16_ss:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_pk_maximum_f16 v0, s0, s1
+; GCN-NEXT:    ; return to shader part epilog
+  %val = call <2 x half> @llvm.maximum.v2f16(<2 x half> %a, <2 x half> %b)
+  ret <2 x half> %val
+}
+
+define amdgpu_ps <3 x half> @test_fmaximum_v3f16_vv(<3 x half> %a, <3 x half> %b) {
+; GCN-LABEL: test_fmaximum_v3f16_vv:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_pk_maximum_f16 v0, v0, v2
+; GCN-NEXT:    v_maximum_f16 v1, v1, v3
+; GCN-NEXT:    ; return to shader part epilog
+  %val = call <3 x half> @llvm.maximum.v3f16(<3 x half> %a, <3 x half> %b)
+  ret <3 x half> %val
+}
+
+define amdgpu_ps <3 x half> @test_fmaximum_v3f16_ss(<3 x half> inreg %a, <3 x half> inreg %b) {
+; GCN-LABEL: test_fmaximum_v3f16_ss:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_pk_maximum_f16 v0, s0, s2
+; GCN-NEXT:    s_maximum_f16 s0, s1, s3
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GCN-NEXT:    v_mov_b32_e32 v1, s0
+; GCN-NEXT:    ; return to shader part epilog
+  %val = call <3 x half> @llvm.maximum.v3f16(<3 x half> %a, <3 x half> %b)
+  ret <3 x half> %val
+}
+
 define amdgpu_ps <4 x half> @test_fmaximum_v4f16(<4 x half> %a, <4 x half> %b) {
-; GFX12-SDAG-LABEL: test_fmaximum_v4f16:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; GFX12-SDAG-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
-; GFX12-SDAG-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
-; GFX12-SDAG-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
-; GFX12-SDAG-NEXT:    v_maximum_f16 v1, v1, v3
-; GFX12-SDAG-NEXT:    v_maximum_f16 v0, v0, v2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX12-SDAG-NEXT:    v_maximum_f16 v2, v6, v5
-; GFX12-SDAG-NEXT:    v_maximum_f16 v3, v7, v4
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-SDAG-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX12-SDAG-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: test_fmaximum_v4f16:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
-; GFX12-GISEL-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
-; GFX12-GISEL-NEXT:    v_maximum_f16 v0, v0, v2
-; GFX12-GISEL-NEXT:    v_maximum_f16 v1, v1, v3
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX12-GISEL-NEXT:    v_maximum_f16 v2, v4, v6
-; GFX12-GISEL-NEXT:    v_maximum_f16 v3, v5, v7
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-GISEL-NEXT:    v_perm_b32 v0, v2, v0, 0x5040100
-; GFX12-GISEL-NEXT:    v_perm_b32 v1, v3, v1, 0x5040100
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GCN-LABEL: test_fmaximum_v4f16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_pk_maximum_f16 v0, v0, v2
+; GCN-NEXT:    v_pk_maximum_f16 v1, v1, v3
+; GCN-NEXT:    ; return to shader part epilog
   %val = call <4 x half> @llvm.maximum.v4f16(<4 x half> %a, <4 x half> %b)
   ret <4 x half> %val
 }
 
 define amdgpu_ps <4 x half> @test_fmaximum_v4f16_ss(<4 x half> inreg %a, <4 x half> inreg %b) {
-; GFX12-SDAG-LABEL: test_fmaximum_v4f16_ss:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_lshr_b32 s4, s3, 16
-; GFX12-SDAG-NEXT:    s_lshr_b32 s5, s1, 16
-; GFX12-SDAG-NEXT:    s_lshr_b32 s6, s2, 16
-; GFX12-SDAG-NEXT:    s_lshr_b32 s7, s0, 16
-; GFX12-SDAG-NEXT:    s_maximum_f16 s4, s5, s4
-; GFX12-SDAG-NEXT:    s_maximum_f16 s5, s7, s6
-; GFX12-SDAG-NEXT:    s_maximum_f16 s0, s0, s2
-; GFX12-SDAG-NEXT:    s_maximum_f16 s1, s1, s3
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(SALU_CYCLE_2)
-; GFX12-SDAG-NEXT:    s_pack_ll_b32_b16 s0, s0, s5
-; GFX12-SDAG-NEXT:    s_pack_ll_b32_b16 s1, s1, s4
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-SDAG-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX12-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX12-GISEL-LABEL: test_fmaximum_v4f16_ss:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_lshr_b32 s4, s0, 16
-; GFX12-GISEL-NEXT:    s_lshr_b32 s5, s1, 16
-; GFX12-GISEL-NEXT:    s_lshr_b32 s6, s2, 16
-; GFX12-GISEL-NEXT:    s_lshr_b32 s7, s3, 16
-; GFX12-GISEL-NEXT:    s_maximum_f16 s0, s0, s2
-; GFX12-GISEL-NEXT:    s_maximum_f16 s2, s4, s6
-; GFX12-GISEL-NEXT:    s_maximum_f16 s1, s1, s3
-; GFX12-GISEL-NEXT:    s_maximum_f16 s3, s5, s7
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_2)
-; GFX12-GISEL-NEXT:    s_pack_ll_b32_b16 s0, s0, s2
-; GFX12-GISEL-NEXT:    s_pack_ll_b32_b16 s1, s1, s3
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX12-GISEL-NEXT:    ; return to shader part epilog
+; GCN-LABEL: test_fmaximum_v4f16_ss:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_pk_maximum_f16 v0, s0, s2
+; GCN-NEXT:    v_pk_maximum_f16 v1, s1, s3
+; GCN-NEXT:    ; return to shader part epilog
   %val = call <4 x half> @llvm.maximum.v4f16(<4 x half> %a, <4 x half> %b)
   ret <4 x half> %val
 }
@@ -341,7 +301,11 @@ declare <4 x float> @llvm.maximum.v4f32(<4 x float>, <4 x float>)
 declare <16 x float> @llvm.maximum.v16f32(<16 x float>, <16 x float>)
 declare half @llvm.maximum.f16(half, half)
 declare <2 x half> @llvm.maximum.v2f16(<2 x half>, <2 x half>)
+declare <3 x half> @llvm.maximum.v3f16(<3 x half>, <3 x half>)
 declare <4 x half> @llvm.maximum.v4f16(<4 x half>, <4 x half>)
 declare double @llvm.maximum.f64(double, double)
 declare <2 x double> @llvm.maximum.v2f64(<2 x double>, <2 x double>)
 declare <4 x double> @llvm.maximum.v4f64(<4 x double>, <4 x double>)
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX12-GISEL: {{.*}}
+; GFX12-SDAG: {{.*}}

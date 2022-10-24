@@ -1717,9 +1717,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   if (ST.hasIEEEMinMax()) {
     getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
-        .legalFor({{S16}, {S32}, {S64}})
-        .scalarize(0)
-        .minScalar(0, S32);
+        .legalFor(FPTypesPK16)
+        .clampMaxNumElements(0, S16, 2)
+        .scalarize(0);
   } else {
     // TODO: Implement
     getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM})
