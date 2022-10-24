@@ -107,8 +107,6 @@ namespace clang {
     void VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D);
     void VisitTemplateDecl(TemplateDecl *D);
     void VisitConceptDecl(ConceptDecl *D);
-    void VisitImplicitConceptSpecializationDecl(
-        ImplicitConceptSpecializationDecl *D);
     void VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D);
     void VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D);
     void VisitClassTemplateDecl(ClassTemplateDecl *D);
@@ -1517,15 +1515,6 @@ void ASTDeclWriter::VisitConceptDecl(ConceptDecl *D) {
   VisitTemplateDecl(D);
   Record.AddStmt(D->getConstraintExpr());
   Code = serialization::DECL_CONCEPT;
-}
-
-void ASTDeclWriter::VisitImplicitConceptSpecializationDecl(
-    ImplicitConceptSpecializationDecl *D) {
-  Record.push_back(D->getTemplateArguments().size());
-  VisitDecl(D);
-  for (const TemplateArgument &Arg : D->getTemplateArguments())
-    Record.AddTemplateArgument(Arg);
-  Code = serialization::DECL_IMPLICIT_CONCEPT_SPECIALIZATION;
 }
 
 void ASTDeclWriter::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {

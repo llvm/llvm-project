@@ -384,8 +384,6 @@ namespace clang {
     void VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D);
     void VisitTemplateDecl(TemplateDecl *D);
     void VisitConceptDecl(ConceptDecl *D);
-    void VisitImplicitConceptSpecializationDecl(
-        ImplicitConceptSpecializationDecl *D);
     void VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D);
     RedeclarableResult VisitRedeclarableTemplateDecl(RedeclarableTemplateDecl *D);
     void VisitClassTemplateDecl(ClassTemplateDecl *D);
@@ -2236,17 +2234,6 @@ void ASTDeclReader::VisitConceptDecl(ConceptDecl *D) {
   mergeMergeable(D);
 }
 
-void ASTDeclReader::VisitImplicitConceptSpecializationDecl(
-    ImplicitConceptSpecializationDecl *D) {
-  // The size of the template list was read during creation of the Decl, so we
-  // don't have to re-read it here.
-  VisitDecl(D);
-  llvm::SmallVector<TemplateArgument, 4> Args;
-  for (unsigned I = 0; I < D->NumTemplateArgs; ++I)
-    Args.push_back(Record.readTemplateArgument(/*Canonicalize=*/true));
-  D->setTemplateArguments(Args);
-}
-
 void ASTDeclReader::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {
 }
 
@@ -3912,10 +3899,6 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_HLSL_BUFFER:
     D = HLSLBufferDecl::CreateDeserialized(Context, ID);
-    break;
-  case DECL_IMPLICIT_CONCEPT_SPECIALIZATION:
-    D = ImplicitConceptSpecializationDecl::CreateDeserialized(Context, ID,
-                                                              Record.readInt());
     break;
   }
 
