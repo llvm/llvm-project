@@ -936,6 +936,14 @@ def StdC : StandardSpec<"stdc"> {
               ]
           >,
           FunctionSpec<
+              "difftime",
+              RetValSpec<DoubleType>,
+              [
+                  ArgSpec<TimeTType>,
+                  ArgSpec<TimeTType>,
+              ]
+          >,
+          FunctionSpec<
               "gmtime",
               RetValSpec<StructTmPtr>,
               [ArgSpec<TimeTTypePtr>]
