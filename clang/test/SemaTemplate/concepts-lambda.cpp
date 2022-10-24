@@ -55,39 +55,3 @@ namespace GH57971 {
   using function_ptr = void(*)(int);
   function_ptr ptr = f<void>;
 }
-
-// GH58368: A lambda defined in a concept requires we store
-// the concept as a part of the lambda context.
-namespace LambdaInConcept {
-using size_t = unsigned long;
-
-template<size_t...Ts>
-struct IdxSeq{};
-
-template <class T, class... Ts>
-concept NotLike = true;
-
-template <size_t, class... Ts>
-struct AnyExcept {
-  template <NotLike<Ts...> T> operator T&() const;
-  template <NotLike<Ts...> T> operator T&&() const;
-};
-
-template <class T>
-  concept ConstructibleWithN = (requires {
-                                []<size_t I, size_t... Idxs>
-                                (IdxSeq<I, Idxs...>)
-                                requires requires { T{AnyExcept<I, T>{}}; }
-                                { }
-                                (IdxSeq<1,2,3>{});
-    });
-
-struct Foo {
-  int i;
-  double j;
-  char k;
-};
-
-static_assert(ConstructibleWithN<Foo>);
-
-}
