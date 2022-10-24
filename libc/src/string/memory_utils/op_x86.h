@@ -129,8 +129,8 @@ template <size_t Size> using Bcmp = BcmpImpl<Size, 64, bcmp64>;
 static inline MemcmpReturnType char_diff_no_zero(CPtr p1, CPtr p2,
                                                  uint64_t mask) {
   const size_t diff_index = __builtin_ctzll(mask);
-  const int16_t ca = cpp::bit_cast<uint8_t>(p1[diff_index]);
-  const int16_t cb = cpp::bit_cast<uint8_t>(p2[diff_index]);
+  const int16_t ca = cpp::to_integer<uint8_t>(p1[diff_index]);
+  const int16_t cb = cpp::to_integer<uint8_t>(p2[diff_index]);
   return ca - cb;
 }
 
