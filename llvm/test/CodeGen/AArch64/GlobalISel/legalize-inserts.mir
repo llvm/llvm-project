@@ -10,7 +10,9 @@ body: |
 
 
     ; CHECK-LABEL: name: test_inserts_nonpow2
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x3
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x3
     ; CHECK-NEXT: $x0 = COPY [[COPY]](s64)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(s64) = COPY $x0
@@ -30,7 +32,9 @@ body: |
     liveins: $x0, $x1, $x2
 
     ; CHECK-LABEL: name: test_inserts_s96
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x2
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
@@ -58,7 +62,9 @@ body: |
     liveins: $x0, $x1, $x2
 
     ; CHECK-LABEL: name: test_inserts_s65
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x2
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s8), [[UV1:%[0-9]+]]:_(s8), [[UV2:%[0-9]+]]:_(s8), [[UV3:%[0-9]+]]:_(s8), [[UV4:%[0-9]+]]:_(s8), [[UV5:%[0-9]+]]:_(s8), [[UV6:%[0-9]+]]:_(s8), [[UV7:%[0-9]+]]:_(s8) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UV]](s8)
@@ -643,7 +649,9 @@ body: |
   bb.0:
     liveins: $w0, $w1
     ; CHECK-LABEL: name: s1_s32_legal
-    ; CHECK: %val1:_(s32) = COPY $w0
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %val1:_(s32) = COPY $w0
     ; CHECK-NEXT: %val2:_(s32) = COPY $w1
     ; CHECK-NEXT: %op:_(s1) = G_TRUNC %val2(s32)
     ; CHECK-NEXT: %ins:_(s32) = G_INSERT %val1, %op(s1), 0
@@ -662,7 +670,9 @@ body: |
   bb.0:
     liveins: $w0, $b0
     ; CHECK-LABEL: name: s8_s32_legal
-    ; CHECK: %val:_(s32) = COPY $w0
+    ; CHECK: liveins: $w0, $b0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %val:_(s32) = COPY $w0
     ; CHECK-NEXT: %op:_(s8) = COPY $b0
     ; CHECK-NEXT: %ins:_(s32) = G_INSERT %val, %op(s8), 0
     ; CHECK-NEXT: $w0 = COPY %ins(s32)
@@ -679,7 +689,9 @@ body: |
   bb.0:
     liveins: $w0, $h0
     ; CHECK-LABEL: name: s16_s32_legal
-    ; CHECK: %val:_(s32) = COPY $w0
+    ; CHECK: liveins: $w0, $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %val:_(s32) = COPY $w0
     ; CHECK-NEXT: %op:_(s16) = COPY $h0
     ; CHECK-NEXT: %ins:_(s32) = G_INSERT %val, %op(s16), 0
     ; CHECK-NEXT: $w0 = COPY %ins(s32)
@@ -696,7 +708,9 @@ body: |
   bb.0:
     liveins: $x0, $w0
     ; CHECK-LABEL: name: s32_s64_legal
-    ; CHECK: %val:_(s64) = COPY $x0
+    ; CHECK: liveins: $x0, $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %val:_(s64) = COPY $x0
     ; CHECK-NEXT: %op:_(s32) = COPY $w0
     ; CHECK-NEXT: %ins:_(s64) = G_INSERT %val, %op(s32), 0
     ; CHECK-NEXT: $x0 = COPY %ins(s64)
@@ -713,7 +727,9 @@ body: |
   bb.0:
     liveins: $x0, $w0
     ; CHECK-LABEL: name: s32_p0_legal
-    ; CHECK: %val:_(p0) = COPY $x0
+    ; CHECK: liveins: $x0, $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %val:_(p0) = COPY $x0
     ; CHECK-NEXT: %op:_(s32) = COPY $w0
     ; CHECK-NEXT: %ins:_(p0) = G_INSERT %val, %op(s32), 0
     ; CHECK-NEXT: $x0 = COPY %ins(p0)
@@ -730,7 +746,9 @@ body: |
   bb.0:
     liveins: $q0, $w0
     ; CHECK-LABEL: name: s32_s128
-    ; CHECK: %val:_(s128) = COPY $q0
+    ; CHECK: liveins: $q0, $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %val:_(s128) = COPY $q0
     ; CHECK-NEXT: %op:_(s32) = COPY $w0
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES %val(s128)
     ; CHECK-NEXT: [[INSERT:%[0-9]+]]:_(s64) = G_INSERT [[UV]], %op(s32), 0
@@ -749,7 +767,9 @@ body: |
   bb.0:
     liveins: $q0, $w0
     ; CHECK-LABEL: name: s1_s128
-    ; CHECK: %val1:_(s128) = COPY $q0
+    ; CHECK: liveins: $q0, $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %val1:_(s128) = COPY $q0
     ; CHECK-NEXT: %val2:_(s32) = COPY $w1
     ; CHECK-NEXT: %op:_(s1) = G_TRUNC %val2(s32)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES %val1(s128)
@@ -772,7 +792,9 @@ body: |
     ; FIXME: Can't legalize this right now?
 
     ; CHECK-LABEL: name: s4_s32
-    ; CHECK: %val1:_(s32) = COPY $w0
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %val1:_(s32) = COPY $w0
     ; CHECK-NEXT: %val2:_(s32) = COPY $w1
     ; CHECK-NEXT: %op:_(s4) = G_TRUNC %val2(s32)
     ; CHECK-NEXT: %ins:_(s32) = G_INSERT %val1, %op(s4), 0
