@@ -104,19 +104,19 @@ static bool increaseGranularity(std::vector<Chunk> &Chunks) {
   if (Verbose)
     errs() << "Increasing granularity...";
   std::vector<Chunk> NewChunks;
-  bool SplitOne = false;
+  bool SplitAny = false;
 
-  for (auto &C : Chunks) {
+  for (Chunk C : Chunks) {
     if (C.End - C.Begin == 0)
       NewChunks.push_back(C);
     else {
       int Half = (C.Begin + C.End) / 2;
       NewChunks.push_back({C.Begin, Half});
       NewChunks.push_back({Half + 1, C.End});
-      SplitOne = true;
+      SplitAny = true;
     }
   }
-  if (SplitOne) {
+  if (SplitAny) {
     Chunks = NewChunks;
     if (Verbose) {
       errs() << "Success! " << NewChunks.size() << " New Chunks:\n";
@@ -127,7 +127,7 @@ static bool increaseGranularity(std::vector<Chunk> &Chunks) {
       }
     }
   }
-  return SplitOne;
+  return SplitAny;
 }
 
 // Check if \p ChunkToCheckForUninterestingness is interesting. Returns the
@@ -147,8 +147,8 @@ CheckChunk(Chunk &ChunkToCheckForUninterestingness,
                         UninterestingChunks.size() - 1);
   copy_if(ChunksStillConsideredInteresting, std::back_inserter(CurrentChunks),
           [&](const Chunk &C) {
-            return !UninterestingChunks.count(C) &&
-                   C != ChunkToCheckForUninterestingness;
+            return C != ChunkToCheckForUninterestingness &&
+                   !UninterestingChunks.count(C);
           });
 
   // Generate Module with only Targets inside Current Chunks
@@ -193,8 +193,7 @@ static SmallString<0> ProcessChunkFromSerializedBitcode(
     SmallString<0> &OriginalBC, std::atomic<bool> &AnyReduced) {
   LLVMContext Ctx;
   auto CloneMMM = std::make_unique<ReducerWorkItem>();
-  auto Data = MemoryBufferRef(StringRef(OriginalBC.data(), OriginalBC.size()),
-                              "<bc file>");
+  MemoryBufferRef Data(StringRef(OriginalBC), "<bc file>");
   readBitcode(*CloneMMM, Data, Ctx, Test.getToolName());
 
   SmallString<0> Result;
@@ -345,8 +344,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
           }
 
           Result = std::make_unique<ReducerWorkItem>();
-          auto Data = MemoryBufferRef(StringRef(Res.data(), Res.size()),
-                                      "<bc file>");
+          MemoryBufferRef Data(StringRef(Res), "<bc file>");
           readBitcode(*Result, Data, Test.getProgram().M->getContext(),
                       Test.getToolName());
           break;
