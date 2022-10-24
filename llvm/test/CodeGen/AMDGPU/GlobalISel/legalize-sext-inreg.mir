@@ -469,10 +469,9 @@ body: |
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT_INREG]](s64)
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX9-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[UV1]], [[C]](s32)
-    ; GFX9-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
-    ; GFX9-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ASHR]](s32), [[ASHR]](s32)
-    ; GFX9-NEXT: [[MV2:%[0-9]+]]:_(s192) = G_MERGE_VALUES [[MV]](s64), [[MV1]](s64), [[MV1]](s64)
-    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s192)
+    ; GFX9-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ASHR]](s32), [[ASHR]](s32)
+    ; GFX9-NEXT: [[MV1:%[0-9]+]]:_(s192) = G_MERGE_VALUES [[SEXT_INREG]](s64), [[MV]](s64), [[MV]](s64)
+    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s96) = G_TRUNC [[MV1]](s192)
     ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC1]](s96)
     ; GFX8-LABEL: name: test_sext_inreg_s96_8
     ; GFX8: liveins: $vgpr0_vgpr1_vgpr2
@@ -483,10 +482,9 @@ body: |
     ; GFX8-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT_INREG]](s64)
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX8-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[UV1]], [[C]](s32)
-    ; GFX8-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
-    ; GFX8-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ASHR]](s32), [[ASHR]](s32)
-    ; GFX8-NEXT: [[MV2:%[0-9]+]]:_(s192) = G_MERGE_VALUES [[MV]](s64), [[MV1]](s64), [[MV1]](s64)
-    ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s192)
+    ; GFX8-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ASHR]](s32), [[ASHR]](s32)
+    ; GFX8-NEXT: [[MV1:%[0-9]+]]:_(s192) = G_MERGE_VALUES [[SEXT_INREG]](s64), [[MV]](s64), [[MV]](s64)
+    ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:_(s96) = G_TRUNC [[MV1]](s192)
     ; GFX8-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC1]](s96)
     ; GFX6-LABEL: name: test_sext_inreg_s96_8
     ; GFX6: liveins: $vgpr0_vgpr1_vgpr2
@@ -497,10 +495,9 @@ body: |
     ; GFX6-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT_INREG]](s64)
     ; GFX6-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX6-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[UV1]], [[C]](s32)
-    ; GFX6-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
-    ; GFX6-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ASHR]](s32), [[ASHR]](s32)
-    ; GFX6-NEXT: [[MV2:%[0-9]+]]:_(s192) = G_MERGE_VALUES [[MV]](s64), [[MV1]](s64), [[MV1]](s64)
-    ; GFX6-NEXT: [[TRUNC1:%[0-9]+]]:_(s96) = G_TRUNC [[MV2]](s192)
+    ; GFX6-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ASHR]](s32), [[ASHR]](s32)
+    ; GFX6-NEXT: [[MV1:%[0-9]+]]:_(s192) = G_MERGE_VALUES [[SEXT_INREG]](s64), [[MV]](s64), [[MV]](s64)
+    ; GFX6-NEXT: [[TRUNC1:%[0-9]+]]:_(s96) = G_TRUNC [[MV1]](s192)
     ; GFX6-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[TRUNC1]](s96)
     %0:_(s96) = COPY $vgpr0_vgpr1_vgpr2
     %1:_(s96) = G_SEXT_INREG %0, 8
@@ -563,10 +560,9 @@ body: |
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT_INREG]](s64)
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX9-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[UV1]], [[C]](s32)
-    ; GFX9-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
-    ; GFX9-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ASHR]](s32), [[ASHR]](s32)
-    ; GFX9-NEXT: [[MV2:%[0-9]+]]:_(s320) = G_MERGE_VALUES [[MV]](s64), [[MV1]](s64), [[MV1]](s64), [[MV1]](s64), [[MV1]](s64)
-    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s160) = G_TRUNC [[MV2]](s320)
+    ; GFX9-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ASHR]](s32), [[ASHR]](s32)
+    ; GFX9-NEXT: [[MV1:%[0-9]+]]:_(s320) = G_MERGE_VALUES [[SEXT_INREG]](s64), [[MV]](s64), [[MV]](s64), [[MV]](s64), [[MV]](s64)
+    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s160) = G_TRUNC [[MV1]](s320)
     ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 = COPY [[TRUNC1]](s160)
     ; GFX8-LABEL: name: test_sext_inreg_s160_8
     ; GFX8: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4
@@ -577,10 +573,9 @@ body: |
     ; GFX8-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT_INREG]](s64)
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX8-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[UV1]], [[C]](s32)
-    ; GFX8-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
-    ; GFX8-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ASHR]](s32), [[ASHR]](s32)
-    ; GFX8-NEXT: [[MV2:%[0-9]+]]:_(s320) = G_MERGE_VALUES [[MV]](s64), [[MV1]](s64), [[MV1]](s64), [[MV1]](s64), [[MV1]](s64)
-    ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:_(s160) = G_TRUNC [[MV2]](s320)
+    ; GFX8-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ASHR]](s32), [[ASHR]](s32)
+    ; GFX8-NEXT: [[MV1:%[0-9]+]]:_(s320) = G_MERGE_VALUES [[SEXT_INREG]](s64), [[MV]](s64), [[MV]](s64), [[MV]](s64), [[MV]](s64)
+    ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:_(s160) = G_TRUNC [[MV1]](s320)
     ; GFX8-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 = COPY [[TRUNC1]](s160)
     ; GFX6-LABEL: name: test_sext_inreg_s160_8
     ; GFX6: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4
@@ -591,10 +586,9 @@ body: |
     ; GFX6-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SEXT_INREG]](s64)
     ; GFX6-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; GFX6-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[UV1]], [[C]](s32)
-    ; GFX6-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32)
-    ; GFX6-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ASHR]](s32), [[ASHR]](s32)
-    ; GFX6-NEXT: [[MV2:%[0-9]+]]:_(s320) = G_MERGE_VALUES [[MV]](s64), [[MV1]](s64), [[MV1]](s64), [[MV1]](s64), [[MV1]](s64)
-    ; GFX6-NEXT: [[TRUNC1:%[0-9]+]]:_(s160) = G_TRUNC [[MV2]](s320)
+    ; GFX6-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[ASHR]](s32), [[ASHR]](s32)
+    ; GFX6-NEXT: [[MV1:%[0-9]+]]:_(s320) = G_MERGE_VALUES [[SEXT_INREG]](s64), [[MV]](s64), [[MV]](s64), [[MV]](s64), [[MV]](s64)
+    ; GFX6-NEXT: [[TRUNC1:%[0-9]+]]:_(s160) = G_TRUNC [[MV1]](s320)
     ; GFX6-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 = COPY [[TRUNC1]](s160)
     %0:_(s160) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4
     %1:_(s160) = G_SEXT_INREG %0, 8

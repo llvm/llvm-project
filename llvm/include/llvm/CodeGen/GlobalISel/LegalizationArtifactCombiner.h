@@ -808,6 +808,76 @@ public:
       }
       return DeadDefs.all();
     }
+
+    GUnmerge *findUnmergeThatDefinesReg(Register Reg, unsigned Size,
+                                        unsigned &DefOperandIdx) {
+      if (Register Def = findValueFromDefImpl(Reg, 0, Size)) {
+        if (auto *Unmerge = dyn_cast<GUnmerge>(MRI.getVRegDef(Def))) {
+          DefOperandIdx = Unmerge->findRegisterDefOperandIdx(Def);
+          return Unmerge;
+        }
+      }
+      return nullptr;
+    }
+
+    // Check if sequence of elements from merge-like instruction is defined by
+    // another sequence of elements defined by unmerge. Most often this is the
+    // same sequence. Search for elements using findValueFromDefImpl.
+    bool isSequenceFromUnmerge(GMergeLikeOp &MI, unsigned MergeStartIdx,
+                               GUnmerge *Unmerge, unsigned UnmergeIdxStart,
+                               unsigned NumElts, unsigned EltSize) {
+      assert(MergeStartIdx + NumElts <= MI.getNumSources());
+      for (unsigned i = MergeStartIdx; i < MergeStartIdx + NumElts; ++i) {
+        unsigned EltUnmergeIdx;
+        GUnmerge *EltUnmerge = findUnmergeThatDefinesReg(
+            MI.getSourceReg(i), EltSize, EltUnmergeIdx);
+        // Check if source i comes from the same Unmerge.
+        if (!EltUnmerge || EltUnmerge != Unmerge)
+          return false;
+        // Check that source i's def has same index in sequence in Unmerge.
+        if (i - MergeStartIdx != EltUnmergeIdx - UnmergeIdxStart)
+          return false;
+      }
+      return true;
+    }
+
+    bool tryCombineMergeLike(GMergeLikeOp &MI,
+                             SmallVectorImpl<MachineInstr *> &DeadInsts,
+                             SmallVectorImpl<Register> &UpdatedDefs,
+                             GISelChangeObserver &Observer) {
+      Register Elt0 = MI.getSourceReg(0);
+      LLT EltTy = MRI.getType(Elt0);
+      unsigned EltSize = EltTy.getSizeInBits();
+
+      unsigned Elt0UnmergeIdx;
+      // Search for unmerge that will be candidate for combine.
+      auto *Unmerge = findUnmergeThatDefinesReg(Elt0, EltSize, Elt0UnmergeIdx);
+      if (!Unmerge)
+        return false;
+
+      unsigned NumMIElts = MI.getNumSources();
+      Register Dst = MI.getReg(0);
+      LLT DstTy = MRI.getType(Dst);
+      Register UnmergeSrc = Unmerge->getSourceReg();
+      LLT UnmergeSrcTy = MRI.getType(UnmergeSrc);
+
+      // Recognize copy of UnmergeSrc to Dst.
+      // Unmerge UnmergeSrc and reassemble it using merge-like opcode into Dst.
+      //
+      // %0:_(EltTy), %1, ... = G_UNMERGE_VALUES %UnmergeSrc:_(Ty)
+      // %Dst:_(Ty) = G_merge_like_opcode %0:_(EltTy), %1, ...
+      //
+      // %Dst:_(Ty) = COPY %UnmergeSrc:_(Ty)
+      if ((DstTy == UnmergeSrcTy) && (Elt0UnmergeIdx == 0)) {
+        if (!isSequenceFromUnmerge(MI, 0, Unmerge, 0, NumMIElts, EltSize))
+          return false;
+        replaceRegOrBuildCopy(Dst, UnmergeSrc, MRI, MIB, UpdatedDefs, Observer);
+        DeadInsts.push_back(&MI);
+        return true;
+      }
+
+      return false;
+    }
   };
 
   bool tryCombineUnmergeValues(GUnmerge &MI,
@@ -1068,6 +1138,8 @@ public:
   bool tryCombineInstruction(MachineInstr &MI,
                              SmallVectorImpl<MachineInstr *> &DeadInsts,
                              GISelObserverWrapper &WrapperObserver) {
+    ArtifactValueFinder Finder(MRI, Builder, LI);
+
     // This might be a recursive call, and we might have DeadInsts already
     // populated. To avoid bad things happening later with multiple vreg defs
     // etc, process the dead instructions now if any.
@@ -1108,6 +1180,8 @@ public:
           break;
         }
       }
+      Changed = Finder.tryCombineMergeLike(cast<GMergeLikeOp>(MI), DeadInsts,
+                                           UpdatedDefs, WrapperObserver);
       break;
     case TargetOpcode::G_EXTRACT:
       Changed = tryCombineExtract(MI, DeadInsts, UpdatedDefs);
@@ -1139,6 +1213,7 @@ public:
         case TargetOpcode::G_UNMERGE_VALUES:
         case TargetOpcode::G_EXTRACT:
         case TargetOpcode::G_TRUNC:
+        case TargetOpcode::G_BUILD_VECTOR:
           // Adding Use to ArtifactList.
           WrapperObserver.changedInstr(Use);
           break;
