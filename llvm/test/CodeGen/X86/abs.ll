@@ -659,21 +659,18 @@ define i32 @test_sextinreg_i32(i32 %a) nounwind {
 define i64 @test_sextinreg_i64(i64 %a) nounwind {
 ; X64-LABEL: test_sextinreg_i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movslq %edi, %rcx
-; X64-NEXT:    movq %rcx, %rax
-; X64-NEXT:    negq %rax
-; X64-NEXT:    cmovsq %rcx, %rax
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    cmovsl %edi, %eax
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_sextinreg_i64:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    sarl $31, %ecx
-; X86-NEXT:    xorl %ecx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    cmovsl %ecx, %eax
 ; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    subl %ecx, %eax
-; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    retl
   %shl = shl i64 %a, 32
   %ashr = ashr exact i64 %shl, 32
@@ -685,18 +682,13 @@ define i128 @test_sextinreg_i128(i128 %a) nounwind {
 ; X64-LABEL: test_sextinreg_i128:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movq %rdi, %rcx
-; X64-NEXT:    sarq $63, %rcx
-; X64-NEXT:    xorq %rcx, %rax
+; X64-NEXT:    negq %rax
+; X64-NEXT:    cmovsq %rdi, %rax
 ; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    subq %rcx, %rax
-; X64-NEXT:    sbbq %rcx, %rdx
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: test_sextinreg_i128:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -705,19 +697,13 @@ define i128 @test_sextinreg_i128(i128 %a) nounwind {
 ; X86-NEXT:    xorl %edx, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    xorl %edx, %esi
-; X86-NEXT:    xorl %edi, %edi
 ; X86-NEXT:    subl %edx, %esi
 ; X86-NEXT:    sbbl %edx, %ecx
-; X86-NEXT:    movl $0, %ebx
-; X86-NEXT:    sbbl %edx, %ebx
-; X86-NEXT:    sbbl %edx, %edi
 ; X86-NEXT:    movl %esi, (%eax)
 ; X86-NEXT:    movl %ecx, 4(%eax)
-; X86-NEXT:    movl %ebx, 8(%eax)
-; X86-NEXT:    movl %edi, 12(%eax)
+; X86-NEXT:    movl $0, 12(%eax)
+; X86-NEXT:    movl $0, 8(%eax)
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
-; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl $4
   %shl = shl i128 %a, 64
   %ashr = ashr exact i128 %shl, 64

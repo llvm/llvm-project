@@ -39,6 +39,7 @@
 // CHECK-NOT: __riscv_zk
 // CHECK-NOT: __riscv_zicbom
 // CHECK-NOT: __riscv_zicboz
+// CHECK-NOT: __riscv_svnapot
 
 // RUN: %clang -target riscv32-unknown-linux-gnu -march=rv32im -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-M-EXT %s
@@ -418,3 +419,9 @@
 // RUN: -march=rv64iztso0p1 -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZTSO-EXT %s
 // CHECK-ZTSO-EXT: __riscv_ztso 1000{{$}}
+
+// RUN: %clang -target riscv32 -march=rv32isvnapot -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-SVNAPOT-EXT %s
+// RUN: %clang -target riscv64 -march=rv64isvnapot -x c -E -dM %s \
+// RUN: -o - | FileCheck --check-prefix=CHECK-SVNAPOT-EXT %s
+// CHECK-SVNAPOT-EXT: __riscv_svnapot 1000000{{$}}
