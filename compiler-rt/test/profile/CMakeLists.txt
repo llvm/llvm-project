@@ -16,6 +16,8 @@ if(APPLE)
   darwin_filter_host_archs(PROFILE_SUPPORTED_ARCH PROFILE_TEST_ARCH)
 endif()
 
+pythonize_bool(LLVM_ENABLE_CURL)
+
 foreach(arch ${PROFILE_TEST_ARCH})
   set(PROFILE_TEST_TARGET_ARCH ${arch})
   get_test_cc_for_arch(${arch} PROFILE_TEST_TARGET_CC PROFILE_TEST_TARGET_CFLAGS)

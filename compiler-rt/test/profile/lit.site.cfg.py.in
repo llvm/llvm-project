@@ -4,6 +4,7 @@
 config.profile_lit_binary_dir = "@PROFILE_LIT_BINARY_DIR@"
 config.target_cflags = "@PROFILE_TEST_TARGET_CFLAGS@"
 config.target_arch = "@PROFILE_TEST_TARGET_ARCH@"
+config.have_curl = @LLVM_ENABLE_CURL_PYBOOL@
 
 # Load common config for all compiler-rt lit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")
