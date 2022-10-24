@@ -101,6 +101,7 @@ using LVOffsets = SmallVector<LVOffset, 8>;
 const LVAddress MaxAddress = std::numeric_limits<uint64_t>::max();
 
 enum class LVBinaryType { NONE, ELF, COFF };
+enum class LVComparePass { Missing, Added };
 
 // Validate functions.
 using LVValidLocation = bool (LVLocation::*)();
@@ -318,6 +319,9 @@ public:
   void printAttributes(raw_ostream &OS, bool Full, StringRef Name,
                        LVObject *Parent, StringRef Value,
                        bool UseQuotes = false, bool PrintRef = false) const;
+
+  // Mark branch as missing (current element and parents).
+  void markBranchAsMissing();
 
   // Prints the common information for an object (name, type, etc).
   virtual void print(raw_ostream &OS, bool Full = true) const;

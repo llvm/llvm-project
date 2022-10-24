@@ -276,7 +276,8 @@ Error LVReader::doPrint() {
 }
 
 Error LVReader::printScopes() {
-  if (bool DoPrint = options().getPrintExecute()) {
+  if (bool DoPrint =
+          (options().getPrintExecute() || options().getComparePrint())) {
     if (Error Err = createSplitFolder())
       return Err;
 

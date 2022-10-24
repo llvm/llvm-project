@@ -4,6 +4,7 @@ macro(add_lv_impl_folder group)
 endmacro()
 
 add_lv_impl_folder(Core
+  Core/LVCompare.cpp
   Core/LVElement.cpp
   Core/LVLine.cpp
   Core/LVLocation.cpp

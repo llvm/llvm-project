@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
+#include "llvm/DebugInfo/LogicalView/Core/LVCompare.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLine.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLocation.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVRange.h"
@@ -827,6 +828,172 @@ LVScope *LVScope::outermostParent(LVAddress Address) {
   return Parent;
 }
 
+LVScope *LVScope::findIn(const LVScopes *Targets) const {
+  if (!Targets)
+    return nullptr;
+
+  // In the case of overloaded functions, sometimes the DWARF used to
+  // describe them, does not give suficient information. Try to find a
+  // perfect match or mark them as possible conflicts.
+  LVScopes Candidates;
+  for (LVScope *Target : *Targets)
+    if (LVScope::equals(Target))
+      Candidates.push_back(Target);
+
+  LLVM_DEBUG({
+    if (!Candidates.empty()) {
+      dbgs() << "\n[LVScope::findIn]\n"
+             << "Reference: "
+             << "Offset = " << hexSquareString(getOffset()) << ", "
+             << "Level = " << getLevel() << ", "
+             << "Kind = " << formattedKind(kind()) << ", "
+             << "Name = " << formattedName(getName()) << "\n";
+      for (const LVScope *Candidate : Candidates)
+        dbgs() << "Candidate: "
+               << "Offset = " << hexSquareString(Candidate->getOffset()) << ", "
+               << "Level = " << Candidate->getLevel() << ", "
+               << "Kind = " << formattedKind(Candidate->kind()) << ", "
+               << "Name = " << formattedName(Candidate->getName()) << "\n";
+    }
+  });
+
+  if (!Candidates.empty())
+    return (Candidates.size() == 1)
+               ? (equals(Candidates[0]) ? Candidates[0] : nullptr)
+               : findEqualScope(&Candidates);
+
+  return nullptr;
+}
+
+bool LVScope::equalNumberOfChildren(const LVScope *Scope) const {
+  // Same number of children. Take into account which elements are requested
+  // to be included in the comparison.
+  return !(
+      (options().getCompareScopes() && scopeCount() != Scope->scopeCount()) ||
+      (options().getCompareSymbols() &&
+       symbolCount() != Scope->symbolCount()) ||
+      (options().getCompareTypes() && typeCount() != Scope->typeCount()) ||
+      (options().getCompareLines() && lineCount() != Scope->lineCount()));
+}
+
+void LVScope::markMissingParents(const LVScope *Target, bool TraverseChildren) {
+  auto SetCompareState = [&](auto *Container) {
+    if (Container)
+      for (auto *Entry : *Container)
+        Entry->setIsInCompare();
+  };
+  SetCompareState(Types);
+  SetCompareState(Symbols);
+  SetCompareState(Lines);
+  SetCompareState(Scopes);
+
+  // At this point, we are ready to start comparing the current scope, once
+  // the compare bits have been set.
+  if (options().getCompareTypes() && getTypes() && Target->getTypes())
+    LVType::markMissingParents(getTypes(), Target->getTypes());
+  if (options().getCompareSymbols() && getSymbols() && Target->getSymbols())
+    LVSymbol::markMissingParents(getSymbols(), Target->getSymbols());
+  if (options().getCompareLines() && getLines() && Target->getLines())
+    LVLine::markMissingParents(getLines(), Target->getLines());
+  if (getScopes() && Target->getScopes())
+    LVScope::markMissingParents(getScopes(), Target->getScopes(),
+                                TraverseChildren);
+}
+
+void LVScope::markMissingParents(const LVScopes *References,
+                                 const LVScopes *Targets,
+                                 bool TraverseChildren) {
+  if (!(References && Targets))
+    return;
+
+  LLVM_DEBUG({
+    dbgs() << "\n[LVScope::markMissingParents]\n";
+    for (const LVScope *Reference : *References)
+      dbgs() << "References: "
+             << "Offset = " << hexSquareString(Reference->getOffset()) << ", "
+             << "Level = " << Reference->getLevel() << ", "
+             << "Kind = " << formattedKind(Reference->kind()) << ", "
+             << "Name = " << formattedName(Reference->getName()) << "\n";
+    for (const LVScope *Target : *Targets)
+      dbgs() << "Targets   : "
+             << "Offset = " << hexSquareString(Target->getOffset()) << ", "
+             << "Level = " << Target->getLevel() << ", "
+             << "Kind = " << formattedKind(Target->kind()) << ", "
+             << "Name = " << formattedName(Target->getName()) << "\n";
+  });
+
+  for (LVScope *Reference : *References) {
+    // Don't process 'Block' scopes, as we can't identify them.
+    if (Reference->getIsBlock() || Reference->getIsGeneratedName())
+      continue;
+
+    LLVM_DEBUG({
+      dbgs() << "\nSearch Reference: "
+             << "Offset = " << hexSquareString(Reference->getOffset()) << " "
+             << "Name = " << formattedName(Reference->getName()) << "\n";
+    });
+    LVScope *Target = Reference->findIn(Targets);
+    if (Target) {
+      LLVM_DEBUG({
+        dbgs() << "\nFound Target: "
+               << "Offset = " << hexSquareString(Target->getOffset()) << " "
+               << "Name = " << formattedName(Target->getName()) << "\n";
+      });
+      if (TraverseChildren)
+        Reference->markMissingParents(Target, TraverseChildren);
+    } else {
+      LLVM_DEBUG({
+        dbgs() << "Missing Reference: "
+               << "Offset = " << hexSquareString(Reference->getOffset()) << " "
+               << "Name = " << formattedName(Reference->getName()) << "\n";
+      });
+      Reference->markBranchAsMissing();
+    }
+  }
+}
+
+bool LVScope::equals(const LVScope *Scope) const {
+  if (!LVElement::equals(Scope))
+    return false;
+  // For lexical scopes, check if their parents are the same.
+  if (getIsLexicalBlock() && Scope->getIsLexicalBlock())
+    return getParentScope()->equals(Scope->getParentScope());
+  return true;
+}
+
+LVScope *LVScope::findEqualScope(const LVScopes *Scopes) const {
+  assert(Scopes && "Scopes must not be nullptr");
+  for (LVScope *Scope : *Scopes)
+    if (equals(Scope))
+      return Scope;
+  return nullptr;
+}
+
+bool LVScope::equals(const LVScopes *References, const LVScopes *Targets) {
+  if (!References && !Targets)
+    return true;
+  if (References && Targets && References->size() == Targets->size()) {
+    for (const LVScope *Reference : *References)
+      if (!Reference->findIn(Targets))
+        return false;
+    return true;
+  }
+  return false;
+}
+
+void LVScope::report(LVComparePass Pass) {
+  getComparator().printItem(this, Pass);
+  getComparator().push(this);
+  if (Children)
+    for (LVElement *Element : *Children)
+      Element->report(Pass);
+
+  if (Lines)
+    for (LVLine *Line : *Lines)
+      Line->report(Pass);
+  getComparator().pop();
+}
+
 void LVScope::printActiveRanges(raw_ostream &OS, bool Full) const {
   if (options().getPrintFormatting() && options().getAttributeRange() &&
       Ranges) {
@@ -871,6 +1038,33 @@ void LVScope::printExtra(raw_ostream &OS, bool Full) const {
 //===----------------------------------------------------------------------===//
 // DWARF Union/Structure/Class.
 //===----------------------------------------------------------------------===//
+bool LVScopeAggregate::equals(const LVScope *Scope) const {
+  if (!LVScope::equals(Scope))
+    return false;
+
+  if (!equalNumberOfChildren(Scope))
+    return false;
+
+  // Check if the parameters match in the case of templates.
+  if (!LVType::parametersMatch(getTypes(), Scope->getTypes()))
+    return false;
+
+  if (!isNamed() && !Scope->isNamed())
+    // In the case of unnamed union/structure/class compare the file name.
+    if (getFilenameIndex() != Scope->getFilenameIndex())
+      return false;
+
+  return true;
+}
+
+LVScope *LVScopeAggregate::findEqualScope(const LVScopes *Scopes) const {
+  assert(Scopes && "Scopes must not be nullptr");
+  for (LVScope *Scope : *Scopes)
+    if (equals(Scope))
+      return Scope;
+  return nullptr;
+}
+
 void LVScopeAggregate::printExtra(raw_ostream &OS, bool Full) const {
   LVScope::printExtra(OS, Full);
   if (Full) {
@@ -885,6 +1079,12 @@ void LVScopeAggregate::printExtra(raw_ostream &OS, bool Full) const {
 //===----------------------------------------------------------------------===//
 // DWARF Template alias.
 //===----------------------------------------------------------------------===//
+bool LVScopeAlias::equals(const LVScope *Scope) const {
+  if (!LVScope::equals(Scope))
+    return false;
+  return equalNumberOfChildren(Scope);
+}
+
 void LVScopeAlias::printExtra(raw_ostream &OS, bool Full) const {
   OS << formattedKind(kind()) << " " << formattedName(getName()) << " -> "
      << typeOffsetAsString()
@@ -963,6 +1163,21 @@ void LVScopeArray::resolveExtra() {
 
   // Update the scope name, to reflect the encoded subranges.
   setName(ArrayInfo.str());
+}
+
+bool LVScopeArray::equals(const LVScope *Scope) const {
+  if (!LVScope::equals(Scope))
+    return false;
+
+  if (!equalNumberOfChildren(Scope))
+    return false;
+
+  // Despite the arrays are encoded, to reflect the dimensions, we have to
+  // check the subranges, in order to determine if they are the same.
+  if (!LVType::equals(getTypes(), Scope->getTypes()))
+    return false;
+
+  return true;
 }
 
 void LVScopeArray::printExtra(raw_ostream &OS, bool Full) const {
@@ -1057,6 +1272,13 @@ StringRef LVScopeCompileUnit::getFilename(size_t Index) const {
   return getStringPool().getString(Filenames[Index - 1]);
 }
 
+bool LVScopeCompileUnit::equals(const LVScope *Scope) const {
+  if (!LVScope::equals(Scope))
+    return false;
+
+  return getNameIndex() == Scope->getNameIndex();
+}
+
 void LVScopeCompileUnit::incrementPrintedLines() {
   options().getSelectExecute() ? ++Found.Lines : ++Printed.Lines;
 }
@@ -1090,10 +1312,23 @@ void LVScopeCompileUnit::increment(LVType *Type) {
 
 // A new element has been added to the scopes tree. Take the following steps:
 // Increase the added element counters, for printing summary.
-void LVScopeCompileUnit::addedElement(LVLine *Line) { increment(Line); }
-void LVScopeCompileUnit::addedElement(LVScope *Scope) { increment(Scope); }
-void LVScopeCompileUnit::addedElement(LVSymbol *Symbol) { increment(Symbol); }
-void LVScopeCompileUnit::addedElement(LVType *Type) { increment(Type); }
+// During comparison notify the Reader of the new element.
+void LVScopeCompileUnit::addedElement(LVLine *Line) {
+  increment(Line);
+  getReader().notifyAddedElement(Line);
+}
+void LVScopeCompileUnit::addedElement(LVScope *Scope) {
+  increment(Scope);
+  getReader().notifyAddedElement(Scope);
+}
+void LVScopeCompileUnit::addedElement(LVSymbol *Symbol) {
+  increment(Symbol);
+  getReader().notifyAddedElement(Symbol);
+}
+void LVScopeCompileUnit::addedElement(LVType *Type) {
+  increment(Type);
+  getReader().notifyAddedElement(Type);
+}
 
 // Record unsuported DWARF tags.
 void LVScopeCompileUnit::addDebugTag(dwarf::Tag Target, LVOffset Offset) {
@@ -1458,6 +1693,12 @@ void LVScopeCompileUnit::printExtra(raw_ostream &OS, bool Full) const {
 //===----------------------------------------------------------------------===//
 // DWARF enumeration (DW_TAG_enumeration_type).
 //===----------------------------------------------------------------------===//
+bool LVScopeEnumeration::equals(const LVScope *Scope) const {
+  if (!LVScope::equals(Scope))
+    return false;
+  return equalNumberOfChildren(Scope);
+}
+
 void LVScopeEnumeration::printExtra(raw_ostream &OS, bool Full) const {
   // Print the full type name.
   OS << formattedKind(kind()) << " " << (getIsEnumClass() ? "class " : "")
@@ -1471,6 +1712,12 @@ void LVScopeEnumeration::printExtra(raw_ostream &OS, bool Full) const {
 //===----------------------------------------------------------------------===//
 // DWARF formal parameter pack (DW_TAG_GNU_formal_parameter_pack).
 //===----------------------------------------------------------------------===//
+bool LVScopeFormalPack::equals(const LVScope *Scope) const {
+  if (!LVScope::equals(Scope))
+    return false;
+  return equalNumberOfChildren(Scope);
+}
+
 void LVScopeFormalPack::printExtra(raw_ostream &OS, bool Full) const {
   OS << formattedKind(kind()) << " " << formattedName(getName()) << "\n";
 }
@@ -1528,6 +1775,51 @@ void LVScopeFunction::resolveExtra() {
     resolveTemplate();
 }
 
+bool LVScopeFunction::equals(const LVScope *Scope) const {
+  if (!LVScope::equals(Scope))
+    return false;
+
+  // When comparing logical elements, ignore any difference in the children.
+  if (options().getCompareContext() && !equalNumberOfChildren(Scope))
+    return false;
+
+  // Check if the linkage name matches.
+  if (getLinkageNameIndex() != Scope->getLinkageNameIndex())
+    return false;
+
+  // Check if the parameters match in the case of templates.
+  if (!LVType::parametersMatch(getTypes(), Scope->getTypes()))
+    return false;
+
+  // Check if the arguments match.
+  if (!LVSymbol::parametersMatch(getSymbols(), Scope->getSymbols()))
+    return false;
+
+  // Check if the lines match.
+  if (options().getCompareLines() &&
+      !LVLine::equals(getLines(), Scope->getLines()))
+    return false;
+
+  // Check if any reference is the same.
+  if (!referenceMatch(Scope))
+    return false;
+
+  if (getReference() && !getReference()->equals(Scope->getReference()))
+    return false;
+
+  return true;
+}
+
+LVScope *LVScopeFunction::findEqualScope(const LVScopes *Scopes) const {
+  assert(Scopes && "Scopes must not be nullptr");
+  // Go through candidates and try to find a best match.
+  for (LVScope *Scope : *Scopes)
+    // Match arguments, children, lines, references.
+    if (equals(Scope))
+      return Scope;
+  return nullptr;
+}
+
 void LVScopeFunction::printExtra(raw_ostream &OS, bool Full) const {
   LVScope *Reference = getReference();
 
@@ -1568,6 +1860,27 @@ void LVScopeFunctionInlined::resolveExtra() {
   // Check if we need to encode the template arguments.
   if (getIsTemplate())
     resolveTemplate();
+}
+
+bool LVScopeFunctionInlined::equals(const LVScope *Scope) const {
+  if (!LVScopeFunction::equals(Scope))
+    return false;
+
+  // Check if any reference is the same.
+  if (getHasDiscriminator() && Scope->getHasDiscriminator())
+    if (getDiscriminator() != Scope->getDiscriminator())
+      return false;
+
+  // Check the call site information.
+  if (getCallFilenameIndex() != Scope->getCallFilenameIndex() ||
+      getCallLineNumber() != Scope->getCallLineNumber())
+    return false;
+
+  return true;
+}
+
+LVScope *LVScopeFunctionInlined::findEqualScope(const LVScopes *Scopes) const {
+  return LVScopeFunction::findEqualScope(Scopes);
 }
 
 void LVScopeFunctionInlined::printExtra(raw_ostream &OS, bool Full) const {
@@ -1612,6 +1925,32 @@ void LVScopeFunctionType::resolveExtra() {
 //===----------------------------------------------------------------------===//
 // DWARF namespace (DW_TAG_namespace).
 //===----------------------------------------------------------------------===//
+bool LVScopeNamespace::equals(const LVScope *Scope) const {
+  if (!LVScope::equals(Scope))
+    return false;
+
+  if (!equalNumberOfChildren(Scope))
+    return false;
+
+  // Check if any reference is the same.
+  if (!referenceMatch(Scope))
+    return false;
+
+  if (getReference() && !getReference()->equals(Scope->getReference()))
+    return false;
+
+  return true;
+}
+
+LVScope *LVScopeNamespace::findEqualScope(const LVScopes *Scopes) const {
+  assert(Scopes && "Scopes must not be nullptr");
+  // Go through candidates and try to find a best match.
+  for (LVScope *Scope : *Scopes)
+    if (equals(Scope))
+      return Scope;
+  return nullptr;
+}
+
 void LVScopeNamespace::printExtra(raw_ostream &OS, bool Full) const {
   OS << formattedKind(kind()) << " " << formattedName(getName()) << "\n";
 
@@ -1638,6 +1977,10 @@ void LVScopeRoot::processRangeInformation() {
       getReader().setCompileUnit(CompileUnit);
       CompileUnit->processRangeLocationCoverage();
     }
+}
+
+bool LVScopeRoot::equals(const LVScope *Scope) const {
+  return LVScope::equals(Scope);
 }
 
 void LVScopeRoot::print(raw_ostream &OS, bool Full) const {
@@ -1695,6 +2038,12 @@ Error LVScopeRoot::doPrintMatches(bool Split, raw_ostream &OS,
 //===----------------------------------------------------------------------===//
 // DWARF template parameter pack (DW_TAG_GNU_template_parameter_pack).
 //===----------------------------------------------------------------------===//
+bool LVScopeTemplatePack::equals(const LVScope *Scope) const {
+  if (!LVScope::equals(Scope))
+    return false;
+  return equalNumberOfChildren(Scope);
+}
+
 void LVScopeTemplatePack::printExtra(raw_ostream &OS, bool Full) const {
   OS << formattedKind(kind()) << " " << formattedName(getName()) << "\n";
 }
