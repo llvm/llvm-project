@@ -1053,6 +1053,44 @@ ConceptDecl *ConceptDecl::CreateDeserialized(ASTContext &C,
 }
 
 //===----------------------------------------------------------------------===//
+// ImplicitConceptSpecializationDecl Implementation
+//===----------------------------------------------------------------------===//
+ImplicitConceptSpecializationDecl::ImplicitConceptSpecializationDecl(
+    DeclContext *DC, SourceLocation SL,
+    ArrayRef<TemplateArgument> ConvertedArgs)
+    : Decl(ImplicitConceptSpecialization, DC, SL),
+      NumTemplateArgs(ConvertedArgs.size()) {
+  setTemplateArguments(ConvertedArgs);
+}
+
+ImplicitConceptSpecializationDecl::ImplicitConceptSpecializationDecl(
+    EmptyShell Empty, unsigned NumTemplateArgs)
+    : Decl(ImplicitConceptSpecialization, Empty),
+      NumTemplateArgs(NumTemplateArgs) {}
+
+ImplicitConceptSpecializationDecl *ImplicitConceptSpecializationDecl::Create(
+    const ASTContext &C, DeclContext *DC, SourceLocation SL,
+    ArrayRef<TemplateArgument> ConvertedArgs) {
+  return new (C, DC,
+              additionalSizeToAlloc<TemplateArgument>(ConvertedArgs.size()))
+      ImplicitConceptSpecializationDecl(DC, SL, ConvertedArgs);
+}
+
+ImplicitConceptSpecializationDecl *
+ImplicitConceptSpecializationDecl::CreateDeserialized(
+    const ASTContext &C, unsigned ID, unsigned NumTemplateArgs) {
+  return new (C, ID, additionalSizeToAlloc<TemplateArgument>(NumTemplateArgs))
+      ImplicitConceptSpecializationDecl(EmptyShell{}, NumTemplateArgs);
+}
+
+void ImplicitConceptSpecializationDecl::setTemplateArguments(
+    ArrayRef<TemplateArgument> Converted) {
+  assert(Converted.size() == NumTemplateArgs);
+  std::uninitialized_copy(Converted.begin(), Converted.end(),
+                          getTrailingObjects<TemplateArgument>());
+}
+
+//===----------------------------------------------------------------------===//
 // ClassTemplatePartialSpecializationDecl Implementation
 //===----------------------------------------------------------------------===//
 void ClassTemplatePartialSpecializationDecl::anchor() {}
