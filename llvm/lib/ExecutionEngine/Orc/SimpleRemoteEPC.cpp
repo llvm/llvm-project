@@ -38,7 +38,7 @@ SimpleRemoteEPC::lookupSymbols(ArrayRef<LookupRequest> Request) {
       Result.push_back({});
       Result.back().reserve(R->size());
       for (auto Addr : *R)
-        Result.back().push_back(Addr.getValue());
+        Result.back().push_back(Addr);
     } else
       return R.takeError();
   }
