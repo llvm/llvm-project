@@ -276,7 +276,7 @@ using BcmpImplementations = testing::TypeList<
     x86::avx512bw::Bcmp<64>,  //
     x86::avx512bw::Bcmp<128>, //
 #endif
-#ifdef __ARM_NEON
+#ifdef LLVM_LIBC_ARCH_AARCH64
     aarch64::Bcmp<16>, //
     aarch64::Bcmp<32>, //
 #endif
