@@ -65,15 +65,15 @@ public:
   /// Type casting utilities on the underlying location.
   template <typename U>
   bool isa() const {
-    return impl.isa<U>();
+    return llvm::isa<U>(*this);
   }
   template <typename U>
   U dyn_cast() const {
-    return impl.dyn_cast<U>();
+    return llvm::dyn_cast<U>(*this);
   }
   template <typename U>
   U cast() const {
-    return impl.cast<U>();
+    return llvm::cast<U>(*this);
   }
 
   /// Comparison operators.
@@ -168,6 +168,39 @@ public:
   }
   static constexpr int NumLowBitsAvailable =
       PointerLikeTypeTraits<mlir::Attribute>::NumLowBitsAvailable;
+};
+
+/// The constructors in mlir::Location ensure that the class is a non-nullable
+/// wrapper around mlir::LocationAttr. Override default behavior and always
+/// return true for isPresent().
+template <>
+struct ValueIsPresent<mlir::Location> {
+  using UnwrappedType = mlir::Location;
+  static inline bool isPresent(const mlir::Location &location) { return true; }
+};
+
+/// Add support for llvm style casts. We provide a cast between To and From if
+/// From is mlir::Location or derives from it.
+template <typename To, typename From>
+struct CastInfo<To, From,
+                std::enable_if_t<
+                    std::is_same_v<mlir::Location, std::remove_const_t<From>> ||
+                    std::is_base_of_v<mlir::Location, From>>>
+    : DefaultDoCastIfPossible<To, From, CastInfo<To, From>> {
+
+  static inline bool isPossible(mlir::Location location) {
+    /// Return a constant true instead of a dynamic true when casting to self or
+    /// up the hierarchy. Additionally, all casting info is deferred to the
+    /// wrapped mlir::LocationAttr instance stored in mlir::Location.
+    return std::is_same_v<To, std::remove_const_t<From>> ||
+           isa<To>(static_cast<mlir::LocationAttr>(location));
+  }
+
+  static inline To castFailed() { return To(); }
+
+  static inline To doCast(mlir::Location location) {
+    return To(location->getImpl());
+  }
 };
 
 } // namespace llvm
