@@ -227,6 +227,20 @@ Changes to the WebAssembly Backend
 
 * ...
 
+Changes to the SystemZ Backend
+------------------------------
+
+* Support z16 processor name.
+* Machine scheduler description for z16.
+* Add support for inline assembly address operands ("p") as well as for SystemZ
+  specific address operands ("ZQ", "ZR", "ZS" and "ZT").
+* Efficient handling of small memcpy/memset operations up to 32 bytes.
+* Tuning of the inliner.
+* Fixing emission of library calls so that narrow integer arguments are sign or
+  zero extended per the SystemZ ABI.
+* Support added for libunwind.
+* Various minor improvements and bugfixes.
+
 Changes to the X86 Backend
 --------------------------
 
