@@ -222,35 +222,3 @@ PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &
 
   return PreservedAnalyses::none();
 }
-
-namespace {
-struct BoundsCheckingLegacyPass : public FunctionPass {
-  static char ID;
-
-  BoundsCheckingLegacyPass() : FunctionPass(ID) {
-    initializeBoundsCheckingLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-    auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    return addBoundsChecking(F, TLI, SE);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-  }
-};
-} // namespace
-
-char BoundsCheckingLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(BoundsCheckingLegacyPass, "bounds-checking",
-                      "Run-time bounds checking", false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(BoundsCheckingLegacyPass, "bounds-checking",
-                    "Run-time bounds checking", false, false)
-
-FunctionPass *llvm::createBoundsCheckingLegacyPass() {
-  return new BoundsCheckingLegacyPass();
-}

@@ -39,9 +39,6 @@ void initializeAggressiveInstCombine(PassRegistry&);
 /// Initialize all passes linked into the IPO library.
 void initializeIPO(PassRegistry&);
 
-/// Initialize all passes linked into the Instrumentation library.
-void initializeInstrumentation(PassRegistry&);
-
 /// Initialize all passes linked into the Analysis library.
 void initializeAnalysis(PassRegistry&);
 
