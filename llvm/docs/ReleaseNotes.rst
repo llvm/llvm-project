@@ -61,7 +61,7 @@ and there is no way to suppress this error.
 
 * GCC >= 7.1
 * Clang >= 5.0
-* Apple Clang >= 9.3
+* Apple Clang >= 10.0
 * Visual Studio 2019 >= 16.7
 
 Changes to the LLVM IR
