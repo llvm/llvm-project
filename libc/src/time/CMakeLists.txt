@@ -46,6 +46,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  difftime
+  SRCS
+    difftime.cpp
+  HDRS
+    difftime.h
+  DEPENDS
+    libc.include.time
+)
+
+add_entrypoint_object(
   gmtime
   SRCS
     gmtime.cpp
