@@ -683,9 +683,8 @@ TEST(TargetParserTest, ARMExtensionFeatures) {
   std::map<uint64_t, std::vector<StringRef>> Extensions;
 
   for (auto &Ext : ARM::ARCHExtNames) {
-    if (Ext.Feature && Ext.NegFeature)
-      Extensions[Ext.ID] = { StringRef(Ext.Feature),
-                             StringRef(Ext.NegFeature) };
+    if (!Ext.Feature.empty() && !Ext.NegFeature.empty())
+      Extensions[Ext.ID] = {Ext.Feature, Ext.NegFeature};
   }
 
   Extensions[ARM::AEK_HWDIVARM]   = { "+hwdiv-arm", "-hwdiv-arm" };
