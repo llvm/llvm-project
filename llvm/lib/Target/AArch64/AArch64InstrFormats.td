@@ -889,6 +889,10 @@ def timm32_0_65535 : Operand<i32>, TImmLeaf<i32, [{
 def timm64_0_65535 : Operand<i64>, TImmLeaf<i64, [{
   return ((uint64_t)Imm) < 65536;
 }]>;
+
+def imm64_0_65535 : Operand<i64>, ImmLeaf<i64, [{
+  return ((uint64_t)Imm) < 65536;
+}]>;
 }
 
 def imm0_255 : Operand<i32>, ImmLeaf<i32, [{
