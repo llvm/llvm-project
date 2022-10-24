@@ -3278,6 +3278,14 @@ void DAGTypeLegalizer::ExpandIntRes_ABS(SDNode *N, SDValue &Lo, SDValue &Hi) {
   GetExpandedInteger(N0, Lo, Hi);
   EVT NVT = Lo.getValueType();
 
+  // If the upper half is all sign bits, then we can perform the ABS on the
+  // lower half and zero-extend.
+  if (DAG.ComputeNumSignBits(N0) > NVT.getScalarSizeInBits()) {
+    Lo = DAG.getNode(ISD::ABS, dl, NVT, Lo);
+    Hi = DAG.getConstant(0, dl, NVT);
+    return;
+  }
+
   // If we have SUBCARRY, use the expanded form of the sra+xor+sub sequence we
   // use in LegalizeDAG. The SUB part of the expansion is based on
   // ExpandIntRes_ADDSUB which also uses SUBCARRY/USUBO after checking that
