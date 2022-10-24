@@ -794,13 +794,17 @@ readConstraintSatisfaction(ASTRecordReader &Record) {
 void ASTStmtReader::VisitConceptSpecializationExpr(
         ConceptSpecializationExpr *E) {
   VisitExpr(E);
+  unsigned NumTemplateArgs = Record.readInt();
   E->NestedNameSpec = Record.readNestedNameSpecifierLoc();
   E->TemplateKWLoc = Record.readSourceLocation();
   E->ConceptName = Record.readDeclarationNameInfo();
   E->NamedConcept = readDeclAs<ConceptDecl>();
   E->FoundDecl = Record.readDeclAs<NamedDecl>();
-  E->SpecDecl = Record.readDeclAs<ImplicitConceptSpecializationDecl>();
   E->ArgsAsWritten = Record.readASTTemplateArgumentListInfo();
+  llvm::SmallVector<TemplateArgument, 4> Args;
+  for (unsigned I = 0; I < NumTemplateArgs; ++I)
+    Args.push_back(Record.readTemplateArgument(/*Canonicalize*/ true));
+  E->setTemplateArguments(Args);
   E->Satisfaction = E->isValueDependent() ? nullptr :
       ASTConstraintSatisfaction::Create(Record.getContext(),
                                         readConstraintSatisfaction(Record));
@@ -3999,7 +4003,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_CONCEPT_SPECIALIZATION: {
-      S = new (Context) ConceptSpecializationExpr(Empty);
+      unsigned numTemplateArgs = Record[ASTStmtReader::NumExprFields];
+      S = ConceptSpecializationExpr::Create(Context, Empty, numTemplateArgs);
       break;
     }
 
