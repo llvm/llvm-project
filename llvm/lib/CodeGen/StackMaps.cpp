@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -54,10 +55,8 @@ static uint64_t getConstMetaVal(const MachineInstr &MI, unsigned Idx) {
   return MO.getImm();
 }
 
-StackMapOpers::StackMapOpers(const MachineInstr *MI)
-  : MI(MI) {
-  assert(getVarIdx() <= MI->getNumOperands() &&
-         "invalid stackmap definition");
+StackMapOpers::StackMapOpers(const MachineInstr *MI) : MI(MI) {
+  assert(getVarIdx() <= MI->getNumOperands() && "invalid stackmap definition");
 }
 
 PatchPointOpers::PatchPointOpers(const MachineInstr *MI)
@@ -81,11 +80,10 @@ unsigned PatchPointOpers::getNextScratchIdx(unsigned StartIdx) const {
 
   // Find the next scratch register (implicit def and early clobber)
   unsigned ScratchIdx = StartIdx, e = MI->getNumOperands();
-  while (ScratchIdx < e &&
-         !(MI->getOperand(ScratchIdx).isReg() &&
-           MI->getOperand(ScratchIdx).isDef() &&
-           MI->getOperand(ScratchIdx).isImplicit() &&
-           MI->getOperand(ScratchIdx).isEarlyClobber()))
+  while (ScratchIdx < e && !(MI->getOperand(ScratchIdx).isReg() &&
+                             MI->getOperand(ScratchIdx).isDef() &&
+                             MI->getOperand(ScratchIdx).isImplicit() &&
+                             MI->getOperand(ScratchIdx).isEarlyClobber()))
     ++ScratchIdx;
 
   assert(ScratchIdx != e && "No scratch register available");
@@ -274,8 +272,8 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
     if (SubRegIdx)
       Offset = TRI->getSubRegIdxOffset(SubRegIdx);
 
-    Locs.emplace_back(Location::Register, TRI->getSpillSize(*RC),
-                      DwarfRegNum, Offset);
+    Locs.emplace_back(Location::Register, TRI->getSpillSize(*RC), DwarfRegNum,
+                      Offset);
     return ++MOI;
   }
 
@@ -570,6 +568,7 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
 
   // Record the stack size of the current function and update callsite count.
   const MachineFrameInfo &MFI = AP.MF->getFrameInfo();
+  const TargetRegisterInfo *TRI = AP.MF->getSubtarget().getRegisterInfo();
   const TargetRegisterInfo *RegInfo = AP.MF->getSubtarget().getRegisterInfo();
   bool HasDynamicFrameSize =
       MFI.hasVarSizedObjects() || RegInfo->hasStackRealignment(*(AP.MF));
@@ -578,8 +577,21 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
   auto CurrentIt = FnInfos.find(AP.CurrentFnSym);
   if (CurrentIt != FnInfos.end())
     CurrentIt->second.RecordCount++;
-  else
-    FnInfos.insert(std::make_pair(AP.CurrentFnSym, FunctionInfo(FrameSize)));
+  else {
+    // Collect callee-saved-register spills.
+    CSRVec CSRInfo;
+    std::vector<CalleeSavedInfo> CSI = MFI.getCalleeSavedInfo();
+    for (auto cs : CSI) {
+      int dwreg = getDwarfRegNum(cs.getReg(), TRI);
+      CSR Entry = {dwreg, cs.getFrameIdx()};
+      CSRInfo.push_back(Entry);
+    }
+    // Check whether this function pushed a frame pointer.
+    const TargetFrameLowering *TFL = AP.MF->getSubtarget().getFrameLowering();
+    bool HasFramePointer = TFL->hasFP(*(AP.MF));
+    FnInfos.insert(std::make_pair(
+        AP.CurrentFnSym, FunctionInfo(FrameSize, HasFramePointer, CSRInfo)));
+  }
 }
 
 void StackMaps::recordStackMap(const MCSymbol &L, const MachineInstr &MI) {
@@ -587,8 +599,8 @@ void StackMaps::recordStackMap(const MCSymbol &L, const MachineInstr &MI) {
 
   StackMapOpers opers(&MI);
   const int64_t ID = MI.getOperand(PatchPointOpers::IDPos).getImm();
-  recordStackMapOpers(L, MI, ID, std::next(MI.operands_begin(),
-                                           opers.getVarIdx()),
+  recordStackMapOpers(L, MI, ID,
+                      std::next(MI.operands_begin(), opers.getVarIdx()),
                       MI.operands_end());
 }
 
@@ -784,6 +796,32 @@ void StackMaps::emitCallsiteEntries(MCStreamer &OS) {
   }
 }
 
+// Emit information about the function prologue: pushed frame pointer and
+// callee-saved registers.
+// CSRInfo[NumFunctions] {
+//     uint8  : HasFramePtr
+//     uint8  : Padding
+//     uint32 : NumSpills
+//
+//     Spills[NumSpills] {
+//         uint16 : DwarfRegister
+//     	   uint16 : Padding
+//     	   int32  : Offset
+//     }
+// }
+void StackMaps::emitCSRInfo(MCStreamer &OS) {
+  for (auto const &FR : FnInfos) {
+    OS.emitInt8(FR.second.HasFramePointer);
+    OS.emitInt8(0); // Padding
+    OS.emitInt32(FR.second.SpilledRegisters.size());
+    for (auto &Ent : FR.second.SpilledRegisters) {
+      OS.emitInt16(Ent.Reg);
+      OS.emitInt16(0); // Padding
+      OS.emitInt32(Ent.Offset);
+    }
+  }
+}
+
 /// Serialize the stackmap data.
 void StackMaps::serializeToStackMapSection() {
   (void)WSMP;
@@ -812,6 +850,7 @@ void StackMaps::serializeToStackMapSection() {
   emitFunctionFrameRecords(OS);
   emitConstantPoolEntries(OS);
   emitCallsiteEntries(OS);
+  emitCSRInfo(OS);
   OS.addBlankLine();
 
   // Clean up.

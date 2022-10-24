@@ -4,7 +4,7 @@
 ; spaces) starting with a `.` follow (e.g. `  .byte`).
 ;
 ;      CHECK:	.section	.llvm_stackmaps,{{.*$}}
-; CHECK-NEXT:{{(.+$[[:space:]]){51}[[:space:]]}}
+; CHECK-NEXT:{{(.+$[[:space:]]){54}[[:space:]]}}
 ;  CHECK-NOT:{{.|[[:space:]]}}
 
 target triple = "x86_64-pc-linux-gnu"

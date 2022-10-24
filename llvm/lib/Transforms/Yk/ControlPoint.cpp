@@ -162,25 +162,11 @@ public:
             ->getType();
 
     // Create the new control point, which is of the form:
-    //   bool new_control_point(YkMT*, YkLocation*, CtrlPointVars*,
-    //   ReturnValue*)
-    // If the return type of the control point's caller is void (i.e. if a
-    // function f calls yk_control_point and f's return type is void), create
-    // an Int1 pointer as a dummy. We have to pass something as the yk_stopgap
-    // signature expects a pointer, even if its never used.
-    Type *ReturnTy = Caller->getReturnType();
-    Type *ReturnPtrTy;
-    if (ReturnTy->isVoidTy()) {
-      // Create dummy pointer which we pass in but which is never written to.
-      ReturnPtrTy = Type::getInt1Ty(Context);
-    } else {
-      ReturnPtrTy = ReturnTy;
-    }
-    FunctionType *FType =
-        FunctionType::get(Type::getInt1Ty(Context),
-                          {YkMTTy, YkLocTy, CtrlPointVarsTy->getPointerTo(),
-                           ReturnPtrTy->getPointerTo()},
-                          false);
+    //   void* new_control_point(YkMT*, YkLocation*, CtrlPointVars*, void*)
+    PointerType *VoidPtr = PointerType::get(Context, 0);
+    FunctionType *FType = FunctionType::get(
+        VoidPtr, {YkMTTy, YkLocTy, CtrlPointVarsTy->getPointerTo(), VoidPtr},
+        false);
     Function *NF = Function::Create(FType, GlobalVariable::ExternalLinkage,
                                     YK_NEW_CONTROL_POINT, M);
 
@@ -189,10 +175,6 @@ public:
     // struct by pointer.
     IRBuilder<> Builder(Caller->getEntryBlock().getFirstNonPHI());
     Value *InputStruct = Builder.CreateAlloca(CtrlPointVarsTy, 0, "");
-
-    // Also at the top, generate storage for the interpreted return of the
-    // control points caller.
-    Value *ReturnPtr = Builder.CreateAlloca(ReturnPtrTy, 0, "");
 
     Builder.SetInsertPoint(OldCtrlPointCall);
     unsigned LvIdx = 0;
@@ -205,11 +187,17 @@ public:
       LvIdx++;
     }
 
+    // Create a call to the llvm.frameaddress intrinsic, which we pass into the
+    // control point. This is later required for stack reconstruction.
+    Function *FrameAddress =
+        Intrinsic::getDeclaration(&M, Intrinsic::frameaddress, {VoidPtr});
+    Value *FAddr = Builder.CreateCall(FrameAddress, {Builder.getInt32(0)});
+
     // Insert call to the new control point.
     Instruction *NewCtrlPointCallInst = Builder.CreateCall(
         NF, {OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_MT_IDX),
              OldCtrlPointCall->getArgOperand(YK_CONTROL_POINT_ARG_LOC_IDX),
-             InputStruct, ReturnPtr});
+             InputStruct, FAddr});
 
     // Once the control point returns we need to extract the (potentially
     // mutated) values from the returned YkCtrlPointStruct and reassign them to
@@ -238,14 +226,14 @@ public:
     // Create the new exit block.
     BasicBlock *ExitBB = BasicBlock::Create(Context, "", Caller);
     Builder.SetInsertPoint(ExitBB);
-    // YKFIXME: We need to return the value of interpreted return and the return
-    // type must be that of the control point's caller.
-    if (ReturnTy->isVoidTy()) {
-      Builder.CreateRetVoid();
-    } else {
-      Value *ReturnValue = Builder.CreateLoad(ReturnTy, ReturnPtr);
-      Builder.CreateRet(ReturnValue);
-    }
+
+    // Create call to frame reconstructor.
+    FunctionType *YKFRType =
+        FunctionType::get(Type::getVoidTy(Context), {VoidPtr}, false);
+    Function *YKFR = Function::Create(YKFRType, GlobalVariable::ExternalLinkage,
+                                      YK_RECONSTRUCT_FRAMES, M);
+    Builder.CreateCall(YKFR, {NewCtrlPointCallInst});
+    Builder.CreateUnreachable();
 
     // To do so we need to first split up the current block and then
     // insert a conditional branch that either continues or returns.
@@ -256,7 +244,13 @@ public:
     Instruction &OldBr = BB->back();
     OldBr.eraseFromParent();
     Builder.SetInsertPoint(BB);
-    Builder.CreateCondBr(NewCtrlPointCallInst, ExitBB, ContBB);
+    // The return value of the control point tells us whether a guard has failed
+    // or not (i.e. anything other than a nullptr means a guard has failed). If
+    // it has jump to `ExitBB` which calls the code that copies over the new
+    // stack from the given pointer.
+    Value *HasGuardFailed = Builder.CreateICmpEQ(
+        NewCtrlPointCallInst, ConstantPointerNull::get(VoidPtr));
+    Builder.CreateCondBr(HasGuardFailed, ContBB, ExitBB);
 
 #ifndef NDEBUG
     // Our pass runs after LLVM normally does its verify pass. In debug builds
