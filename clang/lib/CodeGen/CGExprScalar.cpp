@@ -467,6 +467,9 @@ public:
     return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue());
   }
   Value *VisitCXXScalarValueInitExpr(const CXXScalarValueInitExpr *E) {
+    if (E->getType()->isVoidType())
+      return nullptr;
+
     return EmitNullValue(E->getType());
   }
   Value *VisitGNUNullExpr(const GNUNullExpr *E) {

@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS Support)
 
 add_clang_library(clangIncludeCleaner
+  Analysis.cpp
   HTMLReport.cpp
   Record.cpp
   WalkAST.cpp
@@ -9,5 +10,6 @@ add_clang_library(clangIncludeCleaner
   clangAST
   clangBasic
   clangLex
+  clangToolingInclusionsStdlib
   )
 

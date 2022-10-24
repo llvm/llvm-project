@@ -1003,9 +1003,10 @@ cc_library(
     ],
     deps = [
         ":__support_common",
-        ":__support_cpp_bit",
-        ":__support_cpp_type_traits",
         ":__support_cpp_array",
+        ":__support_cpp_bit",
+        ":__support_cpp_cstddef",
+        ":__support_cpp_type_traits",
         ":libc_root",
     ],
 )

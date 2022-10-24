@@ -2475,10 +2475,30 @@ void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
   if (!resultType) {
     resultType = PadOp::inferResultType(sourceType, staticLow, staticHigh);
   }
+  assert(resultType.isa<RankedTensorType>());
   build(b, result, resultType, source, dynamicLow, dynamicHigh,
         b.getI64ArrayAttr(staticLow), b.getI64ArrayAttr(staticHigh),
         nofold ? b.getUnitAttr() : UnitAttr());
   result.addAttributes(attrs);
+}
+
+void PadOp::build(OpBuilder &b, OperationState &result, Type resultType,
+                  Value source, ArrayRef<OpFoldResult> low,
+                  ArrayRef<OpFoldResult> high, Value constantPadValue,
+                  bool nofold, ArrayRef<NamedAttribute> attrs) {
+  build(b, result, resultType, source, low, high, nofold, attrs);
+
+  // Add a region and a block to yield the pad value.
+  Region *region = result.regions[0].get();
+  int sourceRank = source.getType().cast<RankedTensorType>().getRank();
+  SmallVector<Type> blockArgTypes(sourceRank, b.getIndexType());
+  SmallVector<Location> blockArgLocs(sourceRank, result.location);
+
+  // `builder.createBlock` changes the insertion point within the block. Create
+  // a guard to reset the insertion point of the builder after it is destroyed.
+  OpBuilder::InsertionGuard guard(b);
+  b.createBlock(region, region->end(), blockArgTypes, blockArgLocs);
+  b.create<tensor::YieldOp>(result.location, constantPadValue);
 }
 
 llvm::SmallBitVector PadOp::getPaddedDims() {

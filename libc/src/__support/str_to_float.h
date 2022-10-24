@@ -108,8 +108,9 @@ eisel_lemire(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
   uint32_t clz = leading_zeroes<BitsType>(mantissa);
   mantissa <<= clz;
 
-  uint32_t exp2 = static_cast<uint32_t>(exp10_to_exp2(exp10)) + BITS_IN_MANTISSA +
-                  fputil::FloatProperties<T>::EXPONENT_BIAS - clz;
+  uint32_t exp2 = static_cast<uint32_t>(exp10_to_exp2(exp10)) +
+                  BITS_IN_MANTISSA + fputil::FloatProperties<T>::EXPONENT_BIAS -
+                  clz;
 
   // Multiplication
   const uint64_t *power_of_ten =
@@ -147,8 +148,10 @@ eisel_lemire(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
   }
 
   // Shifting to 54 bits for doubles and 25 bits for floats
-  BitsType msb = static_cast<BitsType>(high64(final_approx) >> (BITS_IN_MANTISSA - 1));
-  BitsType final_mantissa = static_cast<BitsType>(high64(final_approx) >>
+  BitsType msb =
+      static_cast<BitsType>(high64(final_approx) >> (BITS_IN_MANTISSA - 1));
+  BitsType final_mantissa =
+      static_cast<BitsType>(high64(final_approx) >>
                             (msb + BITS_IN_MANTISSA -
                              (fputil::FloatProperties<T>::MANTISSA_WIDTH + 3)));
   exp2 -= static_cast<uint32_t>(1 ^ msb); // same as !msb
@@ -208,7 +211,8 @@ inline bool eisel_lemire<long double>(
   uint32_t clz = leading_zeroes<BitsType>(mantissa);
   mantissa <<= clz;
 
-  uint32_t exp2 = static_cast<uint32_t>(exp10_to_exp2(exp10)) + BITS_IN_MANTISSA +
+  uint32_t exp2 = static_cast<uint32_t>(exp10_to_exp2(exp10)) +
+                  BITS_IN_MANTISSA +
                   fputil::FloatProperties<long double>::EXPONENT_BIAS - clz;
 
   // Multiplication
@@ -576,12 +580,15 @@ decimal_exp_to_float(typename fputil::FPBits<T>::UIntType mantissa,
     return;
   }
 
+#ifndef LLVM_LIBC_DISABLE_CLINGER_FAST_PATH
   if (!truncated) {
     if (clinger_fast_path<T>(mantissa, exp10, outputMantissa, outputExp2)) {
       return;
     }
   }
+#endif // LLVM_LIBC_DISABLE_CLINGER_FAST_PATH
 
+#ifndef LLVM_LIBC_DISABLE_EISEL_LEMIRE
   // Try Eisel-Lemire
   if (eisel_lemire<T>(mantissa, exp10, outputMantissa, outputExp2)) {
     if (!truncated) {
@@ -598,8 +605,11 @@ decimal_exp_to_float(typename fputil::FPBits<T>::UIntType mantissa,
       }
     }
   }
+#endif // LLVM_LIBC_DISABLE_EISEL_LEMIRE
 
+#ifndef LLVM_LIBC_DISABLE_SIMPLE_DECIMAL_CONVERSION
   simple_decimal_conversion<T>(numStart, outputMantissa, outputExp2);
+#endif // LLVM_LIBC_DISABLE_SIMPLE_DECIMAL_CONVERSION
 
   return;
 }

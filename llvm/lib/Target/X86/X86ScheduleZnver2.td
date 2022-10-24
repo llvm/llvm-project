@@ -1127,21 +1127,6 @@ def Zn2WritePCMPGTQYm : SchedWriteRes<[Zn2AGU, Zn2FPU03]> {
 def : InstRW<[Zn2WritePCMPGTQm], (instregex "(V?)PCMPGTQrm")>;
 def : InstRW<[Zn2WritePCMPGTQYm], (instrs VPCMPGTQYrm)>;
 
-//-- Logic instructions --//
-
-// PSLL,PSRL,PSRA W/D/Q.
-// x,x / v,v,x.
-def Zn2WritePShift  : SchedWriteRes<[Zn2FPU2]> {
-  let Latency = 3;
-}
-def Zn2WritePShiftY : SchedWriteRes<[Zn2FPU2]> {
-  let Latency = 3;
-}
-
-// PSLL,PSRL DQ.
-def : InstRW<[Zn2WritePShift], (instregex "(V?)PS(R|L)LDQri")>;
-def : InstRW<[Zn2WritePShiftY], (instregex "(V?)PS(R|L)LDQYri")>;
-
 //=== Floating Point XMM and YMM Instructions ===//
 //-- Move instructions --//
 
