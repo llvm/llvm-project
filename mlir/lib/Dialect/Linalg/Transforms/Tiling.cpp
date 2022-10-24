@@ -235,7 +235,11 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
   auto hasStrideOne = [](Range r) { return !isConstantIntValue(r.stride, 1); };
   if (llvm::any_of(loopRanges, hasStrideOne))
     return op->emitOpError("only stride-1 supported atm");
-  auto dest = op.getDestinationOperands(b);
+
+  // Gather destination tensors.
+  SmallVector<Value> dest;
+  if (failed(tensor::getOrCreateDestinations(b, loc, op, dest)))
+    return op->emitOpError("failed to get destination tensors");
 
   SmallVector<OpFoldResult> nonZeroNumThreads =
       llvm::to_vector(llvm::make_filter_range(numThreads, [](OpFoldResult ofr) {
@@ -622,11 +626,13 @@ static LogicalResult tilePadOp(RewriterBase &builder, tensor::PadOp op,
           getValueOrCreateConstantIndexOp(builder, loc, tileSizes[i]));
     }
   }
-  // Generate loop nest: One loop per dimension.
-  SmallVector<Value> destOperand =
-      tilingInterface.getDestinationOperands(builder);
+  SmallVector<Value> destinationTensors;
+  if (failed(tensor::getOrCreateDestinations(builder, loc, tilingInterface,
+                                             destinationTensors)))
+    return failure();
+
   loopNest = mlir::scf::buildLoopNest(
-      builder, loc, lbs, /*ubs=*/dims, steps, ValueRange(destOperand),
+      builder, loc, lbs, /*ubs=*/dims, steps, ValueRange(destinationTensors),
       [&](OpBuilder &b, Location loc, ValueRange localIvs,
           ValueRange iterArgs) -> scf::ValueVector {
         // Compute offsets and sizes of ExtractSliceOp.
