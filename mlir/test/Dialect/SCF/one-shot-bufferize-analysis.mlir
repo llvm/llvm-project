@@ -177,6 +177,7 @@ func.func @non_reading_scf_for(%t1: tensor<?xf32> {bufferization.writable = true
 
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
   %cst = arith.constant 0.0 : f32
 
   // Write to %t1.
@@ -186,7 +187,7 @@ func.func @non_reading_scf_for(%t1: tensor<?xf32> {bufferization.writable = true
 
   // This loop does not read from %t1. It only writes to it.
   // CHECK:      scf.for
-  %r, %v3 = scf.for %i = %c0 to %s step %c1 iter_args(%t2 = %t1, %v0 = %v) -> (tensor<?xf32>, vector<5xf32>) {
+  %r, %v3 = scf.for %i = %c0 to %c10 step %c1 iter_args(%t2 = %t1, %v0 = %v) -> (tensor<?xf32>, vector<5xf32>) {
     // Write to %t1 via %t2. (Overwrite %t3.)
     // CHECK:      linalg.generic
     // CHECK-SAME: __inplace_operands_attr__ = ["true"]
