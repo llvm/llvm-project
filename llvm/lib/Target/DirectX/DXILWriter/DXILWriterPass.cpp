@@ -64,7 +64,16 @@ public:
   bool runOnModule(Module &M) override {
     std::string Data;
     llvm::raw_string_ostream OS(Data);
+
+    const std::string OriginalTriple = M.getTargetTriple();
+    // Set to DXIL triple when write to bitcode.
+    // Only the output bitcode need to be DXIL triple.
+    M.setTargetTriple("dxil-ms-dx");
+
     WriteDXILToFile(M, OS);
+
+    // Recover triple.
+    M.setTargetTriple(OriginalTriple);
 
     Constant *ModuleConstant =
         ConstantDataArray::get(M.getContext(), arrayRefFromStringRef(Data));
