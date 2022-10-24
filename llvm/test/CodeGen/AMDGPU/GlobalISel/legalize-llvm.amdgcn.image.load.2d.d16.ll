@@ -150,23 +150,16 @@ define amdgpu_ps <3 x half> @image_load_v3f16(<8 x i32> inreg %rsrc, i32 %s, i32
   ; PACKED-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY8]](s32), [[COPY9]](s32)
   ; PACKED-NEXT:   [[AMDGPU_INTRIN_IMAGE_LOAD_D16_:%[0-9]+]]:_(<4 x s16>) = G_AMDGPU_INTRIN_IMAGE_LOAD_D16 intrinsic(@llvm.amdgcn.image.load.2d), 7, [[BUILD_VECTOR1]](<2 x s32>), $noreg, [[BUILD_VECTOR]](<8 x s32>), 0, 0, 0 :: (dereferenceable load (<3 x s16>) from custom "ImageResource", align 8)
   ; PACKED-NEXT:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[AMDGPU_INTRIN_IMAGE_LOAD_D16_]](<4 x s16>)
-  ; PACKED-NEXT:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+  ; PACKED-NEXT:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
   ; PACKED-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; PACKED-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-  ; PACKED-NEXT:   [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
   ; PACKED-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
   ; PACKED-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[BITCAST]], [[C1]]
-  ; PACKED-NEXT:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C1]]
-  ; PACKED-NEXT:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
-  ; PACKED-NEXT:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
-  ; PACKED-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-  ; PACKED-NEXT:   [[AND2:%[0-9]+]]:_(s32) = G_AND [[BITCAST1]], [[C1]]
   ; PACKED-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; PACKED-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[C2]], [[C]](s32)
-  ; PACKED-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
-  ; PACKED-NEXT:   [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-  ; PACKED-NEXT:   $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
-  ; PACKED-NEXT:   $vgpr1 = COPY [[BITCAST3]](<2 x s16>)
+  ; PACKED-NEXT:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C2]], [[C]](s32)
+  ; PACKED-NEXT:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
+  ; PACKED-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+  ; PACKED-NEXT:   $vgpr0 = COPY [[UV]](<2 x s16>)
+  ; PACKED-NEXT:   $vgpr1 = COPY [[BITCAST1]](<2 x s16>)
   ; PACKED-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   %tex = call <3 x half> @llvm.amdgcn.image.load.2d.v3f16.i32(i32 7, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret <3 x half> %tex
@@ -713,23 +706,16 @@ define amdgpu_ps <3 x half> @image_load_v3f16_dmask_0000(<8 x i32> inreg %rsrc, 
   ; UNPACKED-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; UNPACKED-NEXT:   [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
   ; UNPACKED-NEXT:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
-  ; UNPACKED-NEXT:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+  ; UNPACKED-NEXT:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
   ; UNPACKED-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; UNPACKED-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-  ; UNPACKED-NEXT:   [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
   ; UNPACKED-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
   ; UNPACKED-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[BITCAST]], [[C1]]
-  ; UNPACKED-NEXT:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C1]]
-  ; UNPACKED-NEXT:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
-  ; UNPACKED-NEXT:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
-  ; UNPACKED-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-  ; UNPACKED-NEXT:   [[AND2:%[0-9]+]]:_(s32) = G_AND [[BITCAST1]], [[C1]]
   ; UNPACKED-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; UNPACKED-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[C2]], [[C]](s32)
-  ; UNPACKED-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
-  ; UNPACKED-NEXT:   [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-  ; UNPACKED-NEXT:   $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
-  ; UNPACKED-NEXT:   $vgpr1 = COPY [[BITCAST3]](<2 x s16>)
+  ; UNPACKED-NEXT:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C2]], [[C]](s32)
+  ; UNPACKED-NEXT:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
+  ; UNPACKED-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+  ; UNPACKED-NEXT:   $vgpr0 = COPY [[UV]](<2 x s16>)
+  ; UNPACKED-NEXT:   $vgpr1 = COPY [[BITCAST1]](<2 x s16>)
   ; UNPACKED-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   ; PACKED-LABEL: name: image_load_v3f16_dmask_0000
   ; PACKED: bb.1 (%ir-block.0):
@@ -739,23 +725,16 @@ define amdgpu_ps <3 x half> @image_load_v3f16_dmask_0000(<8 x i32> inreg %rsrc, 
   ; PACKED-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; PACKED-NEXT:   [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
   ; PACKED-NEXT:   [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
-  ; PACKED-NEXT:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV]](<2 x s16>)
+  ; PACKED-NEXT:   [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
   ; PACKED-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-  ; PACKED-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-  ; PACKED-NEXT:   [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV1]](<2 x s16>)
   ; PACKED-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
   ; PACKED-NEXT:   [[AND:%[0-9]+]]:_(s32) = G_AND [[BITCAST]], [[C1]]
-  ; PACKED-NEXT:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C1]]
-  ; PACKED-NEXT:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
-  ; PACKED-NEXT:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
-  ; PACKED-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-  ; PACKED-NEXT:   [[AND2:%[0-9]+]]:_(s32) = G_AND [[BITCAST1]], [[C1]]
   ; PACKED-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; PACKED-NEXT:   [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[C2]], [[C]](s32)
-  ; PACKED-NEXT:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
-  ; PACKED-NEXT:   [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-  ; PACKED-NEXT:   $vgpr0 = COPY [[BITCAST2]](<2 x s16>)
-  ; PACKED-NEXT:   $vgpr1 = COPY [[BITCAST3]](<2 x s16>)
+  ; PACKED-NEXT:   [[SHL:%[0-9]+]]:_(s32) = G_SHL [[C2]], [[C]](s32)
+  ; PACKED-NEXT:   [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
+  ; PACKED-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
+  ; PACKED-NEXT:   $vgpr0 = COPY [[UV]](<2 x s16>)
+  ; PACKED-NEXT:   $vgpr1 = COPY [[BITCAST1]](<2 x s16>)
   ; PACKED-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   %tex = call <3 x half> @llvm.amdgcn.image.load.2d.v3f16.i32(i32 0, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret <3 x half> %tex

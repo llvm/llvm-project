@@ -2189,53 +2189,19 @@ body: |
     ; CI-NEXT: {{  $}}
     ; CI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; CI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
-    ; CI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; CI-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; CI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; CI-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
-    ; CI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; CI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
-    ; CI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[COPY1]](s32)
-    ; CI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[SHL]](s32)
-    ; CI-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[TRUNC1]]
-    ; CI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; CI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; CI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ; VI-LABEL: name: test_load_flat_v2s8_align4
     ; VI: liveins: $vgpr0_vgpr1
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; VI-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
-    ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; VI-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C1]]
-    ; VI-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; VI-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C2]](s16)
-    ; VI-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
-    ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; VI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ; GFX9-LABEL: name: test_load_flat_v2s8_align4
     ; GFX9: liveins: $vgpr0_vgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; GFX9-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16), align 4)
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; GFX9-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
-    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C1]]
-    ; GFX9-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C2]](s16)
-    ; GFX9-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
-    ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; GFX9-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; GFX9-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     %0:_(p0) = COPY $vgpr0_vgpr1
     %1:_(<2 x s8>) = G_LOAD %0 :: (load (<2 x s8>), align 4, addrspace 0)
     %2:_(s16) = G_BITCAST %1
@@ -2254,53 +2220,19 @@ body: |
     ; CI-NEXT: {{  $}}
     ; CI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; CI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
-    ; CI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; CI-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; CI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; CI-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
-    ; CI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; CI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
-    ; CI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[COPY1]](s32)
-    ; CI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[SHL]](s32)
-    ; CI-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[TRUNC1]]
-    ; CI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; CI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; CI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ; VI-LABEL: name: test_load_flat_v2s8_align2
     ; VI: liveins: $vgpr0_vgpr1
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; VI-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
-    ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; VI-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C1]]
-    ; VI-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; VI-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C2]](s16)
-    ; VI-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
-    ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; VI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ; GFX9-LABEL: name: test_load_flat_v2s8_align2
     ; GFX9: liveins: $vgpr0_vgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; GFX9-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s16))
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; GFX9-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
-    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C1]]
-    ; GFX9-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C2]](s16)
-    ; GFX9-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
-    ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; GFX9-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; GFX9-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     %0:_(p0) = COPY $vgpr0_vgpr1
     %1:_(<2 x s8>) = G_LOAD %0 :: (load (<2 x s8>), align 2, addrspace 0)
     %2:_(s16) = G_BITCAST %1
@@ -2325,18 +2257,7 @@ body: |
     ; CI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; CI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C1]](s32)
     ; CI-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
-    ; CI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[OR]], [[C1]](s32)
-    ; CI-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; CI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[OR]](s32)
-    ; CI-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C2]]
-    ; CI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
-    ; CI-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C3]]
-    ; CI-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[COPY1]](s32)
-    ; CI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[SHL1]](s32)
-    ; CI-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND]], [[TRUNC1]]
-    ; CI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR1]](s16)
-    ; CI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; CI-NEXT: $vgpr0 = COPY [[OR]](s32)
     ; VI-LABEL: name: test_load_flat_v2s8_align1
     ; VI: liveins: $vgpr0_vgpr1
     ; VI-NEXT: {{  $}}
@@ -2348,17 +2269,7 @@ body: |
     ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; VI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C1]](s32)
     ; VI-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
-    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[OR]], [[C1]](s32)
-    ; VI-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[OR]](s32)
-    ; VI-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C2]]
-    ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; VI-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C2]]
-    ; VI-NEXT: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; VI-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C3]](s16)
-    ; VI-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL1]]
-    ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR1]](s16)
-    ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; VI-NEXT: $vgpr0 = COPY [[OR]](s32)
     ; GFX9-LABEL: name: test_load_flat_v2s8_align1
     ; GFX9: liveins: $vgpr0_vgpr1
     ; GFX9-NEXT: {{  $}}
@@ -2370,17 +2281,7 @@ body: |
     ; GFX9-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[LOAD]], [[C1]](s32)
     ; GFX9-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[ZEXTLOAD]]
-    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[OR]], [[C1]](s32)
-    ; GFX9-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[OR]](s32)
-    ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C2]]
-    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C2]]
-    ; GFX9-NEXT: [[C3:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; GFX9-NEXT: [[SHL1:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C3]](s16)
-    ; GFX9-NEXT: [[OR1:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL1]]
-    ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR1]](s16)
-    ; GFX9-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; GFX9-NEXT: $vgpr0 = COPY [[OR]](s32)
     %0:_(p0) = COPY $vgpr0_vgpr1
     %1:_(<2 x s8>) = G_LOAD %0 :: (load (<2 x s8>), align 1, addrspace 0)
     %2:_(s16) = G_BITCAST %1

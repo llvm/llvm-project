@@ -6565,174 +6565,61 @@ body: |
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p3) :: (load (s16), addrspace 3)
-    ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; SI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; SI-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; SI-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
-    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; SI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; SI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
-    ; SI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[COPY1]](s32)
-    ; SI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[SHL]](s32)
-    ; SI-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[TRUNC1]]
-    ; SI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; SI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; SI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ; CI-LABEL: name: test_load_local_v2s8_align2
     ; CI: liveins: $vgpr0
     ; CI-NEXT: {{  $}}
     ; CI-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; CI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p3) :: (load (s16), addrspace 3)
-    ; CI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; CI-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; CI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; CI-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
-    ; CI-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; CI-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CI-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
-    ; CI-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[COPY1]](s32)
-    ; CI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[SHL]](s32)
-    ; CI-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[TRUNC1]]
-    ; CI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; CI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; CI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ; CI-DS128-LABEL: name: test_load_local_v2s8_align2
     ; CI-DS128: liveins: $vgpr0
     ; CI-DS128-NEXT: {{  $}}
     ; CI-DS128-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; CI-DS128-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p3) :: (load (s16), addrspace 3)
-    ; CI-DS128-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CI-DS128-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; CI-DS128-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; CI-DS128-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; CI-DS128-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
-    ; CI-DS128-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; CI-DS128-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CI-DS128-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[LSHR]], [[C2]]
-    ; CI-DS128-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[COPY1]](s32)
-    ; CI-DS128-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[SHL]](s32)
-    ; CI-DS128-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[TRUNC1]]
-    ; CI-DS128-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; CI-DS128-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; CI-DS128-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ; VI-LABEL: name: test_load_local_v2s8_align2
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; VI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p3) :: (load (s16), addrspace 3)
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; VI-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
-    ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; VI-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C1]]
-    ; VI-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; VI-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C2]](s16)
-    ; VI-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
-    ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; VI-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ; GFX9-LABEL: name: test_load_local_v2s8_align2
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; GFX9-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p3) :: (load (s16), addrspace 3)
-    ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX9-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; GFX9-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; GFX9-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
-    ; GFX9-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX9-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C1]]
-    ; GFX9-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C2]](s16)
-    ; GFX9-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
-    ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; GFX9-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; GFX9-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ; GFX9-UNALIGNED-LABEL: name: test_load_local_v2s8_align2
     ; GFX9-UNALIGNED: liveins: $vgpr0
     ; GFX9-UNALIGNED-NEXT: {{  $}}
     ; GFX9-UNALIGNED-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; GFX9-UNALIGNED-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p3) :: (load (s16), addrspace 3)
-    ; GFX9-UNALIGNED-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX9-UNALIGNED-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; GFX9-UNALIGNED-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; GFX9-UNALIGNED-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; GFX9-UNALIGNED-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
-    ; GFX9-UNALIGNED-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX9-UNALIGNED-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C1]]
-    ; GFX9-UNALIGNED-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; GFX9-UNALIGNED-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C2]](s16)
-    ; GFX9-UNALIGNED-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
-    ; GFX9-UNALIGNED-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; GFX9-UNALIGNED-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; GFX9-UNALIGNED-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ; GFX10-LABEL: name: test_load_local_v2s8_align2
     ; GFX10: liveins: $vgpr0
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; GFX10-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p3) :: (load (s16), addrspace 3)
-    ; GFX10-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX10-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; GFX10-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; GFX10-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; GFX10-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
-    ; GFX10-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX10-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C1]]
-    ; GFX10-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; GFX10-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C2]](s16)
-    ; GFX10-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
-    ; GFX10-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; GFX10-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; GFX10-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ; GFX10-UNALIGNED-LABEL: name: test_load_local_v2s8_align2
     ; GFX10-UNALIGNED: liveins: $vgpr0
     ; GFX10-UNALIGNED-NEXT: {{  $}}
     ; GFX10-UNALIGNED-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; GFX10-UNALIGNED-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p3) :: (load (s16), addrspace 3)
-    ; GFX10-UNALIGNED-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX10-UNALIGNED-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; GFX10-UNALIGNED-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; GFX10-UNALIGNED-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; GFX10-UNALIGNED-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
-    ; GFX10-UNALIGNED-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX10-UNALIGNED-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C1]]
-    ; GFX10-UNALIGNED-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; GFX10-UNALIGNED-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C2]](s16)
-    ; GFX10-UNALIGNED-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
-    ; GFX10-UNALIGNED-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; GFX10-UNALIGNED-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; GFX10-UNALIGNED-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ; GFX11-LABEL: name: test_load_local_v2s8_align2
     ; GFX11: liveins: $vgpr0
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; GFX11-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p3) :: (load (s16), addrspace 3)
-    ; GFX11-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX11-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; GFX11-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; GFX11-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; GFX11-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
-    ; GFX11-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX11-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C1]]
-    ; GFX11-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; GFX11-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C2]](s16)
-    ; GFX11-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
-    ; GFX11-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; GFX11-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; GFX11-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     ; GFX11-UNALIGNED-LABEL: name: test_load_local_v2s8_align2
     ; GFX11-UNALIGNED: liveins: $vgpr0
     ; GFX11-UNALIGNED-NEXT: {{  $}}
     ; GFX11-UNALIGNED-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
     ; GFX11-UNALIGNED-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p3) :: (load (s16), addrspace 3)
-    ; GFX11-UNALIGNED-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; GFX11-UNALIGNED-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[LOAD]], [[C]](s32)
-    ; GFX11-UNALIGNED-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
-    ; GFX11-UNALIGNED-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LOAD]](s32)
-    ; GFX11-UNALIGNED-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C1]]
-    ; GFX11-UNALIGNED-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; GFX11-UNALIGNED-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C1]]
-    ; GFX11-UNALIGNED-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 8
-    ; GFX11-UNALIGNED-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[AND1]], [[C2]](s16)
-    ; GFX11-UNALIGNED-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
-    ; GFX11-UNALIGNED-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
-    ; GFX11-UNALIGNED-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
+    ; GFX11-UNALIGNED-NEXT: $vgpr0 = COPY [[LOAD]](s32)
     %0:_(p3) = COPY $vgpr0
     %1:_(<2 x s8>) = G_LOAD %0 :: (load (<2 x s8>), align 2, addrspace 3)
     %2:_(s16) = G_BITCAST %1
