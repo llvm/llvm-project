@@ -321,6 +321,9 @@ public:
   GetAddrOfGlobal(clang::GlobalDecl GD,
                   ForDefinition_t IsForDefinition = NotForDefinition);
 
+  // C++ related functions.
+  void buildDeclContext(const DeclContext *DC);
+
   llvm::StringRef getMangledName(clang::GlobalDecl GD);
 
   // Make sure that this type is translated.

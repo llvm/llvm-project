@@ -1017,6 +1017,20 @@ CIRGenModule::getAddrOfConstantStringFromLiteral(const StringLiteral *S,
       castStringLiteralToDefaultAddressSpace(*this, GV.getSymNameAttr()));
 }
 
+void CIRGenModule::buildDeclContext(const DeclContext *DC) {
+  for (auto *I : DC->decls()) {
+    // Unlike other DeclContexts, the contents of an ObjCImplDecl at TU scope
+    // are themselves considered "top-level", so EmitTopLevelDecl on an
+    // ObjCImplDecl does not recursively visit them. We need to do that in
+    // case they're nested inside another construct (LinkageSpecDecl /
+    // ExportDecl) that does stop them from being considered "top-level".
+    if (auto *OID = dyn_cast<ObjCImplDecl>(I))
+      llvm_unreachable("NYI");
+
+    buildTopLevelDecl(I);
+  }
+}
+
 // Emit code for a single top level declaration.
 void CIRGenModule::buildTopLevelDecl(Decl *decl) {
   // Ignore dependent declarations
@@ -1043,6 +1057,11 @@ void CIRGenModule::buildTopLevelDecl(Decl *decl) {
     //   for (auto *B : DD->bindings())
     //     if (auto *HD = B->getHoldingVar())
     //       EmitGlobal(HD);
+    break;
+
+  // C++ Decls
+  case Decl::Namespace:
+    buildDeclContext(cast<NamespaceDecl>(decl));
     break;
 
   case Decl::CXXMethod:
