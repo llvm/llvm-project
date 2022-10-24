@@ -15,6 +15,7 @@
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Coarray.h"
 #include "flang/Lower/ConvertExpr.h"
+#include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/HostAssociations.h"
@@ -417,15 +418,34 @@ public:
   }
 
   fir::ExtendedValue
+  translateToExtendedValue(mlir::Location loc, hlfir::FortranEntity entity,
+                           Fortran::lower::StatementContext &context) {
+    auto [exv, exvCleanup] =
+        hlfir::translateToExtendedValue(loc, getFirOpBuilder(), entity);
+    if (exvCleanup)
+      context.attachCleanup(*exvCleanup);
+    return exv;
+  }
+
+  fir::ExtendedValue
   genExprAddr(const Fortran::lower::SomeExpr &expr,
               Fortran::lower::StatementContext &context,
               mlir::Location *locPtr = nullptr) override final {
     mlir::Location loc = locPtr ? *locPtr : toLocation();
-    if (bridge.getLoweringOptions().getLowerToHighLevelFIR())
-      TODO(loc, "lower expr to HLFIR address");
+    if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
+      hlfir::FortranEntity loweredExpr = Fortran::lower::convertExprToHLFIR(
+          loc, *this, expr, localSymbols, context);
+      if (fir::FortranVariableOpInterface variable =
+              loweredExpr.getIfVariable())
+        if (!variable.isBox())
+          return translateToExtendedValue(loc, loweredExpr, context);
+      TODO(loc, "lower expr that is not a scalar or explicit shape array "
+                "variable to HLFIR address");
+    }
     return Fortran::lower::createSomeExtendedAddress(loc, *this, expr,
                                                      localSymbols, context);
   }
+
   fir::ExtendedValue
   genExprValue(const Fortran::lower::SomeExpr &expr,
                Fortran::lower::StatementContext &context,
@@ -440,8 +460,18 @@ public:
   fir::ExtendedValue
   genExprBox(mlir::Location loc, const Fortran::lower::SomeExpr &expr,
              Fortran::lower::StatementContext &stmtCtx) override final {
-    if (bridge.getLoweringOptions().getLowerToHighLevelFIR())
-      TODO(loc, "lower expr to HLFIR box");
+    if (bridge.getLoweringOptions().getLowerToHighLevelFIR()) {
+      hlfir::FortranEntity loweredExpr = Fortran::lower::convertExprToHLFIR(
+          loc, *this, expr, localSymbols, stmtCtx);
+      if (fir::FortranVariableOpInterface variable =
+              loweredExpr.getIfVariable())
+        if (variable.isBoxValue() || !variable.isBoxAddress()) {
+          auto exv = translateToExtendedValue(loc, loweredExpr, stmtCtx);
+          return fir::factory::createBoxValue(getFirOpBuilder(), loc, exv);
+        }
+      TODO(loc,
+           "lower expression value or pointer and allocatable to HLFIR box");
+    }
     return Fortran::lower::createBoxValue(loc, *this, expr, localSymbols,
                                           stmtCtx);
   }
