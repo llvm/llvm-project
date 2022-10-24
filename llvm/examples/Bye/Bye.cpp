@@ -44,17 +44,6 @@ static RegisterPass<LegacyBye> X("goodbye", "Good Bye World Pass",
                                  false /* Only looks at CFG */,
                                  false /* Analysis Pass */);
 
-/* Legacy PM Registration */
-static llvm::RegisterStandardPasses RegisterBye(
-    llvm::PassManagerBuilder::EP_VectorizerStart,
-    [](const llvm::PassManagerBuilder &Builder,
-       llvm::legacy::PassManagerBase &PM) { PM.add(new LegacyBye()); });
-
-static llvm::RegisterStandardPasses RegisterByeLTO(
-    llvm::PassManagerBuilder::EP_ModuleOptimizerEarly,
-    [](const llvm::PassManagerBuilder &Builder,
-       llvm::legacy::PassManagerBase &PM) { PM.add(new LegacyBye()); });
-
 /* New PM Registration */
 llvm::PassPluginLibraryInfo getByePluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "Bye", LLVM_VERSION_STRING,
