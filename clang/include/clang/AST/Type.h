@@ -5248,29 +5248,10 @@ class alignas(8) AutoType : public DeducedType, public llvm::FoldingSetNode {
            TypeDependence ExtraDependence, QualType Canon, ConceptDecl *CD,
            ArrayRef<TemplateArgument> TypeConstraintArgs);
 
-  const TemplateArgument *getArgBuffer() const {
-    return reinterpret_cast<const TemplateArgument*>(this+1);
-  }
-
-  TemplateArgument *getArgBuffer() {
-    return reinterpret_cast<TemplateArgument*>(this+1);
-  }
-
 public:
-  /// Retrieve the template arguments.
-  const TemplateArgument *getArgs() const {
-    return getArgBuffer();
-  }
-
-  /// Retrieve the number of template arguments.
-  unsigned getNumArgs() const {
-    return AutoTypeBits.NumArgs;
-  }
-
-  const TemplateArgument &getArg(unsigned Idx) const; // in TemplateBase.h
-
   ArrayRef<TemplateArgument> getTypeConstraintArguments() const {
-    return {getArgs(), getNumArgs()};
+    return {reinterpret_cast<const TemplateArgument *>(this + 1),
+            AutoTypeBits.NumArgs};
   }
 
   ConceptDecl *getTypeConstraintConcept() const {
@@ -5293,11 +5274,7 @@ public:
     return (AutoTypeKeyword)AutoTypeBits.Keyword;
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
-    Profile(ID, Context, getDeducedType(), getKeyword(), isDependentType(),
-            getTypeConstraintConcept(), getTypeConstraintArguments());
-  }
-
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context);
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                       QualType Deduced, AutoTypeKeyword Keyword,
                       bool IsDependent, ConceptDecl *CD,
@@ -5435,35 +5412,14 @@ public:
 
   /// Get the aliased type, if this is a specialization of a type alias
   /// template.
-  QualType getAliasedType() const {
-    assert(isTypeAlias() && "not a type alias template specialization");
-    return *reinterpret_cast<const QualType*>(end());
-  }
-
-  using iterator = const TemplateArgument *;
-
-  iterator begin() const { return getArgs(); }
-  iterator end() const; // defined inline in TemplateBase.h
+  QualType getAliasedType() const;
 
   /// Retrieve the name of the template that we are specializing.
   TemplateName getTemplateName() const { return Template; }
 
-  /// Retrieve the template arguments.
-  const TemplateArgument *getArgs() const {
-    return reinterpret_cast<const TemplateArgument *>(this + 1);
-  }
-
-  /// Retrieve the number of template arguments.
-  unsigned getNumArgs() const {
-    return TemplateSpecializationTypeBits.NumArgs;
-  }
-
-  /// Retrieve a specific template argument as a type.
-  /// \pre \c isArgType(Arg)
-  const TemplateArgument &getArg(unsigned Idx) const; // in TemplateBase.h
-
   ArrayRef<TemplateArgument> template_arguments() const {
-    return {getArgs(), getNumArgs()};
+    return {reinterpret_cast<const TemplateArgument *>(this + 1),
+            TemplateSpecializationTypeBits.NumArgs};
   }
 
   bool isSugared() const {
@@ -5474,12 +5430,7 @@ public:
     return isTypeAlias() ? getAliasedType() : getCanonicalTypeInternal();
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx) {
-    Profile(ID, Template, template_arguments(), Ctx);
-    if (isTypeAlias())
-      getAliasedType().Profile(ID);
-  }
-
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx);
   static void Profile(llvm::FoldingSetNodeID &ID, TemplateName T,
                       ArrayRef<TemplateArgument> Args,
                       const ASTContext &Context);
@@ -5822,44 +5773,20 @@ class alignas(8) DependentTemplateSpecializationType
                                       ArrayRef<TemplateArgument> Args,
                                       QualType Canon);
 
-  const TemplateArgument *getArgBuffer() const {
-    return reinterpret_cast<const TemplateArgument*>(this+1);
-  }
-
-  TemplateArgument *getArgBuffer() {
-    return reinterpret_cast<TemplateArgument*>(this+1);
-  }
-
 public:
   NestedNameSpecifier *getQualifier() const { return NNS; }
   const IdentifierInfo *getIdentifier() const { return Name; }
 
-  /// Retrieve the template arguments.
-  const TemplateArgument *getArgs() const {
-    return getArgBuffer();
-  }
-
-  /// Retrieve the number of template arguments.
-  unsigned getNumArgs() const {
-    return DependentTemplateSpecializationTypeBits.NumArgs;
-  }
-
-  const TemplateArgument &getArg(unsigned Idx) const; // in TemplateBase.h
-
   ArrayRef<TemplateArgument> template_arguments() const {
-    return {getArgs(), getNumArgs()};
+    return {reinterpret_cast<const TemplateArgument *>(this + 1),
+            DependentTemplateSpecializationTypeBits.NumArgs};
   }
-
-  using iterator = const TemplateArgument *;
-
-  iterator begin() const { return getArgs(); }
-  iterator end() const; // inline in TemplateBase.h
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
-    Profile(ID, Context, getKeyword(), NNS, Name, {getArgs(), getNumArgs()});
+    Profile(ID, Context, getKeyword(), NNS, Name, template_arguments());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID,
