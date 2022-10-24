@@ -658,8 +658,7 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
             dummyName);
       }
     }
-    if (interface.HasExplicitInterface() && dummyIsPointer &&
-        dummy.intent != common::Intent::In) {
+    if (dummyIsPointer && dummy.intent != common::Intent::In) {
       const Symbol *last{GetLastSymbol(*expr)};
       if (!(last && IsProcedurePointer(*last)) &&
           !(dummy.intent == common::Intent::Default &&
