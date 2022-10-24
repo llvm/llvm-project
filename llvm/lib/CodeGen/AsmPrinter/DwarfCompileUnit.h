@@ -206,6 +206,7 @@ public:
   /// variables in this scope then create and insert DIEs for these
   /// variables.
   DIE &updateSubprogramScopeDIE(const DISubprogram *SP);
+  DIE &updateSubprogramScopeDIEImpl(const DISubprogram *SP, DIE *SPDie);
 
   void constructScopeDIE(LexicalScope *Scope, DIE &ParentScopeDIE);
 

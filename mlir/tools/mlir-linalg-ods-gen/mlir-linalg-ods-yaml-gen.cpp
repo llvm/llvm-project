@@ -655,7 +655,7 @@ ArrayAttr {0}::getIndexingMaps() {{
 const char structuredOpFoldersFormat[] = R"FMT(
 LogicalResult {0}::fold(ArrayRef<Attribute>,
                         SmallVectorImpl<OpFoldResult> &) {{
-  return foldMemRefCast(*this);
+  return memref::foldMemRefCast(*this);
 }
 void {0}::getEffects(SmallVectorImpl<
     SideEffects::EffectInstance<MemoryEffects::Effect> >&effects) {{

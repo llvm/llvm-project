@@ -74,23 +74,6 @@ public:
   ObjCARCAAResult run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// Legacy wrapper pass to provide the ObjCARCAAResult object.
-class ObjCARCAAWrapperPass : public ImmutablePass {
-  std::unique_ptr<ObjCARCAAResult> Result;
-
-public:
-  static char ID;
-
-  ObjCARCAAWrapperPass();
-
-  ObjCARCAAResult &getResult() { return *Result; }
-  const ObjCARCAAResult &getResult() const { return *Result; }
-
-  bool doInitialization(Module &M) override;
-  bool doFinalization(Module &M) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-};
-
 } // namespace objcarc
 } // namespace llvm
 

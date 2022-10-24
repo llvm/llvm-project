@@ -1326,26 +1326,6 @@ void AffineApplyOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 //===----------------------------------------------------------------------===//
-// Common canonicalization pattern support logic
-//===----------------------------------------------------------------------===//
-
-/// This is a common class used for patterns of the form
-/// "someop(memrefcast) -> someop".  It folds the source of any memref.cast
-/// into the root operation directly.
-static LogicalResult foldMemRefCast(Operation *op, Value ignore = nullptr) {
-  bool folded = false;
-  for (OpOperand &operand : op->getOpOperands()) {
-    auto cast = operand.get().getDefiningOp<memref::CastOp>();
-    if (cast && operand.get() != ignore &&
-        !cast.getOperand().getType().isa<UnrankedMemRefType>()) {
-      operand.set(cast.getOperand());
-      folded = true;
-    }
-  }
-  return success(folded);
-}
-
-//===----------------------------------------------------------------------===//
 // AffineDmaStartOp
 //===----------------------------------------------------------------------===//
 
@@ -1511,7 +1491,7 @@ LogicalResult AffineDmaStartOp::verifyInvariantsImpl() {
 LogicalResult AffineDmaStartOp::fold(ArrayRef<Attribute> cstOperands,
                                      SmallVectorImpl<OpFoldResult> &results) {
   /// dma_start(memrefcast) -> dma_start
-  return foldMemRefCast(*this);
+  return memref::foldMemRefCast(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1589,7 +1569,7 @@ LogicalResult AffineDmaWaitOp::verifyInvariantsImpl() {
 LogicalResult AffineDmaWaitOp::fold(ArrayRef<Attribute> cstOperands,
                                     SmallVectorImpl<OpFoldResult> &results) {
   /// dma_wait(memrefcast) -> dma_wait
-  return foldMemRefCast(*this);
+  return memref::foldMemRefCast(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2821,7 +2801,7 @@ void AffineLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 OpFoldResult AffineLoadOp::fold(ArrayRef<Attribute> cstOperands) {
   /// load(memrefcast) -> load
-  if (succeeded(foldMemRefCast(*this)))
+  if (succeeded(memref::foldMemRefCast(*this)))
     return getResult();
 
   // Fold load from a global constant memref.
@@ -2939,7 +2919,7 @@ void AffineStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
 LogicalResult AffineStoreOp::fold(ArrayRef<Attribute> cstOperands,
                                   SmallVectorImpl<OpFoldResult> &results) {
   /// store(memrefcast) -> store
-  return foldMemRefCast(*this, getValueToStore());
+  return memref::foldMemRefCast(*this, getValueToStore());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3392,7 +3372,7 @@ void AffinePrefetchOp::getCanonicalizationPatterns(RewritePatternSet &results,
 LogicalResult AffinePrefetchOp::fold(ArrayRef<Attribute> cstOperands,
                                      SmallVectorImpl<OpFoldResult> &results) {
   /// prefetch(memrefcast) -> prefetch
-  return foldMemRefCast(*this);
+  return memref::foldMemRefCast(*this);
 }
 
 //===----------------------------------------------------------------------===//

@@ -27,9 +27,11 @@
 #include "deltas/ReduceGlobalVarInitializers.h"
 #include "deltas/ReduceGlobalVars.h"
 #include "deltas/ReduceIRReferences.h"
+#include "deltas/ReduceInstructionFlags.h"
 #include "deltas/ReduceInstructionFlagsMIR.h"
 #include "deltas/ReduceInstructions.h"
 #include "deltas/ReduceInstructionsMIR.h"
+#include "deltas/ReduceMemoryOperations.h"
 #include "deltas/ReduceMetadata.h"
 #include "deltas/ReduceModuleData.h"
 #include "deltas/ReduceOpcodes.h"
@@ -45,6 +47,7 @@
 #include "deltas/ReduceVirtualRegisters.h"
 #include "deltas/RunIRPasses.h"
 #include "deltas/SimplifyInstructions.h"
+#include "deltas/StripDebugInfo.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -66,10 +69,13 @@ static cl::list<std::string>
 
 #define DELTA_PASSES                                                           \
   do {                                                                         \
+    DELTA_PASS("strip-debug-info", stripDebugInfoDeltaPass)                    \
     DELTA_PASS("functions", reduceFunctionsDeltaPass)                          \
     DELTA_PASS("function-bodies", reduceFunctionBodiesDeltaPass)               \
     DELTA_PASS("special-globals", reduceSpecialGlobalsDeltaPass)               \
     DELTA_PASS("aliases", reduceAliasesDeltaPass)                              \
+    DELTA_PASS("simplify-conditionals-true", reduceConditionalsTrueDeltaPass)  \
+    DELTA_PASS("simplify-conditionals-false", reduceConditionalsFalseDeltaPass)\
     DELTA_PASS("basic-blocks", reduceBasicBlocksDeltaPass)                     \
     DELTA_PASS("global-values", reduceGlobalValuesDeltaPass)                   \
     DELTA_PASS("global-objects", reduceGlobalObjectsDeltaPass)                 \
@@ -91,7 +97,11 @@ static cl::list<std::string>
     DELTA_PASS("attributes", reduceAttributesDeltaPass)                        \
     DELTA_PASS("module-data", reduceModuleDataDeltaPass)                       \
     DELTA_PASS("opcodes", reduceOpcodesDeltaPass)                              \
-  } while (false)
+    DELTA_PASS("volatile", reduceVolatileInstructionsDeltaPass)                \
+    DELTA_PASS("atomic-ordering", reduceAtomicOrderingDeltaPass)               \
+    DELTA_PASS("syncscopes", reduceAtomicSyncScopesDeltaPass)                  \
+    DELTA_PASS("instruction-flags", reduceInstructionFlagsDeltaPass)           \
+} while (false)
 
 #define DELTA_PASSES_MIR                                                       \
   do {                                                                         \

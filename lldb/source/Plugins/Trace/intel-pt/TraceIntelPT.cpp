@@ -89,7 +89,7 @@ TraceIntelPTSP TraceIntelPT::CreateInstanceForPostmortemTrace(
   trace_sp->m_storage.tsc_conversion =
       bundle_description.tsc_perf_zero_conversion;
 
-  if (bundle_description.cpus && trace_mode == TraceMode::UserMode) {
+  if (bundle_description.cpus) {
     std::vector<cpu_id_t> cpus;
 
     for (const JSONCpu &cpu : *bundle_description.cpus) {
@@ -102,8 +102,12 @@ TraceIntelPTSP TraceIntelPT::CreateInstanceForPostmortemTrace(
       cpus.push_back(cpu.id);
     }
 
-    trace_sp->m_storage.multicpu_decoder.emplace(trace_sp);
-  } else {
+    if (trace_mode == TraceMode::UserMode) {
+      trace_sp->m_storage.multicpu_decoder.emplace(trace_sp);
+    }
+  }
+
+  if (!bundle_description.cpus || trace_mode == TraceMode::KernelMode) {
     for (const ThreadPostMortemTraceSP &thread : traced_threads) {
       trace_sp->m_storage.thread_decoders.try_emplace(
           thread->GetID(), std::make_unique<ThreadDecoder>(thread, *trace_sp));

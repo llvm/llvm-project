@@ -5,6 +5,7 @@ add_libc_unittest(
   SRCS
     elements_test.cpp
     memory_access_test.cpp
+    op_tests.cpp
     utils_test.cpp
   COMPILE_OPTIONS
     ${LIBC_COMPILE_OPTIONS_NATIVE}
@@ -13,4 +14,5 @@ add_libc_unittest(
     libc.src.string.memory_utils.memory_utils
     libc.src.__support.CPP.array
     libc.src.__support.CPP.span
+    libc.src.__support.CPP.cstddef
 )

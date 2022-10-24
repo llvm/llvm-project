@@ -108,6 +108,11 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
     } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
       overridesWeakDef = !isWeakDef && dysym->isWeakDef();
       dysym->unreference();
+    } else if (auto *undef = dyn_cast<Undefined>(s)) {
+      // Preserve the original bitcode file name (instead of using the object
+      // file name).
+      if (undef->wasBitcodeSymbol)
+        file = undef->getFile();
     }
     // Defined symbols take priority over other types of symbols, so in case
     // of a name conflict, we fall through to the replaceSymbol() call below.
@@ -142,7 +147,8 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
   RefState refState = isWeakRef ? RefState::Weak : RefState::Strong;
 
   if (wasInserted)
-    replaceSymbol<Undefined>(s, name, file, refState);
+    replaceSymbol<Undefined>(s, name, file, refState,
+                             /*wasBitcodeSymbol=*/false);
   else if (auto *lazy = dyn_cast<LazyArchive>(s))
     lazy->fetchArchiveMember();
   else if (isa<LazyObject>(s))

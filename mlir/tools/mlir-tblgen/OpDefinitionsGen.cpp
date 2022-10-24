@@ -1583,13 +1583,12 @@ void OpEmitter::genSeparateArgParamBuilder() {
       // Generate builder that infers type too.
       // TODO: Subsume this with general checking if type can be
       // inferred automatically.
-      // TODO: Expand to handle regions.
       body << formatv(R"(
         ::llvm::SmallVector<::mlir::Type, 2> inferredReturnTypes;
         if (::mlir::succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
                       {1}.location, {1}.operands,
                       {1}.attributes.getDictionary({1}.getContext()),
-                      /*regions=*/{{}, inferredReturnTypes)))
+                      {1}.regions, inferredReturnTypes)))
           {1}.addTypes(inferredReturnTypes);
         else
           ::llvm::report_fatal_error("Failed to infer result type(s).");)",
@@ -1660,7 +1659,7 @@ void OpEmitter::genSeparateArgParamBuilder() {
   // ambiguous function detection will elide those ones.
   for (auto attrType : attrBuilderType) {
     emit(attrType, TypeParamKind::Separate, /*inferType=*/false);
-    if (canInferType(op) && op.getNumRegions() == 0)
+    if (canInferType(op))
       emit(attrType, TypeParamKind::None, /*inferType=*/true);
     emit(attrType, TypeParamKind::Collective, /*inferType=*/false);
   }

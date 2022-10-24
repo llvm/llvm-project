@@ -536,12 +536,10 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
                                   {opaqueTp}, {fileName}, EmitCInterface::Off)
                        .getResult(0);
 
-    // Allocate a buffer for storing dimension sizes and indices.
+    // Allocate a temporary buffer for storing dimension sizes and indices.
     Type indexTp = rewriter.getIndexType();
-    auto memTp = MemRefType::get({ShapedType::kDynamicSize}, indexTp);
     uint64_t rank = dstTp.getRank();
-    Value dimSizes = rewriter.create<memref::AllocOp>(
-        loc, memTp, ValueRange{constantIndex(rewriter, loc, rank)});
+    Value dimSizes = genAlloca(rewriter, loc, rank, indexTp);
 
     // If the result tensor has dynamic dimensions, get the dynamic sizes from
     // the sparse tensor reader.
@@ -575,26 +573,27 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
     Value nnz = createFuncCall(rewriter, loc, "getSparseTensorReaderNNZ",
                                {indexTp}, {reader}, EmitCInterface::Off)
                     .getResult(0);
+    Type eltTp = dstTp.getElementType();
+    Value value = genAllocaScalar(rewriter, loc, eltTp);
     scf::ForOp forOp = rewriter.create<scf::ForOp>(loc, c0, nnz, c1);
     rewriter.setInsertionPointToStart(forOp.getBody());
 
-    Type eltTp = dstTp.getElementType();
     SmallString<18> getNextFuncName{"getSparseTensorReaderNext",
                                     primaryTypeFunctionSuffix(eltTp)};
     Value indices = dimSizes; // Reuse the indices memref to store indices.
-    Value value = createFuncCall(rewriter, loc, getNextFuncName, {eltTp},
-                                 {reader, indices}, EmitCInterface::On)
-                      .getResult(0);
+    createFuncCall(rewriter, loc, getNextFuncName, {eltTp},
+                   {reader, indices, value}, EmitCInterface::On)
+        .getResult(0);
     SmallVector<Value, 4> indicesArray;
     for (uint64_t i = 0; i < rank; i++) {
       indicesArray.push_back(rewriter.create<memref::LoadOp>(
           loc, indices, constantIndex(rewriter, loc, i)));
     }
-    rewriter.create<InsertOp>(loc, value, cooBuffer, indicesArray);
+    Value v = rewriter.create<memref::LoadOp>(loc, value);
+    rewriter.create<InsertOp>(loc, v, cooBuffer, indicesArray);
     rewriter.setInsertionPointAfter(forOp);
 
-    // Release the indices buffer and the sparse tensor reader.
-    rewriter.create<memref::DeallocOp>(loc, indices);
+    // Release the sparse tensor reader.
     createFuncCall(rewriter, loc, "delSparseTensorReader", {}, {reader},
                    EmitCInterface::Off);
 
@@ -604,6 +603,70 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
     rewriter.setInsertionPointAfterValue(newOp);
     rewriter.create<DeallocTensorOp>(loc, cooBuffer);
 
+    return success();
+  }
+};
+
+struct OutRewriter : public OpRewritePattern<OutOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(OutOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    // Calculate NNZ.
+    Value src = op.getTensor();
+    Value nnz = rewriter.create<NumberOfEntriesOp>(loc, src);
+
+    // Allocate a temporary buffer for storing dimension sizes and indices.
+    auto srcTp = src.getType().template cast<RankedTensorType>();
+    uint64_t rank = srcTp.getRank();
+    Type indexTp = rewriter.getIndexType();
+    Value dimSizes = genAlloca(rewriter, loc, rank, indexTp);
+
+    // Generate code to calculate dimension size values and store the values to
+    // the buffer.
+    SmallVector<Value, 4> dims;
+    sizesForTensor(rewriter, dims, loc, srcTp, src);
+    for (uint64_t i = 0; i < rank; i++) {
+      rewriter.create<memref::StoreOp>(loc, dims[i], dimSizes,
+                                       constantIndex(rewriter, loc, i));
+    }
+
+    // Create a sparse tensor writer and output meta data.
+    Type opaqueTp = getOpaquePointerType(rewriter);
+    Value writer =
+        createFuncCall(rewriter, loc, "createSparseTensorWriter", {opaqueTp},
+                       {op.getDest()}, EmitCInterface::Off)
+            .getResult(0);
+    Value rankValue = constantIndex(rewriter, loc, rank);
+    createFuncCall(rewriter, loc, "outSparseTensorWriterMetaData", {},
+                   {writer, rankValue, nnz, dimSizes}, EmitCInterface::On);
+
+    Value indices = dimSizes; // Reuse the dimSizes buffer for indices.
+    Type eltTp = srcTp.getElementType();
+    SmallString<18> outNextFuncName{"outSparseTensorWriterNext",
+                                    primaryTypeFunctionSuffix(eltTp)};
+    Value value = genAllocaScalar(rewriter, loc, eltTp);
+    ModuleOp module = op->getParentOfType<ModuleOp>();
+    // For each element in the source tensor, output the element.
+    rewriter.create<ForeachOp>(
+        loc, src, [&](OpBuilder &builder, Location loc, ValueRange args) {
+          for (uint64_t i = 0; i < rank; i++) {
+            rewriter.create<memref::StoreOp>(loc, args[i], indices,
+                                             constantIndex(builder, loc, i));
+          }
+          rewriter.create<memref::StoreOp>(loc, args.back(), value);
+          SmallVector<Value, 4> operands{writer, rankValue, indices, value};
+          FlatSymbolRefAttr fn = getFunc(module, outNextFuncName, {}, operands,
+                                         EmitCInterface::On);
+          builder.create<func::CallOp>(loc, TypeRange(), fn, operands);
+          builder.create<sparse_tensor::YieldOp>(loc);
+        });
+
+    // Release the writer.
+    createFuncCall(rewriter, loc, "delSparseTensorWriter", {}, {writer},
+                   EmitCInterface::Off);
+
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -624,7 +687,7 @@ void mlir::populateSparseTensorRewriting(RewritePatternSet &patterns,
 
   // TODO: If RT not enabled, rewrite concatenate ops, etc here.
   if (!enableRT)
-    patterns.add<ConcatenateRewriter, NewRewriter,
+    patterns.add<ConcatenateRewriter, NewRewriter, OutRewriter,
                  Sparse2SparseReshapeRewriter<tensor::ExpandShapeOp>,
                  Sparse2SparseReshapeRewriter<tensor::CollapseShapeOp>>(
         patterns.getContext());

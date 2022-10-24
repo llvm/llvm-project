@@ -10,9 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "FormatGen.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -65,10 +67,113 @@ static void emitEnumClass(const Record &enumDef, StringRef enumName,
   os << "};\n\n";
 }
 
-static void emitDenseMapInfo(StringRef enumName, std::string underlyingType,
+static void emitParserPrinter(const EnumAttr &enumAttr, StringRef qualName,
+                              StringRef cppNamespace, raw_ostream &os) {
+  if (enumAttr.getUnderlyingType().empty() ||
+      enumAttr.getConstBuilderTemplate().empty())
+    return;
+  auto cases = enumAttr.getAllCases();
+
+  // Check which cases shouldn't be printed using a keyword.
+  llvm::BitVector nonKeywordCases(cases.size());
+  for (auto [index, caseVal] : llvm::enumerate(cases))
+    if (!mlir::tblgen::canFormatStringAsKeyword(caseVal.getStr()))
+      nonKeywordCases.set(index);
+
+  // Generate the parser and the start of the printer for the enum.
+  const char *parsedAndPrinterStart = R"(
+namespace mlir {
+template <typename T, typename>
+struct FieldParser;
+
+template<>
+struct FieldParser<{0}, {0}> {{
+  template <typename ParserT>
+  static FailureOr<{0}> parse(ParserT &parser) {{
+    // Parse the keyword/string containing the enum.
+    std::string enumKeyword;
+    auto loc = parser.getCurrentLocation();
+    if (failed(parser.parseOptionalKeywordOrString(&enumKeyword)))
+      return parser.emitError(loc, "expected keyword for {2}");
+
+    // Symbolize the keyword.
+    if (::llvm::Optional<{0}> attr = {1}::symbolizeEnum<{0}>(enumKeyword))
+      return *attr;
+    return parser.emitError(loc, "invalid {2} specification: ") << enumKeyword;
+  }
+};
+} // namespace mlir
+
+namespace llvm {
+inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
+  auto valueStr = stringifyEnum(value);
+)";
+  os << formatv(parsedAndPrinterStart, qualName, cppNamespace,
+                enumAttr.getSummary());
+
+  // If all cases require a string, always wrap.
+  if (nonKeywordCases.all()) {
+    os << "  return p << '\"' << valueStr << '\"';\n"
+          "}\n"
+          "} // namespace llvm\n";
+    return;
+  }
+
+  // If there are any cases that can't be used with a keyword, switch on the
+  // case value to determine when to print in the string form.
+  if (nonKeywordCases.any()) {
+    os << "  switch (value) {\n";
+    for (auto &it : llvm::enumerate(cases)) {
+      if (nonKeywordCases.test(it.index()))
+        continue;
+      StringRef symbol = it.value().getSymbol();
+      os << llvm::formatv("  case {0}::{1}:\n", qualName,
+                          llvm::isDigit(symbol.front()) ? ("_" + symbol)
+                                                        : symbol);
+    }
+    os << "    break;\n"
+          "  default:\n"
+          "    return p << '\"' << valueStr << '\"';\n"
+          "  }\n";
+
+    // If this is a bit enum, conservatively print the string form if the value
+    // is not a power of two (i.e. not a single bit case) and not a known case.
+  } else if (enumAttr.isBitEnum()) {
+    // Process the known multi-bit cases that use valid keywords.
+    llvm::SmallVector<EnumAttrCase *> validMultiBitCases;
+    for (auto [index, caseVal] : llvm::enumerate(cases)) {
+      uint64_t value = caseVal.getValue();
+      if (value && !llvm::has_single_bit(value) && !nonKeywordCases.test(index))
+        validMultiBitCases.push_back(&caseVal);
+    }
+    if (!validMultiBitCases.empty()) {
+      os << "  switch (value) {\n";
+      for (EnumAttrCase *caseVal : validMultiBitCases) {
+        StringRef symbol = caseVal->getSymbol();
+        os << llvm::formatv("  case {0}::{1}:\n", qualName,
+                            llvm::isDigit(symbol.front()) ? ("_" + symbol)
+                                                          : symbol);
+      }
+      os << "    return p << valueStr;\n"
+            "  default:\n"
+            "    break;\n"
+            "  }\n";
+    }
+
+    // All other multi-bit cases should be printed as strings.
+    os << formatv("  auto underlyingValue = "
+                  "static_cast<std::make_unsigned_t<{0}>>(value);\n",
+                  qualName);
+    os << "  if (underlyingValue && !llvm::has_single_bit(underlyingValue))\n"
+          "    return p << '\"' << valueStr << '\"';\n";
+  }
+  os << "  return p << valueStr;\n"
+        "}\n"
+        "} // namespace llvm\n";
+}
+
+static void emitDenseMapInfo(StringRef qualName, std::string underlyingType,
                              StringRef cppNamespace, raw_ostream &os) {
-  std::string qualName =
-      std::string(formatv("{0}::{1}", cppNamespace, enumName));
   if (underlyingType.empty())
     underlyingType =
         std::string(formatv("std::underlying_type_t<{0}>", qualName));
@@ -529,8 +634,13 @@ public:
   for (auto ns : llvm::reverse(namespaces))
     os << "} // namespace " << ns << "\n";
 
+  // Generate a generic parser and printer for the enum.
+  std::string qualName =
+      std::string(formatv("{0}::{1}", cppNamespace, enumName));
+  emitParserPrinter(enumAttr, qualName, cppNamespace, os);
+
   // Emit DenseMapInfo for this enum class
-  emitDenseMapInfo(enumName, underlyingType, cppNamespace, os);
+  emitDenseMapInfo(qualName, underlyingType, cppNamespace, os);
 }
 
 static bool emitEnumDecls(const RecordKeeper &recordKeeper, raw_ostream &os) {

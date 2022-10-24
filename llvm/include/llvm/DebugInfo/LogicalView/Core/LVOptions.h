@@ -511,8 +511,8 @@ class LVPatterns final {
   void resolveGenericPatternMatch(T *Element, const U &Requests) {
     assert(Element && "Element must not be nullptr");
     auto CheckPattern = [=]() -> bool {
-      return Element->isNamed() &&
-             (matchGenericPattern(Element->getName()) ||
+      return (Element->isNamed() && matchGenericPattern(Element->getName())) ||
+             (Element->isTyped() &&
               matchGenericPattern(Element->getTypeName()));
     };
     auto CheckOffset = [=]() -> bool {
@@ -598,8 +598,7 @@ public:
     return matchPattern(Input, GenericMatchInfo);
   }
   bool matchOffsetPattern(LVOffset Offset) {
-    return std::find(OffsetMatchInfo.begin(), OffsetMatchInfo.end(), Offset) !=
-           OffsetMatchInfo.end();
+    return llvm::is_contained(OffsetMatchInfo, Offset);
   }
 
   void resolvePatternMatch(LVLine *Line) {

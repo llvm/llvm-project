@@ -7,17 +7,31 @@
 # relevant portions below.  If doing so becomes too complicated, then
 # we should adjust the `add_mlir_library` function to also work for
 # `INTERFACE` libraries.
-set(MLIRSparseTensorEnums_srcs
-    ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SparseTensor/IR/Enums.h)
+set(MLIRSparseTensorEnums_hdrs
+    mlir/Dialect/SparseTensor/IR/Enums.h)
 # This conditional is copypasta from `add_mlir_library`.
 if(MSVC_IDE OR XCODE)
-  set_source_files_properties(${MLIRSparseTensorEnums_srcs}
-    PROPERTIES HEADER_FILE_ONLY ON)
+  foreach(hdr ${MLIRSparseTensorEnums_hdrs})
+    set_source_files_properties(${MLIR_MAIN_INCLUDE_DIR}/${hdr}
+      PROPERTIES HEADER_FILE_ONLY ON)
+  endforeach()
 endif()
 # Older versions of cmake (< 3.19) require INTERFACE libraries to separate
 # the `add_library` and `target_sources` calls.
 add_library(MLIRSparseTensorEnums INTERFACE)
-target_sources(MLIRSparseTensorEnums INTERFACE ${MLIRSparseTensorEnums_srcs})
+# If we call target_sources naively, then the library won't be
+# installed properly (i.e., so that it can be used by projects outside
+# the llvm-project repo).  To correct this, we must use BUILD_INTERFACE /
+# INSTALL_INTERFACE generator expressions to avoid paths being interpreted
+# as absolute; for more details, see <https://stackoverflow.com/a/62465051>.
+# Unfortunately BUILD_INTERFACE and INSTALL_INTERFACE require their file
+# paths to be relative to different things, hence why we use a foreach loop
+# to iterate over the sources (in case we ever need to have more than one).
+foreach(hdr ${MLIRSparseTensorEnums_hdrs})
+  target_sources(MLIRSparseTensorEnums INTERFACE
+    $<BUILD_INTERFACE:${MLIR_MAIN_INCLUDE_DIR}/${hdr}>
+    $<INSTALL_INTERFACE:${hdr}>)
+endforeach()
 # The `add_mlir_library_install` is required for other libraries to
 # depend on this one, but the conditional itself and the phony target
 # are copypasta from `add_mlir_library`.  Afaict (wrengr), the version

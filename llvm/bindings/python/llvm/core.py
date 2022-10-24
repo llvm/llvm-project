@@ -458,9 +458,6 @@ def register_library(library):
     library.LLVMInitializeScalarOpts.argtypes = [PassRegistry]
     library.LLVMInitializeScalarOpts.restype = None
 
-    library.LLVMInitializeObjCARCOpts.argtypes = [PassRegistry]
-    library.LLVMInitializeObjCARCOpts.restype = None
-
     library.LLVMInitializeVectorization.argtypes = [PassRegistry]
     library.LLVMInitializeVectorization.restype = None
 
@@ -626,7 +623,6 @@ def initialize_llvm():
     lib.LLVMInitializeCore(p)
     lib.LLVMInitializeTransformUtils(p)
     lib.LLVMInitializeScalarOpts(p)
-    lib.LLVMInitializeObjCARCOpts(p)
     lib.LLVMInitializeVectorization(p)
     lib.LLVMInitializeInstCombine(p)
     lib.LLVMInitializeIPO(p)

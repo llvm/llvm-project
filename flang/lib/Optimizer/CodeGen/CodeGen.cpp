@@ -35,6 +35,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 namespace fir {
 #define GEN_PASS_DEF_FIRTOLLVMLOWERING
@@ -898,15 +899,13 @@ struct DispatchOpConversion : public FIROpConversion<fir::DispatchOp> {
     if (bindingTables.empty())
       return emitError(loc) << "no binding tables found";
 
-    if (dispatch.getObject()
-            .getType()
-            .getEleTy()
-            .isa<fir::HeapType, fir::PointerType>())
-      TODO(loc,
-           "fir.dispatch with allocatable or pointer polymorphic entities");
-
     // Get derived type information.
-    auto declaredType = dispatch.getObject().getType().getEleTy();
+    auto declaredType = llvm::TypeSwitch<mlir::Type, mlir::Type>(
+                            dispatch.getObject().getType().getEleTy())
+                            .Case<fir::PointerType, fir::HeapType>(
+                                [](auto p) { return p.getEleTy(); })
+                            .Default([](mlir::Type t) { return t; });
+
     assert(declaredType.isa<fir::RecordType>() && "expecting fir.type");
     auto recordType = declaredType.dyn_cast<fir::RecordType>();
     std::string typeDescName =
@@ -2753,7 +2752,7 @@ struct GlobalOpConversion : public FIROpConversion<fir::GlobalOp> {
   matchAndRewrite(fir::GlobalOp global, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto tyAttr = convertType(global.getType());
-    if (global.getType().isa<fir::BoxType>())
+    if (global.getType().isa<fir::BaseBoxType>())
       tyAttr = tyAttr.cast<mlir::LLVM::LLVMPointerType>().getElementType();
     auto loc = global.getLoc();
     mlir::Attribute initAttr = global.getInitVal().value_or(mlir::Attribute());

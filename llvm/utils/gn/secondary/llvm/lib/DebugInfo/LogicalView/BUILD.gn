@@ -11,6 +11,7 @@ static_library("LogicalView") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "Core/LVCompare.cpp",
     "Core/LVElement.cpp",
     "Core/LVLine.cpp",
     "Core/LVLocation.cpp",

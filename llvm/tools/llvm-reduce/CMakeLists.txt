@@ -36,8 +36,10 @@ add_llvm_tool(llvm-reduce
   deltas/ReduceGlobalVarInitializers.cpp
   deltas/ReduceGlobalVars.cpp
   deltas/ReduceInstructions.cpp
+  deltas/ReduceInstructionFlags.cpp
   deltas/ReduceMetadata.cpp
   deltas/ReduceModuleData.cpp
+  deltas/ReduceMemoryOperations.cpp
   deltas/ReduceOperandBundles.cpp
   deltas/ReduceOpcodes.cpp
   deltas/ReduceSpecialGlobals.cpp
@@ -54,6 +56,7 @@ add_llvm_tool(llvm-reduce
   deltas/ReduceUsingSimplifyCFG.cpp
   deltas/RunIRPasses.cpp
   deltas/SimplifyInstructions.cpp
+  deltas/StripDebugInfo.cpp
   llvm-reduce.cpp
 
   DEPENDS

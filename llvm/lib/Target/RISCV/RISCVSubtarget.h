@@ -85,6 +85,7 @@ private:
   bool HasStdExtZicbom = false;
   bool HasStdExtZicboz = false;
   bool HasStdExtZicbop = false;
+  bool HasStdExtSvnapot = false;
   bool HasStdExtZmmul = false;
   bool HasStdExtZawrs = false;
   bool HasStdExtZtso = false;
@@ -182,6 +183,7 @@ public:
   bool hasStdExtZicbom() const { return HasStdExtZicbom; }
   bool hasStdExtZicboz() const { return HasStdExtZicboz; }
   bool hasStdExtZicbop() const { return HasStdExtZicbop; }
+  bool hasStdExtSvnapot() const { return HasStdExtSvnapot; }
   bool hasStdExtZawrs() const { return HasStdExtZawrs; }
   bool hasStdExtZmmul() const { return HasStdExtZmmul; }
   bool hasStdExtZtso() const { return HasStdExtZtso; }

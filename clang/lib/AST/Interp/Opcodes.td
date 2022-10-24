@@ -160,17 +160,8 @@ def NoRet : Opcode {}
 
 def Call : Opcode {
   let Args = [ArgFunction];
-  let Types = [AllTypeClass];
-  let ChangesPC = 1;
-  let HasCustomEval = 1;
-  let HasGroup = 1;
-}
-
-def CallVoid : Opcode {
-  let Args = [ArgFunction];
   let Types = [];
   let ChangesPC = 1;
-  let HasCustomEval = 1;
 }
 
 //===----------------------------------------------------------------------===//

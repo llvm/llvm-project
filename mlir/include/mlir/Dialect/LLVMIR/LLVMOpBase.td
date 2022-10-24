@@ -27,7 +27,6 @@ def LLVM_Dialect : Dialect {
   let name = "llvm";
   let cppNamespace = "::mlir::LLVM";
 
-  let useDefaultTypePrinterParser = 1;
   let useDefaultAttributePrinterParser = 1;
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
@@ -77,11 +76,20 @@ def LLVM_Dialect : Dialect {
       return "llvm.readnone";
     }
 
+    Type parseType(DialectAsmParser &p) const override;
+    void printType(Type, DialectAsmPrinter &p) const override;
+
   private:
+    /// Register all types.
+    void registerTypes();
+
     /// A cache storing compatible LLVM types that have been verified. This
     /// can save us lots of verification time if there are many occurrences
     /// of some deeply-nested aggregate types in the program.
     ThreadLocalCache<DenseSet<Type>> compatibleTypes;
+
+    /// Register the attributes of this dialect.
+    void registerAttributes();
   }];
 }
 

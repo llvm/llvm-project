@@ -980,6 +980,7 @@ def HasCX8       : Predicate<"Subtarget->hasCX8()">;
 def HasCX16      : Predicate<"Subtarget->hasCX16()">;
 def HasPCONFIG   : Predicate<"Subtarget->hasPCONFIG()">;
 def HasENQCMD    : Predicate<"Subtarget->hasENQCMD()">;
+def HasAMXFP16   : Predicate<"Subtarget->hasAMXFP16()">;
 def HasKL        : Predicate<"Subtarget->hasKL()">;
 def HasWIDEKL    : Predicate<"Subtarget->hasWIDEKL()">;
 def HasHRESET    : Predicate<"Subtarget->hasHRESET()">;

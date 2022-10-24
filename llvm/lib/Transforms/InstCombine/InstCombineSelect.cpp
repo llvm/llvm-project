@@ -2847,16 +2847,31 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         return replaceOperand(SI, 0, A);
     }
 
-    // sel (sel c, a, false), true, (sel !c, b, false) -> sel c, a, b
-    // sel (sel !c, a, false), true, (sel c, b, false) -> sel c, b, a
-    Value *C1, *C2;
-    if (match(CondVal, m_Select(m_Value(C1), m_Value(A), m_Zero())) &&
-        match(TrueVal, m_One()) &&
-        match(FalseVal, m_Select(m_Value(C2), m_Value(B), m_Zero()))) {
-      if (match(C2, m_Not(m_Specific(C1)))) // first case
-        return SelectInst::Create(C1, A, B);
-      else if (match(C1, m_Not(m_Specific(C2)))) // second case
-        return SelectInst::Create(C2, B, A);
+    if (match(TrueVal, m_One())) {
+      Value *C;
+
+      // (C && A) || (!C && B) --> sel C, A, B
+      // (A && C) || (!C && B) --> sel C, A, B
+      // (C && A) || (B && !C) --> sel C, A, B
+      // (A && C) || (B && !C) --> sel C, A, B (may require freeze)
+      if (match(FalseVal, m_c_LogicalAnd(m_Not(m_Value(C)), m_Value(B))) &&
+          match(CondVal, m_c_LogicalAnd(m_Specific(C), m_Value(A)))) {
+        auto *SelCond = dyn_cast<SelectInst>(CondVal);
+        auto *SelFVal = dyn_cast<SelectInst>(FalseVal);
+        bool MayNeedFreeze = SelCond && SelFVal &&
+                             match(SelFVal->getTrueValue(),
+                                   m_Not(m_Specific(SelCond->getTrueValue())));
+        if (MayNeedFreeze)
+          C = Builder.CreateFreeze(C);
+        return SelectInst::Create(C, A, B);
+      }
+
+      // (!C && A) || (C && B) --> sel C, B, A
+      // (!C && A) || (B && C) --> sel C, B, A
+      // TODO: Allow more commutes as with the previous fold.
+      if (match(CondVal, m_LogicalAnd(m_Not(m_Value(C)), m_Value(A))) &&
+          match(FalseVal, m_c_LogicalAnd(m_Specific(C), m_Value(B))))
+        return SelectInst::Create(C, B, A);
     }
   }
 

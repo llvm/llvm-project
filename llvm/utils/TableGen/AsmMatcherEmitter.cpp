@@ -3029,11 +3029,9 @@ static void emitAsmTiedOperandConstraints(CodeGenTarget &Target,
   OS << "      if (OpndNum1 != OpndNum2) {\n";
   OS << "        auto &SrcOp1 = Operands[OpndNum1];\n";
   OS << "        auto &SrcOp2 = Operands[OpndNum2];\n";
-  OS << "        if (SrcOp1->isReg() && SrcOp2->isReg()) {\n";
-  OS << "          if (!AsmParser.regsEqual(*SrcOp1, *SrcOp2)) {\n";
-  OS << "            ErrorInfo = OpndNum2;\n";
-  OS << "            return false;\n";
-  OS << "          }\n";
+  OS << "        if (!AsmParser.areEqualRegs(*SrcOp1, *SrcOp2)) {\n";
+  OS << "          ErrorInfo = OpndNum2;\n";
+  OS << "          return false;\n";
   OS << "        }\n";
   OS << "      }\n";
   OS << "      break;\n";

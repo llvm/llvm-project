@@ -2,6 +2,7 @@ add_subdirectory(Transforms)
 
 add_mlir_dialect_library(MLIRLLVMDialect
   IR/FunctionCallUtils.cpp
+  IR/LLVMAttrs.cpp
   IR/LLVMDialect.cpp
   IR/LLVMIntrinsicOps.cpp
   IR/LLVMTypes.cpp
@@ -12,6 +13,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
 
   DEPENDS
   MLIRLLVMOpsIncGen
+  MLIRLLVMTypesIncGen
   MLIRLLVMIntrinsicOpsIncGen
   MLIRLLVMOpsInterfacesIncGen
   MLIROpenMPOpsIncGen
@@ -19,6 +21,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
 
   LINK_COMPONENTS
   AsmParser
+  BinaryFormat
   BitReader
   BitWriter
   Core

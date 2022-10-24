@@ -75,6 +75,9 @@ public:
   /// Clears the stack without calling any destructors.
   void clear();
 
+  // Returns whether the stack is empty.
+  bool empty() const { return StackSize == 0; }
+
 private:
   /// All stack slots are aligned to the native pointer alignment for storage.
   /// The size of an object is rounded up to a pointer alignment multiple.

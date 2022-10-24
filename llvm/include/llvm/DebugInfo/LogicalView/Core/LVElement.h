@@ -336,7 +336,14 @@ public:
   virtual void resolveReferences() {}
   void resolveParents();
 
-public:
+  bool referenceMatch(const LVElement *Element) const;
+
+  // Returns true if current element is logically equal to the given 'Element'.
+  bool equals(const LVElement *Element) const;
+
+  // Report the current element as missing or added during comparison.
+  virtual void report(LVComparePass Pass) {}
+
   static LVElementDispatch &getDispatch() { return Dispatch; }
 };
 

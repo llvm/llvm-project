@@ -84,11 +84,6 @@ template <typename LinalgOpTy>
 struct LinalgOpTilingInterface
     : public TilingInterface::ExternalModel<LinalgOpTilingInterface<LinalgOpTy>,
                                             LinalgOpTy> {
-  /// Return the destination operands.
-  SmallVector<Value> getDestinationOperands(Operation *op, OpBuilder &b) const {
-    return cast<LinalgOp>(op).getOutputOperands();
-  }
-
   /// Return the loop iterator type.
   SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {
     LinalgOpTy concreteOp = cast<LinalgOpTy>(op);

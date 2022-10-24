@@ -10,6 +10,7 @@
 #define SCUDO_LOCAL_CACHE_H_
 
 #include "internal_defs.h"
+#include "list.h"
 #include "platform.h"
 #include "report.h"
 #include "stats.h"
@@ -26,6 +27,12 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
       DCHECK_LE(N, MaxNumCached);
       Count = N;
       memcpy(Batch, Array, sizeof(Batch[0]) * Count);
+    }
+    void appendFromArray(CompactPtrT *Array, u16 N) {
+      DCHECK_LE(N, MaxNumCached - Count);
+      memcpy(Batch + Count, Array, sizeof(Batch[0]) * N);
+      // u16 will be promoted to int by arithmetic type conversion.
+      Count = static_cast<u16>(Count + N);
     }
     void clear() { Count = 0; }
     void add(CompactPtrT P) {
@@ -49,6 +56,29 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     CompactPtrT Batch[MaxNumCached];
     u16 Count;
   };
+
+  // A BatchGroup is used to collect blocks. Each group has a group id to
+  // identify the group kind of contained blocks.
+  struct BatchGroup {
+    // `Next` is used by IntrusiveList.
+    BatchGroup *Next;
+    // The identifier of each group
+    uptr GroupId;
+    // Cache value of TransferBatch::getMaxCached()
+    u16 MaxCachedPerBatch;
+    // Number of blocks pushed into this group. This is an increment-only
+    // counter.
+    uptr PushedBlocks;
+    // This is used to track how many blocks are pushed since last time we
+    // checked `PushedBlocks`. It's useful for page releasing to determine the
+    // usage of a BatchGroup.
+    uptr PushedBlocksAtLastCheckpoint;
+    // Blocks are managed by TransferBatch in a list.
+    SinglyLinkedList<TransferBatch> Batches;
+  };
+
+  static_assert(sizeof(BatchGroup) <= sizeof(TransferBatch),
+                "BatchGroup uses the same class size as TransferBatch");
 
   void init(GlobalStats *S, SizeClassAllocator *A) {
     DCHECK(isEmpty());
@@ -121,7 +151,16 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
   TransferBatch *createBatch(uptr ClassId, void *B) {
     if (ClassId != BatchClassId)
       B = allocate(BatchClassId);
+    if (UNLIKELY(!B))
+      reportOutOfMemory(SizeClassAllocator::getSizeByClassId(BatchClassId));
     return reinterpret_cast<TransferBatch *>(B);
+  }
+
+  BatchGroup *createGroup() {
+    void *Ptr = allocate(BatchClassId);
+    if (UNLIKELY(!Ptr))
+      reportOutOfMemory(SizeClassAllocator::getSizeByClassId(BatchClassId));
+    return reinterpret_cast<BatchGroup *>(Ptr);
   }
 
   LocalStats &getStats() { return Stats; }
@@ -182,16 +221,11 @@ private:
 
   NOINLINE void drain(PerClass *C, uptr ClassId) {
     const u16 Count = Min(static_cast<u16>(C->MaxCount / 2), C->Count);
-    TransferBatch *B =
-        createBatch(ClassId, Allocator->decompactPtr(ClassId, C->Chunks[0]));
-    if (UNLIKELY(!B))
-      reportOutOfMemory(SizeClassAllocator::getSizeByClassId(BatchClassId));
-    B->setFromArray(&C->Chunks[0], Count);
+    Allocator->pushBlocks(this, ClassId, &C->Chunks[0], Count);
     // u16 will be promoted to int by arithmetic type conversion.
     C->Count = static_cast<u16>(C->Count - Count);
     for (u16 I = 0; I < C->Count; I++)
       C->Chunks[I] = C->Chunks[I + Count];
-    Allocator->pushBatch(ClassId, B);
   }
 };
 

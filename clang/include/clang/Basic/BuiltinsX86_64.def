@@ -135,6 +135,9 @@ TARGET_BUILTIN(__builtin_ia32_ptwrite64, "vUOi", "n", "ptwrite")
 
 TARGET_BUILTIN(__builtin_ia32_prefetchi, "vvC*Ui", "nc", "prefetchi")
 
+// AMX_FP16 FP16
+TARGET_BUILTIN(__builtin_ia32_tdpfp16ps, "vIUcIUcIUc", "n", "amx-fp16")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN
 #undef TARGET_HEADER_BUILTIN

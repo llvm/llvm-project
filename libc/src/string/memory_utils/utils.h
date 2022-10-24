@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
 
 #include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/cstddef.h"
 #include "src/__support/CPP/type_traits.h"
 
 #include <stddef.h> // size_t
@@ -103,8 +104,43 @@ static inline void memcpy_inline(void *__restrict dst,
 #endif
 }
 
-using Ptr = char *;        // Pointer to raw data.
-using CPtr = const char *; // Const pointer to raw data.
+using Ptr = cpp::byte *;        // Pointer to raw data.
+using CPtr = const cpp::byte *; // Const pointer to raw data.
+
+// This type makes sure that we don't accidentally promote an integral type to
+// another one. It is only constructible from the exact T type.
+template <typename T> struct StrictIntegralType {
+  static_assert(cpp::is_integral_v<T>);
+
+  // Can only be constructed from a T.
+  template <typename U, cpp::enable_if_t<cpp::is_same_v<U, T>, bool> = 0>
+  StrictIntegralType(U value) : value(value) {}
+
+  // Allows using the type in an if statement.
+  explicit operator bool() const { return value; }
+
+  // If type is unsigned (bcmp) we allow bitwise OR operations.
+  StrictIntegralType operator|(const StrictIntegralType &Rhs) const {
+    static_assert(!cpp::is_signed_v<T>);
+    return value | Rhs.value;
+  }
+
+  // For interation with the C API we allow explicit conversion back to the
+  // `int` type.
+  explicit operator int() const {
+    // bit_cast makes sure that T and int have the same size.
+    return cpp::bit_cast<int>(value);
+  }
+
+  // Helper to get the zero value.
+  static inline constexpr StrictIntegralType ZERO() { return {T(0)}; }
+
+private:
+  T value;
+};
+
+using MemcmpReturnType = StrictIntegralType<int32_t>;
+using BcmpReturnType = StrictIntegralType<uint32_t>;
 
 // Loads bytes from memory (possibly unaligned) and materializes them as
 // type.

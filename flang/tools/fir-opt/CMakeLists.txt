@@ -7,6 +7,7 @@ target_link_libraries(fir-opt PRIVATE
   FIRSupport
   FIRTransforms
   FIRCodeGen
+  HLFIRDialect
   ${dialect_libs}
 
   # TODO: these should be transitive dependencies from a target providing

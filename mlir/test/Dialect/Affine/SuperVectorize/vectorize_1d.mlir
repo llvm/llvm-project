@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -affine-super-vectorize="virtual-vector-size=128 test-fastest-varying=0" -split-input-file | FileCheck %s
 
-// CHECK-DAG: #[[$map_id1:map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0)>
-// CHECK-DAG: #[[$map_proj_d0d1_0:map[0-9a-zA-Z_]+]] = affine_map<(d0, d1) -> (0)>
+// CHECK-DAG: #[[$map_id1:map[0-9a-zA-Z_]*]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #[[$map_proj_d0d1_0:map[0-9a-zA-Z_]*]] = affine_map<(d0, d1) -> (0)>
 
 // CHECK-LABEL: func @vec1d_1
 func.func @vec1d_1(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
@@ -183,8 +183,8 @@ func.func @vec_block_arg(%A : memref<32x512xi32>) {
 
 // -----
 
-// CHECK-DAG: #[[$map0:map[0-9a-zA-Z_]+]] = affine_map<(d0, d1, d2) -> (d0 * 2 + d1 - 1)>
-// CHECK-DAG: #[[$map1:map[0-9a-zA-Z_]+]] = affine_map<(d0, d1, d2) -> (d2)>
+// CHECK-DAG: #[[$map0:map[0-9a-zA-Z_]*]] = affine_map<(d0, d1, d2) -> (d0 * 2 + d1 - 1)>
+// CHECK-DAG: #[[$map1:map[0-9a-zA-Z_]*]] = affine_map<(d0, d1, d2) -> (d2)>
 // CHECK-LABEL: func @vec_block_arg_2
 func.func @vec_block_arg_2(%A : memref<?x512xindex>) {
   %c0 = arith.constant 0 : index
@@ -402,8 +402,8 @@ func.func @vec_rejected_7(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 
 // -----
 
-// CHECK-DAG: #[[$map_id1:map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0)>
-// CHECK-DAG: #[[$map_proj_d0d1_0:map[0-9a-zA-Z_]+]] = affine_map<(d0, d1) -> (0)>
+// CHECK-DAG: #[[$map_id1:map[0-9a-zA-Z_]*]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #[[$map_proj_d0d1_0:map[0-9a-zA-Z_]*]] = affine_map<(d0, d1) -> (0)>
 
 // CHECK-LABEL: func @vec_rejected_8
 func.func @vec_rejected_8(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
@@ -436,8 +436,8 @@ func.func @vec_rejected_8(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 
 // -----
 
-// CHECK-DAG: #[[$map_id1:map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0)>
-// CHECK-DAG: #[[$map_proj_d0d1_0:map[0-9a-zA-Z_]+]] = affine_map<(d0, d1) -> (0)>
+// CHECK-DAG: #[[$map_id1:map[0-9a-zA-Z_]*]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: #[[$map_proj_d0d1_0:map[0-9a-zA-Z_]*]] = affine_map<(d0, d1) -> (0)>
 
 // CHECK-LABEL: func @vec_rejected_9
 func.func @vec_rejected_9(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {

@@ -272,6 +272,7 @@ private:
   OperandMatchResultTy tryParseMatrixTileList(OperandVector &Operands);
   OperandMatchResultTy tryParseSVEPattern(OperandVector &Operands);
   OperandMatchResultTy tryParseGPR64x8(OperandVector &Operands);
+  OperandMatchResultTy tryParseImmRange(OperandVector &Operands);
 
 public:
   enum AArch64MatchResultTy {
@@ -303,8 +304,8 @@ public:
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
   }
 
-  bool regsEqual(const MCParsedAsmOperand &Op1,
-                 const MCParsedAsmOperand &Op2) const override;
+  bool areEqualRegs(const MCParsedAsmOperand &Op1,
+                    const MCParsedAsmOperand &Op2) const override;
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
   bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
@@ -327,6 +328,7 @@ private:
   enum KindTy {
     k_Immediate,
     k_ShiftedImm,
+    k_ImmRange,
     k_CondCode,
     k_Register,
     k_MatrixRegister,
@@ -417,6 +419,11 @@ private:
     unsigned ShiftAmount;
   };
 
+  struct ImmRangeOp {
+    unsigned First;
+    unsigned Last;
+  };
+
   struct CondCodeOp {
     AArch64CC::CondCode Code;
   };
@@ -478,6 +485,7 @@ private:
     struct VectorIndexOp VectorIndex;
     struct ImmOp Imm;
     struct ShiftedImmOp ShiftedImm;
+    struct ImmRangeOp ImmRange;
     struct CondCodeOp CondCode;
     struct FPImmOp FPImm;
     struct BarrierOp Barrier;
@@ -510,6 +518,9 @@ public:
       break;
     case k_ShiftedImm:
       ShiftedImm = o.ShiftedImm;
+      break;
+    case k_ImmRange:
+      ImmRange = o.ImmRange;
       break;
     case k_CondCode:
       CondCode = o.CondCode;
@@ -587,6 +598,16 @@ public:
   unsigned getShiftedImmShift() const {
     assert(Kind == k_ShiftedImm && "Invalid access!");
     return ShiftedImm.ShiftAmount;
+  }
+
+  unsigned getFirstImmVal() const {
+    assert(Kind == k_ImmRange && "Invalid access!");
+    return ImmRange.First;
+  }
+
+  unsigned getLastImmVal() const {
+    assert(Kind == k_ImmRange && "Invalid access!");
+    return ImmRange.Last;
   }
 
   AArch64CC::CondCode getCondCode() const {
@@ -752,18 +773,30 @@ public:
     return isImmScaled<Bits, Scale>(true);
   }
 
-  template <int Bits, int Scale> DiagnosticPredicate isUImmScaled() const {
-    return isImmScaled<Bits, Scale>(false);
+  template <int Bits, int Scale, int Offset = 0, bool IsRange = false>
+  DiagnosticPredicate isUImmScaled() const {
+    if (IsRange && isImmRange() &&
+        (getLastImmVal() != getFirstImmVal() + Offset))
+      return DiagnosticPredicateTy::NoMatch;
+
+    return isImmScaled<Bits, Scale, IsRange>(false);
   }
 
-  template <int Bits, int Scale>
+  template <int Bits, int Scale, bool IsRange = false>
   DiagnosticPredicate isImmScaled(bool Signed) const {
-    if (!isImm())
+    if ((!isImm() && !isImmRange()) || (isImm() && IsRange) ||
+        (isImmRange() && !IsRange))
       return DiagnosticPredicateTy::NoMatch;
 
-    const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
-    if (!MCE)
-      return DiagnosticPredicateTy::NoMatch;
+    int64_t Val;
+    if (isImmRange())
+      Val = getFirstImmVal();
+    else {
+      const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(getImm());
+      if (!MCE)
+        return DiagnosticPredicateTy::NoMatch;
+      Val = MCE->getValue();
+    }
 
     int64_t MinVal, MaxVal;
     if (Signed) {
@@ -775,7 +808,6 @@ public:
       MaxVal = ((int64_t(1) << Bits) - 1) * Scale;
     }
 
-    int64_t Val = MCE->getValue();
     if (Val >= MinVal && Val <= MaxVal && (Val % Scale) == 0)
       return DiagnosticPredicateTy::Match;
 
@@ -874,6 +906,8 @@ public:
   }
 
   bool isShiftedImm() const { return Kind == k_ShiftedImm; }
+
+  bool isImmRange() const { return Kind == k_ImmRange; }
 
   /// Returns the immediate value as a pair of (imm, shift) if the immediate is
   /// a shifted immediate by value 'Shift' or '0', or if it is an unshifted
@@ -1142,6 +1176,8 @@ public:
   bool isReg() const override {
     return Kind == k_Register;
   }
+
+  bool isVectorList() const { return Kind == k_VectorList; }
 
   bool isScalarReg() const {
     return Kind == k_Register && Reg.Kind == RegKind::Scalar;
@@ -1768,6 +1804,12 @@ public:
     Inst.addOperand(MCOperand::createImm(MCE->getValue() / Scale));
   }
 
+  template <int Scale>
+  void addImmScaledRangeOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getFirstImmVal() / Scale));
+  }
+
   template <typename T>
   void addLogicalImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
@@ -2109,6 +2151,17 @@ public:
     return Op;
   }
 
+  static std::unique_ptr<AArch64Operand> CreateImmRange(unsigned First,
+                                                        unsigned Last, SMLoc S,
+                                                        SMLoc E,
+                                                        MCContext &Ctx) {
+    auto Op = std::make_unique<AArch64Operand>(k_ImmRange, Ctx);
+    Op->ImmRange.First = First;
+    Op->ImmRange.Last = Last;
+    Op->EndLoc = E;
+    return Op;
+  }
+
   static std::unique_ptr<AArch64Operand>
   CreateCondCode(AArch64CC::CondCode Code, SMLoc S, SMLoc E, MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_CondCode, Ctx);
@@ -2269,6 +2322,12 @@ void AArch64Operand::print(raw_ostream &OS) const {
     OS << "<shiftedimm ";
     OS << *getShiftedImmVal();
     OS << ", lsl #" << AArch64_AM::getShiftValue(Shift) << ">";
+    break;
+  }
+  case k_ImmRange: {
+    OS << "<immrange ";
+    OS << getFirstImmVal();
+    OS << ":" << getLastImmVal() << ">";
     break;
   }
   case k_CondCode:
@@ -2997,6 +3056,10 @@ AArch64AsmParser::tryParseImmWithOptionalShift(OperandVector &Operands) {
     // Operand should start from # or should be integer, emit error otherwise.
     return MatchOperand_NoMatch;
 
+  if (getTok().is(AsmToken::Integer) &&
+      getLexer().peekTok().is(AsmToken::Colon))
+    return tryParseImmRange(Operands);
+
   const MCExpr *Imm = nullptr;
   if (parseSymbolicImmVal(Imm))
     return MatchOperand_ParseFail;
@@ -3316,6 +3379,7 @@ static const struct Extension {
     {"sve2-sm4", {AArch64::FeatureSVE2SM4}},
     {"sve2-sha3", {AArch64::FeatureSVE2SHA3}},
     {"sve2-bitperm", {AArch64::FeatureSVE2BitPerm}},
+    {"sve2p1", {AArch64::FeatureSVE2p1}},
     {"ls64", {AArch64::FeatureLS64}},
     {"xs", {AArch64::FeatureXS}},
     {"pauth", {AArch64::FeaturePAuth}},
@@ -4530,13 +4594,21 @@ bool AArch64AsmParser::parseRegisterInRange(unsigned &Out, unsigned Base,
   return false;
 }
 
-bool AArch64AsmParser::regsEqual(const MCParsedAsmOperand &Op1,
-                                 const MCParsedAsmOperand &Op2) const {
+bool AArch64AsmParser::areEqualRegs(const MCParsedAsmOperand &Op1,
+                                    const MCParsedAsmOperand &Op2) const {
   auto &AOp1 = static_cast<const AArch64Operand&>(Op1);
   auto &AOp2 = static_cast<const AArch64Operand&>(Op2);
+
+  if (AOp1.isVectorList() && AOp2.isVectorList())
+    return AOp1.getVectorListCount() == AOp2.getVectorListCount() &&
+           AOp1.getVectorListStart() == AOp2.getVectorListStart();
+
+  if (!AOp1.isReg() || !AOp2.isReg())
+    return false;
+
   if (AOp1.getRegEqualityTy() == RegConstraintEqualityTy::EqualsReg &&
       AOp2.getRegEqualityTy() == RegConstraintEqualityTy::EqualsReg)
-    return MCTargetAsmParser::regsEqual(Op1, Op2);
+    return MCTargetAsmParser::areEqualRegs(Op1, Op2);
 
   assert(AOp1.isScalarReg() && AOp2.isScalarReg() &&
          "Testing equality of non-scalar registers not supported");
@@ -5177,10 +5249,12 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
                                       OperandVector &Operands) {
   switch (ErrCode) {
   case Match_InvalidTiedOperand: {
-    RegConstraintEqualityTy EqTy =
-        static_cast<const AArch64Operand &>(*Operands[ErrorInfo])
-            .getRegEqualityTy();
-    switch (EqTy) {
+    auto &Op = static_cast<const AArch64Operand &>(*Operands[ErrorInfo]);
+    if (Op.isVectorList())
+      return Error(Loc, "operand must match destination register list");
+
+    assert(Op.isReg() && "Unexpected operand type");
+    switch (Op.getRegEqualityTy()) {
     case RegConstraintEqualityTy::EqualsSubReg:
       return Error(Loc, "operand must be 64-bit form of destination register");
     case RegConstraintEqualityTy::EqualsSuperReg:
@@ -5339,6 +5413,15 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "immediate must be an integer in range [1, 32].");
   case Match_InvalidImm1_64:
     return Error(Loc, "immediate must be an integer in range [1, 64].");
+  case Match_InvalidMemoryIndexedRange2UImm2:
+  case Match_InvalidMemoryIndexedRange2UImm3:
+    return Error(
+        Loc,
+        "vector select offset must be an immediate range of the form "
+        "<immf>:<imml>, "
+        "where the first immediate is a multiple of 2 in the range [0, 6] or "
+        "[0, 14] "
+        "depending on the instruction, and the second immediate is immf + 1.");
   case Match_InvalidSVEAddSubImm8:
     return Error(Loc, "immediate must be an integer in range [0, 255]"
                       " with a shift amount of 0");
@@ -5471,6 +5554,9 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "Invalid restricted vector register, expected z0.h..z7.h");
   case Match_InvalidZPR_3b32:
     return Error(Loc, "Invalid restricted vector register, expected z0.s..z7.s");
+  case Match_InvalidZPR_4b8:
+    return Error(Loc,
+                 "Invalid restricted vector register, expected z0.b..z15.b");
   case Match_InvalidZPR_4b16:
     return Error(Loc, "Invalid restricted vector register, expected z0.h..z15.h");
   case Match_InvalidZPR_4b32:
@@ -5526,11 +5612,15 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "operand must be a register in range [w12, w15]");
   case Match_InvalidMatrixIndexGPR32_8_11:
     return Error(Loc, "operand must be a register in range [w8, w11]");
+  case Match_InvalidSVEVectorListMul2x8:
+  case Match_InvalidSVEVectorListMul2x16:
   case Match_InvalidSVEVectorListMul2x32:
   case Match_InvalidSVEVectorListMul2x64:
     return Error(Loc, "Invalid vector list, expected list with 2 consecutive "
                       "SVE vectors, where the first vector is a multiple of 2 "
                       "and with matching element types");
+  case Match_InvalidSVEVectorListMul4x8:
+  case Match_InvalidSVEVectorListMul4x16:
   case Match_InvalidSVEVectorListMul4x32:
   case Match_InvalidSVEVectorListMul4x64:
     return Error(Loc, "Invalid vector list, expected list with 4 consecutive "
@@ -5977,6 +6067,8 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImm1_16:
   case Match_InvalidImm1_32:
   case Match_InvalidImm1_64:
+  case Match_InvalidMemoryIndexedRange2UImm2:
+  case Match_InvalidMemoryIndexedRange2UImm3:
   case Match_InvalidSVEAddSubImm8:
   case Match_InvalidSVEAddSubImm16:
   case Match_InvalidSVEAddSubImm32:
@@ -6042,6 +6134,7 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidZPR_3b8:
   case Match_InvalidZPR_3b16:
   case Match_InvalidZPR_3b32:
+  case Match_InvalidZPR_4b8:
   case Match_InvalidZPR_4b16:
   case Match_InvalidZPR_4b32:
   case Match_InvalidZPR_4b64:
@@ -6073,8 +6166,12 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSVCR:
   case Match_InvalidMatrixIndexGPR32_12_15:
   case Match_InvalidMatrixIndexGPR32_8_11:
+  case Match_InvalidSVEVectorListMul2x8:
+  case Match_InvalidSVEVectorListMul2x16:
   case Match_InvalidSVEVectorListMul2x32:
   case Match_InvalidSVEVectorListMul2x64:
+  case Match_InvalidSVEVectorListMul4x8:
+  case Match_InvalidSVEVectorListMul4x16:
   case Match_InvalidSVEVectorListMul4x32:
   case Match_InvalidSVEVectorListMul4x64:
   case Match_MSR:
@@ -7264,5 +7361,39 @@ AArch64AsmParser::tryParseGPR64x8(OperandVector &Operands) {
 
   Operands.push_back(
       AArch64Operand::CreateReg(X8Reg, RegKind::Scalar, SS, getLoc(), ctx));
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy
+AArch64AsmParser::tryParseImmRange(OperandVector &Operands) {
+  SMLoc S = getLoc();
+
+  if (getTok().isNot(AsmToken::Integer))
+    return MatchOperand_NoMatch;
+
+  if (getLexer().peekTok().isNot(AsmToken::Colon))
+    return MatchOperand_NoMatch;
+
+  const MCExpr *ImmF;
+  if (getParser().parseExpression(ImmF))
+    return MatchOperand_NoMatch;
+
+  if (getTok().isNot(AsmToken::Colon))
+    return MatchOperand_NoMatch;
+
+  Lex(); // Eat ':'
+  if (getTok().isNot(AsmToken::Integer))
+    return MatchOperand_NoMatch;
+
+  SMLoc E = getTok().getLoc();
+  const MCExpr *ImmL;
+  if (getParser().parseExpression(ImmL))
+    return MatchOperand_NoMatch;
+
+  unsigned ImmFVal = dyn_cast<MCConstantExpr>(ImmF)->getValue();
+  unsigned ImmLVal = dyn_cast<MCConstantExpr>(ImmL)->getValue();
+
+  Operands.push_back(
+      AArch64Operand::CreateImmRange(ImmFVal, ImmLVal, S, E, getContext()));
   return MatchOperand_Success;
 }

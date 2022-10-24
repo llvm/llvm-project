@@ -3387,6 +3387,137 @@ void WhileOp::getCanonicalizationPatterns(RewritePatternSet &results,
 }
 
 //===----------------------------------------------------------------------===//
+// IndexSwitchOp
+//===----------------------------------------------------------------------===//
+
+/// Parse the case regions and values.
+static ParseResult
+parseSwitchCases(OpAsmParser &p, DenseI64ArrayAttr &cases,
+                 SmallVectorImpl<std::unique_ptr<Region>> &caseRegions) {
+  SmallVector<int64_t> caseValues;
+  while (succeeded(p.parseOptionalKeyword("case"))) {
+    int64_t value;
+    Region &region =
+        *caseRegions.emplace_back(std::make_unique<Region>()).get();
+    if (p.parseInteger(value) || p.parseRegion(region, /*arguments=*/{}))
+      return failure();
+    caseValues.push_back(value);
+  }
+  cases = p.getBuilder().getDenseI64ArrayAttr(caseValues);
+  return success();
+}
+
+/// Print the case regions and values.
+static void printSwitchCases(OpAsmPrinter &p, Operation *op,
+                             DenseI64ArrayAttr cases, RegionRange caseRegions) {
+  for (auto [value, region] : llvm::zip(cases.asArrayRef(), caseRegions)) {
+    p.printNewline();
+    p << "case " << value << ' ';
+    p.printRegion(*region, /*printEntryBlockArgs=*/false);
+  }
+}
+
+LogicalResult scf::IndexSwitchOp::verify() {
+  if (getCases().size() != getCaseRegions().size()) {
+    return emitOpError("has ")
+           << getCaseRegions().size() << " case regions but "
+           << getCases().size() << " case values";
+  }
+
+  DenseSet<int64_t> valueSet;
+  for (int64_t value : getCases())
+    if (!valueSet.insert(value).second)
+      return emitOpError("has duplicate case value: ") << value;
+
+  auto verifyRegion = [&](Region &region, const Twine &name) -> LogicalResult {
+    auto yield = cast<YieldOp>(region.front().getTerminator());
+    if (yield.getNumOperands() != getNumResults()) {
+      return (emitOpError("expected each region to return ")
+              << getNumResults() << " values, but " << name << " returns "
+              << yield.getNumOperands())
+                 .attachNote(yield.getLoc())
+             << "see yield operation here";
+    }
+    for (auto [idx, result, operand] :
+         llvm::zip(llvm::seq<unsigned>(0, getNumResults()), getResultTypes(),
+                   yield.getOperandTypes())) {
+      if (result == operand)
+        continue;
+      return (emitOpError("expected result #")
+              << idx << " of each region to be " << result)
+                 .attachNote(yield.getLoc())
+             << name << " returns " << operand << " here";
+    }
+    return success();
+  };
+
+  if (failed(verifyRegion(getDefaultRegion(), "default region")))
+    return failure();
+  for (auto &[idx, caseRegion] : llvm::enumerate(getCaseRegions()))
+    if (failed(verifyRegion(caseRegion, "case region #" + Twine(idx))))
+      return failure();
+
+  return success();
+}
+
+unsigned scf::IndexSwitchOp::getNumCases() { return getCases().size(); }
+
+Block &scf::IndexSwitchOp::getDefaultBlock() {
+  return getDefaultRegion().front();
+}
+
+Block &scf::IndexSwitchOp::getCaseBlock(unsigned idx) {
+  assert(idx < getNumCases() && "case index out-of-bounds");
+  return getCaseRegions()[idx].front();
+}
+
+void IndexSwitchOp::getSuccessorRegions(
+    Optional<unsigned> index, ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &successors) {
+  // All regions branch back to the parent op.
+  if (index) {
+    successors.emplace_back(getResults());
+    return;
+  }
+
+  // If a constant was not provided, all regions are possible successors.
+  auto operandValue = operands.front().dyn_cast_or_null<IntegerAttr>();
+  if (!operandValue) {
+    for (Region &caseRegion : getCaseRegions())
+      successors.emplace_back(&caseRegion);
+    successors.emplace_back(&getDefaultRegion());
+    return;
+  }
+
+  // Otherwise, try to find a case with a matching value. If not, the default
+  // region is the only successor.
+  for (auto [caseValue, caseRegion] : llvm::zip(getCases(), getCaseRegions())) {
+    if (caseValue == operandValue.getInt()) {
+      successors.emplace_back(&caseRegion);
+      return;
+    }
+  }
+  successors.emplace_back(&getDefaultRegion());
+}
+
+void IndexSwitchOp::getRegionInvocationBounds(
+    ArrayRef<Attribute> operands, SmallVectorImpl<InvocationBounds> &bounds) {
+  auto operandValue = operands.front().dyn_cast_or_null<IntegerAttr>();
+  if (!operandValue) {
+    // All regions are invoked at most once.
+    bounds.append(getNumRegions(), InvocationBounds(/*lb=*/0, /*ub=*/1));
+    return;
+  }
+
+  unsigned liveIndex = getNumRegions() - 1;
+  auto it = llvm::find(getCases(), operandValue.getInt());
+  if (it != getCases().end())
+    liveIndex = std::distance(getCases().begin(), it);
+  for (unsigned i = 0, e = getNumRegions(); i < e; ++i)
+    bounds.emplace_back(/*lb=*/0, /*ub=*/i == liveIndex);
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
