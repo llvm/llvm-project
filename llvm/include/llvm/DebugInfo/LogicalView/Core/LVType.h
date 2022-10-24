@@ -56,6 +56,9 @@ class LVType : public LVElement {
   LVProperties<Property> Properties;
   static LVTypeDispatch Dispatch;
 
+  // Find the current type in the given 'Targets'.
+  LVType *findIn(const LVTypes *Targets) const;
+
 public:
   LVType() : LVElement(LVSubclassID::LV_TYPE) { setIsType(); }
   LVType(const LVType &) = delete;
@@ -111,6 +114,28 @@ public:
 
   static LVTypeDispatch &getDispatch() { return Dispatch; }
 
+  static bool parametersMatch(const LVTypes *References,
+                              const LVTypes *Targets);
+
+  static void getParameters(const LVTypes *Types, LVTypes *TypesParam,
+                            LVScopes *ScopesParam);
+
+  // Iterate through the 'References' set and check that all its elements
+  // are present in the 'Targets' set. For a missing element, mark its
+  // parents as missing.
+  static void markMissingParents(const LVTypes *References,
+                                 const LVTypes *Targets);
+
+  // Returns true if current type is logically equal to the given 'Type'.
+  virtual bool equals(const LVType *Type) const;
+
+  // Returns true if the given 'References' are logically equal to the
+  // given 'Targets'.
+  static bool equals(const LVTypes *References, const LVTypes *Targets);
+
+  // Report the current type as missing or added during comparison.
+  void report(LVComparePass Pass) override;
+
   void print(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 
@@ -135,6 +160,9 @@ public:
   void setUnderlyingType(LVElement *Element) override { setType(Element); }
 
   void resolveExtra() override;
+
+  // Returns true if current type is logically equal to the given 'Type'.
+  bool equals(const LVType *Type) const override;
 
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 };
@@ -162,6 +190,9 @@ public:
   }
   size_t getValueIndex() const override { return ValueIndex; }
 
+  // Returns true if current type is logically equal to the given 'Type'.
+  bool equals(const LVType *Type) const override;
+
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 };
 
@@ -172,6 +203,9 @@ public:
   LVTypeImport(const LVTypeImport &) = delete;
   LVTypeImport &operator=(const LVTypeImport &) = delete;
   ~LVTypeImport() = default;
+
+  // Returns true if current type is logically equal to the given 'Type'.
+  bool equals(const LVType *Type) const override;
 
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 };
@@ -198,6 +232,9 @@ public:
 
   // Encode the specific template argument.
   void encodeTemplateArgument(std::string &Name) const override;
+
+  // Returns true if current type is logically equal to the given 'Type'.
+  bool equals(const LVType *Type) const override;
 
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 };
@@ -240,6 +277,9 @@ public:
   }
 
   void resolveExtra() override;
+
+  // Returns true if current type is logically equal to the given 'Type'.
+  bool equals(const LVType *Type) const override;
 
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 };

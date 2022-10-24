@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
+#include "llvm/DebugInfo/LogicalView/Core/LVCompare.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLocation.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
@@ -277,6 +278,110 @@ StringRef LVSymbol::resolveReferencesChain() {
     setName(getReference()->resolveReferencesChain());
 
   return getName();
+}
+
+void LVSymbol::markMissingParents(const LVSymbols *References,
+                                  const LVSymbols *Targets) {
+  if (!(References && Targets))
+    return;
+
+  LLVM_DEBUG({
+    dbgs() << "\n[LVSymbol::markMissingParents]\n";
+    for (const LVSymbol *Reference : *References)
+      dbgs() << "References: "
+             << "Kind = " << formattedKind(Reference->kind()) << ", "
+             << "Name = " << formattedName(Reference->getName()) << "\n";
+    for (const LVSymbol *Target : *Targets)
+      dbgs() << "Targets   : "
+             << "Kind = " << formattedKind(Target->kind()) << ", "
+             << "Name = " << formattedName(Target->getName()) << "\n";
+  });
+
+  for (LVSymbol *Reference : *References) {
+    LLVM_DEBUG({
+      dbgs() << "Search Reference: Name = "
+             << formattedName(Reference->getName()) << "\n";
+    });
+    if (!Reference->findIn(Targets))
+      Reference->markBranchAsMissing();
+  }
+}
+
+LVSymbol *LVSymbol::findIn(const LVSymbols *Targets) const {
+  if (!Targets)
+    return nullptr;
+
+  LLVM_DEBUG({
+    dbgs() << "\n[LVSymbol::findIn]\n"
+           << "Reference: "
+           << "Level = " << getLevel() << ", "
+           << "Kind = " << formattedKind(kind()) << ", "
+           << "Name = " << formattedName(getName()) << "\n";
+    for (const LVSymbol *Target : *Targets)
+      dbgs() << "Target   : "
+             << "Level = " << Target->getLevel() << ", "
+             << "Kind = " << formattedKind(Target->kind()) << ", "
+             << "Name = " << formattedName(Target->getName()) << "\n";
+  });
+
+  for (LVSymbol *Target : *Targets)
+    if (equals(Target))
+      return Target;
+
+  return nullptr;
+}
+
+// Check for a match on the arguments of a function.
+bool LVSymbol::parametersMatch(const LVSymbols *References,
+                               const LVSymbols *Targets) {
+  if (!References && !Targets)
+    return true;
+  if (References && Targets) {
+    LVSymbols ReferenceParams;
+    getParameters(References, &ReferenceParams);
+    LVSymbols TargetParams;
+    getParameters(Targets, &TargetParams);
+    return LVSymbol::equals(&ReferenceParams, &TargetParams);
+  }
+  return false;
+}
+
+// Return the symbols which are parameters.
+void LVSymbol::getParameters(const LVSymbols *Symbols, LVSymbols *Parameters) {
+  if (Symbols)
+    for (LVSymbol *Symbol : *Symbols)
+      if (Symbol->getIsParameter())
+        Parameters->push_back(Symbol);
+}
+
+bool LVSymbol::equals(const LVSymbol *Symbol) const {
+  if (!LVElement::equals(Symbol))
+    return false;
+
+  // Check if any reference is the same.
+  if (!referenceMatch(Symbol))
+    return false;
+
+  if (getReference() && !getReference()->equals(Symbol->getReference()))
+    return false;
+
+  return true;
+}
+
+bool LVSymbol::equals(const LVSymbols *References, const LVSymbols *Targets) {
+  if (!References && !Targets)
+    return true;
+  if (References && Targets && References->size() == Targets->size()) {
+    for (const LVSymbol *Reference : *References)
+      if (!Reference->findIn(Targets))
+        return false;
+    return true;
+  }
+  return false;
+}
+
+void LVSymbol::report(LVComparePass Pass) {
+  getComparator().printItem(this, Pass);
 }
 
 void LVSymbol::printLocations(raw_ostream &OS, bool Full) const {

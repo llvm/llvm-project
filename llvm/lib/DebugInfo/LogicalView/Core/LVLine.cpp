@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/LogicalView/Core/LVLine.h"
+#include "llvm/DebugInfo/LogicalView/Core/LVCompare.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
 
 using namespace llvm;
@@ -63,6 +64,77 @@ std::string LVLine::noLineAsString(bool ShowZero) const {
     return LVObject::noLineAsString(ShowZero);
   return (ShowZero || options().getAttributeZero()) ? ("    0   ")
                                                     : ("    -   ");
+}
+
+void LVLine::markMissingParents(const LVLines *References,
+                                const LVLines *Targets) {
+  if (!(References && Targets))
+    return;
+
+  LLVM_DEBUG({
+    dbgs() << "\n[LVLine::markMissingParents]\n";
+    for (const LVLine *Reference : *References)
+      dbgs() << "References: "
+             << "Kind = " << formattedKind(Reference->kind()) << ", "
+             << "Line = " << Reference->getLineNumber() << "\n";
+    for (const LVLine *Target : *Targets)
+      dbgs() << "Targets   : "
+             << "Kind = " << formattedKind(Target->kind()) << ", "
+             << "Line = " << Target->getLineNumber() << "\n";
+  });
+
+  for (LVLine *Reference : *References) {
+    LLVM_DEBUG({
+      dbgs() << "Search Reference: Line = " << Reference->getLineNumber()
+             << "\n";
+    });
+    if (!Reference->findIn(Targets))
+      Reference->markBranchAsMissing();
+  }
+}
+
+LVLine *LVLine::findIn(const LVLines *Targets) const {
+  if (!Targets)
+    return nullptr;
+
+  LLVM_DEBUG({
+    dbgs() << "\n[LVLine::findIn]\n"
+           << "Reference: "
+           << "Level = " << getLevel() << ", "
+           << "Kind = " << formattedKind(kind()) << ", "
+           << "Line = " << getLineNumber() << "\n";
+    for (const LVLine *Target : *Targets)
+      dbgs() << "Target   : "
+             << "Level = " << Target->getLevel() << ", "
+             << "Kind = " << formattedKind(Target->kind()) << ", "
+             << "Line = " << Target->getLineNumber() << "\n";
+  });
+
+  for (LVLine *Line : *Targets)
+    if (equals(Line))
+      return Line;
+
+  return nullptr;
+}
+
+bool LVLine::equals(const LVLine *Line) const {
+  return LVElement::equals(Line);
+}
+
+bool LVLine::equals(const LVLines *References, const LVLines *Targets) {
+  if (!References && !Targets)
+    return true;
+  if (References && Targets && References->size() == Targets->size()) {
+    for (const LVLine *Reference : *References)
+      if (!Reference->findIn(Targets))
+        return false;
+    return true;
+  }
+  return false;
+}
+
+void LVLine::report(LVComparePass Pass) {
+  getComparator().printItem(this, Pass);
 }
 
 void LVLine::print(raw_ostream &OS, bool Full) const {
@@ -118,6 +190,12 @@ std::string LVLineDebug::statesInfo(bool Formatted) const {
   return String;
 }
 
+bool LVLineDebug::equals(const LVLine *Line) const {
+  if (!LVLine::equals(Line))
+    return false;
+  return getFilenameIndex() == Line->getFilenameIndex();
+}
+
 void LVLineDebug::printExtra(raw_ostream &OS, bool Full) const {
   OS << formattedKind(kind());
 
@@ -133,6 +211,10 @@ void LVLineDebug::printExtra(raw_ostream &OS, bool Full) const {
 //===----------------------------------------------------------------------===//
 // Assembler line extracted from the ELF .text section.
 //===----------------------------------------------------------------------===//
+bool LVLineAssembler::equals(const LVLine *Line) const {
+  return LVLine::equals(Line);
+}
+
 void LVLineAssembler::printExtra(raw_ostream &OS, bool Full) const {
   OS << formattedKind(kind());
   OS << " " << formattedName(getName());

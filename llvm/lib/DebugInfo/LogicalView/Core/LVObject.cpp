@@ -95,6 +95,18 @@ void LVObject::setParent(LVSymbol *Symbol) {
   setLevel(Symbol->getLevel() + 1);
 }
 
+void LVObject::markBranchAsMissing() {
+  // Mark the current object as 'missing'; then traverse the parents chain
+  // marking them as 'special missing' to indicate a missing branch. They
+  // can not be marked as missing, because will generate incorrect reports.
+  LVObject *Parent = this;
+  Parent->setIsMissing();
+  while (Parent) {
+    Parent->setIsMissingLink();
+    Parent = Parent->getParent();
+  }
+}
+
 Error LVObject::doPrint(bool Split, bool Match, bool Print, raw_ostream &OS,
                         bool Full) const {
   print(OS, Full);
@@ -129,6 +141,9 @@ void LVObject::printAttributes(raw_ostream &OS, bool Full) const {
   if (options().getInternalID())
     OS << hexSquareString(getID());
 #endif
+  if (options().getCompareExecute() &&
+      (options().getAttributeAdded() || options().getAttributeMissing()))
+    OS << (getIsAdded() ? '+' : getIsMissing() ? '-' : ' ');
   if (options().getAttributeOffset())
     OS << hexSquareString(getOffset());
   if (options().getAttributeLevel()) {

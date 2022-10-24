@@ -101,6 +101,9 @@ class LVScope : public LVElement {
   // only-globals, only-locals, a-pattern.
   bool resolvePrinting() const;
 
+  // Find the current scope in the given 'Targets'.
+  LVScope *findIn(const LVScopes *Targets) const;
+
   // Traverse the scope parent tree, executing the given callback function
   // on each scope.
   void traverseParents(LVScopeGetFunction GetFunction,
@@ -249,6 +252,10 @@ public:
   // DW_AT_specification, DW_AT_abstract_origin, DW_AT_extension.
   virtual LVScope *getReference() const { return nullptr; }
 
+  LVScope *getCompileUnitParent() const override {
+    return LVElement::getCompileUnitParent();
+  }
+
   // Follow a chain of references given by DW_AT_abstract_origin and/or
   // DW_AT_specification and update the scope name.
   StringRef resolveReferencesChain();
@@ -267,6 +274,35 @@ public:
   void encodeTemplateArguments(std::string &Name, const LVTypes *Types) const;
 
   void resolveElements();
+
+  // Iterate through the 'References' set and check that all its elements
+  // are present in the 'Targets' set. For a missing element, mark its
+  // parents as missing.
+  static void markMissingParents(const LVScopes *References,
+                                 const LVScopes *Targets,
+                                 bool TraverseChildren);
+
+  // Checks if the current scope is contained within the target scope.
+  // Depending on the result, the callback may be performed.
+  virtual void markMissingParents(const LVScope *Target, bool TraverseChildren);
+
+  // Returns true if the current scope and the given 'Scope' have the
+  // same number of children.
+  virtual bool equalNumberOfChildren(const LVScope *Scope) const;
+
+  // Returns true if current scope is logically equal to the given 'Scope'.
+  virtual bool equals(const LVScope *Scope) const;
+
+  // Returns true if the given 'References' are logically equal to the
+  // given 'Targets'.
+  static bool equals(const LVScopes *References, const LVScopes *Targets);
+
+  // For the given 'Scopes' returns a scope that is logically equal
+  // to the current scope; otherwise 'nullptr'.
+  virtual LVScope *findEqualScope(const LVScopes *Scopes) const;
+
+  // Report the current scope as missing or added during comparison.
+  void report(LVComparePass Pass) override;
 
   static LVScopeDispatch &getDispatch() { return Dispatch; }
 
@@ -308,6 +344,13 @@ public:
     EncodedArgsIndex = getStringPool().getIndex(EncodedArgs);
   }
 
+  // Returns true if current scope is logically equal to the given 'Scope'.
+  bool equals(const LVScope *Scope) const override;
+
+  // For the given 'Scopes' returns a scope that is logically equal
+  // to the current scope; otherwise 'nullptr'.
+  LVScope *findEqualScope(const LVScopes *Scopes) const override;
+
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 };
 
@@ -322,6 +365,9 @@ public:
   LVScopeAlias &operator=(const LVScopeAlias &) = delete;
   ~LVScopeAlias() = default;
 
+  // Returns true if current scope is logically equal to the given 'Scope'.
+  bool equals(const LVScope *Scope) const override;
+
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 };
 
@@ -334,6 +380,9 @@ public:
   ~LVScopeArray() = default;
 
   void resolveExtra() override;
+
+  // Returns true if current scope is logically equal to the given 'Scope'.
+  bool equals(const LVScope *Scope) const override;
 
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 };
@@ -510,13 +559,16 @@ public:
 
   // A new element has been added to the scopes tree. Take the following steps:
   // Increase the added element counters, for printing summary.
-  // Notify the Reader if element comparison.
+  // During comparison notify the Reader of the new element.
   void addedElement(LVLine *Line);
   void addedElement(LVScope *Scope);
   void addedElement(LVSymbol *Symbol);
   void addedElement(LVType *Type);
 
   void addSize(LVScope *Scope, LVOffset Lower, LVOffset Upper);
+
+  // Returns true if current scope is logically equal to the given 'Scope'.
+  bool equals(const LVScope *Scope) const override;
 
   void print(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override;
@@ -532,6 +584,9 @@ public:
   LVScopeEnumeration &operator=(const LVScopeEnumeration &) = delete;
   ~LVScopeEnumeration() = default;
 
+  // Returns true if current scope is logically equal to the given 'Scope'.
+  bool equals(const LVScope *Scope) const override;
+
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 };
 
@@ -543,6 +598,9 @@ public:
   LVScopeFormalPack(const LVScopeFormalPack &) = delete;
   LVScopeFormalPack &operator=(const LVScopeFormalPack &) = delete;
   ~LVScopeFormalPack() = default;
+
+  // Returns true if current scope is logically equal to the given 'Scope'.
+  bool equals(const LVScope *Scope) const override;
 
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 };
@@ -589,6 +647,13 @@ public:
   void resolveExtra() override;
   void resolveReferences() override;
 
+  // Returns true if current scope is logically equal to the given 'Scope'.
+  bool equals(const LVScope *Scope) const override;
+
+  // For the given 'Scopes' returns a scope that is logically equal
+  // to the current scope; otherwise 'nullptr'.
+  LVScope *findEqualScope(const LVScopes *Scopes) const override;
+
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 };
 
@@ -625,6 +690,13 @@ public:
 
   void resolveExtra() override;
 
+  // Returns true if current scope is logically equal to the given 'Scope'.
+  bool equals(const LVScope *Scope) const override;
+
+  // For the given 'Scopes' returns a scope that is logically equal
+  // to the current scope; otherwise 'nullptr'.
+  LVScope *findEqualScope(const LVScopes *Scopes) const override;
+
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 };
 
@@ -659,6 +731,13 @@ public:
     setReference(static_cast<LVScope *>(Element));
   }
 
+  // Returns true if current scope is logically equal to the given 'Scope'.
+  bool equals(const LVScope *Scope) const override;
+
+  // For the given 'Scopes' returns a scope that is logically equal
+  // to the current scope; otherwise 'nullptr'.
+  LVScope *findEqualScope(const LVScopes *Scopes) const override;
+
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 };
 
@@ -682,6 +761,9 @@ public:
   // Process the collected location, ranges and calculate coverage.
   void processRangeInformation();
 
+  // Returns true if current scope is logically equal to the given 'Scope'.
+  bool equals(const LVScope *Scope) const override;
+
   void print(raw_ostream &OS, bool Full = true) const override;
   void printExtra(raw_ostream &OS, bool Full = true) const override;
   Error doPrintMatches(bool Split, raw_ostream &OS,
@@ -696,6 +778,9 @@ public:
   LVScopeTemplatePack(const LVScopeTemplatePack &) = delete;
   LVScopeTemplatePack &operator=(const LVScopeTemplatePack &) = delete;
   ~LVScopeTemplatePack() = default;
+
+  // Returns true if current scope is logically equal to the given 'Scope'.
+  bool equals(const LVScope *Scope) const override;
 
   void printExtra(raw_ostream &OS, bool Full = true) const override;
 };
