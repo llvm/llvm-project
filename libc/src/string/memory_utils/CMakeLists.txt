@@ -14,6 +14,7 @@ add_header_library(
     op_x86.h
     utils.h
   DEPS
+    libc.src.__support.common
     libc.src.__support.CPP.bit
 )
 

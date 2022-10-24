@@ -25,6 +25,7 @@
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/common.h"
 #include "src/__support/endian.h"
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/utils.h"
@@ -90,6 +91,10 @@ static_assert((UINTPTR_MAX == 4294967295U) ||
                   (UINTPTR_MAX == 18446744073709551615UL),
               "We currently only support 32- or 64-bit platforms");
 
+#if defined(LLVM_LIBC_ARCH_X86_64) || defined(LLVM_LIBC_ARCH_AARCH64)
+#define LLVM_LIBC_HAS_UINT64
+#endif
+
 // Map from sizes to structures offering static load, store and splat methods.
 // Note: On platforms lacking vector support, we use the ArrayType below and
 // decompose the operation in smaller pieces.
@@ -97,7 +102,7 @@ using NativeTypeMap =
     CTMap<CTPair<1, ScalarType<uint8_t>>,  //
           CTPair<2, ScalarType<uint16_t>>, //
           CTPair<4, ScalarType<uint32_t>>, //
-#if defined(LLVM_LIBC_ARCH_X86_64) || defined(LLVM_LIBC_ARCH_AARCH64)
+#if defined(LLVM_LIBC_HAS_UINT64)
           CTPair<8, ScalarType<uint64_t>>, // Not available on 32bit
 #endif                                     //
           CTPair<16, VectorType<16>>,      //
@@ -198,7 +203,9 @@ template <size_t Size, size_t MaxSize> struct Memset {
 ///////////////////////////////////////////////////////////////////////////////
 template <size_t Size> struct Bcmp {
   static constexpr size_t SIZE = Size;
-  static constexpr size_t MaxSize = 8;
+  static constexpr size_t MaxSize = LLVM_LIBC_IS_DEFINED(LLVM_LIBC_HAS_UINT64)
+                                        ? sizeof(uint64_t)
+                                        : sizeof(uint32_t);
 
   template <typename T> static inline uint32_t load_xor(CPtr p1, CPtr p2) {
     return load<T>(p1) ^ load<T>(p2);
@@ -210,7 +217,6 @@ template <size_t Size> struct Bcmp {
   }
 
   static inline BcmpReturnType block(CPtr p1, CPtr p2) {
-    static constexpr size_t MaxSize = 8;
     if constexpr (Size == 1) {
       return load_xor<uint8_t>(p1, p2);
     } else if constexpr (Size == 2) {
@@ -254,7 +260,9 @@ template <size_t Size> struct Bcmp {
 ///////////////////////////////////////////////////////////////////////////////
 template <size_t Size> struct Memcmp {
   static constexpr size_t SIZE = Size;
-  static constexpr size_t MaxSize = 8;
+  static constexpr size_t MaxSize = LLVM_LIBC_IS_DEFINED(LLVM_LIBC_HAS_UINT64)
+                                        ? sizeof(uint64_t)
+                                        : sizeof(uint32_t);
 
   template <typename T> static inline T load_be(CPtr ptr) {
     return Endian::to_big_endian(load<T>(ptr));
