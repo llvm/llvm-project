@@ -72,8 +72,8 @@ protected:
   template <typename CastT, typename ValueT>
   static auto castValue(
       ValueT value,
-      typename std::enable_if_t<
-          is_detected<has_dyn_cast_t, ValueT, CastT>::value> * = nullptr) {
+      std::enable_if_t<is_detected<has_dyn_cast_t, ValueT, CastT>::value> * =
+          nullptr) {
     return value.template dyn_cast<CastT>();
   }
 
@@ -82,8 +82,8 @@ protected:
   template <typename CastT, typename ValueT>
   static auto castValue(
       ValueT value,
-      typename std::enable_if_t<
-          !is_detected<has_dyn_cast_t, ValueT, CastT>::value> * = nullptr) {
+      std::enable_if_t<!is_detected<has_dyn_cast_t, ValueT, CastT>::value> * =
+          nullptr) {
     return dyn_cast<CastT>(value);
   }
 
