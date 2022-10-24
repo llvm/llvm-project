@@ -26,21 +26,6 @@ def TilingInterface : OpInterface<"TilingInterface"> {
   let methods = [
       InterfaceMethod<
         /*desc=*/[{
-          Returns a list of operands into which the result of the
-          tiled implementation is written into. With `tensor`
-          operands, this will be used as the initial tensor into which
-          the tiled results are inserted into. With `memref` operands,
-          this will be the operand into which the result of the tiled
-          operation is written into.
-        }],
-        /*retType=*/"SmallVector<Value>",
-        /*methodName=*/"getDestinationOperands",
-        /*args=*/(ins "OpBuilder &":$b),
-        /*methodBody=*/"",
-        /*defaultImplementation=*/"return ValueRange{};"
-      >,
-      InterfaceMethod<
-        /*desc=*/[{
           Returns a list of iterator types that describe the number of loops.
         }],
         /*retType=*/"SmallVector<utils::IteratorType>",

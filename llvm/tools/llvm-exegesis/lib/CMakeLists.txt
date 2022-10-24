@@ -26,6 +26,7 @@ set(LLVM_LINK_COMPONENTS
   ExecutionEngine
   GlobalISel
   MC
+  MCA
   MCDisassembler
   MCJIT
   MCParser

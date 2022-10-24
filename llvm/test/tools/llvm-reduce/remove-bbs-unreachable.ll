@@ -7,7 +7,7 @@
 ; CHECK-INTERESTINGNESS: test
 
 ; CHECK: define void @test() {
-; CHECK-NEXT:   unreachable:
+; CHECK-NEXT:   entry:
 ; CHECK-NEXT:     ret void
 
 define void @test() {

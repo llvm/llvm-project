@@ -52,6 +52,13 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
       {"llvm::Optional<llvm::MCFixupKind>::operator*() const &",
        "llvm::Optional<llvm::MCFixupKind>", "operator*", "()", "const &",
        "llvm::Optional<llvm::MCFixupKind>::operator*"},
+      {"auto std::__1::ranges::__begin::__fn::operator()[abi:v160000]<char "
+       "const, 18ul>(char const (&) [18ul]) const",
+       "std::__1::ranges::__begin::__fn",
+       "operator()[abi:v160000]<char const, 18ul>", "(char const (&) [18ul])",
+       "const",
+       "std::__1::ranges::__begin::__fn::operator()[abi:v160000]<char const, "
+       "18ul>"},
       // Internal classes
       {"operator<<(Cls, Cls)::Subclass::function()",
        "operator<<(Cls, Cls)::Subclass", "function", "()", "",

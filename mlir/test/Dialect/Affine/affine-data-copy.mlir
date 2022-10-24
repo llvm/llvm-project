@@ -18,8 +18,8 @@
 #ub = affine_map<(d0) -> (d0 + 128)>
 
 // Map used to index the buffer while computing.
-// CHECK-DAG: [[$MAP_IDENTITY:map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0)>
-// CHECK-DAG: [[$MAP_PLUS_128:map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0 + 128)>
+// CHECK-DAG: [[$MAP_IDENTITY:map[0-9a-zA-Z_]*]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: [[$MAP_PLUS_128:map[0-9a-zA-Z_]*]] = affine_map<(d0) -> (d0 + 128)>
 
 // CHECK-LABEL: func @matmul
 // FILTER-LABEL: func @matmul
@@ -200,9 +200,9 @@ func.func @single_elt_buffers(%arg0: memref<1024x1024xf32>, %arg1: memref<1024x1
 
 #map_ub = affine_map<(d0) -> (4096, d0 + 100)>
 
-// CHECK-DAG: [[$MAP_IDENTITY:map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0)>
-// CHECK-DAG: [[$MAP_MIN_UB1:map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0 + 100, 4096)>
-// CHECK-DAG: [[$MAP_MIN_UB2:map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (4096, d0 + 100)>
+// CHECK-DAG: [[$MAP_IDENTITY:map[0-9a-zA-Z_]*]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: [[$MAP_MIN_UB1:map[0-9a-zA-Z_]*]] = affine_map<(d0) -> (d0 + 100, 4096)>
+// CHECK-DAG: [[$MAP_MIN_UB2:map[0-9a-zA-Z_]*]] = affine_map<(d0) -> (4096, d0 + 100)>
 
 // CHECK-LABEL: func @min_upper_bound
 func.func @min_upper_bound(%A: memref<4096xf32>) -> memref<4096xf32> {

@@ -27,52 +27,74 @@ static Value *replaceIntrinsic(Module &M, IntrinsicInst *II,
   return II;
 }
 
-static Value *reduceInstruction(Module &M, Instruction &I) {
+static Value *reduceIntrinsic(Oracle &O, Module &M, IntrinsicInst *II) {
+  IRBuilder<> B(II);
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::sqrt:
+    if (O.shouldKeep())
+      return nullptr;
+
+    return B.CreateFMul(II->getArgOperand(0),
+                        ConstantFP::get(II->getType(), 2.0));
+  case Intrinsic::minnum:
+  case Intrinsic::maxnum:
+  case Intrinsic::minimum:
+  case Intrinsic::maximum:
+  case Intrinsic::amdgcn_fmul_legacy:
+    if (O.shouldKeep())
+      return nullptr;
+    return B.CreateFMul(II->getArgOperand(0), II->getArgOperand(1));
+  case Intrinsic::amdgcn_workitem_id_y:
+  case Intrinsic::amdgcn_workitem_id_z:
+    if (O.shouldKeep())
+      return nullptr;
+    return replaceIntrinsic(M, II, Intrinsic::amdgcn_workitem_id_x);
+  case Intrinsic::amdgcn_workgroup_id_y:
+  case Intrinsic::amdgcn_workgroup_id_z:
+    if (O.shouldKeep())
+      return nullptr;
+    return replaceIntrinsic(M, II, Intrinsic::amdgcn_workgroup_id_x);
+  case Intrinsic::amdgcn_div_fixup:
+  case Intrinsic::amdgcn_fma_legacy:
+    if (O.shouldKeep())
+      return nullptr;
+    return replaceIntrinsic(M, II, Intrinsic::fma, {II->getType()});
+  default:
+    return nullptr;
+  }
+}
+
+static Value *reduceInstruction(Oracle &O, Module &M, Instruction &I) {
   IRBuilder<> B(&I);
   switch (I.getOpcode()) {
   case Instruction::FDiv:
   case Instruction::FRem:
+    if (O.shouldKeep())
+      return nullptr;
+
     // Divisions tends to codegen into a long sequence or a library call.
     return B.CreateFMul(I.getOperand(0), I.getOperand(1));
   case Instruction::UDiv:
   case Instruction::SDiv:
   case Instruction::URem:
   case Instruction::SRem:
+    if (O.shouldKeep())
+      return nullptr;
+
     // Divisions tends to codegen into a long sequence or a library call.
     return B.CreateMul(I.getOperand(0), I.getOperand(1));
   case Instruction::Add:
   case Instruction::Sub: {
+    if (O.shouldKeep())
+      return nullptr;
+
     // Add/sub are more likely codegen to instructions with carry out side
     // effects.
     return B.CreateOr(I.getOperand(0), I.getOperand(1));
   }
   case Instruction::Call: {
-    IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
-    if (!II)
-      return nullptr;
-
-    switch (II->getIntrinsicID()) {
-    case Intrinsic::sqrt:
-      return B.CreateFMul(II->getArgOperand(0),
-                          ConstantFP::get(I.getType(), 2.0));
-    case Intrinsic::minnum:
-    case Intrinsic::maxnum:
-    case Intrinsic::minimum:
-    case Intrinsic::maximum:
-    case Intrinsic::amdgcn_fmul_legacy:
-      return B.CreateFMul(II->getArgOperand(0), II->getArgOperand(1));
-    case Intrinsic::amdgcn_workitem_id_y:
-    case Intrinsic::amdgcn_workitem_id_z:
-      return replaceIntrinsic(M, II, Intrinsic::amdgcn_workitem_id_x);
-    case Intrinsic::amdgcn_workgroup_id_y:
-    case Intrinsic::amdgcn_workgroup_id_z:
-      return replaceIntrinsic(M, II, Intrinsic::amdgcn_workgroup_id_x);
-    case Intrinsic::amdgcn_div_fixup:
-    case Intrinsic::amdgcn_fma_legacy:
-      return replaceIntrinsic(M, II, Intrinsic::fma, {II->getType()});
-    default:
-      return nullptr;
-    }
+    if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
+      return reduceIntrinsic(O, M, II);
 
     return nullptr;
   }
@@ -87,13 +109,9 @@ static void replaceOpcodesInModule(Oracle &O, Module &Mod) {
   for (Function &F : Mod) {
     for (BasicBlock &BB : F)
       for (Instruction &I : make_early_inc_range(BB)) {
-
         Instruction *Replacement =
-            dyn_cast_or_null<Instruction>(reduceInstruction(Mod, I));
+            dyn_cast_or_null<Instruction>(reduceInstruction(O, Mod, I));
         if (Replacement && Replacement != &I) {
-          if (O.shouldKeep())
-            continue;
-
           if (isa<FPMathOperator>(Replacement))
             Replacement->copyFastMathFlags(&I);
 
