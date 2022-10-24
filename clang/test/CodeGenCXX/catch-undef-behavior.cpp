@@ -735,7 +735,7 @@ namespace CopyValueRepresentation {
 }
 
 void ThisAlign::this_align_lambda_2() {
-  // CHECK-LABEL: define internal void @"_ZZN9ThisAlign19this_align_lambda_2EvENK3$_1clEv"
+  // CHECK-LABEL: define internal void @"_ZZN9ThisAlign19this_align_lambda_2EvENK3$_0clEv"
   // CHECK-SAME: (%{{.*}}* {{[^,]*}} %[[this:[^)]*]])
   // CHECK: %[[this_addr:.*]] = alloca
   // CHECK: store %{{.*}}* %[[this]], %{{.*}}** %[[this_addr]],

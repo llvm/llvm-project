@@ -80,16 +80,6 @@ static void emitParserPrinter(const EnumAttr &enumAttr, StringRef qualName,
     if (!mlir::tblgen::canFormatStringAsKeyword(caseVal.getStr()))
       nonKeywordCases.set(index);
 
-  // If this is a bit enum attribute, don't allow cases that may overlap with
-  // other cases. For simplicity sake, only allow cases with a single bit value.
-  if (enumAttr.isBitEnum()) {
-    for (auto [index, caseVal] : llvm::enumerate(cases)) {
-      int64_t value = caseVal.getValue();
-      if (value < 0 || (value != 0 && !llvm::isPowerOf2_64(value)))
-        nonKeywordCases.set(index);
-    }
-  }
-
   // Generate the parser and the start of the printer for the enum.
   const char *parsedAndPrinterStart = R"(
 namespace mlir {
@@ -137,7 +127,7 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
       if (nonKeywordCases.test(it.index()))
         continue;
       StringRef symbol = it.value().getSymbol();
-      os << llvm::formatv("    case {0}::{1}:\n", qualName,
+      os << llvm::formatv("  case {0}::{1}:\n", qualName,
                           llvm::isDigit(symbol.front()) ? ("_" + symbol)
                                                         : symbol);
     }
@@ -145,6 +135,37 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
           "  default:\n"
           "    return p << '\"' << valueStr << '\"';\n"
           "  }\n";
+
+    // If this is a bit enum, conservatively print the string form if the value
+    // is not a power of two (i.e. not a single bit case) and not a known case.
+  } else if (enumAttr.isBitEnum()) {
+    // Process the known multi-bit cases that use valid keywords.
+    llvm::SmallVector<EnumAttrCase *> validMultiBitCases;
+    for (auto [index, caseVal] : llvm::enumerate(cases)) {
+      uint64_t value = caseVal.getValue();
+      if (value && !llvm::has_single_bit(value) && !nonKeywordCases.test(index))
+        validMultiBitCases.push_back(&caseVal);
+    }
+    if (!validMultiBitCases.empty()) {
+      os << "  switch (value) {\n";
+      for (EnumAttrCase *caseVal : validMultiBitCases) {
+        StringRef symbol = caseVal->getSymbol();
+        os << llvm::formatv("  case {0}::{1}:\n", qualName,
+                            llvm::isDigit(symbol.front()) ? ("_" + symbol)
+                                                          : symbol);
+      }
+      os << "    return p << valueStr;\n"
+            "  default:\n"
+            "    break;\n"
+            "  }\n";
+    }
+
+    // All other multi-bit cases should be printed as strings.
+    os << formatv("  auto underlyingValue = "
+                  "static_cast<std::make_unsigned_t<{0}>>(value);\n",
+                  qualName);
+    os << "  if (underlyingValue && !llvm::has_single_bit(underlyingValue))\n"
+          "    return p << '\"' << valueStr << '\"';\n";
   }
   os << "  return p << valueStr;\n"
         "}\n"

@@ -21,6 +21,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
 
   LINK_COMPONENTS
   AsmParser
+  BinaryFormat
   BitReader
   BitWriter
   Core

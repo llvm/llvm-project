@@ -199,24 +199,35 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
       /*args=*/(ins "OpOperand *":$opOperand),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        assert(opOperand->getOwner() == this->getOperation());
+        assert(opOperand->getOwner() == $_op.getOperation());
         return !opOperand->get().getType().template isa<ShapedType>();
       }]
     >,
     InterfaceMethod<
-      /*desc=*/"Return the result tied to `opOperand`.",
+      /*desc=*/"Return the OpResult that is tied to the given OpOperand.",
       /*retTy=*/"OpResult",
       /*methodName=*/"getTiedOpResult",
       /*args=*/(ins "OpOperand *":$opOperand),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        assert(opOperand->getOwner() == this->getOperation());
+        assert(opOperand->getOwner() == $_op.getOperation());
 
         auto [start, end] = $_op.getOutputsPositionRange();
         int64_t resultIndex = opOperand->getOperandNumber() - start;
         assert(resultIndex >= 0 &&
                resultIndex < $_op->getNumResults() );
         return $_op->getResult(resultIndex);
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Return the OpOperand that is tied to the given OpResult.",
+      /*retTy=*/"OpOperand *",
+      /*methodName=*/"getTiedOpOperand",
+      /*args=*/(ins "OpResult":$opResult),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        assert(opResult.getDefiningOp() == $_op.getOperation());
+        return $_op.getOutputOperand(opResult.getResultNumber());
       }]
     >,
     //===------------------------------------------------------------------===//

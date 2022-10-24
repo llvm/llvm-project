@@ -431,6 +431,55 @@ void LVElement::resolveQualifiedName() {
   });
 }
 
+bool LVElement::referenceMatch(const LVElement *Element) const {
+  return (getHasReference() && Element->getHasReference()) ||
+         (!getHasReference() && !Element->getHasReference());
+}
+
+bool LVElement::equals(const LVElement *Element) const {
+  // The minimum factors that must be the same for an equality are:
+  // line number, level, name, qualified name and filename.
+  LLVM_DEBUG({
+    dbgs() << "\n[Element::equals]\n";
+    if (options().getAttributeOffset()) {
+      dbgs() << "Reference: " << hexSquareString(getOffset()) << "\n";
+      dbgs() << "Target   : " << hexSquareString(Element->getOffset()) << "\n";
+    }
+    dbgs() << "Reference: "
+           << "Kind = " << formattedKind(kind()) << ", "
+           << "Name = " << formattedName(getName()) << ", "
+           << "Qualified = " << formattedName(getQualifiedName()) << "\n"
+           << "Target   : "
+           << "Kind = " << formattedKind(Element->kind()) << ", "
+           << "Name = " << formattedName(Element->getName()) << ", "
+           << "Qualified = " << formattedName(Element->getQualifiedName())
+           << "\n"
+           << "Reference: "
+           << "NameIndex = " << getNameIndex() << ", "
+           << "QualifiedNameIndex = " << getQualifiedNameIndex() << ", "
+           << "FilenameIndex = " << getFilenameIndex() << "\n"
+           << "Target   : "
+           << "NameIndex = " << Element->getNameIndex() << ", "
+           << "QualifiedNameIndex = " << Element->getQualifiedNameIndex()
+           << ", "
+           << "FilenameIndex = " << Element->getFilenameIndex() << "\n";
+  });
+  if ((getLineNumber() != Element->getLineNumber()) ||
+      (getLevel() != Element->getLevel()))
+    return false;
+
+  if ((getQualifiedNameIndex() != Element->getQualifiedNameIndex()) ||
+      (getNameIndex() != Element->getNameIndex()) ||
+      (getFilenameIndex() != Element->getFilenameIndex()))
+    return false;
+
+  if (!getType() && !Element->getType())
+    return true;
+  if (getType() && Element->getType())
+    return getType()->equals(Element->getType());
+  return false;
+}
+
 // Print the FileName Index.
 void LVElement::printFileIndex(raw_ostream &OS, bool Full) const {
   if (options().getPrintFormatting() && options().getAttributeAnySource() &&

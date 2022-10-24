@@ -23,6 +23,33 @@ namespace mlir {
 namespace LLVM {
 class LoopOptionsAttrBuilder;
 
+/// This class represents the base attribute for all debug info attributes.
+class DINodeAttr : public Attribute {
+public:
+  using Attribute::Attribute;
+
+  // Support LLVM type casting.
+  static bool classof(Attribute attr);
+};
+
+/// This class represents a LLVM attribute that describes a debug info scope.
+class DIScopeAttr : public DINodeAttr {
+public:
+  using DINodeAttr::DINodeAttr;
+
+  /// Support LLVM type casting.
+  static bool classof(Attribute attr);
+};
+
+/// This class represents a LLVM attribute that describes a debug info type.
+class DITypeAttr : public DINodeAttr {
+public:
+  using DINodeAttr::DINodeAttr;
+
+  /// Support LLVM type casting.
+  static bool classof(Attribute attr);
+};
+
 // Inline the LLVM generated Linkage enum and utility.
 // This is only necessary to isolate the "enum generated code" from the
 // attribute definition itself.

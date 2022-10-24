@@ -38,7 +38,7 @@ void f2() { global = []{ return 3; }; }
 // ARC: call i8* @llvm.objc.retainBlock
 // ARC: call void @llvm.objc.release
 // ARC-LABEL: define internal noundef i32 @___Z2f2v_block_invoke
-// ARC: call noundef i32 @"_ZZ2f2vENK3$_1clEv
+// ARC: call noundef i32 @"_ZZ2f2vENK3$_0clEv
 
 template <class T> void take_lambda(T &&lambda) { lambda(); }
 void take_block(void (^block)()) { block(); }
@@ -66,7 +66,7 @@ void take_block(void (^block)()) { block(); }
 // ARC:   %[[CAPTURE0:.*]] = getelementptr inbounds %[[LAMBDACLASS]], %[[LAMBDACLASS]]* %{{.*}}, i32 0, i32 0
 // ARC:   store i32 %{{.*}}, i32* %[[CAPTURE0]]
 
-// ARC: define internal void @"_ZZN13LambdaCapture4foo1ERiENK3$_3clEv"(%[[LAMBDACLASS]]* {{[^,]*}} %{{.*}})
+// ARC: define internal void @"_ZZN13LambdaCapture4foo1ERiENK3$_0clEv"(%[[LAMBDACLASS]]* {{[^,]*}} %{{.*}})
 // ARC:   %[[BLOCK:.*]] = alloca <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>
 // ARC:   %[[CAPTURE1:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>* %[[BLOCK]], i32 0, i32 5
 // ARC:   store i32 %{{.*}}, i32* %[[CAPTURE1]]
@@ -75,11 +75,11 @@ void take_block(void (^block)()) { block(); }
 // ARC-NOT: @llvm.objc.storeStrong(
 // ARC: ret void
 
-// ARC: define internal void @"___ZZN13LambdaCapture4foo1ERiENK3$_3clEv_block_invoke"
+// ARC: define internal void @"___ZZN13LambdaCapture4foo1ERiENK3$_0clEv_block_invoke"
 // ARC:   %[[CAPTURE2:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>* %{{.*}}, i32 0, i32 5
 // ARC:   store i32 %{{.*}}, i32* %[[CAPTURE2]]
 
-// ARC: define internal void @"___ZZN13LambdaCapture4foo1ERiENK3$_3clEv_block_invoke_2"(i8* noundef %{{.*}})
+// ARC: define internal void @"___ZZN13LambdaCapture4foo1ERiENK3$_0clEv_block_invoke_2"(i8* noundef %{{.*}})
 // ARC:   %[[CAPTURE3:.*]] = getelementptr inbounds <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>, <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, i32 }>* %{{.*}}, i32 0, i32 5
 // ARC:   %[[V1:.*]] = load i32, i32* %[[CAPTURE3]]
 // ARC:   store i32 %[[V1]], i32* @_ZN13LambdaCapture1iE
@@ -141,11 +141,11 @@ namespace BlockInLambda {
 // Check that the delegating invoke function doesn't destruct the Weak object
 // that is passed.
 
-// ARC-LABEL: define internal void @"_ZZN14LambdaDelegate4testEvEN3$_58__invokeENS_4WeakE"(
-// ARC: call void @"_ZZN14LambdaDelegate4testEvENK3$_5clENS_4WeakE"(
+// ARC-LABEL: define internal void @"_ZZN14LambdaDelegate4testEvEN3$_08__invokeENS_4WeakE"(
+// ARC: call void @"_ZZN14LambdaDelegate4testEvENK3$_0clENS_4WeakE"(
 // ARC-NEXT: ret void
 
-// ARC-LABEL: define internal void @"_ZZN14LambdaDelegate4testEvENK3$_5clENS_4WeakE"(
+// ARC-LABEL: define internal void @"_ZZN14LambdaDelegate4testEvENK3$_0clENS_4WeakE"(
 // ARC: call void @_ZN14LambdaDelegate4WeakD1Ev(
 
 #ifdef WEAK_SUPPORTED

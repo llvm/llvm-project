@@ -102,44 +102,18 @@ removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
     }
 }
 
-/// It's OK to add a block to the set of removed blocks if the first
-/// basic block in the function that survives all of the deletions is
-/// a legal entry block. Keep at least one block in a function.
-static bool okToRemove(BasicBlock &Candidate, Function &F,
-                       const DenseSet<BasicBlock *> &BBsToDelete) {
-  size_t NumBlocksDeleted = 0;
-  bool FoundNewEntryBlock = false;
-  for (auto &B : F) {
-    if (&B == &Candidate)
-      continue;
-    if (BBsToDelete.count(&B)) {
-      ++NumBlocksDeleted;
-      continue;
-    }
-    if (!FoundNewEntryBlock) {
-      /// Ok we've found the first block that's not going to be deleted,
-      /// it will be the new entry block -- that's only legal if this
-      /// block has no predecessors among blocks that survive the
-      /// deletions
-      for (BasicBlock *Pred : predecessors(&B)) {
-        if (!BBsToDelete.contains(Pred))
-          return false;
-      }
-      FoundNewEntryBlock = true;
-    }
-  }
-  // Don't delete the last block.
-  return NumBlocksDeleted + 1 < F.size();
-}
-
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
 static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
   DenseSet<BasicBlock *> BBsToKeep, BBsToDelete;
 
   for (auto &F : Program) {
-    for (auto &BB : F) {
-      if (!okToRemove(BB, F, BBsToDelete) || O.shouldKeep())
+    if (F.empty())
+      continue;
+
+    // Never try to delete the entry block.
+    for (auto &BB : make_range(++F.begin(), F.end())) {
+      if (O.shouldKeep())
         BBsToKeep.insert(&BB);
       else
         BBsToDelete.insert(&BB);

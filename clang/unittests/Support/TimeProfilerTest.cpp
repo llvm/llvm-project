@@ -37,14 +37,14 @@ std::string teardownProfiler() {
 
 // Returns true if code compiles successfully.
 // We only parse AST here. This is enough for constexpr evaluation.
-bool compileFromString(StringRef Code) {
+bool compileFromString(StringRef Code, StringRef Standard, StringRef FileName) {
   CompilerInstance Compiler;
   Compiler.createDiagnostics();
 
   auto Invocation = std::make_shared<CompilerInvocation>();
   Invocation->getPreprocessorOpts().addRemappedFile(
-      "test.cc", MemoryBuffer::getMemBuffer(Code).release());
-  const char *Args[] = {"-std=c++20", "test.cc"};
+      FileName, MemoryBuffer::getMemBuffer(Code).release());
+  const char *Args[] = {Standard.data(), FileName.data()};
   CompilerInvocation::CreateFromArgs(*Invocation, Args,
                                      Compiler.getDiagnostics());
   Compiler.setInvocation(std::move(Invocation));
@@ -143,7 +143,7 @@ std::string buildTraceGraph(StringRef Json) {
 
 } // namespace
 
-TEST(TimeProfilerTest, ConstantEvaluation) {
+TEST(TimeProfilerTest, ConstantEvaluationCxx20) {
   constexpr StringRef Code = R"(
 void print(double value);
 
@@ -172,7 +172,7 @@ constexpr int slow_init_list[] = {1, 1, 2, 3, 5, 8, 13, 21}; // 25th line
     )";
 
   setupProfiler();
-  ASSERT_TRUE(compileFromString(Code));
+  ASSERT_TRUE(compileFromString(Code, "-std=c++20", "test.cc"));
   std::string Json = teardownProfiler();
   std::string TraceGraph = buildTraceGraph(Json);
   ASSERT_TRUE(TraceGraph == R"(
@@ -191,6 +191,28 @@ Frontend
 | EvaluateAsConstantExpr (<test.cc:18:11, col:37>)
 | EvaluateAsRValue (<test.cc:22:14, line:23:58>)
 | EvaluateAsInitializer (slow_init_list)
+| PerformPendingInstantiations
+)");
+
+  // NOTE: If this test is failing, run this test with
+  // `llvm::errs() << TraceGraph;` and change the assert above.
+}
+
+TEST(TimeProfilerTest, ConstantEvaluationC99) {
+  constexpr StringRef Code = R"(
+struct {
+  short quantval[4]; // 3rd line
+} value;
+    )";
+
+  setupProfiler();
+  ASSERT_TRUE(compileFromString(Code, "-std=c99", "test.c"));
+  std::string Json = teardownProfiler();
+  std::string TraceGraph = buildTraceGraph(Json);
+  ASSERT_TRUE(TraceGraph == R"(
+Frontend
+| isIntegerConstantExpr (<test.c:3:18>)
+| EvaluateKnownConstIntCheckOverflow (<test.c:3:18>)
 | PerformPendingInstantiations
 )");
 

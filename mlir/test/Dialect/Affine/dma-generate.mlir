@@ -444,7 +444,7 @@ func.func @relative_loop_bounds(%arg0: memref<1027xf32>) {
 // CHECK:      [[BUF:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<1027xf32, 2>
 // CHECK-NEXT: [[MEM:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<1xi32>
 // CHECK-NEXT: affine.for %{{.*}} = 0 to 1024 {
-// CHECK-NEXT:    affine.for %[[I2:.*]] = {{#map[0-9a-zA-Z_]+}}(%{{.*}}) to {{#map[0-9a-zA-Z_]+}}(%{{.*}}) {
+// CHECK-NEXT:    affine.for %[[I2:.*]] = {{#map[0-9a-zA-Z_]*}}(%{{.*}}) to {{#map[0-9a-zA-Z_]*}}(%{{.*}}) {
 // CHECK:           affine.store %{{.*}}, [[BUF]][%[[I2]]] : memref<1027xf32, 2>
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
@@ -614,9 +614,9 @@ func.func @simple_matmul(%arg0: memref<8x8xvector<64xf32>>, %arg1: memref<8x8xve
 // FAST-MEM-16KB:       affine.dma_wait
 // FAST-MEM-16KB:       affine.dma_start %{{.*}}
 // FAST-MEM-16KB:       affine.dma_wait
-// FAST-MEM-16KB:       affine.for %{{.*}} = #map{{[0-9a-zA-Z_]+}}(%{{.*}}) to #map{{[0-9a-zA-Z_]+}}(%{{.*}}) {
-// FAST-MEM-16KB-NEXT:    affine.for %{{.*}} = #map{{[0-9a-zA-Z_]+}}(%{{.*}}) to #map{{[0-9a-zA-Z_]+}}(%{{.*}}) {
-// FAST-MEM-16KB-NEXT:      affine.for %{{.*}} = #map{{[0-9a-zA-Z_]+}}(%{{.*}}) to #map{{[0-9a-zA-Z_]+}}(%{{.*}}) {
+// FAST-MEM-16KB:       affine.for %{{.*}} = #map{{[0-9a-zA-Z_]*}}(%{{.*}}) to #map{{[0-9a-zA-Z_]*}}(%{{.*}}) {
+// FAST-MEM-16KB-NEXT:    affine.for %{{.*}} = #map{{[0-9a-zA-Z_]*}}(%{{.*}}) to #map{{[0-9a-zA-Z_]*}}(%{{.*}}) {
+// FAST-MEM-16KB-NEXT:      affine.for %{{.*}} = #map{{[0-9a-zA-Z_]*}}(%{{.*}}) to #map{{[0-9a-zA-Z_]*}}(%{{.*}}) {
 // FAST-MEM-16KB:           }
 // FAST-MEM-16KB:         }
 // FAST-MEM-16KB:       }

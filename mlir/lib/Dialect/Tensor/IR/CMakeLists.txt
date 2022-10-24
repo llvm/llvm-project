@@ -24,6 +24,7 @@ add_mlir_dialect_library(MLIRTensorDialect
   MLIRArithUtils
   MLIRCastInterfaces
   MLIRComplexDialect
+  MLIRDestinationStyleOpInterface
   MLIRDialectUtils
   MLIRIR
   MLIRInferTypeOpInterface

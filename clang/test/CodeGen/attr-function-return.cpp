@@ -15,14 +15,14 @@ int foo(void) {
   }();
 }
 int bar(void) {
-  // CHECK: @"_ZZ3barvENK3$_1clEv"({{.*}}) [[EXTERN:#[0-9]+]]
+  // CHECK: @"_ZZ3barvENK3$_0clEv"({{.*}}) [[EXTERN:#[0-9]+]]
   return []() __attribute__((function_return("thunk-extern"))) {
     return 42;
   }
   ();
 }
 int baz(void) {
-  // CHECK: @"_ZZ3bazvENK3$_2clEv"({{.*}}) [[KEEP:#[0-9]+]]
+  // CHECK: @"_ZZ3bazvENK3$_0clEv"({{.*}}) [[KEEP:#[0-9]+]]
   return []() __attribute__((function_return("keep"))) {
     return 42;
   }
