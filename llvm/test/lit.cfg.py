@@ -456,6 +456,9 @@ if config.have_libxml2:
 if config.have_curl:
     config.available_features.add('curl')
 
+if config.have_httplib:
+    config.available_features.add('httplib')
+
 if config.have_opt_viewer_modules:
     config.available_features.add('have_opt_viewer_modules')
 
