@@ -876,6 +876,31 @@ public:
         return true;
       }
 
+      // Recognize UnmergeSrc that can be unmerged to DstTy directly.
+      // Types have to be either both vector or both non-vector types.
+      // Merge-like opcodes are combined one at the time. First one creates new
+      // unmerge, following should use the same unmerge (builder performs CSE).
+      //
+      // %0:_(EltTy), %1, %2, %3 = G_UNMERGE_VALUES %UnmergeSrc:_(UnmergeSrcTy)
+      // %Dst:_(DstTy) = G_merge_like_opcode %0:_(EltTy), %1
+      // %AnotherDst:_(DstTy) = G_merge_like_opcode %2:_(EltTy), %3
+      //
+      // %Dst:_(DstTy), %AnotherDst = G_UNMERGE_VALUES %UnmergeSrc
+      if ((DstTy.isVector() == UnmergeSrcTy.isVector()) &&
+          (Elt0UnmergeIdx % NumMIElts == 0) &&
+          getCoverTy(UnmergeSrcTy, DstTy) == UnmergeSrcTy) {
+        if (!isSequenceFromUnmerge(MI, 0, Unmerge, Elt0UnmergeIdx, NumMIElts,
+                                   EltSize))
+          return false;
+        MIB.setInstrAndDebugLoc(MI);
+        auto NewUnmerge = MIB.buildUnmerge(DstTy, Unmerge->getSourceReg());
+        unsigned DstIdx = (Elt0UnmergeIdx * EltSize) / DstTy.getSizeInBits();
+        replaceRegOrBuildCopy(Dst, NewUnmerge.getReg(DstIdx), MRI, MIB,
+                              UpdatedDefs, Observer);
+        DeadInsts.push_back(&MI);
+        return true;
+      }
+
       return false;
     }
   };

@@ -132,11 +132,9 @@ body: |
     ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
-    ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32)
-    ; GFX9-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[UV2]](s32), [[UV3]](s32)
-    ; GFX9-NEXT: $vgpr4_vgpr5 = COPY [[BUILD_VECTOR]](<2 x s32>)
-    ; GFX9-NEXT: $vgpr6_vgpr7 = COPY [[BUILD_VECTOR1]](<2 x s32>)
+    ; GFX9-NEXT: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
+    ; GFX9-NEXT: $vgpr4_vgpr5 = COPY [[UV]](<2 x s32>)
+    ; GFX9-NEXT: $vgpr6_vgpr7 = COPY [[UV1]](<2 x s32>)
     %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(s32), %2:_(s32), %3:_(s32), %4:_(s32) = G_UNMERGE_VALUES %0(<4 x s32>)
     %5:_(<2 x s32>) = G_BUILD_VECTOR %1, %2
