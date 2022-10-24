@@ -11,5 +11,6 @@ unittest("DebugInfoLogicalViewTests") {
     "LogicalElementsTest.cpp",
     "SelectElementsTest.cpp",
     "StringPoolTest.cpp",
+    "WarningInternalTest.cpp",
   ]
 }
