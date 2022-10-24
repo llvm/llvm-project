@@ -279,6 +279,17 @@ bool PointerAssignmentChecker::Check(parser::CharBlock rhsName, bool isCall,
 }
 
 bool PointerAssignmentChecker::Check(const evaluate::ProcedureDesignator &d) {
+  if (const Symbol * symbol{d.GetSymbol()}) {
+    if (const auto *subp{
+            symbol->GetUltimate().detailsIf<SubprogramDetails>()}) {
+      if (subp->stmtFunction()) {
+        evaluate::SayWithDeclaration(context_.messages(), *symbol,
+            "Statement function '%s' may not be the target of a pointer assignment"_err_en_US,
+            symbol->name());
+        return false;
+      }
+    }
+  }
   if (auto chars{Procedure::Characterize(d, context_)}) {
     return Check(d.GetName(), false, &*chars, d.GetSpecificIntrinsic());
   } else {
