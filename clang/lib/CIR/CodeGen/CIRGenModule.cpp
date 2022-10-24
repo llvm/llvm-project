@@ -1081,14 +1081,37 @@ void CIRGenModule::buildTopLevelDecl(Decl *decl) {
         buildTopLevelDecl(childDecl);
     break;
   }
+  // No code generation needed.
+  case Decl::UsingShadow:
+  case Decl::ClassTemplate:
+  case Decl::VarTemplate:
+  case Decl::Concept:
+  case Decl::VarTemplatePartialSpecialization:
+  case Decl::FunctionTemplate:
+  case Decl::TypeAliasTemplate:
+  case Decl::Block:
+  case Decl::Empty:
+  case Decl::Binding:
+    break;
+  case Decl::Using:     // using X; [C++]
+  case Decl::UsingEnum: // using enum X; [C++]
+  case Decl::NamespaceAlias:
+  case Decl::UsingDirective: // using namespace X; [C++]
+    assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
+    break;
   case Decl::CXXConstructor:
     getCXXABI().buildCXXConstructors(cast<CXXConstructorDecl>(decl));
     break;
+
+  case Decl::StaticAssert:
+    // Nothing to do.
+    break;
+
+  case Decl::Typedef:
+  case Decl::TypeAlias: // using foo = bar; [C++11]
   case Decl::Record:
-    // There's nothing to do here, we emit everything pertaining to `Record`s
-    // lazily.
-    // TODO: handle debug info here? See clang's
-    // CodeGenModule::EmitTopLevelDecl
+  case Decl::Enum:
+    assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
     break;
   }
 }
