@@ -77,13 +77,21 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
                    "actual argument", *expr, context)}) {
       const auto *argProcDesignator{
           std::get_if<evaluate::ProcedureDesignator>(&expr->u)};
-      const auto *argProcSymbol{
-          argProcDesignator ? argProcDesignator->GetSymbol() : nullptr};
-      if (argProcSymbol && !argChars->IsTypelessIntrinsicDummy() &&
-          argProcDesignator && argProcDesignator->IsElemental()) { // C1533
-        evaluate::SayWithDeclaration(messages, *argProcSymbol,
-            "Non-intrinsic ELEMENTAL procedure '%s' may not be passed as an actual argument"_err_en_US,
-            argProcSymbol->name());
+      if (const auto *argProcSymbol{
+              argProcDesignator ? argProcDesignator->GetSymbol() : nullptr}) {
+        if (!argChars->IsTypelessIntrinsicDummy() && argProcDesignator &&
+            argProcDesignator->IsElemental()) { // C1533
+          evaluate::SayWithDeclaration(messages, *argProcSymbol,
+              "Non-intrinsic ELEMENTAL procedure '%s' may not be passed as an actual argument"_err_en_US,
+              argProcSymbol->name());
+        } else if (const auto *subp{argProcSymbol->GetUltimate()
+                                        .detailsIf<SubprogramDetails>()}) {
+          if (subp->stmtFunction()) {
+            evaluate::SayWithDeclaration(messages, *argProcSymbol,
+                "Statement function '%s' may not be passed as an actual argument"_err_en_US,
+                argProcSymbol->name());
+          }
+        }
       }
     }
   }
@@ -574,6 +582,17 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
         std::get_if<evaluate::ProcedureDesignator>(&expr->u)};
     const auto *argProcSymbol{
         argProcDesignator ? argProcDesignator->GetSymbol() : nullptr};
+    if (argProcSymbol) {
+      if (const auto *subp{
+              argProcSymbol->GetUltimate().detailsIf<SubprogramDetails>()}) {
+        if (subp->stmtFunction()) {
+          evaluate::SayWithDeclaration(messages, *argProcSymbol,
+              "Statement function '%s' may not be passed as an actual argument"_err_en_US,
+              argProcSymbol->name());
+          return;
+        }
+      }
+    }
     if (auto argChars{characteristics::DummyArgument::FromActual(
             "actual argument", *expr, context)}) {
       if (!argChars->IsTypelessIntrinsicDummy()) {
