@@ -286,6 +286,54 @@ define amdgpu_ps <8 x float> @test_fminimum_v4f64_ss(<4 x double> inreg %a, <4 x
   ret <8 x float> %ret
 }
 
+define amdgpu_kernel void @fminimumi_f32_move_to_valu(float addrspace(1)* %out, float addrspace(1)* %aptr, float addrspace(1)* %bptr) {
+; GCN-LABEL: fminimumi_f32_move_to_valu:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_clause 0x1
+; GCN-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
+; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_load_b32 v1, v0, s[6:7] glc dlc
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    global_load_b32 v2, v0, s[0:1] glc dlc
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_minimum_f32 v1, v1, v2
+; GCN-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+  %a = load volatile float, float addrspace(1)* %aptr, align 4
+  %b = load volatile float, float addrspace(1)* %bptr, align 4
+  %v = call float @llvm.minimum.f32(float %a, float %b)
+  store float %v, float addrspace(1)* %out, align 4
+  ret void
+}
+
+define amdgpu_kernel void @fminimum_f16_move_to_valu(half addrspace(1)* %out, half addrspace(1)* %aptr, half addrspace(1)* %bptr) {
+; GCN-LABEL: fminimum_f16_move_to_valu:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_clause 0x1
+; GCN-NEXT:    s_load_b128 s[4:7], s[0:1], 0x24
+; GCN-NEXT:    s_load_b64 s[0:1], s[0:1], 0x34
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    global_load_u16 v1, v0, s[6:7] glc dlc
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    global_load_u16 v2, v0, s[0:1] glc dlc
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_minimum_f16 v1, v1, v2
+; GCN-NEXT:    global_store_b16 v0, v1, s[4:5]
+; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GCN-NEXT:    s_endpgm
+  %a = load volatile half, half addrspace(1)* %aptr, align 4
+  %b = load volatile half, half addrspace(1)* %bptr, align 4
+  %v = call half @llvm.minimum.f16(half %a, half %b)
+  store half %v, half addrspace(1)* %out, align 4
+  ret void
+}
+
 declare float @llvm.minimum.f32(float, float)
 declare <2 x float> @llvm.minimum.v2f32(<2 x float>, <2 x float>)
 declare <3 x float> @llvm.minimum.v3f32(<3 x float>, <3 x float>)

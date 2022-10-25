@@ -4808,11 +4808,15 @@ unsigned SIInstrInfo::getVALUOp(const MachineInstr &MI) const {
   case AMDGPU::S_SUB_F32: return AMDGPU::V_SUB_F32_e32;
   case AMDGPU::S_MIN_F32: return AMDGPU::V_MIN_F32_e32;
   case AMDGPU::S_MAX_F32: return AMDGPU::V_MAX_F32_e32;
+  case AMDGPU::S_MINIMUM_F32: return AMDGPU::V_MINIMUM_F32_e64;
+  case AMDGPU::S_MAXIMUM_F32: return AMDGPU::V_MAXIMUM_F32_e64;
   case AMDGPU::S_MUL_F32: return AMDGPU::V_MUL_F32_e32;
   case AMDGPU::S_ADD_F16: return AMDGPU::V_ADD_F16_e32;
   case AMDGPU::S_SUB_F16: return AMDGPU::V_SUB_F16_e32;
   case AMDGPU::S_MIN_F16: return AMDGPU::V_MIN_F16_e32;
   case AMDGPU::S_MAX_F16: return AMDGPU::V_MAX_F16_e32;
+  case AMDGPU::S_MINIMUM_F16: return AMDGPU::V_MINIMUM_F16_e64;
+  case AMDGPU::S_MAXIMUM_F16: return AMDGPU::V_MAXIMUM_F16_e64;
   case AMDGPU::S_MUL_F16: return AMDGPU::V_MUL_F16_e32;
   case AMDGPU::S_CVT_PK_RTZ_F16_F32: return AMDGPU::V_CVT_PKRTZ_F16_F32_e32;
   case AMDGPU::S_FMAC_F32: return AMDGPU::V_FMAC_F32_e32;
@@ -6496,6 +6500,29 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
       BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst).addReg(TmpReg);
 
       MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
+      addUsersToMoveToVALUWorklist(NewDst, MRI, Worklist);
+      Inst.eraseFromParent();
+      continue;
+    }
+    case AMDGPU::S_MINIMUM_F32:
+    case AMDGPU::S_MAXIMUM_F32:
+    case AMDGPU::S_MINIMUM_F16:
+    case AMDGPU::S_MAXIMUM_F16: {
+      const DebugLoc &DL = Inst.getDebugLoc();
+      Register NewDst = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      MachineInstr *NewInstr = BuildMI(*MBB, Inst, DL, get(NewOpcode), NewDst)
+                                   .addImm(0)
+                                   .add(Inst.getOperand(1))
+                                   .addImm(0)
+                                   .add(Inst.getOperand(2))
+                                   .addImm(0)
+                                   .addImm(0);
+      MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
+
+      CreatedBBTmp = legalizeOperands(*NewInstr, MDT);
+      if (CreatedBBTmp && TopInst.getParent() == CreatedBBTmp)
+        CreatedBB = CreatedBBTmp;
+
       addUsersToMoveToVALUWorklist(NewDst, MRI, Worklist);
       Inst.eraseFromParent();
       continue;
