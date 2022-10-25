@@ -4,8 +4,7 @@
 define i1 @ptrue() {
 ; CHECK-LABEL: ptrue:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, pow2
-; CHECK-NEXT:    ptest p0, p0.b
+; CHECK-NEXT:    ptrues p0.b, pow2
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 0)
