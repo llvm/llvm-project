@@ -574,15 +574,16 @@ private:
     InstructionCost Cost =
         TTI.getInstructionCost(U, TargetTransformInfo::TCK_SizeAndLatency);
 
+    // Increase the cost if it is inside the loop.
+    unsigned LoopDepth = LI.getLoopDepth(I->getParent());
+    Cost *= std::pow((double)AvgLoopIterationCount, LoopDepth);
+
     // Traverse recursively if there are more uses.
     // TODO: Any other instructions to be added here?
     if (I->mayReadFromMemory() || I->isCast())
       for (auto *User : I->users())
         Cost += getUserBonus(User, TTI, LI);
 
-    // Increase the cost if it is inside the loop.
-    auto LoopDepth = LI.getLoopDepth(I->getParent());
-    Cost *= std::pow((double)AvgLoopIterationCount, LoopDepth);
     return Cost;
   }
 
