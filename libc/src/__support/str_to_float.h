@@ -546,6 +546,41 @@ clinger_fast_path(typename fputil::FPBits<T>::UIntType mantissa, int32_t exp10,
   return true;
 }
 
+// The upper bound is the highest base-10 exponent that could possibly give a
+// non-inf result for this size of float. The value is
+// log10(2^(exponent bias)).
+// The generic approximation uses the fact that log10(2^x) ~= x/3
+template <typename T> constexpr int32_t get_upper_bound() {
+  return static_cast<int32_t>(fputil::FloatProperties<T>::EXPONENT_BIAS) / 3;
+}
+
+template <> constexpr int32_t get_upper_bound<float>() { return 39; }
+
+template <> constexpr int32_t get_upper_bound<double>() { return 309; }
+
+// The lower bound is the largest negative base-10 exponent that could possibly
+// give a non-zero result for this size of float. The value is
+// log10(2^(exponent bias + final mantissa width + intermediate mantissa width))
+// The intermediate mantissa is the integer that's been parsed from the string,
+// and the final mantissa is the fractional part of the output number. A very
+// low base 10 exponent with a very high intermediate mantissa can cancel each
+// other out, and subnormal numbers allow for the result to be at the very low
+// end of the final mantissa.
+template <typename T> constexpr int32_t get_lower_bound() {
+  return -(static_cast<int32_t>(fputil::FloatProperties<T>::EXPONENT_BIAS +
+                                fputil::FloatProperties<T>::MANTISSA_WIDTH +
+                                (sizeof(T) * 8)) /
+           3);
+}
+
+template <> constexpr int32_t get_lower_bound<float>() {
+  return -(39 + 6 + 10);
+}
+
+template <> constexpr int32_t get_lower_bound<double>() {
+  return -(309 + 15 + 20);
+}
+
 // Takes a mantissa and base 10 exponent and converts it into its closest
 // floating point type T equivalient. First we try the Eisel-Lemire algorithm,
 // then if that fails then we fall back to a more accurate algorithm for
@@ -559,21 +594,16 @@ decimal_exp_to_float(typename fputil::FPBits<T>::UIntType mantissa,
                      typename fputil::FPBits<T>::UIntType *outputMantissa,
                      uint32_t *outputExp2) {
   // If the exponent is too large and can't be represented in this size of
-  // float, return inf. These bounds are very loose, but are mostly serving as a
-  // first pass. Some close numbers getting through is okay.
-  if (exp10 >
-      static_cast<int64_t>(fputil::FloatProperties<T>::EXPONENT_BIAS) / 3) {
+  // float, return inf. These bounds are relatively loose, but are mostly
+  // serving as a first pass. Some close numbers getting through is okay.
+  if (exp10 > get_upper_bound<T>()) {
     *outputMantissa = 0;
     *outputExp2 = fputil::FPBits<T>::MAX_EXPONENT;
     errno = ERANGE;
     return;
   }
   // If the exponent is too small even for a subnormal, return 0.
-  if (exp10 < 0 &&
-      -static_cast<int64_t>(exp10) >
-          static_cast<int64_t>(fputil::FloatProperties<T>::EXPONENT_BIAS +
-                               fputil::FloatProperties<T>::MANTISSA_WIDTH) /
-              2) {
+  if (exp10 < get_lower_bound<T>()) {
     *outputMantissa = 0;
     *outputExp2 = 0;
     errno = ERANGE;
@@ -934,8 +964,8 @@ static inline T strtofloatingpoint(const char *__restrict src,
     }
     char *new_str_end = nullptr;
 
-    BitsType output_mantissa = 0;
-    uint32_t output_exponent = 0;
+    BitsType output_mantissa = ~0;
+    uint32_t output_exponent = ~0;
     if (base == 16) {
       seen_digit = hexadecimal_string_to_float<T>(
           src, DECIMAL_POINT, &new_str_end, &output_mantissa, &output_exponent);
