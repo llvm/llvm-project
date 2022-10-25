@@ -32,6 +32,9 @@ def SEXT : I<(outs GPR32:$dst), (ins GPR32:$src1), []>;
 def ZEXT : I<(outs GPR32:$dst), (ins GPR32:$src1), []>;
 def ICMP : I<(outs GPR32:$dst), (ins GPR32:$tst, GPR32:$src1, GPR32:$src2), []>;
 
+def HasFoo : Predicate<"Subtarget->hasFoo()">;
+def HasAnswerToEverything : Predicate<"Subtarget->getAnswerToUniverse() == 42 && Subtarget->getAnswerToLife() == 42">;
+
 def Rule0 : GICombineRule<
   (defs root:$d),
   (match (MUL $t, $s1, $s2),
@@ -60,11 +63,13 @@ def Rule4 : GICombineRule<
   (match (ADD $d, $s1, $s2)),
   (apply [{ APPLY }])>;
 
+let Predicates = [HasFoo] in
 def Rule5 : GICombineRule<
   (defs root:$d),
   (match (SUB $d, $s1, $s2)),
   (apply [{ APPLY }])>;
 
+let Predicates = [HasFoo, HasAnswerToEverything] in
 def Rule6 : GICombineRule<
   (defs root:$d),
   (match (SEXT $t, $s1),
@@ -241,7 +246,7 @@ def MyCombinerHelper: GICombinerHelper<"GenMyCombinerHelper", [
 // CODE-NEXT:        llvm_unreachable("Combine rule elision was incorrect");
 // CODE-NEXT:        return false;
 // CODE-NEXT:     }
- 
+
 // Check that the other rule involving SUB (Rule5) is run otherwise.
 
 // CODE-NEXT:      if (Partition == 1 /* * or nullptr */) {
@@ -249,6 +254,10 @@ def MyCombinerHelper: GICombinerHelper<"GenMyCombinerHelper", [
 // CODE-NEXT:        // Rule: Rule5
 // CODE-NEXT:        if (!RuleConfig->isRuleDisabled(5)) {
 // CODE-NEXT:          if (1
+// CODE-NEXT:               && (
+// CODE-NEXT:               // Predicate: HasFoo
+// CODE-NEXT:               Subtarget->hasFoo()
+// CODE-NEXT:               )
 // CODE-NEXT:) {
 // CODE-NEXT:            APPLY
 // CODE-NEXT:            return true;
@@ -266,7 +275,11 @@ def MyCombinerHelper: GICombinerHelper<"GenMyCombinerHelper", [
 // CODE-NEXT:      // Rule: Rule5
 // CODE-NEXT:      if (!RuleConfig->isRuleDisabled(5)) {
 // CODE-NEXT:        if (1
-// CODE-NEXT:) {
+// CODE-NEXT:             && (
+// CODE-NEXT:             // Predicate: HasFoo
+// CODE-NEXT:             Subtarget->hasFoo()
+// CODE-NEXT:             )
+// CODE-NEXT:      ) {
 // CODE-NEXT:          APPLY
 // CODE-NEXT:          return true;
 // CODE-NEXT:        }
@@ -276,3 +289,23 @@ def MyCombinerHelper: GICombinerHelper<"GenMyCombinerHelper", [
 // CODE-NEXT:    }
 // CODE-NEXT:  }
 
+
+// Check multiple predicates are correctly emitted
+
+// CODE:      // Leaf name: Rule6
+// CODE-NEXT: // Rule: Rule6
+// CODE-NEXT: if (!RuleConfig->isRuleDisabled(6)) {
+// CODE-NEXT:   if (1
+// CODE-NEXT:       && (
+// CODE-NEXT:            // Predicate: HasFoo
+// CODE-NEXT:            Subtarget->hasFoo()
+// CODE-NEXT:          )
+// CODE-NEXT:       && (
+// CODE-NEXT:            // Predicate: HasAnswerToEverything
+// CODE-NEXT:            Subtarget->getAnswerToUniverse() == 42 && Subtarget->getAnswerToLife() == 42
+// CODE-NEXT:          )
+// CODE-NEXT:      ) {
+// CODE-NEXT:     APPLY
+// CODE-NEXT:     return true;
+// CODE-NEXT:   }
+// CODE-NEXT: }
