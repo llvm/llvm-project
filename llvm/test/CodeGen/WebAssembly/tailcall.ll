@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mcpu=mvp -mattr=+tail-call | FileCheck --check-prefixes=CHECK,SLOW %s
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -fast-isel -mcpu=mvp -mattr=+tail-call | FileCheck --check-prefixes=CHECK,FAST %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+tail-call | FileCheck --check-prefixes=CHECK,SLOW %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -fast-isel -mattr=+tail-call | FileCheck --check-prefixes=CHECK,FAST %s
 ; RUN: llc < %s --filetype=obj -mattr=+tail-call | obj2yaml | FileCheck --check-prefix=YAML %s
 
 ; Test that the tail calls lower correctly
