@@ -61,6 +61,11 @@ class GICombineRule<dag defs, dag match, dag apply> : GICombine {
   /// combine rule.
   /// See GIApplyKind for details.
   dag Apply = apply;
+
+  /// Defines the predicates that are checked before the match function
+  /// is called. Targets can use this to, for instance, check Subtarget
+  /// features.
+  list<Predicate> Predicates = [];
 }
 
 /// The operator at the root of a GICombineRule.Defs dag.
