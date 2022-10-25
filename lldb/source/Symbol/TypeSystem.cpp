@@ -341,7 +341,7 @@ TypeSystemMap::GetTypeSystemForLanguage(lldb::LanguageType language,
 void TypeSystemMap::RemoveTypeSystemsForLanguage(lldb::LanguageType language) {
   std::lock_guard<std::mutex> guard(m_mutex);
   collection::iterator pos = m_map.find(language);
-  // If we are clearning the map, we don't need to remove this individual item.
+  // If we are clearing the map, we don't need to remove this individual item.
   // It will go away soon enough.
   if (!m_clear_in_progress) {
     if (pos != m_map.end())
