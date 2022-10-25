@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-include-cleaner/Analysis.h"
+#include "clang-include-cleaner/Types.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"

@@ -11,7 +11,8 @@
 #ifndef CLANG_INCLUDE_CLEANER_ANALYSIS_H
 #define CLANG_INCLUDE_CLEANER_ANALYSIS_H
 
-#include "clang/Tooling/Inclusions/StandardLibrary.h"
+#include "clang-include-cleaner/Types.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include <variant>
 
@@ -21,30 +22,6 @@ class Decl;
 class FileEntry;
 namespace include_cleaner {
 
-/// An entity that can be referenced in the code.
-struct Symbol {
-  Symbol(Decl &D) : Storage(&D) {}
-  Symbol(tooling::stdlib::Symbol S) : Storage(S) {}
-
-private:
-  // FIXME: Add support for macros.
-  std::variant<const Decl *, tooling::stdlib::Symbol> Storage;
-};
-
-/// Represents a file that provides some symbol. Might not be includeable, e.g.
-/// built-in or main-file itself.
-struct Header {
-  /// A physical (or logical, in case of a builtin) file.
-  Header(const FileEntry *FE) : Storage(FE) {}
-  /// A logical file representing a stdlib header.
-  Header(tooling::stdlib::Header H) : Storage(H) {}
-
-  bool operator==(const Header &RHS) const { return Storage == RHS.Storage; }
-
-private:
-  // FIXME: Handle verbatim spellings.
-  std::variant<const FileEntry *, tooling::stdlib::Header> Storage;
-};
 /// A UsedSymbolCB is a callback invoked for each symbol reference seen.
 ///
 /// References occur at a particular location, refer to a single symbol, and
