@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "../CommonArgs.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
@@ -615,6 +616,10 @@ fp16_fml_fallthrough:
   } else if (Triple.isAndroid()) {
     // Enabled A53 errata (835769) workaround by default on android
     Features.push_back("+fix-cortex-a53-835769");
+  } else if (Triple.isOSFuchsia()) {
+    std::string CPU = getCPUName(D, Args, Triple);
+    if (CPU.empty() || CPU == "generic" || CPU == "cortex-a53")
+      Features.push_back("+fix-cortex-a53-835769");
   }
 
   if (Args.getLastArg(options::OPT_mno_bti_at_return_twice))
