@@ -312,6 +312,34 @@ void __asan_set_shadow_00(uptr addr, uptr size) {
   REAL(memset)((void *)addr, 0, size);
 }
 
+void __asan_set_shadow_01(uptr addr, uptr size) {
+  REAL(memset)((void *)addr, 0x01, size);
+}
+
+void __asan_set_shadow_02(uptr addr, uptr size) {
+  REAL(memset)((void *)addr, 0x02, size);
+}
+
+void __asan_set_shadow_03(uptr addr, uptr size) {
+  REAL(memset)((void *)addr, 0x03, size);
+}
+
+void __asan_set_shadow_04(uptr addr, uptr size) {
+  REAL(memset)((void *)addr, 0x04, size);
+}
+
+void __asan_set_shadow_05(uptr addr, uptr size) {
+  REAL(memset)((void *)addr, 0x05, size);
+}
+
+void __asan_set_shadow_06(uptr addr, uptr size) {
+  REAL(memset)((void *)addr, 0x06, size);
+}
+
+void __asan_set_shadow_07(uptr addr, uptr size) {
+  REAL(memset)((void *)addr, 0x07, size);
+}
+
 void __asan_set_shadow_f1(uptr addr, uptr size) {
   REAL(memset)((void *)addr, 0xf1, size);
 }

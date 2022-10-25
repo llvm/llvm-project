@@ -511,15 +511,15 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     auto LT = getTypeLegalizationCost(RetTy);
     return Cost + (LT.first - 1);
   }
-  default:
-    if (ST->hasVInstructions() && RetTy->isVectorTy()) {
-      auto LT = getTypeLegalizationCost(RetTy);
-      if (const auto *Entry = CostTableLookup(VectorIntrinsicCostTable,
-                                              ICA.getID(), LT.second))
-        return LT.first * Entry->Cost;
-    }
-    break;
   }
+
+  if (ST->hasVInstructions() && RetTy->isVectorTy()) {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (const auto *Entry = CostTableLookup(VectorIntrinsicCostTable,
+                                            ICA.getID(), LT.second))
+      return LT.first * Entry->Cost;
+  }
+
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 

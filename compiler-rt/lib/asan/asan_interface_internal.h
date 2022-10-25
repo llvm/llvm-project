@@ -90,6 +90,20 @@ extern "C" {
   SANITIZER_INTERFACE_ATTRIBUTE
   void __asan_set_shadow_00(uptr addr, uptr size);
   SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_set_shadow_01(uptr addr, uptr size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_set_shadow_02(uptr addr, uptr size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_set_shadow_03(uptr addr, uptr size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_set_shadow_04(uptr addr, uptr size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_set_shadow_05(uptr addr, uptr size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_set_shadow_06(uptr addr, uptr size);
+  SANITIZER_INTERFACE_ATTRIBUTE
+  void __asan_set_shadow_07(uptr addr, uptr size);
+  SANITIZER_INTERFACE_ATTRIBUTE
   void __asan_set_shadow_f1(uptr addr, uptr size);
   SANITIZER_INTERFACE_ATTRIBUTE
   void __asan_set_shadow_f2(uptr addr, uptr size);

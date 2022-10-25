@@ -1,8 +1,13 @@
-/* RUN: %clang_cc1 -std=c89 -emit-llvm -o - %s | FileCheck %s
-   RUN: %clang_cc1 -std=c99 -emit-llvm -o - %s | FileCheck %s
-   RUN: %clang_cc1 -std=c11 -emit-llvm -o - %s | FileCheck %s
-   RUN: %clang_cc1 -std=c17 -emit-llvm -o - %s | FileCheck %s
-   RUN: %clang_cc1 -std=c2x -emit-llvm -o - %s | FileCheck %s
+/* RUN: %clang_cc1 -std=c89 -triple x86_64-pc-win32 -emit-llvm -o - %s | FileCheck %s
+   RUN: %clang_cc1 -std=c89 -triple i686-pc-linux -emit-llvm -o - %s | FileCheck %s
+   RUN: %clang_cc1 -std=c99 -triple x86_64-pc-win32 -emit-llvm -o - %s | FileCheck %s
+   RUN: %clang_cc1 -std=c99 -triple i686-pc-linux -emit-llvm -o - %s | FileCheck %s
+   RUN: %clang_cc1 -std=c11 -triple x86_64-pc-win32 -emit-llvm -o - %s | FileCheck %s
+   RUN: %clang_cc1 -std=c11 -triple i686-pc-linux -emit-llvm -o - %s | FileCheck %s
+   RUN: %clang_cc1 -std=c17 -triple x86_64-pc-win32 -emit-llvm -o - %s | FileCheck %s
+   RUN: %clang_cc1 -std=c17 -triple i686-pc-linux -emit-llvm -o - %s | FileCheck %s
+   RUN: %clang_cc1 -std=c2x -triple x86_64-pc-win32 -emit-llvm -o - %s | FileCheck %s
+   RUN: %clang_cc1 -std=c2x -triple i686-pc-linux -emit-llvm -o - %s | FileCheck %s
  */
 
 /* WG14 DR335: yes

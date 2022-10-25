@@ -2304,6 +2304,12 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
       if (Bits < (64 - countLeadingZeros(User->getConstantOperandVal(1))))
         return false;
       break;
+    case RISCV::ORI: {
+      uint64_t Imm = cast<ConstantSDNode>(User->getOperand(1))->getSExtValue();
+      if (Bits < (64 - countLeadingOnes(Imm)))
+        return false;
+      break;
+    }
     case RISCV::SEXT_B:
       if (Bits < 8)
         return false;

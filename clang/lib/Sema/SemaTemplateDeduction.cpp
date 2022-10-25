@@ -5224,7 +5224,8 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
         continue;
       const TemplateArgument &TA1 = TST1->template_arguments().back();
       if (TA1.getKind() == TemplateArgument::Pack) {
-        assert(TST1->getNumArgs() == TST2->getNumArgs());
+        assert(TST1->template_arguments().size() ==
+               TST2->template_arguments().size());
         const TemplateArgument &TA2 = TST2->template_arguments().back();
         assert(TA2.getKind() == TemplateArgument::Pack);
         unsigned PackSize1 = TA1.pack_size();
@@ -5461,7 +5462,7 @@ static bool isAtLeastAsSpecializedAs(Sema &S, QualType T1, QualType T2,
   if (Inst.isInvalid())
     return false;
 
-  auto *TST1 = T1->castAs<TemplateSpecializationType>();
+  const auto *TST1 = cast<TemplateSpecializationType>(T1);
   bool AtLeastAsSpecialized;
   S.runWithSufficientStackSpace(Info.getLocation(), [&] {
     AtLeastAsSpecialized = !FinishTemplateArgumentDeduction(
@@ -5591,7 +5592,8 @@ getMoreSpecialized(Sema &S, QualType T1, QualType T2, TemplateLikeDecl *P1,
     auto *TST2 = cast<TemplateSpecializationType>(T2);
     const TemplateArgument &TA1 = TST1->template_arguments().back();
     if (TA1.getKind() == TemplateArgument::Pack) {
-      assert(TST1->getNumArgs() == TST2->getNumArgs());
+      assert(TST1->template_arguments().size() ==
+             TST2->template_arguments().size());
       const TemplateArgument &TA2 = TST2->template_arguments().back();
       assert(TA2.getKind() == TemplateArgument::Pack);
       unsigned PackSize1 = TA1.pack_size();
@@ -6074,9 +6076,8 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
         hasPackExpansionBeforeEnd(Spec->template_arguments()))
       break;
 
-    for (unsigned I = 0, N = Spec->getNumArgs(); I != N; ++I)
-      MarkUsedTemplateParameters(Ctx, Spec->getArg(I), OnlyDeduced, Depth,
-                                 Used);
+    for (const auto &Arg : Spec->template_arguments())
+      MarkUsedTemplateParameters(Ctx, Arg, OnlyDeduced, Depth, Used);
     break;
   }
 
@@ -6120,9 +6121,8 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
     MarkUsedTemplateParameters(Ctx, Spec->getQualifier(),
                                OnlyDeduced, Depth, Used);
 
-    for (unsigned I = 0, N = Spec->getNumArgs(); I != N; ++I)
-      MarkUsedTemplateParameters(Ctx, Spec->getArg(I), OnlyDeduced, Depth,
-                                 Used);
+    for (const auto &Arg : Spec->template_arguments())
+      MarkUsedTemplateParameters(Ctx, Arg, OnlyDeduced, Depth, Used);
     break;
   }
 
