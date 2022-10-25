@@ -4935,9 +4935,6 @@ lldb/utils/TableGen/LLDBTableGen.cpp
 lldb/utils/TableGen/LLDBTableGenBackends.h
 lldb/utils/TableGen/LLDBTableGenUtils.cpp
 lldb/utils/TableGen/LLDBTableGenUtils.h
-llvm/bindings/go/llvm/InstrumentationBindings.h
-llvm/bindings/go/llvm/SupportBindings.cpp
-llvm/bindings/go/llvm/SupportBindings.h
 llvm/bindings/ocaml/llvm/llvm_ocaml.h
 llvm/cmake/dummy.cpp
 llvm/cmake/unwind.h
