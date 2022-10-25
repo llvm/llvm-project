@@ -325,6 +325,9 @@ Improvements to Clang's diagnostics
   pointers is improved to include the type of the array and whether it's cast
   to another type. This should improve comprehension for why an index is
   out-of-bounds.
+- Clang now correctly point to the problematic parameter for the ``-Wnonnull``
+  warning.
+  This fixes `Issue 58273 <https://github.com/llvm/llvm-project/issues/58273>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
