@@ -9,14 +9,12 @@ define i64 @test_ctlz_i64_zeropoison(i64 %v) #0 {
 ; CHECK-LABEL: @test_ctlz_i64_zeropoison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0:![0-9]+]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4:[0-9]+]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.ctlz.i64(i64 [[V:%.*]], i1 true)
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[_MSCZ_BS:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    [[_MSCZ_BZP:%.*]] = icmp eq i64 [[V:%.*]], 0
+; CHECK-NEXT:    [[_MSCZ_BS1:%.*]] = or i1 [[_MSCZ_BS]], [[_MSCZ_BZP]]
+; CHECK-NEXT:    [[_MSCZ_OS:%.*]] = sext i1 [[_MSCZ_BS1]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.ctlz.i64(i64 [[V]], i1 true)
+; CHECK-NEXT:    store i64 [[_MSCZ_OS]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %res = call i64 @llvm.ctlz.i64(i64 %v, i1 true) ; <<i64>> [#uses=1]
@@ -26,14 +24,10 @@ define i64 @test_ctlz_i64_nozeropoison(i64 %v) #0 {
 ; CHECK-LABEL: @test_ctlz_i64_nozeropoison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[_MSCZ_BS:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    [[_MSCZ_OS:%.*]] = sext i1 [[_MSCZ_BS]] to i64
 ; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.ctlz.i64(i64 [[V:%.*]], i1 false)
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[_MSCZ_OS]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %res = call i64 @llvm.ctlz.i64(i64 %v, i1 false) ; <<i64>> [#uses=1]
@@ -45,15 +39,12 @@ define <2 x i64> @test_ctlz_v2i64_zeropoison(<2 x i64> %v) #0 {
 ; CHECK-LABEL: @test_ctlz_v2i64_zeropoison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
-; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> [[V:%.*]], i1 true)
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[_MSCZ_BS:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[_MSCZ_BZP:%.*]] = icmp eq <2 x i64> [[V:%.*]], zeroinitializer
+; CHECK-NEXT:    [[_MSCZ_BS1:%.*]] = or <2 x i1> [[_MSCZ_BS]], [[_MSCZ_BZP]]
+; CHECK-NEXT:    [[_MSCZ_OS:%.*]] = sext <2 x i1> [[_MSCZ_BS1]] to <2 x i64>
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> [[V]], i1 true)
+; CHECK-NEXT:    store <2 x i64> [[_MSCZ_OS]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %res = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %v, i1 true) ; <<2 x i64>> [#uses=1]
@@ -63,15 +54,10 @@ define <2 x i64> @test_ctlz_v2i64_nozeropoison(<2 x i64> %v) #0 {
 ; CHECK-LABEL: @test_ctlz_v2i64_nozeropoison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[_MSCZ_BS:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[_MSCZ_OS:%.*]] = sext <2 x i1> [[_MSCZ_BS]] to <2 x i64>
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> [[V:%.*]], i1 false)
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[_MSCZ_OS]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %res = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %v, i1 false) ; <<2 x i64>> [#uses=1]
@@ -83,14 +69,12 @@ define i64 @test_cttz_i64_zeropoison(i64 %v) #0 {
 ; CHECK-LABEL: @test_cttz_i64_zeropoison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.cttz.i64(i64 [[V:%.*]], i1 true)
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[_MSCZ_BS:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    [[_MSCZ_BZP:%.*]] = icmp eq i64 [[V:%.*]], 0
+; CHECK-NEXT:    [[_MSCZ_BS1:%.*]] = or i1 [[_MSCZ_BS]], [[_MSCZ_BZP]]
+; CHECK-NEXT:    [[_MSCZ_OS:%.*]] = sext i1 [[_MSCZ_BS1]] to i64
+; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.cttz.i64(i64 [[V]], i1 true)
+; CHECK-NEXT:    store i64 [[_MSCZ_OS]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %res = call i64 @llvm.cttz.i64(i64 %v, i1 true) ; <<i64>> [#uses=1]
@@ -100,14 +84,10 @@ define i64 @test_cttz_i64_nozeropoison(i64 %v) #0 {
 ; CHECK-LABEL: @test_cttz_i64_nozeropoison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP2:%.*]], label [[TMP3:%.*]], !prof [[PROF0]]
-; CHECK:       2:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       3:
+; CHECK-NEXT:    [[_MSCZ_BS:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    [[_MSCZ_OS:%.*]] = sext i1 [[_MSCZ_BS]] to i64
 ; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.cttz.i64(i64 [[V:%.*]], i1 false)
-; CHECK-NEXT:    store i64 0, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store i64 [[_MSCZ_OS]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret i64 [[RES]]
 ;
   %res = call i64 @llvm.cttz.i64(i64 %v, i1 false) ; <<i64>> [#uses=1]
@@ -119,15 +99,12 @@ define <2 x i64> @test_cttz_v2i64_zeropoison(<2 x i64> %v) #0 {
 ; CHECK-LABEL: @test_cttz_v2i64_zeropoison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
-; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[V:%.*]], i1 true)
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    [[_MSCZ_BS:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[_MSCZ_BZP:%.*]] = icmp eq <2 x i64> [[V:%.*]], zeroinitializer
+; CHECK-NEXT:    [[_MSCZ_BS1:%.*]] = or <2 x i1> [[_MSCZ_BS]], [[_MSCZ_BZP]]
+; CHECK-NEXT:    [[_MSCZ_OS:%.*]] = sext <2 x i1> [[_MSCZ_BS1]] to <2 x i64>
+; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[V]], i1 true)
+; CHECK-NEXT:    store <2 x i64> [[_MSCZ_OS]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %res = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %v, i1 true) ; <<2 x i64>> [#uses=1]
@@ -137,15 +114,10 @@ define <2 x i64> @test_cttz_v2i64_nozeropoison(<2 x i64> %v) #0 {
 ; CHECK-LABEL: @test_cttz_v2i64_nozeropoison(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
-; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i128 [[TMP2]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP3:%.*]], label [[TMP4:%.*]], !prof [[PROF0]]
-; CHECK:       3:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
-; CHECK-NEXT:    unreachable
-; CHECK:       4:
+; CHECK-NEXT:    [[_MSCZ_BS:%.*]] = icmp ne <2 x i64> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[_MSCZ_OS:%.*]] = sext <2 x i1> [[_MSCZ_BS]] to <2 x i64>
 ; CHECK-NEXT:    [[RES:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[V:%.*]], i1 false)
-; CHECK-NEXT:    store <2 x i64> zeroinitializer, ptr @__msan_retval_tls, align 8
+; CHECK-NEXT:    store <2 x i64> [[_MSCZ_OS]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <2 x i64> [[RES]]
 ;
   %res = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %v, i1 false) ; <<2 x i64>> [#uses=1]
