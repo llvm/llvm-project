@@ -1298,6 +1298,12 @@ def Tensor_PadOp : Tensor_Op<"pad", [
       "ArrayRef<OpFoldResult>":$low, "ArrayRef<OpFoldResult>":$high,
       CArg<"bool", "false">:$nofold,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a PadOp with constant padding,  mixed static and dynamic entries
+    // and custom result type. If the type passed is nullptr, it is inferred.
+    OpBuilder<(ins "Type":$resultType, "Value":$source,
+      "ArrayRef<OpFoldResult>":$low, "ArrayRef<OpFoldResult>":$high,
+      "Value":$constantPadValue, CArg<"bool", "false">:$nofold,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
   let hasCanonicalizer = 1;

@@ -2000,9 +2000,8 @@ public:
       highValues.push_back(highVal);
     }
 
-    auto newPadOp = tensor::createPadScalarOp(
-        padOp.getType(), input, padConstant, lowValues, highValues,
-        /*nofold=*/false, loc, rewriter);
+    auto newPadOp = rewriter.create<tensor::PadOp>(
+        loc, padOp.getType(), input, lowValues, highValues, padConstant);
 
     rewriter.replaceOp(padOp, newPadOp.getResult());
     return success();
