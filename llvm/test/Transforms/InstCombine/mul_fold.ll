@@ -16,16 +16,7 @@ declare <2 x i8> @use_v2i8(<2 x i8>)
 ;  4 tests that use in0/in1 with different commutes
 define i8 @mul8_low_A0_B0(i8 %in0, i8 %in1) {
 ; CHECK-LABEL: @mul8_low_A0_B0(
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i8 [[IN0:%.*]], 15
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i8 [[IN0]], 4
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i8 [[IN1:%.*]], 15
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i8 [[IN1]], 4
-; CHECK-NEXT:    [[M10:%.*]] = mul i8 [[IN1HI]], [[IN0]]
-; CHECK-NEXT:    [[M01:%.*]] = mul i8 [[IN0HI]], [[IN1]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i8 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i8 [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[ADDC]], 4
-; CHECK-NEXT:    [[RETLO:%.*]] = add i8 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i8 [[IN0:%.*]], [[IN1:%.*]]
 ; CHECK-NEXT:    ret i8 [[RETLO]]
 ;
   %In0Lo = and i8 %in0, 15
@@ -44,16 +35,7 @@ define i8 @mul8_low_A0_B0(i8 %in0, i8 %in1) {
 define i8 @mul8_low_A0_B1(i8 %p, i8 %in1) {
 ; CHECK-LABEL: @mul8_low_A0_B1(
 ; CHECK-NEXT:    [[IN0:%.*]] = call i8 @use8(i8 [[P:%.*]])
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i8 [[IN0]], 15
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i8 [[IN0]], 4
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i8 [[IN1:%.*]], 15
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i8 [[IN1]], 4
-; CHECK-NEXT:    [[M10:%.*]] = mul i8 [[IN0]], [[IN1HI]]
-; CHECK-NEXT:    [[M01:%.*]] = mul i8 [[IN0HI]], [[IN1]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i8 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i8 [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[ADDC]], 4
-; CHECK-NEXT:    [[RETLO:%.*]] = add i8 [[M00]], [[SHL]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i8 [[IN0]], [[IN1:%.*]]
 ; CHECK-NEXT:    ret i8 [[RETLO]]
 ;
   %in0 = call i8 @use8(i8 %p) ; thwart complexity-based canonicalization
@@ -73,16 +55,7 @@ define i8 @mul8_low_A0_B1(i8 %p, i8 %in1) {
 define i8 @mul8_low_A0_B2(i8 %in0, i8 %p) {
 ; CHECK-LABEL: @mul8_low_A0_B2(
 ; CHECK-NEXT:    [[IN1:%.*]] = call i8 @use8(i8 [[P:%.*]])
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i8 [[IN0:%.*]], 15
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i8 [[IN0]], 4
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i8 [[IN1]], 15
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i8 [[IN1]], 4
-; CHECK-NEXT:    [[M10:%.*]] = mul i8 [[IN1HI]], [[IN0]]
-; CHECK-NEXT:    [[M01:%.*]] = mul i8 [[IN1]], [[IN0HI]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i8 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i8 [[M01]], [[M10]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[ADDC]], 4
-; CHECK-NEXT:    [[RETLO:%.*]] = add i8 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i8 [[IN1]], [[IN0:%.*]]
 ; CHECK-NEXT:    ret i8 [[RETLO]]
 ;
 
@@ -104,16 +77,7 @@ define i8 @mul8_low_A0_B3(i8 %p, i8 %q) {
 ; CHECK-LABEL: @mul8_low_A0_B3(
 ; CHECK-NEXT:    [[IN0:%.*]] = call i8 @use8(i8 [[P:%.*]])
 ; CHECK-NEXT:    [[IN1:%.*]] = call i8 @use8(i8 [[Q:%.*]])
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i8 [[IN0]], 15
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i8 [[IN0]], 4
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i8 [[IN1]], 15
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i8 [[IN1]], 4
-; CHECK-NEXT:    [[M10:%.*]] = mul i8 [[IN0]], [[IN1HI]]
-; CHECK-NEXT:    [[M01:%.*]] = mul i8 [[IN1]], [[IN0HI]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i8 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i8 [[M01]], [[M10]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[ADDC]], 4
-; CHECK-NEXT:    [[RETLO:%.*]] = add i8 [[M00]], [[SHL]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i8 [[IN0]], [[IN1]]
 ; CHECK-NEXT:    ret i8 [[RETLO]]
 ;
   %in0 = call i8 @use8(i8 %p) ; thwart complexity-based canonicalization
@@ -142,10 +106,7 @@ define i16 @mul16_low_A1_B0(i16 %in0, i16 %in1) {
 ; CHECK-NEXT:    call void @use16(i16 [[M10]])
 ; CHECK-NEXT:    [[M01:%.*]] = mul nuw i16 [[IN1LO]], [[IN0HI]]
 ; CHECK-NEXT:    call void @use16(i16 [[M01]])
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i16 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i16 [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[ADDC]], 8
-; CHECK-NEXT:    [[RETLO:%.*]] = add i16 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i16 [[IN0]], [[IN1]]
 ; CHECK-NEXT:    ret i16 [[RETLO]]
 ;
   %In0Lo = and i16 %in0, 255
@@ -173,10 +134,7 @@ define i16 @mul16_low_A1_B1(i16 %in0, i16 %in1) {
 ; CHECK-NEXT:    call void @use16(i16 [[M10]])
 ; CHECK-NEXT:    [[M01:%.*]] = mul nuw i16 [[IN0HI]], [[IN1LO]]
 ; CHECK-NEXT:    call void @use16(i16 [[M01]])
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i16 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i16 [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[ADDC]], 8
-; CHECK-NEXT:    [[RETLO:%.*]] = add i16 [[M00]], [[SHL]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i16 [[IN0]], [[IN1]]
 ; CHECK-NEXT:    ret i16 [[RETLO]]
 ;
   %In0Lo = and i16 %in0, 255
@@ -204,10 +162,7 @@ define i16 @mul16_low_A1_B2(i16 %in0, i16 %in1) {
 ; CHECK-NEXT:    call void @use16(i16 [[M10]])
 ; CHECK-NEXT:    [[M01:%.*]] = mul nuw i16 [[IN1LO]], [[IN0HI]]
 ; CHECK-NEXT:    call void @use16(i16 [[M01]])
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i16 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i16 [[M01]], [[M10]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[ADDC]], 8
-; CHECK-NEXT:    [[RETLO:%.*]] = add i16 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i16 [[IN0]], [[IN1]]
 ; CHECK-NEXT:    ret i16 [[RETLO]]
 ;
   %In0Lo = and i16 %in0, 255
@@ -235,10 +190,7 @@ define i16 @mul16_low_A1_B3(i16 %in0, i16 %in1) {
 ; CHECK-NEXT:    call void @use16(i16 [[M10]])
 ; CHECK-NEXT:    [[M01:%.*]] = mul nuw i16 [[IN1LO]], [[IN0HI]]
 ; CHECK-NEXT:    call void @use16(i16 [[M01]])
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i16 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i16 [[M01]], [[M10]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[ADDC]], 8
-; CHECK-NEXT:    [[RETLO:%.*]] = add i16 [[M00]], [[SHL]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i16 [[IN0]], [[IN1]]
 ; CHECK-NEXT:    ret i16 [[RETLO]]
 ;
   %In0Lo = and i16 %in0, 255
@@ -260,16 +212,10 @@ define i16 @mul16_low_A1_B3(i16 %in0, i16 %in1) {
 define i32 @mul32_low_A2_B0(i32 %in0, i32 %in1) {
 ; CHECK-LABEL: @mul32_low_A2_B0(
 ; CHECK-NEXT:    [[IN0LO:%.*]] = and i32 [[IN0:%.*]], 65535
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i32 [[IN0]], 16
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i32 [[IN1:%.*]], 65535
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i32 [[IN1]], 16
+; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i32 [[IN1:%.*]], 16
 ; CHECK-NEXT:    [[M10:%.*]] = mul nuw i32 [[IN1HI]], [[IN0LO]]
 ; CHECK-NEXT:    call void @use32(i32 [[M10]])
-; CHECK-NEXT:    [[M01:%.*]] = mul i32 [[IN0HI]], [[IN1]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i32 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i32 [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[ADDC]], 16
-; CHECK-NEXT:    [[RETLO:%.*]] = add i32 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i32 [[IN0]], [[IN1]]
 ; CHECK-NEXT:    ret i32 [[RETLO]]
 ;
   %In0Lo = and i32 %in0, 65535
@@ -289,16 +235,10 @@ define i32 @mul32_low_A2_B0(i32 %in0, i32 %in1) {
 define i32 @mul32_low_A2_B1(i32 %in0, i32 %in1) {
 ; CHECK-LABEL: @mul32_low_A2_B1(
 ; CHECK-NEXT:    [[IN0LO:%.*]] = and i32 [[IN0:%.*]], 65535
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i32 [[IN0]], 16
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i32 [[IN1:%.*]], 65535
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i32 [[IN1]], 16
+; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i32 [[IN1:%.*]], 16
 ; CHECK-NEXT:    [[M10:%.*]] = mul nuw i32 [[IN1HI]], [[IN0LO]]
 ; CHECK-NEXT:    call void @use32(i32 [[M10]])
-; CHECK-NEXT:    [[M01:%.*]] = mul i32 [[IN0HI]], [[IN1]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i32 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i32 [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[ADDC]], 16
-; CHECK-NEXT:    [[RETLO:%.*]] = add i32 [[M00]], [[SHL]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i32 [[IN0]], [[IN1]]
 ; CHECK-NEXT:    ret i32 [[RETLO]]
 ;
   %In0Lo = and i32 %in0, 65535
@@ -319,16 +259,10 @@ define i32 @mul32_low_A2_B2(i32 %in0, i32 %p) {
 ; CHECK-LABEL: @mul32_low_A2_B2(
 ; CHECK-NEXT:    [[IN1:%.*]] = call i32 @use32(i32 [[P:%.*]])
 ; CHECK-NEXT:    [[IN0LO:%.*]] = and i32 [[IN0:%.*]], 65535
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i32 [[IN0]], 16
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i32 [[IN1]], 65535
 ; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i32 [[IN1]], 16
 ; CHECK-NEXT:    [[M10:%.*]] = mul nuw i32 [[IN0LO]], [[IN1HI]]
 ; CHECK-NEXT:    call void @use32(i32 [[M10]])
-; CHECK-NEXT:    [[M01:%.*]] = mul i32 [[IN1]], [[IN0HI]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i32 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i32 [[M01]], [[M10]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[ADDC]], 16
-; CHECK-NEXT:    [[RETLO:%.*]] = add i32 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i32 [[IN1]], [[IN0]]
 ; CHECK-NEXT:    ret i32 [[RETLO]]
 ;
   %in1 = call i32 @use32(i32 %p) ; thwart complexity-based canonicalization
@@ -350,16 +284,10 @@ define i32 @mul32_low_A2_B3(i32 %in0, i32 %p) {
 ; CHECK-LABEL: @mul32_low_A2_B3(
 ; CHECK-NEXT:    [[IN1:%.*]] = call i32 @use32(i32 [[P:%.*]])
 ; CHECK-NEXT:    [[IN0LO:%.*]] = and i32 [[IN0:%.*]], 65535
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i32 [[IN0]], 16
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i32 [[IN1]], 65535
 ; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i32 [[IN1]], 16
 ; CHECK-NEXT:    [[M10:%.*]] = mul nuw i32 [[IN1HI]], [[IN0LO]]
 ; CHECK-NEXT:    call void @use32(i32 [[M10]])
-; CHECK-NEXT:    [[M01:%.*]] = mul i32 [[IN1]], [[IN0HI]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i32 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i32 [[M01]], [[M10]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[ADDC]], 16
-; CHECK-NEXT:    [[RETLO:%.*]] = add i32 [[M00]], [[SHL]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i32 [[IN1]], [[IN0]]
 ; CHECK-NEXT:    ret i32 [[RETLO]]
 ;
   %in1 = call i32 @use32(i32 %p) ; thwart complexity-based canonicalization
@@ -380,17 +308,11 @@ define i32 @mul32_low_A2_B3(i32 %in0, i32 %p) {
 ; 4 tests that use in0/In1Lo with different commutes
 define i64 @mul64_low_A3_B0(i64 %in0, i64 %in1) {
 ; CHECK-LABEL: @mul64_low_A3_B0(
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i64 [[IN0:%.*]], 4294967295
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i64 [[IN0]], 32
+; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i64 [[IN0:%.*]], 32
 ; CHECK-NEXT:    [[IN1LO:%.*]] = and i64 [[IN1:%.*]], 4294967295
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i64 [[IN1]], 32
-; CHECK-NEXT:    [[M10:%.*]] = mul i64 [[IN1HI]], [[IN0]]
 ; CHECK-NEXT:    [[M01:%.*]] = mul nuw i64 [[IN0HI]], [[IN1LO]]
 ; CHECK-NEXT:    call void @use64(i64 [[M01]])
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i64 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i64 [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[ADDC]], 32
-; CHECK-NEXT:    [[RETLO:%.*]] = add i64 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i64 [[IN0]], [[IN1]]
 ; CHECK-NEXT:    ret i64 [[RETLO]]
 ;
   %In0Lo = and i64 %in0, 4294967295
@@ -409,17 +331,11 @@ define i64 @mul64_low_A3_B0(i64 %in0, i64 %in1) {
 
 define i64 @mul64_low_A3_B1(i64 %in0, i64 %in1) {
 ; CHECK-LABEL: @mul64_low_A3_B1(
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i64 [[IN0:%.*]], 4294967295
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i64 [[IN0]], 32
+; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i64 [[IN0:%.*]], 32
 ; CHECK-NEXT:    [[IN1LO:%.*]] = and i64 [[IN1:%.*]], 4294967295
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i64 [[IN1]], 32
-; CHECK-NEXT:    [[M10:%.*]] = mul i64 [[IN1HI]], [[IN0]]
 ; CHECK-NEXT:    [[M01:%.*]] = mul nuw i64 [[IN0HI]], [[IN1LO]]
 ; CHECK-NEXT:    call void @use64(i64 [[M01]])
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i64 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i64 [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[ADDC]], 32
-; CHECK-NEXT:    [[RETLO:%.*]] = add i64 [[M00]], [[SHL]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i64 [[IN0]], [[IN1]]
 ; CHECK-NEXT:    ret i64 [[RETLO]]
 ;
   %In0Lo = and i64 %in0, 4294967295
@@ -439,17 +355,11 @@ define i64 @mul64_low_A3_B1(i64 %in0, i64 %in1) {
 define i64 @mul64_low_A3_B2(i64 %p, i64 %in1) {
 ; CHECK-LABEL: @mul64_low_A3_B2(
 ; CHECK-NEXT:    [[IN0:%.*]] = call i64 @use64(i64 [[P:%.*]])
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i64 [[IN0]], 4294967295
 ; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i64 [[IN0]], 32
 ; CHECK-NEXT:    [[IN1LO:%.*]] = and i64 [[IN1:%.*]], 4294967295
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i64 [[IN1]], 32
-; CHECK-NEXT:    [[M10:%.*]] = mul i64 [[IN0]], [[IN1HI]]
 ; CHECK-NEXT:    [[M01:%.*]] = mul nuw i64 [[IN0HI]], [[IN1LO]]
 ; CHECK-NEXT:    call void @use64(i64 [[M01]])
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i64 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i64 [[M01]], [[M10]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[ADDC]], 32
-; CHECK-NEXT:    [[RETLO:%.*]] = add i64 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i64 [[IN0]], [[IN1]]
 ; CHECK-NEXT:    ret i64 [[RETLO]]
 ;
   %in0 = call i64 @use64(i64 %p) ; thwart complexity-based canonicalization
@@ -470,17 +380,11 @@ define i64 @mul64_low_A3_B2(i64 %p, i64 %in1) {
 define i64 @mul64_low_A3_B3(i64 %p, i64 %in1) {
 ; CHECK-LABEL: @mul64_low_A3_B3(
 ; CHECK-NEXT:    [[IN0:%.*]] = call i64 @use64(i64 [[P:%.*]])
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i64 [[IN0]], 4294967295
 ; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i64 [[IN0]], 32
 ; CHECK-NEXT:    [[IN1LO:%.*]] = and i64 [[IN1:%.*]], 4294967295
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i64 [[IN1]], 32
-; CHECK-NEXT:    [[M10:%.*]] = mul i64 [[IN0]], [[IN1HI]]
 ; CHECK-NEXT:    [[M01:%.*]] = mul nuw i64 [[IN1LO]], [[IN0HI]]
 ; CHECK-NEXT:    call void @use64(i64 [[M01]])
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i64 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i64 [[M01]], [[M10]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[ADDC]], 32
-; CHECK-NEXT:    [[RETLO:%.*]] = add i64 [[M00]], [[SHL]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i64 [[IN0]], [[IN1]]
 ; CHECK-NEXT:    ret i64 [[RETLO]]
 ;
   %in0 = call i64 @use64(i64 %p) ; thwart complexity-based canonicalization
@@ -506,11 +410,9 @@ define i32 @mul32_low_one_extra_user(i32 %in0, i32 %in1) {
 ; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i32 [[IN1]], 16
 ; CHECK-NEXT:    [[M10:%.*]] = mul nuw i32 [[IN1HI]], [[IN0LO]]
 ; CHECK-NEXT:    [[M01:%.*]] = mul nuw i32 [[IN1LO]], [[IN0HI]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i32 [[IN1LO]], [[IN0LO]]
 ; CHECK-NEXT:    [[ADDC:%.*]] = add i32 [[M10]], [[M01]]
 ; CHECK-NEXT:    call void @use32(i32 [[ADDC]])
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[ADDC]], 16
-; CHECK-NEXT:    [[RETLO:%.*]] = add i32 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i32 [[IN0]], [[IN1]]
 ; CHECK-NEXT:    ret i32 [[RETLO]]
 ;
   %In0Lo = and i32 %in0, 65535
@@ -531,16 +433,7 @@ define i32 @mul32_low_one_extra_user(i32 %in0, i32 %in1) {
 ; https://alive2.llvm.org/ce/z/2BqKLt
 define i8 @mul8_low(i8 %in0, i8 %in1) {
 ; CHECK-LABEL: @mul8_low(
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i8 [[IN0:%.*]], 15
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i8 [[IN0]], 4
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i8 [[IN1:%.*]], 15
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i8 [[IN1]], 4
-; CHECK-NEXT:    [[M10:%.*]] = mul i8 [[IN1HI]], [[IN0]]
-; CHECK-NEXT:    [[M01:%.*]] = mul i8 [[IN0HI]], [[IN1]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i8 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i8 [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[ADDC]], 4
-; CHECK-NEXT:    [[RETLO:%.*]] = add i8 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i8 [[IN0:%.*]], [[IN1:%.*]]
 ; CHECK-NEXT:    ret i8 [[RETLO]]
 ;
   %In0Lo = and i8 %in0, 15
@@ -558,16 +451,7 @@ define i8 @mul8_low(i8 %in0, i8 %in1) {
 
 define i16 @mul16_low(i16 %in0, i16 %in1) {
 ; CHECK-LABEL: @mul16_low(
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i16 [[IN0:%.*]], 255
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i16 [[IN0]], 8
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i16 [[IN1:%.*]], 255
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i16 [[IN1]], 8
-; CHECK-NEXT:    [[M10:%.*]] = mul i16 [[IN1HI]], [[IN0]]
-; CHECK-NEXT:    [[M01:%.*]] = mul i16 [[IN0HI]], [[IN1]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i16 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i16 [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[ADDC]], 8
-; CHECK-NEXT:    [[RETLO:%.*]] = add i16 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i16 [[IN0:%.*]], [[IN1:%.*]]
 ; CHECK-NEXT:    ret i16 [[RETLO]]
 ;
   %In0Lo = and i16 %in0, 255
@@ -585,16 +469,7 @@ define i16 @mul16_low(i16 %in0, i16 %in1) {
 
 define i32 @mul32_low(i32 %in0, i32 %in1) {
 ; CHECK-LABEL: @mul32_low(
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i32 [[IN0:%.*]], 65535
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i32 [[IN0]], 16
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i32 [[IN1:%.*]], 65535
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i32 [[IN1]], 16
-; CHECK-NEXT:    [[M10:%.*]] = mul i32 [[IN1HI]], [[IN0]]
-; CHECK-NEXT:    [[M01:%.*]] = mul i32 [[IN0HI]], [[IN1]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i32 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i32 [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[ADDC]], 16
-; CHECK-NEXT:    [[RETLO:%.*]] = add i32 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i32 [[IN0:%.*]], [[IN1:%.*]]
 ; CHECK-NEXT:    ret i32 [[RETLO]]
 ;
   %In0Lo = and i32 %in0, 65535
@@ -612,16 +487,7 @@ define i32 @mul32_low(i32 %in0, i32 %in1) {
 
 define i64 @mul64_low(i64 %in0, i64 %in1) {
 ; CHECK-LABEL: @mul64_low(
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i64 [[IN0:%.*]], 4294967295
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i64 [[IN0]], 32
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i64 [[IN1:%.*]], 4294967295
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i64 [[IN1]], 32
-; CHECK-NEXT:    [[M10:%.*]] = mul i64 [[IN1HI]], [[IN0]]
-; CHECK-NEXT:    [[M01:%.*]] = mul i64 [[IN0HI]], [[IN1]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i64 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i64 [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[ADDC]], 32
-; CHECK-NEXT:    [[RETLO:%.*]] = add i64 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i64 [[IN0:%.*]], [[IN1:%.*]]
 ; CHECK-NEXT:    ret i64 [[RETLO]]
 ;
   %In0Lo = and i64 %in0, 4294967295
@@ -639,16 +505,7 @@ define i64 @mul64_low(i64 %in0, i64 %in1) {
 
 define i128 @mul128_low(i128 %in0, i128 %in1) {
 ; CHECK-LABEL: @mul128_low(
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i128 [[IN0:%.*]], 18446744073709551615
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i128 [[IN0]], 64
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i128 [[IN1:%.*]], 18446744073709551615
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i128 [[IN1]], 64
-; CHECK-NEXT:    [[M10:%.*]] = mul i128 [[IN1HI]], [[IN0]]
-; CHECK-NEXT:    [[M01:%.*]] = mul i128 [[IN0HI]], [[IN1]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i128 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i128 [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i128 [[ADDC]], 64
-; CHECK-NEXT:    [[RETLO:%.*]] = add i128 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i128 [[IN0:%.*]], [[IN1:%.*]]
 ; CHECK-NEXT:    ret i128 [[RETLO]]
 ;
   %In0Lo = and i128 %in0, 18446744073709551615
