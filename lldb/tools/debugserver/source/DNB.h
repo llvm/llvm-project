@@ -245,4 +245,6 @@ std::string DNBGetMacCatalystVersionString();
 /// \return true if debugserver is running in translation
 /// (is an x86_64 process on arm64)
 bool DNBDebugserverIsTranslated();
+
+bool DNBGetAddressingBits(uint32_t &addressing_bits);
 #endif
