@@ -245,7 +245,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
     }
 
     auto dict_sp = data_sp->GetAsDictionary();
-    if (!data_sp) {
+    if (!dict_sp) {
       error.SetErrorString("invalid JSON");
       return error;
     }
