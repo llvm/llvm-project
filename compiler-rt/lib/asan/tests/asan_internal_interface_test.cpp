@@ -19,6 +19,27 @@ TEST(AddressSanitizerInternalInterface, SetShadow) {
   __asan_set_shadow_00((uptr)buffer.data(), buffer.size());
   EXPECT_EQ(std::vector<char>(buffer.size(), 0x00), buffer);
 
+  __asan_set_shadow_01((uptr)buffer.data(), buffer.size());
+  EXPECT_EQ(std::vector<char>(buffer.size(), 0x01), buffer);
+
+  __asan_set_shadow_02((uptr)buffer.data(), buffer.size());
+  EXPECT_EQ(std::vector<char>(buffer.size(), 0x02), buffer);
+
+  __asan_set_shadow_03((uptr)buffer.data(), buffer.size());
+  EXPECT_EQ(std::vector<char>(buffer.size(), 0x03), buffer);
+
+  __asan_set_shadow_04((uptr)buffer.data(), buffer.size());
+  EXPECT_EQ(std::vector<char>(buffer.size(), 0x04), buffer);
+
+  __asan_set_shadow_05((uptr)buffer.data(), buffer.size());
+  EXPECT_EQ(std::vector<char>(buffer.size(), 0x05), buffer);
+
+  __asan_set_shadow_06((uptr)buffer.data(), buffer.size());
+  EXPECT_EQ(std::vector<char>(buffer.size(), 0x06), buffer);
+
+  __asan_set_shadow_07((uptr)buffer.data(), buffer.size());
+  EXPECT_EQ(std::vector<char>(buffer.size(), 0x07), buffer);
+
   __asan_set_shadow_f1((uptr)buffer.data(), buffer.size());
   EXPECT_EQ(std::vector<char>(buffer.size(), 0xf1), buffer);
 
