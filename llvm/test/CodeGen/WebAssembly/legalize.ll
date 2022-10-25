@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -mcpu=mvp -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers | FileCheck %s
 
 ; Test various types and operators that need to be legalized.
 
