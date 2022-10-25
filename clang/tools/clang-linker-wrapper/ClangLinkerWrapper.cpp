@@ -42,6 +42,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
@@ -1119,19 +1120,34 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
 /// be registered by the runtime.
 Expected<SmallVector<StringRef>>
 linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
-                       const InputArgList &Args) {
+                       const InputArgList &Args, char **Argv, int Argc) {
   llvm::TimeTraceScope TimeScope("Handle all device input");
 
-  DenseMap<OffloadFile::TargetID, SmallVector<OffloadFile, 4>> InputsForTarget;
+  DenseMap<OffloadFile::TargetID, SmallVector<OffloadFile>> InputMap;
   for (auto &File : LinkerInputFiles)
-    InputsForTarget[File].emplace_back(std::move(File));
+    InputMap[File].emplace_back(std::move(File));
   LinkerInputFiles.clear();
 
-  DenseMap<OffloadKind, SmallVector<OffloadingImage, 2>> Images;
-  for (auto &[ID, Input] : InputsForTarget) {
+  SmallVector<SmallVector<OffloadFile>> InputsForTarget;
+  for (auto &[ID, Input] : InputMap)
+    InputsForTarget.emplace_back(std::move(Input));
+  InputMap.clear();
+
+  std::mutex ImageMtx;
+  DenseMap<OffloadKind, SmallVector<OffloadingImage>> Images;
+  auto Err = parallelForEachError(InputsForTarget, [&](auto &Input) -> Error {
     llvm::TimeTraceScope TimeScope("Link device input");
 
-    auto LinkerArgs = getLinkerArgs(Input, Args);
+    // Each thread needs its own copy of the base arguments to maintain
+    // per-device argument storage of synthetic strings.
+    const OptTable &Tbl = getOptTable();
+    BumpPtrAllocator Alloc;
+    StringSaver Saver(Alloc);
+    auto BaseArgs =
+        Tbl.parseArgs(Argc, Argv, OPT_INVALID, Saver, [](StringRef Err) {
+          reportError(createStringError(inconvertibleErrorCode(), Err));
+        });
+    auto LinkerArgs = getLinkerArgs(Input, BaseArgs);
 
     DenseSet<OffloadKind> ActiveOffloadKinds;
     for (const auto &File : Input)
@@ -1142,7 +1158,7 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
     if (Error Err = linkBitcodeFiles(Input, InputFiles, LinkerArgs))
       return std::move(Err);
 
-    // Write any remaining device inputs to an output file for the linker job.
+    // Write any remaining device inputs to an output file for the linker.
     for (const OffloadFile &File : Input) {
       auto FileNameOrErr = writeOffloadFile(File);
       if (!FileNameOrErr)
@@ -1150,7 +1166,7 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
       InputFiles.emplace_back(*FileNameOrErr);
     }
 
-    // Link the remaining device files, if necessary, using the device linker.
+    // Link the remaining device files using the device linker.
     llvm::Triple Triple(LinkerArgs.getLastArgValue(OPT_triple_EQ));
     bool RequiresLinking =
         !Args.hasArg(OPT_embed_bitcode) &&
@@ -1171,17 +1187,31 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
       TheImage.TheImageKind = IMG_Object;
       TheImage.TheOffloadKind = Kind;
       TheImage.StringData = {
-          {"triple", LinkerArgs.getLastArgValue(OPT_triple_EQ)},
-          {"arch", LinkerArgs.getLastArgValue(OPT_arch_EQ)}};
+          {"triple",
+           Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_triple_EQ))},
+          {"arch",
+           Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_arch_EQ))}};
       TheImage.Image = std::move(*FileOrErr);
+
+      std::lock_guard<decltype(ImageMtx)> Guard(ImageMtx);
       Images[Kind].emplace_back(std::move(TheImage));
     }
-  }
+    return Error::success();
+  });
+  if (Err)
+    return std::move(Err);
 
   // Create a binary image of each offloading image and embed it into a new
   // object file.
   SmallVector<StringRef> WrappedOutput;
-  for (const auto &[Kind, Input] : Images) {
+  for (auto &[Kind, Input] : Images) {
+    // We sort the entries before bundling so they appear in a deterministic
+    // order in the final binary.
+    llvm::sort(Input, [](OffloadingImage &A, OffloadingImage &B) {
+      return A.StringData["triple"].compare(B.StringData["triple"]) == 1 ||
+             A.StringData["arch"].compare(B.StringData["arch"]) == 1 ||
+             A.TheOffloadKind < B.TheOffloadKind;
+    });
     auto BundledImagesOrErr = bundleLinkedOutput(Input, Args, Kind);
     if (!BundledImagesOrErr)
       return BundledImagesOrErr.takeError();
@@ -1362,6 +1392,16 @@ int main(int Argc, char **Argv) {
   if (!CudaBinaryPath.empty())
     CudaBinaryPath = CudaBinaryPath + "/bin";
 
+  parallel::strategy = hardware_concurrency(1);
+  if (auto *Arg = Args.getLastArg(OPT_wrapper_jobs)) {
+    unsigned Threads = 0;
+    if (!llvm::to_integer(Arg->getValue(), Threads) || Threads == 0)
+      reportError(createStringError(
+          inconvertibleErrorCode(), "%s: expected a positive integer, got '%s'",
+          Arg->getSpelling().data(), Arg->getValue()));
+    parallel::strategy = hardware_concurrency(Threads);
+  }
+
   if (Args.hasArg(OPT_wrapper_time_trace_eq)) {
     unsigned Granularity;
     Args.getLastArgValue(OPT_wrapper_time_trace_granularity, "500")
@@ -1378,7 +1418,8 @@ int main(int Argc, char **Argv) {
       reportError(DeviceInputFiles.takeError());
 
     // Link and wrap the device images extracted from the linker input.
-    auto FilesOrErr = linkAndWrapDeviceFiles(*DeviceInputFiles, Args);
+    auto FilesOrErr =
+        linkAndWrapDeviceFiles(*DeviceInputFiles, Args, Argv, Argc);
     if (!FilesOrErr)
       reportError(FilesOrErr.takeError());
 
