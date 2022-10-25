@@ -52,26 +52,22 @@ struct Color {
     {
       "kind": "memberOf",
       "source": "c:@S@Color@FI@Red",
-      "target": "c:@S@Color",
-      "targetFallback": "Color"
+      "target": "c:@S@Color"
     },
     {
       "kind": "memberOf",
       "source": "c:@S@Color@FI@Green",
-      "target": "c:@S@Color",
-      "targetFallback": "Color"
+      "target": "c:@S@Color"
     },
     {
       "kind": "memberOf",
       "source": "c:@S@Color@FI@Blue",
-      "target": "c:@S@Color",
-      "targetFallback": "Color"
+      "target": "c:@S@Color"
     },
     {
       "kind": "memberOf",
       "source": "c:@S@Color@FI@Alpha",
-      "target": "c:@S@Color",
-      "targetFallback": "Color"
+      "target": "c:@S@Color"
     }
   ],
   "symbols": [

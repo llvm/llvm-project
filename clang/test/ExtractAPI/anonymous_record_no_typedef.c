@@ -56,26 +56,22 @@ struct Vehicle {
     {
       "kind": "memberOf",
       "source": "c:@S@Vehicle@E@input.h@64@Bicycle",
-      "target": "c:@S@Vehicle@E@input.h@64",
-      "targetFallback": "Vehicle::enum (unnamed)"
+      "target": "c:@S@Vehicle@E@input.h@64"
     },
     {
       "kind": "memberOf",
       "source": "c:@S@Vehicle@E@input.h@64@Car",
-      "target": "c:@S@Vehicle@E@input.h@64",
-      "targetFallback": "Vehicle::enum (unnamed)"
+      "target": "c:@S@Vehicle@E@input.h@64"
     },
     {
       "kind": "memberOf",
       "source": "c:@S@Vehicle@FI@type",
-      "target": "c:@S@Vehicle",
-      "targetFallback": "Vehicle"
+      "target": "c:@S@Vehicle"
     },
     {
       "kind": "memberOf",
       "source": "c:@S@Vehicle@FI@information",
-      "target": "c:@S@Vehicle",
-      "targetFallback": "Vehicle"
+      "target": "c:@S@Vehicle"
     }
   ],
   "symbols": [

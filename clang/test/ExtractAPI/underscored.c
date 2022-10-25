@@ -65,8 +65,7 @@ typedef _HiddenTypedef ExposedTypedefToHidden;
     {
       "kind": "memberOf",
       "source": "c:@S@ExposedRecord@FI@a",
-      "target": "c:@S@ExposedRecord",
-      "targetFallback": "ExposedRecord"
+      "target": "c:@S@ExposedRecord"
     }
   ],
   "symbols": [
