@@ -97,14 +97,9 @@ struct NewOpInterface
 struct InsertOpInterface
     : public BufferizableOpInterface::ExternalModel<InsertOpInterface,
                                                     sparse_tensor::InsertOp> {
-  bool bufferizesToAllocation(Operation *op, OpResult opResult) const {
-    // Does bufferization handle realloc?
-    return false;
-  }
-
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
-    return false;
+    return true;
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
@@ -125,11 +120,6 @@ struct InsertOpInterface
     // InsertOp returns the same object (realloc should not invalidate
     // aliases).
     return BufferRelation::Equivalent;
-  }
-
-  bool isWritable(Operation *op, Value value,
-                  const AnalysisState &state) const {
-    return true;
   }
 };
 
