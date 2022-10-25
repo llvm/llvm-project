@@ -7,8 +7,7 @@
 define i1 @and(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: and:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and p1.b, p0/z, p1.b, p2.b
-; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    ands p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.and.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
@@ -19,8 +18,7 @@ define i1 @and(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1>
 define i1 @bic(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: bic:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic p1.b, p0/z, p1.b, p2.b
-; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    bics p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.bic.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
@@ -31,8 +29,7 @@ define i1 @bic(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1>
 define i1 @eor(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: eor:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor p1.b, p0/z, p1.b, p2.b
-; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    eors p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.eor.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
@@ -43,8 +40,7 @@ define i1 @eor(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1>
 define i1 @nand(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: nand:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    nand p1.b, p0/z, p1.b, p2.b
-; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    nands p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.nand.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
@@ -55,8 +51,7 @@ define i1 @nand(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1
 define i1 @nor(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: nor:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    nor p1.b, p0/z, p1.b, p2.b
-; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    nors p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.nor.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
@@ -67,8 +62,7 @@ define i1 @nor(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1>
 define i1 @orn(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: orn:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orn p1.b, p0/z, p1.b, p2.b
-; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    orns p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.orn.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
@@ -79,8 +73,7 @@ define i1 @orn(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1>
 define i1 @orr(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: orr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr p1.b, p0/z, p1.b, p2.b
-; CHECK-NEXT:    ptest p0, p1.b
+; CHECK-NEXT:    orrs p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.orr.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
