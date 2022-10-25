@@ -3965,6 +3965,11 @@ Decl *TemplateDeclInstantiator::VisitConceptDecl(ConceptDecl *D) {
   llvm_unreachable("Concept definitions cannot reside inside a template");
 }
 
+Decl *TemplateDeclInstantiator::VisitImplicitConceptSpecializationDecl(
+    ImplicitConceptSpecializationDecl *D) {
+  llvm_unreachable("Concept specializations cannot reside inside a template");
+}
+
 Decl *
 TemplateDeclInstantiator::VisitRequiresExprBodyDecl(RequiresExprBodyDecl *D) {
   return RequiresExprBodyDecl::Create(SemaRef.Context, D->getDeclContext(),
