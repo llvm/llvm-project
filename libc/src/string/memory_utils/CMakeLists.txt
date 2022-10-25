@@ -16,6 +16,8 @@ add_header_library(
   DEPS
     libc.src.__support.common
     libc.src.__support.CPP.bit
+    libc.src.__support.CPP.cstddef
+    libc.src.__support.CPP.type_traits
 )
 
 add_header_library(
