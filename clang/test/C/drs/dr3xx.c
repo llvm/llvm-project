@@ -33,7 +33,7 @@
  * Missing Predefined Macro Name
  *
  * WG14 DR342: dup 340
- * 	VLAs and conditional expressions
+ * VLAs and conditional expressions
  */
 
 
