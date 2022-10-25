@@ -22,6 +22,21 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
+// Translation CommandLine Options
+//===----------------------------------------------------------------------===//
+
+struct TranslationOptions {
+  llvm::cl::opt<bool> noImplicitModule{
+      "no-implicit-module",
+      llvm::cl::desc("Disable the parsing of an implicit top-level module op"),
+      llvm::cl::init(false)};
+};
+
+static llvm::ManagedStatic<TranslationOptions> clOptions;
+
+void mlir::registerTranslationCLOptions() { *clOptions; }
+
+//===----------------------------------------------------------------------===//
 // Translation Registry
 //===----------------------------------------------------------------------===//
 
@@ -103,24 +118,22 @@ TranslateFromMLIRRegistration::TranslateFromMLIRRegistration(
     const TranslateFromMLIRFunction &function,
     const std::function<void(DialectRegistry &)> &dialectRegistration) {
 
-  static llvm::cl::opt<bool> noImplicitModule{
-      "no-implicit-module",
-      llvm::cl::desc("Disable the parsing of an implicit top-level module op"),
-      llvm::cl::init(false)};
-
-  registerTranslation(name, description,
-                      [function, dialectRegistration](
-                          llvm::SourceMgr &sourceMgr, raw_ostream &output,
-                          MLIRContext *context) {
-                        DialectRegistry registry;
-                        dialectRegistration(registry);
-                        context->appendDialectRegistry(registry);
-                        OwningOpRef<Operation *> op = parseSourceFileForTool(
-                            sourceMgr, context, !noImplicitModule);
-                        if (!op || failed(verify(*op)))
-                          return failure();
-                        return function(op.get(), output);
-                      });
+  registerTranslation(
+      name, description,
+      [function, dialectRegistration](llvm::SourceMgr &sourceMgr,
+                                      raw_ostream &output,
+                                      MLIRContext *context) {
+        DialectRegistry registry;
+        dialectRegistration(registry);
+        context->appendDialectRegistry(registry);
+        bool implicitModule =
+            (!clOptions.isConstructed() || !clOptions->noImplicitModule);
+        OwningOpRef<Operation *> op =
+            parseSourceFileForTool(sourceMgr, context, implicitModule);
+        if (!op || failed(verify(*op)))
+          return failure();
+        return function(op.get(), output);
+      });
 }
 
 //===----------------------------------------------------------------------===//
