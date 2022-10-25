@@ -96,6 +96,15 @@ TEST(YAMLIO, TestMapRead) {
     EXPECT_EQ(doc.foo, 3);
     EXPECT_EQ(doc.bar, 5);
   }
+
+  {
+    Input yin("{\"foo\": 3\n, \"bar\": 5}");
+    yin >> doc;
+
+    EXPECT_FALSE(yin.error());
+    EXPECT_EQ(doc.foo, 3);
+    EXPECT_EQ(doc.bar, 5);
+  }
 }
 
 TEST(YAMLIO, TestMalformedMapRead) {
