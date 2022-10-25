@@ -639,19 +639,12 @@ define <8 x float> @shuffle_v8f32_00224466_v4f32(<4 x float> %a, <4 x float> %b)
 }
 
 define <8 x float> @shuffle_v8f32_00004444_v4f32(<4 x float> %a, <4 x float> %b) {
-; AVX1-LABEL: shuffle_v8f32_00004444_v4f32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
-; AVX1-NEXT:    retq
-;
-; AVX2OR512VL-LABEL: shuffle_v8f32_00004444_v4f32:
-; AVX2OR512VL:       # %bb.0:
-; AVX2OR512VL-NEXT:    vbroadcastss %xmm0, %xmm0
-; AVX2OR512VL-NEXT:    vbroadcastss %xmm1, %xmm1
-; AVX2OR512VL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX2OR512VL-NEXT:    retq
+; ALL-LABEL: shuffle_v8f32_00004444_v4f32:
+; ALL:       # %bb.0:
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; ALL-NEXT:    retq
   %1 = shufflevector <4 x float> %a, <4 x float> %b, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i32 4, i32 4>
   ret <8 x float> %1
 }
@@ -3289,19 +3282,12 @@ define <8 x i32> @shuffle_v8i32_32107654_v4i32(<4 x i32> %a, <4 x i32> %b) {
 }
 
 define <8 x i32> @shuffle_v8i32_00004444_v4f32(<4 x i32> %a, <4 x i32> %b) {
-; AVX1-LABEL: shuffle_v8i32_00004444_v4f32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
-; AVX1-NEXT:    retq
-;
-; AVX2OR512VL-LABEL: shuffle_v8i32_00004444_v4f32:
-; AVX2OR512VL:       # %bb.0:
-; AVX2OR512VL-NEXT:    vbroadcastss %xmm0, %xmm0
-; AVX2OR512VL-NEXT:    vbroadcastss %xmm1, %xmm1
-; AVX2OR512VL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX2OR512VL-NEXT:    retq
+; ALL-LABEL: shuffle_v8i32_00004444_v4f32:
+; ALL:       # %bb.0:
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; ALL-NEXT:    retq
   %1 = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i32 4, i32 4>
   ret <8 x i32> %1
 }
