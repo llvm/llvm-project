@@ -101,7 +101,7 @@ v_cndmask_b32_e64 v5, v1, v2, s[100:101]
 
 v_cndmask_b32_e64 v5, v1, v2, vcc
 // W64: encoding: [0x05,0x00,0x01,0xd5,0x01,0x05,0xaa,0x01]
-// W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cndmask_b32_e64 v5, -v1, |v2|, vcc
 // W64: encoding: [0x05,0x02,0x01,0xd5,0x01,0x05,0xaa,0x21]
@@ -229,7 +229,7 @@ v_cndmask_b32_e64 v5, v1, v2, s100
 
 v_cndmask_b32_e64 v5, v1, v2, vcc_lo
 // W32: encoding: [0x05,0x00,0x01,0xd5,0x01,0x05,0xaa,0x01]
-// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+// W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_cndmask_b32_e64 v5, -v1, |v2|, vcc_lo
 // W32: encoding: [0x05,0x02,0x01,0xd5,0x01,0x05,0xaa,0x21]
