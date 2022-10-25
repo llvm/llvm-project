@@ -6302,8 +6302,8 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     for (unsigned I=0; I<InVals.size(); ++I) {
       Register Reg = MF.getRegInfo().createVirtualRegister(
           getRegClassFor(InVals[I].getValueType().getSimpleVT()));
-      SDValue X = DAG.getCopyToReg(Chain, DL, Reg, InVals[I]);
-      InVals[I] = DAG.getCopyFromReg(X, DL, Reg,
+      Chain = DAG.getCopyToReg(Chain, DL, Reg, InVals[I]);
+      InVals[I] = DAG.getCopyFromReg(Chain, DL, Reg,
                                      InVals[I].getValueType());
     }
   }
