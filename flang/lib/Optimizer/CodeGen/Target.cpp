@@ -343,72 +343,23 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
   default:
     break;
   case llvm::Triple::ArchType::x86:
-    switch (trp.getOS()) {
-    default:
-      break;
-    case llvm::Triple::OSType::Linux:
-    case llvm::Triple::OSType::Darwin:
-    case llvm::Triple::OSType::MacOSX:
-    case llvm::Triple::OSType::Solaris:
-    case llvm::Triple::OSType::Win32:
-      return std::make_unique<TargetI386>(ctx, std::move(trp),
-                                          std::move(kindMap));
-    }
-    break;
+    return std::make_unique<TargetI386>(ctx, std::move(trp),
+                                        std::move(kindMap));
   case llvm::Triple::ArchType::x86_64:
-    switch (trp.getOS()) {
-    default:
-      break;
-    case llvm::Triple::OSType::Linux:
-    case llvm::Triple::OSType::Darwin:
-    case llvm::Triple::OSType::MacOSX:
-    case llvm::Triple::OSType::Solaris:
-    case llvm::Triple::OSType::Win32:
-      return std::make_unique<TargetX86_64>(ctx, std::move(trp),
-                                            std::move(kindMap));
-    }
-    break;
+    return std::make_unique<TargetX86_64>(ctx, std::move(trp),
+                                          std::move(kindMap));
   case llvm::Triple::ArchType::aarch64:
-    switch (trp.getOS()) {
-    default:
-      break;
-    case llvm::Triple::OSType::Linux:
-    case llvm::Triple::OSType::Darwin:
-    case llvm::Triple::OSType::MacOSX:
-    case llvm::Triple::OSType::Win32:
-      return std::make_unique<TargetAArch64>(ctx, std::move(trp),
-                                             std::move(kindMap));
-    }
-    break;
-  case llvm::Triple::ArchType::ppc64le:
-    switch (trp.getOS()) {
-    default:
-      break;
-    case llvm::Triple::OSType::Linux:
-      return std::make_unique<TargetPPC64le>(ctx, std::move(trp),
-                                             std::move(kindMap));
-    }
-    break;
-  case llvm::Triple::ArchType::sparc:
-    switch (trp.getOS()) {
-    default:
-      break;
-    case llvm::Triple::OSType::Linux:
-    case llvm::Triple::OSType::Solaris:
-      return std::make_unique<TargetSparc>(ctx, std::move(trp),
+    return std::make_unique<TargetAArch64>(ctx, std::move(trp),
                                            std::move(kindMap));
-    }
-    break;
+  case llvm::Triple::ArchType::ppc64le:
+    return std::make_unique<TargetPPC64le>(ctx, std::move(trp),
+                                           std::move(kindMap));
+  case llvm::Triple::ArchType::sparc:
+    return std::make_unique<TargetSparc>(ctx, std::move(trp),
+                                         std::move(kindMap));
   case llvm::Triple::ArchType::sparcv9:
-    switch (trp.getOS()) {
-    default:
-      break;
-    case llvm::Triple::OSType::Linux:
-    case llvm::Triple::OSType::Solaris:
-      return std::make_unique<TargetSparcV9>(ctx, std::move(trp),
-                                             std::move(kindMap));
-    }
-    break;
+    return std::make_unique<TargetSparcV9>(ctx, std::move(trp),
+                                           std::move(kindMap));
   }
   TODO(mlir::UnknownLoc::get(ctx), "target not implemented");
 }

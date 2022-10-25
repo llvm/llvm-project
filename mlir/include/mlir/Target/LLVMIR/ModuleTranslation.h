@@ -42,6 +42,7 @@ namespace detail {
 class DebugTranslation;
 } // namespace detail
 
+class DINodeAttr;
 class LLVMFuncOp;
 
 /// Implementation class for module translation. Holds a reference to the module
@@ -174,6 +175,9 @@ public:
 
   /// Translates the given location.
   const llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
+
+  /// Translates the given LLVM debug info metadata.
+  llvm::Metadata *translateDebugInfo(LLVM::DINodeAttr attr);
 
   /// Translates the contents of the given block to LLVM IR using this
   /// translator. The LLVM IR basic block corresponding to the given block is
