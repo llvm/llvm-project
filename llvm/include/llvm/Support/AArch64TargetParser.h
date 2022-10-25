@@ -139,6 +139,13 @@ StringRef getArchExtName(unsigned ArchExtKind);
 StringRef getArchExtFeature(StringRef ArchExt);
 ArchKind convertV9toV8(ArchKind AK);
 
+// FIXME: We should be able to define CPU aliases in TargetParser.
+inline StringRef resolveCPUAlias(StringRef CPU) {
+  if (CPU == "grace")
+    return "neoverse-v2";
+  return CPU;
+}
+
 // Information by Name
 unsigned getDefaultFPU(StringRef CPU, ArchKind AK);
 uint64_t getDefaultExtensions(StringRef CPU, ArchKind AK);
