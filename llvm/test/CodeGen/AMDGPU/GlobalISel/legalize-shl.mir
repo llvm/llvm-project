@@ -1153,23 +1153,17 @@ body: |
     ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; SI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
-    ; SI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[UV]](s64), [[UV1]](s64)
-    ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
+    ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[COPY]](s128)
     ; VI-LABEL: name: test_shl_s128_s32_0
     ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; VI-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
-    ; VI-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[UV]](s64), [[UV1]](s64)
-    ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
+    ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[COPY]](s128)
     ; GFX9-LABEL: name: test_shl_s128_s32_0
     ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
-    ; GFX9-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[UV]](s64), [[UV1]](s64)
-    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
+    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[COPY]](s128)
     %0:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     %1:_(s32) = G_CONSTANT i32 0
     %3:_(s128) = G_SHL %0, %1

@@ -792,16 +792,13 @@ body: |
     ; CHECK-NEXT: [[SHL10:%[0-9]+]]:_(s32) = G_SHL [[AND20]], [[C2]](s32)
     ; CHECK-NEXT: [[OR11:%[0-9]+]]:_(s32) = G_OR [[AND19]], [[SHL10]]
     ; CHECK-NEXT: [[MV5:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR10]](s32), [[OR11]](s32)
-    ; CHECK-NEXT: [[SHL11:%[0-9]+]]:_(s32) = G_SHL [[AND19]], [[C2]](s32)
-    ; CHECK-NEXT: [[OR12:%[0-9]+]]:_(s32) = G_OR [[AND18]], [[SHL11]]
-    ; CHECK-NEXT: [[OR13:%[0-9]+]]:_(s32) = G_OR [[AND20]], [[SHL9]]
-    ; CHECK-NEXT: [[MV6:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR12]](s32), [[OR13]](s32)
+    ; CHECK-NEXT: [[OR12:%[0-9]+]]:_(s32) = G_OR [[AND20]], [[SHL9]]
+    ; CHECK-NEXT: [[MV6:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV8]](s32), [[OR12]](s32)
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s32) = COPY [[OR11]](s32)
-    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s32) = COPY [[OR12]](s32)
-    ; CHECK-NEXT: [[MV7:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
-    ; CHECK-NEXT: [[OR14:%[0-9]+]]:_(s32) = G_OR [[AND20]], [[SHL3]]
-    ; CHECK-NEXT: [[OR15:%[0-9]+]]:_(s32) = G_OR [[COPY1]], [[SHL3]]
-    ; CHECK-NEXT: [[MV8:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR14]](s32), [[OR15]](s32)
+    ; CHECK-NEXT: [[MV7:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY4]](s32), [[UV8]](s32)
+    ; CHECK-NEXT: [[OR13:%[0-9]+]]:_(s32) = G_OR [[AND20]], [[SHL3]]
+    ; CHECK-NEXT: [[OR14:%[0-9]+]]:_(s32) = G_OR [[COPY1]], [[SHL3]]
+    ; CHECK-NEXT: [[MV8:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR13]](s32), [[OR14]](s32)
     ; CHECK-NEXT: [[MV9:%[0-9]+]]:_(s384) = G_MERGE_VALUES [[MV3]](s64), [[MV4]](s64), [[MV5]](s64), [[MV6]](s64), [[MV7]](s64), [[MV8]](s64)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s112) = G_TRUNC [[MV9]](s384)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[TRUNC]](s112)
