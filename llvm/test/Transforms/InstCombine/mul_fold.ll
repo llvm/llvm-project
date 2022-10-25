@@ -41,13 +41,14 @@ define i8 @mul8_low_A0_B0(i8 %in0, i8 %in1) {
   ret i8 %retLo
 }
 
-define i8 @mul8_low_A0_B1(i8 %in0, i8 %in1) {
+define i8 @mul8_low_A0_B1(i8 %p, i8 %in1) {
 ; CHECK-LABEL: @mul8_low_A0_B1(
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i8 [[IN0:%.*]], 15
+; CHECK-NEXT:    [[IN0:%.*]] = call i8 @use8(i8 [[P:%.*]])
+; CHECK-NEXT:    [[IN0LO:%.*]] = and i8 [[IN0]], 15
 ; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i8 [[IN0]], 4
 ; CHECK-NEXT:    [[IN1LO:%.*]] = and i8 [[IN1:%.*]], 15
 ; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i8 [[IN1]], 4
-; CHECK-NEXT:    [[M10:%.*]] = mul i8 [[IN1HI]], [[IN0]]
+; CHECK-NEXT:    [[M10:%.*]] = mul i8 [[IN0]], [[IN1HI]]
 ; CHECK-NEXT:    [[M01:%.*]] = mul i8 [[IN0HI]], [[IN1]]
 ; CHECK-NEXT:    [[M00:%.*]] = mul nuw i8 [[IN1LO]], [[IN0LO]]
 ; CHECK-NEXT:    [[ADDC:%.*]] = add i8 [[M10]], [[M01]]
@@ -55,11 +56,12 @@ define i8 @mul8_low_A0_B1(i8 %in0, i8 %in1) {
 ; CHECK-NEXT:    [[RETLO:%.*]] = add i8 [[M00]], [[SHL]]
 ; CHECK-NEXT:    ret i8 [[RETLO]]
 ;
+  %in0 = call i8 @use8(i8 %p) ; thwart complexity-based canonicalization
   %In0Lo = and i8 %in0, 15
   %In0Hi = lshr i8 %in0, 4
   %In1Lo = and i8 %in1, 15
   %In1Hi = lshr i8 %in1, 4
-  %m10 = mul i8 %In1Hi, %in0
+  %m10 = mul i8 %in0, %In1Hi
   %m01 = mul i8 %In0Hi, %in1
   %m00 = mul i8 %In1Lo, %In0Lo
   %addc = add i8 %m10, %m01
@@ -68,26 +70,29 @@ define i8 @mul8_low_A0_B1(i8 %in0, i8 %in1) {
   ret i8 %retLo
 }
 
-define i8 @mul8_low_A0_B2(i8 %in0, i8 %in1) {
+define i8 @mul8_low_A0_B2(i8 %in0, i8 %p) {
 ; CHECK-LABEL: @mul8_low_A0_B2(
+; CHECK-NEXT:    [[IN1:%.*]] = call i8 @use8(i8 [[P:%.*]])
 ; CHECK-NEXT:    [[IN0LO:%.*]] = and i8 [[IN0:%.*]], 15
 ; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i8 [[IN0]], 4
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i8 [[IN1:%.*]], 15
+; CHECK-NEXT:    [[IN1LO:%.*]] = and i8 [[IN1]], 15
 ; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i8 [[IN1]], 4
 ; CHECK-NEXT:    [[M10:%.*]] = mul i8 [[IN1HI]], [[IN0]]
-; CHECK-NEXT:    [[M01:%.*]] = mul i8 [[IN0HI]], [[IN1]]
+; CHECK-NEXT:    [[M01:%.*]] = mul i8 [[IN1]], [[IN0HI]]
 ; CHECK-NEXT:    [[M00:%.*]] = mul nuw i8 [[IN1LO]], [[IN0LO]]
 ; CHECK-NEXT:    [[ADDC:%.*]] = add i8 [[M01]], [[M10]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[ADDC]], 4
 ; CHECK-NEXT:    [[RETLO:%.*]] = add i8 [[SHL]], [[M00]]
 ; CHECK-NEXT:    ret i8 [[RETLO]]
 ;
+
+  %in1 = call i8 @use8(i8 %p) ; thwart complexity-based canonicalization
   %In0Lo = and i8 %in0, 15
   %In0Hi = lshr i8 %in0, 4
   %In1Lo = and i8 %in1, 15
   %In1Hi = lshr i8 %in1, 4
   %m10 = mul i8 %In1Hi, %in0
-  %m01 = mul i8 %In0Hi, %in1
+  %m01 = mul i8 %in1, %In0Hi
   %m00 = mul i8 %In1Lo, %In0Lo
   %addc = add i8 %m01, %m10
   %shl = shl i8 %addc, 4
@@ -95,26 +100,30 @@ define i8 @mul8_low_A0_B2(i8 %in0, i8 %in1) {
   ret i8 %retLo
 }
 
-define i8 @mul8_low_A0_B3(i8 %in0, i8 %in1) {
+define i8 @mul8_low_A0_B3(i8 %p, i8 %q) {
 ; CHECK-LABEL: @mul8_low_A0_B3(
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i8 [[IN0:%.*]], 15
+; CHECK-NEXT:    [[IN0:%.*]] = call i8 @use8(i8 [[P:%.*]])
+; CHECK-NEXT:    [[IN1:%.*]] = call i8 @use8(i8 [[Q:%.*]])
+; CHECK-NEXT:    [[IN0LO:%.*]] = and i8 [[IN0]], 15
 ; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i8 [[IN0]], 4
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i8 [[IN1:%.*]], 15
+; CHECK-NEXT:    [[IN1LO:%.*]] = and i8 [[IN1]], 15
 ; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i8 [[IN1]], 4
-; CHECK-NEXT:    [[M10:%.*]] = mul i8 [[IN1HI]], [[IN0]]
-; CHECK-NEXT:    [[M01:%.*]] = mul i8 [[IN0HI]], [[IN1]]
+; CHECK-NEXT:    [[M10:%.*]] = mul i8 [[IN0]], [[IN1HI]]
+; CHECK-NEXT:    [[M01:%.*]] = mul i8 [[IN1]], [[IN0HI]]
 ; CHECK-NEXT:    [[M00:%.*]] = mul nuw i8 [[IN1LO]], [[IN0LO]]
 ; CHECK-NEXT:    [[ADDC:%.*]] = add i8 [[M01]], [[M10]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[ADDC]], 4
 ; CHECK-NEXT:    [[RETLO:%.*]] = add i8 [[M00]], [[SHL]]
 ; CHECK-NEXT:    ret i8 [[RETLO]]
 ;
+  %in0 = call i8 @use8(i8 %p) ; thwart complexity-based canonicalization
+  %in1 = call i8 @use8(i8 %q) ; thwart complexity-based canonicalization
   %In0Lo = and i8 %in0, 15
   %In0Hi = lshr i8 %in0, 4
   %In1Lo = and i8 %in1, 15
   %In1Hi = lshr i8 %in1, 4
-  %m10 = mul i8 %In1Hi, %in0
-  %m01 = mul i8 %In0Hi, %in1
+  %m10 = mul i8 %in0, %In1Hi
+  %m01 = mul i8 %in1, %In0Hi
   %m00 = mul i8 %In1Lo, %In0Lo
   %addc = add i8 %m01, %m10
   %shl = shl i8 %addc, 4
@@ -162,7 +171,7 @@ define i16 @mul16_low_A1_B1(i16 %in0, i16 %in1) {
 ; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i16 [[IN1]], 8
 ; CHECK-NEXT:    [[M10:%.*]] = mul nuw i16 [[IN0LO]], [[IN1HI]]
 ; CHECK-NEXT:    call void @use16(i16 [[M10]])
-; CHECK-NEXT:    [[M01:%.*]] = mul nuw i16 [[IN1LO]], [[IN0HI]]
+; CHECK-NEXT:    [[M01:%.*]] = mul nuw i16 [[IN0HI]], [[IN1LO]]
 ; CHECK-NEXT:    call void @use16(i16 [[M01]])
 ; CHECK-NEXT:    [[M00:%.*]] = mul nuw i16 [[IN1LO]], [[IN0LO]]
 ; CHECK-NEXT:    [[ADDC:%.*]] = add i16 [[M10]], [[M01]]
@@ -176,7 +185,7 @@ define i16 @mul16_low_A1_B1(i16 %in0, i16 %in1) {
   %In1Hi = lshr i16 %in1, 8
   %m10 = mul i16 %In0Lo, %In1Hi
   call void @use16(i16 %m10)
-  %m01 = mul i16 %In1Lo, %In0Hi
+  %m01 = mul i16 %In0Hi, %In1Lo
   call void @use16(i16 %m01)
   %m00 = mul i16 %In1Lo, %In0Lo
   %addc = add i16 %m10, %m01
@@ -191,7 +200,7 @@ define i16 @mul16_low_A1_B2(i16 %in0, i16 %in1) {
 ; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i16 [[IN0]], 8
 ; CHECK-NEXT:    [[IN1LO:%.*]] = and i16 [[IN1:%.*]], 255
 ; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i16 [[IN1]], 8
-; CHECK-NEXT:    [[M10:%.*]] = mul nuw i16 [[IN0LO]], [[IN1HI]]
+; CHECK-NEXT:    [[M10:%.*]] = mul nuw i16 [[IN1HI]], [[IN0LO]]
 ; CHECK-NEXT:    call void @use16(i16 [[M10]])
 ; CHECK-NEXT:    [[M01:%.*]] = mul nuw i16 [[IN1LO]], [[IN0HI]]
 ; CHECK-NEXT:    call void @use16(i16 [[M01]])
@@ -205,7 +214,7 @@ define i16 @mul16_low_A1_B2(i16 %in0, i16 %in1) {
   %In0Hi = lshr i16 %in0, 8
   %In1Lo = and i16 %in1, 255
   %In1Hi = lshr i16 %in1, 8
-  %m10 = mul i16 %In0Lo, %In1Hi
+  %m10 = mul i16 %In1Hi, %In0Lo
   call void @use16(i16 %m10)
   %m01 = mul i16 %In1Lo, %In0Hi
   call void @use16(i16 %m01)
@@ -306,28 +315,30 @@ define i32 @mul32_low_A2_B1(i32 %in0, i32 %in1) {
   ret i32 %retLo
 }
 
-define i32 @mul32_low_A2_B2(i32 %in0, i32 %in1) {
+define i32 @mul32_low_A2_B2(i32 %in0, i32 %p) {
 ; CHECK-LABEL: @mul32_low_A2_B2(
+; CHECK-NEXT:    [[IN1:%.*]] = call i32 @use32(i32 [[P:%.*]])
 ; CHECK-NEXT:    [[IN0LO:%.*]] = and i32 [[IN0:%.*]], 65535
 ; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i32 [[IN0]], 16
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i32 [[IN1:%.*]], 65535
+; CHECK-NEXT:    [[IN1LO:%.*]] = and i32 [[IN1]], 65535
 ; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i32 [[IN1]], 16
-; CHECK-NEXT:    [[M10:%.*]] = mul nuw i32 [[IN1HI]], [[IN0LO]]
+; CHECK-NEXT:    [[M10:%.*]] = mul nuw i32 [[IN0LO]], [[IN1HI]]
 ; CHECK-NEXT:    call void @use32(i32 [[M10]])
-; CHECK-NEXT:    [[M01:%.*]] = mul i32 [[IN0HI]], [[IN1]]
+; CHECK-NEXT:    [[M01:%.*]] = mul i32 [[IN1]], [[IN0HI]]
 ; CHECK-NEXT:    [[M00:%.*]] = mul nuw i32 [[IN1LO]], [[IN0LO]]
 ; CHECK-NEXT:    [[ADDC:%.*]] = add i32 [[M01]], [[M10]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[ADDC]], 16
 ; CHECK-NEXT:    [[RETLO:%.*]] = add i32 [[SHL]], [[M00]]
 ; CHECK-NEXT:    ret i32 [[RETLO]]
 ;
+  %in1 = call i32 @use32(i32 %p) ; thwart complexity-based canonicalization
   %In0Lo = and i32 %in0, 65535
   %In0Hi = lshr i32 %in0, 16
   %In1Lo = and i32 %in1, 65535
   %In1Hi = lshr i32 %in1, 16
-  %m10 = mul i32 %In1Hi, %In0Lo
+  %m10 = mul i32 %In0Lo, %In1Hi
   call void @use32(i32 %m10)
-  %m01 = mul i32 %In0Hi, %in1
+  %m01 = mul i32 %in1, %In0Hi
   %m00 = mul i32 %In1Lo, %In0Lo
   %addc = add i32 %m01, %m10
   %shl = shl i32 %addc, 16
@@ -335,28 +346,30 @@ define i32 @mul32_low_A2_B2(i32 %in0, i32 %in1) {
   ret i32 %retLo
 }
 
-define i32 @mul32_low_A2_B3(i32 %in0, i32 %in1) {
+define i32 @mul32_low_A2_B3(i32 %in0, i32 %p) {
 ; CHECK-LABEL: @mul32_low_A2_B3(
+; CHECK-NEXT:    [[IN1:%.*]] = call i32 @use32(i32 [[P:%.*]])
 ; CHECK-NEXT:    [[IN0LO:%.*]] = and i32 [[IN0:%.*]], 65535
 ; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i32 [[IN0]], 16
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i32 [[IN1:%.*]], 65535
+; CHECK-NEXT:    [[IN1LO:%.*]] = and i32 [[IN1]], 65535
 ; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i32 [[IN1]], 16
 ; CHECK-NEXT:    [[M10:%.*]] = mul nuw i32 [[IN1HI]], [[IN0LO]]
 ; CHECK-NEXT:    call void @use32(i32 [[M10]])
-; CHECK-NEXT:    [[M01:%.*]] = mul i32 [[IN0HI]], [[IN1]]
+; CHECK-NEXT:    [[M01:%.*]] = mul i32 [[IN1]], [[IN0HI]]
 ; CHECK-NEXT:    [[M00:%.*]] = mul nuw i32 [[IN1LO]], [[IN0LO]]
 ; CHECK-NEXT:    [[ADDC:%.*]] = add i32 [[M01]], [[M10]]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[ADDC]], 16
 ; CHECK-NEXT:    [[RETLO:%.*]] = add i32 [[M00]], [[SHL]]
 ; CHECK-NEXT:    ret i32 [[RETLO]]
 ;
+  %in1 = call i32 @use32(i32 %p) ; thwart complexity-based canonicalization
   %In0Lo = and i32 %in0, 65535
   %In0Hi = lshr i32 %in0, 16
   %In1Lo = and i32 %in1, 65535
   %In1Hi = lshr i32 %in1, 16
   %m10 = mul i32 %In1Hi, %In0Lo
   call void @use32(i32 %m10)
-  %m01 = mul i32 %In0Hi, %in1
+  %m01 = mul i32 %in1, %In0Hi
   %m00 = mul i32 %In1Lo, %In0Lo
   %addc = add i32 %m01, %m10
   %shl = shl i32 %addc, 16
@@ -423,13 +436,14 @@ define i64 @mul64_low_A3_B1(i64 %in0, i64 %in1) {
   ret i64 %retLo
 }
 
-define i64 @mul64_low_A3_B2(i64 %in0, i64 %in1) {
+define i64 @mul64_low_A3_B2(i64 %p, i64 %in1) {
 ; CHECK-LABEL: @mul64_low_A3_B2(
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i64 [[IN0:%.*]], 4294967295
+; CHECK-NEXT:    [[IN0:%.*]] = call i64 @use64(i64 [[P:%.*]])
+; CHECK-NEXT:    [[IN0LO:%.*]] = and i64 [[IN0]], 4294967295
 ; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i64 [[IN0]], 32
 ; CHECK-NEXT:    [[IN1LO:%.*]] = and i64 [[IN1:%.*]], 4294967295
 ; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i64 [[IN1]], 32
-; CHECK-NEXT:    [[M10:%.*]] = mul i64 [[IN1HI]], [[IN0]]
+; CHECK-NEXT:    [[M10:%.*]] = mul i64 [[IN0]], [[IN1HI]]
 ; CHECK-NEXT:    [[M01:%.*]] = mul nuw i64 [[IN0HI]], [[IN1LO]]
 ; CHECK-NEXT:    call void @use64(i64 [[M01]])
 ; CHECK-NEXT:    [[M00:%.*]] = mul nuw i64 [[IN1LO]], [[IN0LO]]
@@ -438,11 +452,12 @@ define i64 @mul64_low_A3_B2(i64 %in0, i64 %in1) {
 ; CHECK-NEXT:    [[RETLO:%.*]] = add i64 [[SHL]], [[M00]]
 ; CHECK-NEXT:    ret i64 [[RETLO]]
 ;
+  %in0 = call i64 @use64(i64 %p) ; thwart complexity-based canonicalization
   %In0Lo = and i64 %in0, 4294967295
   %In0Hi = lshr i64 %in0, 32
   %In1Lo = and i64 %in1, 4294967295
   %In1Hi = lshr i64 %in1, 32
-  %m10 = mul i64 %In1Hi, %in0
+  %m10 = mul i64 %in0, %In1Hi
   %m01 = mul i64 %In0Hi, %In1Lo
   call void @use64(i64 %m01)
   %m00 = mul i64 %In1Lo, %In0Lo
@@ -452,14 +467,15 @@ define i64 @mul64_low_A3_B2(i64 %in0, i64 %in1) {
   ret i64 %retLo
 }
 
-define i64 @mul64_low_A3_B3(i64 %in0, i64 %in1) {
+define i64 @mul64_low_A3_B3(i64 %p, i64 %in1) {
 ; CHECK-LABEL: @mul64_low_A3_B3(
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i64 [[IN0:%.*]], 4294967295
+; CHECK-NEXT:    [[IN0:%.*]] = call i64 @use64(i64 [[P:%.*]])
+; CHECK-NEXT:    [[IN0LO:%.*]] = and i64 [[IN0]], 4294967295
 ; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i64 [[IN0]], 32
 ; CHECK-NEXT:    [[IN1LO:%.*]] = and i64 [[IN1:%.*]], 4294967295
 ; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i64 [[IN1]], 32
-; CHECK-NEXT:    [[M10:%.*]] = mul i64 [[IN1HI]], [[IN0]]
-; CHECK-NEXT:    [[M01:%.*]] = mul nuw i64 [[IN0HI]], [[IN1LO]]
+; CHECK-NEXT:    [[M10:%.*]] = mul i64 [[IN0]], [[IN1HI]]
+; CHECK-NEXT:    [[M01:%.*]] = mul nuw i64 [[IN1LO]], [[IN0HI]]
 ; CHECK-NEXT:    call void @use64(i64 [[M01]])
 ; CHECK-NEXT:    [[M00:%.*]] = mul nuw i64 [[IN1LO]], [[IN0LO]]
 ; CHECK-NEXT:    [[ADDC:%.*]] = add i64 [[M01]], [[M10]]
@@ -467,12 +483,13 @@ define i64 @mul64_low_A3_B3(i64 %in0, i64 %in1) {
 ; CHECK-NEXT:    [[RETLO:%.*]] = add i64 [[M00]], [[SHL]]
 ; CHECK-NEXT:    ret i64 [[RETLO]]
 ;
+  %in0 = call i64 @use64(i64 %p) ; thwart complexity-based canonicalization
   %In0Lo = and i64 %in0, 4294967295
   %In0Hi = lshr i64 %in0, 32
   %In1Lo = and i64 %in1, 4294967295
   %In1Hi = lshr i64 %in1, 32
-  %m10 = mul i64 %In1Hi, %in0
-  %m01 = mul i64 %In0Hi, %In1Lo
+  %m10 = mul i64 %in0, %In1Hi
+  %m01 = mul i64 %In1Lo, %In0Hi
   call void @use64(i64 %m01)
   %m00 = mul i64 %In1Lo, %In0Lo
   %addc = add i64 %m01, %m10
