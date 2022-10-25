@@ -147,7 +147,12 @@ list(INSERT CMAKE_MODULE_PATH 0
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
-if(LLVM_ENABLE_LIBXML2)
+# This allows disabling clang's XML dependency even if LLVM finds libxml2.
+# By default, clang depends on libxml2 if LLVM does.
+option(CLANG_ENABLE_LIBXML2 "Whether libclang may depend on libxml2"
+       ${LLVM_ENABLE_LIBXML2})
+
+if(CLANG_ENABLE_LIBXML2)
   # Don't look for libxml if we're using MSan, since uninstrumented third party
   # code may call MSan interceptors like strlen, leading to false positives.
   if(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
