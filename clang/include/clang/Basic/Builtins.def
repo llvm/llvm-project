@@ -1650,12 +1650,12 @@ LANGBUILTIN(__builtin_coro_suspend, "cIb", "n", COR_LANG)
 // Pointer authentication builtins.
 BUILTIN(__builtin_ptrauth_strip, "v*v*i", "tnc")
 BUILTIN(__builtin_ptrauth_blend_discriminator, "zv*i", "tnc")
-BUILTIN(__builtin_ptrauth_sign_constant, "v*v*iv*", "tnc")
+BUILTIN(__builtin_ptrauth_sign_constant, "v*v*iv*", "tncE")
 BUILTIN(__builtin_ptrauth_sign_unauthenticated, "v*v*iv*", "tnc")
 BUILTIN(__builtin_ptrauth_sign_generic_data, "zv*v*", "tnc")
 BUILTIN(__builtin_ptrauth_auth_and_resign, "v*v*iv*iv*", "tn")
 BUILTIN(__builtin_ptrauth_auth, "v*v*iv*", "tn")
-BUILTIN(__builtin_ptrauth_string_discriminator, "zcC*", "nc")
+BUILTIN(__builtin_ptrauth_string_discriminator, "zcC*", "ncE")
 
 // OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.
 // We need the generic prototype, since the packet type could be anything.

@@ -1974,20 +1974,8 @@ static bool IsNoOpCall(const CallExpr *E) {
   unsigned Builtin = E->getBuiltinCallee();
   return (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
           Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
+          Builtin == Builtin::BI__builtin_ptrauth_sign_constant ||
           Builtin == Builtin::BI__builtin_function_start);
-}
-
-static bool isGlobalCallLValue(const CallExpr *E) {
-  if (IsNoOpCall(E))
-    return true;
-
-  switch (E->getBuiltinCallee()) {
-  case Builtin::BI__builtin_ptrauth_sign_constant:
-    return true;
-
-  default:
-    return false;
-  }
 }
 
 static bool IsGlobalLValue(APValue::LValueBase B) {
@@ -2034,7 +2022,7 @@ static bool IsGlobalLValue(APValue::LValueBase B) {
   case Expr::ObjCBoxedExprClass:
     return cast<ObjCBoxedExpr>(E)->isExpressibleAsConstantInitializer();
   case Expr::CallExprClass:
-    return isGlobalCallLValue(cast<CallExpr>(E));
+    return IsNoOpCall(cast<CallExpr>(E));
   // For GCC compatibility, &&label has static storage duration.
   case Expr::AddrLabelExprClass:
     return true;
@@ -9245,8 +9233,6 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
   case Builtin::BI__builtin_operator_new:
     return HandleOperatorNewCall(Info, E, Result);
-  case Builtin::BI__builtin_ptrauth_sign_constant:
-    return Success(E);
   case Builtin::BI__builtin_launder:
     return evaluatePointer(E->getArg(0), Result);
   case Builtin::BIstrchr:
