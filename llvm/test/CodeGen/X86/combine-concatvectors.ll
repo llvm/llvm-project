@@ -62,9 +62,8 @@ define void @concat_of_broadcast_v2f64_v4f64() {
 ; AVX2-NEXT:    movl $1091567616, 30256(%rax) # imm = 0x41100000
 ; AVX2-NEXT:    movabsq $4294967297, %rcx # imm = 0x100000001
 ; AVX2-NEXT:    movq %rcx, 46348(%rax)
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; AVX2-NEXT:    vbroadcastsd %xmm0, %ymm1
-; AVX2-NEXT:    vmovups %ymm1, 48296(%rax)
+; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX2-NEXT:    vmovups %ymm0, 48296(%rax)
 ; AVX2-NEXT:    vmovlps %xmm0, 47372(%rax)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
