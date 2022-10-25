@@ -1344,8 +1344,8 @@ private:
       while (CurrentToken) {
         if (IsMarkOrRegion || CurrentToken->Previous->is(TT_BinaryOperator)) {
           CurrentToken->setType(TT_ImplicitStringLiteral);
-        next();
         }
+        next();
       }
     }
   }
