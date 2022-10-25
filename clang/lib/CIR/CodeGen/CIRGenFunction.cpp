@@ -420,14 +420,17 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
   Stmt *Body = FD->getBody();
 
   if (Body) {
-    // Coroutines always emit lifetime markers
+    // LLVM codegen: Coroutines always emit lifetime markers
+    // Hide this under request for lifetime emission so that we can write
+    // tests when the time comes, but CIR should be intrinsically scope
+    // accurate, so no need to tie coroutines to such markers.
     if (isa<CoroutineBodyStmt>(Body))
-      llvm_unreachable("Coroutines NYI");
+      assert(!UnimplementedFeature::shouldEmitLifetimeMarkers() && "NYI");
 
     // Initialize helper which will detect jumps which can cause invalid
     // lifetime markers.
     if (ShouldEmitLifetimeMarkers)
-      llvm_unreachable("Lifetime markers NYI");
+      assert(!UnimplementedFeature::shouldEmitLifetimeMarkers() && "NYI");
   }
 
   // Create a scope in the symbol table to hold variable declarations.
@@ -451,7 +454,7 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
 
     // Save parameters for coroutine function.
     if (Body && isa_and_nonnull<CoroutineBodyStmt>(Body))
-      llvm_unreachable("Coroutines NYI");
+      llvm::append_range(FnArgs, FD->parameters());
 
     // Generate the body of the function.
     // TODO: PGO.assignRegionCounters

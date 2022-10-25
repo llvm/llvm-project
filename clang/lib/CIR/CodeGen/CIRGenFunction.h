@@ -350,6 +350,9 @@ public:
   clang::QualType FnRetTy;
   mlir::cir::FuncOp CurFn = nullptr;
 
+  /// Save Parameter Decl for coroutine.
+  llvm::SmallVector<const ParmVarDecl *, 4> FnArgs;
+
   /// CXXStructorImplicitParamDecl - When generating code for a constructor or
   /// destructor, this will hold the implicit argument (e.g. VTT).
   clang::ImplicitParamDecl *CXXStructorImplicitParamDecl = nullptr;
