@@ -649,6 +649,22 @@ TEST_F(TokenAnnotatorTest, UnderstandsRequiresExpressions) {
   EXPECT_TOKEN(Tokens[14], tok::l_brace, TT_RequiresExpressionLBrace);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsPragmaRegion) {
+  // Everything after #pragma region should be ImplicitStringLiteral
+  auto Tokens = annotate("#pragma region Foo(Bar: Hello)");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::identifier, TT_ImplicitStringLiteral);
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_ImplicitStringLiteral);
+  EXPECT_TOKEN(Tokens[7], tok::identifier, TT_ImplicitStringLiteral);
+
+  // Make sure it's annotated correctly inside a function as well
+  Tokens = annotate("void test(){\n#pragma region Foo(Bar: Hello)\n}");
+  ASSERT_EQ(Tokens.size(), 16u) << Tokens;
+  EXPECT_TOKEN(Tokens[10], tok::identifier, TT_ImplicitStringLiteral);
+  EXPECT_TOKEN(Tokens[11], tok::colon, TT_ImplicitStringLiteral);
+  EXPECT_TOKEN(Tokens[12], tok::identifier, TT_ImplicitStringLiteral);
+}
+
 TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
   const char *BaseCode = nullptr;
   const char *ConstrainedCode = nullptr;
