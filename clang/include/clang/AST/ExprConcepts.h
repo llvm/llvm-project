@@ -37,17 +37,18 @@ class ASTStmtWriter;
 ///
 /// According to C++2a [expr.prim.id]p3 an id-expression that denotes the
 /// specialization of a concept results in a prvalue of type bool.
-class ConceptSpecializationExpr final : public Expr, public ConceptReference {
-  friend class ASTReader;
+class ConceptSpecializationExpr final : public Expr, public ConceptReference,
+      private llvm::TrailingObjects<ConceptSpecializationExpr,
+                                    TemplateArgument> {
   friend class ASTStmtReader;
-
+  friend TrailingObjects;
 public:
   using SubstitutionDiagnostic = std::pair<SourceLocation, std::string>;
 
 protected:
-  /// \brief The Implicit Concept Specialization Decl, which holds the template
-  /// arguments for this specialization.
-  ImplicitConceptSpecializationDecl *SpecDecl;
+  /// \brief The number of template arguments in the tail-allocated list of
+  /// converted template arguments.
+  unsigned NumTemplateArgs;
 
   /// \brief Information about the satisfaction of the named concept with the
   /// given arguments. If this expression is value dependent, this is to be
@@ -59,46 +60,51 @@ protected:
                             DeclarationNameInfo ConceptNameInfo,
                             NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
                             const ASTTemplateArgumentListInfo *ArgsAsWritten,
-                            ImplicitConceptSpecializationDecl *SpecDecl,
+                            ArrayRef<TemplateArgument> ConvertedArgs,
                             const ConstraintSatisfaction *Satisfaction);
 
   ConceptSpecializationExpr(const ASTContext &C, ConceptDecl *NamedConcept,
-                            ImplicitConceptSpecializationDecl *SpecDecl,
+                            ArrayRef<TemplateArgument> ConvertedArgs,
                             const ConstraintSatisfaction *Satisfaction,
                             bool Dependent,
                             bool ContainsUnexpandedParameterPack);
-  ConceptSpecializationExpr(EmptyShell Empty);
+
+  ConceptSpecializationExpr(EmptyShell Empty, unsigned NumTemplateArgs);
 
 public:
+
   static ConceptSpecializationExpr *
   Create(const ASTContext &C, NestedNameSpecifierLoc NNS,
          SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
          NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
          const ASTTemplateArgumentListInfo *ArgsAsWritten,
-         ImplicitConceptSpecializationDecl *SpecDecl,
+         ArrayRef<TemplateArgument> ConvertedArgs,
          const ConstraintSatisfaction *Satisfaction);
 
   static ConceptSpecializationExpr *
   Create(const ASTContext &C, ConceptDecl *NamedConcept,
-         ImplicitConceptSpecializationDecl *SpecDecl,
-         const ConstraintSatisfaction *Satisfaction, bool Dependent,
+         ArrayRef<TemplateArgument> ConvertedArgs,
+         const ConstraintSatisfaction *Satisfaction,
+         bool Dependent,
          bool ContainsUnexpandedParameterPack);
 
+  static ConceptSpecializationExpr *
+  Create(ASTContext &C, EmptyShell Empty, unsigned NumTemplateArgs);
+
   ArrayRef<TemplateArgument> getTemplateArguments() const {
-    return SpecDecl->getTemplateArguments();
+    return ArrayRef<TemplateArgument>(getTrailingObjects<TemplateArgument>(),
+                                      NumTemplateArgs);
   }
 
-  const ImplicitConceptSpecializationDecl *getSpecializationDecl() const {
-    assert(SpecDecl && "Template Argument Decl not initialized");
-    return SpecDecl;
-  }
+  /// \brief Set new template arguments for this concept specialization.
+  void setTemplateArguments(ArrayRef<TemplateArgument> Converted);
 
   /// \brief Whether or not the concept with the given arguments was satisfied
   /// when the expression was created.
   /// The expression must not be dependent.
   bool isSatisfied() const {
-    assert(!isValueDependent() &&
-           "isSatisfied called on a dependent ConceptSpecializationExpr");
+    assert(!isValueDependent()
+           && "isSatisfied called on a dependent ConceptSpecializationExpr");
     return Satisfaction->IsSatisfied;
   }
 
@@ -106,8 +112,8 @@ public:
   /// satisfaction of the named concept.
   /// The expression must not be dependent.
   const ASTConstraintSatisfaction &getSatisfaction() const {
-    assert(!isValueDependent() &&
-           "getSatisfaction called on dependent ConceptSpecializationExpr");
+    assert(!isValueDependent()
+           && "getSatisfaction called on dependent ConceptSpecializationExpr");
     return *Satisfaction;
   }
 
