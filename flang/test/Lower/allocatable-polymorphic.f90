@@ -7,12 +7,14 @@ module poly
     integer :: b
   contains
     procedure, nopass :: proc1 => proc1_p1
+    procedure :: proc2 => proc2_p1
   end type
 
   type, extends(p1) :: p2
     integer :: c
   contains
-      procedure, nopass :: proc1 => proc1_p2
+    procedure, nopass :: proc1 => proc1_p2
+    procedure :: proc2 => proc2_p2
   end type
 
 contains
@@ -22,6 +24,16 @@ contains
 
   subroutine proc1_p2()
     print*, 'call proc1_p2'
+  end subroutine
+
+  subroutine proc2_p1(this)
+    class(p1) :: this
+    print*, 'call proc2_p1'
+  end subroutine
+
+  subroutine proc2_p2(this)
+    class(p2) :: this
+    print*, 'call proc2_p2'
   end subroutine
 end module
 
@@ -42,6 +54,9 @@ program test_allocatable
 
   call c1%proc1()
   call c2%proc1()
+
+  call c1%proc2()
+  call c2%proc2()
 end
 
 ! CHECK-LABEL: func.func @_QQmain()
@@ -85,7 +100,6 @@ end
 ! CHECK: %[[RANK:.*]] = arith.constant 1 : i32
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
 ! CHECK: fir.call @_FortranAAllocatableInitDerived(%[[C3_CAST]], %[[TYPE_DESC_P1_CAST]], %[[RANK]], %[[C0]]) : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
-! CHECK: %[[C1:.*]] = arith.constant 1 : index
 ! CHECK: %[[C10:.*]] = arith.constant 10 : i32
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
 ! CHECK: %[[C3_CAST:.*]] = fir.convert %[[C3]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
@@ -101,22 +115,34 @@ end
 ! CHECK: %[[RANK:.*]] = arith.constant 1 : i32
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
 ! CHECK: fir.call @_FortranAAllocatableInitDerived(%[[C4_CAST]], %[[TYPE_DESC_P2_CAST]], %[[RANK]], %[[C0]]) : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
-! CHECK: %[[C1:.*]] = arith.constant 1 : index
+! CHECK: %[[CST1:.*]] = arith.constant 1 : index
 ! CHECK: %[[C20:.*]] = arith.constant 20 : i32
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
 ! CHECK: %[[C4_CAST:.*]] = fir.convert %[[C4]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[C1_I64:.*]] = fir.convert %[[C1]] : (index) -> i64
+! CHECK: %[[C1_I64:.*]] = fir.convert %[[CST1]] : (index) -> i64
 ! CHECK: %[[C20_I64:.*]] = fir.convert %[[C20]] : (i32) -> i64
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableSetBounds(%[[C4_CAST]], %[[C0]], %[[C1_I64]], %[[C20_I64]]) : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> none
 ! CHECK: %[[C4_CAST:.*]] = fir.convert %[[C4]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableAllocate(%[[C4_CAST]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
+! Check fir.rebox for fir.class
+! CHECK: %[[C1_LOAD:.*]] = fir.load %[[C1]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
+! CHECK: %[[C1_REBOX:.*]] = fir.rebox %[[C1_LOAD]] : (!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
+! CHECK: fir.dispatch "proc2"(%[[C1_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%61 : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+
+! CHECK: %[[C2_LOAD:.*]] = fir.load %[[C2]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
+! CHECK: %[[C2_REBOX:.*]] = fir.rebox %[[C2_LOAD]] : (!fir.class<!fir.heap<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
+! CHECK: fir.dispatch "proc2"(%[[C2_REBOX]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%63 : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
 ! Check code generation of allocate runtime calls for polymoprhic entities. This
 ! is done from Fortran so we don't have a file full of auto-generated type info
 ! in order to perform the checks.
 
 ! LLVM-LABEL: define void @_QQmain()
+! LLVM: %[[TMP1:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
+! LLVM: %[[TMP2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
+! LLVM: %[[TMP3:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
+! LLVM: %[[TMP4:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
 ! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerived(ptr @_QFEp, ptr @_QMpolyE.dt.p1, i32 0, i32 0)
 ! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr @_QFEp, i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
 ! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerived(ptr @_QFEc1, ptr @_QMpolyE.dt.p1, i32 0, i32 0)
@@ -129,3 +155,20 @@ end
 ! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerived(ptr @_QFEc4, ptr @_QMpolyE.dt.p2, i32 1, i32 0)
 ! LLVM: %{{.*}} = call {} @_FortranAAllocatableSetBounds(ptr @_QFEc4, i32 0, i64 1, i64 20)
 ! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr @_QFEc4, i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
+! LLVM:  call void %{{.*}}()
+
+! LLVM: %[[C1_LOAD:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr @_QFEc1
+! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[C1_LOAD]], ptr %[[TMP4]]
+! LLVM: %[[GEP_TDESC_C1:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[TMP4]], i32 0, i32 7
+! LLVM: %[[TDESC_C1:.*]] = load ptr, ptr %[[GEP_TDESC_C1]]
+! LLVM: %[[BOX0:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr undef, i64 ptrtoint (ptr getelementptr (%_QMpolyTp1, ptr null, i32 1) to i64), i32 20180515, i8 0, i8 42, i8 0, i8 1, ptr undef, [1 x i64] undef }, ptr %[[TDESC_C1]], 7
+! LLVM: %[[BOX1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX0]], ptr %{{.*}}, 0
+! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX1]], ptr %[[TMP3]]
+
+! LLVM: %[[LOAD_C2:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr @_QFEc2
+! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD_C2]], ptr %[[TMP2]]
+! LLVM: %[[GEP_TDESC_C2:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[TMP2]], i32 0, i32 7
+! LLVM: %[[TDESC_C2:.*]] = load ptr, ptr %[[GEP_TDESC_C2]]
+! LLVM: %[[BOX0:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr undef, i64 ptrtoint (ptr getelementptr (%_QMpolyTp1, ptr null, i32 1) to i64), i32 20180515, i8 0, i8 42, i8 0, i8 1, ptr undef, [1 x i64] undef }, ptr %[[TDESC_C2]], 7
+! LLVM: %[[BOX1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX0]], ptr %{{.*}}, 0
+! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX1]], ptr %[[TMP1]]
