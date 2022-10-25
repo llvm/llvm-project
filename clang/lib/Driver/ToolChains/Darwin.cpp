@@ -1353,11 +1353,16 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
   // If we have a symbol export directive and we're linking in the profile
   // runtime, automatically export symbols necessary to implement some of the
   // runtime's functionality.
-  if (hasExportSymbolDirective(Args) && ForGCOV) {
-    addExportedSymbol(CmdArgs, "___gcov_dump");
-    addExportedSymbol(CmdArgs, "___gcov_reset");
-    addExportedSymbol(CmdArgs, "_writeout_fn_list");
-    addExportedSymbol(CmdArgs, "_reset_fn_list");
+  if (hasExportSymbolDirective(Args)) {
+    if (ForGCOV) {
+      addExportedSymbol(CmdArgs, "___gcov_dump");
+      addExportedSymbol(CmdArgs, "___gcov_reset");
+      addExportedSymbol(CmdArgs, "_writeout_fn_list");
+      addExportedSymbol(CmdArgs, "_reset_fn_list");
+    } else {
+      addExportedSymbol(CmdArgs, "___llvm_profile_filename");
+      addExportedSymbol(CmdArgs, "___llvm_profile_raw_version");
+    }
   }
 
   // Align __llvm_prf_{cnts,data} sections to the maximum expected page

@@ -78,6 +78,12 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
         "software disabled tracing": 2,
         "trace synchronization point": 1
       }
+    },
+    "errors": {
+      "totalCount": 0,
+      "libiptErrors": {},
+      "fatalErrors": 0,
+      "otherErrors": 0
     }
   },
   "globalStats": {

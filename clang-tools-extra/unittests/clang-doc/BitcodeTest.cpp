@@ -183,11 +183,33 @@ TEST(BitcodeTest, emitTypedefInfoBitcode) {
   I.Underlying = TypeInfo("unsigned");
   I.IsUsing = true;
 
+  CommentInfo Top;
+  Top.Kind = "FullComment";
+
+  Top.Children.emplace_back(std::make_unique<CommentInfo>());
+  CommentInfo *BlankLine = Top.Children.back().get();
+  BlankLine->Kind = "ParagraphComment";
+  BlankLine->Children.emplace_back(std::make_unique<CommentInfo>());
+  BlankLine->Children.back()->Kind = "TextComment";
+
+  I.Description.emplace_back(std::move(Top));
+
   std::string WriteResult = writeInfo(&I);
   EXPECT_TRUE(WriteResult.size() > 0);
   std::vector<std::unique_ptr<Info>> ReadResults = readInfo(WriteResult, 1);
 
   CheckTypedefInfo(&I, InfoAsTypedef(ReadResults[0].get()));
+
+  // Check one with no IsUsing set, no description, and no definition location.
+  TypedefInfo I2;
+  I2.Name = "SomethingElse";
+  I2.IsUsing = false;
+  I2.Underlying = TypeInfo("int");
+
+  WriteResult = writeInfo(&I2);
+  EXPECT_TRUE(WriteResult.size() > 0);
+  ReadResults = readInfo(WriteResult, 1);
+  CheckTypedefInfo(&I2, InfoAsTypedef(ReadResults[0].get()));
 }
 
 TEST(SerializeTest, emitInfoWithCommentBitcode) {

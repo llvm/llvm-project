@@ -67,6 +67,7 @@ static_library("Utility") {
     "RegisterContext_x86.cpp",
     "RegisterInfoPOSIX_arm.cpp",
     "RegisterInfoPOSIX_arm64.cpp",
+    "RegisterInfoPOSIX_loongarch64.cpp",
     "RegisterInfoPOSIX_ppc64le.cpp",
     "RegisterInfoPOSIX_riscv64.cpp",
     "StopInfoMachException.cpp",

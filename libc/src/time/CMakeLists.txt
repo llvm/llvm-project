@@ -1,3 +1,7 @@
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+endif()
+
 add_object_library(
   time_utils
   SRCS
@@ -102,4 +106,18 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  time
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.time
+)
+
+add_entrypoint_object(
+  clock
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.clock
 )

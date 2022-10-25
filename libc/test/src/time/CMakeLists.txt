@@ -105,3 +105,27 @@ add_libc_unittest(
     libc.include.time
     libc.src.time.nanosleep
 )
+
+add_libc_unittest(
+  time_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    time_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.time
+    libc.src.time.time
+)
+
+add_libc_unittest(
+  clock_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    clock_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.time
+    libc.src.time.clock
+)

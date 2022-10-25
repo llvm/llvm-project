@@ -1964,7 +1964,7 @@ multiclass VCMLA_ROTS<string type, string lanety, string laneqty> {
 }
 
 // v8.3-A Vector complex addition intrinsics
-let ArchGuard = "defined(__ARM_FEATURE_COMPLEX)", TargetGuard = "fullfp16" in {
+let TargetGuard = "v8.3a,fullfp16" in {
   def VCADD_ROT90_FP16   : SInst<"vcadd_rot90", "...", "h">;
   def VCADD_ROT270_FP16  : SInst<"vcadd_rot270", "...", "h">;
   def VCADDQ_ROT90_FP16  : SInst<"vcaddq_rot90", "QQQ", "h">;
@@ -1972,7 +1972,7 @@ let ArchGuard = "defined(__ARM_FEATURE_COMPLEX)", TargetGuard = "fullfp16" in {
 
   defm VCMLA_FP16  : VCMLA_ROTS<"h", "uint32x2_t", "uint32x4_t">;
 }
-let ArchGuard = "defined(__ARM_FEATURE_COMPLEX)" in {
+let TargetGuard = "v8.3a" in {
   def VCADD_ROT90   : SInst<"vcadd_rot90", "...", "f">;
   def VCADD_ROT270  : SInst<"vcadd_rot270", "...", "f">;
   def VCADDQ_ROT90  : SInst<"vcaddq_rot90", "QQQ", "f">;
@@ -1980,7 +1980,7 @@ let ArchGuard = "defined(__ARM_FEATURE_COMPLEX)" in {
 
   defm VCMLA_F32        : VCMLA_ROTS<"f", "uint64x1_t", "uint64x2_t">;
 }
-let ArchGuard = "defined(__ARM_FEATURE_COMPLEX) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "v8.3a" in {
   def VCADDQ_ROT90_FP64  : SInst<"vcaddq_rot90", "QQQ", "d">;
   def VCADDQ_ROT270_FP64 : SInst<"vcaddq_rot270", "QQQ", "d">;
 

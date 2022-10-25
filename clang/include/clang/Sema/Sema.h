@@ -2566,10 +2566,6 @@ public:
 
   bool isSimpleTypeSpecifier(tok::TokenKind Kind) const;
 
-  enum class DiagCtorKind { None, Implicit, Typename };
-  QualType getTypeDeclType(DeclContext *LookupCtx, DiagCtorKind DCK,
-                           TypeDecl *TD, SourceLocation NameLoc);
-
   ParsedType getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                          Scope *S, CXXScopeSpec *SS = nullptr,
                          bool isClassName = false, bool HasTrailingDot = false,
