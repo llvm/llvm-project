@@ -731,18 +731,17 @@ private:
 
       auto *V = CS.getArgOperand(A->getArgNo());
       if (isa<PoisonValue>(V))
-        return;
+        continue;
 
       // TrackValueOfGlobalVariable only tracks scalar global variables.
       if (auto *GV = dyn_cast<GlobalVariable>(V)) {
         // Check if we want to specialize on the address of non-constant
         // global values.
-        if (!GV->isConstant())
-          if (!SpecializeOnAddresses)
-            return;
+        if (!GV->isConstant() && !SpecializeOnAddresses)
+          continue;
 
         if (!GV->getValueType()->isSingleValueType())
-          return;
+          continue;
       }
 
       if (isa<Constant>(V) && (Solver.getLatticeValueFor(V).isConstant() ||
