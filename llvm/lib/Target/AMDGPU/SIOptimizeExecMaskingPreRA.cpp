@@ -226,7 +226,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
       auto DefSegment = SelLI->FindSegmentContaining(SelIdx.getRegSlot());
       assert(DefSegment != SelLI->end() &&
              "No live interval segment covering definition?");
-      for (auto I = DefSegment; I != SelLI->end(); ++I) {
+      for (auto I = DefSegment; I != SelLI->end() && I->start <= AndIdx; ++I) {
         SlotIndex Start = I->start < SelIdx.getRegSlot() ?
                           SelIdx.getRegSlot() : I->start;
         SlotIndex End = I->end < AndIdx.getRegSlot() || I->end.isBlock() ?
