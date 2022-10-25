@@ -116,3 +116,13 @@
 // RUN: %clang -mrelax-all -fno-integrated-as -x c++ %s -S -o /dev/null 2>&1 \
 // RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
 // WARN: unused
+
+// Test that -g is passed through to GAS.
+// RUN: %clang --target=aarch64-linux-gnu -fno-integrated-as -g %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=DEBUG %s
+// RUN: %clang --target=aarch64-linux-gnu -fno-integrated-as -g0 -g %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=DEBUG %s
+// DEBUG: "-g"
+// RUN: %clang --target=aarch64-linux-gnu -fno-integrated-as -g -g0 %s -### 2>&1 | \
+// RUN:   FileCheck --check-prefix=NODEBUG %s
+// NODEBUG-NOT: "-g"
