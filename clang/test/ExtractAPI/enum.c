@@ -65,68 +65,57 @@ enum {
     {
       "kind": "memberOf",
       "source": "c:@E@Vehicle@Bicycle",
-      "target": "c:@E@Vehicle",
-      "targetFallback": "Vehicle"
+      "target": "c:@E@Vehicle"
     },
     {
       "kind": "memberOf",
       "source": "c:@E@Vehicle@Car",
-      "target": "c:@E@Vehicle",
-      "targetFallback": "Vehicle"
+      "target": "c:@E@Vehicle"
     },
     {
       "kind": "memberOf",
       "source": "c:@E@Vehicle@Train",
-      "target": "c:@E@Vehicle",
-      "targetFallback": "Vehicle"
+      "target": "c:@E@Vehicle"
     },
     {
       "kind": "memberOf",
       "source": "c:@E@Vehicle@Ship",
-      "target": "c:@E@Vehicle",
-      "targetFallback": "Vehicle"
+      "target": "c:@E@Vehicle"
     },
     {
       "kind": "memberOf",
       "source": "c:@E@Vehicle@Airplane",
-      "target": "c:@E@Vehicle",
-      "targetFallback": "Vehicle"
+      "target": "c:@E@Vehicle"
     },
     {
       "kind": "memberOf",
       "source": "c:@E@Direction@North",
-      "target": "c:@E@Direction",
-      "targetFallback": "Direction"
+      "target": "c:@E@Direction"
     },
     {
       "kind": "memberOf",
       "source": "c:@E@Direction@East",
-      "target": "c:@E@Direction",
-      "targetFallback": "Direction"
+      "target": "c:@E@Direction"
     },
     {
       "kind": "memberOf",
       "source": "c:@E@Direction@South",
-      "target": "c:@E@Direction",
-      "targetFallback": "Direction"
+      "target": "c:@E@Direction"
     },
     {
       "kind": "memberOf",
       "source": "c:@E@Direction@West",
-      "target": "c:@E@Direction",
-      "targetFallback": "Direction"
+      "target": "c:@E@Direction"
     },
     {
       "kind": "memberOf",
       "source": "c:@Ea@Constant@Constant",
-      "target": "c:@Ea@Constant",
-      "targetFallback": "enum (unnamed)"
+      "target": "c:@Ea@Constant"
     },
     {
       "kind": "memberOf",
       "source": "c:@Ea@OtherConstant@OtherConstant",
-      "target": "c:@Ea@OtherConstant",
-      "targetFallback": "enum (unnamed)"
+      "target": "c:@Ea@OtherConstant"
     }
   ],
   "symbols": [

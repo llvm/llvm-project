@@ -49,8 +49,7 @@
     {
       "kind": "conformsTo",
       "source": "c:objc(pl)AnotherProtocol",
-      "target": "c:objc(pl)Protocol",
-      "targetFallback": "Protocol"
+      "target": "c:objc(pl)Protocol"
     }
   ],
   "symbols": [

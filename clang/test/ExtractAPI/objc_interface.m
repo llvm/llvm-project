@@ -57,20 +57,17 @@
     {
       "kind": "memberOf",
       "source": "c:objc(cs)Super(cm)getWithProperty:",
-      "target": "c:objc(cs)Super",
-      "targetFallback": "Super"
+      "target": "c:objc(cs)Super"
     },
     {
       "kind": "memberOf",
       "source": "c:objc(cs)Super(im)setProperty:andOtherThing:",
-      "target": "c:objc(cs)Super",
-      "targetFallback": "Super"
+      "target": "c:objc(cs)Super"
     },
     {
       "kind": "memberOf",
       "source": "c:objc(cs)Super(py)Property",
-      "target": "c:objc(cs)Super",
-      "targetFallback": "Super"
+      "target": "c:objc(cs)Super"
     },
     {
       "kind": "conformsTo",
@@ -81,20 +78,17 @@
     {
       "kind": "memberOf",
       "source": "c:objc(cs)Derived@Ivar",
-      "target": "c:objc(cs)Derived",
-      "targetFallback": "Derived"
+      "target": "c:objc(cs)Derived"
     },
     {
       "kind": "memberOf",
       "source": "c:objc(cs)Derived(im)getIvar",
-      "target": "c:objc(cs)Derived",
-      "targetFallback": "Derived"
+      "target": "c:objc(cs)Derived"
     },
     {
       "kind": "inheritsFrom",
       "source": "c:objc(cs)Derived",
-      "target": "c:objc(cs)Super",
-      "targetFallback": "Super"
+      "target": "c:objc(cs)Super"
     }
   ],
   "symbols": [
