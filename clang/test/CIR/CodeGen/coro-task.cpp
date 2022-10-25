@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -clangir-disable-emit-cxx-default -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
+// XFAIL: *
 
 namespace std {
 
@@ -94,7 +95,10 @@ struct co_invoke_fn {
   }
 };
 
+co_invoke_fn co_invoke;
+
 }} // namespace folly::coro
 
 // CHECK: module {
+// CHECK-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !cir.struct<"struct.folly::coro::co_invoke_fn", i8
 // CHECK-NEXT: }
