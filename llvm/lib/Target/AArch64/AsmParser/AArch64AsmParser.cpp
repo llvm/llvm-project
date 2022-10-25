@@ -1,3 +1,4 @@
+
 //==- AArch64AsmParser.cpp - Parse AArch64 assembly to MCInst instructions -==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -68,6 +69,7 @@ enum class RegKind {
   Scalar,
   NeonVector,
   SVEDataVector,
+  SVEPredicateAsCounter,
   SVEPredicateVector,
   Matrix
 };
@@ -266,6 +268,7 @@ private:
   template <bool ParseShiftExtend, bool ParseSuffix>
   OperandMatchResultTy tryParseSVEDataVector(OperandVector &Operands);
   OperandMatchResultTy tryParseSVEPredicateVector(OperandVector &Operands);
+  OperandMatchResultTy tryParseSVEPredicateAsCounter(OperandVector &Operands);
   template <RegKind VectorKind>
   OperandMatchResultTy tryParseVectorList(OperandVector &Operands,
                                           bool ExpectMatch = false);
@@ -1198,6 +1201,22 @@ public:
   bool isMatrix() const { return Kind == k_MatrixRegister; }
   bool isMatrixTileList() const { return Kind == k_MatrixTileList; }
 
+  template <unsigned Class> bool isSVEPredicateAsCounterReg() const {
+    RegKind RK;
+    switch (Class) {
+    case AArch64::PPRRegClassID:
+    case AArch64::PPR_3bRegClassID:
+    case AArch64::PPR_p8to15RegClassID:
+      RK = RegKind::SVEPredicateAsCounter;
+      break;
+    default:
+      llvm_unreachable("Unsupport register class");
+    }
+
+    return (Kind == k_Register && Reg.Kind == RK) &&
+           AArch64MCRegisterClasses[Class].contains(getReg());
+  }
+
   template <unsigned Class> bool isSVEVectorReg() const {
     RegKind RK;
     switch (Class) {
@@ -1229,6 +1248,17 @@ public:
       return DiagnosticPredicateTy::NoMatch;
 
     if (isSVEVectorReg<Class>() && (Reg.ElementWidth == ElementWidth))
+      return DiagnosticPredicateTy::Match;
+
+    return DiagnosticPredicateTy::NearMatch;
+  }
+
+  template <int ElementWidth, unsigned Class>
+  DiagnosticPredicate isSVEPredicateAsCounterRegOfWidth() const {
+    if (Kind != k_Register || Reg.Kind != RegKind::SVEPredicateAsCounter)
+      return DiagnosticPredicateTy::NoMatch;
+
+    if (isSVEPredicateAsCounterReg<Class>() && (Reg.ElementWidth == ElementWidth))
       return DiagnosticPredicateTy::Match;
 
     return DiagnosticPredicateTy::NearMatch;
@@ -2059,7 +2089,8 @@ public:
                   unsigned ShiftAmount = 0,
                   unsigned HasExplicitAmount = false) {
     assert((Kind == RegKind::NeonVector || Kind == RegKind::SVEDataVector ||
-            Kind == RegKind::SVEPredicateVector) &&
+            Kind == RegKind::SVEPredicateVector ||
+            Kind == RegKind::SVEPredicateAsCounter) &&
            "Invalid vector kind");
     auto Op = CreateReg(RegNum, Kind, S, E, Ctx, EqualsReg, ExtTy, ShiftAmount,
                         HasExplicitAmount);
@@ -2478,6 +2509,7 @@ static Optional<std::pair<int, int>> parseVectorKind(StringRef Suffix,
             .Case(".d", {0, 64})
             .Default({-1, -1});
     break;
+  case RegKind::SVEPredicateAsCounter:
   case RegKind::SVEPredicateVector:
   case RegKind::SVEDataVector:
   case RegKind::Matrix:
@@ -2559,6 +2591,27 @@ static unsigned matchSVEPredicateVectorRegName(StringRef Name) {
       .Case("p13", AArch64::P13)
       .Case("p14", AArch64::P14)
       .Case("p15", AArch64::P15)
+      .Default(0);
+}
+
+static unsigned matchSVEPredicateAsCounterRegName(StringRef Name) {
+  return StringSwitch<unsigned>(Name.lower())
+      .Case("pn0", AArch64::P0)
+      .Case("pn1", AArch64::P1)
+      .Case("pn2", AArch64::P2)
+      .Case("pn3", AArch64::P3)
+      .Case("pn4", AArch64::P4)
+      .Case("pn5", AArch64::P5)
+      .Case("pn6", AArch64::P6)
+      .Case("pn7", AArch64::P7)
+      .Case("pn8", AArch64::P8)
+      .Case("pn9", AArch64::P9)
+      .Case("pn10", AArch64::P10)
+      .Case("pn11", AArch64::P11)
+      .Case("pn12", AArch64::P12)
+      .Case("pn13", AArch64::P13)
+      .Case("pn14", AArch64::P14)
+      .Case("pn15", AArch64::P15)
       .Default(0);
 }
 
@@ -2704,6 +2757,9 @@ unsigned AArch64AsmParser::matchRegisterNameAlias(StringRef Name,
 
   if ((RegNum = matchSVEPredicateVectorRegName(Name)))
     return Kind == RegKind::SVEPredicateVector ? RegNum : 0;
+
+  if ((RegNum = matchSVEPredicateAsCounterRegName(Name)))
+    return Kind == RegKind::SVEPredicateAsCounter ? RegNum : 0;
 
   if ((RegNum = MatchNeonVectorRegName(Name)))
     return Kind == RegKind::NeonVector ? RegNum : 0;
@@ -3803,6 +3859,32 @@ AArch64AsmParser::tryParseVectorRegister(unsigned &Reg, StringRef &Kind,
   return MatchOperand_NoMatch;
 }
 
+OperandMatchResultTy
+AArch64AsmParser::tryParseSVEPredicateAsCounter(OperandVector &Operands) {
+  const SMLoc S = getLoc();
+  StringRef Kind;
+  unsigned RegNum;
+  auto Res =
+      tryParseVectorRegister(RegNum, Kind, RegKind::SVEPredicateAsCounter);
+  if (Res != MatchOperand_Success)
+    return Res;
+
+  const auto &KindRes = parseVectorKind(Kind, RegKind::SVEPredicateAsCounter);
+  if (!KindRes)
+    return MatchOperand_NoMatch;
+
+  unsigned ElementWidth = KindRes->second;
+  Operands.push_back(
+      AArch64Operand::CreateVectorReg(RegNum, RegKind::SVEPredicateAsCounter,
+                                      ElementWidth, S, getLoc(), getContext()));
+
+  // Check if register is followed by an index
+  OperandMatchResultTy ResIndex = tryParseVectorIndex(Operands);
+  if (ResIndex == MatchOperand_ParseFail)
+    return ResIndex;
+
+  return MatchOperand_Success;
+}
 /// tryParseSVEPredicateVector - Parse a SVE predicate register operand.
 OperandMatchResultTy
 AArch64AsmParser::tryParseSVEPredicateVector(OperandVector &Operands) {
@@ -5573,6 +5655,15 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "invalid predicate register.");
   case Match_InvalidSVEPredicate3bAnyReg:
     return Error(Loc, "invalid restricted predicate register, expected p0..p7 (without element suffix)");
+  case Match_InvalidSVEPNPredicateB_p8to15Reg:
+  case Match_InvalidSVEPNPredicateH_p8to15Reg:
+  case Match_InvalidSVEPNPredicateS_p8to15Reg:
+  case Match_InvalidSVEPNPredicateD_p8to15Reg:
+    return Error(Loc, "Invalid predicate register, expected PN in range "
+                      "pn8..pn15 with element suffix.");
+  case Match_InvalidSVEPNPredicateAny_p8to15Reg:
+    return Error(Loc, "invalid restricted predicate-as-counter register "
+                      "expected pn8..pn15");
   case Match_InvalidSVEExactFPImmOperandHalfOne:
     return Error(Loc, "Invalid floating point constant, expected 0.5 or 1.0.");
   case Match_InvalidSVEExactFPImmOperandHalfTwo:
@@ -6145,6 +6236,11 @@ bool AArch64AsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSVEPredicateSReg:
   case Match_InvalidSVEPredicateDReg:
   case Match_InvalidSVEPredicate3bAnyReg:
+  case Match_InvalidSVEPNPredicateB_p8to15Reg:
+  case Match_InvalidSVEPNPredicateH_p8to15Reg:
+  case Match_InvalidSVEPNPredicateS_p8to15Reg:
+  case Match_InvalidSVEPNPredicateD_p8to15Reg:
+  case Match_InvalidSVEPNPredicateAny_p8to15Reg:
   case Match_InvalidSVEExactFPImmOperandHalfOne:
   case Match_InvalidSVEExactFPImmOperandHalfTwo:
   case Match_InvalidSVEExactFPImmOperandZeroOne:

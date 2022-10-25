@@ -1193,6 +1193,35 @@ void AArch64InstPrinter::printRegWithShiftExtend(const MCInst *MI,
   }
 }
 
+template <int EltSize>
+void AArch64InstPrinter::printPredicateAsCounter(const MCInst *MI,
+                                                 unsigned OpNum,
+                                                 const MCSubtargetInfo &STI,
+                                                 raw_ostream &O) {
+  unsigned Reg = MI->getOperand(OpNum).getReg();
+
+  assert(Reg <= AArch64::P15 && "Unsupported predicate register");
+  O << "pn" << (Reg - AArch64::P0);
+  switch (EltSize) {
+  case 0:
+    break;
+  case 8:
+    O << ".b";
+    break;
+  case 16:
+    O << ".h";
+    break;
+  case 32:
+    O << ".s";
+    break;
+  case 64:
+    O << ".d";
+    break;
+  default:
+    llvm_unreachable("Unsupported element size");
+  }
+}
+
 void AArch64InstPrinter::printCondCode(const MCInst *MI, unsigned OpNum,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O) {
