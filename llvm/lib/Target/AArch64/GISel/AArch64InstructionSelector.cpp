@@ -5845,7 +5845,7 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     auto DiscVal = getIConstantVRegVal(DiscReg, MRI);
     bool IsDiscZero = DiscVal && DiscVal->isNullValue();
 
-    if (Key > 3)
+    if (Key > AArch64PACKey::LAST)
       return false;
 
     unsigned Opcodes[][4] = {
