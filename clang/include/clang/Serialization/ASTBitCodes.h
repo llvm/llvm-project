@@ -41,7 +41,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 23;
+const unsigned VERSION_MAJOR = 22;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -1520,10 +1520,7 @@ enum DeclCode {
   /// A HLSLBufferDecl record.
   DECL_HLSL_BUFFER,
 
-  /// An ImplicitConceptSpecializationDecl record.
-  DECL_IMPLICIT_CONCEPT_SPECIALIZATION,
-
-  DECL_LAST = DECL_IMPLICIT_CONCEPT_SPECIALIZATION
+  DECL_LAST = DECL_HLSL_BUFFER
 };
 
 /// Record codes for each kind of statement or expression.
