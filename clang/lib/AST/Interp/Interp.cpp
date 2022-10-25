@@ -401,6 +401,38 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
   return false;
 }
 
+static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
+                                   const Pointer &BasePtr, const Record *R) {
+  assert(R);
+  bool Result = true;
+  // Check all fields of this record are initialized.
+  for (const Record::Field &F : R->fields()) {
+    Pointer FieldPtr = BasePtr.atField(F.Offset);
+    QualType FieldType = FieldPtr.getType();
+
+    if (FieldType->isRecordType()) {
+      Result &= CheckFieldsInitialized(S, OpPC, FieldPtr, FieldPtr.getRecord());
+    } else if (FieldType->isArrayType()) {
+      // FIXME: Arrays need to be handled here as well I think.
+    } else if (!FieldPtr.isInitialized()) {
+      const SourceInfo &SI = S.Current->getSource(OpPC);
+      S.FFDiag(SI, diag::note_constexpr_uninitialized)
+          << true << F.Decl->getType();
+      SourceLocation SubobjectLoc = F.Decl->getLocation();
+      if (SubobjectLoc.isValid())
+        S.Note(SubobjectLoc, diag::note_constexpr_subobject_declared_here);
+      Result = false;
+    }
+  }
+  return Result;
+}
+
+bool CheckCtorCall(InterpState &S, CodePtr OpPC, const Pointer &This) {
+  assert(!This.isZero());
+  const Record *R = This.getRecord();
+  return CheckFieldsInitialized(S, OpPC, This, R);
+}
+
 bool Interpret(InterpState &S, APValue &Result) {
   // The current stack frame when we started Interpret().
   // This is being used by the ops to determine wheter
