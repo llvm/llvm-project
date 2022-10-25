@@ -80,7 +80,7 @@ SelfExecutorProcessControl::loadDylib(const char *DylibPath) {
   if (!Dylib->isValid())
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
   DynamicLibraries.push_back(std::move(Dylib));
-  return pointerToJITTargetAddress(DynamicLibraries.back().get());
+  return ExecutorAddr::fromPtr(DynamicLibraries.back().get());
 }
 
 Expected<std::vector<tpctypes::LookupResult>>
@@ -88,14 +88,14 @@ SelfExecutorProcessControl::lookupSymbols(ArrayRef<LookupRequest> Request) {
   std::vector<tpctypes::LookupResult> R;
 
   for (auto &Elem : Request) {
-    auto *Dylib = jitTargetAddressToPointer<sys::DynamicLibrary *>(Elem.Handle);
+    auto *Dylib = Elem.Handle.toPtr<sys::DynamicLibrary *>();
     assert(llvm::any_of(DynamicLibraries,
                         [=](const std::unique_ptr<sys::DynamicLibrary> &DL) {
                           return DL.get() == Dylib;
                         }) &&
            "Invalid handle");
 
-    R.push_back(std::vector<JITTargetAddress>());
+    R.push_back(std::vector<ExecutorAddr>());
     for (auto &KV : Elem.Symbols) {
       auto &Sym = KV.first;
       std::string Tmp((*Sym).data() + !!GlobalManglingPrefix,
@@ -107,7 +107,7 @@ SelfExecutorProcessControl::lookupSymbols(ArrayRef<LookupRequest> Request) {
         MissingSymbols.push_back(Sym);
         return make_error<SymbolsNotFound>(SSP, std::move(MissingSymbols));
       }
-      R.back().push_back(pointerToJITTargetAddress(Addr));
+      R.back().push_back(ExecutorAddr::fromPtr(Addr));
     }
   }
 
