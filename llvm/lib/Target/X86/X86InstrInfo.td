@@ -131,6 +131,10 @@ def SDT_X86AESENCDECKL : SDTypeProfile<2, 2, [SDTCisVT<0, v2i64>,
                                               SDTCisVT<2, v2i64>,
                                               SDTCisPtrTy<3>]>;
 
+def SDTX86Cmpccxadd : SDTypeProfile<1, 4, [SDTCisSameAs<0, 2>,
+                                           SDTCisPtrTy<1>, SDTCisSameAs<2, 3>,
+                                           SDTCisVT<4, i8>]>;
+
 def X86MemBarrier : SDNode<"X86ISD::MEMBARRIER", SDT_X86MEMBARRIER,
                             [SDNPHasChain,SDNPSideEffect]>;
 def X86MFence : SDNode<"X86ISD::MFENCE", SDT_X86MEMBARRIER,
@@ -340,6 +344,10 @@ def X86aesenc256kl : SDNode<"X86ISD::AESENC256KL", SDT_X86AESENCDECKL,
 def X86aesdec256kl : SDNode<"X86ISD::AESDEC256KL", SDT_X86AESENCDECKL,
                             [SDNPHasChain, SDNPMayLoad, SDNPSideEffect,
                              SDNPMemOperand]>;
+
+def X86cmpccxadd : SDNode<"X86ISD::CMPCCXADD", SDTX86Cmpccxadd,
+                          [SDNPHasChain, SDNPMayLoad, SDNPMayStore,
+                           SDNPMemOperand]>;
 
 //===----------------------------------------------------------------------===//
 // X86 Operand Definitions.
@@ -981,6 +989,7 @@ def HasCX16      : Predicate<"Subtarget->hasCX16()">;
 def HasPCONFIG   : Predicate<"Subtarget->hasPCONFIG()">;
 def HasENQCMD    : Predicate<"Subtarget->hasENQCMD()">;
 def HasAMXFP16   : Predicate<"Subtarget->hasAMXFP16()">;
+def HasCMPCCXADD : Predicate<"Subtarget->hasCMPCCXADD()">;
 def HasKL        : Predicate<"Subtarget->hasKL()">;
 def HasWIDEKL    : Predicate<"Subtarget->hasWIDEKL()">;
 def HasHRESET    : Predicate<"Subtarget->hasHRESET()">;
@@ -3009,6 +3018,57 @@ let Predicates = [HasPREFETCHI, In64BitMode], SchedRW = [WriteLoad] in {
   def PREFETCHIT1 : I<0x18, MRM6m, (outs), (ins i8mem:$src),
     "prefetchit1\t$src", [(prefetch addr:$src, (i32 0), (i32 2), (i32 0))]>, TB;
 }
+
+//===----------------------------------------------------------------------===//
+// CMPCCXADD Instructions
+//
+let isCodeGenOnly = 1, ForceDisassemble = 1, mayLoad = 1, mayStore = 1,
+    Predicates = [HasCMPCCXADD, In64BitMode], Defs = [EFLAGS],
+    Constraints = "$dstsrc1 = $dst" in {
+def CMPCCXADDmr32 : I<0xe0, MRMDestMem4VOp3CC, (outs GR32:$dst),
+          (ins GR32:$dstsrc1, i32mem:$dstsrc2, GR32:$src3, ccode:$cond),
+          "cmp${cond}xadd\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
+          [(set GR32:$dst, (X86cmpccxadd addr:$dstsrc2,
+            GR32:$dstsrc1, GR32:$src3, timm:$cond))]>,
+          VEX_4V, T8PD, Sched<[WriteXCHG]>;
+
+def CMPCCXADDmr64 : I<0xe0, MRMDestMem4VOp3CC, (outs GR64:$dst),
+          (ins GR64:$dstsrc1, i64mem:$dstsrc2, GR64:$src3, ccode:$cond),
+          "cmp${cond}xadd\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
+          [(set GR64:$dst, (X86cmpccxadd addr:$dstsrc2,
+            GR64:$dstsrc1, GR64:$src3, timm:$cond))]>,
+          VEX_4V, VEX_W, T8PD, Sched<[WriteXCHG]>;
+}
+
+multiclass CMPCCXADD_Aliases<string Cond, int CC> {
+  def : InstAlias<"cmp"#Cond#"xadd"#"\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
+                  (CMPCCXADDmr32 GR32:$dst, i32mem:$dstsrc2, GR32:$src3, CC), 0>;
+  def : InstAlias<"cmp"#Cond#"xadd"#"\t{$src3, $dst, $dstsrc2|$dstsrc2, $dst, $src3}",
+                  (CMPCCXADDmr64 GR64:$dst, i64mem:$dstsrc2, GR64:$src3, CC), 0>;
+}
+
+defm : CMPCCXADD_Aliases<"o" ,  0>;
+defm : CMPCCXADD_Aliases<"no",  1>;
+defm : CMPCCXADD_Aliases<"b" ,  2>;
+defm : CMPCCXADD_Aliases<"ae",  3>;
+defm : CMPCCXADD_Aliases<"nb",  3>;
+defm : CMPCCXADD_Aliases<"e" ,  4>;
+defm : CMPCCXADD_Aliases<"z" ,  4>;
+defm : CMPCCXADD_Aliases<"ne",  5>;
+defm : CMPCCXADD_Aliases<"nz",  5>;
+defm : CMPCCXADD_Aliases<"be",  6>;
+defm : CMPCCXADD_Aliases<"nbe", 7>;
+defm : CMPCCXADD_Aliases<"a",   7>;
+defm : CMPCCXADD_Aliases<"s" ,  8>;
+defm : CMPCCXADD_Aliases<"ns",  9>;
+defm : CMPCCXADD_Aliases<"p" , 10>;
+defm : CMPCCXADD_Aliases<"np", 11>;
+defm : CMPCCXADD_Aliases<"l" , 12>;
+defm : CMPCCXADD_Aliases<"ge", 13>;
+defm : CMPCCXADD_Aliases<"nl", 13>;
+defm : CMPCCXADD_Aliases<"le", 14>;
+defm : CMPCCXADD_Aliases<"g",  15>;
+defm : CMPCCXADD_Aliases<"nle",15>;
 
 //===----------------------------------------------------------------------===//
 // Pattern fragments to auto generate TBM instructions.

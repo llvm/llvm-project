@@ -29,24 +29,26 @@ using namespace llvm;
 void X86InstPrinterCommon::printCondCode(const MCInst *MI, unsigned Op,
                                          raw_ostream &O) {
   int64_t Imm = MI->getOperand(Op).getImm();
+  bool Flavor = MI->getOpcode() == X86::CMPCCXADDmr32 ||
+                MI->getOpcode() == X86::CMPCCXADDmr64;
   switch (Imm) {
   default: llvm_unreachable("Invalid condcode argument!");
   case    0: O << "o";  break;
   case    1: O << "no"; break;
   case    2: O << "b";  break;
-  case    3: O << "ae"; break;
-  case    4: O << "e";  break;
-  case    5: O << "ne"; break;
+  case    3: O << (Flavor ? "nb" : "ae"); break;
+  case    4: O << (Flavor ?  "z" :  "e"); break;
+  case    5: O << (Flavor ? "nz" : "ne"); break;
   case    6: O << "be"; break;
-  case    7: O << "a";  break;
+  case    7: O << (Flavor ? "nbe" : "a"); break;
   case    8: O << "s";  break;
   case    9: O << "ns"; break;
   case  0xa: O << "p";  break;
   case  0xb: O << "np"; break;
   case  0xc: O << "l";  break;
-  case  0xd: O << "ge"; break;
+  case  0xd: O << (Flavor ? "nl" : "ge"); break;
   case  0xe: O << "le"; break;
-  case  0xf: O << "g";  break;
+  case  0xf: O << (Flavor ? "nle" : "g"); break;
   }
 }
 
