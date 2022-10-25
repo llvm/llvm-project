@@ -1772,6 +1772,21 @@ void AArch64InstPrinter::printSVEPattern(const MCInst *MI, unsigned OpNum,
     O << markup("<imm:") << '#' << formatImm(Val) << markup(">");
 }
 
+void AArch64InstPrinter::printSVEVecLenSpecifier(const MCInst *MI,
+                                                 unsigned OpNum,
+                                                 const MCSubtargetInfo &STI,
+                                                 raw_ostream &O) {
+  unsigned Val = MI->getOperand(OpNum).getImm();
+  // Pattern has only 1 bit
+  if (Val > 1)
+    llvm_unreachable("Invalid vector length specifier");
+  if (auto Pat =
+          AArch64SVEVecLenSpecifier::lookupSVEVECLENSPECIFIERByEncoding(Val))
+    O << Pat->Name;
+  else
+    llvm_unreachable("Invalid vector length specifier");
+}
+
 template <char suffix>
 void AArch64InstPrinter::printSVERegOp(const MCInst *MI, unsigned OpNum,
                                        const MCSubtargetInfo &STI,
