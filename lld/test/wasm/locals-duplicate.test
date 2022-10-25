@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj %p/Inputs/locals-duplicate1.ll -o %t1.o
-; RUN: llc -filetype=obj %p/Inputs/locals-duplicate2.ll -o %t2.o
+; RUN: llc -mcpu=mvp -filetype=obj %p/Inputs/locals-duplicate1.ll -o %t1.o
+; RUN: llc -mcpu=mvp -filetype=obj %p/Inputs/locals-duplicate2.ll -o %t2.o
 ; RUN: wasm-ld --export-dynamic --no-entry -o %t.wasm %t1.o %t2.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
