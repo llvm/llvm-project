@@ -4,7 +4,6 @@ add_header_library(
   HDRS
     bcmp_implementations.h
     bzero_implementations.h
-    elements.h
     memcmp_implementations.h
     memcpy_implementations.h
     memset_implementations.h
