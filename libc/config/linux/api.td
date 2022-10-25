@@ -172,7 +172,7 @@ def StdlibAPI : PublicAPI<"stdlib.h"> {
 }
 
 def TimeAPI : PublicAPI<"time.h"> {
-  let Types = ["time_t", "struct tm", "struct timespec", "clockid_t",];
+  let Types = ["clock_t", "time_t", "struct tm", "struct timespec", "clockid_t",];
 }
 
 def ErrnoAPI : PublicAPI<"errno.h"> {

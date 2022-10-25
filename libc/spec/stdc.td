@@ -3,6 +3,7 @@ def StdC : StandardSpec<"stdc"> {
   NamedType StructTmType = NamedType<"struct tm">;
   PtrType StructTmPtr = PtrType<StructTmType>;
   PtrType TimeTTypePtr = PtrType<TimeTType>;
+  NamedType ClockT = NamedType<"clock_t">;
 
   NamedType DivTType = NamedType<"div_t">;
   NamedType LDivTType = NamedType<"ldiv_t">;
@@ -917,8 +918,9 @@ def StdC : StandardSpec<"stdc"> {
       "time.h",
       [], // Macros
       [ // Types
-       StructTmType,
-       TimeTType,
+         ClockT,
+         StructTmType,
+         TimeTType,
       ],
       [], // Enumerations
       [
@@ -934,6 +936,11 @@ def StdC : StandardSpec<"stdc"> {
                   ArgSpec<StructTmPtr>,
                   ArgSpec<CharPtr>,
               ]
+          >,
+          FunctionSpec<
+              "clock",
+              RetValSpec<ClockT>,
+              [ArgSpec<VoidType>]
           >,
           FunctionSpec<
               "difftime",
@@ -960,6 +967,11 @@ def StdC : StandardSpec<"stdc"> {
               "mktime",
               RetValSpec<TimeTType>,
               [ArgSpec<StructTmPtr>]
+          >,
+          FunctionSpec<
+              "time",
+              RetValSpec<TimeTType>,
+              [ArgSpec<TimeTTypePtr>]
           >,
       ]
   >;
