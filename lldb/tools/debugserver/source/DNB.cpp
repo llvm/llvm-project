@@ -1824,3 +1824,19 @@ bool DNBDebugserverIsTranslated() {
     return false;
   return ret == 1;
 }
+
+bool DNBGetAddressingBits(uint32_t &addressing_bits) {
+  static uint32_t g_addressing_bits = 0;
+  static std::once_flag g_once_flag;
+  std::call_once(g_once_flag, [&](){
+    size_t len = sizeof(uint32_t);
+    if (::sysctlbyname("machdep.virtual_address_size", &g_addressing_bits, &len,
+                       NULL, 0) != 0) {
+      g_addressing_bits = 0;
+    }
+  }
+
+  addressing_bits = g_addressing_bits;
+
+  return addressing_bits > 0;
+}
