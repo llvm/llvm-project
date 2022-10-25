@@ -189,7 +189,7 @@ public:
 
   public:
     enum InfoType GetInfoType() const { return info_type; }
-    union {
+    union ContextInfo {
       struct RegisterPlusOffset {
         RegisterInfo reg;      // base register
         int64_t signed_offset; // signed offset added to base register
@@ -241,6 +241,8 @@ public:
 
       uint32_t isa;
     } info;
+    static_assert(std::is_trivial<ContextInfo>::value,
+                  "ContextInfo must be trivial.");
 
     Context() = default;
 

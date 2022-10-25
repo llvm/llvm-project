@@ -561,6 +561,10 @@ mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
 mlir::Value genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder, mlir::Location loc,
                                  mlir::Value cPtr, mlir::Type ty);
 
+/// Create a fir.box from a fir::ExtendedValue and wrap it in a fir::BoxValue
+/// to keep all the lower bound and explicit parameter information.
+fir::BoxValue createBoxValue(fir::FirOpBuilder &builder, mlir::Location loc,
+                             const fir::ExtendedValue &exv);
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

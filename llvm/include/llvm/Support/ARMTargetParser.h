@@ -237,6 +237,20 @@ static const ArchNames<ArchKind> ARCHNames[] = {
 #include "llvm/Support/ARMTargetParser.def"
 };
 
+inline ArchKind &operator--(ArchKind &Kind) {
+  assert((Kind >= ArchKind::ARMV8A && Kind <= ArchKind::ARMV9_3A) &&
+         "We only expect operator-- to be called with ARMV8/V9");
+  if (Kind == ArchKind::INVALID || Kind == ArchKind::ARMV8A ||
+      Kind == ArchKind::ARMV8_1A || Kind == ArchKind::ARMV9A ||
+      Kind == ArchKind::ARMV8R)
+    Kind = ArchKind::INVALID;
+  else {
+    unsigned KindAsInteger = static_cast<unsigned>(Kind);
+    Kind = static_cast<ArchKind>(--KindAsInteger);
+  }
+  return Kind;
+}
+
 // Information by ID
 StringRef getFPUName(unsigned FPUKind);
 FPUVersion getFPUVersion(unsigned FPUKind);
@@ -258,6 +272,7 @@ StringRef getArchExtFeature(StringRef ArchExt);
 bool appendArchExtFeatures(StringRef CPU, ARM::ArchKind AK, StringRef ArchExt,
                            std::vector<StringRef> &Features,
                            unsigned &ArgFPUKind);
+ArchKind convertV9toV8(ArchKind AK);
 
 // Information by Name
 unsigned getDefaultFPU(StringRef CPU, ArchKind AK);

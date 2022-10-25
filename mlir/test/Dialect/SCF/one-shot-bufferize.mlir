@@ -38,6 +38,32 @@ func.func @scf_for_yield_only(
 
 // -----
 
+// CHECK-LABEL: func @scf_for_is_reading(
+//  CHECK-SAME:     %[[A:.*]]: memref<?xf32, strided<[?], offset: ?>>, %[[B:.*]]: memref<?xf32, strided<[?], offset: ?>>
+func.func @scf_for_is_reading(%A : tensor<?xf32>, %B : tensor<?xf32>,
+                              %lb : index, %ub : index)
+  -> (f32, f32)
+{
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.0 : f32
+
+  // This is a regression test to make sure that an alloc + copy is emitted.
+
+  // CHECK: %[[alloc:.*]] = memref.alloc
+  // CHECK: memref.copy %[[A]], %[[alloc]]
+  // CHECK: %[[clone:.*]] = bufferization.clone %[[alloc]]
+  // CHECK: scf.for {{.*}} iter_args(%{{.*}} = %[[clone]])
+  %0 = scf.for %iv = %lb to %ub step %c1 iter_args(%1 = %A) -> tensor<?xf32> {
+    %r = linalg.fill ins(%cst : f32) outs(%1 : tensor<?xf32>) -> tensor<?xf32>
+    scf.yield %B : tensor<?xf32>
+  }
+  %1 = tensor.extract %0[%c1] : tensor<?xf32>
+  %2 = tensor.extract %A[%c1] : tensor<?xf32>
+  return %1, %2 : f32, f32
+}
+
+// -----
+
 // Ensure that the function bufferizes without error. This tests pre-order
 // traversal of scf.for loops during bufferization. No need to check the IR,
 // just want to make sure that it does not crash.

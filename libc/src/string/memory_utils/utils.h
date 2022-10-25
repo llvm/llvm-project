@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_MEMORY_UTILS_UTILS_H
 
 #include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/cstddef.h"
 #include "src/__support/CPP/type_traits.h"
 
 #include <stddef.h> // size_t
@@ -103,8 +104,8 @@ static inline void memcpy_inline(void *__restrict dst,
 #endif
 }
 
-using Ptr = char *;        // Pointer to raw data.
-using CPtr = const char *; // Const pointer to raw data.
+using Ptr = cpp::byte *;        // Pointer to raw data.
+using CPtr = const cpp::byte *; // Const pointer to raw data.
 
 // This type makes sure that we don't accidentally promote an integral type to
 // another one. It is only constructible from the exact T type.

@@ -1098,10 +1098,9 @@ public:
 
     // If it's still dependent, make a dependent specialization.
     if (InstName.getAsDependentTemplateName())
-      return SemaRef.Context.getDependentTemplateSpecializationType(Keyword,
-                                          QualifierLoc.getNestedNameSpecifier(),
-                                                                    Name,
-                                                                    Args);
+      return SemaRef.Context.getDependentTemplateSpecializationType(
+          Keyword, QualifierLoc.getNestedNameSpecifier(), Name,
+          Args.arguments());
 
     // Otherwise, make an elaborated type wrapping a non-dependent
     // specialization.
@@ -6778,12 +6777,9 @@ QualType TreeTransform<Derived>::TransformDependentTemplateSpecializationType(
   // FIXME: maybe don't rebuild if all the template arguments are the same.
 
   if (DependentTemplateName *DTN = Template.getAsDependentTemplateName()) {
-    QualType Result
-      = getSema().Context.getDependentTemplateSpecializationType(
-                                                TL.getTypePtr()->getKeyword(),
-                                                         DTN->getQualifier(),
-                                                         DTN->getIdentifier(),
-                                                               NewTemplateArgs);
+    QualType Result = getSema().Context.getDependentTemplateSpecializationType(
+        TL.getTypePtr()->getKeyword(), DTN->getQualifier(),
+        DTN->getIdentifier(), NewTemplateArgs.arguments());
 
     DependentTemplateSpecializationTypeLoc NewTL
       = TLB.push<DependentTemplateSpecializationTypeLoc>(Result);
@@ -12606,7 +12602,8 @@ TreeTransform<Derived>::TransformRequiresExpr(RequiresExpr *E) {
   // C++2a [expr.prim.req]p2
   // Expressions appearing within a requirement-body are unevaluated operands.
   EnterExpressionEvaluationContext Ctx(
-      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
+      SemaRef, Sema::ExpressionEvaluationContext::Unevaluated,
+      Sema::ReuseLambdaContextDecl);
 
   RequiresExprBodyDecl *Body = RequiresExprBodyDecl::Create(
       getSema().Context, getSema().CurContext,

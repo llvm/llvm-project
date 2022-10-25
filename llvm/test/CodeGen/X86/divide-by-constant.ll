@@ -738,9 +738,10 @@ define i64 @urem_i64_12(i64 %x) nounwind {
 ; X32-NEXT:    pushl %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    shrdl $2, %ecx, %esi
-; X32-NEXT:    shrl $2, %ecx
-; X32-NEXT:    addl %esi, %ecx
+; X32-NEXT:    movl %ecx, %eax
+; X32-NEXT:    shrl $2, %eax
+; X32-NEXT:    shldl $30, %esi, %ecx
+; X32-NEXT:    addl %eax, %ecx
 ; X32-NEXT:    adcl $0, %ecx
 ; X32-NEXT:    movl $-1431655765, %edx # imm = 0xAAAAAAAB
 ; X32-NEXT:    movl %ecx, %eax

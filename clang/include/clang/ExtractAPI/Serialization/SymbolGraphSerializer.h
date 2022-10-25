@@ -18,6 +18,7 @@
 #define LLVM_CLANG_EXTRACTAPI_SERIALIZATION_SYMBOLGRAPHSERIALIZER_H
 
 #include "clang/ExtractAPI/API.h"
+#include "clang/ExtractAPI/APIIgnoresList.h"
 #include "clang/ExtractAPI/Serialization/SerializerBase.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/JSON.h"
@@ -168,8 +169,9 @@ private:
 
 public:
   SymbolGraphSerializer(const APISet &API, StringRef ProductName,
+                        const APIIgnoresList &IgnoresList,
                         APISerializerOption Options = {})
-      : APISerializer(API, ProductName, Options) {}
+      : APISerializer(API, ProductName, IgnoresList, Options) {}
 };
 
 } // namespace extractapi

@@ -6,6 +6,7 @@ add_flang_library(FortranLower
   CallInterface.cpp
   Coarray.cpp
   ConvertExpr.cpp
+  ConvertExprToHLFIR.cpp
   ConvertType.cpp
   ConvertVariable.cpp
   ComponentPath.cpp
@@ -28,6 +29,7 @@ add_flang_library(FortranLower
   FIRBuilder
   FIRSupport
   FIRTransforms
+  HLFIRDialect
   ${dialect_libs}
 
   LINK_LIBS
@@ -35,6 +37,7 @@ add_flang_library(FortranLower
   FIRBuilder
   FIRSupport
   FIRTransforms
+  HLFIRDialect
   ${dialect_libs}
   FortranCommon
   FortranParser
