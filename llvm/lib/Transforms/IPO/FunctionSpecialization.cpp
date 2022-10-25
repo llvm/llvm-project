@@ -552,11 +552,9 @@ private:
     // inlined so that we shouldn't specialize it.
     if (Metrics.notDuplicatable || !Metrics.NumInsts.isValid() ||
         (!ForceFunctionSpecialization &&
-         Metrics.NumInsts < SmallFunctionThreshold)) {
-      InstructionCost C{};
-      C.setInvalid();
-      return C;
-    }
+         !F->hasFnAttribute(Attribute::NoInline) &&
+         Metrics.NumInsts < SmallFunctionThreshold))
+      return InstructionCost::getInvalid();
 
     // Otherwise, set the specialization cost to be the cost of all the
     // instructions in the function and penalty for specializing more functions.
