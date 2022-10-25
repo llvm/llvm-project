@@ -18,8 +18,8 @@ namespace llvm {
 namespace jitlink {
 namespace aarch64 {
 
-const uint8_t NullGOTEntryContent[8] = {0x00, 0x00, 0x00, 0x00,
-                                        0x00, 0x00, 0x00, 0x00};
+const char NullPointerContent[8] = {0x00, 0x00, 0x00, 0x00,
+                                    0x00, 0x00, 0x00, 0x00};
 
 const uint8_t StubContent[8] = {
     0x10, 0x00, 0x00, 0x58, // LDR x16, <literal>

@@ -248,10 +248,30 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
 constexpr uint64_t PointerSize = 8;
 
 /// AArch64 null pointer content.
-extern const uint8_t NullGOTEntryContent[PointerSize];
+extern const char NullPointerContent[PointerSize];
 
 /// AArch64 PLT stub content.
 extern const uint8_t StubContent[8];
+
+/// Creates a new pointer block in the given section and returns an
+/// Anonymous symobl pointing to it.
+///
+/// If InitialTarget is given then an Pointer64 relocation will be added to the
+/// block pointing at InitialTarget.
+///
+/// The pointer block will have the following default values:
+///   alignment: 64-bit
+///   alignment-offset: 0
+///   address: highest allowable (~7U)
+inline Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
+                                      Symbol *InitialTarget = nullptr,
+                                      uint64_t InitialAddend = 0) {
+  auto &B = G.createContentBlock(PointerSection, NullPointerContent,
+                                 orc::ExecutorAddr(~uint64_t(7)), 8, 0);
+  if (InitialTarget)
+    B.addEdge(Pointer64, 0, *InitialTarget, InitialAddend);
+  return G.addAnonymousSymbol(B, 0, 8, false, false);
+}
 
 /// Global Offset Table Builder.
 class GOTTableManager : public TableManager<GOTTableManager> {
@@ -300,10 +320,7 @@ public:
   }
 
   Symbol &createEntry(LinkGraph &G, Symbol &Target) {
-    auto &GOTEntryBlock = G.createContentBlock(
-        getGOTSection(G), getGOTEntryBlockContent(), orc::ExecutorAddr(), 8, 0);
-    GOTEntryBlock.addEdge(aarch64::Pointer64, 0, Target, 0);
-    return G.addAnonymousSymbol(GOTEntryBlock, 0, 8, false, false);
+    return createAnonymousPointer(G, getGOTSection(G), &Target);
   }
 
 private:
@@ -312,11 +329,6 @@ private:
       GOTSection = &G.createSection(getSectionName(),
                                     orc::MemProt::Read | orc::MemProt::Exec);
     return *GOTSection;
-  }
-
-  ArrayRef<char> getGOTEntryBlockContent() {
-    return {reinterpret_cast<const char *>(NullGOTEntryContent),
-            sizeof(NullGOTEntryContent)};
   }
 
   Section *GOTSection = nullptr;
