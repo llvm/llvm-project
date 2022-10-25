@@ -26,10 +26,10 @@ namespace test_union {
     int * AQ f0; // expected-note 8 {{'U1' is implicitly deleted because variant field 'f0' has an address-discriminated ptrauth qualifier}}
     U1() = default;
     ~U1() = default;
-    U1(const U1 &) = default; // expected-warning {{explicitly defaulted copy constructor is implicitly deleted}} expected-note 2 {{explicitly defaulted function was implicitly deleted here}}
-    U1(U1 &&) = default; // expected-warning {{explicitly defaulted move constructor is implicitly deleted}}
-    U1 & operator=(const U1 &) = default; // expected-warning {{explicitly defaulted copy assignment operator is implicitly deleted}} expected-note 2 {{explicitly defaulted function was implicitly deleted here}}
-    U1 & operator=(U1 &&) = default; // expected-warning {{explicitly defaulted move assignment operator is implicitly deleted}}
+    U1(const U1 &) = default; // expected-warning {{explicitly defaulted copy constructor is implicitly deleted}} expected-note 2 {{explicitly defaulted function was implicitly deleted here}} expected-note{{replace 'default'}}
+    U1(U1 &&) = default; // expected-warning {{explicitly defaulted move constructor is implicitly deleted}} expected-note{{replace 'default'}}
+    U1 & operator=(const U1 &) = default; // expected-warning {{explicitly defaulted copy assignment operator is implicitly deleted}} expected-note 2 {{explicitly defaulted function was implicitly deleted here}} expected-note{{replace 'default'}}
+    U1 & operator=(U1 &&) = default; // expected-warning {{explicitly defaulted move assignment operator is implicitly deleted}} expected-note{{replace 'default'}}
   };
 
   // It's fine if the user has explicitly defined the special functions.
@@ -48,7 +48,7 @@ namespace test_union {
   // class.
   struct S0 {
     union {
-      int * AQ f0; // expected-note 4 {{'' is implicitly deleted because variant field 'f0' has an address-discriminated ptrauth qualifier}}
+      int * AQ f0; // expected-note 4 {{' is implicitly deleted because variant field 'f0' has an address-discriminated ptrauth qualifier}}
       char f1;
     };
   };
