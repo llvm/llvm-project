@@ -41,6 +41,20 @@ def NullAttr : CIR_Attr<"Null", "null", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// ZeroAttr
+//===----------------------------------------------------------------------===//
+
+def ZeroAttr : CIR_Attr<"Zero", "zero", [TypedAttrInterface]> {
+  let summary = "Attribute to represent zero initialization";
+  let description = [{
+    The ZeroAttr is used to indicate zero initialization on structs.
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type);
+  let assemblyFormat = [{}];
+}
+
+//===----------------------------------------------------------------------===//
 // CstArrayAttr
 //===----------------------------------------------------------------------===//
 

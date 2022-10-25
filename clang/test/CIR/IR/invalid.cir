@@ -221,3 +221,9 @@ cir.func @unary1() {
   %3 = cir.unary(dec, %2) : i32, i32 //  // expected-error {{'cir.unary' op requires result to be used by a memory store to the same address as the input memory load}}
   cir.return
 }
+
+// -----
+
+module {
+  cir.global external @v = #cir.zero : i32 // expected-error {{zero expects struct type}}
+}
