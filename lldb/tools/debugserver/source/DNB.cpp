@@ -1834,7 +1834,7 @@ bool DNBGetAddressingBits(uint32_t &addressing_bits) {
                        NULL, 0) != 0) {
       g_addressing_bits = 0;
     }
-  }
+  });
 
   addressing_bits = g_addressing_bits;
 
