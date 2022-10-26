@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false -mcpu=mvp -disable-wasm-fallthrough-return-opt -wasm-keep-registers -verify-machineinstrs | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -mcpu=mvp -wasm-keep-registers -fast-isel -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-keep-registers -fast-isel -verify-machineinstrs | FileCheck %s
 
 ; Test that FastISel does not generate instructions with NoReg
 

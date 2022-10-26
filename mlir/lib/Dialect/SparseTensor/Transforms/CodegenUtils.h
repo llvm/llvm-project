@@ -35,127 +35,6 @@ namespace sparse_tensor {
 enum class EmitCInterface : bool { Off = false, On = true };
 
 //===----------------------------------------------------------------------===//
-// SparseTensorLoopEmiter class, manages sparse tensors and helps to generate
-// loop structure to (co-iterate) sparse tensors.
-//
-// An example usage:
-// To generate following loops over T1<?x?> and T2<?x?>
-//
-// for i in T1[0] {
-//   for j : T2[0] {
-//     for k : T1[1] {}
-//     for k : T2[1] {}
-//   }
-// }
-//
-// One can use
-//
-// SparseTensorLoopEmiter loopEmiter({T1, T1});
-// loopEmiter.initializeLoopEmit();
-// loopEmiter.enterLoopOverTensorAtDim(T1, 0);
-// loopEmiter.enterLoopOverTensorAtDim(T2, 0);
-// loopEmiter.enterLoopOverTensorAtDim(T1, 1);
-// loopEmiter.exitCurrentLoop();
-// loopEmiter.enterLoopOverTensorAtDim(T2, 1);
-// for 0 -> 3:
-//    loopEmiter.exitCurrentLoop();
-//===----------------------------------------------------------------------===//
-
-// TODO: Sparsification should also rely on this class to generate loops.
-class SparseTensorLoopEmitter {
-public:
-  /// Constructor: take an array of tensors inputs, on which the generated loops
-  /// will iterate on. The index of the tensor in the array is also the
-  /// tensor id (tid) used in related functions.
-  explicit SparseTensorLoopEmitter(ValueRange tensors,
-                                   bool isLastOutput = false);
-
-  ///
-  /// Core functions.
-  ///
-
-  /// Starts a loop emitting session:
-  /// 1. Generates all the buffers needed to iterate tensors.
-  /// 2. Generates the lo/hi bounds to iterate tensors[0].
-  void initializeLoopEmit(OpBuilder &builder, Location loc);
-
-  // TODO: Gets rid of `dim` in the argument list? Track the dimension we
-  // are currently at internally. Then it would be enterNextDimForTensor.
-
-  /// Emits loop over tensor[dim], it assumes that loops between
-  /// tensor[0...dim - 1] have already been generated.
-  /// It also prepares to enter tensor[dim + 1].
-  Operation *enterLoopOverTensorAtDim(OpBuilder &builder, Location loc,
-                                      size_t tid, size_t dim,
-                                      ArrayRef<Value> reduc = {});
-
-  /// Emits a coiteration loop over a set of tensors.
-  // TODO: not yet implemented
-  void enterCoiterationOverTensorsAtDims(OpBuilder &builder, Location loc,
-                                         ArrayRef<size_t> ts,
-                                         ArrayRef<size_t> ds);
-
-  /// Emits extra locals, since the locals might not be in simplified lattices
-  /// point used to generate the loops, but are still required to generates
-  /// expressions.
-  Value emitExtraLocalsForTensorsAtDims(OpBuilder &builder, Location loc,
-                                        size_t tid, size_t dim);
-
-  void exitCurrentLoop();
-
-  /// Return the array of coordinate for all the loop generated till now.
-  void getCoordinateArray(SmallVectorImpl<Value> &coords) {
-    for (auto &l : loopStack)
-      coords.push_back(l.idx);
-  }
-
-  ///
-  /// Getters.
-  ///
-
-  Value getTensorValueBuffer(size_t tid) { return valBuffer[tid]; }
-  Value getLastLevelTensorPointerIndex(size_t tid) {
-    return pidxs[tid].back();
-  };
-
-private:
-  struct LoopLevelInfo {
-    LoopLevelInfo(ArrayRef<size_t> ts, ArrayRef<size_t> ds, Value idx)
-        : tensors(ts), dims(ds), idx(idx) {}
-    llvm::SmallVector<size_t, 4> tensors;
-    llvm::SmallVector<size_t, 4> dims;
-    Value idx;
-  };
-
-  /// Return false if tid[dim] is a dense dimension that does not need to be
-  /// prepared (to be used by sparsification for needUniv).
-  bool prepareLoopOverTensorAtDim(OpBuilder &builder, Location loc, size_t tid,
-                                  size_t dim);
-
-  /// Input (TODO: and output) tensors.
-  std::vector<Value> tensors;
-  /// The dim type array for each tensor.
-  std::vector<std::vector<DimLevelType>> dims;
-  /// Sparse iteration information (by tensor and dim). These arrays
-  /// are updated to remain current within the current loop.
-  std::vector<std::vector<Value>> pidxs;
-  std::vector<std::vector<Value>> coord;
-  std::vector<std::vector<Value>> highs;
-  /// Universal dense indices and upper bounds (by index). The sizes array is
-  /// set once with the inferred dimension sizes.
-  std::vector<std::vector<Value>> sizes;
-  std::vector<std::vector<Value>> ptrBuffer; // to_pointers
-  std::vector<std::vector<Value>> idxBuffer; // to_indices
-  std::vector<Value> valBuffer;              // to_value
-
-  bool isLastOutput; // Is the last tensor output tensor
-  std::vector<LoopLevelInfo> loopStack;
-  // TODO: not yet used, it should track the current level for each tensor
-  // to help eliminate `dim` paramters from above APIs.
-  std::vector<size_t> curLv;
-};
-
-//===----------------------------------------------------------------------===//
 // ExecutionEngine/SparseTensorUtils helper functions.
 //===----------------------------------------------------------------------===//
 
@@ -399,6 +278,214 @@ inline Value constantDimLevelTypeEncoding(OpBuilder &builder, Location loc,
                                           DimLevelType dlt) {
   return constantI8(builder, loc, static_cast<uint8_t>(dlt));
 }
+
+inline bool isZeroRankedTensorOrScalar(Type type) {
+  auto rtp = type.dyn_cast<RankedTensorType>();
+  return !rtp || rtp.getRank() == 0;
+}
+
+//===----------------------------------------------------------------------===//
+// SparseTensorLoopEmiter class, manages sparse tensors and helps to generate
+// loop structure to (co)-iterate sparse tensors.
+//
+// An example usage:
+// To generate the following loops over T1<?x?> and T2<?x?>
+//
+// for i in TENSOR_1_0 {
+//   for j : TENSOR_2_0 {
+//     for k : TENSOR_1_1 {}
+//     for k : TENSOR_2_1 {}
+//   }
+// }
+//
+// One can use
+//
+// SparseTensorLoopEmiter loopEmiter({T1, T1});
+// loopEmiter.initializeLoopEmit();
+// loopEmiter.enterLoopOverTensorAtDim(T1, 0);
+// loopEmiter.enterLoopOverTensorAtDim(T2, 0);
+// loopEmiter.enterLoopOverTensorAtDim(T1, 1);
+// loopEmiter.exitCurrentLoop();
+// loopEmiter.enterLoopOverTensorAtDim(T2, 1);
+// loopEmiter.exitCurrentLoop(); // exit k
+// loopEmiter.exitCurrentLoop(); // exit j
+// loopEmiter.exitCurrentLoop(); // exit i
+//===----------------------------------------------------------------------===//
+
+// TODO: Sparsification should also rely on this class to generate loops.
+class SparseTensorLoopEmitter {
+public:
+  /// Optional callback function to setup dense output tensors when
+  /// initializing the loop emitter (e.g., to fill a dense output with zeros).
+  using OutputUpdater = function_ref<Value(OpBuilder &builder, Location loc,
+                                           Value memref, Value tensor)>;
+
+  /// Constructor: take an array of tensors inputs, on which the generated loops
+  /// will iterate on. The index of the tensor in the array is also the
+  /// tensor id (tid) used in related functions.
+  /// If isSparseOut is set, loop emitter assume that the sparse output tensor
+  /// is empty, and will always generate loops on it based on the dim sizes.
+  explicit SparseTensorLoopEmitter(ValueRange tensors, bool hasOutput = false,
+                                   bool isSparseOut = false);
+
+  /// Starts a loop emitting session by generating all the buffers needed to
+  /// iterate tensors.
+  void initializeLoopEmit(OpBuilder &builder, Location loc,
+                          OutputUpdater updater = nullptr);
+
+  /// Enters a new loop sequence, the loops within the same sequence starts from
+  /// the break points of previous loop instead of starting over from 0.
+  /// e.g.,
+  /// {
+  ///   // loop sequence start.
+  ///   p0 = while(xxx)
+  ///     ...
+  ///     break p0
+  ///
+  ///   // Starts loop from p0
+  ///   for (i = p0; i < end; i++)
+  ///     ...
+  ///   // loop sequence end.
+  /// }
+  void enterNewLoopSeq(OpBuilder &builder, Location loc, ArrayRef<size_t> tids,
+                       ArrayRef<size_t> dims);
+
+  // exit the current loop sequence, this will reset universal index to 0.
+  void exitCurrentLoopSeq() {
+    assert(loopSeqStack.size() == loopStack.size() + 1);
+    loopSeqStack.pop_back();
+  }
+
+  // TODO: Gets rid of `dim` in the argument list? Track the dimension we
+  // are currently at internally. Then it would be enterNextDimForTensor.
+  // Still need a way to specify the dim for non annoated dense tensor though,
+  // as it can be accessed out of order.
+  /// Emits loop over tensor_tid_dim, it assumes that loops between
+  /// tensor_tid_[0, dim - 1] have already been generated.
+  /// The function will also perform in-place update on the `reduc` vector to
+  /// return the reduction variable used inside the generated loop.
+  Operation *enterLoopOverTensorAtDim(OpBuilder &builder, Location loc,
+                                      size_t tid, size_t dim,
+                                      MutableArrayRef<Value> reduc = {},
+                                      bool isParallel = false,
+                                      ArrayRef<size_t> extraTids = {},
+                                      ArrayRef<size_t> extraDims = {});
+
+  /// Emits a co-iteration loop over a set of tensors.
+  Operation *enterCoIterationOverTensorsAtDims(
+      OpBuilder &builder, Location loc, ArrayRef<size_t> tids,
+      ArrayRef<size_t> dims, bool needsUniv, MutableArrayRef<Value> reduc = {},
+      ArrayRef<size_t> extraTids = {}, ArrayRef<size_t> extraDims = {});
+
+  SmallVector<Value, 2> exitCurrentLoop(OpBuilder &builder, Location loc,
+                                        ArrayRef<Value> reduc = {});
+
+  /// Returns the array of coordinate for all the loop generated till now.
+  void getCoordinateArray(SmallVectorImpl<Value> &coords) const {
+    for (auto &l : loopStack)
+      coords.push_back(l.iv);
+  }
+
+  /// Gets loop induction variable at the given level.
+  Value getLoopIV(size_t level) const {
+    if (level < loopStack.size())
+      return loopStack[level].iv;
+    return nullptr;
+  }
+
+  ///
+  /// Getters.
+  ///
+  const std::vector<std::vector<Value>> &getPidxs() const { return pidxs; };
+  const std::vector<std::vector<Value>> &getCoord() const { return coord; };
+  const std::vector<std::vector<Value>> &getHighs() const { return highs; };
+  const std::vector<std::vector<Value>> &getPtrBuffer() const {
+    return ptrBuffer;
+  };
+  const std::vector<std::vector<Value>> &getIdxBuffer() const {
+    return idxBuffer;
+  };
+  const std::vector<Value> &getValBuffer() const { return valBuffer; };
+
+private:
+  struct LoopLevelInfo {
+    LoopLevelInfo(ArrayRef<size_t> tids, ArrayRef<size_t> dims, Operation *loop,
+                  Value iv)
+        : tids(tids), dims(dims), loop(loop), iv(iv) {}
+    // TODO: maybe use a vector<pair> for tid and dim?
+    // The set of tensors that the loop is operating on
+    const llvm::SmallVector<size_t, 4> tids;
+    // The corresponding dims for the tensors
+    const llvm::SmallVector<size_t, 4> dims;
+    const Operation *loop; // the loop operation
+    const Value iv;        // the induction variable for the loop
+  };
+
+  /// Linearizes address for dense dimension (i.e., p = (i * d0) + j).
+  Value genAddress(OpBuilder &builder, Location loc, size_t tid, size_t dim,
+                   Value iv) {
+    Value p = dim == 0 ? constantIndex(builder, loc, 0) : pidxs[tid][dim - 1];
+    Value mul = builder.create<arith::MulIOp>(loc, highs[tid][dim], p);
+    Value add = builder.create<arith::AddIOp>(loc, mul, iv);
+    return add;
+  }
+
+  bool isOutputTensor(size_t tid) {
+    return hasOutput && tid == tensors.size() - 1;
+  }
+
+  /// Setups [lo, hi] for iterating tensor[dim], it assumes that tensor[0
+  /// ...dims-1] has already been setup.
+  void prepareLoopOverTensorAtDim(OpBuilder &builder, Location loc, size_t tid,
+                                  size_t dim);
+
+  /// Emits extra locals, since the locals might not be in simplified lattices
+  /// point used to generate the loops, but are still required to generates
+  /// expressions.
+  void emitExtraLocalsForTensorsAtDenseDims(OpBuilder &builder, Location loc,
+                                            ArrayRef<size_t> tids,
+                                            ArrayRef<size_t> dims);
+
+  /// Exits a for loop, returns the reduction results, e.g.,
+  /// %ret = for () {
+  ///   ...
+  ///   yield %val
+  /// }
+  /// Return %ret to user, while %val is provided by users (`reduc`)
+  SmallVector<Value, 2> exitForLoop(OpBuilder &builder, Location loc,
+                                    ArrayRef<Value> reduc);
+
+  /// Exits a while loop, returns the reduction results.
+  SmallVector<Value, 2> exitCoiterationLoop(OpBuilder &builder, Location loc,
+                                            ArrayRef<Value> reduc);
+
+  // Whether the loop emitter needs to treat the last tensor as the output
+  // tensor.
+  bool hasOutput;
+  /// Input and (optional) output tensors.
+  std::vector<Value> tensors;
+  /// The dim type array for each tensor.
+  std::vector<std::vector<DimLevelType>> dimTypes;
+  /// Sparse iteration information (by tensor and dim). These arrays
+  /// are updated to remain current within the current loop.
+  std::vector<std::vector<Value>> pidxs;
+  std::vector<std::vector<Value>> coord;
+  std::vector<std::vector<Value>> highs;
+  std::vector<std::vector<Value>> ptrBuffer; // to_pointers
+  std::vector<std::vector<Value>> idxBuffer; // to_indices
+  std::vector<Value> valBuffer;              // to_value
+
+  // Loop Stack, stores the information of all the nested loops that are alive.
+  std::vector<LoopLevelInfo> loopStack;
+
+  // Loop Sequence Stack, stores the unversial index for the current loop
+  // sequence.
+  std::vector<Value> loopSeqStack;
+
+  // TODO: not yet used, it should track the current level for each tensor
+  // to help eliminate `dim` paramters from above APIs.
+  // std::vector<size_t> curLv;
+};
 
 } // namespace sparse_tensor
 } // namespace mlir

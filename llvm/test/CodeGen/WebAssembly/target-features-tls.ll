@@ -1,5 +1,5 @@
-; RUN: llc < %s -mcpu=mvp -mattr=-bulk-memory,atomics | FileCheck %s --check-prefixes NO-BULK-MEM
-; RUN: llc < %s -mcpu=mvp -mattr=+bulk-memory,atomics | FileCheck %s --check-prefixes BULK-MEM
+; RUN: llc < %s -mattr=-bulk-memory,atomics | FileCheck %s --check-prefixes NO-BULK-MEM
+; RUN: llc < %s -mattr=+bulk-memory,atomics | FileCheck %s --check-prefixes BULK-MEM
 
 ; Test that the target features section contains -atomics or +atomics
 ; for modules that have thread local storage in their source.

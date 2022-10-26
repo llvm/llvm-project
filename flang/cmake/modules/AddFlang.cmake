@@ -7,7 +7,7 @@ macro(set_flang_windows_version_resource_properties name)
       VERSION_MAJOR ${FLANG_VERSION_MAJOR}
       VERSION_MINOR ${FLANG_VERSION_MINOR}
       VERSION_PATCHLEVEL ${FLANG_VERSION_PATCHLEVEL}
-      VERSION_STRING "${FLANG_VERSION} (${BACKEND_PACKAGE_STRING})"
+      VERSION_STRING "${FLANG_VERSION}"
       PRODUCT_NAME "flang")
   endif()
 endmacro()

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mcpu=mvp -mattr=+mutable-globals | FileCheck %s
+; RUN: llc < %s -mattr=+mutable-globals | FileCheck %s
 
 ; Test that mutable globals is properly emitted into the target features section
 

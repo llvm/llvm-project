@@ -477,28 +477,34 @@ public:
     // 1. Generates loop for the sparse input.
     SparseTensorLoopEmitter loopEmitter(ValueRange{input});
     loopEmitter.initializeLoopEmit(rewriter, loc);
-    for (int64_t i = 0; i < rank; i++)
+    for (int64_t i = 0; i < rank; i++) {
+      // TODO: provide utility function for loop sequences that only contains
+      // one for loop?
+      loopEmitter.enterNewLoopSeq(rewriter, loc, 0, static_cast<size_t>(i));
       loopEmitter.enterLoopOverTensorAtDim(rewriter, loc, 0, i);
+    }
 
     SmallVector<Value, 4> coords;
     coords.reserve(rank);
     loopEmitter.getCoordinateArray(coords);
 
-    Value vals = loopEmitter.getTensorValueBuffer(0);
-    Value pidx = loopEmitter.getLastLevelTensorPointerIndex(0);
+    Value vals = loopEmitter.getValBuffer()[0];
+    Value pidx = loopEmitter.getPidxs()[0].back();
     // Loads the value from sparse tensor using pointer index;
     // loads the value from dense tensor using coordinate array.
     Value val = enc ? rewriter.create<memref::LoadOp>(loc, vals, pidx)
                     : rewriter.create<memref::LoadOp>(loc, vals, coords);
-
-    for (int64_t i = 0; i < rank; i++)
-      loopEmitter.exitCurrentLoop();
 
     // 2. Inline the block in the foreach operator.
     Block::iterator inlinePos = rewriter.getInsertionPoint();
     Block *srcBlock = op.getBody();
     // Remove sparse_tensor.yield.
     rewriter.eraseOp(srcBlock->getTerminator());
+
+    for (int64_t i = 0; i < rank; i++) {
+      loopEmitter.exitCurrentLoop(rewriter, loc);
+      loopEmitter.exitCurrentLoopSeq();
+    }
 
     SmallVector<Value, 4> args;
     // Remap coordinates.

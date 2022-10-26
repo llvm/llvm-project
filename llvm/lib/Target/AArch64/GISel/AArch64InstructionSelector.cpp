@@ -3269,24 +3269,12 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
       // For the 32-bit -> 64-bit case, we can emit a mov (ORRWrs)
       // + SUBREG_TO_REG.
-      //
-      // If we are zero extending from 32 bits to 64 bits, it's possible that
-      // the instruction implicitly does the zero extend for us. In that case,
-      // we only need the SUBREG_TO_REG.
       if (IsGPR && SrcSize == 32 && DstSize == 64) {
-        // Unlike with the G_LOAD case, we don't want to look through copies
-        // here. (See isDef32.)
-        MachineInstr *Def = MRI.getVRegDef(SrcReg);
-        Register SubregToRegSrc = SrcReg;
-
-        // Does the instruction implicitly zero extend?
-        if (!Def || !isDef32(*Def)) {
-          // No. Zero out using an OR.
-          Register OrDst = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
-          const Register ZReg = AArch64::WZR;
-          MIB.buildInstr(AArch64::ORRWrs, {OrDst}, {ZReg, SrcReg}).addImm(0);
-          SubregToRegSrc = OrDst;
-        }
+        Register SubregToRegSrc =
+            MRI.createVirtualRegister(&AArch64::GPR32RegClass);
+        const Register ZReg = AArch64::WZR;
+        MIB.buildInstr(AArch64::ORRWrs, {SubregToRegSrc}, {ZReg, SrcReg})
+            .addImm(0);
 
         MIB.buildInstr(AArch64::SUBREG_TO_REG, {DefReg}, {})
             .addImm(0)

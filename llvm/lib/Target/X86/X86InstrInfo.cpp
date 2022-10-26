@@ -8709,6 +8709,10 @@ bool X86InstrInfo::hasReassociableOperands(const MachineInstr &Inst,
 //       3. Other forms of the same operation (intrinsics and other variants)
 bool X86InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
   switch (Inst.getOpcode()) {
+  case X86::ADD8rr:
+  case X86::ADD16rr:
+  case X86::ADD32rr:
+  case X86::ADD64rr:
   case X86::AND8rr:
   case X86::AND16rr:
   case X86::AND32rr:
