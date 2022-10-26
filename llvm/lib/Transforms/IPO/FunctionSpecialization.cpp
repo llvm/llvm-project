@@ -315,8 +315,9 @@ public:
                         << F->getName() << " is " << Cost << "\n");
 
       SmallVector<CallSpecBinding, 8> Specializations;
-      if (!calculateGains(F, Cost, Specializations)) {
-        LLVM_DEBUG(dbgs() << "FnSpecialization: No possible constants found\n");
+      if (!findSpecializations(F, Cost, Specializations)) {
+        LLVM_DEBUG(
+            dbgs() << "FnSpecialization: No possible specializations found\n");
         continue;
       }
 
@@ -421,35 +422,51 @@ private:
   /// applying them.
   ///
   /// \returns true if any specializations have been found.
-  bool calculateGains(Function *F, InstructionCost Cost,
-                      SmallVectorImpl<CallSpecBinding> &WorkList) {
+  bool findSpecializations(Function *F, InstructionCost Cost,
+                           SmallVectorImpl<CallSpecBinding> &WorkList) {
+    // Get a list of interesting arguments.
+    SmallVector<Argument *, 4> Args;
+    for (Argument &Arg : F->args())
+      if (isArgumentInteresting(&Arg))
+        Args.push_back(&Arg);
+
+    if (!Args.size())
+      return false;
+
+    // Find all the call sites for the function.
     SpecializationMap Specializations;
-    // Determine if we should specialize the function based on the values the
-    // argument can take on. If specialization is not profitable, we continue
-    // on to the next argument.
-    for (Argument &FormalArg : F->args()) {
-      // Determine if this argument is interesting. If we know the argument can
-      // take on any constant values, they are collected in Constants.
-      SmallVector<CallArgBinding, 8> ActualArgs;
-      if (!isArgumentInteresting(&FormalArg, ActualArgs)) {
-        LLVM_DEBUG(dbgs() << "FnSpecialization: Argument "
-                          << FormalArg.getNameOrAsOperand()
-                          << " is not interesting\n");
+    for (User *U : F->users()) {
+      if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
         continue;
+      auto &CS = *cast<CallBase>(U);
+      // If the call site has attribute minsize set, that callsite won't be
+      // specialized.
+      if (CS.hasFnAttr(Attribute::MinSize))
+        continue;
+
+      // If the parent of the call site will never be executed, we don't need
+      // to worry about the passed value.
+      if (!Solver.isBlockExecutable(CS.getParent()))
+        continue;
+
+      // Examine arguments and create specialization candidates from call sites
+      // with constant arguments.
+      bool Added = false;
+      for (Argument *A : Args) {
+        Constant *C = getCandidateConstant(CS.getArgOperand(A->getArgNo()));
+        if (!C)
+          continue;
+
+        if (!Added) {
+          Specializations[&CS] = {{}, 0 - Cost};
+          Added = true;
+        }
+
+        SpecializationInfo &S = Specializations.back().second;
+        S.Gain += getSpecializationBonus(A, C);
+        S.Args.push_back({A, C});
       }
-
-      for (const auto &Entry : ActualArgs) {
-        CallBase *Call = Entry.first;
-        Constant *ActualArg = Entry.second;
-
-        auto I = Specializations.insert({Call, SpecializationInfo()});
-        SpecializationInfo &S = I.first->second;
-
-        if (I.second)
-          S.Gain = 0 - Cost;
-        S.Gain += getSpecializationBonus(&FormalArg, ActualArg);
-        S.Args.push_back({&FormalArg, ActualArg});
-      }
+      Added = false;
     }
 
     // Remove unprofitable specializations.
@@ -653,31 +670,21 @@ private:
     return TotalCost + Bonus;
   }
 
-  /// Determine if we should specialize a function based on the incoming values
-  /// of the given argument.
-  ///
-  /// This function implements the goal-directed heuristic. It determines if
-  /// specializing the function based on the incoming values of argument \p A
-  /// would result in any significant optimization opportunities. If
-  /// optimization opportunities exist, the constant values of \p A on which to
-  /// specialize the function are collected in \p Constants.
-  ///
-  /// \returns true if the function should be specialized on the given
-  /// argument.
-  bool isArgumentInteresting(Argument *A,
-                             SmallVectorImpl<CallArgBinding> &Constants) {
-
+  /// Determine if it is possible to specialise the function for constant values
+  /// of the formal parameter \p A.
+  bool isArgumentInteresting(Argument *A) {
     // No point in specialization if the argument is unused.
     if (A->user_empty())
       return false;
 
     // For now, don't attempt to specialize functions based on the values of
     // composite types.
-    Type *ArgTy = A->getType()                              ;
+    Type *ArgTy = A->getType();
     if (!ArgTy->isSingleValueType())
       return false;
 
-    // Specialization of integer and floating point types needs to be explicitly enabled.
+    // Specialization of integer and floating point types needs to be explicitly
+    // enabled.
     if (!EnableSpecializationForLiteralConstant &&
         (ArgTy->isIntegerTy() || ArgTy->isFloatingPointTy()))
       return false;
@@ -698,83 +705,46 @@ private:
       return false;
     }
 
-    // Collect the constant values that the argument can take on. If the
-    // argument can't take on any constant values, we aren't going to
-    // specialize the function. While it's possible to specialize the function
-    // based on non-constant arguments, there's likely not much benefit to
-    // constant propagation in doing so.
-    //
-    // TODO 1: currently it won't specialize if there are over the threshold of
-    // calls using the same argument, e.g foo(a) x 4 and foo(b) x 1, but it
-    // might be beneficial to take the occurrences into account in the cost
-    // model, so we would need to find the unique constants.
-    //
-    // TODO 2: this currently does not support constants, i.e. integer ranges.
-    //
-    getPossibleConstants(A, Constants);
-
-    if (Constants.empty())
-      return false;
-
-    LLVM_DEBUG(dbgs() << "FnSpecialization: Found interesting argument "
-                      << A->getNameOrAsOperand() << "\n");
     return true;
   }
 
-  /// Collect in \p Constants all the constant values that argument \p A can
-  /// take on.
-  void getPossibleConstants(Argument *A,
-                            SmallVectorImpl<CallArgBinding> &Constants) {
-    Function *F = A->getParent();
+  /// Check if the valuy \p V  (an actual argument) is a constant or can only
+  /// have a constant value. Return that constant.
+  Constant *getCandidateConstant(Value *V) {
+    if (isa<PoisonValue>(V))
+      return nullptr;
 
-    // Iterate over all the call sites of the argument's parent function.
-    for (User *U : F->users()) {
-      if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
-        continue;
-      auto &CS = *cast<CallBase>(U);
-      // If the call site has attribute minsize set, that callsite won't be
-      // specialized.
-      if (CS.hasFnAttr(Attribute::MinSize))
-        continue;
+    // TrackValueOfGlobalVariable only tracks scalar global variables.
+    if (auto *GV = dyn_cast<GlobalVariable>(V)) {
+      // Check if we want to specialize on the address of non-constant
+      // global values.
+      if (!GV->isConstant() && !SpecializeOnAddresses)
+        return nullptr;
 
-      // If the parent of the call site will never be executed, we don't need
-      // to worry about the passed value.
-      if (!Solver.isBlockExecutable(CS.getParent()))
-        continue;
-
-      auto *V = CS.getArgOperand(A->getArgNo());
-      if (isa<PoisonValue>(V))
-        continue;
-
-      // TrackValueOfGlobalVariable only tracks scalar global variables.
-      if (auto *GV = dyn_cast<GlobalVariable>(V)) {
-        // Check if we want to specialize on the address of non-constant
-        // global values.
-        if (!GV->isConstant() && !SpecializeOnAddresses)
-          continue;
-
-        if (!GV->getValueType()->isSingleValueType())
-          continue;
-      }
-
-      // Select for possible specialisation arguments which are constants or
-      // are deduced to be constants or constant ranges with a single element.
-      Constant *C = dyn_cast<Constant>(V);
-      if (!C) {
-        const ValueLatticeElement &LV = Solver.getLatticeValueFor(V);
-        if (LV.isConstant())
-          C = LV.getConstant();
-        else if (LV.isConstantRange() &&
-                 LV.getConstantRange().isSingleElement()) {
-          assert(V->getType()->isIntegerTy() && "Non-integral constant range");
-          C = Constant::getIntegerValue(
-              V->getType(), *LV.getConstantRange().getSingleElement());
-        } else
-          continue;
-      }
-
-      Constants.push_back({&CS, C});
+      if (!GV->getValueType()->isSingleValueType())
+        return nullptr;
     }
+
+    // Select for possible specialisation values that are constants or
+    // are deduced to be constants or constant ranges with a single element.
+    Constant *C = dyn_cast<Constant>(V);
+    if (!C) {
+      const ValueLatticeElement &LV = Solver.getLatticeValueFor(V);
+      if (LV.isConstant())
+        C = LV.getConstant();
+      else if (LV.isConstantRange() &&
+               LV.getConstantRange().isSingleElement()) {
+        assert(V->getType()->isIntegerTy() && "Non-integral constant range");
+        C = Constant::getIntegerValue(
+            V->getType(), *LV.getConstantRange().getSingleElement());
+      } else
+        return nullptr;
+    }
+
+    LLVM_DEBUG(dbgs() << "FnSpecialization: Found interesting argument "
+                      << V->getNameOrAsOperand() << "\n");
+
+    return C;
   }
 
   /// Rewrite calls to function \p F to call function \p Clone instead.
