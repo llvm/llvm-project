@@ -1332,9 +1332,8 @@ lldb::ModuleSP IRExecutionUnit::CreateJITModule(const char *name) {
 
       jit_module_sp->SetTypeSystemMap(target->GetTypeSystemMap());
 
-      ConstString const_name(name);
       FileSpec jit_file;
-      jit_file.GetFilename() = const_name;
+      jit_file.SetFilename(name);
       jit_module_sp->SetFileSpecAndObjectName(jit_file, ConstString());
 
       target->GetImages().Append(jit_module_sp);

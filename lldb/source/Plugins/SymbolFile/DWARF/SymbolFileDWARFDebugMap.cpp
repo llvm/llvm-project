@@ -1532,7 +1532,7 @@ SymbolFileDWARFDebugMap::GetASTData(lldb::LanguageType language) {
       if (!exists)
         if (file_spec.GetDirectory().IsEmpty() && m_objfile_sp) {
           // For relative paths, search next to the binary.
-          file_spec.GetDirectory() = m_objfile_sp->GetFileSpec().GetDirectory();
+          file_spec.SetDirectory(m_objfile_sp->GetFileSpec().GetDirectory());
           exists = FileSystem::Instance().Exists(file_spec);
         }
       if (exists) {
