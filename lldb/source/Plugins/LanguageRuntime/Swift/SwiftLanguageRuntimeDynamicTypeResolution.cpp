@@ -37,6 +37,7 @@
 #include "swift/Reflection/TypeRefBuilder.h"
 #include "swift/Remote/MemoryReader.h"
 #include "swift/RemoteAST/RemoteAST.h"
+#include "swift/Runtime/Metadata.h"
 
 #include <sstream>
 
@@ -699,7 +700,7 @@ SwiftLanguageRuntimeImpl::emplaceClangTypeInfo(
     CompilerType clang_type, llvm::Optional<uint64_t> byte_size,
     llvm::Optional<size_t> bit_align,
     llvm::ArrayRef<swift::reflection::FieldInfo> fields) {
-  std::lock_guard<std::recursive_mutex> locker(m_clang_type_info_mutex);
+  const std::lock_guard<std::recursive_mutex> locker(m_clang_type_info_mutex);
   if (!byte_size || !bit_align) {
     m_clang_type_info.insert({clang_type.GetOpaqueQualType(), llvm::None});
     return nullptr;
@@ -707,19 +708,28 @@ SwiftLanguageRuntimeImpl::emplaceClangTypeInfo(
   assert(*bit_align % 8 == 0 && "Bit alignment no a multiple of 8!");
   auto byte_align = *bit_align / 8;
   // The stride is the size rounded up to alignment.
-  size_t byte_stride = llvm::alignTo(*byte_size, byte_align);
+  const size_t byte_stride = llvm::alignTo(*byte_size, byte_align);
+  unsigned extra_inhabitants = 0;
+  if (clang_type.IsPointerType(nullptr)) {
+    lldb_assert(TypeSystemSwiftTypeRef::IsKnownSpecialImportedType(
+                    clang_type.GetDisplayTypeName().GetStringRef()),
+                "Expected clang pointer type to be a known special type!",
+              __FUNCTION__, __FILE__, __LINE__);
+    extra_inhabitants = swift::swift_getHeapObjectExtraInhabitantCount();
+  }
+
   if (fields.empty()) {
     auto it_b = m_clang_type_info.insert(
         {clang_type.GetOpaqueQualType(),
          swift::reflection::TypeInfo(swift::reflection::TypeInfoKind::Builtin,
-                                     *byte_size, byte_align, byte_stride, 0,
-                                     true)});
+                                     *byte_size, byte_align, byte_stride,
+                                     extra_inhabitants, true)});
     return &*it_b.first->second;
   }
   auto it_b = m_clang_record_type_info.insert(
       {clang_type.GetOpaqueQualType(),
        swift::reflection::RecordTypeInfo(
-           *byte_size, byte_align, byte_stride, 0, false,
+           *byte_size, byte_align, byte_stride, extra_inhabitants, false,
            swift::reflection::RecordKind::Struct, fields)});
   return &*it_b.first->second;
 }
