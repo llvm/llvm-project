@@ -170,6 +170,10 @@ DecodedThread::GetNanosecondsRangeByIndex(uint64_t item_index) {
   return prev(next_it)->second;
 }
 
+uint64_t DecodedThread::GetTotalInstructionCount() const {
+  return m_insn_count;
+}
+
 void DecodedThread::AppendEvent(lldb::TraceEvent event) {
   CreateNewTraceItem(lldb::eTraceItemKindEvent).event = event;
   m_events_stats.RecordEvent(event);
@@ -177,25 +181,23 @@ void DecodedThread::AppendEvent(lldb::TraceEvent event) {
 
 void DecodedThread::AppendInstruction(const pt_insn &insn) {
   CreateNewTraceItem(lldb::eTraceItemKindInstruction).load_address = insn.ip;
+  m_insn_count++;
 }
 
 void DecodedThread::AppendError(const IntelPTError &error) {
   CreateNewTraceItem(lldb::eTraceItemKindError).error =
       ConstString(error.message()).AsCString();
+  m_error_stats.RecordError(/*fatal=*/false);
 }
 
-void DecodedThread::AppendCustomError(StringRef err) {
+void DecodedThread::AppendCustomError(StringRef err, bool fatal) {
   CreateNewTraceItem(lldb::eTraceItemKindError).error =
       ConstString(err).AsCString();
+  m_error_stats.RecordError(fatal);
 }
 
 lldb::TraceEvent DecodedThread::GetEventByIndex(int item_index) const {
   return m_item_data[item_index].event;
-}
-
-void DecodedThread::LibiptErrorsStats::RecordError(int libipt_error_code) {
-  libipt_errors_counts[pt_errstr(pt_errcode(libipt_error_code))]++;
-  total_count++;
 }
 
 const DecodedThread::EventsStats &DecodedThread::GetEventsStats() const {
@@ -205,6 +207,29 @@ const DecodedThread::EventsStats &DecodedThread::GetEventsStats() const {
 void DecodedThread::EventsStats::RecordEvent(lldb::TraceEvent event) {
   events_counts[event]++;
   total_count++;
+}
+
+uint64_t DecodedThread::ErrorStats::GetTotalCount() const {
+  uint64_t total = 0;
+  for (const auto &[kind, count] : libipt_errors)
+    total += count;
+
+  return total + other_errors + fatal_errors;
+}
+
+void DecodedThread::ErrorStats::RecordError(bool fatal) {
+  if (fatal)
+    fatal_errors++;
+  else
+    other_errors++;
+}
+
+void DecodedThread::ErrorStats::RecordError(int libipt_error_code) {
+  libipt_errors[pt_errstr(pt_errcode(libipt_error_code))]++;
+}
+
+const DecodedThread::ErrorStats &DecodedThread::GetErrorStats() const {
+  return m_error_stats;
 }
 
 lldb::TraceItemKind

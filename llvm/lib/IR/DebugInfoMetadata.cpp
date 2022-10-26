@@ -112,34 +112,64 @@ const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
   if (LocA == LocB)
     return LocA;
 
-  SmallSet<std::pair<DIScope *, DILocation *>, 5> Locations;
+  LLVMContext &C = LocA->getContext();
+  SmallDenseMap<std::pair<DILocalScope *, DILocation *>,
+                std::pair<unsigned, unsigned>, 4>
+      Locations;
+
   DIScope *S = LocA->getScope();
   DILocation *L = LocA->getInlinedAt();
-  while (S) {
-    Locations.insert(std::make_pair(S, L));
+  unsigned Line = LocA->getLine();
+  unsigned Col = LocA->getColumn();
+
+  // Walk from the current source locaiton until the file scope;
+  // then, do the same for the inlined-at locations.
+  auto AdvanceToParentLoc = [&S, &L, &Line, &Col]() {
     S = S->getScope();
     if (!S && L) {
+      Line = L->getLine();
+      Col = L->getColumn();
       S = L->getScope();
       L = L->getInlinedAt();
     }
-  }
-  S = LocB->getScope();
-  L = LocB->getInlinedAt();
+  };
+
   while (S) {
-    if (Locations.count(std::make_pair(S, L)))
-      break;
-    S = S->getScope();
-    if (!S && L) {
-      S = L->getScope();
-      L = L->getInlinedAt();
-    }
+    if (auto *LS = dyn_cast<DILocalScope>(S))
+      Locations.try_emplace(std::make_pair(LS, L), std::make_pair(Line, Col));
+    AdvanceToParentLoc();
   }
 
-  // If the two locations are irreconsilable, just pick one. This is misleading,
-  // but on the other hand, it's a "line 0" location.
-  if (!S || !isa<DILocalScope>(S))
+  // Walk the source locations of LocB until a match with LocA is found.
+  S = LocB->getScope();
+  L = LocB->getInlinedAt();
+  Line = LocB->getLine();
+  Col = LocB->getColumn();
+  while (S) {
+    if (auto *LS = dyn_cast<DILocalScope>(S)) {
+      auto MatchLoc = Locations.find(std::make_pair(LS, L));
+      if (MatchLoc != Locations.end()) {
+        // If the lines match, keep the line, but set the column to '0'
+        // If the lines don't match, pick a "line 0" location but keep
+        // the current scope and inlined-at.
+        bool SameLine = Line == MatchLoc->second.first;
+        bool SameCol = Col == MatchLoc->second.second;
+        Line = SameLine ? Line : 0;
+        Col = SameLine && SameCol ? Col : 0;
+        break;
+      }
+    }
+    AdvanceToParentLoc();
+  }
+
+  if (!S) {
+    // If the two locations are irreconsilable, pick any scope,
+    // and return a "line 0" location.
+    Line = Col = 0;
     S = LocA->getScope();
-  return DILocation::get(LocA->getContext(), 0, 0, S, L);
+  }
+
+  return DILocation::get(C, Line, Col, S, L);
 }
 
 Optional<unsigned> DILocation::encodeDiscriminator(unsigned BD, unsigned DF,

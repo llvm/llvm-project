@@ -93,6 +93,7 @@ add_gen_header(
     .llvm_libc_common_h
     .llvm-libc-macros.time_macros
     .llvm-libc-types.time_t
+    .llvm-libc-types.clock_t
     .llvm-libc-types.clockid_t
     .llvm-libc-types.struct_tm
     .llvm-libc-types.struct_timespec

@@ -255,9 +255,6 @@ Bug Fixes
 - Reject non-type template arguments formed by casting a non-zero integer
   to a pointer in pre-C++17 modes, instead of treating them as null
   pointers.
-- Fix missing diagnostics for uses of declarations when performing typename access,
-  such as when performing member access on a '[[deprecated]]' type alias.
-  `Issue 58547 <https://github.com/llvm/llvm-project/issues/58547>`
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -609,6 +606,12 @@ X86 Support in Clang
 - Support ISA of ``CMPCCXADD``.
   * Support intrinsic of ``__cmpccxadd_epi32``.
   * Support intrinsic of ``__cmpccxadd_epi64``.
+
+WebAssembly Support in Clang
+----------------------------
+
+The -mcpu=generic configuration now enables sign-ext and mutable-globals. These
+proposals are standardized and available in all major engines.
 
 DWARF Support in Clang
 ----------------------

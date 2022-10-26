@@ -823,8 +823,10 @@ static Optional<unsigned> pickOpcodeForVT(
   case MVT::i64:
     return Opcode_i64;
   case MVT::f16:
+  case MVT::bf16:
     return Opcode_f16;
   case MVT::v2f16:
+  case MVT::v2bf16:
     return Opcode_f16x2;
   case MVT::f32:
     return Opcode_f32;
@@ -833,6 +835,21 @@ static Optional<unsigned> pickOpcodeForVT(
   default:
     return None;
   }
+}
+
+static int getLdStRegType(EVT VT) {
+  if (VT.isFloatingPoint())
+    switch (VT.getSimpleVT().SimpleTy) {
+    case MVT::f16:
+    case MVT::bf16:
+    case MVT::v2f16:
+    case MVT::v2bf16:
+      return NVPTX::PTXLdStInstCode::Untyped;
+    default:
+      return NVPTX::PTXLdStInstCode::Float;
+    }
+  else
+    return NVPTX::PTXLdStInstCode::Unsigned;
 }
 
 bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
@@ -891,19 +908,16 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   // Vector Setting
   unsigned vecType = NVPTX::PTXLdStInstCode::Scalar;
   if (SimpleVT.isVector()) {
-    assert(LoadedVT == MVT::v2f16 && "Unexpected vector type");
-    // v2f16 is loaded using ld.b32
+    assert((LoadedVT == MVT::v2f16 || LoadedVT == MVT::v2bf16) &&
+           "Unexpected vector type");
+    // v2f16/v2bf16 is loaded using ld.b32
     fromTypeWidth = 32;
   }
 
   if (PlainLoad && (PlainLoad->getExtensionType() == ISD::SEXTLOAD))
     fromType = NVPTX::PTXLdStInstCode::Signed;
-  else if (ScalarVT.isFloatingPoint())
-    // f16 uses .b16 as its storage type.
-    fromType = ScalarVT.SimpleTy == MVT::f16 ? NVPTX::PTXLdStInstCode::Untyped
-                                             : NVPTX::PTXLdStInstCode::Float;
   else
-    fromType = NVPTX::PTXLdStInstCode::Unsigned;
+    fromType = getLdStRegType(ScalarVT);
 
   // Create the machine instruction DAG
   SDValue Chain = N->getOperand(0);
@@ -1033,11 +1047,8 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
       N->getOperand(N->getNumOperands() - 1))->getZExtValue();
   if (ExtensionType == ISD::SEXTLOAD)
     FromType = NVPTX::PTXLdStInstCode::Signed;
-  else if (ScalarVT.isFloatingPoint())
-    FromType = ScalarVT.SimpleTy == MVT::f16 ? NVPTX::PTXLdStInstCode::Untyped
-                                             : NVPTX::PTXLdStInstCode::Float;
   else
-    FromType = NVPTX::PTXLdStInstCode::Unsigned;
+    FromType = getLdStRegType(ScalarVT);
 
   unsigned VecType;
 
@@ -1057,7 +1068,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   // v8f16 is a special case. PTX doesn't have ld.v8.f16
   // instruction. Instead, we split the vector into v2f16 chunks and
   // load them with ld.v4.b32.
-  if (EltVT == MVT::v2f16) {
+  if (EltVT == MVT::v2f16 || EltVT == MVT::v2bf16) {
     assert(N->getOpcode() == NVPTXISD::LoadV4 && "Unexpected load opcode.");
     EltVT = MVT::i32;
     FromType = NVPTX::PTXLdStInstCode::Untyped;
@@ -1745,18 +1756,13 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   MVT ScalarVT = SimpleVT.getScalarType();
   unsigned toTypeWidth = ScalarVT.getSizeInBits();
   if (SimpleVT.isVector()) {
-    assert(StoreVT == MVT::v2f16 && "Unexpected vector type");
+    assert((StoreVT == MVT::v2f16 || StoreVT == MVT::v2bf16) &&
+           "Unexpected vector type");
     // v2f16 is stored using st.b32
     toTypeWidth = 32;
   }
 
-  unsigned int toType;
-  if (ScalarVT.isFloatingPoint())
-    // f16 uses .b16 as its storage type.
-    toType = ScalarVT.SimpleTy == MVT::f16 ? NVPTX::PTXLdStInstCode::Untyped
-                                           : NVPTX::PTXLdStInstCode::Float;
-  else
-    toType = NVPTX::PTXLdStInstCode::Unsigned;
+  unsigned int toType = getLdStRegType(ScalarVT);
 
   // Create the machine instruction DAG
   SDValue Chain = ST->getChain();
@@ -1896,12 +1902,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   assert(StoreVT.isSimple() && "Store value is not simple");
   MVT ScalarVT = StoreVT.getSimpleVT().getScalarType();
   unsigned ToTypeWidth = ScalarVT.getSizeInBits();
-  unsigned ToType;
-  if (ScalarVT.isFloatingPoint())
-    ToType = ScalarVT.SimpleTy == MVT::f16 ? NVPTX::PTXLdStInstCode::Untyped
-                                           : NVPTX::PTXLdStInstCode::Float;
-  else
-    ToType = NVPTX::PTXLdStInstCode::Unsigned;
+  unsigned ToType = getLdStRegType(ScalarVT);
 
   SmallVector<SDValue, 12> StOps;
   SDValue N2;
@@ -1929,7 +1930,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
   // v8f16 is a special case. PTX doesn't have st.v8.f16
   // instruction. Instead, we split the vector into v2f16 chunks and
   // store them with st.v4.b32.
-  if (EltVT == MVT::v2f16) {
+  if (EltVT == MVT::v2f16 || EltVT == MVT::v2bf16) {
     assert(N->getOpcode() == NVPTXISD::StoreV4 && "Unexpected load opcode.");
     EltVT = MVT::i32;
     ToType = NVPTX::PTXLdStInstCode::Untyped;
