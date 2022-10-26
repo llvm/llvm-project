@@ -132,6 +132,15 @@ func.func @sparse_push_back(%arg0: memref<?xindex>, %arg1: memref<?xf64>, %arg2:
 
 // -----
 
+func.func @sparse_push_back_n(%arg0: memref<?xindex>, %arg1: memref<?xf32>, %arg2: f32) -> memref<?xf32> {
+  %c0 = arith.constant 0: index
+  // expected-error@+1 {{'sparse_tensor.push_back' op n must be not less than 1}}
+  %0 = sparse_tensor.push_back %arg0, %arg1, %arg2, %c0 {idx = 2 : index} : memref<?xindex>, memref<?xf32>, f32, index
+  return %0 : memref<?xf32>
+}
+
+// -----
+
 func.func @sparse_unannotated_expansion(%arg0: tensor<128xf64>) {
   // expected-error@+1 {{'sparse_tensor.expand' op operand #0 must be sparse tensor of any type values, but got 'tensor<128xf64>'}}
   %values, %filled, %added, %count = sparse_tensor.expand %arg0

@@ -10,6 +10,7 @@
 #include "tests/scudo_unit_test.h"
 
 #include "allocator_config.h"
+#include "chunk.h"
 #include "combined.h"
 
 #include <condition_variable>
@@ -700,3 +701,33 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, ReallocateInPlaceStress) {
       Allocator->deallocate(Ptrs[i], Origin);
   }
 }
+
+#if SCUDO_CAN_USE_PRIMARY64
+#if SCUDO_TRUSTY
+
+// TrustyConfig is designed for a domain-specific allocator. Add a basic test
+// which covers only simple operations and ensure the configuration is able to
+// compile.
+TEST(ScudoCombinedTest, BasicTrustyConfig) {
+  using AllocatorT = scudo::Allocator<scudo::TrustyConfig>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  for (scudo::uptr ClassId = 1U;
+       ClassId <= scudo::TrustyConfig::SizeClassMap::LargestClassId;
+       ClassId++) {
+    const scudo::uptr Size =
+        scudo::TrustyConfig::SizeClassMap::getSizeByClassId(ClassId);
+    void *p = Allocator->allocate(Size - scudo::Chunk::getHeaderSize(), Origin);
+    ASSERT_NE(p, nullptr);
+    free(p);
+  }
+
+  bool UnlockRequired;
+  auto *TSD = Allocator->getTSDRegistry()->getTSDAndLock(&UnlockRequired);
+  TSD->Cache.drain();
+
+  Allocator->releaseToOS();
+}
+
+#endif
+#endif

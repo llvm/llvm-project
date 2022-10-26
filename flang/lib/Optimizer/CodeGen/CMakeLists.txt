@@ -17,6 +17,8 @@ add_flang_library(FIRCodeGen
   FIRBuilder
   FIRDialect
   FIRSupport
+  MLIRComplexToLLVM
+  MLIRComplexToStandard
   MLIRMathToFuncs
   MLIRMathToLLVM
   MLIRMathToLibm

@@ -4947,7 +4947,7 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
         DAG.getNode(Opc, DL, ContainerVT, DAG.getUNDEF(ContainerVT), Val, VL);
   } else {
     // On RV32, i64-element vectors must be specially handled to place the
-    // value at element 0, by using two vslide1up instructions in sequence on
+    // value at element 0, by using two vslide1down instructions in sequence on
     // the i32 split lo/hi value. Use an equivalently-sized i32 vector for
     // this.
     SDValue One = DAG.getConstant(1, DL, XLenVT);
@@ -4959,16 +4959,14 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
         getDefaultScalableVLOps(I32ContainerVT, DL, DAG, Subtarget).first;
     // Limit the active VL to two.
     SDValue InsertI64VL = DAG.getConstant(2, DL, XLenVT);
-    // Note: We can't pass a UNDEF to the first VSLIDE1UP_VL since an untied
-    // undef doesn't obey the earlyclobber constraint. Just splat a zero value.
-    ValInVec = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, I32ContainerVT,
-                           DAG.getUNDEF(I32ContainerVT), Zero, InsertI64VL);
-    // First slide in the hi value, then the lo in underneath it.
-    ValInVec = DAG.getNode(RISCVISD::VSLIDE1UP_VL, DL, I32ContainerVT,
-                           DAG.getUNDEF(I32ContainerVT), ValInVec, ValHi,
+    // First slide in the lo value, then the hi in above it. We use slide1down
+    // to avoid the register group overlap constraint of vslide1up.
+    ValInVec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32ContainerVT,
+                           DAG.getUNDEF(I32ContainerVT),
+                           DAG.getUNDEF(I32ContainerVT), ValLo,
                            I32Mask, InsertI64VL);
-    ValInVec = DAG.getNode(RISCVISD::VSLIDE1UP_VL, DL, I32ContainerVT,
-                           DAG.getUNDEF(I32ContainerVT), ValInVec, ValLo,
+    ValInVec = DAG.getNode(RISCVISD::VSLIDE1DOWN_VL, DL, I32ContainerVT,
+                           DAG.getUNDEF(I32ContainerVT), ValInVec, ValHi,
                            I32Mask, InsertI64VL);
     // Bitcast back to the right container type.
     ValInVec = DAG.getBitcast(ContainerVT, ValInVec);

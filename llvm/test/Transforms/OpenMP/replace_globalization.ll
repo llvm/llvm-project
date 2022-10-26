@@ -105,7 +105,10 @@ declare i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 
 declare i32 @llvm.nvvm.read.ptx.sreg.warpsize()
 
-declare i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1)
+; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
+define weak i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1) {
+  ret i32 0
+}
 
 declare void @__kmpc_target_deinit(%struct.ident_t*, i8, i1)
 

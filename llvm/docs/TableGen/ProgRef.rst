@@ -223,10 +223,10 @@ TableGen provides "bang operators" that have a wide variety of uses:
                : !div        !empty       !eq          !filter      !find
                : !foldl      !foreach     !ge          !getdagop    !gt
                : !head       !if          !interleave  !isa         !le
-               : !listconcat !listsplat   !lt          !mul         !ne
-               : !not        !or          !setdagop    !shl         !size
-               : !sra        !srl         !strconcat   !sub         !subst
-               : !substr     !tail        !xor
+               : !listconcat !listsplat   !logtwo      !lt          !mul
+               : !ne         !not         !or          !setdagop    !shl
+               : !size       !sra         !srl         !strconcat   !sub
+               : !subst      !substr      !tail        !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1744,6 +1744,11 @@ and non-0 as true.
     This operator produces a list of length *count* whose elements are all
     equal to the *value*. For example, ``!listsplat(42, 3)`` results in
     ``[42, 42, 42]``.
+
+``!logtwo(``\ *a*\ ``)``
+    This operator produces the base 2 log of *a* and produces the integer
+    result. The log of 0 or a negative number produces an error. This
+    is a flooring operation.
 
 ``!lt(``\ *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is less than *b*; 0 otherwise.
