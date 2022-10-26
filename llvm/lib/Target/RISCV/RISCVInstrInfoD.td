@@ -336,6 +336,8 @@ def : PatSetCC<FPR64, any_fsetccs, SETOLE, FLE_D>;
 
 defm Select_FPR64 : SelectCC_GPR_rrirr<FPR64>;
 
+def PseudoFROUND_D : PseudoFROUND<FPR64>;
+
 /// Loads
 
 defm : LdPat<load, FLD, f64>;
