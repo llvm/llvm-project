@@ -2119,3 +2119,57 @@ define i8 @demand_low_bits_uses_commute(i8 %x, i8 %y, i8 %z) {
   %r = shl i8 %s, 2
   ret i8 %r
 }
+
+define i8 @shrink_sub_from_constant_lowbits(i8 %x) {
+; CHECK-LABEL: @shrink_sub_from_constant_lowbits(
+; CHECK-NEXT:    [[X000:%.*]] = shl i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 7, [[X000]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[SUB]], -8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x000 = shl i8 %x, 3   ; 3 low bits are known zero
+  %sub = sub i8 7, %x000
+  %r = and i8 %sub, -8   ; 3 low bits are not demanded
+  ret i8 %r
+}
+
+define i8 @shrink_sub_from_constant_lowbits_uses(i8 %x) {
+; CHECK-LABEL: @shrink_sub_from_constant_lowbits_uses(
+; CHECK-NEXT:    [[X000:%.*]] = shl i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 7, [[X000]]
+; CHECK-NEXT:    call void @use8(i8 [[SUB]])
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[SUB]], -8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x000 = shl i8 %x, 3   ; 3 low bits are known zero
+  %sub = sub i8 7, %x000
+  call void @use8(i8 %sub)
+  %r = and i8 %sub, -8   ; 3 low bits are not demanded
+  ret i8 %r
+}
+
+define i8 @shrink_sub_from_constant_lowbits2(i8 %x) {
+; CHECK-LABEL: @shrink_sub_from_constant_lowbits2(
+; CHECK-NEXT:    [[X000:%.*]] = and i8 [[X:%.*]], -8
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 30, [[X000]]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[SUB]], -16
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x000 = and i8 %x, -8   ; 3 low bits are known zero
+  %sub = sub i8 30, %x000 ; 0b0001_1110
+  %r = and i8 %sub, -16   ; 4 low bits are not demanded
+  ret i8 %r
+}
+
+define <2 x i8> @shrink_sub_from_constant_lowbits3(<2 x i8> %x) {
+; CHECK-LABEL: @shrink_sub_from_constant_lowbits3(
+; CHECK-NEXT:    [[X0000:%.*]] = shl <2 x i8> [[X:%.*]], <i8 4, i8 4>
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i8> <i8 31, i8 31>, [[X0000]]
+; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> [[SUB]], <i8 3, i8 3>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %x0000 = shl <2 x i8> %x, <i8 4, i8 4>     ; 4 low bits are known zero
+  %sub = sub <2 x i8> <i8 31, i8 31>, %x0000
+  %r = lshr <2 x i8> %sub, <i8 3, i8 3>      ; 3 low bits are not demanded
+  ret <2 x i8> %r
+}
