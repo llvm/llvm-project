@@ -449,8 +449,8 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp,
       m_private_run_lock(), m_currently_handling_do_on_removals(false),
       m_resume_requested(false), m_finalizing(false),
       m_clear_thread_plans_on_stop(false), m_force_next_event_delivery(false),
-      m_last_broadcast_state(eStateInvalid), m_destroy_in_process(false),
-      m_destroy_complete(false), m_can_interpret_function_calls(false),
+      m_destroy_in_process(false), m_destroy_complete(false), m_last_broadcast_state(eStateInvalid),
+      m_can_interpret_function_calls(false),
       m_run_thread_plan_lock(), m_can_jit(eCanJITDontKnow) {
   CheckInWithManager();
 
