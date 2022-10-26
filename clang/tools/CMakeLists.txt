@@ -19,6 +19,7 @@ add_clang_subdirectory(clang-scan-deps)
 if(HAVE_CLANG_REPL_SUPPORT)
   add_clang_subdirectory(clang-repl)
 endif()
+add_clang_subdirectory(clang-hip)
 
 add_clang_subdirectory(c-index-test)
 

@@ -158,28 +158,24 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
     CmdArgs.push_back(Args.MakeArgString(disable_fn));
   }
 
-  // If more than 1 input or need to link any SDLs, we need a pre-link step.
-  if ((input_count > 1) || !CmdArgs.empty()) {
-    CmdArgs.push_back(Args.MakeArgString("-opaque-pointers"));
-    // ArgStringList CmdArgs;
-    for (const auto &II : Inputs)
-      if (II.isFilename())
-        CmdArgs.push_back(II.getFilename());
-    CmdArgs.push_back("-o");
-    auto PreLinkFileName =
-        getOutputFileName(C, OutputFilePrefix, "-prelinked", "bc");
-    CmdArgs.push_back(PreLinkFileName);
-    C.addCommand(std::make_unique<Command>(
-        JA, *this, ResponseFileSupport::AtFileCurCP(), Exec, CmdArgs, Inputs,
-        InputInfo(&JA, Args.MakeArgString(PreLinkFileName))));
-    // Output of prelink is only input to last link
-    LastLinkArgs.push_back(Args.MakeArgString(PreLinkFileName));
-  } else {
-    // If only a single input, use it for lastlink input
-    for (const auto &II : Inputs)
-      if (II.isFilename())
-        LastLinkArgs.push_back(II.getFilename());
-  }
+  // Force clang build select link before llvm-link to ensure functions are
+  // marked linkonce_odr so that they can be removed if not used.
+  const char *CbslExec =
+    Args.MakeArgString(getToolChain().GetProgramPath("clang-build-select-link"));
+  CmdArgs.push_back(Args.MakeArgString("-opaque-pointers"));
+  // ArgStringList CmdArgs;
+  for (const auto &II : Inputs)
+    if (II.isFilename())
+      CmdArgs.push_back(II.getFilename());
+  CmdArgs.push_back("-o");
+  auto PreLinkFileName =
+      getOutputFileName(C, OutputFilePrefix, "-prelinked", "bc");
+  CmdArgs.push_back(PreLinkFileName);
+  C.addCommand(std::make_unique<Command>(
+      JA, *this, ResponseFileSupport::AtFileCurCP(), CbslExec, CmdArgs, Inputs,
+      InputInfo(&JA, Args.MakeArgString(PreLinkFileName))));
+  // Output of prelink is only input to last link
+  LastLinkArgs.push_back(Args.MakeArgString(PreLinkFileName));
 
   // Last link brings in libomptarget and subset of user-option bc files.
   // This link uses --internalize to internalize libomptarget symbols.
