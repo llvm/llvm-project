@@ -233,8 +233,10 @@ void ProfiledBinary::load() {
 }
 
 bool ProfiledBinary::inlineContextEqual(uint64_t Address1, uint64_t Address2) {
-  const SampleContextFrameVector &Context1 = getFrameLocationStack(Address1);
-  const SampleContextFrameVector &Context2 = getFrameLocationStack(Address2);
+  const SampleContextFrameVector &Context1 =
+      getCachedFrameLocationStack(Address1);
+  const SampleContextFrameVector &Context2 =
+      getCachedFrameLocationStack(Address2);
   if (Context1.size() != Context2.size())
     return false;
   if (Context1.empty())
@@ -254,7 +256,7 @@ ProfiledBinary::getExpandedContext(const SmallVectorImpl<uint64_t> &Stack,
   // Process from frame root to leaf
   for (auto Address : Stack) {
     const SampleContextFrameVector &ExpandedContext =
-        getFrameLocationStack(Address);
+        getCachedFrameLocationStack(Address);
     // An instruction without a valid debug line will be ignored by sample
     // processing
     if (ExpandedContext.empty())
@@ -806,10 +808,9 @@ void ProfiledBinary::computeInlinedContextSizeForRange(uint64_t RangeBegin,
     return;
 
   do {
-    const SampleContextFrameVector &SymbolizedCallStack =
+    const SampleContextFrameVector SymbolizedCallStack =
         getFrameLocationStack(IP.Address, UsePseudoProbes);
     uint64_t Size = AddressToInstSizeMap[IP.Address];
-
     // Record instruction size for the corresponding context
     FuncSizeTracker.addInstructionForContext(SymbolizedCallStack, Size);
 
