@@ -112,7 +112,6 @@ private:
   llvm::DenseMap<const FieldDecl *, Field *> FieldMap;
   /// Mapping from declarations to virtual bases.
   llvm::DenseMap<const RecordDecl *, Base *> VirtualBaseMap;
-  /// Mapping from
   /// Size of the structure.
   unsigned BaseSize;
   /// Size of all virtual bases.
