@@ -5,69 +5,225 @@
 #ifndef LLVM_AMPLIFICATIONFACTOR_H
 #define LLVM_AMPLIFICATIONFACTOR_H
 
-#include "ComputationGraph.h"
+#include "AtomicCondition.h"
 #include "stdlib.h"
-
-typedef struct NodeProcessingQItem {
-  CGNode *Node;
-  struct NodeProcessingQItem *NextItem;
-} NodeProcessingQItem;
-
-typedef struct NodeProcessingQ {
-  NodeProcessingQItem *Front;
-  NodeProcessingQItem *Back;
-  uint64_t Size;
-} NodeProcessingQ;
-
-typedef struct FloatAFItem {
-  char *ResultInstructionString;
-  int ResultNodeID;
-  char *WRTInstructionString;
-  int WRTNodeID;
-  CGNode **AFPathPointer;
-  uint64_t AFPathLength;
-  float AF;
-  float AmplifiedRelativeError;
-  char *AFString;
-} FloatAFItem;
-
-typedef struct DoubleAFItem {
-  char *ResultInstructionString;
-  int ResultNodeID;
-  char *WRTInstructionString;
-  int WRTNodeID;
-  CGNode **AFPathPointer;
-  uint64_t AFPathLength;
-  double AF;
-  double AmplifiedRelativeError;
-  char *AFString;
-} DoubleAFItem;
-
-typedef struct AFRecordStore {
-  FloatAFItem *FloatAFItemPointer;
-  uint64_t FloatAFRecords;
-  DoubleAFItem *DoubleAFItemPointer;
-  uint64_t DoubleAFRecords;
-} AFRecordStore;
-
-typedef struct AFAliasStore {
-  FloatAFItem **FloatAFItemPointer;
-  uint64_t FloatAFRecords;
-  DoubleAFItem **DoubleAFItemPointer;
-  uint64_t DoubleAFRecords;
-} AFAliasStore;
 
 /*----------------------------------------------------------------------------*/
 /* Constants                                                                  */
 /*----------------------------------------------------------------------------*/
+#define CG_NODES_WORK_LIST_SIZE 100000
+#define AF_ITEM_LIST_SIZE 10000
+#define MAX_AF_PATH_LENGTH 150
+#define MAX_AF_STRING_LENGTH 3000
+
+// ULP error introduced by each operation on x86_64 architecture as given in
+// https://www.gnu.org/software/libc/manual/html_node/Errors-in-Math-Functions.html
+float fp32OpError[] = {
+    1e-6,
+    1e-6,
+    1e-6,
+    1e-6,
+    1e-6,
+    1e-6,
+    1e-6,
+    1e-6,
+    1e-6,
+    1e-6,
+    2e-6,
+    2e-6,
+    2e-6,
+    1e-6,
+    1e-6,
+    1e-6, // Does not have a known error
+    1e-6, // Truncing is not a GNU library function. Giving it 1 ULP error
+    1e-6, // Extendin is not a GNU library function. Giving it 1 ULP error
+    1e-6,
+};
+
+double fp64OpError[] = {
+    1e-16,
+    1e-16,
+    1e-16,
+    1e-16,
+    1e-16,
+    1e-16,
+    1e-16, // Does not have a known error
+    1e-16,
+    1e-16,
+    1e-16,
+    2e-16,
+    2e-16,
+    2e-16,
+    1e-16,
+    1e-16,
+    1e-16, // Does not have a known error
+    1e-16, // Truncing is not a GNU library function. Giving it 1 ULP error
+    1e-16, // Extendin is not a GNU library function. Giving it 1 ULP error
+    1e-16,
+};
+
+/*----------------------------------------------------------------------------*/
+/* Data Structures, Associated Functions and Types                            */
+/*----------------------------------------------------------------------------*/
+
+/* ------------------------------- AFComponent -------------------------------*/
+
+struct AFComponent {
+  OutputRegister
+  ACItem** AFPath;
+  double* AF;
+};
+
+/* ---------------------------------- AFItem ---------------------------------*/
+
+struct AFItem {
+  int ItemId;
+  AFComponent** Components;
+
+  uint64_t AFPathLength;
+
+};
+
+typedef struct AFItem AFItem;
+
+void fAFCreateAFItem(AFItem **AddressToAllocateAt) {
+  if((*AddressToAllocateAt = (AFItem *)malloc(sizeof(AFItem))) == NULL) {
+    printf("#fAF: Not enough memory for AFItem!");
+    exit(EXIT_FAILURE);
+  }
+
+  return ;
+}
+
+// Setting AFItem Values at Location.
+void fAFInitializeAFItem(AFItem **Location, CGNode *Node, CGNode *WRTNode) {
+  fAFCreateAFItem(Location);
+
+  (*Location)->Node = Node;
+  (*Location)->WRTNode = WRTNode;
+
+  // Setting the Amplification Path
+  if(((*Location)->AFPathPointer =
+           (CGNode **)malloc(sizeof(CGNode*) * MAX_AF_PATH_LENGTH)) == NULL) {
+    printf("#fAF: Not enough memory for CGNode pointers!");
+    exit(EXIT_FAILURE);
+  }
+
+  (*Location)->AFPathLength=0;
+  (*Location)->AFPathPointer[(*Location)->AFPathLength] = NULL;
+  (*Location)->AF = 1;
+  (*Location)->AmplifiedRelativeError = 0;
+
+  if (((*Location)->AFString =
+           (char *)malloc(sizeof(char) * MAX_AF_STRING_LENGTH)) == NULL) {
+    printf("#fAF: Not enough memory for AFString!");
+    exit(EXIT_FAILURE);
+  }
+  (*Location)->AFString[0] = '\0';
+
+  return ;
+}
+
+// Setting AFItem Values at Location.
+void fAFAddAFItemCorrespondingChildNode(AFItem **Location, CGNode *Node, CGNode *WRTNode, int WRT,
+                  AFItem *ParentAFItem) {
+  fAFCreateAFItem(Location);
+  (*Location)->Node = Node;
+  if(!WRT)
+    (*Location)->WRTNode = WRTNode->LeftNode;
+  else if(WRT==1)
+    (*Location)->WRTNode = WRTNode->RightNode;
+
+  // Setting the Amplification Path
+  if(((*Location)->AFPathPointer =
+           (CGNode **)malloc(sizeof(CGNode*) * MAX_AF_PATH_LENGTH)) == NULL) {
+    printf("#fAF: Not enough memory for CGNode pointers!");
+    exit(EXIT_FAILURE);
+  }
+
+  fAFCopyCGNodePointerArray(&(*Location)->AFPathPointer,
+                            &ParentAFItem->AFPathPointer,
+                            ParentAFItem->AFPathLength);
+
+  if(!WRT) {
+    (*Location)->AFPathPointer[ParentAFItem->AFPathLength] = WRTNode->LeftNode;
+    (*Location)->AF = ParentAFItem->AF *
+                      (*WRTNode->ACRecord)->ACWRTX;
+  } else if(WRT==1) {
+    (*Location)->AFPathPointer[ParentAFItem->AFPathLength] = WRTNode->RightNode;
+    (*Location)->AF = ParentAFItem->AF *
+                      (*WRTNode->ACRecord)->ACWRTY;
+  }
+
+  (*Location)->AFPathLength = ParentAFItem->AFPathLength + 1;
+
+  (*Location)->AmplifiedRelativeError = (*Location)->AF *
+                                        fp64OpError[WRTNode->Kind];
+
+  // Allocating memory for the string representation of Amplification
+  // factor and storing the string
+  if (((*Location)->AFString = (char *)malloc(sizeof(char) * 3000)) == NULL) {
+    printf("#fAF: Out of memory error!");
+    exit(EXIT_FAILURE);
+  }
+  if(strlen(ParentAFItem->AFString) != 0)
+    strcpy((*Location)->AFString, (ParentAFItem->AFString));
+  else
+    strcat((*Location)->AFString, "1.0");
+
+  if(!WRT && strlen((*WRTNode->ACRecord)->ACWRTXstring) != 0) {
+    strcat((*Location)->AFString, "*");
+    strcat((*Location)->AFString,
+           (*WRTNode->ACRecord)->ACWRTXstring);
+  } else if (WRT==1 && strlen((*WRTNode->ACRecord)->ACWRTYstring) != 0) {
+    strcat((*Location)->AFString, "*");
+    strcat((*Location)->AFString,
+           (*WRTNode->ACRecord)->ACWRTYstring);
+  }
+
+  return ;
+}
+
+void fAFPrintAFItem(AFItem *Item) {
+  printf("\t\tInstruction String: %s\n",
+         Item->Node->InstructionString);
+  printf("\t\tNode Id: %d\n",
+         Item->Node->NodeId);
+  printf("\t\tWRTInstructionString: %s\n",
+         Item->WRTNode->InstructionString);
+  printf("\t\tWRTNodeID: %d\n",
+         Item->WRTNode->NodeId);
+  printf("\t\tAF Path Length: %lu\n",
+         Item->AFPathLength);
+  printf("\t\tAF Path: [%d",
+         Item->AFPathPointer[0]->NodeId);
+  for (int I = 1; (uint64_t)I < Item->AFPathLength;
+       ++I) {
+    printf(", %d",
+           Item->AFPathPointer[I]->NodeId);
+  }
+  printf("]\n");
+  printf("\t\tAF: %0.15lf\n",
+         Item->AF);
+  printf("\t\tAmplifiedRelativeError: %0.15lf\n",
+         Item->AmplifiedRelativeError);
+}
+
+/* --------------------------------- AFTable ---------------------------------*/
+
+struct AFTable {
+  uint64_t ListLength;
+  struct AFItem **AFItems;
+};
+
+typedef struct AFTable AFTable;
 
 /*----------------------------------------------------------------------------*/
 /* Globals                                                                    */
 /*----------------------------------------------------------------------------*/
-AFRecordStore *AnalysisInfo;
-AFAliasStore *AnalysisResult;
-uint64_t Q_SIZE = 1000000;
-uint64_t AF_PATH_SIZE = 150;
+
+AFTable *AFs;
+AFTable *AnalysisResult;
 
 /*----------------------------------------------------------------------------*/
 /* Utility Functions                                                          */
@@ -95,27 +251,9 @@ int fAFisMemoryOpInstruction(char *InstructionString) {
   return 0;
 }
 
-void fAFCopyCGNodePointerArray(CGNode ***Dest, CGNode ***Src, uint64_t SrcLength) {
-  for (uint64_t i = 0, j = 0; i < SrcLength; ++i, ++j) {
-    (*Dest)[j] = (*Src)[i];
-  }
-}
-
-int fAFFloatAFComparator(const void *a, const void *b) {
-  double AF1 = (*(FloatAFItem **)a)->AF;
-  double AF2 = (*(FloatAFItem **)b)->AF;
-
-  if(AF2 > AF1)
-    return 1;
-  else if(AF2 == AF1)
-    return 0;
-  else
-    return -1;
-}
-
 int fAFDoubleAFComparator(const void *a, const void *b) {
-  double AF1 = (*(DoubleAFItem **)a)->AF;
-  double AF2 = (*(DoubleAFItem **)b)->AF;
+  double AF1 = (*(AFItem **)a)->AF;
+  double AF2 = (*(AFItem **)b)->AF;
 
   if(AF2 > AF1)
     return 1;
@@ -124,693 +262,71 @@ int fAFDoubleAFComparator(const void *a, const void *b) {
   else
     return -1;
 }
+
+/*----------------------------------------------------------------------------*/
+/* Memory Allocators                                                          */
+/*----------------------------------------------------------------------------*/
 
 void fAFInitialize() {
-  AnalysisInfo = NULL;
-  int64_t Size = 10000;
-
-  // Allocating Memory to the analysis object itself
-  if( (AnalysisInfo = (AFRecordStore *)malloc(sizeof(AFRecordStore))) == NULL) {
-    printf("#AF: Queue out of memory error!");
-    exit(EXIT_FAILURE);
-  }
-  AnalysisInfo->FloatAFRecords = 0;
-  AnalysisInfo->DoubleAFRecords = 0;
-
-  // Allocating Memory for Amplification Factor Tables
-  if( (AnalysisInfo->FloatAFItemPointer =
-           (FloatAFItem *)malloc((size_t)((int64_t)sizeof(FloatAFItem) * Size))) == NULL) {
-    printf("#CG: graph out of memory error!");
-    exit(EXIT_FAILURE);
-  }
-  if( (AnalysisInfo->DoubleAFItemPointer =
-           (DoubleAFItem *)malloc((size_t)((int64_t)sizeof(DoubleAFItem) * Size))) == NULL) {
-    printf("#CG: graph out of memory error!");
+  // Allocating Memory to the AF table itself
+  if(( AFs = (AFTable*)malloc(sizeof(AFTable))) == NULL) {
+    printf("#fAF: Queue out of memory error!");
     exit(EXIT_FAILURE);
   }
 
-  // Allocating memory for Amplification Paths for each AFRecord
-  for(int I = 0; I<Size; I++) {
-    if ((AnalysisInfo->FloatAFItemPointer[I].AFPathPointer =
-             (CGNode **)malloc(sizeof(CGNode*) * AF_PATH_SIZE)) == NULL) {
-      printf("#fAd: Out of memory error!");
-      exit(EXIT_FAILURE);
-    }
-    AnalysisInfo->FloatAFItemPointer[I].AFPathLength = 0;
-
-    if ((AnalysisInfo->DoubleAFItemPointer[I].AFPathPointer =
-             (CGNode **)malloc(sizeof(CGNode*) * AF_PATH_SIZE)) == NULL) {
-      printf("#fAd: Out of memory error!");
-      exit(EXIT_FAILURE);
-    }
-    AnalysisInfo->DoubleAFItemPointer[I].AFPathLength = 0;
+  // Allocating Memory for the AFItem Pointers
+  if((AFs->AFItems =
+           (AFItem **)malloc(sizeof(AFItem*) * AF_ITEM_LIST_SIZE)) == NULL) {
+    printf("#fAF: Not enough memory for AFItem pointers!");
+    exit(EXIT_FAILURE);
   }
+  AFs->ListLength = 0;
 
-  // Allocating Memory to the Result object
-  if( (AnalysisResult = (AFAliasStore *)malloc(sizeof(AFAliasStore))) == NULL) {
-    printf("#AF: Queue out of memory error!");
+  // Allocating Memory to the Result table itself
+  if(( AnalysisResult = (AFTable*)malloc(sizeof(AFTable))) == NULL) {
+    printf("#fAF: Queue out of memory error!");
     exit(EXIT_FAILURE);
   }
 
-  // Allocating Memory for pointers in the Result object
-  if( (AnalysisResult->FloatAFItemPointer =
-           (FloatAFItem **)malloc((size_t)((int64_t)sizeof(FloatAFItem*) * Size))) == NULL) {
-    printf("#CG: graph out of memory error!");
+  // Allocating Memory for the AFItem Pointers
+  if((AnalysisResult->AFItems =
+           (AFItem **)malloc(sizeof(AFItem*) * AF_ITEM_LIST_SIZE)) == NULL) {
+    printf("#fAF: Not enough memory for AFItem pointers!");
     exit(EXIT_FAILURE);
   }
-  if( (AnalysisResult->DoubleAFItemPointer =
-           (DoubleAFItem **)malloc((size_t)((int64_t)sizeof(DoubleAFItem*) * Size))) == NULL) {
-    printf("#CG: graph out of memory error!");
-    exit(EXIT_FAILURE);
-  }
-  AnalysisResult->FloatAFRecords = 0;
-  AnalysisResult->DoubleAFRecords = 0;
-
-#if FAF_DEBUG
-  // Create a directory if not present
-  char *DirectoryName = (char *)malloc(strlen(LOG_DIRECTORY_NAME) * sizeof(char));
-  strcpy(DirectoryName, LOG_DIRECTORY_NAME);
-
-  char ExecutionId[5000];
-  char AFFileName[5000];
-  AFFileName[0] = '\0';
-  strcpy(AFFileName, strcat(strcpy(AFFileName, DirectoryName), "/program_log_"));
-
-  fACGenerateExecutionID(ExecutionId);
-  strcat(ExecutionId, ".txt");
-
-  strcat(AFFileName, ExecutionId);
-  printf("Amplification Factors Storage File:%s\n", AFFileName);
-#endif
-}
-
-void fAFfp32Analysis(char *InstructionToAnalyse) {
-  assert(fCGisRegister(InstructionToAnalyse));
-#if FAF_DEBUG
-  printf("\nPerforming fp32 Amplification Factor Calculation\n");
-  printf("\tInstruction to Analyse: %s\n", InstructionToAnalyse);
-#endif
-
-  char *ResolvedInstruction=InstructionToAnalyse;
-  if(fCGisPHIInstruction(ResolvedInstruction)) {
-    // Resolve to a Non-Phi Value
-    ResolvedInstruction = fCGperformPHIResolution(ResolvedInstruction);
-    if(!fCGisRegister(ResolvedInstruction)) {
-#if FAF_DEBUG
-      printf("\nDone Analysing fp32 Instruction: %s\n", InstructionToAnalyse);
-#endif
-      return ;
-    }
-  }
-
-  // Search for node corresponding to Instruction String in the InstructionNode
-  // Map and retrieve the NodeID as well as the Node from the Computation Graph.
-  InstructionNodePair *CurrInstructionNode;
-  CGNode *NodeToAnalyse, *CurrCGNode;
-  int NodeID;
-
-#if FAF_DEBUG>=2
-  printf("\tSearching for %s in Instruction -> NodeID Map\n", ResolvedInstruction);
-#endif
-  for (CurrInstructionNode = CG->InstructionNodeMapHead;
-       CurrInstructionNode != NULL &&
-       strcmp(CurrInstructionNode->InstructionString, ResolvedInstruction) != 0;
-       CurrInstructionNode=CurrInstructionNode->Next){
-#if FAF_DEBUG>=2
-    printf("\t\t%s -> %d\n", CurrInstructionNode->InstructionString, CurrInstructionNode->NodeId);
-#endif
-  }
-  assert(CurrInstructionNode != NULL);
-  NodeID = CurrInstructionNode->NodeId;
-#if FAF_DEBUG
-  printf("\tFound %s -> %d\n", CurrInstructionNode->InstructionString, NodeID);
-#endif
-
-#if FAF_DEBUG>=2
-  printf("\n\tSearching for %d in Nodes List\n", NodeID);
-#endif
-  for(CurrCGNode = CG->NodesLinkedListHead;
-       CurrCGNode != NULL && CurrCGNode->NodeId != NodeID;
-       CurrCGNode=CurrCGNode->Next) {
-#if FAF_DEBUG>=2
-    printf("\t\tInstruction String: %s, NodeID: %d\n", CurrCGNode->InstructionString, CurrCGNode->NodeId);
-#endif
-  }
-  assert(CurrCGNode != NULL);
-  NodeToAnalyse = CurrCGNode;
-#if FAF_DEBUG
-  printf("\tFound NodeToAnalyse: %s\n", NodeToAnalyse->InstructionString);
-#endif
-
-#if FAF_DUMP_SYMBOLIC
-  // Create a directory if not present
-  char *DirectoryName = (char *)malloc((strlen(LOG_DIRECTORY_NAME)+1) * sizeof(char));
-  strcpy(DirectoryName, LOG_DIRECTORY_NAME);
-  fAFcreateLogDirectory(DirectoryName);
-
-  char ExecutionId[5000];
-  char FileName[5000];
-  char NodeIdString[20];
-  FileName[0] = '\0';
-  strcpy(FileName, strcat(strcpy(FileName, DirectoryName), "/fAF_"));
-
-  fACGenerateExecutionID(ExecutionId);
-  strcat(ExecutionId, "_");
-  sprintf(NodeIdString, "%d", NodeToAnalyse->NodeId);
-  strcat(ExecutionId, NodeIdString);
-  strcat(ExecutionId, ".txt");
-  strcat(FileName, ExecutionId);
-
-  // Output file for Relative Error Expression
-  FILE *FP = fopen(FileName, "w");
-
-  // Allocating memory for string representation of Relative Error Expression
-  char *RelativeErrorString;
-  if((RelativeErrorString = (char *)malloc(sizeof(char) * 20000)) == NULL) {
-    printf("No memory for relative error string");
-    exit(EXIT_FAILURE);
-  }
-  RelativeErrorString[0] = '\0';
-#endif
-
-  // Create a Queue object and add NodeToAnalyse to front of Queue
-  NodeProcessingQItem *QItem;
-  if( (QItem = (NodeProcessingQItem *)malloc((size_t)((int64_t)sizeof(NodeProcessingQItem)))) == NULL) {
-    printf("#AF: Out of memory error!");
-    exit(EXIT_FAILURE);
-  }
-  QItem->Node = NodeToAnalyse;
-  QItem->NextItem = NULL;
-  struct NodeProcessingQ ProcessingQ = {QItem, QItem, 1};
-  NodeProcessingQItem *WRTNode = QItem;
-
-  // Store Amplification factor of NodeToAnalyse with Itself in table as 1
-  FloatAFItem *AFItemPointer = &AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords];
-
-  AFItemPointer->ResultInstructionString = NodeToAnalyse->InstructionString;
-  AFItemPointer->ResultNodeID = NodeToAnalyse->NodeId;
-  AFItemPointer->WRTInstructionString = WRTNode->Node->InstructionString;
-  AFItemPointer->WRTNodeID = WRTNode->Node->NodeId;
-  AFItemPointer->AFPathPointer[AFItemPointer->AFPathLength] = WRTNode->Node;
-  AFItemPointer->AFPathLength+=1;
-  AFItemPointer->AF = 1;
-  AFItemPointer->AmplifiedRelativeError = 0;
-  if ((AFItemPointer->AFString = (char *)malloc(sizeof(char) * 3000)) == NULL) {
-    printf("#fAd: Out of memory error!");
-    exit(EXIT_FAILURE);
-  }
-  AFItemPointer->AFString[0] = '\0';
-  AnalysisInfo->FloatAFRecords++;
-
-  if (fAFisMemoryOpInstruction(AFItemPointer->WRTInstructionString)) {
-    // Adding this node to the ResultStore
-    AnalysisResult->FloatAFItemPointer[AnalysisResult->FloatAFRecords] = AFItemPointer;
-    AnalysisResult->FloatAFRecords++;
-  }
-
-#if FAF_DUMP_SYMBOLIC
-  strcat(RelativeErrorString, "(0");
-#endif
-
-  // Amplification Factor Calculation
-  // Loop till Queue is empty -> Front == Back
-  while(ProcessingQ.Size != 0 && ProcessingQ.Front != NULL && ProcessingQ.Back != NULL) {
-#if FAF_DEBUG>=2
-    NodeProcessingQItem *ProcessingQItemPointer;
-    printf("\n\tPrinting the Node Processing Q of size: %lu\n", ProcessingQ.Size);
-    printf("\tQ Front - Node Id: %d, Instruction String: %s\n",
-           ProcessingQ.Front->Node->NodeId,
-           ProcessingQ.Front->Node->InstructionString);
-    printf("\tQ Back - Node Id: %d, Instruction String: %s\n",
-           ProcessingQ.Back->Node->NodeId,
-           ProcessingQ.Back->Node->InstructionString);
-    printf("\tQueue:\n");
-    for (ProcessingQItemPointer = ProcessingQ.Front;
-         ProcessingQItemPointer!=NULL;
-         ProcessingQItemPointer = ProcessingQItemPointer->NextItem) {
-      printf("\t\tNode Id: %d, Instruction String: %s\n",
-             ProcessingQItemPointer->Node->NodeId,
-             ProcessingQItemPointer->Node->InstructionString);
-    }
-#endif
-    // Get the front of Q
-    WRTNode = ProcessingQ.Front;
-
-    // From AF Table, get AF at NodeToAnalyse for WRTNode
-    uint64_t RecordCounter;
-
-#if FAF_DEBUG>=2
-    printf("\n\tFinding AF at NodeToAnalyse %d WRTNode %d\n",
-           NodeToAnalyse->NodeId, WRTNode->Node->NodeId);
-#endif
-    for(RecordCounter = 0, AFItemPointer = AnalysisInfo->FloatAFItemPointer;
-         RecordCounter < AnalysisInfo->FloatAFRecords && AFItemPointer->WRTNodeID != WRTNode->Node->NodeId;
-         RecordCounter++, AFItemPointer++) {
-#if FAF_DEBUG>=2
-      printf("\t\tAF@Node Id: %d, WRT Node Id: %d is AF=%f\n",
-             AFItemPointer->ResultNodeID, AFItemPointer->WRTNodeID, AFItemPointer->AF);
-#endif
-    }
-
-#if FAF_DEBUG
-    printf("\tRequired AF@Node Id: %d, WRT Node Id: %d is AF=%f\n",
-           AFItemPointer->ResultNodeID, AFItemPointer->WRTNodeID, AFItemPointer->AF);
-#endif
-
-    float AFofWRTNode = AFItemPointer->AF;
-    CGNode **AFPathofWRTNode = AFItemPointer->AFPathPointer;
-    uint64_t AFPathLengthofWRTNode = AFItemPointer->AFPathLength;
-    char *AFofWRTNode_String;
-    AFofWRTNode_String = AFItemPointer->AFString;
-
-    // Calculate AF and Push nodes to process on ProcessingQ
-    switch (WRTNode->Node->Kind) {
-    case 0:
-#if FAF_DEBUG
-      printf("\tIn Register case\n");
-#endif
-      break;
-    case 1:
-#if FAF_DEBUG
-      printf("\tIn Unary case\n");
-#endif
-
-      // Multiply above AF with left AC and store in table
-      if(WRTNode->Node->LeftNode != NULL) {
-        AFItemPointer = &AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords];
-
-        AFItemPointer->ResultInstructionString =
-            NodeToAnalyse->InstructionString;
-        AFItemPointer->ResultNodeID = NodeToAnalyse->NodeId;
-        AFItemPointer->WRTInstructionString =
-            WRTNode->Node->LeftNode->InstructionString;
-        AFItemPointer->WRTNodeID = WRTNode->Node->LeftNode->NodeId;
-        fAFCopyCGNodePointerArray(&AFItemPointer->AFPathPointer,
-                                  &AFPathofWRTNode,
-                                  AFPathLengthofWRTNode);
-        AFItemPointer->AFPathLength+=AFPathLengthofWRTNode;
-        AFItemPointer->AFPathPointer[AFItemPointer->AFPathLength] = WRTNode->Node->LeftNode;
-        AFItemPointer->AFPathLength+=1;
-        AFItemPointer->AF =
-            AFofWRTNode *
-            StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTX;
-        AFItemPointer->AmplifiedRelativeError = AFItemPointer->AF *
-                                       fp32OpError[WRTNode->Node->Kind];
-
-        // Allocating memory for the string representation of Amplification 
-        // factor and storing the string
-        if ((AFItemPointer->AFString = (char *)malloc(sizeof(char) * 3000)) == NULL) {
-          printf("#fAd: Out of memory error!");
-          exit(EXIT_FAILURE);
-        }
-        if(strlen(AFofWRTNode_String) != 0)
-          strcpy(AFItemPointer->AFString, AFofWRTNode_String);
-        else
-          strcat(AFItemPointer->AFString, "1.0");
-        if(strlen(StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTXstring) != 0) {
-          strcat(AFItemPointer->AFString, "*");
-          strcat(AFItemPointer->AFString,
-                 StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTXstring);
-        }
-
-#if FAF_DUMP_SYMBOLIC
-        // Appending relative error contribution of node in string format to relative
-        // error string.
-        strcat(RelativeErrorString, "+");
-        char IntroducedErrorString[30];
-        IntroducedErrorString[0] = '\0';
-        sprintf(IntroducedErrorString, "%0.7f", fp32OpError[WRTNode->Node->Kind]);
-        strcat(RelativeErrorString, IntroducedErrorString);
-        if(strlen(AFItemPointer->AFString) != 0) {
-          strcat(RelativeErrorString, "*");
-          strcat(RelativeErrorString, AFItemPointer->AFString);
-        }
-#endif
-        
-        AnalysisInfo->FloatAFRecords++;
-
-        if (fAFisMemoryOpInstruction(AFItemPointer->WRTInstructionString)) {
-          // Adding this node to the ResultStore
-          AnalysisResult->FloatAFItemPointer[AnalysisResult->FloatAFRecords] = AFItemPointer;
-          AnalysisResult->FloatAFRecords++;
-        }
-
-#if FAF_DEBUG>=2
-        printf("\n\tNew AFItem Stored:\n");
-        printf("\t\tInstruction String: %s\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .ResultInstructionString);
-        printf("\t\tNode Id: %d\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .ResultNodeID);
-        printf("\t\tWRTInstructionString: %s\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .WRTInstructionString);
-        printf("\t\tWRTNodeID: %d\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .WRTNodeID);
-        printf("\t\tAF Path Length: %lu\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .AFPathLength);
-        printf("\t\tAF Path: [%d",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .AFPathPointer[0]->NodeId);
-        for (int I = 1; (uint64_t)I < AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1].AFPathLength;
-             ++I) {
-          printf(", %d",
-                 AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                     .AFPathPointer[I]->NodeId);
-        }
-        printf("]\n");
-        printf("\t\tAF: %f\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1].AF);
-        printf("\t\tAmplified Relative Error: %f\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1].AmplifiedRelativeError);
-#endif
-        if (WRTNode->Node->LeftNode->Kind != 0) {
-          // Pushing Node on Processing Q
-          if ((QItem = (NodeProcessingQItem *)malloc(
-                   (size_t)((int64_t)sizeof(NodeProcessingQItem)))) == NULL) {
-            printf("#AF: Out of memory error!");
-            exit(EXIT_FAILURE);
-          }
-          QItem->Node = WRTNode->Node->LeftNode;
-          QItem->NextItem = NULL;
-          ProcessingQ.Back->NextItem = QItem;
-          ProcessingQ.Back = ProcessingQ.Back->NextItem;
-
-          ProcessingQ.Size++;
-        }
-      }
-      break;
-    case 2:
-#if FAF_DEBUG
-      printf("\tIn Binary case\n");
-#endif
-
-      // Multiply above AF with left AC and store in table
-      if(WRTNode->Node->LeftNode != NULL) {
-        AFItemPointer = &AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords];
-        AFItemPointer->ResultInstructionString =
-            NodeToAnalyse->InstructionString;
-        AFItemPointer->ResultNodeID = NodeToAnalyse->NodeId;
-        AFItemPointer->WRTInstructionString =
-            WRTNode->Node->LeftNode->InstructionString;
-        AFItemPointer->WRTNodeID = WRTNode->Node->LeftNode->NodeId;
-        fAFCopyCGNodePointerArray(&AFItemPointer->AFPathPointer,
-                                  &AFPathofWRTNode,
-                                  AFPathLengthofWRTNode);
-        AFItemPointer->AFPathLength+=AFPathLengthofWRTNode;
-        AFItemPointer->AFPathPointer[AFItemPointer->AFPathLength] = WRTNode->Node->LeftNode;
-        AFItemPointer->AFPathLength+=1;
-        AFItemPointer->AF =
-            AFofWRTNode *
-            StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTX;
-        AFItemPointer->AmplifiedRelativeError = AFItemPointer->AF *
-                                       fp32OpError[WRTNode->Node->Kind];
-
-        // Allocating memory for the string representation of Amplification
-        // factor and storing the string
-        if ((AFItemPointer->AFString = (char *)malloc(sizeof(char) * 3000)) == NULL) {
-          printf("#fAd: Out of memory error!");
-          exit(EXIT_FAILURE);
-        }
-        if(strlen(AFofWRTNode_String) != 0)
-          strcpy(AFItemPointer->AFString, AFofWRTNode_String);
-        else
-          strcat(AFItemPointer->AFString, "1.0");
-        if(strlen(StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTXstring) != 0) {
-          strcat(AFItemPointer->AFString, "*");
-          strcat(AFItemPointer->AFString,
-                 StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTXstring);
-        }
-
-#if FAF_DUMP_SYMBOLIC
-        // Appending relative error contribution of node in string format to relative
-        // error string.
-        strcat(RelativeErrorString, "+");
-        char IntroducedErrorString[30];
-        IntroducedErrorString[0] = '\0';
-        sprintf(IntroducedErrorString, "%0.7f", fp32OpError[WRTNode->Node->Kind]);
-        strcat(RelativeErrorString, IntroducedErrorString);
-        if(strlen(AFItemPointer->AFString) != 0) {
-          strcat(RelativeErrorString, "*");
-          strcat(RelativeErrorString, AFItemPointer->AFString);
-        }
-#endif
-
-        AnalysisInfo->FloatAFRecords++;
-
-        if (fAFisMemoryOpInstruction(AFItemPointer->WRTInstructionString)) {
-          // Adding this node to the ResultStore
-          AnalysisResult->FloatAFItemPointer[AnalysisResult->FloatAFRecords] = AFItemPointer;
-          AnalysisResult->FloatAFRecords++;
-        }
-
-#if FAF_DEBUG>=2
-        printf("\n\tNew AFItem Stored:\n");
-        printf("\t\tInstruction String: %s\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .ResultInstructionString);
-        printf("\t\tNode Id: %d\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .ResultNodeID);
-        printf("\t\tWRTInstructionString: %s\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .WRTInstructionString);
-        printf("\t\tWRTNodeID: %d\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .WRTNodeID);
-        printf("\t\tAF Path Length: %lu\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .AFPathLength);
-        printf("\t\tAF Path: [%d",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .AFPathPointer[0]->NodeId);
-        for (int I = 1; (uint64_t)I < AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1].AFPathLength;
-             ++I) {
-          printf(", %d",
-                 AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                     .AFPathPointer[I]->NodeId);
-        }
-        printf("]\n");
-        printf("\t\tAF: %f\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1].AF);
-        printf("\t\tAmplifiedRelativeError: %f\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1].AmplifiedRelativeError);
-#endif
-
-        if (WRTNode->Node->LeftNode->Kind != 0) {
-          // Pushing Left Node on Processing Q
-          if ((QItem = (NodeProcessingQItem *)malloc(
-                   (size_t)((int64_t)sizeof(NodeProcessingQItem)))) == NULL) {
-            printf("#AF: Out of memory error!");
-            exit(EXIT_FAILURE);
-          }
-          QItem->Node = WRTNode->Node->LeftNode;
-          QItem->NextItem = NULL;
-          ProcessingQ.Back->NextItem = QItem;
-          ProcessingQ.Back = ProcessingQ.Back->NextItem;
-
-          ProcessingQ.Size++;
-        }
-      }
-
-      // Multiply above AF with right AC and store in table
-      if(WRTNode->Node->RightNode != NULL) {
-        AFItemPointer = &AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords];
-
-        AFItemPointer->ResultInstructionString =
-            NodeToAnalyse->InstructionString;
-        AFItemPointer->ResultNodeID = NodeToAnalyse->NodeId;
-        AFItemPointer->WRTInstructionString =
-            WRTNode->Node->RightNode->InstructionString;
-        AFItemPointer->WRTNodeID = WRTNode->Node->RightNode->NodeId;
-        fAFCopyCGNodePointerArray(&AFItemPointer->AFPathPointer,
-                                  &AFPathofWRTNode,
-                                  AFPathLengthofWRTNode);
-        AFItemPointer->AFPathLength+=AFPathLengthofWRTNode;
-        AFItemPointer->AFPathPointer[AFItemPointer->AFPathLength] = WRTNode->Node->RightNode;
-        AFItemPointer->AFPathLength+=1;
-        AFItemPointer->AF =
-            AFofWRTNode *
-            StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTY;
-        AFItemPointer->AmplifiedRelativeError = AFItemPointer->AF *
-                                       fp32OpError[WRTNode->Node->Kind];
-
-        // Allocating memory for the string representation of Amplification
-        // factor and storing the string
-        if ((AFItemPointer->AFString = (char *)malloc(sizeof(char) * 3000)) == NULL) {
-          printf("#fAd: Out of memory error!");
-          exit(EXIT_FAILURE);
-        }
-        if(strlen(AFofWRTNode_String) != 0)
-          strcpy(AFItemPointer->AFString, AFofWRTNode_String);
-        else
-          strcat(AFItemPointer->AFString, "1.0");
-        if(strlen(StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTYstring) != 0) {
-          strcat(AFItemPointer->AFString, "*");
-          strcat(AFItemPointer->AFString,
-                 StorageTable->FP32ACItems[WRTNode->Node->NodeId].ACWRTYstring);
-        }
-
-#if FAF_DUMP_SYMBOLIC
-        // Appending relative error contribution of node in string format to relative
-        // error string.
-        strcat(RelativeErrorString, "+");
-        char IntroducedErrorString[30];
-        IntroducedErrorString[0] = '\0';
-        sprintf(IntroducedErrorString, "%0.7f", fp32OpError[WRTNode->Node->Kind]);
-        strcat(RelativeErrorString, IntroducedErrorString);
-        if(strlen(AFItemPointer->AFString) != 0) {
-          strcat(RelativeErrorString, "*");
-          strcat(RelativeErrorString, AFItemPointer->AFString);
-        }
-#endif
-
-        AnalysisInfo->FloatAFRecords++;
-
-        if (fAFisMemoryOpInstruction(AFItemPointer->WRTInstructionString)) {
-          // Adding this node to the ResultStore
-          AnalysisResult->FloatAFItemPointer[AnalysisResult->FloatAFRecords] = AFItemPointer;
-          AnalysisResult->FloatAFRecords++;
-        }
-
-#if FAF_DEBUG>=2
-        printf("\n\tNew AFItem Stored:\n");
-        printf("\t\tInstruction String: %s\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .ResultInstructionString);
-        printf("\t\tNode Id: %d\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .ResultNodeID);
-        printf("\t\tWRTInstructionString: %s\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .WRTInstructionString);
-        printf("\t\tWRTNodeID: %d\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .WRTNodeID);
-        printf("\t\tAF Path Length: %lu\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .AFPathLength);
-        printf("\t\tAF Path: [%d",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                   .AFPathPointer[0]->NodeId);
-        for (int I = 1; (uint64_t)I < AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1].AFPathLength;
-             ++I) {
-          printf(", %d",
-                 AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1]
-                     .AFPathPointer[I]->NodeId);
-        }
-        printf("]\n");
-        printf("\t\tAF: %f\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1].AF);
-        printf("\t\tAmplified Relative Error: %f\n",
-               AnalysisInfo->FloatAFItemPointer[AnalysisInfo->FloatAFRecords - 1].AmplifiedRelativeError);
-#endif
-
-        if (WRTNode->Node->RightNode->Kind != 0) {
-          // Pushing Right Node on Processing Q
-          if ((QItem = (NodeProcessingQItem *)malloc(
-                   (size_t)((int64_t)sizeof(NodeProcessingQItem)))) == NULL) {
-            printf("#AF: Out of memory error!");
-            exit(EXIT_FAILURE);
-          }
-          QItem->Node = WRTNode->Node->RightNode;
-          QItem->NextItem = NULL;
-          ProcessingQ.Back->NextItem = QItem;
-          ProcessingQ.Back = ProcessingQ.Back->NextItem;
-
-          ProcessingQ.Size++;
-        }
-      }
-      break;
-    }
-
-    // Popping off Front of Q
-    ProcessingQ.Front = ProcessingQ.Front->NextItem;
-    ProcessingQ.Size--;
-    free(WRTNode);
-  }
-
-#if FAF_DUMP_SYMBOLIC
-  strcat(RelativeErrorString, ")");
-#endif
-
-#if FAF_DEBUG
-  printf("\nDone Analysing fp32 NodeId: %d, Instruction: %s\n",
-         NodeToAnalyse->NodeId, NodeToAnalyse->InstructionString);
-#endif
-
-#if FAF_DUMP_SYMBOLIC
-  fprintf(FP, "%s\n", RelativeErrorString);
-
-  fclose(FP);
-
-//  printf("\nRelative Error written to: %s\n", FileName);
-#endif
+  AnalysisResult->ListLength = 0;
 
   return ;
 }
 
+/*----------------------------------------------------------------------------*/
+/* Analysis Functions                                                         */
+/*----------------------------------------------------------------------------*/
 
-void fAFfp64Analysis(char *InstructionToAnalyse) {
-  printf("Here now\n");
+// Input: An LLVM instruction that has a computation graph node or is a Phi node.
+// Steps:
+//  Resolve to a Non-Phi Instruction
+//  Get the Node corresponding to the ResolvedInstruction from the Instruction
+//  Node map.
+//
+void fAFAnalysis(char *InstructionToAnalyse) {
   assert(fCGisRegister(InstructionToAnalyse));
+
 #if FAF_DEBUG
-  printf("\nPerforming fp64 Amplification Factor Calculation\n");
+  printf("\nPerforming Amplification Factor Calculation\n");
   printf("\tInstruction to Analyse: %s\n", InstructionToAnalyse);
 #endif
 
-  char *ResolvedInstruction=InstructionToAnalyse;
-  if(fCGisPHIInstruction(ResolvedInstruction)) {
-    // Resolve to a Non-Phi Value
-    ResolvedInstruction = fCGperformPHIResolution(ResolvedInstruction);
-    if(!fCGisRegister(ResolvedInstruction)) {
-#if FAF_DEBUG
-      printf("\nDone Analysing fp64 Instruction: %s\n", InstructionToAnalyse);
-#endif
-      return ;
-    }
-  }
+  // Resolve to a Non-phi Instruction
+  char *ResolvedInstruction=fCGperformPHIResolution(InstructionToAnalyse);
 
-  // Search for node corresponding to Instruction String in the InstructionNode
-  // Map and retrieve the NodeID as well as the Node from the Computation Graph.
-  InstructionNodePair *CurrInstructionNode;
-  CGNode *NodeToAnalyse, *CurrCGNode;
-  int NodeID;
+  // Search for node corresponding to Instruction String in the InstructionNodeMap
+  // and retrieve the Node in the Computation Graph.
+  CGNode *RootNode = fCGInstructionNodeMapGet(CG->InstructionNodeMap,
+                                               ResolvedInstruction);
 
-#if FAF_DEBUG>=2
-  printf("\tSearching for %s in Instruction -> NodeID Map\n", ResolvedInstruction);
-#endif
-  for (CurrInstructionNode = CG->InstructionNodeMapHead;
-       CurrInstructionNode != NULL &&
-       strcmp(CurrInstructionNode->InstructionString, ResolvedInstruction) != 0;
-       CurrInstructionNode=CurrInstructionNode->Next){
-#if FAF_DEBUG>=2
-    printf("\t\t%s -> %d\n", CurrInstructionNode->InstructionString, CurrInstructionNode->NodeId);
-#endif
-  }
-  assert(CurrInstructionNode != NULL);
-  NodeID = CurrInstructionNode->NodeId;
 #if FAF_DEBUG
-  printf("\tFound %s -> %d\n", CurrInstructionNode->InstructionString, NodeID);
-#endif
-
-#if FAF_DEBUG>=2
-  printf("\n\tSearching for %d in Nodes List\n", NodeID);
-#endif
-  for(CurrCGNode = CG->NodesLinkedListHead;
-       CurrCGNode != NULL && CurrCGNode->NodeId != NodeID;
-       CurrCGNode=CurrCGNode->Next) {
-#if FAF_DEBUG>=2
-    printf("\t\tInstruction String: %s, NodeID: %d\n", CurrCGNode->InstructionString, CurrCGNode->NodeId);
-#endif
-  }
-  assert(CurrCGNode != NULL);
-  NodeToAnalyse = CurrCGNode;
-#if FAF_DEBUG
-  printf("\tFound NodeToAnalyse: %s\n", NodeToAnalyse->InstructionString);
+  printf("\tFound Root Node: %s\n", RootNode->InstructionString);
 #endif
 
 #if FAF_DUMP_SYMBOLIC
@@ -827,7 +343,7 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
 
   fACGenerateExecutionID(ExecutionId);
   strcat(ExecutionId, "_");
-  sprintf(NodeIdString, "%d", NodeToAnalyse->NodeId);
+  sprintf(NodeIdString, "%d", RootNode->NodeId);
   strcat(ExecutionId, NodeIdString);
   strcat(ExecutionId, ".txt");
   strcat(FileName, ExecutionId);
@@ -856,39 +372,32 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
   RelativeErrorString[0] = '\0';
 #endif
 
-  // Create a Queue object and add NodeToAnalyse to front of Queue
-  NodeProcessingQItem *QItem;
-  if( (QItem = (NodeProcessingQItem *)malloc((size_t)((int64_t)sizeof(NodeProcessingQItem)))) == NULL) {
-    printf("#AF: Out of memory error!");
+  // Create a Queue object and add RootNode to front of Queue
+  ProcessingQItem *QItem;
+  if( (QItem = (ProcessingQItem *)malloc((size_t)((int64_t)sizeof(ProcessingQItem)))) == NULL) {
+    printf("#AF: Not enough memory for a ProcessingQItem!");
     exit(EXIT_FAILURE);
   }
-  QItem->Node = NodeToAnalyse;
-  QItem->NextItem = NULL;
-  struct NodeProcessingQ ProcessingQ = {QItem, QItem, 1};
-  NodeProcessingQItem *WRTNode = QItem;
+  QItem->Node = RootNode;
+  QItem->NextNode = NULL;
+  ProcessingQ WorkQ = {QItem, QItem, 1};
+  ProcessingQItem *WRTNode = QItem;
 
-  // Store Amplification factor of NodeToAnalyse with Itself in table as 1
-  DoubleAFItem *AFItemPointer = &AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords];
+  // Store Amplification factor of RootNode with Itself in table as 1
+  fAFInitializeAFItem(&AFs->AFItems[AFs->ListLength], RootNode,
+                      WRTNode->Node);
 
-  AFItemPointer->ResultInstructionString = NodeToAnalyse->InstructionString;
-  AFItemPointer->ResultNodeID = NodeToAnalyse->NodeId;
-  AFItemPointer->WRTInstructionString = WRTNode->Node->InstructionString;
-  AFItemPointer->WRTNodeID = WRTNode->Node->NodeId;
-  AFItemPointer->AFPathPointer[AFItemPointer->AFPathLength] = WRTNode->Node;
-  AFItemPointer->AFPathLength+=1;
-  AFItemPointer->AF = 1;
-  AFItemPointer->AmplifiedRelativeError = 0;
-  if ((AFItemPointer->AFString = (char *)malloc(sizeof(char) * 3000)) == NULL) {
-    printf("#fAd: Out of memory error!");
-    exit(EXIT_FAILURE);
-  }
-  AFItemPointer->AFString[0] = '\0';
-  AnalysisInfo->DoubleAFRecords++;
+  AFs->AFItems[AFs->ListLength]->AFPathPointer[AFs->AFItems[AFs->ListLength]->AFPathLength] =
+      WRTNode->Node;
+  AFs->AFItems[AFs->ListLength]->AFPathLength+=1;
 
-  if (fAFisMemoryOpInstruction(AFItemPointer->WRTInstructionString)) {
+  AFs->ListLength++;
+
+  if (fAFisMemoryOpInstruction(AFs->AFItems[AFs->ListLength-1]->WRTNode->InstructionString)) {
     // Adding this node to the ResultStore
-    AnalysisResult->DoubleAFItemPointer[AnalysisResult->DoubleAFRecords] = AFItemPointer;
-    AnalysisResult->DoubleAFRecords++;
+    AnalysisResult->AFItems[AnalysisResult->ListLength] = AFs->AFItems[AFs->ListLength-1];
+    AnalysisResult->ListLength++;
+    printf("Debugging:\n");
   }
 
 #if FAF_DUMP_SYMBOLIC
@@ -896,57 +405,52 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
 #endif
 
   // Amplification Factor Calculation
-  // Loop till Queue is empty -> Front == Back
-  while(ProcessingQ.Size != 0 && ProcessingQ.Front != NULL && ProcessingQ.Back != NULL) {
+  // Loop till Queue is empty -> QLength == 0
+  while(WorkQ.QLength != 0) {
 #if FAF_DEBUG>=2
-    NodeProcessingQItem *ProcessingQItemPointer;
-    printf("\n\tPrinting the Node Processing Q of size: %lu\n", ProcessingQ.Size);
-    printf("\tQ Front - Node Id: %d, Instruction String: %s\n",
-           ProcessingQ.Front->Node->NodeId,
-           ProcessingQ.Front->Node->InstructionString);
-    printf("\tQ Back - Node Id: %d, Instruction String: %s\n",
-           ProcessingQ.Back->Node->NodeId,
-           ProcessingQ.Back->Node->InstructionString);
-    printf("\tQueue:\n");
-    for (ProcessingQItemPointer = ProcessingQ.Front;
-         ProcessingQItemPointer!=NULL;
-         ProcessingQItemPointer = ProcessingQItemPointer->NextItem) {
-      printf("\t\tNode Id: %d, Instruction String: %s\n",
-             ProcessingQItemPointer->Node->NodeId,
-             ProcessingQItemPointer->Node->InstructionString);
-    }
+  ProcessingQItem *ProcessingQItemPointer;
+  printf("\n\tPrinting the Node Processing Q of size: %lu\n", WorkQ.QLength);
+  printf("\tQ Front - Node Id: %d, Instruction String: %s\n",
+         WorkQ.Front->Node->NodeId,
+         WorkQ.Front->Node->InstructionString);
+  printf("\tQ Back - Node Id: %d, Instruction String: %s\n",
+         WorkQ.Back->Node->NodeId,
+         WorkQ.Back->Node->InstructionString);
+  printf("\tQueue:\n");
+  for (ProcessingQItemPointer = WorkQ.Front;
+       ProcessingQItemPointer!=NULL;
+       ProcessingQItemPointer = ProcessingQItemPointer->NextNode) {
+    printf("\t\tNode Id: %d, Instruction String: %s\n",
+           ProcessingQItemPointer->Node->NodeId,
+           ProcessingQItemPointer->Node->InstructionString);
+  }
 #endif
     // Get the front of Q
-    WRTNode = ProcessingQ.Front;
+    WRTNode = WorkQ.Front;
 
-    // From AF Table, get AF at NodeToAnalyse for WRTNode
+    // From AF Table, get AF of WRTNode at RootNode
     uint64_t RecordCounter;
+    AFItem **AFItemPointer;
 
 #if FAF_DEBUG>=2
-    printf("\n\tFinding AF at NodeToAnalyse %d WRTNode %d\n",
-           NodeToAnalyse->NodeId, WRTNode->Node->NodeId);
+    printf("\n\tFinding AF at RootNode %d WRTNode %d\n",
+           RootNode->NodeId, WRTNode->Node->NodeId);
 #endif
-    for(RecordCounter = 0, AFItemPointer = AnalysisInfo->DoubleAFItemPointer;
-         RecordCounter < AnalysisInfo->DoubleAFRecords && AFItemPointer->WRTNodeID != WRTNode->Node->NodeId;
+    for(RecordCounter = 0, AFItemPointer = AFs->AFItems;
+         RecordCounter < AFs->ListLength && (*AFItemPointer)->WRTNode->NodeId != WRTNode->Node->NodeId;
          RecordCounter++, AFItemPointer++) {
 #if FAF_DEBUG>=2
       printf("\t\tAF@Node Id: %d, WRT Node Id: %d is AF=%f\n",
-             AFItemPointer->ResultNodeID, AFItemPointer->WRTNodeID, AFItemPointer->AF);
+             (*AFItemPointer)->Node->NodeId, (*AFItemPointer)->WRTNode->NodeId, (*AFItemPointer)->AF);
 #endif
     }
 
 #if FAF_DEBUG
     printf("\tRequired AF@Node Id: %d, WRT Node Id: %d is AF=%f\n",
-           AFItemPointer->ResultNodeID, AFItemPointer->WRTNodeID, AFItemPointer->AF);
+           (*AFItemPointer)->Node->NodeId, (*AFItemPointer)->WRTNode->NodeId, (*AFItemPointer)->AF);
 #endif
 
-    double AFofWRTNode = AFItemPointer->AF;
-    CGNode **AFPathofWRTNode = AFItemPointer->AFPathPointer;
-    uint64_t AFPathLengthofWRTNode = AFItemPointer->AFPathLength;
-    char *AFofWRTNode_String;
-    AFofWRTNode_String = AFItemPointer->AFString;
-
-    // Calculate AF and Push nodes to process on ProcessingQ
+    // Calculate AF and Push nodes to process on WorkQ
     switch (WRTNode->Node->Kind) {
     case 0:
 #if FAF_DEBUG
@@ -960,41 +464,9 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
 
       // Multiply above AF with left AC and store in table
       if(WRTNode->Node->LeftNode != NULL) {
-        AFItemPointer = &AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords];
-
-        AFItemPointer->ResultInstructionString =
-            NodeToAnalyse->InstructionString;
-        AFItemPointer->ResultNodeID = NodeToAnalyse->NodeId;
-        AFItemPointer->WRTInstructionString =
-            WRTNode->Node->LeftNode->InstructionString;
-        AFItemPointer->WRTNodeID = WRTNode->Node->LeftNode->NodeId;
-        fAFCopyCGNodePointerArray(&AFItemPointer->AFPathPointer,
-                                  &AFPathofWRTNode,
-                                  AFPathLengthofWRTNode);
-        AFItemPointer->AFPathLength+=AFPathLengthofWRTNode;
-        AFItemPointer->AFPathPointer[AFItemPointer->AFPathLength] = WRTNode->Node->LeftNode;
-        AFItemPointer->AFPathLength+=1;
-        AFItemPointer->AF =
-            AFofWRTNode *
-            StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTX;
-        AFItemPointer->AmplifiedRelativeError = AFItemPointer->AF *
-                                       fp64OpError[WRTNode->Node->Kind];
-
-        // Allocating memory for the string representation of Amplification
-        // factor and storing the string
-        if ((AFItemPointer->AFString = (char *)malloc(sizeof(char) * 3000)) == NULL) {
-          printf("#fAd: Out of memory error!");
-          exit(EXIT_FAILURE);
-        }
-        if(strlen(AFofWRTNode_String) != 0)
-          strcpy(AFItemPointer->AFString, AFofWRTNode_String);
-        else
-          strcat(AFItemPointer->AFString, "1.0");
-        if(strlen(StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTXstring) != 0) {
-          strcat(AFItemPointer->AFString, "*");
-          strcat(AFItemPointer->AFString,
-                 StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTXstring);
-        }
+        fAFAddAFItemCorrespondingChildNode(&AFs->AFItems[AFs->ListLength],
+                                           RootNode, WRTNode->Node,
+                                           0, *AFItemPointer);
 
 #if FAF_DUMP_SYMBOLIC
         // Appending relative error contribution of node in string format to relative
@@ -1004,66 +476,26 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
         IntroducedErrorString[0] = '\0';
         sprintf(IntroducedErrorString, "%0.16lf", fp64OpError[WRTNode->Node->Kind]);
         strcat(RelativeErrorString, IntroducedErrorString);
-        if(strlen(AFItemPointer->AFString) != 0) {
+        if(strlen((*AFItemPointer)->AFString) != 0) {
           strcat(RelativeErrorString, "*");
-          strcat(RelativeErrorString, AFItemPointer->AFString);
+          strcat(RelativeErrorString, AFs->AFItems[AFs->ListLength]->AFString);
         }
 #endif
 
-        AnalysisInfo->DoubleAFRecords++;
+        AFs->ListLength++;
 
-        if (fAFisMemoryOpInstruction(AFItemPointer->WRTInstructionString)) {
+        if (fAFisMemoryOpInstruction(AFs->AFItems[AFs->ListLength-1]->WRTNode->InstructionString)) {
           // Adding this node to the ResultStore
-          AnalysisResult->DoubleAFItemPointer[AnalysisResult->DoubleAFRecords] = AFItemPointer;
-          AnalysisResult->DoubleAFRecords++;
+          AnalysisResult->AFItems[AnalysisResult->ListLength] = AFs->AFItems[AFs->ListLength-1];
+          AnalysisResult->ListLength++;
         }
 
 #if FAF_DEBUG>=2
         printf("\n\tNew AFItem Stored:\n");
-        printf("\t\tInstruction String: %s\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .ResultInstructionString);
-        printf("\t\tNode Id: %d\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .ResultNodeID);
-        printf("\t\tWRTInstructionString: %s\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .WRTInstructionString);
-        printf("\t\tWRTNodeID: %d\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .WRTNodeID);
-        printf("\t\tAF Path Length: %lu\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .AFPathLength);
-        printf("\t\tAF Path: [%d",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .AFPathPointer[0]->NodeId);
-        for (int I = 1; (uint64_t)I < AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1].AFPathLength;
-             ++I) {
-          printf(", %d",
-                 AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                     .AFPathPointer[I]->NodeId);
-        }
-        printf("]\n");
-        printf("\t\tAF: %0.15lf\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1].AF);
-        printf("\t\tAmplifiedRelativeError: %0.15lf\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1].AmplifiedRelativeError);
+        fAFPrintAFItem(AFs->AFItems[AFs->ListLength - 1]);
 #endif
-        if (WRTNode->Node->LeftNode->Kind != 0) {
-          // Pushing Node on Processing Q
-          if ((QItem = (NodeProcessingQItem *)malloc(
-                   (size_t)((int64_t)sizeof(NodeProcessingQItem)))) == NULL) {
-            printf("#AF: Out of memory error!");
-            exit(EXIT_FAILURE);
-          }
-          QItem->Node = WRTNode->Node->LeftNode;
-          QItem->NextItem = NULL;
-          ProcessingQ.Back->NextItem = QItem;
-          ProcessingQ.Back = ProcessingQ.Back->NextItem;
 
-          ProcessingQ.Size++;
-        }
+        fAFAddChildToWorkQ(&WorkQ, WRTNode->Node, 0);
       }
       break;
     case 2:
@@ -1073,41 +505,9 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
 
       // Multiply above AF with left AC and store in table
       if(WRTNode->Node->LeftNode != NULL) {
-        AFItemPointer = &AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords];
-
-        AFItemPointer->ResultInstructionString =
-            NodeToAnalyse->InstructionString;
-        AFItemPointer->ResultNodeID = NodeToAnalyse->NodeId;
-        AFItemPointer->WRTInstructionString =
-            WRTNode->Node->LeftNode->InstructionString;
-        AFItemPointer->WRTNodeID = WRTNode->Node->LeftNode->NodeId;
-        fAFCopyCGNodePointerArray(&AFItemPointer->AFPathPointer,
-                                  &AFPathofWRTNode,
-                                  AFPathLengthofWRTNode);
-        AFItemPointer->AFPathLength+=AFPathLengthofWRTNode;
-        AFItemPointer->AFPathPointer[AFItemPointer->AFPathLength] = WRTNode->Node->LeftNode;
-        AFItemPointer->AFPathLength+=1;
-        AFItemPointer->AF =
-            AFofWRTNode *
-            StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTX;
-        AFItemPointer->AmplifiedRelativeError = AFItemPointer->AF *
-                                       fp64OpError[WRTNode->Node->Kind];
-
-        // Allocating memory for the string representation of Amplification
-        // factor and storing the string
-        if ((AFItemPointer->AFString = (char *)malloc(sizeof(char) * 3000)) == NULL) {
-          printf("#fAd: Out of memory error!");
-          exit(EXIT_FAILURE);
-        }
-        if(strlen(AFofWRTNode_String) != 0)
-          strcpy(AFItemPointer->AFString, AFofWRTNode_String);
-        else
-          strcat(AFItemPointer->AFString, "1.0");
-        if(strlen(StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTXstring) != 0) {
-          strcat(AFItemPointer->AFString, "*");
-          strcat(AFItemPointer->AFString,
-                 StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTXstring);
-        }
+        fAFAddAFItemCorrespondingChildNode(&AFs->AFItems[AFs->ListLength],
+                                           RootNode, WRTNode->Node,
+                                           0, *AFItemPointer);
 
 #if FAF_DUMP_SYMBOLIC
         // Appending relative error contribution of node in string format to relative
@@ -1117,107 +517,33 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
         IntroducedErrorString[0] = '\0';
         sprintf(IntroducedErrorString, "%0.16lf", fp64OpError[WRTNode->Node->Kind]);
         strcat(RelativeErrorString, IntroducedErrorString);
-        if(strlen(AFItemPointer->AFString) != 0) {
+        if(strlen((*AFItemPointer)->AFString) != 0) {
           strcat(RelativeErrorString, "*");
-          strcat(RelativeErrorString, AFItemPointer->AFString);
+          strcat(RelativeErrorString, (*AFItemPointer)->AFString);
         }
 #endif
 
-        AnalysisInfo->DoubleAFRecords++;
+        AFs->ListLength++;
 
-        if (fAFisMemoryOpInstruction(AFItemPointer->WRTInstructionString)) {
+        if (fAFisMemoryOpInstruction(AFs->AFItems[AFs->ListLength-1]->WRTNode->InstructionString)) {
           // Adding this node to the ResultStore
-          AnalysisResult->DoubleAFItemPointer[AnalysisResult->DoubleAFRecords] = AFItemPointer;
-          AnalysisResult->DoubleAFRecords++;
+          AnalysisResult->AFItems[AnalysisResult->ListLength] = AFs->AFItems[AFs->ListLength-1];
+          AnalysisResult->ListLength++;
         }
 
 #if FAF_DEBUG>=2
         printf("\n\tNew AFItem Stored:\n");
-        printf("\t\tInstruction String: %s\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .ResultInstructionString);
-        printf("\t\tNode Id: %d\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .ResultNodeID);
-        printf("\t\tWRTInstructionString: %s\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .WRTInstructionString);
-        printf("\t\tWRTNodeID: %d\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .WRTNodeID);
-        printf("\t\tAF Path Length: %lu\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .AFPathLength);
-        printf("\t\tAF Path: [%d",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .AFPathPointer[0]->NodeId);
-        for (int I = 1; (uint64_t)I < AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1].AFPathLength;
-             ++I) {
-          printf(", %d",
-                 AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                     .AFPathPointer[I]->NodeId);
-        }
-        printf("]\n");
-        printf("\t\tAF: %0.15lf\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1].AF);
-        printf("\t\tAmplified Relative Error: %0.15lf\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1].AmplifiedRelativeError);
+        fAFPrintAFItem(AFs->AFItems[AFs->ListLength - 1]);
 #endif
 
-        if (WRTNode->Node->LeftNode->Kind != 0) {
-          // Pushing Left Node on Processing Q
-          if ((QItem = (NodeProcessingQItem *)malloc(
-                   (size_t)((int64_t)sizeof(NodeProcessingQItem)))) == NULL) {
-            printf("#AF: Out of memory error!");
-            exit(EXIT_FAILURE);
-          }
-          QItem->Node = WRTNode->Node->LeftNode;
-          QItem->NextItem = NULL;
-          ProcessingQ.Back->NextItem = QItem;
-          ProcessingQ.Back = ProcessingQ.Back->NextItem;
-
-          ProcessingQ.Size++;
-        }
+        fAFAddChildToWorkQ(&WorkQ, WRTNode->Node, 0);
       }
 
       // Multiply above AF with right AC and store in table
       if(WRTNode->Node->RightNode != NULL) {
-        AFItemPointer = &AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords];
-
-        AFItemPointer->ResultInstructionString =
-            NodeToAnalyse->InstructionString;
-        AFItemPointer->ResultNodeID = NodeToAnalyse->NodeId;
-        AFItemPointer->WRTInstructionString =
-            WRTNode->Node->RightNode->InstructionString;
-        AFItemPointer->WRTNodeID = WRTNode->Node->RightNode->NodeId;
-        fAFCopyCGNodePointerArray(&AFItemPointer->AFPathPointer,
-                                  &AFPathofWRTNode,
-                                  AFPathLengthofWRTNode);
-        AFItemPointer->AFPathLength+=AFPathLengthofWRTNode;
-        AFItemPointer->AFPathPointer[AFItemPointer->AFPathLength] = WRTNode->Node->RightNode;
-        AFItemPointer->AFPathLength+=1;
-
-        AFItemPointer->AF =
-            AFofWRTNode *
-            StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTY;
-        AFItemPointer->AmplifiedRelativeError = AFItemPointer->AF *
-                                       fp64OpError[WRTNode->Node->Kind];
-
-        // Allocating memory for the string representation of Amplification
-        // factor and storing the string
-        if ((AFItemPointer->AFString = (char *)malloc(sizeof(char) * 3000)) == NULL) {
-          printf("#fAd: Out of memory error!");
-          exit(EXIT_FAILURE);
-        }
-        if(strlen(AFofWRTNode_String) != 0)
-          strcpy(AFItemPointer->AFString, AFofWRTNode_String);
-        else
-          strcat(AFItemPointer->AFString, "1.0");
-        if(StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTYstring) {
-          strcat(AFItemPointer->AFString, "*");
-          strcat(AFItemPointer->AFString,
-                 StorageTable->FP64ACItems[WRTNode->Node->NodeId].ACWRTYstring);
-        }
+        fAFAddAFItemCorrespondingChildNode(&AFs->AFItems[AFs->ListLength],
+                                           RootNode, WRTNode->Node,
+                                           1, *AFItemPointer);
 
 #if FAF_DUMP_SYMBOLIC
         // Appending relative error contribution of node in string format to relative
@@ -1227,74 +553,33 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
         IntroducedErrorString[0] = '\0';
         sprintf(IntroducedErrorString, "%0.16lf", fp64OpError[WRTNode->Node->Kind]);
         strcat(RelativeErrorString, IntroducedErrorString);
-        if(strlen(AFItemPointer->AFString) != 0) {
+        if(strlen((*AFItemPointer)->AFString) != 0) {
           strcat(RelativeErrorString, "*");
-          strcat(RelativeErrorString, AFItemPointer->AFString);
+          strcat(RelativeErrorString, (*AFItemPointer)->AFString);
         }
 #endif
 
-        AnalysisInfo->DoubleAFRecords++;
+        AFs->ListLength++;
 
-        if (fAFisMemoryOpInstruction(AFItemPointer->WRTInstructionString)) {
+        if (fAFisMemoryOpInstruction(AFs->AFItems[AFs->ListLength-1]->WRTNode->InstructionString)) {
           // Adding this node to the ResultStore
-          AnalysisResult->DoubleAFItemPointer[AnalysisResult->DoubleAFRecords] = AFItemPointer;
-          AnalysisResult->DoubleAFRecords++;
+          AnalysisResult->AFItems[AnalysisResult->ListLength] = AFs->AFItems[AFs->ListLength-1];
+          AnalysisResult->ListLength++;
         }
-        
+
 #if FAF_DEBUG>=2
         printf("\n\tNew AFItem Stored:\n");
-        printf("\t\tInstruction String: %s\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .ResultInstructionString);
-        printf("\t\tNode Id: %d\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .ResultNodeID);
-        printf("\t\tWRTInstructionString: %s\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .WRTInstructionString);
-        printf("\t\tWRTNodeID: %d\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .WRTNodeID);
-        printf("\t\tAF Path Length: %lu\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .AFPathLength);
-        printf("\t\tAF Path: [%d",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                   .AFPathPointer[0]->NodeId);
-        for (int I = 1; (uint64_t)I < AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1].AFPathLength;
-             ++I) {
-          printf(", %d",
-                 AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1]
-                     .AFPathPointer[I]->NodeId);
-        }
-        printf("]\n");
-        printf("\t\tAF: %0.15lf\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1].AF);
-        printf("\t\tAmplifiedRelativeError: %0.15lf\n",
-               AnalysisInfo->DoubleAFItemPointer[AnalysisInfo->DoubleAFRecords - 1].AmplifiedRelativeError);
+        fAFPrintAFItem(AFs->AFItems[AFs->ListLength - 1]);
 #endif
 
-        if (WRTNode->Node->RightNode->Kind != 0) {
-          // Pushing Right Node on Processing Q
-          if ((QItem = (NodeProcessingQItem *)malloc(
-                   (size_t)((int64_t)sizeof(NodeProcessingQItem)))) == NULL) {
-            printf("#AF: Out of memory error!");
-            exit(EXIT_FAILURE);
-          }
-          QItem->Node = WRTNode->Node->RightNode;
-          QItem->NextItem = NULL;
-          ProcessingQ.Back->NextItem = QItem;
-          ProcessingQ.Back = ProcessingQ.Back->NextItem;
-
-          ProcessingQ.Size++;
-        }
+        fAFAddChildToWorkQ(&WorkQ, WRTNode->Node, 1);
       }
       break;
     }
 
     // Popping off Front of Q
-    ProcessingQ.Front = ProcessingQ.Front->NextItem;
-    ProcessingQ.Size--;
+    WorkQ.Front = WorkQ.Front->NextNode;
+    WorkQ.QLength--;
     free(WRTNode);
   }
 
@@ -1304,7 +589,7 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
 
 #if FAF_DEBUG
   printf("\nDone Analysing fp64 NodeId: %d, Instruction: %s\n",
-         NodeToAnalyse->NodeId, NodeToAnalyse->InstructionString);
+         RootNode->NodeId, RootNode->InstructionString);
 #endif
 
 #if FAF_DUMP_SYMBOLIC
@@ -1320,34 +605,21 @@ void fAFfp64Analysis(char *InstructionToAnalyse) {
 
 void fAFPrintTopAmplificationPaths() {
   // Sorting the two lists according to Amplification Factors
-  qsort(AnalysisResult->FloatAFItemPointer, AnalysisResult->FloatAFRecords, sizeof(FloatAFItem*), fAFFloatAFComparator);
-  qsort(AnalysisResult->DoubleAFItemPointer, AnalysisResult->DoubleAFRecords, sizeof(DoubleAFItem*), fAFDoubleAFComparator);
+  qsort(AnalysisResult->AFItems, AnalysisResult->ListLength,
+        sizeof(AFItem *), fAFDoubleAFComparator);
 
   // Printing Results
-  printf("The top Amplification Paths for fp32:\n");
-  for (int I = 0; I < min(5, AnalysisResult->FloatAFRecords); ++I) {
-    printf("AF: %f of Node:%d WRT Node:%d through path: [%d",
-           AnalysisResult->FloatAFItemPointer[I]->AF,
-           AnalysisResult->FloatAFItemPointer[I]->ResultNodeID,
-           AnalysisResult->FloatAFItemPointer[I]->WRTNodeID,
-           AnalysisResult->FloatAFItemPointer[I]->AFPathPointer[0]->NodeId);
-    for (int J = 1; (uint64_t)J < AnalysisResult->FloatAFItemPointer[I]->AFPathLength; ++J) {
-      printf(", %d",
-             AnalysisResult->FloatAFItemPointer[I]->AFPathPointer[J]->NodeId);
-    }
-    printf("]\n");
-  }
   printf("\n");
-  printf("The top Amplification Paths for fp64:\n");
-  for (int I = 0; I < min(5, AnalysisResult->DoubleAFRecords); ++I) {
+  printf("The top Amplification Paths are:\n");
+  for (int I = 0; I < min(5, AnalysisResult->ListLength); ++I) {
     printf("AF: %f of Node:%d WRT Node:%d through path: [%d",
-           AnalysisResult->DoubleAFItemPointer[I]->AF,
-           AnalysisResult->DoubleAFItemPointer[I]->ResultNodeID,
-           AnalysisResult->DoubleAFItemPointer[I]->WRTNodeID,
-           AnalysisResult->DoubleAFItemPointer[I]->AFPathPointer[0]->NodeId);
-    for (int J = 1; (uint64_t)J < AnalysisResult->DoubleAFItemPointer[I]->AFPathLength; ++J) {
+           AnalysisResult->AFItems[I]->AF,
+           AnalysisResult->AFItems[I]->Node->NodeId,
+           AnalysisResult->AFItems[I]->WRTNode->NodeId,
+           AnalysisResult->AFItems[I]->AFPathPointer[0]->NodeId);
+    for (int J = 1; (uint64_t)J < AnalysisResult->AFItems[I]->AFPathLength; ++J) {
       printf(", %d",
-             AnalysisResult->DoubleAFItemPointer[I]->AFPathPointer[J]->NodeId);
+             AnalysisResult->AFItems[I]->AFPathPointer[J]->NodeId);
     }
     printf("]\n");
   }
@@ -1355,19 +627,9 @@ void fAFPrintTopAmplificationPaths() {
 }
 
 void fAFStoreAFs() {
-  // Create a directory if not present
-  char *DirectoryName = (char *)malloc((strlen(LOG_DIRECTORY_NAME)+1) * sizeof(char));
-  strcpy(DirectoryName, LOG_DIRECTORY_NAME);
-  fAFcreateLogDirectory(DirectoryName);
-
-  char ExecutionId[5000];
-  char FileName[5000];
-  FileName[0] = '\0';
-  strcpy(FileName, strcat(strcpy(FileName, DirectoryName), "/fAF_"));
-
-  fACGenerateExecutionID(ExecutionId);
-  strcat(ExecutionId, ".json");
-  strcat(FileName, ExecutionId);
+  // Generate a file path + file name string to store the AF Records
+  char File[5000];
+  fAFGenerateFileString(File, "fAF_", ".json");
 
   // TODO: Build analysis functions with arguments and print the arguments
   // Get program name and input
@@ -1382,58 +644,17 @@ void fAFStoreAFs() {
   //  }
 
   // Table Output
-  FILE *FP = fopen(FileName, "w");
+  FILE *FP = fopen(File, "w");
   fprintf(FP, "{\n");
 
   long unsigned int RecordsStored = 0;
 
-  fprintf(FP, "\t\"FP32\": [\n");
-  int I = 0;
-  while ((uint64_t)I < AnalysisInfo->FloatAFRecords) {
-    if (fAFisMemoryOpInstruction(AnalysisInfo->FloatAFItemPointer[I].WRTInstructionString) &&
-        fprintf(FP,
-                "\t\t{\n"
-                "\t\t\t\"Result Instruction\": \"%s\",\n"
-                "\t\t\t\"Result Node ID\":%d,\n"
-                "\t\t\t\"AF WRT Node\": \"%s\",\n"
-                "\t\t\t\"WRT Node ID\":%d,\n"
-                "\t\t\t\"AF\": %0.7f,\n"
-                "\t\t\t\"Amplified Relative Error\": %0.7f,\n"
-                "\t\t\t\"AF String\": \"%s\",\n",
-                AnalysisInfo->FloatAFItemPointer[I].ResultInstructionString,
-                AnalysisInfo->FloatAFItemPointer[I].ResultNodeID,
-                AnalysisInfo->FloatAFItemPointer[I].WRTInstructionString,
-                AnalysisInfo->FloatAFItemPointer[I].WRTNodeID,
-                AnalysisInfo->FloatAFItemPointer[I].AF,
-                AnalysisInfo->FloatAFItemPointer[I].AmplifiedRelativeError,
-                AnalysisInfo->FloatAFItemPointer[I].AFString) > 0){
-      fprintf(FP,
-              "\t\t\t\"AF Path\": [%d",
-              AnalysisInfo->FloatAFItemPointer[I].AFPathPointer[0]->NodeId);
-      for (int J = 1; (uint64_t)J < AnalysisInfo->FloatAFItemPointer[I].AFPathLength; ++J) {
-        fprintf(FP,
-                ", %d",
-                AnalysisInfo->FloatAFItemPointer[I].AFPathPointer[J]->NodeId);
-      }
-      fprintf(FP, "]\n");
-      RecordsStored++;
-
-      if (RecordsStored != AnalysisInfo->FloatAFRecords)
-        fprintf(FP, "\t\t},\n");
-      else
-        fprintf(FP, "\t\t}\n");
-    }
-    I++;
-  }
-  fprintf(FP, "\t],\n");
-
   RecordsStored = 0;
 
-  fprintf(FP, "\t\"FP64\": [\n");
-  I = 0;
-  while ((uint64_t)I < AnalysisInfo->DoubleAFRecords) {
-    if (fAFisMemoryOpInstruction(AnalysisInfo->DoubleAFItemPointer[I].WRTInstructionString) &&
-        fprintf(FP,
+  fprintf(FP, "\t\"AFs\": [\n");
+  int I = 0;
+  while ((uint64_t)I < AFs->ListLength) {
+    if (fprintf(FP,
                 "\t\t{\n"
                 "\t\t\t\"Result Instruction\": \"%s\",\n"
                 "\t\t\t\"Result Node ID\":%d,\n"
@@ -1442,25 +663,25 @@ void fAFStoreAFs() {
                 "\t\t\t\"AF\": %0.15lf,\n"
                 "\t\t\t\"Amplified Relative Error\": %0.15lf,\n"
                 "\t\t\t\"AF String\": \"%s\",\n",
-                AnalysisInfo->DoubleAFItemPointer[I].ResultInstructionString,
-                AnalysisInfo->DoubleAFItemPointer[I].ResultNodeID,
-                AnalysisInfo->DoubleAFItemPointer[I].WRTInstructionString,
-                AnalysisInfo->DoubleAFItemPointer[I].WRTNodeID,
-                AnalysisInfo->DoubleAFItemPointer[I].AF,
-                AnalysisInfo->DoubleAFItemPointer[I].AmplifiedRelativeError,
-                AnalysisInfo->DoubleAFItemPointer[I].AFString) > 0) {
+                AFs->AFItems[I]->Node->InstructionString,
+                AFs->AFItems[I]->Node->NodeId,
+                AFs->AFItems[I]->WRTNode->InstructionString,
+                AFs->AFItems[I]->WRTNode->NodeId,
+                AFs->AFItems[I]->AF,
+                AFs->AFItems[I]->AmplifiedRelativeError,
+                AFs->AFItems[I]->AFString) > 0) {
       fprintf(FP,
               "\t\t\t\"AF Path\": [%d",
-              AnalysisInfo->DoubleAFItemPointer[I].AFPathPointer[0]->NodeId);
-      for (int J = 1; (uint64_t)J < AnalysisInfo->DoubleAFItemPointer[I].AFPathLength; ++J) {
+              AFs->AFItems[I]->AFPathPointer[0]->NodeId);
+      for (int J = 1; (uint64_t)J < AFs->AFItems[I]->AFPathLength; ++J) {
         fprintf(FP,
                 ", %d",
-                AnalysisInfo->DoubleAFItemPointer[I].AFPathPointer[J]->NodeId);
+                AFs->AFItems[I]->AFPathPointer[J]->NodeId);
       }
       fprintf(FP, "]\n");
       RecordsStored++;
 
-      if (RecordsStored != AnalysisInfo->DoubleAFRecords)
+      if (RecordsStored != AFs->ListLength)
         fprintf(FP, "\t\t},\n");
       else
         fprintf(FP, "\t\t}\n");
@@ -1473,7 +694,7 @@ void fAFStoreAFs() {
 
   fclose(FP);
 
-  printf("\nAmplification Factors written to file: %s\n", FileName);
+  printf("\nAmplification Factors written to file: %s\n", File);
 }
 
 #endif // LLVM_AMPLIFICATIONFACTOR_H

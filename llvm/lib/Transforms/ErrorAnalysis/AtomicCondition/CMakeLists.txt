@@ -3,4 +3,5 @@ add_llvm_component_library(LLVMAtomicCondition
 
     ADDITIONAL_HEADER_DIRS
     ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms/ErrorAnalysis/AtomicCondition
+    ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms/ErrorAnalysis/Utilities
     )

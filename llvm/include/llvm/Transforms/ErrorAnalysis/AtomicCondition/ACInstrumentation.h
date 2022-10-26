@@ -17,61 +17,60 @@ private:
   Function *FunctionToInstrument;
 
   Function *ACInitFunction;
-  Function *CGInitFunction;
-  Function *AFInitFunction;
+//  Function *AFInitFunction;
 
-  Function *ACfp32UnaryFunction;
-  Function *ACfp64UnaryFunction;
-  Function *ACfp32BinaryFunction;
-  Function *ACfp64BinaryFunction;
-
-  Function *CGRecordPHIInstruction;
-  Function *CGRecordBasicBlock;
-  Function *CGCreateNode;
+  Function *ACComputingFunction;
 
   Function *ACStoreFunction;
-  Function *CGStoreFunction;
-  Function *AFStoreFunction;
-  Function *AFPrintTopAmplificationPaths;
+//  Function *AFStoreFunction;
+//  Function *AFPrintTopAmplificationPaths;
 
-  Function *AFfp32AnalysisFunction;
-  Function *AFfp64AnalysisFunction;
+//  Function *AFAnalysisFunction;
 
   // Additional Utilities
-  Function *CGDotGraphFunction;
 
 public:
+  Value *EmptyValuePointer;
+
   ACInstrumentation(Function *F);
 
-  void instrumentCallRecordingBasicBlock(BasicBlock *CurrentBB,
-                                         long int *NumInstrumentedInstructions);
-  void instrumentCallRecordingPHIInstructions(BasicBlock *CurrentBB,
-                                              long int *NumInstrumentedInstructions);
-  void instrumentCallsForMemoryLoadOperation(Instruction *BaseInstruction,
-                                             long int *NumInstrumentedInstructions);
-  void instrumentCallsForCastOperation(Instruction * BaseInstruction,
+//  void instrumentCallsForMemoryLoadOperation(Instruction *BaseInstruction,
+//                                             BasicBlock::iterator *InstructionIterator,
+//                                             long int *NumInstrumentedInstructions);
+//  void instrumentCallsForUnaryOperation(Instruction *BaseInstruction,
+//                                        BasicBlock::iterator *InstructionIterator,
+//                                        long int *NumInstrumentedInstructions);
+//  void instrumentCallsForBinaryOperation(Instruction *BaseInstruction,
+//                                         BasicBlock::iterator *InstructionIterator,
+//                                         long int *NumInstrumentedInstructions);
+//  void instrumentCallsForOtherOperation(Instruction *BaseInstruction,
+//                                        BasicBlock::iterator *InstructionIterator,
+//                                        long int *NumInstrumentedInstructions);
+//  void instrumentCallsForAFAnalysis(Instruction *BaseInstruction,
+//                                    Instruction *LocationToInstrument,
+//                                    BasicBlock::iterator *InstructionIterator,
+//                                    long int *NumInstrumentedInstructions);
+
+//  void instrumentAFAnalysisForPrintsAndReturns(Instruction *BaseInstruction,
+//                                               BasicBlock::iterator *InstructionIterator,
+//                                               long int *NumInstrumentedInstructions);
+
+  void instrumentCallsForACComputation(Instruction *BaseInstruction,
+                                       BasicBlock::iterator *InstructionIterator,
                                        long int *NumInstrumentedInstructions);
-  void instrumentCallsForUnaryOperation(Instruction *BaseInstruction,
-                                        long int *NumInstrumentedInstructions);
-  void instrumentCallsForBinaryOperation(Instruction *BaseInstruction,
-                                         long int *NumInstrumentedInstructions);
-  void instrumentCallsForOtherOperation(Instruction *BaseInstruction,
-                                        long int *NumInstrumentedInstructions);
-  void instrumentCallsForNonACIntrinsicFunction(Instruction *BaseInstruction,
-                                           long int *NumInstrumentedInstructions);
-  void instrumentCallsForNonACFloatPointInstruction(Instruction *BaseInstruction,
-                                                    long int *NumInstrumentedInstructions);
-  void instrumentCallsForAFAnalysis(Instruction *BaseInstruction,
-                                    Instruction *LocationToInstrument,
-                                    long int *NumInstrumentedInstructions);
 
   void instrumentBasicBlock(BasicBlock *BB,
                             long int *NumInstrumentedInstructions);
   void instrumentMainFunction(Function *F);
 
   //// Helper Functions
+
   /// Instruction based functions
+  // Instruction finders
+  Instruction *getInstructionAfterInitializationCalls(BasicBlock *BB);
+
   // Categorized by operations
+  static bool canHaveGraphNode(const Instruction *Inst);
   static bool isMemoryLoadOperation(const Instruction *Inst);
   static bool isIntegerToFloatCastOperation(const Instruction *Inst);
   static bool isUnaryOperation(const Instruction *Inst);
@@ -96,6 +95,7 @@ public:
   Value *createStringRefGlobalString(StringRef StringObj, Instruction *Inst);
   std::string getInstructionAsString(Instruction *Inst);
   static bool isInstructionOfInterest(Instruction *Inst);
+  int getFunctionEnum(Instruction *Inst);
 };
 
 } // namespace atomiccondition

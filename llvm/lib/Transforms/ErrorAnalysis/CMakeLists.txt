@@ -1,4 +1,5 @@
 add_subdirectory(AtomicCondition)
+add_subdirectory(Utilities)
 
 add_llvm_component_library(LLVMErrorAnalysis
   ErrorAnalysis.cpp
@@ -15,5 +16,6 @@ add_llvm_component_library(LLVMErrorAnalysis
   Core
   Support
   AtomicCondition
+  Utilities
   )
 
