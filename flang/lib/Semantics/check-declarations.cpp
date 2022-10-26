@@ -429,10 +429,15 @@ void CheckHelper::CheckValue(
   if (symbol.attrs().test(Attr::VOLATILE)) {
     messages_.Say("VALUE attribute may not apply to a VOLATILE"_err_en_US);
   }
-  if (innermostSymbol_ && IsBindCProcedure(*innermostSymbol_) &&
-      IsOptional(symbol)) {
-    messages_.Say(
-        "VALUE attribute may not apply to an OPTIONAL in a BIND(C) procedure"_err_en_US);
+  if (innermostSymbol_ && IsBindCProcedure(*innermostSymbol_)) {
+    if (IsOptional(symbol)) {
+      messages_.Say(
+          "VALUE attribute may not apply to an OPTIONAL in a BIND(C) procedure"_err_en_US);
+    }
+    if (symbol.Rank() > 0) {
+      messages_.Say(
+          "VALUE attribute may not apply to an array in a BIND(C) procedure"_err_en_US);
+    }
   }
   if (derived) {
     if (FindCoarrayUltimateComponent(*derived)) {
@@ -1914,6 +1919,7 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
     return;
   }
   CheckConflicting(symbol, Attr::BIND_C, Attr::PARAMETER);
+  CheckConflicting(symbol, Attr::BIND_C, Attr::ELEMENTAL);
   if (symbol.has<ObjectEntityDetails>() && !symbol.owner().IsModule()) {
     messages_.Say(symbol.name(),
         "A variable with BIND(C) attribute may only appear in the specification part of a module"_err_en_US);

@@ -334,6 +334,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAMXINT8 = true;
     } else if (Feature == "+amx-tile") {
       HasAMXTILE = true;
+    } else if (Feature == "+cmpccxadd") {
+      HasCMPCCXADD = true;
     } else if (Feature == "+avxvnni") {
       HasAVXVNNI = true;
     } else if (Feature == "+serialize") {
@@ -782,6 +784,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AMXBF16__");
   if (HasAMXFP16)
     Builder.defineMacro("__AMXFP16__");
+  if (HasCMPCCXADD)
+    Builder.defineMacro("__CMPCCXADD__");
   if (HasAVXVNNI)
     Builder.defineMacro("__AVXVNNI__");
   if (HasSERIALIZE)
@@ -913,6 +917,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("clflushopt", true)
       .Case("clwb", true)
       .Case("clzero", true)
+      .Case("cmpccxadd", true)
       .Case("crc32", true)
       .Case("cx16", true)
       .Case("enqcmd", true)
@@ -1009,6 +1014,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("clflushopt", HasCLFLUSHOPT)
       .Case("clwb", HasCLWB)
       .Case("clzero", HasCLZERO)
+      .Case("cmpccxadd", HasCMPCCXADD)
       .Case("crc32", HasCRC32)
       .Case("cx8", HasCX8)
       .Case("cx16", HasCX16)

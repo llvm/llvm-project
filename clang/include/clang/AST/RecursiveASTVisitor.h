@@ -276,8 +276,7 @@ public:
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
   // FIXME: take a TemplateArgumentLoc* (or TemplateArgumentListInfo) instead.
-  bool TraverseTemplateArguments(const TemplateArgument *Args,
-                                 unsigned NumArgs);
+  bool TraverseTemplateArguments(ArrayRef<TemplateArgument> Args);
 
   /// Recursively visit a base specifier. This can be overridden by a
   /// subclass.
@@ -873,8 +872,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgument(
     return getDerived().TraverseStmt(Arg.getAsExpr());
 
   case TemplateArgument::Pack:
-    return getDerived().TraverseTemplateArguments(Arg.pack_begin(),
-                                                  Arg.pack_size());
+    return getDerived().TraverseTemplateArguments(Arg.pack_elements());
   }
 
   return true;
@@ -914,8 +912,7 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLoc(
     return getDerived().TraverseStmt(ArgLoc.getSourceExpression());
 
   case TemplateArgument::Pack:
-    return getDerived().TraverseTemplateArguments(Arg.pack_begin(),
-                                                  Arg.pack_size());
+    return getDerived().TraverseTemplateArguments(Arg.pack_elements());
   }
 
   return true;
@@ -923,10 +920,9 @@ bool RecursiveASTVisitor<Derived>::TraverseTemplateArgumentLoc(
 
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseTemplateArguments(
-    const TemplateArgument *Args, unsigned NumArgs) {
-  for (unsigned I = 0; I != NumArgs; ++I) {
-    TRY_TO(TraverseTemplateArgument(Args[I]));
-  }
+    ArrayRef<TemplateArgument> Args) {
+  for (const TemplateArgument &Arg : Args)
+    TRY_TO(TraverseTemplateArgument(Arg));
 
   return true;
 }
@@ -1083,7 +1079,7 @@ DEF_TRAVERSE_TYPE(UnaryTransformType, {
 DEF_TRAVERSE_TYPE(AutoType, {
   TRY_TO(TraverseType(T->getDeducedType()));
   if (T->isConstrained()) {
-    TRY_TO(TraverseTemplateArguments(T->getArgs(), T->getNumArgs()));
+    TRY_TO(TraverseTemplateArguments(T->getTypeConstraintArguments()));
   }
 })
 DEF_TRAVERSE_TYPE(DeducedTemplateSpecializationType, {
@@ -1103,7 +1099,7 @@ DEF_TRAVERSE_TYPE(SubstTemplateTypeParmPackType, {
 
 DEF_TRAVERSE_TYPE(TemplateSpecializationType, {
   TRY_TO(TraverseTemplateName(T->getTemplateName()));
-  TRY_TO(TraverseTemplateArguments(T->getArgs(), T->getNumArgs()));
+  TRY_TO(TraverseTemplateArguments(T->template_arguments()));
 })
 
 DEF_TRAVERSE_TYPE(InjectedClassNameType, {})
@@ -1131,7 +1127,7 @@ DEF_TRAVERSE_TYPE(DependentNameType,
 
 DEF_TRAVERSE_TYPE(DependentTemplateSpecializationType, {
   TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
-  TRY_TO(TraverseTemplateArguments(T->getArgs(), T->getNumArgs()));
+  TRY_TO(TraverseTemplateArguments(T->template_arguments()));
 })
 
 DEF_TRAVERSE_TYPE(PackExpansionType, { TRY_TO(TraverseType(T->getPattern())); })
@@ -2303,6 +2299,10 @@ DEF_TRAVERSE_DECL(ParmVarDecl, {
 })
 
 DEF_TRAVERSE_DECL(RequiresExprBodyDecl, {})
+
+DEF_TRAVERSE_DECL(ImplicitConceptSpecializationDecl, {
+  TRY_TO(TraverseTemplateArguments(D->getTemplateArguments()));
+})
 
 #undef DEF_TRAVERSE_DECL
 

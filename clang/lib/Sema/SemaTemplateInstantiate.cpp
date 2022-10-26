@@ -231,6 +231,15 @@ Response HandleRecordDecl(const CXXRecordDecl *Rec,
   return Response::UseNextDecl(Rec);
 }
 
+Response HandleImplicitConceptSpecializationDecl(
+    const ImplicitConceptSpecializationDecl *CSD,
+    MultiLevelTemplateArgumentList &Result) {
+  Result.addOuterTemplateArguments(
+      const_cast<ImplicitConceptSpecializationDecl *>(CSD),
+      CSD->getTemplateArguments());
+  return Response::UseNextDecl(CSD);
+}
+
 Response HandleGenericDeclContext(const Decl *CurDecl) {
   return Response::UseNextDecl(CurDecl);
 }
@@ -289,6 +298,9 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
                          ForConstraintInstantiation);
     } else if (const auto *Rec = dyn_cast<CXXRecordDecl>(CurDecl)) {
       R = HandleRecordDecl(Rec, Result, Context, ForConstraintInstantiation);
+    } else if (const auto *CSD =
+                   dyn_cast<ImplicitConceptSpecializationDecl>(CurDecl)) {
+      R = HandleImplicitConceptSpecializationDecl(CSD, Result);
     } else if (!isa<DeclContext>(CurDecl)) {
       R = Response::DontClearRelativeToPrimaryNextDecl(CurDecl);
       if (CurDecl->getDeclContext()->isTranslationUnit()) {

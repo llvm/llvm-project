@@ -1277,9 +1277,12 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
 
   ErrorOr<BinarySection &> Section = BC->getSectionForAddress(EntryAddress);
   assert(Section && "cannot get section for address");
-  BF = BC->createBinaryFunction(Rel->Symbol->getName().str() + "@PLT", *Section,
-                                EntryAddress, 0, EntrySize,
-                                Section->getAlignment());
+  if (!BF)
+    BF = BC->createBinaryFunction(Rel->Symbol->getName().str() + "@PLT",
+                                  *Section, EntryAddress, 0, EntrySize,
+                                  Section->getAlignment());
+  else
+    BF->addAlternativeName(Rel->Symbol->getName().str() + "@PLT");
   setPLTSymbol(BF, Rel->Symbol->getName());
 }
 
@@ -1411,15 +1414,19 @@ void RewriteInstance::disassemblePLT() {
       continue;
 
     analyzeOnePLTSection(Section, PLTSI->EntrySize);
-    // If we did not register any function at the start of the section,
-    // then it must be a general PLT entry. Add a function at the location.
-    if (BC->getBinaryFunctions().find(Section.getAddress()) ==
-        BC->getBinaryFunctions().end()) {
-      BinaryFunction *BF = BC->createBinaryFunction(
+
+    BinaryFunction *PltBF;
+    auto BFIter = BC->getBinaryFunctions().find(Section.getAddress());
+    if (BFIter != BC->getBinaryFunctions().end()) {
+      PltBF = &BFIter->second;
+    } else {
+      // If we did not register any function at the start of the section,
+      // then it must be a general PLT entry. Add a function at the location.
+      PltBF = BC->createBinaryFunction(
           "__BOLT_PSEUDO_" + Section.getName().str(), Section,
           Section.getAddress(), 0, PLTSI->EntrySize, Section.getAlignment());
-      BF->setPseudo(true);
     }
+    PltBF->setPseudo(true);
   }
 }
 

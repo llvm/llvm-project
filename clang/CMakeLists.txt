@@ -134,10 +134,6 @@ if(CLANG_BUILT_STANDALONE)
 
     umbrella_lit_testsuite_begin(check-all)
   endif() # LLVM_INCLUDE_TESTS
-
-  set(BACKEND_PACKAGE_STRING "LLVM ${LLVM_PACKAGE_VERSION}")
-else()
-  set(BACKEND_PACKAGE_STRING "${PACKAGE_STRING}")
 endif() # standalone
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)

@@ -129,11 +129,9 @@ static const Type *getFullyQualifiedTemplateType(const ASTContext &Ctx,
   if (const auto *TST = dyn_cast<const TemplateSpecializationType>(TypePtr)) {
     bool MightHaveChanged = false;
     SmallVector<TemplateArgument, 4> FQArgs;
-    for (TemplateSpecializationType::iterator I = TST->begin(), E = TST->end();
-         I != E; ++I) {
-      // Cheap to copy and potentially modified by
-      // getFullyQualifedTemplateArgument.
-      TemplateArgument Arg(*I);
+    // Cheap to copy and potentially modified by
+    // getFullyQualifedTemplateArgument.
+    for (TemplateArgument Arg : TST->template_arguments()) {
       MightHaveChanged |= getFullyQualifiedTemplateArgument(
           Ctx, Arg, WithGlobalNsPrefix);
       FQArgs.push_back(Arg);

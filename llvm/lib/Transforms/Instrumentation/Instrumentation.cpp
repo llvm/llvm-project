@@ -88,17 +88,3 @@ Comdat *llvm::getOrCreateFunctionComdat(Function &F, Triple &T) {
   return C;
 }
 
-/// initializeInstrumentation - Initialize all passes in the TransformUtils
-/// library.
-void llvm::initializeInstrumentation(PassRegistry &Registry) {
-  initializeMemProfilerLegacyPassPass(Registry);
-  initializeModuleMemProfilerLegacyPassPass(Registry);
-  initializeBoundsCheckingLegacyPassPass(Registry);
-  initializeDataFlowSanitizerLegacyPassPass(Registry);
-}
-
-/// LLVMInitializeInstrumentation - C binding for
-/// initializeInstrumentation.
-void LLVMInitializeInstrumentation(LLVMPassRegistryRef R) {
-  initializeInstrumentation(*unwrap(R));
-}

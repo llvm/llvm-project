@@ -11525,7 +11525,7 @@ bool Sema::isStdInitializerList(QualType Ty, QualType *Element) {
                  Ty->getAs<TemplateSpecializationType>()) {
     Template = dyn_cast_or_null<ClassTemplateDecl>(
         TST->getTemplateName().getAsTemplateDecl());
-    Arguments = TST->getArgs();
+    Arguments = TST->template_arguments().begin();
   }
   if (!Template)
     return false;

@@ -495,7 +495,7 @@ transform::SplitHandlesOp::apply(transform::TransformResults &results,
            << " handles";
   }
   // Normal successful case.
-  for (auto en : llvm::enumerate(state.getPayloadOps(getHandle())))
+  for (const auto &en : llvm::enumerate(state.getPayloadOps(getHandle())))
     results.set(getResults()[en.index()].cast<OpResult>(), en.value());
   return DiagnosedSilenceableFailure::success();
 }

@@ -256,6 +256,88 @@ TEST_F(RISCVEmulatorTester, TestAtomicSequence) {
   ASSERT_EQ(this->gpr.gpr[0], uint64_t(16));
 }
 
+struct TestDecode {
+  uint32_t inst;
+  RISCVInst inst_type;
+};
+
+bool compareInst(const RISCVInst &lhs, const RISCVInst &rhs) {
+  if (lhs.index() != rhs.index())
+    return false;
+  return std::visit(
+      [&](auto &&L) {
+        return std::visit(
+            [&](auto &&R) {
+              // guaranteed by
+              // 1. lhs.index() == rhs.index()
+              // (they are the same instruction type)
+              // 2. all instruction representations are plain data objects
+              // consisting of primitive types.
+              return std::memcmp(&L, &R, sizeof(L)) == 0;
+            },
+            rhs);
+      },
+      lhs);
+}
+
+TEST_F(RISCVEmulatorTester, TestCDecode) {
+  std::vector<TestDecode> tests = {
+      {0x0000, INVALID{0x0000}},
+      {0x0010, RESERVED{0x0010}},
+      // ADDI4SPN here, decode as ADDI
+      {0x0024, ADDI{Rd{9}, Rs{2}, 8}},
+      {0x4488, LW{Rd{10}, Rs{9}, 8}},
+      {0x6488, LD{Rd{10}, Rs{9}, 8}},
+      {0xC488, SW{Rs{9}, Rs{10}, 8}},
+      {0xE488, SD{Rs{9}, Rs{10}, 8}},
+      {0x1001, NOP{0x1001}},
+      {0x1085, ADDI{Rd{1}, Rs{1}, uint32_t(-31)}},
+      {0x2081, ADDIW{Rd{1}, Rs{1}, 0}},
+      // ADDI16SP here, decode as ADDI
+      {0x7101, ADDI{Rd{2}, Rs{2}, uint32_t(-512)}},
+      {0x4081, ADDI{Rd{1}, Rs{0}, 0}},
+      {0x7081, LUI{Rd{1}, uint32_t(-131072)}},
+      {0x8085, SRLI{Rd{9}, Rs{9}, 1}},
+      {0x8485, SRAI{Rd{9}, Rs{9}, 1}},
+      {0x8881, ANDI{Rd{9}, Rs{9}, 0}},
+      {0x8C85, SUB{Rd{9}, Rs{9}, Rs{9}}},
+      {0x8CA5, XOR{Rd{9}, Rs{9}, Rs{9}}},
+      {0x8CC5, OR{Rd{9}, Rs{9}, Rs{9}}},
+      {0x8CE5, AND{Rd{9}, Rs{9}, Rs{9}}},
+      {0x9C85, SUBW{Rd{9}, Rs{9}, Rs{9}}},
+      {0x9CA5, ADDW{Rd{9}, Rs{9}, Rs{9}}},
+      // C.J here, decoded as JAL
+      {0xA001, JAL{Rd{0}, 0}},
+      {0xC081, B{Rs{9}, Rs{0}, 0, 0b000}},
+      {0xE081, B{Rs{9}, Rs{0}, 0, 0b001}},
+      {0x1082, SLLI{Rd{1}, Rs{1}, 32}},
+      {0x1002, HINT{0x1002}},
+      // SLLI64 here, decoded as HINT if not in RV128
+      {0x0082, HINT{0x0082}},
+      // LWSP here, decoded as LW
+      {0x4082, LW{Rd{1}, Rs{2}, 0}},
+      // LDSP here, decoded as LD
+      {0x6082, LD{Rd{1}, Rs{2}, 0}},
+      // C.JR here, decoded as JALR
+      {0x8082, JALR{Rd{0}, Rs{1}, 0}},
+      // C.MV here, decoded as ADD
+      {0x8086, ADD{Rd{1}, Rs{0}, Rs{1}}},
+      {0x9002, EBREAK{0x9002}},
+      {0x9082, JALR{Rd{1}, Rs{1}, 0}},
+      {0x9086, ADD{Rd{1}, Rs{1}, Rs{1}}},
+      // C.SWSP here, decoded as SW
+      {0xC006, SW{Rs{2}, Rs{1}, 0}},
+      // C.SDSP here, decoded as SD
+      {0xE006, SD{Rs{2}, Rs{1}, 0}},
+  };
+
+  for (auto i : tests) {
+    auto decode = this->Decode(i.inst);
+    ASSERT_TRUE(decode.has_value());
+    ASSERT_TRUE(compareInst(decode->decoded, i.inst_type));
+  }
+}
+
 // GEN_BRANCH_TEST(opcode, imm1, imm2, imm3):
 // It should branch for instruction `opcode imm1, imm2`
 // It should do nothing for instruction `opcode imm1, imm3`
@@ -274,7 +356,6 @@ struct TestData {
 };
 
 TEST_F(RISCVEmulatorTester, TestDecodeAndExcute) {
-
   std::vector<TestData> tests = {
       // RV32I & RV64I Tests
       {0x00010113, "ADDI", false, [](RS1 rs1, RS2, PC) { return rs1 + 0; }},

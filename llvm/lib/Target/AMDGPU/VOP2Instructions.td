@@ -269,7 +269,8 @@ class VOP2bInstAlias <VOP2_Pseudo ps, Instruction inst,
                       string OpName, string opnd> :
   InstAlias <OpName#" "#!subst("vcc", opnd, ps.Pfl.Asm32),
              (inst ps.Pfl.DstRC:$vdst, ps.Pfl.Src0RC32:$src0,
-                   ps.Pfl.Src1RC32:$src1)>,
+                   ps.Pfl.Src1RC32:$src1),
+             1, inst.AsmVariantName>,
   PredicateControl {
 }
 
@@ -331,12 +332,15 @@ multiclass
 class VOP2eInstAlias <VOP2_Pseudo ps, Instruction inst, string opnd = ""> :
   InstAlias <ps.OpName#" "#ps.Pfl.Asm32#", "#opnd,
              (inst ps.Pfl.DstRC:$vdst, ps.Pfl.Src0RC32:$src0,
-                   ps.Pfl.Src1RC32:$src1)>, PredicateControl;
+                   ps.Pfl.Src1RC32:$src1),
+             1, inst.AsmVariantName>,
+  PredicateControl;
 
 class VOP2e64InstAlias <VOP3_Pseudo ps, Instruction inst> :
   InstAlias <ps.OpName#" "#ps.Pfl.Asm64,
              (inst ps.Pfl.DstRC:$vdst, VOPDstS64orS32:$sdst,
-                   ps.Pfl.Src0RC32:$src0, ps.Pfl.Src1RC32:$src1, clampmod:$clamp)>,
+                   ps.Pfl.Src0RC32:$src0, ps.Pfl.Src1RC32:$src1, clampmod:$clamp),
+             1, inst.AsmVariantName>,
   PredicateControl;
 
 multiclass VOP2eInstAliases<VOP2_Pseudo ps, VOP2_Real inst> {
@@ -423,6 +427,15 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
   let InsVOP3Base  = getIns64<Src0VOP3DPP, Src1RC64, RegisterOperand<VGPR_32>, 3,
                        0, HasModifiers, HasModifiers, HasOMod,
                        Src0Mod, Src1Mod, Src2Mod>.ret;
+  // We need a dummy src2 tied to dst to track the use of that register for s_delay_alu
+  let InsVOPDX = (ins Src0RC32:$src0X, Src1RC32:$vsrc1X, VGPRSrc_32:$src2X);
+  let InsVOPDXDeferred =
+    (ins !if(!eq(Src0VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0X,
+         VGPR_32:$vsrc1X, VGPRSrc_32:$src2X);
+  let InsVOPDY = (ins Src0RC32:$src0Y, Src1RC32:$vsrc1Y, VGPRSrc_32:$src2Y);
+  let InsVOPDYDeferred =
+    (ins !if(!eq(Src1VT.Size, 32), VSrc_f32_Deferred, VSrc_f16_Deferred):$src0Y,
+         VGPR_32:$vsrc1Y, VGPRSrc_32:$src2Y);
 
   let InsDPP8 = (ins Src0ModDPP:$src0_modifiers, Src0DPP:$src0,
                      Src1ModDPP:$src1_modifiers, Src1DPP:$src1,

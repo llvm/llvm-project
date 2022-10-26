@@ -17,6 +17,8 @@ endif()
 # Must go below project(..)
 include(GNUInstallDirs)
 
+option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests." ${LLVM_INCLUDE_TESTS})
+
 if(LLDB_BUILT_STANDALONE)
   include(LLDBStandalone)
 
@@ -129,7 +131,6 @@ if (NOT TARGET llvm_gtest)
   set(LLDB_INCLUDE_UNITTESTS OFF)
 endif()
 
-option(LLDB_INCLUDE_TESTS "Generate build targets for the LLDB unit tests." ${LLVM_INCLUDE_TESTS})
 if(LLDB_INCLUDE_TESTS)
   add_subdirectory(test)
   if (LLDB_INCLUDE_UNITTESTS)

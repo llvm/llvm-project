@@ -768,7 +768,7 @@ ParseResult OperationParser::finalize() {
   auto &attributeAliases = state.symbols.attributeAliasDefinitions;
   auto locID = TypeID::get<DeferredLocInfo *>();
   auto resolveLocation = [&, this](auto &opOrArgument) -> LogicalResult {
-    auto fwdLoc = opOrArgument.getLoc().template dyn_cast<OpaqueLoc>();
+    auto fwdLoc = dyn_cast<OpaqueLoc>(opOrArgument.getLoc());
     if (!fwdLoc || fwdLoc.getUnderlyingTypeID() != locID)
       return success();
     auto locInfo = deferredLocsReferences[fwdLoc.getUnderlyingLocation()];
@@ -776,7 +776,7 @@ ParseResult OperationParser::finalize() {
     if (!attr)
       return this->emitError(locInfo.loc)
              << "operation location alias was never defined";
-    auto locAttr = attr.dyn_cast<LocationAttr>();
+    auto locAttr = dyn_cast<LocationAttr>(attr);
     if (!locAttr)
       return this->emitError(locInfo.loc)
              << "expected location, but found '" << attr << "'";
@@ -1930,7 +1930,7 @@ ParseResult OperationParser::parseLocationAlias(LocationAttr &loc) {
   // If this alias can be resolved, do it now.
   Attribute attr = state.symbols.attributeAliasDefinitions.lookup(identifier);
   if (attr) {
-    if (!(loc = attr.dyn_cast<LocationAttr>()))
+    if (!(loc = dyn_cast<LocationAttr>(attr)))
       return emitError(tok.getLoc())
              << "expected location, but found '" << attr << "'";
   } else {

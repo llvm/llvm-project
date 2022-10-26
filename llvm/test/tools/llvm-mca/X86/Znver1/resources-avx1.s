@@ -1565,7 +1565,7 @@ vzeroupper
 # CHECK-NEXT:  1      1     1.00                        vpslld	$1, %xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00                        vpslld	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     1.00    *                   vpslld	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      1     1.00                        vpslldq	$1, %xmm1, %xmm2
+# CHECK-NEXT:  1      1     0.25                        vpslldq	$1, %xmm1, %xmm2
 # CHECK-NEXT:  1      1     1.00                        vpsllq	$1, %xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00                        vpsllq	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     1.00    *                   vpsllq	(%rax), %xmm1, %xmm2
@@ -1581,7 +1581,7 @@ vzeroupper
 # CHECK-NEXT:  1      1     1.00                        vpsrld	$1, %xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00                        vpsrld	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     1.00    *                   vpsrld	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      1     1.00                        vpsrldq	$1, %xmm1, %xmm2
+# CHECK-NEXT:  1      1     0.25                        vpsrldq	$1, %xmm1, %xmm2
 # CHECK-NEXT:  1      1     1.00                        vpsrlq	$1, %xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00                        vpsrlq	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      8     1.00    *                   vpsrlq	(%rax), %xmm1, %xmm2
@@ -1738,7 +1738,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 175.00 175.00  -      -      -      -      -     153.58 191.58 218.75 321.08  -
+# CHECK-NEXT: 175.00 175.00  -      -      -      -      -     154.08 192.08 217.25 321.58  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -2277,7 +2277,7 @@ vzeroupper
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpslld	$1, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpslld	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00    -      -     vpslld	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpslldq	$1, %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpslldq	$1, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpsllq	$1, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpsllq	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00    -      -     vpsllq	(%rax), %xmm1, %xmm2
@@ -2293,7 +2293,7 @@ vzeroupper
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpsrld	$1, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpsrld	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00    -      -     vpsrld	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpsrldq	$1, %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     vpsrldq	$1, %xmm1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpsrlq	$1, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     vpsrlq	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00    -      -     vpsrlq	(%rax), %xmm1, %xmm2

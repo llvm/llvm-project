@@ -22,6 +22,23 @@ namespace trace_intel_pt {
 
 class TraceIntelPT : public Trace {
 public:
+  /// Properties to be used with the `settings` command.
+  class PluginProperties : public Properties {
+  public:
+    static ConstString GetSettingName();
+
+    PluginProperties();
+
+    ~PluginProperties() override = default;
+
+    uint64_t GetInfiniteDecodingLoopVerificationThreshold();
+
+    uint64_t GetExtremelyLargeDecodingThreshold();
+  };
+
+  /// Return the global properties for this trace plug-in.
+  static PluginProperties &GetGlobalProperties();
+
   void Dump(Stream *s) const override;
 
   llvm::Expected<FileSpec> SaveToDisk(FileSpec directory,
@@ -59,6 +76,8 @@ public:
   CreateInstanceForLiveProcess(Process &process);
 
   static llvm::StringRef GetPluginNameStatic() { return "intel-pt"; }
+
+  static void DebuggerInitialize(Debugger &debugger);
   /// \}
 
   lldb::CommandObjectSP

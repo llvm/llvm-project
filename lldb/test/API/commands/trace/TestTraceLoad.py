@@ -37,6 +37,12 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
       "totalCount": 0,
       "individualCounts": {}
     },
+    "errors": {
+      "totalCount": 0,
+      "libiptErrors": {},
+      "fatalErrors": 0,
+      "otherErrors": 0
+    },
     "continuousExecutions": 0,
     "PSBBlocks": 0
   },
@@ -71,6 +77,12 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         "CPU core changed": 1,
         "HW clock tick": 8
       }
+    },
+    "errors": {
+      "totalCount": 1,
+      "libiptErrors": {},
+      "fatalErrors": 0,
+      "otherErrors": 1
     },
     "continuousExecutions": 1,
     "PSBBlocks": 1
@@ -172,19 +184,20 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
 
   Trace technology: intel-pt
 
-  Total number of trace items: 24
+  Total number of trace items: 28
 
   Memory usage:
     Raw trace size: 4 KiB
-    Total approximate memory usage (excluding raw trace): 0.21 KiB
+    Total approximate memory usage (excluding raw trace): 0.25 KiB
     Average memory usage per item (excluding raw trace): 9.00 bytes
 
   Timing for this thread:
     Decoding instructions: ''', '''
 
   Events:
-    Number of individual events: 3
+    Number of individual events: 7
       software disabled tracing: 2
+      hardware disabled tracing: 4
       trace synchronization point: 1'''])
 
     @testSBAPIAndCommands

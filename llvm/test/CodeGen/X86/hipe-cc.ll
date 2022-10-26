@@ -21,7 +21,7 @@ entry:
 
 define cc 11 {i32, i32, i32} @addfour(i32 %hp, i32 %p, i32 %x, i32 %y, i32 %z) nounwind {
 entry:
-  ; CHECK:      addl %edx, %eax
+  ; CHECK:      addl %edx, %ecx
   ; CHECK-NEXT: addl %ecx, %eax
   %0 = add i32 %x, %y
   %1 = add i32 %0, %z

@@ -28,6 +28,12 @@
  *
  * WG14 DR312: yes
  * Meaning of "known constant size"
+ *
+ * WG14 DR333: yes
+ * Missing Predefined Macro Name
+ *
+ * WG14 DR342: dup 340
+ * VLAs and conditional expressions
  */
 
 
@@ -189,10 +195,100 @@ _Static_assert(!DR321, "__STDC_MB_MIGHT_NEQ_WC__ but all basic source characters
 _Static_assert(DR321, "!__STDC_MB_MIGHT_NEQ_WC__ but some character differs");
 #endif
 
-/* WG14 DR328: yes
+/* WG14 DR328: partial
  * String literals in compound literal initialization
+ *
+ * DR328 is implemented properly in terms of allowing string literals, but is
+ * not implemented. See DR339 (marked as a duplicate of this one) for details.
  */
 const char *dr328_v = (const char *){"this is a string literal"}; /* c89only-warning {{compound literals are a C99-specific feature}} */
 void dr328(void) {
   const char *val = (const char *){"also a string literal"}; /* c89only-warning {{compound literals are a C99-specific feature}} */
+}
+
+/* WG14 DR335: yes
+ * _Bool bit-fields
+ *
+ * See dr335.c also, which tests the runtime behavior of the part of the DR
+ * which will compile.
+ */
+void dr335(void) {
+  struct bits_ {
+    _Bool bbf3 : 3; /* expected-error {{width of bit-field 'bbf3' (3 bits) exceeds the width of its type (1 bit)}}
+                       c89only-warning {{'_Bool' is a C99 extension}}
+                     */
+  };
+}
+
+/* WG14 DR339: dup 328
+ * Variably modified compound literals
+ *
+ * This DR is marked as a duplicate of DR328, see that DR for further
+ * details.
+ *
+ * FIXME: we should be diagnosing this compound literal as creating a variably-
+ * modified type at file scope, as we would do for a file scope variable.
+ */
+extern int dr339_v;
+void *dr339 = &(int (*)[dr339_v]){ 0 }; /* c89only-warning {{variable length arrays are a C99 feature}}
+                                           c99andup-warning {{variable length array used}}
+                                           c89only-warning {{compound literals are a C99-specific feature}}
+                                         */
+
+/* WG14 DR340: yes
+ * Composite types for variable-length arrays
+ *
+ * The DR made this behavior undefined because implementations disagreed on the
+ * behavior. For this DR, Clang accepts the code and GCC rejects it. It's
+ * unclear whether the Clang behavior is intentional, but because the code is
+ * UB, any behavior is acceptable.
+ */
+#if __STDC_VERSION__ < 202000L
+void dr340(int x, int y) {
+  typedef void (*T1)(int);
+  typedef void (*T2)(); /* expected-warning {{a function declaration without a prototype is deprecated in all versions of C}} */
+
+  T1 (*a)[] = 0;
+  T2 (*b)[x] = 0;       /* c89only-warning {{variable length arrays are a C99 feature}}
+                           c99andup-warning {{variable length array used}}
+                         */
+  (y ? a : b)[0][0]();
+}
+#endif /* __STDC_VERSION__ < 202000L */
+
+/* WG14 DR341: yes
+ * [*] in abstract declarators
+ */
+void dr341_1(int (*)[*]);                  /* c89only-warning {{variable length arrays are a C99 feature}}
+                                              c99andup-warning {{variable length array used}}
+                                            */
+void dr341_2(int (*)[sizeof(int (*)[*])]); /* expected-error {{star modifier used outside of function prototype}} */
+
+/* WG14 DR343: yes
+ * Initializing qualified wchar_t arrays
+ */
+void dr343(void) {
+  const __WCHAR_TYPE__ x[] = L"foo";
+}
+
+/* WG14 DR344: yes
+ * Casts in preprocessor conditional expressions
+ *
+ * Note: this DR removed a constraint about not containing casts because there
+ * are no keywords, therefore no types to cast to, so casts simply don't exist
+ * as a construct during preprocessing.
+ */
+#if (int)+0
+#error "this should not be an error, we shouldn't get here"
+#else
+/* expected-error@+1 {{"reached"}} */
+#error "reached"
+#endif
+
+/* WG14 DR345: yes
+ * Where does parameter scope start?
+ */
+void f(long double f,
+       char (**a)[10 * sizeof f]) {
+  _Static_assert(sizeof **a == sizeof(long double) * 10, "");
 }

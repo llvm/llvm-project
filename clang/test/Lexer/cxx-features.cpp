@@ -66,9 +66,9 @@
 #error "wrong value for __cpp_aggregate_paren_init"
 #endif
 
-#if defined(CHAR8_T) ? check(char8_t, 201811, 201811, 201811, 201811, 201811, 201811) : \
+#if defined(CHAR8_T) ? check(char8_t, 202207, 202207, 202207, 202207, 202207, 202207) : \
     defined(NO_CHAR8_T) ? check(char8_t, 0, 0, 0, 0, 0, 0) : \
-    check(char8_t, 0, 0, 0, 0, 201811, 201811)
+    check(char8_t, 0, 0, 0, 0, 202207, 202207)
 #error "wrong value for __cpp_char8_t"
 #endif
 

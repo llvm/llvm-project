@@ -31,10 +31,6 @@ define void @computeJD(ptr) nounwind {
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    imull %edx
 ; CHECK-NEXT:    movl %edx, %edi
-; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:    shrl $31, %eax
-; CHECK-NEXT:    sarl $7, %edi
-; CHECK-NEXT:    addl %eax, %edi
 ; CHECK-NEXT:    imull $36525, %esi, %eax # imm = 0x8EAD
 ; CHECK-NEXT:    addl $172251900, %eax # imm = 0xA445AFC
 ; CHECK-NEXT:    movl $1374389535, %edx # imm = 0x51EB851F
@@ -43,7 +39,11 @@ define void @computeJD(ptr) nounwind {
 ; CHECK-NEXT:    shrl $31, %eax
 ; CHECK-NEXT:    sarl $5, %edx
 ; CHECK-NEXT:    addl %eax, %edx
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    shrl $31, %eax
 ; CHECK-NEXT:    addl 16(%ebx), %ecx
+; CHECK-NEXT:    addl %eax, %ecx
+; CHECK-NEXT:    sarl $7, %edi
 ; CHECK-NEXT:    addl %edi, %ecx
 ; CHECK-NEXT:    leal 257(%ecx,%edx), %eax
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)

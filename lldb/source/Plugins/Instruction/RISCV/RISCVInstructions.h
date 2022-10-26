@@ -68,6 +68,11 @@ struct Rs {
     Rd rd;                                                                     \
     Rs rs1;                                                                    \
   }
+/// The `inst` fields are used for debugging.
+#define INVALID_INST(NAME)                                                     \
+  struct NAME {                                                                \
+    uint32_t inst;                                                             \
+  }
 
 // RV32I instructions (The base integer ISA)
 struct B {
@@ -165,16 +170,22 @@ R_TYPE_INST(AMOMAX_D);
 R_TYPE_INST(AMOMINU_D);
 R_TYPE_INST(AMOMAXU_D);
 
-using RISCVInst =
-    std::variant<LUI, AUIPC, JAL, JALR, B, LB, LH, LW, LBU, LHU, SB, SH, SW,
-                 ADDI, SLTI, SLTIU, XORI, ORI, ANDI, ADD, SUB, SLL, SLT, SLTU,
-                 XOR, SRL, SRA, OR, AND, LWU, LD, SD, SLLI, SRLI, SRAI, ADDIW,
-                 SLLIW, SRLIW, SRAIW, ADDW, SUBW, SLLW, SRLW, SRAW, MUL, MULH,
-                 MULHSU, MULHU, DIV, DIVU, REM, REMU, MULW, DIVW, DIVUW, REMW,
-                 REMUW, LR_W, SC_W, AMOSWAP_W, AMOADD_W, AMOXOR_W, AMOAND_W,
-                 AMOOR_W, AMOMIN_W, AMOMAX_W, AMOMINU_W, AMOMAXU_W, LR_D, SC_D,
-                 AMOSWAP_D, AMOADD_D, AMOXOR_D, AMOAND_D, AMOOR_D, AMOMIN_D,
-                 AMOMAX_D, AMOMINU_D, AMOMAXU_D>;
+/// Invalid and reserved instructions, the `inst` fields are used for debugging.
+INVALID_INST(INVALID);
+INVALID_INST(RESERVED);
+INVALID_INST(EBREAK);
+INVALID_INST(HINT);
+INVALID_INST(NOP);
+
+using RISCVInst = std::variant<
+    LUI, AUIPC, JAL, JALR, B, LB, LH, LW, LBU, LHU, SB, SH, SW, ADDI, SLTI,
+    SLTIU, XORI, ORI, ANDI, ADD, SUB, SLL, SLT, SLTU, XOR, SRL, SRA, OR, AND,
+    LWU, LD, SD, SLLI, SRLI, SRAI, ADDIW, SLLIW, SRLIW, SRAIW, ADDW, SUBW, SLLW,
+    SRLW, SRAW, MUL, MULH, MULHSU, MULHU, DIV, DIVU, REM, REMU, MULW, DIVW,
+    DIVUW, REMW, REMUW, LR_W, SC_W, AMOSWAP_W, AMOADD_W, AMOXOR_W, AMOAND_W,
+    AMOOR_W, AMOMIN_W, AMOMAX_W, AMOMINU_W, AMOMAXU_W, LR_D, SC_D, AMOSWAP_D,
+    AMOADD_D, AMOXOR_D, AMOAND_D, AMOOR_D, AMOMIN_D, AMOMAX_D, AMOMINU_D,
+    AMOMAXU_D, INVALID, EBREAK, RESERVED, HINT, NOP>;
 
 struct InstrPattern {
   const char *name;
@@ -195,26 +206,6 @@ struct DecodeResult {
 constexpr uint32_t DecodeRD(uint32_t inst) { return (inst & 0xF80) >> 7; }
 constexpr uint32_t DecodeRS1(uint32_t inst) { return (inst & 0xF8000) >> 15; }
 constexpr uint32_t DecodeRS2(uint32_t inst) { return (inst & 0x1F00000) >> 20; }
-
-// decode register for RVC
-constexpr uint16_t DecodeCR_RD(uint16_t inst) { return DecodeRD(inst); }
-constexpr uint16_t DecodeCI_RD(uint16_t inst) { return DecodeRD(inst); }
-constexpr uint16_t DecodeCIW_RD(uint16_t inst) { return (inst & 0x1C) >> 2; }
-constexpr uint16_t DecodeCL_RD(uint16_t inst) { return DecodeCIW_RD(inst); }
-constexpr uint16_t DecodeCA_RD(uint16_t inst) { return (inst & 0x380) >> 7; }
-constexpr uint16_t DecodeCB_RD(uint16_t inst) { return DecodeCA_RD(inst); }
-
-constexpr uint16_t DecodeCR_RS1(uint16_t inst) { return DecodeRD(inst); }
-constexpr uint16_t DecodeCI_RS1(uint16_t inst) { return DecodeRD(inst); }
-constexpr uint16_t DecodeCL_RS1(uint16_t inst) { return DecodeCA_RD(inst); }
-constexpr uint16_t DecodeCS_RS1(uint16_t inst) { return DecodeCA_RD(inst); }
-constexpr uint16_t DecodeCA_RS1(uint16_t inst) { return DecodeCA_RD(inst); }
-constexpr uint16_t DecodeCB_RS1(uint16_t inst) { return DecodeCA_RD(inst); }
-
-constexpr uint16_t DecodeCR_RS2(uint16_t inst) { return (inst & 0x7C) >> 2; }
-constexpr uint16_t DecodeCSS_RS2(uint16_t inst) { return DecodeCR_RS2(inst); }
-constexpr uint16_t DecodeCS_RS2(uint16_t inst) { return DecodeCIW_RD(inst); }
-constexpr uint16_t DecodeCA_RS2(uint16_t inst) { return DecodeCIW_RD(inst); }
 
 } // namespace lldb_private
 #endif // LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_RISCVINSTRUCTION_H

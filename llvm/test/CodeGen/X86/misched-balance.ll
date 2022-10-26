@@ -9,8 +9,8 @@ define void @unrolled_mmult1(ptr %tmp55, ptr %tmp56, ptr %pre, ptr %pre94,
 entry:
   br label %for.body
 
-; imull folded loads should be in order and interleaved with addl, never
-; adjacent. Also check that we have no spilling.
+; imull folded loads should be in order, addl may be reordered to reduce total
+; latency. Also check that we have no spilling.
 ;
 ; Since mmult1 IR is already in good order, this effectively ensure
 ; the scheduler maintains source order.
@@ -22,27 +22,27 @@ entry:
 ; CHECK: addl
 ; CHECK: imull 8
 ; CHECK-NOT: {{imull|rsp}}
-; CHECK: addl
 ; CHECK: imull 12
 ; CHECK-NOT: {{imull|rsp}}
 ; CHECK: addl
+; CHECK: addl
 ; CHECK: imull 16
 ; CHECK-NOT: {{imull|rsp}}
-; CHECK: addl
 ; CHECK: imull 20
 ; CHECK-NOT: {{imull|rsp}}
 ; CHECK: addl
 ; CHECK: imull 24
 ; CHECK-NOT: {{imull|rsp}}
 ; CHECK: addl
+; CHECK: addl
 ; CHECK: imull 28
 ; CHECK-NOT: {{imull|rsp}}
-; CHECK: addl
 ; CHECK: imull 32
 ; CHECK-NOT: {{imull|rsp}}
 ; CHECK: addl
 ; CHECK: imull 36
 ; CHECK-NOT: {{imull|rsp}}
+; CHECK: addl
 ; CHECK: addl
 ; CHECK-NOT: {{imull|rsp}}
 ; CHECK-LABEL: %end
@@ -127,27 +127,27 @@ end:
 ; CHECK: addl
 ; CHECK: imull 8
 ; CHECK-NOT: {{imull|rsp}}
-; CHECK: addl
 ; CHECK: imull 12
 ; CHECK-NOT: {{imull|rsp}}
 ; CHECK: addl
+; CHECK: addl
 ; CHECK: imull 16
 ; CHECK-NOT: {{imull|rsp}}
-; CHECK: addl
 ; CHECK: imull 20
 ; CHECK-NOT: {{imull|rsp}}
 ; CHECK: addl
 ; CHECK: imull 24
 ; CHECK-NOT: {{imull|rsp}}
 ; CHECK: addl
+; CHECK: addl
 ; CHECK: imull 28
 ; CHECK-NOT: {{imull|rsp}}
-; CHECK: addl
 ; CHECK: imull 32
 ; CHECK-NOT: {{imull|rsp}}
 ; CHECK: addl
 ; CHECK: imull 36
 ; CHECK-NOT: {{imull|rsp}}
+; CHECK: addl
 ; CHECK: addl
 ; CHECK-NOT: {{imull|rsp}}
 ; CHECK-LABEL: %end

@@ -325,6 +325,9 @@ Improvements to Clang's diagnostics
   pointers is improved to include the type of the array and whether it's cast
   to another type. This should improve comprehension for why an index is
   out-of-bounds.
+- Clang now correctly points to the problematic parameter for the ``-Wnonnull``
+  warning. This fixes
+  `Issue 58273 <https://github.com/llvm/llvm-project/issues/58273>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -554,6 +557,8 @@ C++2b Feature Support
 
 - Support label at end of compound statement (`P2324 <https://wg21.link/p2324r2>`_).
 - Implemented `P1169R4: static operator() <https://wg21.link/P1169R4>`_.
+- Implemented "char8_t Compatibility and Portability Fix" (`P2513R3 <https://wg21.link/P2513R3>`_).
+  This Change was applied to C++20 as a Defect Report.
 
 CUDA/HIP Language Changes in Clang
 ----------------------------------
@@ -598,6 +603,15 @@ X86 Support in Clang
 - Add ISA of ``AMX-FP16`` which support ``_tile_dpfp16ps``.
 - Switch ``AVX512-BF16`` intrinsics types from ``short`` to ``__bf16``.
 - Add support for ``PREFETCHI`` instructions.
+- Support ISA of ``CMPCCXADD``.
+  * Support intrinsic of ``__cmpccxadd_epi32``.
+  * Support intrinsic of ``__cmpccxadd_epi64``.
+
+WebAssembly Support in Clang
+----------------------------
+
+The -mcpu=generic configuration now enables sign-ext and mutable-globals. These
+proposals are standardized and available in all major engines.
 
 DWARF Support in Clang
 ----------------------
@@ -651,8 +665,8 @@ libclang
   the behavior of ``QualType::getNonReferenceType`` for ``CXType``.
 - Introduced the new function ``clang_CXXMethod_isDeleted``, which queries
   whether the method is declared ``= delete``.
-- ``clang_Cursor_getNumTemplateArguments``, ``clang_Cursor_getTemplateArgumentKind``, 
-  ``clang_Cursor_getTemplateArgumentType``, ``clang_Cursor_getTemplateArgumentValue`` and 
+- ``clang_Cursor_getNumTemplateArguments``, ``clang_Cursor_getTemplateArgumentKind``,
+  ``clang_Cursor_getTemplateArgumentType``, ``clang_Cursor_getTemplateArgumentValue`` and
   ``clang_Cursor_getTemplateArgumentUnsignedValue`` now work on struct, class,
   and partial template specialization cursors in addition to function cursors.
 

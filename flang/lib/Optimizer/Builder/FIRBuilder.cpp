@@ -1323,3 +1323,39 @@ mlir::Value fir::factory::genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder,
   return builder.create<fir::CoordinateOp>(loc, builder.getRefType(fieldTy),
                                            cPtr, field);
 }
+
+fir::BoxValue fir::factory::createBoxValue(fir::FirOpBuilder &builder,
+                                           mlir::Location loc,
+                                           const fir::ExtendedValue &exv) {
+  if (auto *boxValue = exv.getBoxOf<fir::BoxValue>())
+    return *boxValue;
+  mlir::Value box = builder.createBox(loc, exv);
+  llvm::SmallVector<mlir::Value> lbounds;
+  llvm::SmallVector<mlir::Value> explicitTypeParams;
+  exv.match(
+      [&](const fir::ArrayBoxValue &box) {
+        lbounds.append(box.getLBounds().begin(), box.getLBounds().end());
+      },
+      [&](const fir::CharArrayBoxValue &box) {
+        lbounds.append(box.getLBounds().begin(), box.getLBounds().end());
+        explicitTypeParams.emplace_back(box.getLen());
+      },
+      [&](const fir::CharBoxValue &box) {
+        explicitTypeParams.emplace_back(box.getLen());
+      },
+      [&](const fir::MutableBoxValue &x) {
+        explicitTypeParams.append(x.nonDeferredLenParams().begin(),
+                                  x.nonDeferredLenParams().end());
+      },
+      [](const auto &) {});
+  return fir::BoxValue(box, lbounds, explicitTypeParams);
+}
+
+mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
+                                                mlir::Location loc,
+                                                mlir::Value cPtr) {
+  mlir::Type cPtrTy = fir::unwrapRefType(cPtr.getType());
+  mlir::Value cPtrAddr =
+      fir::factory::genCPtrOrCFunptrAddr(builder, loc, cPtr, cPtrTy);
+  return builder.create<fir::LoadOp>(loc, cPtrAddr);
+}

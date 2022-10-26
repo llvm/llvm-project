@@ -14,7 +14,10 @@ add_header_library(
     op_x86.h
     utils.h
   DEPS
+    libc.src.__support.common
     libc.src.__support.CPP.bit
+    libc.src.__support.CPP.cstddef
+    libc.src.__support.CPP.type_traits
 )
 
 add_header_library(
