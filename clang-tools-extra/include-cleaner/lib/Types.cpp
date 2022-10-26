@@ -9,6 +9,7 @@
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/FileEntry.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang::include_cleaner {
@@ -19,6 +20,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Symbol &S) {
     if (const auto *ND = llvm::dyn_cast<NamedDecl>(&S.declaration()))
       return OS << ND->getNameAsString();
     return OS << S.declaration().getDeclKindName();
+  case Symbol::Macro:
+    return OS << S.macro().Name;
   case Symbol::Standard:
     return OS << S.standard().scope() << S.standard().name();
   }
@@ -33,6 +36,20 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Header &H) {
     return OS << H.standard().name();
   }
   llvm_unreachable("Unhandled Header kind");
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Include &I) {
+  return OS << I.Line << ": " << I.Spelled << " => "
+            << (I.Resolved ? I.Resolved->getName() : "<missing>");
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SymbolReference &R) {
+  // We can't decode the Location without SourceManager. Its raw representation
+  // isn't completely useless (and distinguishes SymbolReference from Symbol).
+  return OS << R.Symbol << "@0x"
+            << llvm::utohexstr(R.RefLocation.getRawEncoding(),
+                               /*Width=*/CHAR_BIT *
+                                   sizeof(SourceLocation::UIntTy));
 }
 
 } // namespace clang::include_cleaner
