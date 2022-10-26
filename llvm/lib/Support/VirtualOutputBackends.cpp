@@ -356,7 +356,26 @@ Error OnDiskOutputFile::keep() {
   if (!RenameEC)
     return Error::success();
 
+  // Rename failed. Print some information for diagnosis.
+  // FIXME: Remove the direct printing to stderr when figure out the reason for
+  // failure.
+  errs() << "Rename failed: " << *TempPath;
+  if (sys::fs::exists(*TempPath))
+    errs() << " (exists)";
+  errs() << " -> " << OutputPath;
+  if (sys::fs::exists(OutputPath))
+    errs() << " (exists)";
+  errs() << ": " << RenameEC.message() << "\n";
+
+  // FIXME: TempPath should be in the same directory as OutputPath but try to
+  // copy the output to see if makes any difference. If this path is used,
+  // investigate why we need to copy.
+  RenameEC = sys::fs::copy_file(*TempPath, OutputPath);
   (void)sys::fs::remove(*TempPath);
+
+  if (!RenameEC)
+    return Error::success();
+
   return make_error<TempFileOutputError>(*TempPath, OutputPath, RenameEC);
 }
 
