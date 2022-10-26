@@ -171,6 +171,8 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
     return visitWhileStmt(cast<WhileStmt>(S));
   case Stmt::DoStmtClass:
     return visitDoStmt(cast<DoStmt>(S));
+  case Stmt::ForStmtClass:
+    return visitForStmt(cast<ForStmt>(S));
   case Stmt::BreakStmtClass:
     return visitBreakStmt(cast<BreakStmt>(S));
   case Stmt::ContinueStmtClass:
@@ -326,6 +328,39 @@ bool ByteCodeStmtGen<Emitter>::visitDoStmt(const DoStmt *S) {
   if (!this->visitBool(Cond))
     return false;
   if (!this->jumpTrue(StartLabel))
+    return false;
+  this->emitLabel(EndLabel);
+  return true;
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitForStmt(const ForStmt *S) {
+  // for (Init; Cond; Inc) { Body }
+  const Stmt *Init = S->getInit();
+  const Expr *Cond = S->getCond();
+  const Expr *Inc = S->getInc();
+  const Stmt *Body = S->getBody();
+
+  LabelTy EndLabel = this->getLabel();
+  LabelTy CondLabel = this->getLabel();
+  LabelTy IncLabel = this->getLabel();
+  LoopScope<Emitter> LS(this, EndLabel, IncLabel);
+
+  if (Init && !this->visitStmt(Init))
+    return false;
+  this->emitLabel(CondLabel);
+  if (Cond) {
+    if (!this->visitBool(Cond))
+      return false;
+    if (!this->jumpFalse(EndLabel))
+      return false;
+  }
+  if (Body && !this->visitStmt(Body))
+    return false;
+  this->emitLabel(IncLabel);
+  if (Inc && !this->discard(Inc))
+    return false;
+  if (!this->jump(CondLabel))
     return false;
   this->emitLabel(EndLabel);
   return true;
