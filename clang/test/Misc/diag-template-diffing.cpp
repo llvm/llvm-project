@@ -1454,7 +1454,7 @@ void run() {
   D<X::X1>(VectorType<X::X2>());
 }
 // CHECK-ELIDE-NOTREE: error: no matching function for call to 'D'
-// CHECK-ELIDE-NOTREE: note: candidate function template not viable: no known conversion from 'VectorType<X::X2>' to 'const VectorType<(X)0>' for 1st argument
+// CHECK-ELIDE-NOTREE: note: candidate function template not viable: no known conversion from 'VectorType<X::X2>' to 'const VectorType<(TypeAlias::X)0>' for 1st argument
 }
 
 namespace TypeAlias2 {

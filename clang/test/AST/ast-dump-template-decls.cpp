@@ -172,9 +172,11 @@ using test1 = D<E, int>;
 // CHECK:      TypeAliasDecl 0x{{[^ ]*}} <line:{{[1-9]+}}:1, col:23> col:7 test1 'D<subst_default_argument::E, int>':'subst_default_argument::E<int, subst_default_argument::A<int>>'
 // CHECK:      TemplateSpecializationType 0x{{[^ ]*}} 'A<int>' sugar A
 // CHECK-NEXT: |-TemplateArgument type 'int':'int'
-// CHECK-NEXT: | `-SubstTemplateTypeParmType 0x{{[^ ]*}} 'int' sugar class depth 0 index 1 D2
-// CHECK-NEXT: |   |-TypeAliasTemplate 0x{{[^ ]*}} 'D'
-// CHECK-NEXT: |   `-BuiltinType 0x{{[^ ]*}} 'int'
+// CHECK-NEXT: | `-SubstTemplateTypeParmType 0x{{[^ ]*}} 'int' sugar class depth 0 index 0 E1
+// CHECK-NEXT: |   |-ClassTemplate 0x{{[^ ]*}} 'E'
+// CHECK-NEXT: |   `-SubstTemplateTypeParmType 0x{{[^ ]*}} 'int' sugar class depth 0 index 1 D2
+// CHECK-NEXT: |     |-TypeAliasTemplate 0x{{[^ ]*}} 'D'
+// CHECK-NEXT: |     `-BuiltinType 0x{{[^ ]*}} 'int'
 // CHECK-NEXT: `-RecordType 0x{{[^ ]*}} 'subst_default_argument::A<int>'
 // CHECK-NEXT:   `-ClassTemplateSpecialization 0x{{[^ ]*}} 'A'
 } // namespace subst_default_argument
