@@ -270,7 +270,8 @@ def SparseTensor_PushBackOp : SparseTensor_Op<"push_back",
      AllTypesMatch<["inBuffer", "outBuffer"]>]>,
     Arguments<(ins StridedMemRefRankOf<[Index], [1]>:$bufferSizes,
                StridedMemRefRankOf<[AnyType], [1]>:$inBuffer,
-               AnyType:$value, IndexAttr:$idx, UnitAttr:$inbounds)>,
+               AnyType:$value, IndexAttr:$idx, Optional<Index>:$n,
+               UnitAttr:$inbounds)>,
     Results<(outs StridedMemRefRankOf<[AnyType], [1]>:$outBuffer)>  {
   string summary = "Pushes a value to the back of a given buffer";
   string description = [{
@@ -279,6 +280,14 @@ def SparseTensor_PushBackOp : SparseTensor_Op<"push_back",
     capacity of the buffer is recorded in the memref type of `inBuffer `. If the
     current buffer is full, then `inBuffer.realloc` is called before pushing the
     data to the buffer. This is similar to std::vector push_back.
+
+    The optional input `n` specifies the number of times to repeately push
+    the value to the back of the tensor. When `n` is a compile-time constant,
+    its value can't be less than 1. If `n` is a runtime value that is less
+    than 1, the behavior is undefined. Although using input `n` is semantically
+    equivalent to calling push_back n times, it gives compiler more chances to
+    to optimize the memory reallocation and the filling of the memory with the
+    same value.
 
     The `inbounds` attribute tells the compiler that the insertion won't go
     beyond the current storage buffer. This allows the compiler to not generate
@@ -300,10 +309,24 @@ def SparseTensor_PushBackOp : SparseTensor_Op<"push_back",
     %r = sparse_tensor.push_back inbounds %bufferSizes, %buffer, %val
       {idx = 0 : index} : memref<?xindex>, memref<?xf64>, f64
     ```
+
+    ```mlir
+    %r = sparse_tensor.push_back inbounds %bufferSizes, %buffer, %val, %n
+      {idx = 0 : index} : memref<?xindex>, memref<?xf64>, f64
+    ```
   }];
   let assemblyFormat = "(`inbounds` $inbounds^)? $bufferSizes `,` $inBuffer"
-                       " `,` $value attr-dict `:` type($bufferSizes) `,`"
-                       " type($inBuffer) `,` type($value)";
+                       " `,` $value (`,` $n^ )?  attr-dict `:`"
+                       " type($bufferSizes) `,` type($inBuffer) `,`"
+                       " type($value)  (`,` type($n)^ )?";
+
+  let builders = [
+    //Build an op without input `n`.
+    OpBuilder<(ins "Type":$outBuffer, "Value":$bufferSizes, "Value":$inBuffer,
+                   "Value":$value, "APInt":$idx)>
+  ];
+
+  let hasVerifier = 1;
 }
 
 def SparseTensor_ExpandOp : SparseTensor_Op<"expand", []>,
