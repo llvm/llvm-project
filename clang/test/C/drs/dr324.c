@@ -1,8 +1,8 @@
-/* RUN: %clang_cc1 -std=c89 -fsyntax-only -pedantic -verify %s
-   RUN: %clang_cc1 -std=c99 -fsyntax-only -pedantic -verify %s
-   RUN: %clang_cc1 -std=c11 -fsyntax-only -pedantic -verify %s
-   RUN: %clang_cc1 -std=c17 -fsyntax-only -pedantic -verify %s
-   RUN: %clang_cc1 -std=c2x -fsyntax-only -pedantic -verify %s
+/* RUN: %clang_cc1 -std=c89 -fsyntax-only -fms-extensions -pedantic -verify %s
+   RUN: %clang_cc1 -std=c99 -fsyntax-only -fms-extensions -pedantic -verify %s
+   RUN: %clang_cc1 -std=c11 -fsyntax-only -fms-extensions -pedantic -verify %s
+   RUN: %clang_cc1 -std=c17 -fsyntax-only -fms-extensions -pedantic -verify %s
+   RUN: %clang_cc1 -std=c2x -fsyntax-only -fms-extensions -pedantic -verify %s
  */
 
 /* WG14 DR324: yes
@@ -20,7 +20,12 @@ char lit_char = '\y';       /* expected-warning {{unknown escape sequence '\y'}}
  * is using \d but it's in a header-name use rather than a string-literal use.
  * The second pragma is a string-literal and so the \d is invalid there.
  */
+#ifdef _WIN32
+/* This test only makes sense on Windows targets where the backslash is a valid
+ * path separator.
+ */
 #pragma GCC dependency "oops\..\dr0xx.c"
+#endif
 #pragma message("this has a \t tab escape and an invalid \d escape") /* expected-warning {{this has a 	 tab escape and an invalid d escape}}
                                                                         expected-warning {{unknown escape sequence '\d'}}
                                                                       */
