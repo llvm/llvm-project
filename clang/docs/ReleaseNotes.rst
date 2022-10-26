@@ -225,6 +225,8 @@ Bug Fixes
 - Fix a crash when generating code coverage information for an
   ``if consteval`` statement. This fixes
   `Issue 57377 <https://github.com/llvm/llvm-project/issues/57377>`_.
+- Fix a crash when a ``btf_type_tag`` attribute is applied to the pointee of
+  a function pointer.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
