@@ -157,12 +157,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) {
   for (unsigned I = 0, N = F->getNumParams(); I < N; ++I) {
     QualType Ty = F->getParamDecl(I)->getType();
 
-    PrimType PrimTy;
-    if (llvm::Optional<PrimType> T = S.Ctx.classify(Ty)) {
-      PrimTy = *T;
-    } else {
-      PrimTy = PT_Ptr;
-    }
+    PrimType PrimTy = S.Ctx.classify(Ty).value_or(PT_Ptr);
 
     TYPE_SWITCH(PrimTy, print(OS, stackRef<T>(Off), S.getCtx(), Ty));
     Off += align(primSize(PrimTy));
