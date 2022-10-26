@@ -383,11 +383,11 @@ add_libc_unittest(
   SRCS
     syscall_test.cpp
   DEPENDS
-    libc.src.unistd.__llvm_libc_syscall
     libc.include.errno
     libc.include.unistd
     libc.include.fcntl
     libc.include.sys_syscall
+    libc.src.unistd.__llvm_libc_syscall
     libc.test.errno_setter_matcher
 )
 
