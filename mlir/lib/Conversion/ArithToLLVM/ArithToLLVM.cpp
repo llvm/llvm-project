@@ -24,16 +24,93 @@ using namespace mlir;
 
 namespace {
 
+// Map arithmetic fastmath enum values to LLVMIR enum values.
+static LLVM::FastmathFlags
+convertArithFastMathFlagsToLLVM(arith::FastMathFlags arithFMF) {
+  LLVM::FastmathFlags llvmFMF{};
+  const std::pair<arith::FastMathFlags, LLVM::FastmathFlags> flags[] = {
+      {arith::FastMathFlags::nnan, LLVM::FastmathFlags::nnan},
+      {arith::FastMathFlags::ninf, LLVM::FastmathFlags::ninf},
+      {arith::FastMathFlags::nsz, LLVM::FastmathFlags::nsz},
+      {arith::FastMathFlags::arcp, LLVM::FastmathFlags::arcp},
+      {arith::FastMathFlags::contract, LLVM::FastmathFlags::contract},
+      {arith::FastMathFlags::afn, LLVM::FastmathFlags::afn},
+      {arith::FastMathFlags::reassoc, LLVM::FastmathFlags::reassoc}};
+  for (auto fmfMap : flags) {
+    if (bitEnumContainsAny(arithFMF, fmfMap.first))
+      llvmFMF = llvmFMF | fmfMap.second;
+  }
+  return llvmFMF;
+}
+
+// Create an LLVM fastmath attribute from a given arithmetic fastmath attribute.
+static LLVM::FastmathFlagsAttr
+convertArithFastMathAttr(arith::FastMathFlagsAttr fmfAttr) {
+  arith::FastMathFlags arithFMF = fmfAttr.getValue();
+  return LLVM::FastmathFlagsAttr::get(
+      fmfAttr.getContext(), convertArithFastMathFlagsToLLVM(arithFMF));
+}
+
+// Attribute converter that populates a NamedAttrList by removing the fastmath
+// attribute from the source operation attributes, and replacing it with an
+// equivalent LLVM fastmath attribute.
+template <typename SourceOp, typename TargetOp>
+class AttrConvertFastMath {
+public:
+  AttrConvertFastMath(SourceOp srcOp) {
+    // Copy the source attributes.
+    convertedAttr = NamedAttrList{srcOp->getAttrs()};
+    // Get the name of the arith fastmath attribute.
+    llvm::StringRef arithFMFAttrName = SourceOp::getFastMathAttrName();
+    // Remove the source fastmath attribute.
+    auto arithFMFAttr = convertedAttr.erase(arithFMFAttrName)
+                            .dyn_cast_or_null<arith::FastMathFlagsAttr>();
+    if (arithFMFAttr) {
+      llvm::StringRef targetAttrName = TargetOp::getFastmathAttrName();
+      convertedAttr.set(targetAttrName, convertArithFastMathAttr(arithFMFAttr));
+    }
+  }
+
+  ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
+
+private:
+  NamedAttrList convertedAttr;
+};
+
+// Attribute converter that populates a NamedAttrList by removing the fastmath
+// attribute from the source operation attributes. This may be useful for
+// target operations that do not require the fastmath attribute, or for targets
+// that do not yet support the LLVM fastmath attribute.
+template <typename SourceOp, typename TargetOp>
+class AttrDropFastMath {
+public:
+  AttrDropFastMath(SourceOp srcOp) {
+    // Copy the source attributes.
+    convertedAttr = NamedAttrList{srcOp->getAttrs()};
+    // Get the name of the arith fastmath attribute.
+    llvm::StringRef arithFMFAttrName = SourceOp::getFastMathAttrName();
+    // Remove the source fastmath attribute.
+    convertedAttr.erase(arithFMFAttrName);
+  }
+
+  ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
+
+private:
+  NamedAttrList convertedAttr;
+};
+
 //===----------------------------------------------------------------------===//
 // Straightforward Op Lowerings
 //===----------------------------------------------------------------------===//
 
-using AddFOpLowering = VectorConvertToLLVMPattern<arith::AddFOp, LLVM::FAddOp>;
+using AddFOpLowering = VectorConvertToLLVMPattern<arith::AddFOp, LLVM::FAddOp,
+                                                  AttrConvertFastMath>;
 using AddIOpLowering = VectorConvertToLLVMPattern<arith::AddIOp, LLVM::AddOp>;
 using AndIOpLowering = VectorConvertToLLVMPattern<arith::AndIOp, LLVM::AndOp>;
 using BitcastOpLowering =
     VectorConvertToLLVMPattern<arith::BitcastOp, LLVM::BitcastOp>;
-using DivFOpLowering = VectorConvertToLLVMPattern<arith::DivFOp, LLVM::FDivOp>;
+using DivFOpLowering = VectorConvertToLLVMPattern<arith::DivFOp, LLVM::FDivOp,
+                                                  AttrConvertFastMath>;
 using DivSIOpLowering =
     VectorConvertToLLVMPattern<arith::DivSIOp, LLVM::SDivOp>;
 using DivUIOpLowering =
@@ -47,23 +124,29 @@ using FPToSIOpLowering =
     VectorConvertToLLVMPattern<arith::FPToSIOp, LLVM::FPToSIOp>;
 using FPToUIOpLowering =
     VectorConvertToLLVMPattern<arith::FPToUIOp, LLVM::FPToUIOp>;
+// TODO: Add LLVM intrinsic support for fastmath
 using MaxFOpLowering =
-    VectorConvertToLLVMPattern<arith::MaxFOp, LLVM::MaxNumOp>;
+    VectorConvertToLLVMPattern<arith::MaxFOp, LLVM::MaxNumOp, AttrDropFastMath>;
 using MaxSIOpLowering =
     VectorConvertToLLVMPattern<arith::MaxSIOp, LLVM::SMaxOp>;
 using MaxUIOpLowering =
     VectorConvertToLLVMPattern<arith::MaxUIOp, LLVM::UMaxOp>;
+// TODO: Add LLVM intrinsic support for fastmath
 using MinFOpLowering =
-    VectorConvertToLLVMPattern<arith::MinFOp, LLVM::MinNumOp>;
+    VectorConvertToLLVMPattern<arith::MinFOp, LLVM::MinNumOp, AttrDropFastMath>;
 using MinSIOpLowering =
     VectorConvertToLLVMPattern<arith::MinSIOp, LLVM::SMinOp>;
 using MinUIOpLowering =
     VectorConvertToLLVMPattern<arith::MinUIOp, LLVM::UMinOp>;
-using MulFOpLowering = VectorConvertToLLVMPattern<arith::MulFOp, LLVM::FMulOp>;
+using MulFOpLowering = VectorConvertToLLVMPattern<arith::MulFOp, LLVM::FMulOp,
+                                                  AttrConvertFastMath>;
 using MulIOpLowering = VectorConvertToLLVMPattern<arith::MulIOp, LLVM::MulOp>;
-using NegFOpLowering = VectorConvertToLLVMPattern<arith::NegFOp, LLVM::FNegOp>;
+using NegFOpLowering = VectorConvertToLLVMPattern<arith::NegFOp, LLVM::FNegOp,
+                                                  AttrConvertFastMath>;
 using OrIOpLowering = VectorConvertToLLVMPattern<arith::OrIOp, LLVM::OrOp>;
-using RemFOpLowering = VectorConvertToLLVMPattern<arith::RemFOp, LLVM::FRemOp>;
+// TODO: Add LLVM intrinsic support for fastmath
+using RemFOpLowering =
+    VectorConvertToLLVMPattern<arith::RemFOp, LLVM::FRemOp, AttrDropFastMath>;
 using RemSIOpLowering =
     VectorConvertToLLVMPattern<arith::RemSIOp, LLVM::SRemOp>;
 using RemUIOpLowering =
@@ -77,7 +160,8 @@ using ShRUIOpLowering =
     VectorConvertToLLVMPattern<arith::ShRUIOp, LLVM::LShrOp>;
 using SIToFPOpLowering =
     VectorConvertToLLVMPattern<arith::SIToFPOp, LLVM::SIToFPOp>;
-using SubFOpLowering = VectorConvertToLLVMPattern<arith::SubFOp, LLVM::FSubOp>;
+using SubFOpLowering = VectorConvertToLLVMPattern<arith::SubFOp, LLVM::FSubOp,
+                                                  AttrConvertFastMath>;
 using SubIOpLowering = VectorConvertToLLVMPattern<arith::SubIOp, LLVM::SubOp>;
 using TruncFOpLowering =
     VectorConvertToLLVMPattern<arith::TruncFOp, LLVM::FPTruncOp>;
@@ -153,7 +237,7 @@ LogicalResult
 ConstantOpLowering::matchAndRewrite(arith::ConstantOp op, OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
   return LLVM::detail::oneToOneRewrite(op, LLVM::ConstantOp::getOperationName(),
-                                       adaptor.getOperands(),
+                                       adaptor.getOperands(), op->getAttrs(),
                                        *getTypeConverter(), rewriter);
 }
 
