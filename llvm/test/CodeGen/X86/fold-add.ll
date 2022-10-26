@@ -97,10 +97,10 @@ define dso_local i64 @neg_0x80000001() #0 {
 ; MSTATIC-NEXT:  movabsq $-2147483649, %rcx
 ; MSTATIC-NEXT:  movabsq $foo, %rax
 ; MSTATIC-NEXT:  addq %rcx, %rax
-; MPIC-NEXT:     leaq _GLOBAL_OFFSET_TABLE_(%rip), %rax
-; MPIC-NEXT:     movabsq $foo@GOTOFF, %rcx
-; MPIC-NEXT:     addq %rax, %rcx
+; MPIC-NEXT:     leaq _GLOBAL_OFFSET_TABLE_(%rip), %rcx
+; MPIC-NEXT:     movabsq $foo@GOTOFF, %rdx
 ; MPIC-NEXT:     movabsq $-2147483649, %rax
+; MPIC-NEXT:     addq %rdx, %rax
 ; MPIC-NEXT:     addq %rcx, %rax
 entry:
   ret i64 add (i64 ptrtoint (ptr @foo to i64), i64 -2147483649)
