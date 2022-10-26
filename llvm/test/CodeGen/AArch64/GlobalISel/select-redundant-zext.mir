@@ -16,12 +16,14 @@ body:             |
 
     ; CHECK-LABEL: name: fold
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY1]], [[COPY]]
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ADDWrr]], %subreg.sub_32
-    ; CHECK: $x0 = COPY [[SUBREG_TO_REG]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY1]], [[COPY]]
+    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[ADDWrr]], 0
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+    ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = COPY $w1
     %2:gpr(s32) = G_ADD %1, %0
@@ -44,11 +46,12 @@ body:             |
 
     ; CHECK-LABEL: name: dont_fold_s16
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[DEF]], %subreg.sub_32
-    ; CHECK: [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 15
-    ; CHECK: $x0 = COPY [[UBFMXri]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[DEF]], %subreg.sub_32
+    ; CHECK-NEXT: [[UBFMXri:%[0-9]+]]:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 15
+    ; CHECK-NEXT: $x0 = COPY [[UBFMXri]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s16) = G_IMPLICIT_DEF
     %3:gpr(s64) = G_ZEXT %0(s16)
     $x0 = COPY %3(s64)
@@ -68,11 +71,12 @@ body:             |
 
     ; CHECK-LABEL: name: dont_fold_copy
     ; CHECK: liveins: $w0
-    ; CHECK: %copy:gpr32 = COPY $w0
-    ; CHECK: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %copy, 0
-    ; CHECK: %zext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
-    ; CHECK: $x0 = COPY %zext
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %copy, 0
+    ; CHECK-NEXT: %zext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+    ; CHECK-NEXT: $x0 = COPY %zext
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %copy:gpr(s32) = COPY $w0
     %zext:gpr(s64) = G_ZEXT %copy(s32)
     $x0 = COPY %zext(s64)
@@ -92,12 +96,13 @@ body:             |
 
     ; CHECK-LABEL: name: dont_fold_bitcast
     ; CHECK: liveins: $w0
-    ; CHECK: %copy:gpr32all = COPY $w0
-    ; CHECK: %bitcast1:gpr32 = COPY %copy
-    ; CHECK: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %bitcast1, 0
-    ; CHECK: %zext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
-    ; CHECK: $x0 = COPY %zext
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr32all = COPY $w0
+    ; CHECK-NEXT: %bitcast1:gpr32 = COPY %copy
+    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %bitcast1, 0
+    ; CHECK-NEXT: %zext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+    ; CHECK-NEXT: $x0 = COPY %zext
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %copy:gpr(s32) = COPY $w0
     %bitcast0:gpr(<4 x s8>) = G_BITCAST %copy(s32)
     %bitcast1:gpr(s32) = G_BITCAST %bitcast0
@@ -119,12 +124,13 @@ body:             |
 
     ; CHECK-LABEL: name: dont_fold_trunc
     ; CHECK: liveins: $x0
-    ; CHECK: %copy:gpr64sp = COPY $x0
-    ; CHECK: %trunc:gpr32common = COPY %copy.sub_32
-    ; CHECK: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %trunc, 0
-    ; CHECK: %zext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
-    ; CHECK: $x0 = COPY %zext
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %trunc:gpr32common = COPY %copy.sub_32
+    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %trunc, 0
+    ; CHECK-NEXT: %zext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+    ; CHECK-NEXT: $x0 = COPY %zext
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %copy:gpr(s64) = COPY $x0
     %trunc:gpr(s32) = G_TRUNC %copy(s64)
     %zext:gpr(s64) = G_ZEXT %trunc(s32)
@@ -140,21 +146,25 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: dont_fold_phi
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   liveins: $w0, $w1, $w2
-  ; CHECK:   %copy1:gpr32all = COPY $w0
-  ; CHECK:   %copy2:gpr32all = COPY $w1
-  ; CHECK:   %cond_wide:gpr32 = COPY $w2
-  ; CHECK:   TBNZW %cond_wide, 0, %bb.1
-  ; CHECK:   B %bb.2
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK: bb.2:
-  ; CHECK:   %phi:gpr32 = PHI %copy1, %bb.0, %copy2, %bb.1
-  ; CHECK:   [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %phi, 0
-  ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
-  ; CHECK:   $x0 = COPY [[SUBREG_TO_REG]]
-  ; CHECK:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT:   liveins: $w0, $w1, $w2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %copy1:gpr32all = COPY $w0
+  ; CHECK-NEXT:   %copy2:gpr32all = COPY $w1
+  ; CHECK-NEXT:   %cond_wide:gpr32 = COPY $w2
+  ; CHECK-NEXT:   TBNZW %cond_wide, 0, %bb.1
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   %phi:gpr32 = PHI %copy1, %bb.0, %copy2, %bb.1
+  ; CHECK-NEXT:   [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %phi, 0
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+  ; CHECK-NEXT:   $x0 = COPY [[SUBREG_TO_REG]]
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   ; We should have a ORRWrs here, because isDef32 disallows phis.
 
   bb.0:
@@ -188,13 +198,14 @@ body:             |
 
     ; CHECK-LABEL: name: dont_look_through_copy
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
-    ; CHECK: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY1]], [[COPY]]
-    ; CHECK: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[ADDWrr]], 0
-    ; CHECK: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
-    ; CHECK: $x0 = COPY [[SUBREG_TO_REG]]
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY1]], [[COPY]]
+    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, [[ADDWrr]], 0
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+    ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr(s32) = COPY $w0
     %1:gpr(s32) = COPY $w1
     %2:gpr(s32) = G_ADD %1, %0
