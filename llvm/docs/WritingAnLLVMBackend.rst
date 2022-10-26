@@ -762,7 +762,7 @@ target description file (``IntRegs``).
 
 .. code-block:: text
 
-  def LDrr : F3_1 <3, 0b000000, (outs IntRegs:$dst), (ins MEMrr:$addr),
+  def LDrr : F3_1 <3, 0b000000, (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr),
                    "ld [$addr], $dst",
                    [(set i32:$dst, (load ADDRrr:$addr))]>;
 
@@ -790,9 +790,9 @@ class is defined:
 
 .. code-block:: text
 
-  def LDri : F3_2 <3, 0b000000, (outs IntRegs:$dst), (ins MEMri:$addr),
+  def LDri : F3_2 <3, 0b000000, (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):$addr),
                    "ld [$addr], $dst",
-                   [(set i32:$dst, (load ADDRri:$addr))]>;
+                   [(set i32:$rd, (load ADDRri:$addr))]>;
 
 Writing these definitions for so many similar instructions can involve a lot of
 cut and paste.  In ``.td`` files, the ``multiclass`` directive enables the
@@ -805,13 +805,13 @@ pattern ``F3_12`` is defined to create 2 instruction classes each time
 
   multiclass F3_12 <string OpcStr, bits<6> Op3Val, SDNode OpNode> {
     def rr  : F3_1 <2, Op3Val,
-                   (outs IntRegs:$dst), (ins IntRegs:$b, IntRegs:$c),
-                   !strconcat(OpcStr, " $b, $c, $dst"),
-                   [(set i32:$dst, (OpNode i32:$b, i32:$c))]>;
+                   (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs1),
+                   !strconcat(OpcStr, " $rs1, $rs2, $rd"),
+                   [(set i32:$rd, (OpNode i32:$rs1, i32:$rs2))]>;
     def ri  : F3_2 <2, Op3Val,
-                   (outs IntRegs:$dst), (ins IntRegs:$b, i32imm:$c),
-                   !strconcat(OpcStr, " $b, $c, $dst"),
-                   [(set i32:$dst, (OpNode i32:$b, simm13:$c))]>;
+                   (outs IntRegs:$rd), (ins IntRegs:$rs1, i32imm:$simm13),
+                   !strconcat(OpcStr, " $rs1, $simm13, $rd"),
+                   [(set i32:$rd, (OpNode i32:$rs1, simm13:$simm13))]>;
   }
 
 So when the ``defm`` directive is used for the ``XOR`` and ``ADD``
@@ -850,17 +850,19 @@ Instruction Operand Mapping
 ---------------------------
 
 The code generator backend maps instruction operands to fields in the
-instruction.  Operands are assigned to unbound fields in the instruction in the
-order they are defined.  Fields are bound when they are assigned a value.  For
-example, the Sparc target defines the ``XNORrr`` instruction as a ``F3_1``
-format instruction having three operands.
+instruction.  Whenever a bit in the instruction encoding ``Inst`` is assigned
+to field without a concrete value, an operand from the ``outs`` or ``ins`` list
+is expected to have a matching name. This operand then populates that undefined
+field. For example, the Sparc target defines the ``XNORrr`` instruction as a
+``F3_1`` format instruction having three operands: the output ``$rd``, and the
+inputs ``$rs1``, and ``$rs2``.
 
 .. code-block:: text
 
   def XNORrr  : F3_1<2, 0b000111,
-                     (outs IntRegs:$dst), (ins IntRegs:$b, IntRegs:$c),
-                     "xnor $b, $c, $dst",
-                     [(set i32:$dst, (not (xor i32:$b, i32:$c)))]>;
+                     (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2),
+                     "xnor $rs1, $rs2, $rd",
+                     [(set i32:$rd, (not (xor i32:$rs1, i32:$rs2)))]>;
 
 The instruction templates in ``SparcInstrFormats.td`` show the base class for
 ``F3_1`` is ``InstSP``.
@@ -878,7 +880,8 @@ The instruction templates in ``SparcInstrFormats.td`` show the base class for
     let Pattern = pattern;
   }
 
-``InstSP`` leaves the ``op`` field unbound.
+``InstSP`` defines the ``op`` field, and uses it to define bits 30 and 31 of the
+instruction, but does not assign a value to it.
 
 .. code-block:: text
 
@@ -893,9 +896,8 @@ The instruction templates in ``SparcInstrFormats.td`` show the base class for
     let Inst{18-14} = rs1;
   }
 
-``F3`` binds the ``op`` field and defines the ``rd``, ``op3``, and ``rs1``
-fields.  ``F3`` format instructions will bind the operands ``rd``, ``op3``, and
-``rs1`` fields.
+``F3`` defines the ``rd``, ``op3``, and ``rs1`` fields, and uses them in the
+instruction, and again does not assign values.
 
 .. code-block:: text
 
@@ -910,10 +912,42 @@ fields.  ``F3`` format instructions will bind the operands ``rd``, ``op3``, and
     let Inst{4-0}  = rs2;
   }
 
-``F3_1`` binds the ``op3`` field and defines the ``rs2`` fields.  ``F3_1``
-format instructions will bind the operands to the ``rd``, ``rs1``, and ``rs2``
-fields.  This results in the ``XNORrr`` instruction binding ``$dst``, ``$b``,
-and ``$c`` operands to the ``rd``, ``rs1``, and ``rs2`` fields respectively.
+``F3_1`` assigns a value to ``op`` and ``op3`` fields, and defines the ``rs2``
+field.  Therefore, a ``F3_1`` format instruction will require a definition for
+``rd``, ``rs1``, and ``rs2`` in order to fully specify the instruction encoding.
+
+The ``XNORrr`` instruction then provides those three operands in its
+OutOperandList and InOperandList, which bind to the corresponding fields, and
+thus complete the instruction encoding.
+
+For some instructions, a single operand may contain sub-operands. As shown
+earlier, the instruction ``LDrr`` uses an input operand of type ``MEMrr``. This
+operand type contains two register sub-operands, defined by the
+``MIOperandInfo`` value to be ``(ops IntRegs, IntRegs)``.
+
+.. code-block:: text
+
+  def LDrr : F3_1 <3, 0b000000, (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr),
+                   "ld [$addr], $dst",
+                   [(set i32:$dst, (load ADDRrr:$addr))]>;
+
+As this instruction is also the ``F3_1`` format, it will expect operands named
+``rd``, ``rs1``, and ``rs2`` as well. In order to allow this, a complex operand
+can optionally give names to each of its sub-operands. In this example
+``MEMrr``'s first sub-operand is named ``$rs1``, the second ``$rs2``, and the
+operand as a whole is also given the name ``$addr``.
+
+When a particular instruction doesn't use all the operands that the instruction
+format defines, a constant value may instead be bound to one or all. For
+example, the ``RDASR`` instruction only takes a single register operand, so we
+assign a constant zero to ``rs2``:
+
+.. code-block:: text
+
+  let rs2 = 0 in
+    def RDASR : F3_1<2, 0b101000,
+                     (outs IntRegs:$rd), (ins ASRRegs:$rs1),
+                     "rd $rs1, $rd", []>;
 
 Instruction Operand Name Mapping
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

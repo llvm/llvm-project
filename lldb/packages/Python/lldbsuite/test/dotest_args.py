@@ -43,8 +43,12 @@ def create_parser():
     if sys.platform == 'darwin':
         group.add_argument('--apple-sdk', metavar='apple_sdk', dest='apple_sdk', default="", help=textwrap.dedent(
             '''Specify the name of the Apple SDK (macosx, macosx.internal, iphoneos, iphoneos.internal, or path to SDK) and use the appropriate tools from that SDK's toolchain.'''))
-    group.add_argument('--libcxx-include-dir', help=textwrap.dedent('Specify the path to a custom libc++ include directory. Must be used in conjunction with --libcxx-library-dir.'))
-    group.add_argument('--libcxx-library-dir', help=textwrap.dedent('Specify the path to a custom libc++ library directory. Must be used in conjunction with --libcxx-include-dir.'))
+    group.add_argument('--libcxx-include-dir', help=textwrap.dedent(
+        'Specify the path to a custom libc++ include directory. Must be used in conjunction with --libcxx-library-dir.'))
+    group.add_argument('--libcxx-include-target-dir', help=textwrap.dedent(
+        'Specify the path to a custom libc++ include target directory to use in addition to --libcxx-include-dir. Optional.'))
+    group.add_argument('--libcxx-library-dir', help=textwrap.dedent(
+        'Specify the path to a custom libc++ library directory. Must be used in conjunction with --libcxx-include-dir.'))
     # FIXME? This won't work for different extra flags according to each arch.
     group.add_argument(
         '-E',

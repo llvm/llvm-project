@@ -2257,7 +2257,10 @@ declare void @unknowni32p(i32*) #2
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
 declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
 
-declare i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1)
+; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
+define weak i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1) {
+  ret i32 0
+}
 
 declare void @__kmpc_get_shared_variables(i8***)
 

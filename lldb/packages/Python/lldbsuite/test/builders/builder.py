@@ -122,8 +122,12 @@ class Builder:
 
     def getLibCxxArgs(self):
         if configuration.libcxx_include_dir and configuration.libcxx_library_dir:
-            return ["LIBCPP_INCLUDE_DIR={}".format(configuration.libcxx_include_dir),
-                    "LIBCPP_LIBRARY_DIR={}".format(configuration.libcxx_library_dir)]
+            libcpp_args = ["LIBCPP_INCLUDE_DIR={}".format(configuration.libcxx_include_dir),
+                           "LIBCPP_LIBRARY_DIR={}".format(configuration.libcxx_library_dir)]
+            if configuration.libcxx_include_target_dir:
+                libcpp_args.append("LIBCPP_INCLUDE_TARGET_DIR={}".format(
+                    configuration.libcxx_include_target_dir))
+            return libcpp_args
         return []
 
     def _getDebugInfoArgs(self, debug_info):
