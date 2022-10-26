@@ -550,8 +550,7 @@ static void buildCommonPollyPipeline(FunctionPassManager &PM,
   }
 
   if (ExportJScop)
-    llvm::report_fatal_error("Option -polly-export not supported with NPM",
-                             false);
+    SPM.addPass(JSONExportPass());
 
   if (!EnableForOpt)
     return;
