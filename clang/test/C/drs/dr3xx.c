@@ -31,6 +31,9 @@
  *
  * WG14 DR333: yes
  * Missing Predefined Macro Name
+ *
+ * WG14 DR342: dup 340
+ * 	VLAs and conditional expressions
  */
 
 
@@ -217,7 +220,7 @@ void dr335(void) {
   };
 }
 
-/* WG14 DR339: partial
+/* WG14 DR339: dup 328
  * Variably modified compound literals
  *
  * This DR is marked as a duplicate of DR328, see that DR for further
@@ -231,3 +234,61 @@ void *dr339 = &(int (*)[dr339_v]){ 0 }; /* c89only-warning {{variable length arr
                                            c99andup-warning {{variable length array used}}
                                            c89only-warning {{compound literals are a C99-specific feature}}
                                          */
+
+/* WG14 DR340: yes
+ * Composite types for variable-length arrays
+ *
+ * The DR made this behavior undefined because implementations disagreed on the
+ * behavior. For this DR, Clang accepts the code and GCC rejects it. It's
+ * unclear whether the Clang behavior is intentional, but because the code is
+ * UB, any behavior is acceptable.
+ */
+#if __STDC_VERSION__ < 202000L
+void dr340(int x, int y) {
+  typedef void (*T1)(int);
+  typedef void (*T2)(); /* expected-warning {{a function declaration without a prototype is deprecated in all versions of C}} */
+
+  T1 (*a)[] = 0;
+  T2 (*b)[x] = 0;       /* c89only-warning {{variable length arrays are a C99 feature}}
+                           c99andup-warning {{variable length array used}}
+                         */
+  (y ? a : b)[0][0]();
+}
+#endif /* __STDC_VERSION__ < 202000L */
+
+/* WG14 DR341: yes
+ * [*] in abstract declarators
+ */
+void dr341_1(int (*)[*]);                  /* c89only-warning {{variable length arrays are a C99 feature}}
+                                              c99andup-warning {{variable length array used}}
+                                            */
+void dr341_2(int (*)[sizeof(int (*)[*])]); /* expected-error {{star modifier used outside of function prototype}} */
+
+/* WG14 DR343: yes
+ * Initializing qualified wchar_t arrays
+ */
+void dr343(void) {
+  const __WCHAR_TYPE__ x[] = L"foo";
+}
+
+/* WG14 DR344: yes
+ * Casts in preprocessor conditional expressions
+ *
+ * Note: this DR removed a constraint about not containing casts because there
+ * are no keywords, therefore no types to cast to, so casts simply don't exist
+ * as a construct during preprocessing.
+ */
+#if (int)+0
+#error "this should not be an error, we shouldn't get here"
+#else
+/* expected-error@+1 {{"reached"}} */
+#error "reached"
+#endif
+
+/* WG14 DR345: yes
+ * Where does parameter scope start?
+ */
+void f(long double f,
+       char (**a)[10 * sizeof f]) {
+  _Static_assert(sizeof **a == sizeof(long double) * 10, "");
+}
