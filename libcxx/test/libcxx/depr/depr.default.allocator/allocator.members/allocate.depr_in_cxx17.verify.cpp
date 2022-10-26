@@ -13,8 +13,7 @@
 
 // Deprecated in C++17
 
-// FIXME: Remove 'clang-16' from UNSUPPORTED by 2022-11-05 (bugfix D136533).
-// UNSUPPORTED: c++03, c++11, c++14, clang-16
+// UNSUPPORTED: c++03, c++11, c++14
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
 
@@ -24,11 +23,7 @@
 int main(int, char**)
 {
     std::allocator<int> a;
-    TEST_IGNORE_NODISCARD a.allocate(3, nullptr);
-    // expected-warning@-1 {{'allocate' is deprecated}}
-#if defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 1600
-    // expected-warning@*:* {{'pointer' is deprecated}}
-    // expected-warning@*:* {{'const_pointer' is deprecated}}
-#endif
+    TEST_IGNORE_NODISCARD a.allocate(3, nullptr); // expected-warning {{'allocate' is deprecated}}
+
     return 0;
 }
