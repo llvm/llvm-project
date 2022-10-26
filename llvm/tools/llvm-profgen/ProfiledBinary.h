@@ -477,18 +477,24 @@ public:
   // Load the symbols from debug table and populate into symbol list.
   void populateSymbolListFromDWARF(ProfileSymbolList &SymbolList);
 
-  const SampleContextFrameVector &
+  SampleContextFrameVector
   getFrameLocationStack(uint64_t Address, bool UseProbeDiscriminator = false) {
+    InstructionPointer IP(this, Address);
+    return symbolize(IP, true, UseProbeDiscriminator);
+  }
+
+  const SampleContextFrameVector &
+  getCachedFrameLocationStack(uint64_t Address,
+                              bool UseProbeDiscriminator = false) {
     auto I = AddressToLocStackMap.emplace(Address, SampleContextFrameVector());
     if (I.second) {
-      InstructionPointer IP(this, Address);
-      I.first->second = symbolize(IP, true, UseProbeDiscriminator);
+      I.first->second = getFrameLocationStack(Address, UseProbeDiscriminator);
     }
     return I.first->second;
   }
 
-  Optional<SampleContextFrame> getInlineLeafFrameLoc(uint64_t Address) {
-    const auto &Stack = getFrameLocationStack(Address);
+  Optional<SampleContextFrame> getInlineLeafFrameLoc(uint64_t Offset) {
+    const auto &Stack = getCachedFrameLocationStack(Offset);
     if (Stack.empty())
       return {};
     return Stack.back();
