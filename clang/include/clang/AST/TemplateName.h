@@ -139,23 +139,24 @@ public:
 class SubstTemplateTemplateParmPackStorage : public UncommonTemplateNameStorage,
                                              public llvm::FoldingSetNode {
   const TemplateArgument *Arguments;
-  llvm::PointerIntPair<Decl *, 1, bool> AssociatedDeclAndFinal;
+  Decl *AssociatedDecl;
 
 public:
   SubstTemplateTemplateParmPackStorage(ArrayRef<TemplateArgument> ArgPack,
-                                       Decl *AssociatedDecl, unsigned Index,
-                                       bool Final);
+                                       Decl *AssociatedDecl, unsigned Index)
+      : UncommonTemplateNameStorage(SubstTemplateTemplateParmPack, Index,
+                                    ArgPack.size()),
+        Arguments(ArgPack.data()), AssociatedDecl(AssociatedDecl) {
+    assert(AssociatedDecl != nullptr);
+  }
 
   /// A template-like entity which owns the whole pattern being substituted.
   /// This will own a set of template parameters.
-  Decl *getAssociatedDecl() const;
+  Decl *getAssociatedDecl() const { return AssociatedDecl; }
 
   /// Returns the index of the replaced parameter in the associated declaration.
   /// This should match the result of `getParameterPack()->getIndex()`.
   unsigned getIndex() const { return Bits.Index; }
-
-  // When true the substitution will be 'Final' (subst node won't be placed).
-  bool getFinal() const;
 
   /// Retrieve the template template parameter pack being substituted.
   TemplateTemplateParmDecl *getParameterPack() const;
@@ -168,7 +169,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID &ID, ASTContext &Context,
                       const TemplateArgument &ArgPack, Decl *AssociatedDecl,
-                      unsigned Index, bool Final);
+                      unsigned Index);
 };
 
 /// Represents a C++ template name within the type system.
