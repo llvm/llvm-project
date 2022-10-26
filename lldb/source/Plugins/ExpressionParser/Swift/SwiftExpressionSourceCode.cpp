@@ -442,7 +442,8 @@ bool SwiftExpressionSourceCode::GetText(
 
     localOptions.SetPreparePlaygroundStubFunctions(need_to_declare_log_functions);
 
-    WrapExpression(wrap_stream, m_body.c_str(), needs_object_ptr,
+    std::string full_body = m_prefix + m_body;
+    WrapExpression(wrap_stream, full_body.c_str(), needs_object_ptr,
                    static_method, is_class, weak_self, localOptions,
                    os_vers.str(), first_body_line, local_variables);
 
