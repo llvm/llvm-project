@@ -3795,6 +3795,49 @@ BoUpSLP::findPartiallyOrderedLoads(const BoUpSLP::TreeEntry &TE) {
   return None;
 }
 
+/// Check if two insertelement instructions are from the same buildvector.
+static bool areTwoInsertFromSameBuildVector(
+    InsertElementInst *VU, InsertElementInst *V,
+    function_ref<Value *(InsertElementInst *)> GetBaseOperand) {
+  // Instructions must be from the same basic blocks.
+  if (VU->getParent() != V->getParent())
+    return false;
+  // Checks if 2 insertelements are from the same buildvector.
+  if (VU->getType() != V->getType())
+    return false;
+  // Multiple used inserts are separate nodes.
+  if (!VU->hasOneUse() && !V->hasOneUse())
+    return false;
+  auto *IE1 = VU;
+  auto *IE2 = V;
+  unsigned Idx1 = *getInsertIndex(IE1);
+  unsigned Idx2 = *getInsertIndex(IE2);
+  // Go through the vector operand of insertelement instructions trying to find
+  // either VU as the original vector for IE2 or V as the original vector for
+  // IE1.
+  do {
+    if (IE2 == VU)
+      return VU->hasOneUse();
+    if (IE1 == V)
+      return V->hasOneUse();
+    if (IE1) {
+      if ((IE1 != VU && !IE1->hasOneUse()) ||
+          getInsertIndex(IE1).value_or(Idx2) == Idx2)
+        IE1 = nullptr;
+      else
+        IE1 = dyn_cast_or_null<InsertElementInst>(GetBaseOperand(IE1));
+    }
+    if (IE2) {
+      if ((IE2 != V && !IE2->hasOneUse()) ||
+          getInsertIndex(IE2).value_or(Idx1) == Idx1)
+        IE2 = nullptr;
+      else
+        IE2 = dyn_cast_or_null<InsertElementInst>(GetBaseOperand(IE2));
+    }
+  } while (IE1 || IE2);
+  return false;
+}
+
 Optional<BoUpSLP::OrdersType> BoUpSLP::getReorderingData(const TreeEntry &TE,
                                                          bool TopToBottom) {
   // No need to reorder if need to shuffle reuses, still need to shuffle the
@@ -3858,6 +3901,58 @@ Optional<BoUpSLP::OrdersType> BoUpSLP::getReorderingData(const TreeEntry &TE,
        (TopToBottom && isa<StoreInst, InsertElementInst>(TE.getMainOp()))) &&
       !TE.isAltShuffle())
     return TE.ReorderIndices;
+  if (TE.State == TreeEntry::Vectorize && TE.getOpcode() == Instruction::PHI) {
+    auto PHICompare = [](llvm::Value *V1, llvm::Value *V2) {
+      if (V1->user_empty() || V2->user_empty())
+        return false;
+      auto *FirstUserOfPhi1 = cast<Instruction>(*V1->user_begin());
+      auto *FirstUserOfPhi2 = cast<Instruction>(*V2->user_begin());
+      if (auto *IE1 = dyn_cast<InsertElementInst>(FirstUserOfPhi1))
+        if (auto *IE2 = dyn_cast<InsertElementInst>(FirstUserOfPhi2)) {
+          if (!areTwoInsertFromSameBuildVector(
+                  IE1, IE2,
+                  [](InsertElementInst *II) { return II->getOperand(0); }))
+            return false;
+          Optional<unsigned> Idx1 = getInsertIndex(IE1);
+          Optional<unsigned> Idx2 = getInsertIndex(IE2);
+          if (Idx1 == None || Idx2 == None)
+            return false;
+          return *Idx1 < *Idx2;
+        }
+      if (auto *EE1 = dyn_cast<ExtractElementInst>(FirstUserOfPhi1))
+        if (auto *EE2 = dyn_cast<ExtractElementInst>(FirstUserOfPhi2)) {
+          if (EE1->getOperand(0) != EE2->getOperand(0))
+            return false;
+          Optional<unsigned> Idx1 = getExtractIndex(EE1);
+          Optional<unsigned> Idx2 = getExtractIndex(EE2);
+          if (Idx1 == None || Idx2 == None)
+            return false;
+          return *Idx1 < *Idx2;
+        }
+      return false;
+    };
+    auto IsIdentityOrder = [](const OrdersType &Order) {
+      for (unsigned Idx : seq<unsigned>(0, Order.size()))
+        if (Idx != Order[Idx])
+          return false;
+      return true;
+    };
+    if (!TE.ReorderIndices.empty())
+      return TE.ReorderIndices;
+    DenseMap<Value *, unsigned> PhiToId;
+    SmallVector<Value *, 4> Phis;
+    OrdersType ResOrder(TE.Scalars.size());
+    for (unsigned Id = 0, Sz = TE.Scalars.size(); Id < Sz; ++Id) {
+      PhiToId[TE.Scalars[Id]] = Id;
+      Phis.push_back(TE.Scalars[Id]);
+    }
+    llvm::stable_sort(Phis, PHICompare);
+    for (unsigned Id = 0, Sz = Phis.size(); Id < Sz; ++Id)
+      ResOrder[Id] = PhiToId[Phis[Id]];
+    if (IsIdentityOrder(ResOrder))
+      return {};
+    return ResOrder;
+  }
   if (TE.State == TreeEntry::NeedToGather) {
     // TODO: add analysis of other gather nodes with extractelement
     // instructions and other values/instructions, not only undefs.
@@ -3935,6 +4030,9 @@ void BoUpSLP::reorderTopToBottom() {
   // their ordering.
   DenseMap<const TreeEntry *, OrdersType> GathersToOrders;
 
+  // Phi nodes can have preferred ordering based on their result users
+  DenseMap<const TreeEntry *, OrdersType> PhisToOrders;
+
   // AltShuffles can also have a preferred ordering that leads to fewer
   // instructions, e.g., the addsub instruction in x86.
   DenseMap<const TreeEntry *, OrdersType> AltShufflesToOrders;
@@ -3949,7 +4047,7 @@ void BoUpSLP::reorderTopToBottom() {
   // extracts.
   for_each(VectorizableTree, [this, &TTIRef, &VFToOrderedEntries,
                               &GathersToOrders, &ExternalUserReorderMap,
-                              &AltShufflesToOrders](
+                              &AltShufflesToOrders, &PhisToOrders](
                                  const std::unique_ptr<TreeEntry> &TE) {
     // Look for external users that will probably be vectorized.
     SmallVector<OrdersType, 1> ExternalUserReorderIndices =
@@ -4006,6 +4104,9 @@ void BoUpSLP::reorderTopToBottom() {
       VFToOrderedEntries[TE->getVectorFactor()].insert(TE.get());
       if (TE->State != TreeEntry::Vectorize || !TE->ReuseShuffleIndices.empty())
         GathersToOrders.try_emplace(TE.get(), *CurrentOrder);
+      if (TE->State == TreeEntry::Vectorize &&
+          TE->getOpcode() == Instruction::PHI)
+        PhisToOrders.try_emplace(TE.get(), *CurrentOrder);
     }
   });
 
@@ -4031,8 +4132,8 @@ void BoUpSLP::reorderTopToBottom() {
       if (!OpTE->ReuseShuffleIndices.empty() && !GathersToOrders.count(OpTE))
         continue;
       // Count number of orders uses.
-      const auto &Order = [OpTE, &GathersToOrders,
-                           &AltShufflesToOrders]() -> const OrdersType & {
+      const auto &Order = [OpTE, &GathersToOrders, &AltShufflesToOrders,
+                           &PhisToOrders]() -> const OrdersType & {
         if (OpTE->State == TreeEntry::NeedToGather ||
             !OpTE->ReuseShuffleIndices.empty()) {
           auto It = GathersToOrders.find(OpTE);
@@ -4042,6 +4143,12 @@ void BoUpSLP::reorderTopToBottom() {
         if (OpTE->isAltShuffle()) {
           auto It = AltShufflesToOrders.find(OpTE);
           if (It != AltShufflesToOrders.end())
+            return It->second;
+        }
+        if (OpTE->State == TreeEntry::Vectorize &&
+            isa<PHINode>(OpTE->getMainOp())) {
+          auto It = PhisToOrders.find(OpTE);
+          if (It != PhisToOrders.end())
             return It->second;
         }
         return OpTE->ReorderIndices;
@@ -7136,49 +7243,6 @@ InstructionCost BoUpSLP::getSpillCost() const {
   }
 
   return Cost;
-}
-
-/// Check if two insertelement instructions are from the same buildvector.
-static bool areTwoInsertFromSameBuildVector(
-    InsertElementInst *VU, InsertElementInst *V,
-    function_ref<Value *(InsertElementInst *)> GetBaseOperand) {
-  // Instructions must be from the same basic blocks.
-  if (VU->getParent() != V->getParent())
-    return false;
-  // Checks if 2 insertelements are from the same buildvector.
-  if (VU->getType() != V->getType())
-    return false;
-  // Multiple used inserts are separate nodes.
-  if (!VU->hasOneUse() && !V->hasOneUse())
-    return false;
-  auto *IE1 = VU;
-  auto *IE2 = V;
-  unsigned Idx1 = *getInsertIndex(IE1);
-  unsigned Idx2 = *getInsertIndex(IE2);
-  // Go through the vector operand of insertelement instructions trying to find
-  // either VU as the original vector for IE2 or V as the original vector for
-  // IE1.
-  do {
-    if (IE2 == VU)
-      return VU->hasOneUse();
-    if (IE1 == V)
-      return V->hasOneUse();
-    if (IE1) {
-      if ((IE1 != VU && !IE1->hasOneUse()) ||
-          getInsertIndex(IE1).value_or(Idx2) == Idx2)
-        IE1 = nullptr;
-      else
-        IE1 = dyn_cast_or_null<InsertElementInst>(GetBaseOperand(IE1));
-    }
-    if (IE2) {
-      if ((IE2 != V && !IE2->hasOneUse()) ||
-          getInsertIndex(IE2).value_or(Idx1) == Idx1)
-        IE2 = nullptr;
-      else
-        IE2 = dyn_cast_or_null<InsertElementInst>(GetBaseOperand(IE2));
-    }
-  } while (IE1 || IE2);
-  return false;
 }
 
 /// Checks if the \p IE1 instructions is followed by \p IE2 instruction in the
