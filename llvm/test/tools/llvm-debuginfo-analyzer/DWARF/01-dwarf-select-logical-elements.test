@@ -1,0 +1,71 @@
+; Test case 1 - General options
+
+; test.cpp
+;  1  using INTPTR = const int *;
+;  2  int foo(INTPTR ParamPtr, unsigned ParamUnsigned, bool ParamBool) {
+;  3    if (ParamBool) {
+;  4      typedef int INTEGER;
+;  5      const INTEGER CONSTANT = 7;
+;  6      return CONSTANT;
+;  7    }
+;  8    return ParamUnsigned;
+;  9  }
+
+; Select logical elements.
+; The following prints all 'instructions', 'symbols' and 'types' that
+; contain 'inte' or 'movl' in their names or types, using a tab layout
+; and given the number of matches.
+
+; RUN: llvm-debuginfo-analyzer --attribute=level \
+; RUN:                         --select-nocase --select-regex \
+; RUN:                         --select=INTe --select=movl \
+; RUN:                         --report=list \
+; RUN:                         --print=symbols,types,instructions,summary \
+; RUN:                         %p/Inputs/test-dwarf-clang.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; ONE:      Logical View:
+; ONE-NEXT: [000]           {File} 'test-dwarf-clang.o'
+; ONE-EMPTY:
+; ONE-NEXT: [001]           {CompileUnit} 'test.cpp'
+; ONE-NEXT: [004]           {Code} 'movl	$0x7, -0x1c(%rbp)'
+; ONE-NEXT: [004]           {Code} 'movl	$0x7, -0x4(%rbp)'
+; ONE-NEXT: [003]           {Code} 'movl	%eax, -0x4(%rbp)'
+; ONE-NEXT: [003]           {Code} 'movl	%esi, -0x14(%rbp)'
+; ONE-NEXT: [004]           {Code} 'movl	-0x14(%rbp), %eax'
+; ONE-NEXT: [003]           {Code} 'movl	-0x4(%rbp), %eax'
+; ONE-NEXT: [003]     4     {TypeAlias} 'INTEGER' -> 'int'
+; ONE-NEXT: [004]     5     {Variable} 'CONSTANT' -> 'const INTEGER'
+; ONE-EMPTY:
+; ONE-NEXT: -----------------------------
+; ONE-NEXT: Element      Total    Printed
+; ONE-NEXT: -----------------------------
+; ONE-NEXT: Scopes           3          0
+; ONE-NEXT: Symbols          4          1
+; ONE-NEXT: Types            2          1
+; ONE-NEXT: Lines           17          6
+; ONE-NEXT: -----------------------------
+; ONE-NEXT: Total           26          8
+
+; RUN: llvm-debuginfo-analyzer --attribute=level \
+; RUN:                         --select-regex --select-nocase \
+; RUN:                         --select=INTe \
+; RUN:                         --report=list \
+; RUN:                         --print=symbols,types \
+; RUN:                         %p/Inputs/test-dwarf-clang.o \
+; RUN:                         %p/Inputs/test-dwarf-gcc.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=TWO %s
+
+; TWO:      Logical View:
+; TWO-NEXT: [000]           {File} 'test-dwarf-clang.o'
+; TWO-EMPTY:
+; TWO-NEXT: [001]           {CompileUnit} 'test.cpp'
+; TWO-NEXT: [003]     4     {TypeAlias} 'INTEGER' -> 'int'
+; TWO-NEXT: [004]     5     {Variable} 'CONSTANT' -> 'const INTEGER'
+; TWO-EMPTY:
+; TWO-NEXT: Logical View:
+; TWO-NEXT: [000]           {File} 'test-dwarf-gcc.o'
+; TWO-EMPTY:
+; TWO-NEXT: [001]           {CompileUnit} 'test.cpp'
+; TWO-NEXT: [004]     4     {TypeAlias} 'INTEGER' -> 'int'
+; TWO-NEXT: [004]     5     {Variable} 'CONSTANT' -> 'const INTEGER'
