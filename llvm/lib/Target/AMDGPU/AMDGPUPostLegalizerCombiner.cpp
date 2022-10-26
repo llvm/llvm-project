@@ -78,11 +78,6 @@ public:
 
 bool AMDGPUPostLegalizerCombinerHelper::matchFMinFMaxLegacy(
     MachineInstr &MI, FMinFMaxLegacyInfo &Info) {
-  // FIXME: Combines should have subtarget predicates, and we shouldn't need
-  // this here.
-  if (!MF.getSubtarget<GCNSubtarget>().hasFminFmaxLegacy())
-    return false;
-
   // FIXME: Type predicate on pattern
   if (MRI.getType(MI.getOperand(0).getReg()) != LLT::scalar(32))
     return false;
@@ -310,11 +305,17 @@ protected:
   AMDGPUCombinerHelper &Helper;
   AMDGPUPostLegalizerCombinerHelper &PostLegalizerHelper;
 
+  // Note: pointer is necessary because Target Predicates use
+  //   "Subtarget->"
+  const GCNSubtarget *Subtarget;
+
 public:
   AMDGPUPostLegalizerCombinerHelperState(
       AMDGPUCombinerHelper &Helper,
-      AMDGPUPostLegalizerCombinerHelper &PostLegalizerHelper)
-      : Helper(Helper), PostLegalizerHelper(PostLegalizerHelper) {}
+      AMDGPUPostLegalizerCombinerHelper &PostLegalizerHelper,
+      const GCNSubtarget &Subtarget)
+      : Helper(Helper), PostLegalizerHelper(PostLegalizerHelper),
+        Subtarget(&Subtarget) {}
 };
 
 #define AMDGPUPOSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
@@ -329,16 +330,18 @@ namespace {
 class AMDGPUPostLegalizerCombinerInfo final : public CombinerInfo {
   GISelKnownBits *KB;
   MachineDominatorTree *MDT;
+  const GCNSubtarget &Subtarget;
 
 public:
   AMDGPUGenPostLegalizerCombinerHelperRuleConfig GeneratedRuleCfg;
 
-  AMDGPUPostLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
+  AMDGPUPostLegalizerCombinerInfo(const GCNSubtarget &Subtarget, bool EnableOpt,
+                                  bool OptSize, bool MinSize,
                                   const AMDGPULegalizerInfo *LI,
                                   GISelKnownBits *KB, MachineDominatorTree *MDT)
       : CombinerInfo(/*AllowIllegalOps*/ false, /*ShouldLegalizeIllegal*/ true,
                      /*LegalizerInfo*/ LI, EnableOpt, OptSize, MinSize),
-        KB(KB), MDT(MDT) {
+        KB(KB), MDT(MDT), Subtarget(Subtarget) {
     if (!GeneratedRuleCfg.parseCommandLineOption())
       report_fatal_error("Invalid rule identifier");
   }
@@ -353,8 +356,8 @@ bool AMDGPUPostLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
   AMDGPUCombinerHelper Helper(Observer, B, /*IsPreLegalize*/ false, KB, MDT,
                               LInfo);
   AMDGPUPostLegalizerCombinerHelper PostLegalizerHelper(B, Helper);
-  AMDGPUGenPostLegalizerCombinerHelper Generated(GeneratedRuleCfg, Helper,
-                                                 PostLegalizerHelper);
+  AMDGPUGenPostLegalizerCombinerHelper Generated(
+      GeneratedRuleCfg, Helper, PostLegalizerHelper, Subtarget);
 
   if (Generated.tryCombineAll(Observer, MI, B))
     return true;
@@ -431,7 +434,7 @@ bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   GISelKnownBits *KB = &getAnalysis<GISelKnownBitsAnalysis>().get(MF);
   MachineDominatorTree *MDT =
       IsOptNone ? nullptr : &getAnalysis<MachineDominatorTree>();
-  AMDGPUPostLegalizerCombinerInfo PCInfo(EnableOpt, F.hasOptSize(),
+  AMDGPUPostLegalizerCombinerInfo PCInfo(ST, EnableOpt, F.hasOptSize(),
                                          F.hasMinSize(), LI, KB, MDT);
   Combiner C(PCInfo, TPC);
   return C.combineMachineInstrs(MF, /*CSEInfo*/ nullptr);

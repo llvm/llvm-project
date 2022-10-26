@@ -667,7 +667,7 @@ void ProfileGenerator::populateBodySamplesForAllFunctions(
       continue;
 
     do {
-      const SampleContextFrameVector &FrameVec =
+      const SampleContextFrameVector FrameVec =
           Binary->getFrameLocationStack(IP.Address);
       if (!FrameVec.empty()) {
         // FIXME: As accumulating total count per instruction caused some
@@ -709,7 +709,7 @@ void ProfileGenerator::populateBoundarySamplesForAllFunctions(
       continue;
     // Record called target sample and its count.
     const SampleContextFrameVector &FrameVec =
-        Binary->getFrameLocationStack(SourceAddress);
+        Binary->getCachedFrameLocationStack(SourceAddress);
     if (!FrameVec.empty()) {
       FunctionSamples &FunctionProfile =
           getLeafProfileAndAddTotalSamples(FrameVec, 0);

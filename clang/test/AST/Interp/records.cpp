@@ -257,11 +257,6 @@ namespace DeriveFailures {
   static_assert(D.Val == 0, ""); // ref-error {{not an integral constant expression}} \
                                  // ref-note {{initializer of 'D' is not a constant expression}}
 
-#if 0
-  // FIXME: This test is currently disabled because the failing constructor call
-  //   causes us to run into an assertion later on in the new interpreter.
-  //   Once that is fixed, we fail successfully but the diagnostic uses the
-  //   wrong value.
   struct AnotherBase {
     int Val;
     constexpr AnotherBase(int i) : Val(12 / i) {} //ref-note {{division by zero}} \
@@ -274,9 +269,7 @@ namespace DeriveFailures {
   constexpr AnotherBase Derp(0); // ref-error {{must be initialized by a constant expression}} \
                                  // ref-note {{in call to 'AnotherBase(0)'}} \
                                  // expected-error {{must be initialized by a constant expression}} \
-                                 // expected-note {{in call to 'AnotherBase(}}
-                                 // FIXME Previous note uses the wrong value
-#endif
+                                 // expected-note {{in call to 'AnotherBase(0)'}}
 
   struct YetAnotherBase {
     int Val;
