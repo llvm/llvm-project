@@ -147,10 +147,3 @@ namespace PR9449 {
 
   template void f<int>(); // expected-note{{in instantiation of}}
 }
-
-namespace sugared_template_instantiation {
-  // Test that we ignore local qualifiers.
-  template <class A1, class = typename A1::type1> struct A {};
-  struct B { typedef int type1; };
-  typedef A<const B> type2;
-} // namespace sugated_template_instantiation

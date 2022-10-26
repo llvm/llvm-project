@@ -77,7 +77,7 @@ enum class TemplateSubstitutionKind : char {
 
     using ArgList = ArrayRef<TemplateArgument>;
     struct ArgumentListLevel {
-      llvm::PointerIntPair<Decl *, 1, bool> AssociatedDeclAndFinal;
+      Decl *AssociatedDecl;
       ArgList Args;
     };
     using ContainerType = SmallVector<ArgumentListLevel, 4>;
@@ -101,8 +101,8 @@ enum class TemplateSubstitutionKind : char {
     MultiLevelTemplateArgumentList() = default;
 
     /// Construct a single-level template argument list.
-    MultiLevelTemplateArgumentList(Decl *D, ArgList Args, bool Final) {
-      addOuterTemplateArguments(D, Args, Final);
+    MultiLevelTemplateArgumentList(Decl *D, ArgList Args) {
+      addOuterTemplateArguments(D, Args);
     }
 
     void setKind(TemplateSubstitutionKind K) { Kind = K; }
@@ -160,11 +160,9 @@ enum class TemplateSubstitutionKind : char {
     /// A template-like entity which owns the whole pattern being substituted.
     /// This will usually own a set of template parameters, or in some
     /// cases might even be a template parameter itself.
-    std::pair<Decl *, bool> getAssociatedDecl(unsigned Depth) const {
+    Decl *getAssociatedDecl(unsigned Depth) const {
       assert(NumRetainedOuterLevels <= Depth && Depth < getNumLevels());
-      auto AD = TemplateArgumentLists[getNumLevels() - Depth - 1]
-                    .AssociatedDeclAndFinal;
-      return {AD.getPointer(), AD.getInt()};
+      return TemplateArgumentLists[getNumLevels() - Depth - 1].AssociatedDecl;
     }
 
     /// Determine whether there is a non-NULL template argument at the
@@ -204,22 +202,21 @@ enum class TemplateSubstitutionKind : char {
 
     /// Add a new outmost level to the multi-level template argument
     /// list.
-    /// A 'Final' substitution means that Subst* nodes won't be built
-    /// for the replacements.
-    void addOuterTemplateArguments(Decl *AssociatedDecl, ArgList Args,
-                                   bool Final) {
+    void addOuterTemplateArguments(Decl *AssociatedDecl, ArgList Args) {
       assert(!NumRetainedOuterLevels &&
              "substituted args outside retained args?");
       assert(getKind() == TemplateSubstitutionKind::Specialization);
+      assert(AssociatedDecl != nullptr || Args.size() == 0);
       TemplateArgumentLists.push_back(
-          {{AssociatedDecl->getCanonicalDecl(), Final}, Args});
+          {AssociatedDecl ? AssociatedDecl->getCanonicalDecl() : nullptr,
+           Args});
     }
 
     void addOuterTemplateArguments(ArgList Args) {
       assert(!NumRetainedOuterLevels &&
              "substituted args outside retained args?");
       assert(getKind() == TemplateSubstitutionKind::Rewrite);
-      TemplateArgumentLists.push_back({{}, Args});
+      TemplateArgumentLists.push_back({nullptr, Args});
     }
 
     void addOuterTemplateArguments(llvm::NoneType) {
