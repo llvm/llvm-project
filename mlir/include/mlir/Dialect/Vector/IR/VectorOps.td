@@ -13,7 +13,8 @@
 #ifndef VECTOR_OPS
 #define VECTOR_OPS
 
-include "mlir/Dialect/Vector/Interfaces/MaskingInterfaces.td"
+include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.td"
+include "mlir/Dialect/Vector/Interfaces/MaskingOpInterface.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
@@ -2140,13 +2141,15 @@ def Vector_CreateMaskOp :
 }
 
 def Vector_MaskOp : Vector_Op<"mask", [
-  SingleBlockImplicitTerminator<"vector::YieldOp">, RecursiveMemoryEffects,
-  NoRegionArguments
+  SingleBlockImplicitTerminator<"vector::YieldOp">,
+  DeclareOpInterfaceMethods<MaskingOpInterface>,
+  RecursiveMemoryEffects, NoRegionArguments
 ]> {
   let summary = "Predicates a maskable vector operation";
   let description = [{
-    The `vector.mask` operation predicates the execution of another operation.
-    It takes an `i1` vector mask and an optional pass-thru vector as arguments.
+    The `vector.mask` is a `MaskingOpInterface` operation that predicates the
+    execution of another operation. It takes an `i1` vector mask and an
+    optional passthru vector as arguments.
     A `vector.yield`-terminated region encloses the operation to be masked.
     Values used within the region are captured from above. Only one *maskable*
     operation can be masked with a `vector.mask` operation at a time. An

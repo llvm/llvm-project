@@ -3250,7 +3250,8 @@ cc_library(
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
-        ":MaskingInterfaces",
+        ":MaskableOpInterface",
+        ":MaskingOpInterface",
         ":MemRefDialect",
         ":SideEffectInterfaces",
         ":Support",
@@ -8201,8 +8202,15 @@ cc_library(
 ##---------------------------------------------------------------------------##
 
 td_library(
-    name = "MaskingInterfacesTdFiles",
-    srcs = ["include/mlir/Dialect/Vector/Interfaces/MaskingInterfaces.td"],
+    name = "MaskingOpInterfaceTdFiles",
+    srcs = ["include/mlir/Dialect/Vector/Interfaces/MaskingOpInterface.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+td_library(
+    name = "MaskableOpInterfaceTdFiles",
+    srcs = ["include/mlir/Dialect/Vector/Interfaces/MaskableOpInterface.td"],
     includes = ["include"],
     deps = [":OpBaseTdFiles"],
 )
@@ -8215,7 +8223,8 @@ td_library(
         ":ControlFlowInterfacesTdFiles",
         ":DestinationStyleOpInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
-        ":MaskingInterfacesTdFiles",
+        ":MaskableOpInterfaceTdFiles",
+        ":MaskingOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
         ":VectorInterfacesTdFiles",
@@ -8224,21 +8233,39 @@ td_library(
 )
 
 gentbl_cc_library(
-    name = "MaskingInterfacesIncGen",
+    name = "MaskableOpInterfaceIncGen",
     strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
-            "include/mlir/Dialect/Vector/Interfaces/MaskingInterfaces.h.inc",
+            "include/mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h.inc",
         ),
         (
             ["-gen-op-interface-defs"],
-            "include/mlir/Dialect/Vector/Interfaces/MaskingInterfaces.cpp.inc",
+            "include/mlir/Dialect/Vector/Interfaces/MaskableOpInterface.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Vector/Interfaces/MaskingInterfaces.td",
-    deps = [":MaskingInterfacesTdFiles"],
+    td_file = "include/mlir/Dialect/Vector/Interfaces/MaskableOpInterface.td",
+    deps = [":MaskableOpInterfaceTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MaskingOpInterfaceIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/Vector/Interfaces/MaskingOpInterface.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/Vector/Interfaces/MaskingOpInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Vector/Interfaces/MaskingOpInterface.td",
+    deps = [":MaskingOpInterfaceTdFiles"],
 )
 
 gentbl_cc_library(
@@ -8294,13 +8321,27 @@ gentbl_cc_library(
 )
 
 cc_library(
-    name = "MaskingInterfaces",
-    srcs = ["lib/Dialect/Vector/Interfaces/MaskingInterfaces.cpp"],
-    hdrs = ["include/mlir/Dialect/Vector/Interfaces/MaskingInterfaces.h"],
+    name = "MaskableOpInterface",
+    srcs = ["lib/Dialect/Vector/Interfaces/MaskableOpInterface.cpp"],
+    hdrs = ["include/mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"],
     includes = ["include"],
     deps = [
         ":IR",
-        ":MaskingInterfacesIncGen",
+        ":MaskableOpInterfaceIncGen",
+        ":MaskingOpInterface",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "MaskingOpInterface",
+    srcs = ["lib/Dialect/Vector/Interfaces/MaskingOpInterface.cpp"],
+    hdrs = ["include/mlir/Dialect/Vector/Interfaces/MaskingOpInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":MaskingOpInterfaceIncGen",
         ":Support",
         "//llvm:Support",
     ],
