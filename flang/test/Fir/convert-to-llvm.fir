@@ -1486,16 +1486,15 @@ func.func @dead_slice() {
 
 // Test `fir.box_tdesc` conversion.
 
-func.func @box_tdesc(%arg0: !fir.box<f64>) {
-  %0 = fir.box_tdesc %arg0 : (!fir.box<f64>) -> !fir.tdesc<f64>
+func.func @box_tdesc(%arg0: !fir.box<!fir.type<dtdesc{a:i32}>>) {
+  %0 = fir.box_tdesc %arg0 : (!fir.box<!fir.type<dtdesc{a:i32}>>) -> !fir.tdesc<!fir.type<dtdesc{a:i32}>>
   return
 }
 
 // CHECK-LABEL: llvm.func @box_tdesc(
-// CHECK-SAME:                       %[[ARG0:.*]]: !llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>) {
-// CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][0, 4] : (!llvm.ptr<struct<(ptr<f64>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}})>>) -> !llvm.ptr<i8>
-// CHECK:         %[[LOAD:.*]] = llvm.load %[[GEP]] : !llvm.ptr<i{{.*}}>
-// CHECK:         %{{.*}} = llvm.inttoptr %[[LOAD]] : i{{.*}} to !llvm.ptr<i{{.*}}>
+// CHECK-SAME:                       %[[ARG0:.*]]: !llvm.ptr<struct<(ptr<struct<"dtdesc", (i{{.*}})>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr<i{{.*}}>, array<1 x i{{.*}}>)>>) {
+// CHECK:         %[[GEP:.*]] = llvm.getelementptr %[[ARG0]][0, 7] : (!llvm.ptr<struct<(ptr<struct<"dtdesc", (i{{.*}})>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr<i{{.*}}>, array<1 x i{{.*}}>)>>) -> !llvm.ptr<ptr<i8>> 
+// CHECK:         %[[LOAD:.*]] = llvm.load %[[GEP]] : !llvm.ptr<ptr<i{{.*}}>>
 
 // -----
 
