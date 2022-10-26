@@ -666,35 +666,17 @@ private:
   /// argument.
   bool isArgumentInteresting(Argument *A,
                              SmallVectorImpl<CallArgBinding> &Constants) {
-
-    // No point in specialization if the argument is unused.
-    if (A->user_empty())
-      return false;
-
     // For now, don't attempt to specialize functions based on the values of
     // composite types.
-    Type *ArgTy = A->getType()                              ;
-    if (!ArgTy->isSingleValueType())
+    if (!A->getType()->isSingleValueType() || A->user_empty())
       return false;
 
-    // Specialization of integer and floating point types needs to be explicitly enabled.
-    if (!EnableSpecializationForLiteralConstant &&
-        (ArgTy->isIntegerTy() || ArgTy->isFloatingPointTy()))
-      return false;
-
-    // SCCP solver does not record an argument that will be constructed on
-    // stack.
-    if (A->hasByValAttr() && !A->getParent()->onlyReadsMemory())
-      return false;
-
-    // Check the lattice value and decide if we should attemt to specialize,
-    // based on this argument. No point in specialization, if the lattice value
-    // is already a constant.
-    const ValueLatticeElement &LV = Solver.getLatticeValueFor(A);
-    if (LV.isUnknownOrUndef() || LV.isConstant() ||
-        (LV.isConstantRange() && LV.getConstantRange().isSingleElement())) {
+    // If the argument isn't overdefined, there's nothing to do. It should
+    // already be constant.
+    if (!Solver.getLatticeValueFor(A).isOverdefined()) {
       LLVM_DEBUG(dbgs() << "FnSpecialization: Nothing to do, argument "
-                        << A->getNameOrAsOperand() << " is already constant\n");
+                        << A->getNameOrAsOperand()
+                        << " is already constant?\n");
       return false;
     }
 
@@ -727,6 +709,11 @@ private:
                             SmallVectorImpl<CallArgBinding> &Constants) {
     Function *F = A->getParent();
 
+    // SCCP solver does not record an argument that will be constructed on
+    // stack.
+    if (A->hasByValAttr() && !F->onlyReadsMemory())
+      return;
+
     // Iterate over all the call sites of the argument's parent function.
     for (User *U : F->users()) {
       if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
@@ -757,23 +744,9 @@ private:
           continue;
       }
 
-      // Select for possible specialisation arguments which are constants or
-      // are deduced to be constants or constant ranges with a single element.
-      Constant *C = dyn_cast<Constant>(V);
-      if (!C) {
-        const ValueLatticeElement &LV = Solver.getLatticeValueFor(V);
-        if (LV.isConstant())
-          C = LV.getConstant();
-        else if (LV.isConstantRange() &&
-                 LV.getConstantRange().isSingleElement()) {
-          assert(V->getType()->isIntegerTy() && "Non-integral constant range");
-          C = Constant::getIntegerValue(
-              V->getType(), *LV.getConstantRange().getSingleElement());
-        } else
-          continue;
-      }
-
-      Constants.push_back({&CS, C});
+      if (isa<Constant>(V) && (Solver.getLatticeValueFor(V).isConstant() ||
+                               EnableSpecializationForLiteralConstant))
+        Constants.push_back({&CS, cast<Constant>(V)});
     }
   }
 
