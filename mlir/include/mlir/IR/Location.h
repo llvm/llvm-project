@@ -36,6 +36,21 @@ public:
   /// Walk all of the locations nested under, and including, the current.
   WalkResult walk(function_ref<WalkResult(Location)> walkFn);
 
+  /// Return an instance of the given location type if one is nested under the
+  /// current location. Returns nullptr if one could not be found.
+  template <typename T>
+  T findInstanceOf() {
+    T result = {};
+    walk([&](auto loc) {
+      if (auto typedLoc = llvm::dyn_cast<T>(loc)) {
+        result = typedLoc;
+        return WalkResult::interrupt();
+      }
+      return WalkResult::advance();
+    });
+    return result;
+  }
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(Attribute attr);
 };
@@ -117,6 +132,29 @@ inline ::llvm::hash_code hash_value(Location arg) {
 #include "mlir/IR/BuiltinLocationAttributes.h.inc"
 
 namespace mlir {
+
+//===----------------------------------------------------------------------===//
+// FusedLoc
+//===----------------------------------------------------------------------===//
+
+/// This class represents a fused location whose metadata is known to be an
+/// instance of the given type.
+template <typename MetadataT>
+class FusedLocWith : public FusedLoc {
+public:
+  using FusedLoc::FusedLoc;
+
+  /// Return the metadata associated with this fused location.
+  MetadataT getMetadata() const {
+    return FusedLoc::getMetadata().template cast<MetadataT>();
+  }
+
+  /// Support llvm style casting.
+  static bool classof(Attribute attr) {
+    auto fusedLoc = attr.dyn_cast<FusedLoc>();
+    return fusedLoc && fusedLoc.getMetadata().isa_and_nonnull<MetadataT>();
+  }
+};
 
 //===----------------------------------------------------------------------===//
 // OpaqueLoc
