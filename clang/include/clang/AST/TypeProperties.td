@@ -773,16 +773,13 @@ let Class = SubstTemplateTypeParmPackType in {
   def : Property<"Index", UInt32> {
     let Read = [{ node->getIndex() }];
   }
-  def : Property<"Final", Bool> {
-    let Read = [{ node->getFinal() }];
-  }
   def : Property<"replacementPack", TemplateArgument> {
     let Read = [{ node->getArgumentPack() }];
   }
 
   def : Creator<[{
     return ctx.getSubstTemplateTypeParmPackType(
-                        associatedDecl, Index, Final, replacementPack);
+                        associatedDecl, Index, replacementPack);
   }]>;
 }
 

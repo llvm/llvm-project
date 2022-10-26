@@ -1720,17 +1720,14 @@ public:
   // SubstTempalteTypeParmPack, SubstNonTypeTemplateParmPack, and
   // FunctionParmPackExpr are all partially substituted, which cannot happen
   // with concepts at this point in translation.
-  using inherited::TransformTemplateTypeParmType;
   QualType TransformTemplateTypeParmType(TypeLocBuilder &TLB,
-                                         TemplateTypeParmTypeLoc TL, bool) {
+                                         TemplateTypeParmTypeLoc TL) {
     assert(TL.getDecl()->getDepth() <= TemplateDepth &&
            "Nothing should reference a value below the actual template depth, "
            "depth is likely wrong");
     if (TL.getDecl()->getDepth() != TemplateDepth)
       Result = true;
-    return inherited::TransformTemplateTypeParmType(
-        TLB, TL,
-        /*SuppressObjCLifetime=*/false);
+    return inherited::TransformTemplateTypeParmType(TLB, TL);
   }
 
   Decl *TransformDecl(SourceLocation Loc, Decl *D) {
@@ -3852,10 +3849,13 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     if (Pattern->isInvalidDecl())
       return QualType();
 
+    TemplateArgumentList StackTemplateArgs(TemplateArgumentList::OnStack,
+                                           CanonicalConverted);
+
     // Only substitute for the innermost template argument list.
     MultiLevelTemplateArgumentList TemplateArgLists;
-    TemplateArgLists.addOuterTemplateArguments(Template, CanonicalConverted,
-                                               /*Final=*/false);
+    TemplateArgLists.addOuterTemplateArguments(Template,
+                                               StackTemplateArgs.asArray());
     TemplateArgLists.addOuterRetainedLevels(
         AliasTemplate->getTemplateParameters()->getDepth());
 
@@ -3981,9 +3981,9 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
         ClassTemplate->getTemplatedDecl()->hasAttrs()) {
       InstantiatingTemplate Inst(*this, TemplateLoc, Decl);
       if (!Inst.isInvalid()) {
-        MultiLevelTemplateArgumentList TemplateArgLists(Template,
-                                                        CanonicalConverted,
-                                                        /*Final=*/false);
+        MultiLevelTemplateArgumentList TemplateArgLists;
+        TemplateArgLists.addOuterTemplateArguments(Template,
+                                                   CanonicalConverted);
         InstantiateAttrsForDecl(TemplateArgLists,
                                 ClassTemplate->getTemplatedDecl(), Decl);
       }
@@ -4866,8 +4866,7 @@ Sema::CheckConceptTemplateId(const CXXScopeSpec &SS,
   bool AreArgsDependent =
       TemplateSpecializationType::anyDependentTemplateArguments(
           *TemplateArgs, CanonicalConverted);
-  MultiLevelTemplateArgumentList MLTAL(NamedConcept, CanonicalConverted,
-                                       /*Final=*/false);
+  MultiLevelTemplateArgumentList MLTAL(NamedConcept, CanonicalConverted);
   LocalInstantiationScope Scope(*this);
 
   EnterExpressionEvaluationContext EECtx{
@@ -5279,9 +5278,11 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
     if (Inst.isInvalid())
       return nullptr;
 
+    TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, Converted);
+
     // Only substitute for the innermost template argument list.
-    MultiLevelTemplateArgumentList TemplateArgLists(Template, Converted,
-                                                    /*Final=*/false);
+    MultiLevelTemplateArgumentList TemplateArgLists(Template,
+                                                    TemplateArgs.asArray());
     for (unsigned i = 0, e = Param->getDepth(); i != e; ++i)
       TemplateArgLists.addOuterTemplateArguments(None);
 
@@ -5333,9 +5334,11 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
   if (Inst.isInvalid())
     return ExprError();
 
+  TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, Converted);
+
   // Only substitute for the innermost template argument list.
-  MultiLevelTemplateArgumentList TemplateArgLists(Template, Converted,
-                                                  /*Final=*/false);
+  MultiLevelTemplateArgumentList TemplateArgLists(Template,
+                                                  TemplateArgs.asArray());
   for (unsigned i = 0, e = Param->getDepth(); i != e; ++i)
     TemplateArgLists.addOuterTemplateArguments(None);
 
@@ -5384,9 +5387,11 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
   if (Inst.isInvalid())
     return TemplateName();
 
+  TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack, Converted);
+
   // Only substitute for the innermost template argument list.
-  MultiLevelTemplateArgumentList TemplateArgLists(Template, Converted,
-                                                  /*Final=*/false);
+  MultiLevelTemplateArgumentList TemplateArgLists(Template,
+                                                  TemplateArgs.asArray());
   for (unsigned i = 0, e = Param->getDepth(); i != e; ++i)
     TemplateArgLists.addOuterTemplateArguments(None);
 
@@ -5567,8 +5572,10 @@ bool Sema::CheckTemplateArgument(
       if (Inst.isInvalid())
         return true;
 
-      MultiLevelTemplateArgumentList MLTAL(Template, CanonicalConverted,
-                                           /*Final=*/false);
+      TemplateArgumentList TemplateArgs(TemplateArgumentList::OnStack,
+                                        CanonicalConverted);
+
+      MultiLevelTemplateArgumentList MLTAL(Template, TemplateArgs.asArray());
       // If the parameter is a pack expansion, expand this slice of the pack.
       if (auto *PET = NTTPType->getAs<PackExpansionType>()) {
         Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(*this,
@@ -5730,10 +5737,9 @@ bool Sema::CheckTemplateArgument(
     if (Inst.isInvalid())
       return true;
 
-    Params =
-        SubstTemplateParams(Params, CurContext,
-                            MultiLevelTemplateArgumentList(
-                                Template, CanonicalConverted, /*Final=*/false));
+    Params = SubstTemplateParams(
+        Params, CurContext,
+        MultiLevelTemplateArgumentList(Template, CanonicalConverted));
     if (!Params)
       return true;
   }
@@ -6132,8 +6138,7 @@ bool Sema::CheckTemplateArgumentList(
     CXXThisScopeRAII(*this, RD, ThisQuals, RD != nullptr);
 
     MultiLevelTemplateArgumentList MLTAL = getTemplateInstantiationArgs(
-        Template, /*Final=*/false, &StackTemplateArgs,
-        /*RelativeToPrimary=*/true,
+        Template, &StackTemplateArgs, /*RelativeToPrimary=*/true,
         /*Pattern=*/nullptr,
         /*ForConceptInstantiation=*/true);
     if (EnsureTemplateArgumentListConstraints(

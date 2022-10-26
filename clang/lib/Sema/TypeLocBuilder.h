@@ -64,10 +64,6 @@ public:
   /// must be empty for this to work.
   void pushFullCopy(TypeLoc L);
 
-  /// Pushes 'T' with all locations pointing to 'Loc'.
-  /// The builder must be empty for this to work.
-  void pushTrivial(ASTContext &Context, QualType T, SourceLocation Loc);
-
   /// Pushes space for a typespec TypeLoc.  Invalidates any TypeLocs
   /// previously retrieved from this builder.
   TypeSpecTypeLoc pushTypeSpec(QualType T) {
