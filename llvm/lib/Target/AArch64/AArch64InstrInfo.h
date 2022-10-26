@@ -125,7 +125,7 @@ public:
 
   /// Return the opcode that set flags when possible.  The caller is
   /// responsible for ensuring the opc has a flag setting equivalent.
-  static unsigned convertToFlagSettingOpc(unsigned Opc, bool &Is64Bit);
+  static unsigned convertToFlagSettingOpc(unsigned Opc);
 
   /// Return true if this is a load/store that can be potentially paired/merged.
   bool isCandidateToMergeOrPair(const MachineInstr &MI) const;
