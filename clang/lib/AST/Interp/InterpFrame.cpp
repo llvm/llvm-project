@@ -149,7 +149,11 @@ void InterpFrame::describe(llvm::raw_ostream &OS) {
     OS << "->";
   }
   OS << *F << "(";
-  unsigned Off = Func->hasRVO() ? primSize(PT_Ptr) : 0;
+  unsigned Off = 0;
+
+  Off += Func->hasRVO() ? primSize(PT_Ptr) : 0;
+  Off += Func->hasThisPointer() ? primSize(PT_Ptr) : 0;
+
   for (unsigned I = 0, N = F->getNumParams(); I < N; ++I) {
     QualType Ty = F->getParamDecl(I)->getType();
 
