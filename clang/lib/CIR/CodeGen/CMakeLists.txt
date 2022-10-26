@@ -15,6 +15,7 @@ add_clang_library(clangCIR
   CIRGenCall.cpp
   CIRGenClass.cpp
   CIRGenCleanup.cpp
+  CIRGenCoroutine.cpp
   CIRGenDecl.cpp
   CIRGenDeclCXX.cpp
   CIRGenExpr.cpp

@@ -614,6 +614,7 @@ public:
                       bool ignoreResult = false);
 
   mlir::LogicalResult buildFunctionBody(const clang::Stmt *Body);
+  mlir::LogicalResult buildCoroutineBody(const CoroutineBodyStmt &S);
 
   // Build CIR for a statement. useCurrentScope should be true if no
   // new scopes need be created when finding a compound statement.
