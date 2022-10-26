@@ -90,6 +90,7 @@ int test5(int test5_val) {
 // DexExpectWatchValue('test5_val', 7, from_line=ref('test5_start'), to_line=ref('test5_end'))
 // DexExpectWatchValue('c', 1, 5, from_line=ref('test5_start'), to_line=ref('test5_end'))
 
+__attribute__((optnone))
 int main() {
   int main_result = 0;
   // DexLabel('main_start')
