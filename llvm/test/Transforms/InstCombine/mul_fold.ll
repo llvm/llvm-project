@@ -521,19 +521,10 @@ define i128 @mul128_low(i128 %in0, i128 %in1) {
   ret i128 %retLo
 }
 
-; TODO: Skip vector type
+; Support vector type
 define <2 x i8> @mul_v2i8_low(<2 x i8> %in0, <2 x i8> %in1) {
 ; CHECK-LABEL: @mul_v2i8_low(
-; CHECK-NEXT:    [[IN0LO:%.*]] = and <2 x i8> [[IN0:%.*]], <i8 15, i8 15>
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr <2 x i8> [[IN0]], <i8 4, i8 4>
-; CHECK-NEXT:    [[IN1LO:%.*]] = and <2 x i8> [[IN1:%.*]], <i8 15, i8 15>
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr <2 x i8> [[IN1]], <i8 4, i8 4>
-; CHECK-NEXT:    [[M10:%.*]] = mul <2 x i8> [[IN1HI]], [[IN0]]
-; CHECK-NEXT:    [[M01:%.*]] = mul <2 x i8> [[IN0HI]], [[IN1]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw <2 x i8> [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add <2 x i8> [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> [[ADDC]], <i8 4, i8 4>
-; CHECK-NEXT:    [[RETLO:%.*]] = add <2 x i8> [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul <2 x i8> [[IN0:%.*]], [[IN1:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[RETLO]]
 ;
   %In0Lo = and <2 x i8> %in0, <i8 15, i8 15>
@@ -551,17 +542,11 @@ define <2 x i8> @mul_v2i8_low(<2 x i8> %in0, <2 x i8> %in1) {
 
 define <2 x i8> @mul_v2i8_low_one_extra_user(<2 x i8> %in0, <2 x i8> %in1) {
 ; CHECK-LABEL: @mul_v2i8_low_one_extra_user(
-; CHECK-NEXT:    [[IN0LO:%.*]] = and <2 x i8> [[IN0:%.*]], <i8 15, i8 15>
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr <2 x i8> [[IN0]], <i8 4, i8 4>
+; CHECK-NEXT:    [[IN0HI:%.*]] = lshr <2 x i8> [[IN0:%.*]], <i8 4, i8 4>
 ; CHECK-NEXT:    [[IN1LO:%.*]] = and <2 x i8> [[IN1:%.*]], <i8 15, i8 15>
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr <2 x i8> [[IN1]], <i8 4, i8 4>
-; CHECK-NEXT:    [[M10:%.*]] = mul <2 x i8> [[IN1HI]], [[IN0]]
 ; CHECK-NEXT:    [[M01:%.*]] = mul nuw <2 x i8> [[IN1LO]], [[IN0HI]]
 ; CHECK-NEXT:    call void @use_v2i8(<2 x i8> [[M01]])
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw <2 x i8> [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add <2 x i8> [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i8> [[ADDC]], <i8 4, i8 4>
-; CHECK-NEXT:    [[RETLO:%.*]] = add <2 x i8> [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul <2 x i8> [[IN0]], [[IN1]]
 ; CHECK-NEXT:    ret <2 x i8> [[RETLO]]
 ;
   %In0Lo = and <2 x i8> %in0, <i8 15, i8 15>
@@ -578,19 +563,10 @@ define <2 x i8> @mul_v2i8_low_one_extra_user(<2 x i8> %in0, <2 x i8> %in1) {
   ret <2 x i8> %retLo
 }
 
-; TODO: Support wide width
+; Support wide width
 define i130 @mul130_low(i130 %in0, i130 %in1) {
 ; CHECK-LABEL: @mul130_low(
-; CHECK-NEXT:    [[IN0LO:%.*]] = and i130 [[IN0:%.*]], 36893488147419103231
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i130 [[IN0]], 65
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i130 [[IN1:%.*]], 36893488147419103231
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i130 [[IN1]], 65
-; CHECK-NEXT:    [[M10:%.*]] = mul i130 [[IN1HI]], [[IN0]]
-; CHECK-NEXT:    [[M01:%.*]] = mul i130 [[IN0HI]], [[IN1]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i130 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i130 [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i130 [[ADDC]], 65
-; CHECK-NEXT:    [[RETLO:%.*]] = add i130 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i130 [[IN0:%.*]], [[IN1:%.*]]
 ; CHECK-NEXT:    ret i130 [[RETLO]]
 ;
   %In0Lo = and i130 %in0, 36893488147419103231
@@ -609,16 +585,10 @@ define i130 @mul130_low(i130 %in0, i130 %in1) {
 define i130 @mul130_low_one_extra_user(i130 %in0, i130 %in1) {
 ; CHECK-LABEL: @mul130_low_one_extra_user(
 ; CHECK-NEXT:    [[IN0LO:%.*]] = and i130 [[IN0:%.*]], 36893488147419103231
-; CHECK-NEXT:    [[IN0HI:%.*]] = lshr i130 [[IN0]], 65
-; CHECK-NEXT:    [[IN1LO:%.*]] = and i130 [[IN1:%.*]], 36893488147419103231
-; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i130 [[IN1]], 65
+; CHECK-NEXT:    [[IN1HI:%.*]] = lshr i130 [[IN1:%.*]], 65
 ; CHECK-NEXT:    [[M10:%.*]] = mul nuw i130 [[IN1HI]], [[IN0LO]]
 ; CHECK-NEXT:    call void @use130(i130 [[M10]])
-; CHECK-NEXT:    [[M01:%.*]] = mul i130 [[IN0HI]], [[IN1]]
-; CHECK-NEXT:    [[M00:%.*]] = mul nuw i130 [[IN1LO]], [[IN0LO]]
-; CHECK-NEXT:    [[ADDC:%.*]] = add i130 [[M10]], [[M01]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i130 [[ADDC]], 65
-; CHECK-NEXT:    [[RETLO:%.*]] = add i130 [[SHL]], [[M00]]
+; CHECK-NEXT:    [[RETLO:%.*]] = mul i130 [[IN0]], [[IN1]]
 ; CHECK-NEXT:    ret i130 [[RETLO]]
 ;
   %In0Lo = and i130 %in0, 36893488147419103231

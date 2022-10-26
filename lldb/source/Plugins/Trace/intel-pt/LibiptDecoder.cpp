@@ -128,6 +128,182 @@ CreateQueryDecoder(TraceIntelPT &trace_intel_pt, ArrayRef<uint8_t> buffer) {
   return PtQueryDecoderUP(decoder_ptr, QueryDecoderDeleter);
 }
 
+/// Class used to identify anomalies in traces, which should often indicate a
+/// fatal error in the trace.
+class PSBBlockAnomalyDetector {
+public:
+  PSBBlockAnomalyDetector(pt_insn_decoder &decoder,
+                          TraceIntelPT &trace_intel_pt,
+                          DecodedThread &decoded_thread)
+      : m_decoder(decoder), m_decoded_thread(decoded_thread) {
+    m_infinite_decoding_loop_threshold =
+        trace_intel_pt.GetGlobalProperties()
+            .GetInfiniteDecodingLoopVerificationThreshold();
+    m_extremely_large_decoding_threshold =
+        trace_intel_pt.GetGlobalProperties()
+            .GetExtremelyLargeDecodingThreshold();
+    m_next_infinite_decoding_loop_threshold =
+        m_infinite_decoding_loop_threshold;
+  }
+
+  /// \return
+  ///   An \a llvm::Error if an anomaly that includes the last instruction item
+  ///   in the trace, or \a llvm::Error::success otherwise.
+  Error DetectAnomaly() {
+    RefreshPacketOffset();
+    uint64_t insn_added_since_last_packet_offset =
+        m_decoded_thread.GetTotalInstructionCount() -
+        m_insn_count_at_last_packet_offset;
+
+    // We want to check if we might have fallen in an infinite loop. As this
+    // check is not a no-op, we want to do it when we have a strong suggestion
+    // that things went wrong. First, we check how many instructions we have
+    // decoded since we processed an Intel PT packet for the last time. This
+    // number should be low, because at some point we should see branches, jumps
+    // or interrupts that require a new packet to be processed. Once we reach
+    // certain threshold we start analyzing the trace.
+    //
+    // We use the number of decoded instructions since the last Intel PT packet
+    // as a proxy because, in fact, we don't expect a single packet to give,
+    // say, 100k instructions. That would mean that there are 100k sequential
+    // instructions without any single branch, which is highly unlikely, or that
+    // we found an infinite loop using direct jumps, e.g.
+    //
+    //   0x0A: nop or pause
+    //   0x0C: jump to 0x0A
+    //
+    // which is indeed code that is found in the kernel. I presume we reach
+    // this kind of code in the decoder because we don't handle self-modified
+    // code in post-mortem kernel traces.
+    //
+    // We are right now only signaling the anomaly as a trace error, but it
+    // would be more conservative to also discard all the trace items found in
+    // this PSB. I prefer not to do that for the time being to give more
+    // exposure to this kind of anomalies and help debugging. Discarding the
+    // trace items would just make investigation harded.
+    //
+    // Finally, if the user wants to see if a specific thread has an anomaly,
+    // it's enough to run the `thread trace dump info` command and look for the
+    // count of this kind of errors.
+
+    if (insn_added_since_last_packet_offset >=
+        m_extremely_large_decoding_threshold) {
+      // In this case, we have decoded a massive amount of sequential
+      // instructions that don't loop. Honestly I wonder if this will ever
+      // happen, but better safe than sorry.
+      return createStringError(
+          inconvertibleErrorCode(),
+          "anomalous trace: possible infinite trace detected");
+    }
+    if (insn_added_since_last_packet_offset ==
+        m_next_infinite_decoding_loop_threshold) {
+      if (Optional<uint64_t> loop_size = TryIdentifyInfiniteLoop()) {
+        return createStringError(
+            inconvertibleErrorCode(),
+            "anomalous trace: possible infinite loop detected of size %" PRIu64,
+            *loop_size);
+      }
+      m_next_infinite_decoding_loop_threshold *= 2;
+    }
+    return Error::success();
+  }
+
+private:
+  Optional<uint64_t> TryIdentifyInfiniteLoop() {
+    // The infinite decoding loops we'll encounter are due to sequential
+    // instructions that repeat themselves due to direct jumps, therefore in a
+    // cycle each individual address will only appear once. We use this
+    // information to detect cycles by finding the last 2 ocurrences of the last
+    // instruction added to the trace. Then we traverse the trace making sure
+    // that these two instructions where the ends of a repeating loop.
+
+    // This is a utility that returns the most recent instruction index given a
+    // position in the trace. If the given position is an instruction, that
+    // position is returned. It skips non-instruction items.
+    auto most_recent_insn_index =
+        [&](uint64_t item_index) -> Optional<uint64_t> {
+      while (true) {
+        if (m_decoded_thread.GetItemKindByIndex(item_index) ==
+            lldb::eTraceItemKindInstruction) {
+          return item_index;
+        }
+        if (item_index == 0)
+          return None;
+        item_index--;
+      }
+      return None;
+    };
+    // Similar to most_recent_insn_index but skips the starting position.
+    auto prev_insn_index = [&](uint64_t item_index) -> Optional<uint64_t> {
+      if (item_index == 0)
+        return None;
+      return most_recent_insn_index(item_index - 1);
+    };
+
+    // We first find the most recent instruction.
+    Optional<uint64_t> last_insn_index_opt =
+        *prev_insn_index(m_decoded_thread.GetItemsCount());
+    if (!last_insn_index_opt)
+      return None;
+    uint64_t last_insn_index = *last_insn_index_opt;
+
+    // We then find the most recent previous occurrence of that last
+    // instruction.
+    Optional<uint64_t> last_insn_copy_index = prev_insn_index(last_insn_index);
+    uint64_t loop_size = 1;
+    while (last_insn_copy_index &&
+           m_decoded_thread.GetInstructionLoadAddress(*last_insn_copy_index) !=
+               m_decoded_thread.GetInstructionLoadAddress(last_insn_index)) {
+      last_insn_copy_index = prev_insn_index(*last_insn_copy_index);
+      loop_size++;
+    }
+    if (!last_insn_copy_index)
+      return None;
+
+    // Now we check if the segment between these last positions of the last
+    // instruction address is in fact a repeating loop.
+    uint64_t loop_elements_visited = 1;
+    uint64_t insn_index_a = last_insn_index,
+             insn_index_b = *last_insn_copy_index;
+    while (loop_elements_visited < loop_size) {
+      if (Optional<uint64_t> prev = prev_insn_index(insn_index_a))
+        insn_index_a = *prev;
+      else
+        return None;
+      if (Optional<uint64_t> prev = prev_insn_index(insn_index_b))
+        insn_index_b = *prev;
+      else
+        return None;
+      if (m_decoded_thread.GetInstructionLoadAddress(insn_index_a) !=
+          m_decoded_thread.GetInstructionLoadAddress(insn_index_b))
+        return None;
+      loop_elements_visited++;
+    }
+    return loop_size;
+  }
+
+  // Refresh the internal counters if a new packet offset has been visited
+  void RefreshPacketOffset() {
+    lldb::addr_t new_packet_offset;
+    if (!IsLibiptError(pt_insn_get_offset(&m_decoder, &new_packet_offset)) &&
+        new_packet_offset != m_last_packet_offset) {
+      m_last_packet_offset = new_packet_offset;
+      m_next_infinite_decoding_loop_threshold =
+          m_infinite_decoding_loop_threshold;
+      m_insn_count_at_last_packet_offset =
+          m_decoded_thread.GetTotalInstructionCount();
+    }
+  }
+
+  pt_insn_decoder &m_decoder;
+  DecodedThread &m_decoded_thread;
+  lldb::addr_t m_last_packet_offset = LLDB_INVALID_ADDRESS;
+  uint64_t m_insn_count_at_last_packet_offset = 0;
+  uint64_t m_infinite_decoding_loop_threshold;
+  uint64_t m_next_infinite_decoding_loop_threshold;
+  uint64_t m_extremely_large_decoding_threshold;
+};
+
 /// Class that decodes a raw buffer for a single PSB block using the low level
 /// libipt library. It assumes that kernel and user mode instructions are not
 /// mixed in the same PSB block.
@@ -155,9 +331,10 @@ public:
   ///     appended to. It might have already some instructions.
   PSBBlockDecoder(PtInsnDecoderUP &&decoder_up, const PSBBlock &psb_block,
                   Optional<lldb::addr_t> next_block_ip,
-                  DecodedThread &decoded_thread)
+                  DecodedThread &decoded_thread, TraceIntelPT &trace_intel_pt)
       : m_decoder_up(std::move(decoder_up)), m_psb_block(psb_block),
-        m_next_block_ip(next_block_ip), m_decoded_thread(decoded_thread) {}
+        m_next_block_ip(next_block_ip), m_decoded_thread(decoded_thread),
+        m_anomaly_detector(*m_decoder_up, trace_intel_pt, decoded_thread) {}
 
   /// \param[in] trace_intel_pt
   ///     The main Trace object that own the PSB block.
@@ -192,7 +369,7 @@ public:
       return decoder_up.takeError();
 
     return PSBBlockDecoder(std::move(*decoder_up), psb_block, next_block_ip,
-                           decoded_thread);
+                           decoded_thread, trace_intel_pt);
   }
 
   void DecodePSBBlock() {
@@ -213,12 +390,24 @@ public:
   }
 
 private:
-  /// Decode all the instructions and events of the given PSB block.
-  ///
-  /// \param[in] status
-  ///   The status that was result of synchronizing to the most recent PSB.
+  /// Append an instruction and return \b false if and only if a serious anomaly
+  /// has been detected.
+  bool AppendInstructionAndDetectAnomalies(const pt_insn &insn) {
+    m_decoded_thread.AppendInstruction(insn);
+
+    if (Error err = m_anomaly_detector.DetectAnomaly()) {
+      m_decoded_thread.AppendCustomError(toString(std::move(err)),
+                                         /*fatal=*/true);
+      return false;
+    }
+    return true;
+  }
+  /// Decode all the instructions and events of the given PSB block. The
+  /// decoding loop might stop abruptly if an infinite decoding loop is
+  /// detected.
   void DecodeInstructionsAndEvents(int status) {
     pt_insn insn;
+
     while (true) {
       status = ProcessPTEvents(status);
 
@@ -238,7 +427,9 @@ private:
       } else if (IsEndOfStream(status)) {
         break;
       }
-      m_decoded_thread.AppendInstruction(insn);
+
+      if (!AppendInstructionAndDetectAnomalies(insn))
+        return;
     }
 
     // We need to keep querying non-branching instructions until we hit the
@@ -247,7 +438,8 @@ private:
     // https://github.com/intel/libipt/blob/master/doc/howto_libipt.md#parallel-decode
     if (m_next_block_ip && insn.ip != 0) {
       while (insn.ip != *m_next_block_ip) {
-        m_decoded_thread.AppendInstruction(insn);
+        if (!AppendInstructionAndDetectAnomalies(insn))
+          return;
 
         status = pt_insn_next(m_decoder_up.get(), &insn, sizeof(insn));
 
@@ -313,6 +505,7 @@ private:
   PSBBlock m_psb_block;
   Optional<lldb::addr_t> m_next_block_ip;
   DecodedThread &m_decoded_thread;
+  PSBBlockAnomalyDetector m_anomaly_detector;
 };
 
 Error lldb_private::trace_intel_pt::DecodeSingleTraceForThread(

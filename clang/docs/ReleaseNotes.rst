@@ -255,9 +255,6 @@ Bug Fixes
 - Reject non-type template arguments formed by casting a non-zero integer
   to a pointer in pre-C++17 modes, instead of treating them as null
   pointers.
-- Fix missing diagnostics for uses of declarations when performing typename access,
-  such as when performing member access on a '[[deprecated]]' type alias.
-  `Issue 58547 <https://github.com/llvm/llvm-project/issues/58547>`
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
