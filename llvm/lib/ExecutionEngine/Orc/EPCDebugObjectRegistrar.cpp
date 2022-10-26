@@ -17,11 +17,16 @@ namespace llvm {
 namespace orc {
 
 Expected<std::unique_ptr<EPCDebugObjectRegistrar>>
-createJITLoaderGDBRegistrar(ExecutionSession &ES) {
+createJITLoaderGDBRegistrar(ExecutionSession &ES,
+                            Optional<ExecutorAddr> RegistrationFunctionDylib) {
   auto &EPC = ES.getExecutorProcessControl();
-  auto ProcessHandle = EPC.loadDylib(nullptr);
-  if (!ProcessHandle)
-    return ProcessHandle.takeError();
+
+  if (!RegistrationFunctionDylib) {
+    if (auto D = EPC.loadDylib(nullptr))
+      RegistrationFunctionDylib = *D;
+    else
+      return D.takeError();
+  }
 
   SymbolStringPtr RegisterFn =
       EPC.getTargetTriple().isOSBinFormatMachO()
@@ -31,7 +36,8 @@ createJITLoaderGDBRegistrar(ExecutionSession &ES) {
   SymbolLookupSet RegistrationSymbols;
   RegistrationSymbols.add(RegisterFn);
 
-  auto Result = EPC.lookupSymbols({{*ProcessHandle, RegistrationSymbols}});
+  auto Result =
+      EPC.lookupSymbols({{*RegistrationFunctionDylib, RegistrationSymbols}});
   if (!Result)
     return Result.takeError();
 
