@@ -856,9 +856,9 @@ void USRGenerator::VisitType(QualType T) {
                                     = T->getAs<TemplateSpecializationType>()) {
       Out << '>';
       VisitTemplateName(Spec->getTemplateName());
-      Out << Spec->getNumArgs();
-      for (unsigned I = 0, N = Spec->getNumArgs(); I != N; ++I)
-        VisitTemplateArgument(Spec->getArg(I));
+      Out << Spec->template_arguments().size();
+      for (const auto &Arg : Spec->template_arguments())
+        VisitTemplateArgument(Arg);
       return;
     }
     if (const DependentNameType *DNT = T->getAs<DependentNameType>()) {

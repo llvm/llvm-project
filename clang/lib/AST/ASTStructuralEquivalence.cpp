@@ -533,6 +533,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   return true;
 }
 
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     ArrayRef<TemplateArgument> Args1,
+                                     ArrayRef<TemplateArgument> Args2);
+
 /// Determine whether two template arguments are equivalent.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      const TemplateArgument &Arg1,
@@ -575,18 +579,24 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                     Arg2.getAsExpr());
 
   case TemplateArgument::Pack:
-    if (Arg1.pack_size() != Arg2.pack_size())
-      return false;
-
-    for (unsigned I = 0, N = Arg1.pack_size(); I != N; ++I)
-      if (!IsStructurallyEquivalent(Context, Arg1.pack_begin()[I],
-                                    Arg2.pack_begin()[I]))
-        return false;
-
-    return true;
+    return IsStructurallyEquivalent(Context, Arg1.pack_elements(),
+                                    Arg2.pack_elements());
   }
 
   llvm_unreachable("Invalid template argument kind");
+}
+
+/// Determine structural equivalence of two template argument lists.
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     ArrayRef<TemplateArgument> Args1,
+                                     ArrayRef<TemplateArgument> Args2) {
+  if (Args1.size() != Args2.size())
+    return false;
+  for (unsigned I = 0, N = Args1.size(); I != N; ++I) {
+    if (!IsStructurallyEquivalent(Context, Args1[I], Args2[I]))
+      return false;
+  }
+  return true;
 }
 
 /// Determine structural equivalence for the common part of array
@@ -1018,16 +1028,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       if (Auto1->getTypeConstraintConcept() !=
           Auto2->getTypeConstraintConcept())
         return false;
-      ArrayRef<TemplateArgument> Auto1Args =
-          Auto1->getTypeConstraintArguments();
-      ArrayRef<TemplateArgument> Auto2Args =
-          Auto2->getTypeConstraintArguments();
-      if (Auto1Args.size() != Auto2Args.size())
+      if (!IsStructurallyEquivalent(Context,
+                                    Auto1->getTypeConstraintArguments(),
+                                    Auto2->getTypeConstraintArguments()))
         return false;
-      for (unsigned I = 0, N = Auto1Args.size(); I != N; ++I) {
-        if (!IsStructurallyEquivalent(Context, Auto1Args[I], Auto2Args[I]))
-          return false;
-      }
     }
     break;
   }
@@ -1101,13 +1105,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(Context, Spec1->getTemplateName(),
                                   Spec2->getTemplateName()))
       return false;
-    if (Spec1->getNumArgs() != Spec2->getNumArgs())
+    if (!IsStructurallyEquivalent(Context, Spec1->template_arguments(),
+                                  Spec2->template_arguments()))
       return false;
-    for (unsigned I = 0, N = Spec1->getNumArgs(); I != N; ++I) {
-      if (!IsStructurallyEquivalent(Context, Spec1->getArg(I),
-                                    Spec2->getArg(I)))
-        return false;
-    }
     break;
   }
 
@@ -1158,13 +1158,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(Spec1->getIdentifier(),
                                   Spec2->getIdentifier()))
       return false;
-    if (Spec1->getNumArgs() != Spec2->getNumArgs())
+    if (!IsStructurallyEquivalent(Context, Spec1->template_arguments(),
+                                  Spec2->template_arguments()))
       return false;
-    for (unsigned I = 0, N = Spec1->getNumArgs(); I != N; ++I) {
-      if (!IsStructurallyEquivalent(Context, Spec1->getArg(I),
-                                    Spec2->getArg(I)))
-        return false;
-    }
     break;
   }
 
