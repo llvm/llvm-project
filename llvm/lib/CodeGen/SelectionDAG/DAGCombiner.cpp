@@ -23503,14 +23503,58 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
 }
 
 SDValue DAGCombiner::visitSCALAR_TO_VECTOR(SDNode *N) {
-  SDValue Scalar = N->getOperand(0);
   EVT VT = N->getValueType(0);
   if (!VT.isFixedLengthVector())
     return SDValue();
 
+  // Try to convert a scalar binop with an extracted vector element to a vector
+  // binop. This is intended to reduce potentially expensive register moves.
+  // TODO: Check if both operands are extracted.
+  // TODO: Generalize this, so it can be called from visitINSERT_VECTOR_ELT().
+  SDValue Scalar = N->getOperand(0);
+  unsigned Opcode = Scalar.getOpcode();
+  if (Scalar.hasOneUse() && Scalar->getNumValues() == 1 &&
+      TLI.isBinOp(Opcode) && VT.getScalarType() == Scalar.getValueType() &&
+      DAG.isSafeToSpeculativelyExecute(Opcode) && hasOperation(Opcode, VT)) {
+    // Match an extract element and get a shuffle mask equivalent.
+    SmallVector<int, 8> ShufMask(VT.getVectorNumElements(), -1);
+    auto getShuffleMaskForExtElt = [&](SDValue EE) {
+      if (EE.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          EE.getOperand(0).getValueType() == VT &&
+          isa<ConstantSDNode>(EE.getOperand(1))) {
+        // Mask = {ExtractIndex, undef, undef....}
+        ShufMask[0] = EE.getConstantOperandVal(1);
+        // Make sure the shuffle is legal if we are crossing lanes.
+        return TLI.isShuffleMaskLegal(ShufMask, VT);
+      }
+      return false;
+    };
+
+    // s2v (bo (extelt V, Idx), C) --> shuffle (bo V, C'), {Idx, -1, -1...}
+    if (auto *C = dyn_cast<ConstantSDNode>(Scalar.getOperand(1))) {
+      if (getShuffleMaskForExtElt(Scalar.getOperand(0))) {
+        SDLoc DL(N);
+        SDValue V = Scalar.getOperand(0).getOperand(0);
+        SDValue VecC = DAG.getConstant(C->getAPIntValue(), DL, VT);
+        SDValue VecBO = DAG.getNode(Opcode, DL, VT, V, VecC);
+        return DAG.getVectorShuffle(VT, DL, VecBO, DAG.getUNDEF(VT), ShufMask);
+      }
+    }
+    // s2v (bo C, (extelt V, Idx)) --> shuffle (bo C', V), {Idx, -1, -1...}
+    if (auto *C = dyn_cast<ConstantSDNode>(Scalar.getOperand(0))) {
+      if (getShuffleMaskForExtElt(Scalar.getOperand(1))) {
+        SDLoc DL(N);
+        SDValue V = Scalar.getOperand(1).getOperand(0);
+        SDValue VecC = DAG.getConstant(C->getAPIntValue(), DL, VT);
+        SDValue VecBO = DAG.getNode(Opcode, DL, VT, VecC, V);
+        return DAG.getVectorShuffle(VT, DL, VecBO, DAG.getUNDEF(VT), ShufMask);
+      }
+    }
+  }
+
   // Replace a SCALAR_TO_VECTOR(EXTRACT_VECTOR_ELT(V,C0)) pattern
   // with a VECTOR_SHUFFLE and possible truncate.
-  if (Scalar.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+  if (Opcode != ISD::EXTRACT_VECTOR_ELT ||
       !Scalar.getOperand(0).getValueType().isFixedLengthVector())
     return SDValue();
 
