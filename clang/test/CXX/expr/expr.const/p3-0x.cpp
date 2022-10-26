@@ -88,7 +88,7 @@ void noexcept_true() noexcept(true);
 Val<decltype(&noexcept_false), &noexcept_true> remove_noexcept;
 Val<decltype(&noexcept_true), &noexcept_false> add_noexcept;
 #if __cplusplus > 201402L
-// expected-error@-2 {{value of type 'void (*)() noexcept(false)' is not implicitly convertible to 'decltype(&noexcept_true)' (aka 'void (*)() noexcept(true)')}}
+// expected-error@-2 {{value of type 'void (*)() noexcept(false)' is not implicitly convertible to 'void (*)() noexcept'}}
 #endif
 
 // (no other conversions are permitted)
