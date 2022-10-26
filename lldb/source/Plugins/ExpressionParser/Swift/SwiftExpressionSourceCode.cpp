@@ -112,12 +112,10 @@ bool SwiftExpressionSourceCode::GetText(
 
     localOptions.SetPreparePlaygroundStubFunctions(need_to_declare_log_functions);
 
-    SwiftASTManipulator::WrapExpression(wrap_stream, m_body.c_str(),
-                                        needs_object_ptr, static_method,
-                                        is_class, weak_self,
-                                        localOptions,
-                                        os_vers.str(),
-                                        first_body_line);
+    std::string full_body = m_prefix + m_body;
+    SwiftASTManipulator::WrapExpression(
+        wrap_stream, full_body.c_str(), needs_object_ptr, static_method,
+        is_class, weak_self, localOptions, os_vers.str(), first_body_line);
 
     text = wrap_stream.GetString().str();
   } else {
