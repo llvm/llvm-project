@@ -1069,11 +1069,19 @@ static bool argTypeIsABIEquivalent(QualType SrcType, QualType DestType,
   return Context.hasSameUnqualifiedType(SrcType, DestType);
 }
 
-static bool checkCastFunctionType(Sema &Self, const ExprResult &SrcExpr,
-                                  QualType DestType) {
-  if (Self.Diags.isIgnored(diag::warn_cast_function_type,
-                           SrcExpr.get()->getExprLoc()))
-    return true;
+static unsigned int checkCastFunctionType(Sema &Self, const ExprResult &SrcExpr,
+                                          QualType DestType) {
+  unsigned int DiagID = 0;
+  const unsigned int DiagList[] = {diag::warn_cast_function_type_strict,
+                                   diag::warn_cast_function_type};
+  for (auto ID : DiagList) {
+    if (!Self.Diags.isIgnored(ID, SrcExpr.get()->getExprLoc())) {
+      DiagID = ID;
+      break;
+    }
+  }
+  if (!DiagID)
+    return 0;
 
   QualType SrcType = SrcExpr.get()->getType();
   const FunctionType *SrcFTy = nullptr;
@@ -1088,9 +1096,16 @@ static bool checkCastFunctionType(Sema &Self, const ExprResult &SrcExpr,
     SrcFTy = SrcType->castAs<FunctionType>();
     DstFTy = DestType.getNonReferenceType()->castAs<FunctionType>();
   } else {
-    return true;
+    return 0;
   }
   assert(SrcFTy && DstFTy);
+
+  if (Self.Context.hasSameType(SrcFTy, DstFTy))
+    return 0;
+
+  // For strict checks, ensure we have an exact match.
+  if (DiagID == diag::warn_cast_function_type_strict)
+    return DiagID;
 
   auto IsVoidVoid = [](const FunctionType *T) {
     if (!T->getReturnType()->isVoidType())
@@ -1102,16 +1117,16 @@ static bool checkCastFunctionType(Sema &Self, const ExprResult &SrcExpr,
 
   // Skip if either function type is void(*)(void)
   if (IsVoidVoid(SrcFTy) || IsVoidVoid(DstFTy))
-    return true;
+    return 0;
 
   // Check return type.
   if (!argTypeIsABIEquivalent(SrcFTy->getReturnType(), DstFTy->getReturnType(),
                               Self.Context))
-    return false;
+    return DiagID;
 
   // Check if either has unspecified number of parameters
   if (SrcFTy->isFunctionNoProtoType() || DstFTy->isFunctionNoProtoType())
-    return true;
+    return 0;
 
   // Check parameter types.
 
@@ -1124,19 +1139,19 @@ static bool checkCastFunctionType(Sema &Self, const ExprResult &SrcExpr,
   unsigned DstNumParams = DstFPTy->getNumParams();
   if (NumParams > DstNumParams) {
     if (!DstFPTy->isVariadic())
-      return false;
+      return DiagID;
     NumParams = DstNumParams;
   } else if (NumParams < DstNumParams) {
     if (!SrcFPTy->isVariadic())
-      return false;
+      return DiagID;
   }
 
   for (unsigned i = 0; i < NumParams; ++i)
     if (!argTypeIsABIEquivalent(SrcFPTy->getParamType(i),
                                 DstFPTy->getParamType(i), Self.Context))
-      return false;
+      return DiagID;
 
-  return true;
+  return 0;
 }
 
 /// CheckReinterpretCast - Check that a reinterpret_cast\<DestType\>(SrcExpr) is
@@ -1177,8 +1192,8 @@ void CastOperation::CheckReinterpretCast() {
       checkObjCConversion(Sema::CCK_OtherCast);
     DiagnoseReinterpretUpDownCast(Self, SrcExpr.get(), DestType, OpRange);
 
-    if (!checkCastFunctionType(Self, SrcExpr, DestType))
-      Self.Diag(OpRange.getBegin(), diag::warn_cast_function_type)
+    if (unsigned DiagID = checkCastFunctionType(Self, SrcExpr, DestType))
+      Self.Diag(OpRange.getBegin(), DiagID)
           << SrcExpr.get()->getType() << DestType << OpRange;
   } else {
     SrcExpr = ExprError();
@@ -2807,8 +2822,8 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
     if (Kind == CK_BitCast)
       checkCastAlign();
 
-    if (!checkCastFunctionType(Self, SrcExpr, DestType))
-      Self.Diag(OpRange.getBegin(), diag::warn_cast_function_type)
+    if (unsigned DiagID = checkCastFunctionType(Self, SrcExpr, DestType))
+      Self.Diag(OpRange.getBegin(), DiagID)
           << SrcExpr.get()->getType() << DestType << OpRange;
 
   } else {
@@ -3166,9 +3181,8 @@ void CastOperation::CheckCStyleCast() {
     }
   }
 
-  if (!checkCastFunctionType(Self, SrcExpr, DestType))
-    Self.Diag(OpRange.getBegin(), diag::warn_cast_function_type)
-        << SrcType << DestType << OpRange;
+  if (unsigned DiagID = checkCastFunctionType(Self, SrcExpr, DestType))
+    Self.Diag(OpRange.getBegin(), DiagID) << SrcType << DestType << OpRange;
 
   if (isa<PointerType>(SrcType) && isa<PointerType>(DestType)) {
     QualType SrcTy = cast<PointerType>(SrcType)->getPointeeType();
