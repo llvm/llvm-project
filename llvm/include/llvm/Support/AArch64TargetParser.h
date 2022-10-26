@@ -109,6 +109,20 @@ const ARM::CpuNames<ArchKind> AArch64CPUNames[] = {
 #include "AArch64TargetParser.def"
 };
 
+const struct {
+  const char *Alias;
+  size_t AliasLength;
+  const char *Name;
+  size_t NameLength;
+
+  StringRef getAlias() const { return StringRef(Alias, AliasLength); }
+  StringRef getName() const { return StringRef(Name, NameLength); }
+} AArch64CPUAliases[] = {
+#define AARCH64_CPU_ALIAS(ALIAS,NAME)                                          \
+  {ALIAS, sizeof(ALIAS) - 1, NAME, sizeof(NAME) - 1},
+#include "AArch64TargetParser.def"
+};
+
 const ArchKind ArchKinds[] = {
 #define AARCH64_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT) \
     ArchKind::ID,
@@ -138,13 +152,7 @@ StringRef getSubArch(ArchKind AK);
 StringRef getArchExtName(unsigned ArchExtKind);
 StringRef getArchExtFeature(StringRef ArchExt);
 ArchKind convertV9toV8(ArchKind AK);
-
-// FIXME: We should be able to define CPU aliases in TargetParser.
-inline StringRef resolveCPUAlias(StringRef CPU) {
-  if (CPU == "grace")
-    return "neoverse-v2";
-  return CPU;
-}
+StringRef resolveCPUAlias(StringRef CPU);
 
 // Information by Name
 unsigned getDefaultFPU(StringRef CPU, ArchKind AK);
