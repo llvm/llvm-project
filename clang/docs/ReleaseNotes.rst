@@ -158,6 +158,8 @@ code bases.
       }
     }
 
+  - The ``-fexperimental-new-pass-manager`` and ``-fno-legacy-pass-manager``
+    flags have been removed. These have been no-ops since 15.0.0.
 
 What's New in Clang |release|?
 ==============================
