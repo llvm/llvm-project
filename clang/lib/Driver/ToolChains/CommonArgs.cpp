@@ -1537,33 +1537,31 @@ static unsigned ParseDebugDefaultVersion(const ToolChain &TC,
 
 unsigned tools::DwarfVersionNum(StringRef ArgValue) {
   return llvm::StringSwitch<unsigned>(ArgValue)
-    .Case("-gdwarf-2", 2)
-    .Case("-gdwarf-3", 3)
-    .Case("-gdwarf-4", 4)
-    .Case("-gdwarf-5", 5)
-    .Default(0);
+      .Case("-gdwarf-2", 2)
+      .Case("-gdwarf-3", 3)
+      .Case("-gdwarf-4", 4)
+      .Case("-gdwarf-5", 5)
+      .Default(0);
 }
 
 const Arg *tools::getDwarfNArg(const ArgList &Args) {
   return Args.getLastArg(options::OPT_gdwarf_2, options::OPT_gdwarf_3,
-      options::OPT_gdwarf_4, options::OPT_gdwarf_5,
-      options::OPT_gdwarf);
+                         options::OPT_gdwarf_4, options::OPT_gdwarf_5,
+                         options::OPT_gdwarf);
 }
 
 unsigned tools::getDwarfVersion(const ToolChain &TC,
-    const llvm::opt::ArgList &Args) {
+                                const llvm::opt::ArgList &Args) {
   unsigned DwarfVersion = ParseDebugDefaultVersion(TC, Args);
-  if (const Arg* GDwarfN = getDwarfNArg(Args))
+  if (const Arg *GDwarfN = getDwarfNArg(Args))
     if (int N = DwarfVersionNum(GDwarfN->getSpelling()))
       DwarfVersion = N;
   if (DwarfVersion == 0) {
     DwarfVersion = TC.GetDefaultDwarfVersion();
-    assert(DwarfVersion &&
-        "toolchain default DWARF version must be nonzero");
+    assert(DwarfVersion && "toolchain default DWARF version must be nonzero");
   }
   return DwarfVersion;
 }
-
 
 void tools::AddAssemblerKPIC(const ToolChain &ToolChain, const ArgList &Args,
                              ArgStringList &CmdArgs) {
