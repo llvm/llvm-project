@@ -1109,19 +1109,6 @@ def ZnWritePCMPGTQYm : SchedWriteRes<[ZnAGU, ZnFPU03]> {
 def : InstRW<[ZnWritePCMPGTQm], (instregex "(V?)PCMPGTQrm")>;
 def : InstRW<[ZnWritePCMPGTQYm], (instrs VPCMPGTQYrm)>;
 
-//-- Logic instructions --//
-
-// PSLL,PSRL,PSRA W/D/Q.
-// x,x / v,v,x.
-def ZnWritePShift  : SchedWriteRes<[ZnFPU2]> ;
-def ZnWritePShiftY : SchedWriteRes<[ZnFPU2]> {
-  let Latency = 2;
-}
-
-// PSLL,PSRL DQ.
-def : InstRW<[ZnWritePShift], (instregex "(V?)PS(R|L)LDQri")>;
-def : InstRW<[ZnWritePShiftY], (instregex "(V?)PS(R|L)LDQYri")>;
-
 //=== Floating Point XMM and YMM Instructions ===//
 //-- Move instructions --//
 

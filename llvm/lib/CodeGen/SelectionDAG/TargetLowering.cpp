@@ -7249,6 +7249,13 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     // Shift the input by the number of TrailingZeros in the divisor. The
     // shifted out bits will be added to the remainder later.
     if (TrailingZeros) {
+      // Save the shifted off bits if we need the remainder.
+      if (Opcode != ISD::UDIV) {
+        APInt Mask = APInt::getLowBitsSet(HBitWidth, TrailingZeros);
+        PartialRem = DAG.getNode(ISD::AND, dl, HiLoVT, LL,
+                                 DAG.getConstant(Mask, dl, HiLoVT));
+      }
+
       LL = DAG.getNode(
           ISD::OR, dl, HiLoVT,
           DAG.getNode(ISD::SRL, dl, HiLoVT, LL,
@@ -7258,13 +7265,6 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
                                                  HiLoVT, dl)));
       LH = DAG.getNode(ISD::SRL, dl, HiLoVT, LH,
                        DAG.getShiftAmountConstant(TrailingZeros, HiLoVT, dl));
-
-      // Save the shifted off bits if we need the remainder.
-      if (Opcode != ISD::UDIV) {
-        APInt Mask = APInt::getLowBitsSet(HBitWidth, TrailingZeros);
-        PartialRem = DAG.getNode(ISD::AND, dl, HiLoVT, LL,
-                                 DAG.getConstant(Mask, dl, HiLoVT));
-      }
     }
 
     // Use addcarry if we can, otherwise use a compare to detect overflow.

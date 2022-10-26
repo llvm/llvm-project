@@ -31,6 +31,8 @@ ELF Improvements
 * ``--compress-debug-sections=zstd`` is now available to compress debug
   sections with zstd (``ELFCOMPRESS_ZSTD``).
   (`D133548 <https://reviews.llvm.org/D133548>`_)
+* ``--no-warnings``/``-w`` is now available to suppress warnings.
+  (`D136569 <https://reviews.llvm.org/D136569>`_)
 
 Breaking changes
 ----------------

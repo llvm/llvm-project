@@ -969,6 +969,10 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
   for (const auto &II : Inputs)
     CmdArgs.push_back(II.getFilename());
 
+  if (Arg *A = Args.getLastArg(options::OPT_g_Flag, options::OPT_gN_Group))
+    if (!A->getOption().matches(options::OPT_g0))
+      Args.AddLastArg(CmdArgs, options::OPT_g_Flag);
+
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath(DefaultAssembler));
   C.addCommand(std::make_unique<Command>(JA, *this,

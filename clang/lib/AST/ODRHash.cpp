@@ -948,7 +948,7 @@ public:
     ID.AddInteger(T->isConstrained());
     if (T->isConstrained()) {
       AddDecl(T->getTypeConstraintConcept());
-      ID.AddInteger(T->getNumArgs());
+      ID.AddInteger(T->getTypeConstraintArguments().size());
       for (const auto &TA : T->getTypeConstraintArguments())
         Hash.AddTemplateArgument(TA);
     }
@@ -1102,7 +1102,7 @@ public:
   void VisitEnumType(const EnumType *T) { VisitTagType(T); }
 
   void VisitTemplateSpecializationType(const TemplateSpecializationType *T) {
-    ID.AddInteger(T->getNumArgs());
+    ID.AddInteger(T->template_arguments().size());
     for (const auto &TA : T->template_arguments()) {
       Hash.AddTemplateArgument(TA);
     }
@@ -1167,7 +1167,7 @@ public:
       const DependentTemplateSpecializationType *T) {
     AddIdentifierInfo(T->getIdentifier());
     AddNestedNameSpecifier(T->getQualifier());
-    ID.AddInteger(T->getNumArgs());
+    ID.AddInteger(T->template_arguments().size());
     for (const auto &TA : T->template_arguments()) {
       Hash.AddTemplateArgument(TA);
     }

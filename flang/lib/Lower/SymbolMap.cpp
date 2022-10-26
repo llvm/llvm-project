@@ -90,6 +90,22 @@ Fortran::lower::SymMap::lookupImpliedDo(Fortran::lower::SymMap::AcDoVar var) {
   return {};
 }
 
+llvm::Optional<fir::FortranVariableOpInterface>
+Fortran::lower::SymMap::lookupVariableDefinition(semantics::SymbolRef sym) {
+  for (auto jmap = symbolMapStack.rbegin(), jend = symbolMapStack.rend();
+       jmap != jend; ++jmap) {
+    auto iter = jmap->find(&*sym);
+    if (iter != jmap->end()) {
+      if (const auto *varDef =
+              std::get_if<fir::FortranVariableOpInterface>(&iter->second))
+        return *varDef;
+      else
+        return llvm::None;
+    }
+  }
+  return llvm::None;
+}
+
 llvm::raw_ostream &
 Fortran::lower::operator<<(llvm::raw_ostream &os,
                            const Fortran::lower::SymbolBox &symBox) {

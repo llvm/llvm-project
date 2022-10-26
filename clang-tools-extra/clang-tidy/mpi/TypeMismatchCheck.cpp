@@ -183,8 +183,10 @@ isCXXComplexTypeMatching(const TemplateSpecializationType *const Template,
   if (Template->getAsCXXRecordDecl()->getName() != "complex")
     return true;
 
-  const auto *Builtin =
-      Template->getArg(0).getAsType().getTypePtr()->getAs<BuiltinType>();
+  const auto *Builtin = Template->template_arguments()[0]
+                            .getAsType()
+                            .getTypePtr()
+                            ->getAs<BuiltinType>();
 
   if (Builtin &&
       !isMPITypeMatching(ComplexCXXMatches, Builtin->getKind(), MPIDatatype)) {

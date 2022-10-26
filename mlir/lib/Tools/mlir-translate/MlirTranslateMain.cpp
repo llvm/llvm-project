@@ -61,6 +61,7 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
                            llvm::cl::Required);
   registerAsmPrinterCLOptions();
   registerMLIRContextCLOptions();
+  registerTranslationCLOptions();
   llvm::cl::ParseCommandLineOptions(argc, argv, toolName);
 
   std::string errorMessage;

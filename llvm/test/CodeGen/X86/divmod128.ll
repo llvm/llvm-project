@@ -425,9 +425,10 @@ entry:
 define i128 @urem_i128_12(i128 %x) nounwind {
 ; X86-64-LABEL: urem_i128_12:
 ; X86-64:       # %bb.0: # %entry
-; X86-64-NEXT:    shrdq $2, %rsi, %rdi
+; X86-64-NEXT:    movq %rsi, %rax
+; X86-64-NEXT:    shldq $62, %rdi, %rax
 ; X86-64-NEXT:    shrq $2, %rsi
-; X86-64-NEXT:    addq %rdi, %rsi
+; X86-64-NEXT:    addq %rax, %rsi
 ; X86-64-NEXT:    adcq $0, %rsi
 ; X86-64-NEXT:    movabsq $-6148914691236517205, %rcx # imm = 0xAAAAAAAAAAAAAAAB
 ; X86-64-NEXT:    movq %rsi, %rax
@@ -443,9 +444,10 @@ define i128 @urem_i128_12(i128 %x) nounwind {
 ; WIN64-LABEL: urem_i128_12:
 ; WIN64:       # %bb.0: # %entry
 ; WIN64-NEXT:    movq %rdx, %r8
-; WIN64-NEXT:    shrdq $2, %rdx, %rcx
+; WIN64-NEXT:    movq %rdx, %rax
+; WIN64-NEXT:    shldq $62, %rcx, %rax
 ; WIN64-NEXT:    shrq $2, %r8
-; WIN64-NEXT:    addq %rcx, %r8
+; WIN64-NEXT:    addq %rax, %r8
 ; WIN64-NEXT:    adcq $0, %r8
 ; WIN64-NEXT:    movabsq $-6148914691236517205, %rdx # imm = 0xAAAAAAAAAAAAAAAB
 ; WIN64-NEXT:    movq %r8, %rax

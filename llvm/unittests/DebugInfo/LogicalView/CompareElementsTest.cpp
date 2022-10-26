@@ -26,6 +26,10 @@ namespace {
 //===----------------------------------------------------------------------===//
 // Basic Reader functionality.
 class ReaderTestCompare : public LVReader {
+  // Elements created but not added to any logical scope. They are
+  // deleted when the logical Reader is destroyed.
+  LVAutoSmallVector<LVElement *> OrphanElements;
+
 public:
   // Types.
   LVType *IntegerType = nullptr;
@@ -109,7 +113,7 @@ void ReaderTestCompare::createElements() {
   Error Err = createScopes();
   ASSERT_THAT_ERROR(std::move(Err), Succeeded());
   Root = getScopesRoot();
-  EXPECT_NE(Root, nullptr);
+  ASSERT_NE(Root, nullptr);
 
   // Create the logical types.
   IntegerType = create<LVType, LVTypeSetFunction>(&LVType::setIsBase);
@@ -199,6 +203,8 @@ void ReaderTestCompare::addElements(bool IsReference, bool IsTarget) {
   auto Insert = [&](bool Insert, auto *Parent, auto *Child) {
     if (Insert)
       add(Parent, Child);
+    else
+      OrphanElements.push_back(Child);
   };
 
   setCompileUnit(CompileUnit);

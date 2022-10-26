@@ -85,6 +85,14 @@ bool AArch64::getExtensionFeatures(uint64_t Extensions,
   return true;
 }
 
+StringRef AArch64::resolveCPUAlias(StringRef CPU) {
+  return StringSwitch<StringRef>(CPU)
+#define AARCH64_CPU_ALIAS(ALIAS,NAME)                                          \
+  .Case(ALIAS, NAME)
+#include "../../include/llvm/Support/AArch64TargetParser.def"
+  .Default(CPU);
+}
+
 bool AArch64::getArchFeatures(AArch64::ArchKind AK,
                               std::vector<StringRef> &Features) {
   if (AK == ArchKind::INVALID)
@@ -164,6 +172,9 @@ void AArch64::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
     if (Arch.ArchID != ArchKind::INVALID)
       Values.push_back(Arch.getName());
   }
+
+  for (const auto &Alias: AArch64CPUAliases)
+    Values.push_back(Alias.getAlias());
 }
 
 bool AArch64::isX18ReservedByDefault(const Triple &TT) {
@@ -194,9 +205,17 @@ AArch64::ArchExtKind AArch64::parseArchExt(StringRef ArchExt) {
 }
 
 AArch64::ArchKind AArch64::parseCPUArch(StringRef CPU) {
-  for (const auto &C : AArch64CPUNames) {
+  // Resolve aliases first.
+  for (const auto &Alias : AArch64CPUAliases) {
+    if (CPU == Alias.getAlias()) {
+      CPU = Alias.getName();
+      break;
+    }
+  }
+  // Then find the CPU name.
+  for (const auto &C : AArch64CPUNames)
     if (CPU == C.getName())
       return C.ArchID;
-  }
+
   return ArchKind::INVALID;
 }

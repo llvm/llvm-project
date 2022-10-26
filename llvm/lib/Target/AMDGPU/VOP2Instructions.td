@@ -269,7 +269,8 @@ class VOP2bInstAlias <VOP2_Pseudo ps, Instruction inst,
                       string OpName, string opnd> :
   InstAlias <OpName#" "#!subst("vcc", opnd, ps.Pfl.Asm32),
              (inst ps.Pfl.DstRC:$vdst, ps.Pfl.Src0RC32:$src0,
-                   ps.Pfl.Src1RC32:$src1)>,
+                   ps.Pfl.Src1RC32:$src1),
+             1, inst.AsmVariantName>,
   PredicateControl {
 }
 
@@ -331,12 +332,15 @@ multiclass
 class VOP2eInstAlias <VOP2_Pseudo ps, Instruction inst, string opnd = ""> :
   InstAlias <ps.OpName#" "#ps.Pfl.Asm32#", "#opnd,
              (inst ps.Pfl.DstRC:$vdst, ps.Pfl.Src0RC32:$src0,
-                   ps.Pfl.Src1RC32:$src1)>, PredicateControl;
+                   ps.Pfl.Src1RC32:$src1),
+             1, inst.AsmVariantName>,
+  PredicateControl;
 
 class VOP2e64InstAlias <VOP3_Pseudo ps, Instruction inst> :
   InstAlias <ps.OpName#" "#ps.Pfl.Asm64,
              (inst ps.Pfl.DstRC:$vdst, VOPDstS64orS32:$sdst,
-                   ps.Pfl.Src0RC32:$src0, ps.Pfl.Src1RC32:$src1, clampmod:$clamp)>,
+                   ps.Pfl.Src0RC32:$src0, ps.Pfl.Src1RC32:$src1, clampmod:$clamp),
+             1, inst.AsmVariantName>,
   PredicateControl;
 
 multiclass VOP2eInstAliases<VOP2_Pseudo ps, VOP2_Real inst> {

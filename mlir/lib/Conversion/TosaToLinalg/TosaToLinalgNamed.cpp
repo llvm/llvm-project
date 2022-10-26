@@ -58,10 +58,9 @@ static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
 
   Value padValue = rewriter.create<arith::ConstantOp>(loc, padAttr);
 
-  return tensor::createPadScalarOp(RankedTensorType::get(paddedShape, inputETy),
-                                   input, padValue, lowIndices, highIndices,
-                                   /*nofold=*/false, loc, rewriter)
-      .getResult();
+  return rewriter.create<tensor::PadOp>(
+      loc, RankedTensorType::get(paddedShape, inputETy), input, lowIndices,
+      highIndices, padValue);
 }
 
 static mlir::Value reifyConstantDim(Attribute attr,

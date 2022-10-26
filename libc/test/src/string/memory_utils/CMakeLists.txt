@@ -14,4 +14,5 @@ add_libc_unittest(
     libc.src.string.memory_utils.memory_utils
     libc.src.__support.CPP.array
     libc.src.__support.CPP.span
+    libc.src.__support.CPP.cstddef
 )
