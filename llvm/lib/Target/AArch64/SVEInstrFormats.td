@@ -8732,28 +8732,49 @@ multiclass sve2p1_ptrue_pn<string mnemonic> {
 }
 
 
-class sve2p1_pred_as_ctr_to_mask<string mnemonic, bits<2> sz, PPRRegOp pprty>
-    : I<(outs pprty:$Pd), (ins PNRAny_p8to15:$PNn, VectorIndexS:$imm2),
-        mnemonic, "\t$Pd, $PNn$imm2",
+// SVE extract mask predicate from predicate-as-counter
+class sve2p1_pred_as_ctr_to_mask_base<string mnemonic, bits<2> sz, bits<3> opc,
+                                      RegisterOperand pprty, Operand idxty>
+    : I<(outs pprty:$Pd), (ins PNRAny_p8to15:$PNn, idxty:$index),
+        mnemonic, "\t$Pd, $PNn$index",
         "", []>, Sched<[]> {
   bits<4> Pd;
   bits<3> PNn;
   bits<2> imm2;
   let Inst{31-24} = 0b00100101;
   let Inst{23-22} = sz;
-  let Inst{21-10} = 0b100000011100;
-  let Inst{9-8}   = imm2;
+  let Inst{21-11} = 0b10000001110;
+  let Inst{10-8}  = opc;
   let Inst{7-5}   = PNn;
   let Inst{4}     = 0b1;
   let Inst{3-0}   = Pd;
 }
 
+class sve2p1_pred_as_ctr_to_mask<string mnemonic, bits<2> sz, PPRRegOp pprty>
+    : sve2p1_pred_as_ctr_to_mask_base<mnemonic, sz, {0, ?, ?}, pprty, VectorIndexS> {
+  bits<2> index;
+  let Inst{9-8} = index;
+}
 
 multiclass sve2p1_pred_as_ctr_to_mask<string mnemonic> {
  def _B : sve2p1_pred_as_ctr_to_mask<mnemonic, 0b00, PPR8>;
  def _H : sve2p1_pred_as_ctr_to_mask<mnemonic, 0b01, PPR16>;
  def _S : sve2p1_pred_as_ctr_to_mask<mnemonic, 0b10, PPR32>;
  def _D : sve2p1_pred_as_ctr_to_mask<mnemonic, 0b11, PPR64>;
+}
+
+
+class sve2p1_pred_as_ctr_to_mask_pair<string mnemonic, bits<2> sz, RegisterOperand pprty>
+    : sve2p1_pred_as_ctr_to_mask_base<mnemonic, sz, {1, 0, ?}, pprty, VectorIndexD> {
+  bit index;
+  let Inst{8}    = index;
+}
+
+multiclass sve2p1_pred_as_ctr_to_mask_pair<string mnemonic> {
+ def _B : sve2p1_pred_as_ctr_to_mask_pair<mnemonic, 0b00, PP_b>;
+ def _H : sve2p1_pred_as_ctr_to_mask_pair<mnemonic, 0b01, PP_h>;
+ def _S : sve2p1_pred_as_ctr_to_mask_pair<mnemonic, 0b10, PP_s>;
+ def _D : sve2p1_pred_as_ctr_to_mask_pair<mnemonic, 0b11, PP_d>;
 }
 
 
@@ -9060,6 +9081,7 @@ multiclass sve2p1_pcount_pn<string mnemonic, bits<3> opc> {
 }
 
 
+// SVE integer compare scalar count and limit (predicate-as-counter)
 class sve2p1_int_while_rr_pn<string mnemonic, bits<2> sz, bits<3> opc,
                              PNRP8to15RegOp pnrty>
     : I<(outs pnrty:$PNd), (ins GPR64:$Rn, GPR64:$Rm, sve_vec_len_specifier_enum:$vl),
@@ -9091,4 +9113,36 @@ multiclass sve2p1_int_while_rr_pn<string mnemonic, bits<3> opc> {
  def _H : sve2p1_int_while_rr_pn<mnemonic, 0b01, opc, PNR16_p8to15>;
  def _S : sve2p1_int_while_rr_pn<mnemonic, 0b10, opc, PNR32_p8to15>;
  def _D : sve2p1_int_while_rr_pn<mnemonic, 0b11, opc, PNR64_p8to15>;
+}
+
+
+// SVE integer compare scalar count and limit (predicate pair)
+class sve2p1_int_while_rr_pair<string mnemonic, bits<2> sz, bits<3> opc,
+                             RegisterOperand ppr_ty>
+    : I<(outs ppr_ty:$Pd), (ins GPR64:$Rn, GPR64:$Rm),
+        mnemonic, "\t$Pd, $Rn, $Rm",
+        "", []>, Sched<[]> {
+  bits<3> Pd;
+  bits<5> Rn;
+  bits<5> Rm;
+  let Inst{31-24} = 0b00100101;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Rm;
+  let Inst{15-12} = 0b0101;
+  let Inst{11-10} = opc{2-1};
+  let Inst{9-5}   = Rn;
+  let Inst{4}     = 0b1;
+  let Inst{3-1}   = Pd;
+  let Inst{0}     = opc{0};
+
+  let Defs = [NZCV];
+}
+
+
+multiclass sve2p1_int_while_rr_pair<string mnemonic, bits<3> opc> {
+ def _B : sve2p1_int_while_rr_pair<mnemonic, 0b00, opc, PP_b_mul_r>;
+ def _H : sve2p1_int_while_rr_pair<mnemonic, 0b01, opc, PP_h_mul_r>;
+ def _S : sve2p1_int_while_rr_pair<mnemonic, 0b10, opc, PP_s_mul_r>;
+ def _D : sve2p1_int_while_rr_pair<mnemonic, 0b11, opc, PP_d_mul_r>;
 }
