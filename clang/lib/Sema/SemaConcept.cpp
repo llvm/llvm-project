@@ -1077,7 +1077,7 @@ static bool substituteParameterMappings(Sema &S, NormalizedConstraint &N,
   TemplateArgumentList TAL{TemplateArgumentList::OnStack,
                            CSE->getTemplateArguments()};
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
-      CSE->getNamedConcept(), /*Final=*/true, &TAL,
+      CSE->getNamedConcept(), /*Final=*/false, &TAL,
       /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr,
       /*ForConstraintInstantiation=*/true);

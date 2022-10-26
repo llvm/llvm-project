@@ -2243,7 +2243,7 @@ void ASTDeclReader::VisitImplicitConceptSpecializationDecl(
   VisitDecl(D);
   llvm::SmallVector<TemplateArgument, 4> Args;
   for (unsigned I = 0; I < D->NumTemplateArgs; ++I)
-    Args.push_back(Record.readTemplateArgument(/*Canonicalize=*/false));
+    Args.push_back(Record.readTemplateArgument(/*Canonicalize=*/true));
   D->setTemplateArguments(Args);
 }
 
