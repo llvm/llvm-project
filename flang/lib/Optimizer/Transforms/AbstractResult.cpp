@@ -371,7 +371,7 @@ public:
         }
         patterns.insert<ReturnOpConversion>(context, newArg);
         target.addDynamicallyLegalOp<mlir::func::ReturnOp>(
-            [](mlir::func::ReturnOp ret) { return ret.operands().empty(); });
+            [](mlir::func::ReturnOp ret) { return ret.getOperands().empty(); });
         assert(func.getFunctionType() ==
                getNewFunctionType(funcTy, shouldBoxResult));
       } else {

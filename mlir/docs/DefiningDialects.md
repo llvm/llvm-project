@@ -108,6 +108,29 @@ are included, you may want to specify a full namespace path or a partial one. In
 to use full namespaces whenever you can. This makes it easier for dialects within different namespaces,
 and projects, to interact with each other.
 
+### C++ Accessor Generation
+
+When generating accessors for dialects and their components (attributes, operations, types, etc.),
+we prefix the name with `get` and `set` respectively, and transform `snake_style` names to camel
+case (`UpperCamel` when prefixed, and `lowerCamel` for individual variable names). For example, if an
+operation were defined as:
+
+```tablegen
+def MyOp : MyDialect<"op"> {
+  let arguments = (ins StrAttr:$value, StrAttr:$other_value);
+}
+```
+
+It would have accessors generated for the `value` and `other_value` attributes as follows:
+
+```c++
+StringAttr MyOp::getValue();
+void MyOp::setValue(StringAttr newValue);
+
+StringAttr MyOp::getOtherValue();
+void MyOp::setOtherValue(StringAttr newValue);
+```
+
 ### Dependent Dialects
 
 MLIR has a very large ecosystem, and contains dialects that server many different purposes. It
@@ -278,59 +301,6 @@ void MyDialect::getCanonicalizationPatterns(RewritePatternSet &results) const;
 
 See the documentation for [Canonicalization in MLIR](Canonicalization.md) for a much more 
 detailed description about canonicalization patterns.
-
-### C++ Accessor Prefix
-
-Historically, MLIR has generated accessors for operation components (such as attribute, operands, 
-results) using the tablegen definition name verbatim. This means that if an operation was defined
-as:
-
-```tablegen
-def MyOp : MyDialect<"op"> {
-  let arguments = (ins StrAttr:$value, StrAttr:$other_value);
-}
-```
-
-It would have accessors generated for the `value` and `other_value` attributes as follows:
-
-```c++
-StringAttr MyOp::value();
-void MyOp::value(StringAttr newValue);
-
-StringAttr MyOp::other_value();
-void MyOp::other_value(StringAttr newValue);
-```
-
-Since then, we have decided to move accessors over to a style that matches the rest of the
-code base. More specifically, this means that we prefix accessors with `get` and `set`
-respectively, and transform `snake_style` names to camel case (`UpperCamel` when prefixed,
-and `lowerCamel` for individual variable names). If we look at the same example as above, this
-would produce:
-
-```c++
-StringAttr MyOp::getValue();
-void MyOp::setValue(StringAttr newValue);
-
-StringAttr MyOp::getOtherValue();
-void MyOp::setOtherValue(StringAttr newValue);
-```
-
-The form in which accessors are generated is controlled by the `emitAccessorPrefix` field.
-This field may any of the following values:
-
-* `kEmitAccessorPrefix_Raw`
-  - Don't emit any `get`/`set` prefix.
-
-* `kEmitAccessorPrefix_Prefixed`
-  - Only emit with `get`/`set` prefix.
-
-* `kEmitAccessorPrefix_Both`
-  - Emit with **and** without prefix.
-
-All new dialects are strongly encouraged to use the default `kEmitAccessorPrefix_Prefixed`
-value, as the `Raw` form is deprecated and in the process of being removed.
-
-Note: Remove this section when all dialects have been switched to the new accessor form.
 
 ## Defining an Extensible dialect
 
