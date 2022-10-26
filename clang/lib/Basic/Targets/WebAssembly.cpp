@@ -147,6 +147,9 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["mutable-globals"] = true;
     Features["tail-call"] = true;
     setSIMDLevel(Features, SIMD128, true);
+  } else if (CPU == "generic") {
+    Features["sign-ext"] = true;
+    Features["mutable-globals"] = true;
   }
 
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);

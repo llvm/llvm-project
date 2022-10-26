@@ -607,6 +607,12 @@ X86 Support in Clang
   * Support intrinsic of ``__cmpccxadd_epi32``.
   * Support intrinsic of ``__cmpccxadd_epi64``.
 
+WebAssembly Support in Clang
+----------------------------
+
+The -mcpu=generic configuration now enables sign-ext and mutable-globals. These
+proposals are standardized and available in all major engines.
+
 DWARF Support in Clang
 ----------------------
 
