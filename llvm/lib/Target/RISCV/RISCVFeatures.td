@@ -479,6 +479,63 @@ def HasStdExtZawrs : Predicate<"Subtarget->hasStdExtZawrs()">,
                                AssemblerPredicate<(all_of FeatureStdExtZawrs),
                                "'Zawrs' (Wait on Reservation Set)">;
 
+def FeatureStdExtZvkb
+    : SubtargetFeature<"experimental-zvkb", "HasStdExtZvkb", "true",
+                       "'Zvkb' (Vector Bitmanip instructions for Cryptography.)">;
+def HasStdExtZvkb : Predicate<"Subtarget->hasStdExtZvkb()">,
+                              AssemblerPredicate<(all_of FeatureStdExtZvkb),
+                              "'Zvkb' (Vector Bitmanip instructions for Cryptography.)">;
+
+def FeatureStdExtZvkg
+    : SubtargetFeature<"experimental-zvkg", "HasStdExtZvkg", "true",
+                       "'Zvkg' (Vector GCM instructions for Cryptography.)">;
+def HasStdExtZvkg : Predicate<"Subtarget->hasStdExtZvkg()">,
+                              AssemblerPredicate<(all_of FeatureStdExtZvkg),
+                              "'Zvkg' (Vector GCM instructions for Cryptography.)">;
+
+def FeatureStdExtZvkn
+    : SubtargetFeature<"experimental-zvkn", "HasStdExtZvkn", "true",
+                       "This extension is shorthand for the following set of "
+                       "other extensions: Zvkned, Zvknhb and Zvkb.">;
+
+def FeatureStdExtZvknha
+    : SubtargetFeature<"experimental-zvknha", "HasStdExtZvknha", "true",
+                       "'Zvknha' (Vector SHA-2. (SHA-256 only))">;
+
+def FeatureStdExtZvknhb
+    : SubtargetFeature<"experimental-zvknhb", "HasStdExtZvknhb", "true",
+                       "'Zvknhb' (Vector SHA-2. (SHA-256 and SHA-512))",
+                       [FeatureStdExtZvknha]>;
+def HasStdExtZvknha : Predicate<"Subtarget->hasStdExtZvknha()">,
+                                AssemblerPredicate<(all_of FeatureStdExtZvknha),
+                                "'Zvknha' (Vector SHA-2. (SHA-256 only))">;
+
+def FeatureStdExtZvkned
+    : SubtargetFeature<"experimental-zvkned", "HasStdExtZvkned", "true",
+                       "'Zvkned' (Vector AES Encryption & Decryption (Single Round))">;
+def HasStdExtZvkned : Predicate<"Subtarget->hasStdExtZvkned()">,
+                                AssemblerPredicate<(all_of FeatureStdExtZvkned),
+                                "'Zvkned' (Vector AES Encryption & Decryption (Single Round))">;
+
+def FeatureStdExtZvks
+    : SubtargetFeature<"experimental-zvks", "HasStdExtZvks", "true",
+                       "This extension is shorthand for the following set of "
+                       "other extensions: Zvksed, Zvksh and Zvkb.">;
+
+def FeatureStdExtZvksed
+    : SubtargetFeature<"experimental-zvksed", "HasStdExtZvksed", "true",
+                       "'Zvksed' (SM4 Block Cipher Instructions.)">;
+def HasStdExtZvksed : Predicate<"Subtarget->hasStdExtZvksed()">,
+                                AssemblerPredicate<(all_of FeatureStdExtZvksed),
+                                "'Zvksed' (SM4 Block Cipher Instructions.)">;
+
+def FeatureStdExtZvksh
+    : SubtargetFeature<"experimental-zvksh", "HasStdExtZvksh", "true",
+                       "'Zvksh' (SM3 Hash Function Instructions.)">;
+def HasStdExtZvksh : Predicate<"Subtarget->hasStdExtZvksh()">,
+                               AssemblerPredicate<(all_of FeatureStdExtZvksh),
+                               "'Zvksh' (SM3 Hash Function Instructions.)">;
+
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//
