@@ -10153,6 +10153,14 @@ TEST_F(FormatTest, UnderstandsOverloadedOperators) {
   // verifyFormat("void f() { operator*(a & a); }");
   // verifyFormat("void f() { operator&(a, b * b); }");
 
+  verifyFormat("void f() { return operator()(x) * b; }");
+  verifyFormat("void f() { return operator[](x) * b; }");
+  verifyFormat("void f() { return operator\"\"_a(x) * b; }");
+  verifyFormat("void f() { return operator\"\" _a(x) * b; }");
+  verifyFormat("void f() { return operator\"\"s(x) * b; }");
+  verifyFormat("void f() { return operator\"\" s(x) * b; }");
+  verifyFormat("void f() { return operator\"\"if(x) * b; }");
+
   verifyFormat("::operator delete(foo);");
   verifyFormat("::operator new(n * sizeof(foo));");
   verifyFormat("foo() { ::operator delete(foo); }");
