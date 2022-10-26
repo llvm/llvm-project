@@ -12,10 +12,91 @@
 #include "clang/AST/DeclGroup.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 
 namespace clang::include_cleaner {
+namespace {
+
+class PPRecorder : public PPCallbacks {
+public:
+  PPRecorder(RecordedPP &Recorded, const Preprocessor &PP)
+      : Recorded(Recorded), PP(PP), SM(PP.getSourceManager()) {}
+
+  void FileChanged(SourceLocation Loc, FileChangeReason Reason,
+                   SrcMgr::CharacteristicKind FileType,
+                   FileID PrevFID) override {
+    Active = SM.isWrittenInMainFile(Loc);
+  }
+
+  void InclusionDirective(SourceLocation Hash, const Token &IncludeTok,
+                          StringRef SpelledFilename, bool IsAngled,
+                          CharSourceRange FilenameRange,
+                          llvm::Optional<FileEntryRef> File,
+                          StringRef SearchPath, StringRef RelativePath,
+                          const Module *, SrcMgr::CharacteristicKind) override {
+    if (!Active)
+      return;
+
+    Include I;
+    I.HashLocation = Hash;
+    I.Resolved = File ? &File->getFileEntry() : nullptr;
+    I.Line = SM.getSpellingLineNumber(Hash);
+    I.Spelled = SpelledFilename;
+    Recorded.Includes.add(I);
+  }
+
+  void MacroExpands(const Token &MacroName, const MacroDefinition &MD,
+                    SourceRange Range, const MacroArgs *Args) override {
+    if (!Active)
+      return;
+    recordMacroRef(MacroName, *MD.getMacroInfo());
+  }
+
+  void MacroDefined(const Token &MacroName, const MacroDirective *MD) override {
+    if (!Active)
+      return;
+
+    const auto *MI = MD->getMacroInfo();
+    // The tokens of a macro definition could refer to a macro.
+    // Formally this reference isn't resolved until this macro is expanded,
+    // but we want to treat it as a reference anyway.
+    for (const auto &Tok : MI->tokens()) {
+      auto *II = Tok.getIdentifierInfo();
+      // Could this token be a reference to a macro? (Not param to this macro).
+      if (!II || !II->hadMacroDefinition() ||
+          llvm::is_contained(MI->params(), II))
+        continue;
+      if (const MacroInfo *MI = PP.getMacroInfo(II))
+        recordMacroRef(Tok, *MI);
+    }
+  }
+
+  void MacroUndefined(const Token &MacroName, const MacroDefinition &MD,
+                      const MacroDirective *) override {
+    if (!Active)
+      return;
+    if (const auto *MI = MD.getMacroInfo())
+      recordMacroRef(MacroName, *MI);
+  }
+
+private:
+  void recordMacroRef(const Token &Tok, const MacroInfo &MI) {
+    if (MI.isBuiltinMacro())
+      return; // __FILE__ is not a reference.
+    Recorded.MacroReferences.push_back(
+        SymbolReference{Macro{Tok.getIdentifierInfo(), MI.getDefinitionLoc()},
+                        Tok.getLocation()});
+  }
+
+  bool Active = false;
+  RecordedPP &Recorded;
+  const Preprocessor &PP;
+  const SourceManager &SM;
+};
+
+} // namespace
 
 // FIXME: this is a mirror of clang::clangd::parseIWYUPragma, move to libTooling
 // to share the code?
@@ -141,5 +222,37 @@ std::unique_ptr<ASTConsumer> RecordedAST::record() {
 
   return std::make_unique<Recorder>(this);
 }
+
+void RecordedPP::RecordedIncludes::add(const Include &I) {
+  unsigned Index = All.size();
+  All.push_back(I);
+  auto BySpellingIt = BySpelling.try_emplace(I.Spelled).first;
+  All.back().Spelled = BySpellingIt->first(); // Now we own the backing string.
+
+  BySpellingIt->second.push_back(Index);
+  if (I.Resolved)
+    ByFile[I.Resolved].push_back(Index);
+}
+
+llvm::SmallVector<const Include *>
+RecordedPP::RecordedIncludes::match(Header H) const {
+  llvm::SmallVector<const Include *> Result;
+  switch (H.kind()) {
+  case Header::Physical:
+    for (unsigned I : ByFile.lookup(H.physical()))
+      Result.push_back(&All[I]);
+    break;
+  case Header::Standard:
+    for (unsigned I : BySpelling.lookup(H.standard().name().trim("<>")))
+      Result.push_back(&All[I]);
+    break;
+  }
+  return Result;
+}
+
+std::unique_ptr<PPCallbacks> RecordedPP::record(const Preprocessor &PP) {
+  return std::make_unique<PPRecorder>(*this, PP);
+}
+
 
 } // namespace clang::include_cleaner
