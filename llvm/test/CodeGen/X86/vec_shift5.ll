@@ -214,6 +214,74 @@ define <4 x i32> @test18(<4 x i32> %a0, ptr %dummy) {
   ret <4 x i32> %res
 }
 
+; PR39482
+
+define <4 x i32> @extelt0_sub_pslli_v4i32(<4 x i32> %x, <4 x i32> %y){
+; CHECK-LABEL: extelt0_sub_pslli_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    movl $32, %ecx
+; CHECK-NEXT:    subl %eax, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm1
+; CHECK-NEXT:    pslld %xmm1, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %ext = extractelement <4 x i32> %y, i64 0
+  %bo = sub i32 32, %ext
+  %r = tail call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> %x, i32 %bo)
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @extelt1_add_psrli_v4i32(<4 x i32> %x, <4 x i32> %y){
+; CHECK-LABEL: extelt1_add_psrli_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    addl $3, %eax
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    psrld %xmm1, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %ext = extractelement <4 x i32> %y, i64 1
+  %bo = add i32 %ext, 3
+  %r = tail call <4 x i32> @llvm.x86.sse2.psrli.d(<4 x i32> %x, i32 %bo)
+  ret <4 x i32> %r
+}
+
+define i32 @extelt1_add_psrai_v4i32_uses(<4 x i32> %x, <4 x i32> %y){
+; CHECK-LABEL: extelt1_add_psrai_v4i32_uses:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; CHECK-NEXT:    movd %xmm1, %ecx
+; CHECK-NEXT:    addl $3, %ecx
+; CHECK-NEXT:    movd %ecx, %xmm1
+; CHECK-NEXT:    psrad %xmm1, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    imull %ecx, %eax
+; CHECK-NEXT:    ret{{[l|q]}}
+  %ext = extractelement <4 x i32> %y, i64 1
+  %bo = add i32 %ext, 3
+  %r = tail call <4 x i32> @llvm.x86.sse2.psrai.d(<4 x i32> %x, i32 %bo)
+  %ext3 = extractelement <4 x i32> %r, i64 3
+  %r2 = mul i32 %bo, %ext3
+  ret i32 %r2
+}
+
+define <4 x i32> @extelt0_twice_sub_pslli_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z){
+; CHECK-LABEL: extelt0_twice_sub_pslli_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    movd %xmm2, %ecx
+; CHECK-NEXT:    subl %ecx, %eax
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    pslld %xmm1, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %ext1 = extractelement <4 x i32> %y, i64 0
+  %ext2 = extractelement <4 x i32> %z, i64 0
+  %bo = sub i32 %ext1, %ext2
+  %r = tail call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> %x, i32 %bo)
+  ret <4 x i32> %r
+}
+
 declare <8 x i16> @llvm.x86.sse2.pslli.w(<8 x i16>, i32)
 declare <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16>, i32)
 declare <8 x i16> @llvm.x86.sse2.psrai.w(<8 x i16>, i32)
@@ -222,4 +290,3 @@ declare <4 x i32> @llvm.x86.sse2.psrli.d(<4 x i32>, i32)
 declare <4 x i32> @llvm.x86.sse2.psrai.d(<4 x i32>, i32)
 declare <2 x i64> @llvm.x86.sse2.pslli.q(<2 x i64>, i32)
 declare <2 x i64> @llvm.x86.sse2.psrli.q(<2 x i64>, i32)
-

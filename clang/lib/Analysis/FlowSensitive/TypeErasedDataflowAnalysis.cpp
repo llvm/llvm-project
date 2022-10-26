@@ -80,10 +80,9 @@ using TerminatorVisitorRetTy = std::pair<const Expr *, bool>;
 class TerminatorVisitor
     : public ConstStmtVisitor<TerminatorVisitor, TerminatorVisitorRetTy> {
 public:
-  TerminatorVisitor(TypeErasedDataflowAnalysis &Analysis,
-                    const StmtToEnvMap &StmtToEnv, Environment &Env,
+  TerminatorVisitor(const StmtToEnvMap &StmtToEnv, Environment &Env,
                     int BlockSuccIdx, TransferOptions TransferOpts)
-      : Analysis(Analysis), StmtToEnv(StmtToEnv), Env(Env),
+      : StmtToEnv(StmtToEnv), Env(Env),
         BlockSuccIdx(BlockSuccIdx), TransferOpts(TransferOpts) {}
 
   TerminatorVisitorRetTy VisitIfStmt(const IfStmt *S) {
@@ -162,7 +161,6 @@ private:
     return {&Cond, ConditionValue};
   }
 
-  TypeErasedDataflowAnalysis &Analysis;
   const StmtToEnvMap &StmtToEnv;
   Environment &Env;
   int BlockSuccIdx;
@@ -255,7 +253,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
       if (const Stmt *PredTerminatorStmt = Pred->getTerminatorStmt()) {
         const StmtToEnvMapImpl StmtToEnv(AC.CFCtx, AC.BlockStates);
         auto [Cond, CondValue] =
-            TerminatorVisitor(Analysis, StmtToEnv, PredState.Env,
+            TerminatorVisitor(StmtToEnv, PredState.Env,
                               blockIndexInPredecessor(*Pred, Block),
                               *BuiltinTransferOpts)
                 .Visit(PredTerminatorStmt);

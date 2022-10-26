@@ -2256,6 +2256,23 @@ public:
   SDValue getNeutralElement(unsigned Opcode, const SDLoc &DL, EVT VT,
                             SDNodeFlags Flags);
 
+  /// Some opcodes may create immediate undefined behavior when used with some
+  /// values (integer division-by-zero for example). Therefore, these operations
+  /// are not generally safe to move around or change.
+  bool isSafeToSpeculativelyExecute(unsigned Opcode) const {
+    switch (Opcode) {
+    case ISD::SDIV:
+    case ISD::SREM:
+    case ISD::SDIVREM:
+    case ISD::UDIV:
+    case ISD::UREM:
+    case ISD::UDIVREM:
+      return false;
+    default:
+      return true;
+    }
+  }
+
 private:
   void InsertNode(SDNode *N);
   bool RemoveNodeFromCSEMaps(SDNode *N);
