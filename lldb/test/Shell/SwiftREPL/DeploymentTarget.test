@@ -3,7 +3,7 @@
 // REQUIRES: swift
 
 // RUN: echo -n "@available(macOS " >%t.swift
-// RUN: python -c 'from __future__ import print_function; import platform; print(platform.mac_ver()[0],end="")' >>%t.swift
+// RUN: %python -c 'from __future__ import print_function; import platform; print(platform.mac_ver()[0],end="")' >>%t.swift
 // RUN: echo  ", *) func newAPI() -> Int { return 11+12 }" >>%t.swift
 // RUN: echo  "newAPI()" >>%t.swift
 
