@@ -446,16 +446,16 @@ private:
         SpecializationInfo &S = I.first->second;
 
         if (I.second)
-          S.Gain = ForceFunctionSpecialization ? 1 : 0 - Cost;
-        if (!ForceFunctionSpecialization)
-          S.Gain += getSpecializationBonus(&FormalArg, ActualArg);
+          S.Gain = 0 - Cost;
+        S.Gain += getSpecializationBonus(&FormalArg, ActualArg);
         S.Args.push_back({&FormalArg, ActualArg});
       }
     }
 
     // Remove unprofitable specializations.
-    Specializations.remove_if(
-        [](const auto &Entry) { return Entry.second.Gain <= 0; });
+    if (!ForceFunctionSpecialization)
+      Specializations.remove_if(
+          [](const auto &Entry) { return Entry.second.Gain <= 0; });
 
     // Clear the MapVector and return the underlying vector.
     WorkList = Specializations.takeVector();

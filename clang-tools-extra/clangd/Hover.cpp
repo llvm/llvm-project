@@ -1017,7 +1017,7 @@ const NamedDecl *pickDeclToUse(llvm::ArrayRef<const NamedDecl *> Candidates) {
   // which isn't really useful for Hover. So use the other one,
   // which in this example would be the actual declaration of foo.
   if (Candidates.size() <= 2) {
-    if (llvm::isa<BaseUsingDecl>(Candidates.front()))
+    if (llvm::isa<UsingDecl>(Candidates.front()))
       return Candidates.back();
     return Candidates.front();
   }
@@ -1029,7 +1029,7 @@ const NamedDecl *pickDeclToUse(llvm::ArrayRef<const NamedDecl *> Candidates) {
   // we actually want to show the using declaration,
   // it's not clear which declaration to pick otherwise.
   auto BaseDecls = llvm::make_filter_range(Candidates, [](const NamedDecl *D) {
-    return llvm::isa<BaseUsingDecl>(D);
+    return llvm::isa<UsingDecl>(D);
   });
   if (std::distance(BaseDecls.begin(), BaseDecls.end()) == 1)
     return *BaseDecls.begin();
