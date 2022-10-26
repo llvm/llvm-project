@@ -1346,6 +1346,7 @@ private:
           CurrentToken->setType(TT_ImplicitStringLiteral);
         next();
         }
+      }
     }
   }
 
