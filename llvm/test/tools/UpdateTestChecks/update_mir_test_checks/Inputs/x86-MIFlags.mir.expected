@@ -73,8 +73,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fr32 = COPY $xmm0
     ; CHECK-NEXT: [[MOVSSrm_alt:%[0-9]+]]:fr32 = MOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
-    ; CHECK-NEXT: %2:fr32 = nsz nofpexcept DIVSSrr [[MOVSSrm_alt]], [[COPY]], implicit $mxcsr
-    ; CHECK-NEXT: $xmm0 = COPY %2
+    ; CHECK-NEXT: [[DIVSSrr:%[0-9]+]]:fr32 = nsz nofpexcept DIVSSrr [[MOVSSrm_alt]], [[COPY]], implicit $mxcsr
+    ; CHECK-NEXT: $xmm0 = COPY [[DIVSSrr]]
     ; CHECK-NEXT: RET 0, $xmm0
     %0:fr32 = COPY $xmm0
     %1:fr32 = MOVSSrm_alt $rip, 1, $noreg, %const.0, $noreg :: (load (s32) from constant-pool)
