@@ -930,7 +930,7 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
   // If no description has been set, then set it to the default thread stopped
   // description. If we have breakpoints that get hit and shouldn't be reported
   // as breakpoints, then they will set the description above.
-  if (ObjectContainsKey(body, "description")) {
+  if (!ObjectContainsKey(body, "description")) {
     char description[1024];
     if (thread.GetStopDescription(description, sizeof(description))) {
       EmplaceSafeString(body, "description", std::string(description));

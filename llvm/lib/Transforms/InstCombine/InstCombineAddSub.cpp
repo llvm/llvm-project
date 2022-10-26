@@ -1270,13 +1270,9 @@ static Instruction *factorizeMathWithShlOps(BinaryOperator &I,
 /// Reduce a sequence of masked half-width multiplies to a single multiply.
 /// ((XLow * YHigh) + (YLow * XHigh)) << HalfBits) + (XLow * YLow) --> X * Y
 static Instruction *foldBoxMultiply(BinaryOperator &I) {
-  if (!I.getType()->isIntegerTy())
-    return nullptr;
-
   unsigned BitWidth = I.getType()->getScalarSizeInBits();
-  // Skip the odd bitwidth types and large bitwidth types
-  // TODO: Relax the constraint of wide/vectors types.
-  if ((BitWidth & 0x1) || (BitWidth > 128))
+  // Skip the odd bitwidth types.
+  if ((BitWidth & 0x1))
     return nullptr;
 
   unsigned HalfBits = BitWidth >> 1;

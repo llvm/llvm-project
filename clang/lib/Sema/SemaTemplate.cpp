@@ -10963,14 +10963,20 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
       //
       // FIXME: That's not strictly true: mem-initializer-id lookup does not
       // ignore functions, but that appears to be an oversight.
-      QualType T = getTypeDeclType(
-          Ctx,
-          Keyword == ETK_Typename ? DiagCtorKind::Typename : DiagCtorKind::None,
-          Type, IILoc);
+      auto *LookupRD = dyn_cast_or_null<CXXRecordDecl>(Ctx);
+      auto *FoundRD = dyn_cast<CXXRecordDecl>(Type);
+      if (Keyword == ETK_Typename && LookupRD && FoundRD &&
+          FoundRD->isInjectedClassName() &&
+          declaresSameEntity(LookupRD, cast<Decl>(FoundRD->getParent())))
+        Diag(IILoc, diag::ext_out_of_line_qualified_id_type_names_constructor)
+            << &II << 1 << 0 /*'typename' keyword used*/;
+
       // We found a type. Build an ElaboratedType, since the
       // typename-specifier was just sugar.
-      return Context.getElaboratedType(
-          Keyword, QualifierLoc.getNestedNameSpecifier(), T);
+      MarkAnyDeclReferenced(Type->getLocation(), Type, /*OdrUse=*/false);
+      return Context.getElaboratedType(Keyword,
+                                       QualifierLoc.getNestedNameSpecifier(),
+                                       Context.getTypeDeclType(Type));
     }
 
     // C++ [dcl.type.simple]p2:
