@@ -140,6 +140,12 @@ static DecodeStatus DecodePPR_3bRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus
 DecodePPR_p8to15RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
                               const MCDisassembler *Decoder);
+static DecodeStatus DecodePPR2RegisterClass(MCInst &Inst, unsigned RegNo,
+                                            uint64_t Address,
+                                            const void *Decoder);
+static DecodeStatus DecodePPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
+                                                uint64_t Address,
+                                                const void *Decoder);
 
 static DecodeStatus DecodeFixedPointScaleImm32(MCInst &Inst, unsigned Imm,
                                                uint64_t Address,
@@ -705,6 +711,29 @@ DecodePPR_p8to15RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Addr,
 
   // Just reuse the PPR decode table
   return DecodePPRRegisterClass(Inst, RegNo + 8, Addr, Decoder);
+}
+
+static DecodeStatus DecodePPR2RegisterClass(MCInst &Inst, unsigned RegNo,
+                                            uint64_t Address,
+                                            const void *Decoder) {
+  if (RegNo > 15)
+    return Fail;
+
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::PPR2RegClassID].getRegister(RegNo);
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
+}
+
+static DecodeStatus DecodePPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
+                                                uint64_t Address,
+                                                const void *Decoder) {
+  if ((RegNo * 2) > 14)
+    return Fail;
+  unsigned Register =
+      AArch64MCRegisterClasses[AArch64::PPR2RegClassID].getRegister(RegNo * 2);
+  Inst.addOperand(MCOperand::createReg(Register));
+  return Success;
 }
 
 static DecodeStatus DecodeQQRegisterClass(MCInst &Inst, unsigned RegNo,

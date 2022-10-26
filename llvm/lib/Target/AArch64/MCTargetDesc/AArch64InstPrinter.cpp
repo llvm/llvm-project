@@ -1415,6 +1415,23 @@ static unsigned getNextVectorRegister(unsigned Reg, unsigned Stride = 1) {
     case AArch64::Z31:
       Reg = AArch64::Z0;
       break;
+    case AArch64::P0:  Reg = AArch64::P1;  break;
+    case AArch64::P1:  Reg = AArch64::P2;  break;
+    case AArch64::P2:  Reg = AArch64::P3;  break;
+    case AArch64::P3:  Reg = AArch64::P4;  break;
+    case AArch64::P4:  Reg = AArch64::P5;  break;
+    case AArch64::P5:  Reg = AArch64::P6;  break;
+    case AArch64::P6:  Reg = AArch64::P7;  break;
+    case AArch64::P7:  Reg = AArch64::P8;  break;
+    case AArch64::P8:  Reg = AArch64::P9;  break;
+    case AArch64::P9:  Reg = AArch64::P10; break;
+    case AArch64::P10: Reg = AArch64::P11; break;
+    case AArch64::P11: Reg = AArch64::P12; break;
+    case AArch64::P12: Reg = AArch64::P13; break;
+    case AArch64::P13: Reg = AArch64::P14; break;
+    case AArch64::P14: Reg = AArch64::P15; break;
+    // Vector lists can wrap around.
+    case AArch64::P15: Reg = AArch64::P0; break;
     }
   }
   return Reg;
@@ -1477,7 +1494,8 @@ void AArch64InstPrinter::printVectorList(const MCInst *MI, unsigned OpNum,
   unsigned NumRegs = 1;
   if (MRI.getRegClass(AArch64::DDRegClassID).contains(Reg) ||
       MRI.getRegClass(AArch64::ZPR2RegClassID).contains(Reg) ||
-      MRI.getRegClass(AArch64::QQRegClassID).contains(Reg))
+      MRI.getRegClass(AArch64::QQRegClassID).contains(Reg) ||
+      MRI.getRegClass(AArch64::PPR2RegClassID).contains(Reg))
     NumRegs = 2;
   else if (MRI.getRegClass(AArch64::DDDRegClassID).contains(Reg) ||
            MRI.getRegClass(AArch64::ZPR3RegClassID).contains(Reg) ||
@@ -1495,6 +1513,8 @@ void AArch64InstPrinter::printVectorList(const MCInst *MI, unsigned OpNum,
     Reg = FirstReg;
   else if (unsigned FirstReg = MRI.getSubReg(Reg, AArch64::zsub0))
     Reg = FirstReg;
+  else if (unsigned FirstReg = MRI.getSubReg(Reg, AArch64::psub0))
+    Reg = FirstReg;
 
   // If it's a D-reg, we need to promote it to the equivalent Q-reg before
   // printing (otherwise getRegisterName fails).
@@ -1504,7 +1524,9 @@ void AArch64InstPrinter::printVectorList(const MCInst *MI, unsigned OpNum,
     Reg = MRI.getMatchingSuperReg(Reg, AArch64::dsub, &FPR128RC);
   }
 
-  if (MRI.getRegClass(AArch64::ZPRRegClassID).contains(Reg) && NumRegs > 1 &&
+  if ((MRI.getRegClass(AArch64::ZPRRegClassID).contains(Reg) ||
+       MRI.getRegClass(AArch64::PPRRegClassID).contains(Reg)) &&
+      NumRegs > 1 &&
       // Do not print the range when the last register is lower than the first.
       // Because it is a wrap-around register.
       Reg < getNextVectorRegister(Reg, NumRegs - 1)) {
@@ -1520,7 +1542,8 @@ void AArch64InstPrinter::printVectorList(const MCInst *MI, unsigned OpNum,
   } else {
     for (unsigned i = 0; i < NumRegs; ++i, Reg = getNextVectorRegister(Reg)) {
       // wrap-around sve register
-      if (MRI.getRegClass(AArch64::ZPRRegClassID).contains(Reg))
+      if (MRI.getRegClass(AArch64::ZPRRegClassID).contains(Reg) ||
+          MRI.getRegClass(AArch64::PPRRegClassID).contains(Reg))
         printRegName(O, Reg);
       else
         printRegName(O, Reg, AArch64::vreg);
