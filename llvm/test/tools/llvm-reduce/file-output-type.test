@@ -1,0 +1,48 @@
+# RUN: rm -f reduced.ll reduced.bc
+
+# RUN: llvm-as -o test-output-format.bc %p/Inputs/test-output-format.ll
+
+# A .ll input file should default to text output in reduced.ll
+# RUN: llvm-reduce --delta-passes=instructions --test FileCheck --test-arg %s --test-arg --input-file %p/Inputs/test-output-format.ll
+# RUN: llvm-as -disable-output reduced.ll
+
+
+# A .bc input file should default to bitcode output, in reduced.bc
+# RUN: rm -f reduced.ll reduced.bc
+# RUN: llvm-reduce --delta-passes=instructions --test FileCheck --test-arg %s --test-arg --input-file test-output-format.bc
+# RUN: llvm-dis -disable-output reduced.bc
+
+
+# A .bc input file with a requested .bc output should produce bitcode
+# RUN: llvm-reduce --delta-passes=instructions -o %t.0.bc --test FileCheck --test-arg %s --test-arg --input-file test-output-format.bc
+# RUN: llvm-dis -disable-output %t.0.bc
+
+
+# A .bc input file with a requested .ll output should produce text
+# RUN: rm -f reduced.ll reduced.bc
+# RUN: llvm-reduce --delta-passes=instructions -o %t.0.ll --test FileCheck --test-arg %s --test-arg --input-file test-output-format.bc
+# RUN: llvm-as -disable-output %t.0.ll
+
+
+# A file name ending in .bc should default to bitcode output
+# RUN: llvm-reduce -o %t.1.bc --delta-passes=instructions --test FileCheck --test-arg %s --test-arg --input-file %p/Inputs/test-output-format.ll
+# RUN: llvm-dis -disable-output %t.1.bc
+
+
+# Make sure an explicit -output-bitcode produces bitcode output regardless of suffix
+# RUN: llvm-reduce -output-bitcode -o %t.2_no_suffix --delta-passes=instructions --test FileCheck --test-arg %s --test-arg --input-file %p/Inputs/test-output-format.ll
+# RUN: llvm-dis -disable-output %t.2_no_suffix
+
+
+# Make sure an explicit -output-bitcode overrides .ll suffix
+# RUN: llvm-reduce -output-bitcode -o %t.2.ll --delta-passes=instructions --test FileCheck --test-arg %s --test-arg --input-file %p/Inputs/test-output-format.ll
+# RUN: llvm-dis -disable-output %t.2.ll
+
+
+# Make sure MIR ignores requests for bitcode
+# RUN: llvm-reduce -output-bitcode --delta-passes=instructions -o %t.3  --test FileCheck --test-arg --check-prefix=MIR --test-arg %s --test-arg --input-file %p/Inputs/test-output-format.mir
+# RUN: llc -x mir -run-pass=none -o /dev/null %t.3
+
+
+# CHECK: store i32 0
+# MIR: G_CONSTANT i32 0

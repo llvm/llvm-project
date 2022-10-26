@@ -41,7 +41,7 @@ private:
   uint64_t computeMIRComplexityScore() const;
 };
 
-std::unique_ptr<ReducerWorkItem>
+std::pair<std::unique_ptr<ReducerWorkItem>, bool>
 parseReducerWorkItem(const char *ToolName, StringRef Filename,
                      LLVMContext &Ctxt, std::unique_ptr<TargetMachine> &TM,
                      bool IsMIR);

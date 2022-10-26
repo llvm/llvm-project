@@ -17,19 +17,12 @@
 #include "DeltaManager.h"
 #include "ReducerWorkItem.h"
 #include "TestRunner.h"
-#include "llvm/Analysis/ModuleSummaryAnalysis.h"
-#include "llvm/Analysis/ProfileSummaryInfo.h"
-#include "llvm/Bitcode/BitcodeReader.h"
-#include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IRReader/IRReader.h"
-#include "llvm/Passes/PassBuilder.h"
+
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include <system_error>
 #include <vector>
 
@@ -63,7 +56,8 @@ static cl::list<std::string>
                   cl::cat(LLVMReduceOptions));
 
 static cl::opt<std::string> OutputFilename(
-    "output", cl::desc("Specify the output file. default: reduced.ll|mir"));
+    "output",
+    cl::desc("Specify the output file. default: reduced.ll|.bc|.mir"));
 static cl::alias OutputFileAlias("o", cl::desc("Alias for -output"),
                                  cl::aliasopt(OutputFilename),
                                  cl::cat(LLVMReduceOptions));
@@ -84,6 +78,11 @@ static cl::opt<InputLanguages>
                              clEnumValN(InputLanguages::MIR, "mir", "")),
                   cl::cat(LLVMReduceOptions));
 
+static cl::opt<bool> ForceOutputBitcode(
+    "output-bitcode",
+    cl::desc("Emit final result as bitcode instead of text IR"), cl::Hidden,
+    cl::cat(LLVMReduceOptions));
+
 static cl::opt<int>
     MaxPassIterations("max-pass-iterations",
                       cl::desc("Maximum number of times to run the full set "
@@ -94,45 +93,24 @@ static codegen::RegisterCodeGenFlags CGF;
 
 bool isReduced(ReducerWorkItem &M, TestRunner &Test);
 
-void writeOutput(ReducerWorkItem &M, StringRef Message) {
-  if (ReplaceInput) // In-place
-    OutputFilename = InputFilename.c_str();
-  else if (OutputFilename.empty() || OutputFilename == "-")
-    OutputFilename = M.isMIR() ? "reduced.mir" : "reduced.ll";
-  std::error_code EC;
-  raw_fd_ostream Out(OutputFilename, EC);
-  if (EC) {
-    errs() << "Error opening output file: " << EC.message() << "!\n";
-    exit(1);
-  }
-  M.print(Out, /*AnnotationWriter=*/nullptr);
-  errs() << Message << OutputFilename << "\n";
-}
+static std::pair<StringRef, bool> determineOutputType(bool IsMIR,
+                                                      bool InputIsBitcode) {
+  bool OutputBitcode = ForceOutputBitcode;
 
-void writeBitcode(ReducerWorkItem &M, llvm::raw_ostream &OutStream) {
-  if (M.LTOInfo && M.LTOInfo->IsThinLTO && M.LTOInfo->EnableSplitLTOUnit) {
-    PassBuilder PB;
-    LoopAnalysisManager LAM;
-    FunctionAnalysisManager FAM;
-    CGSCCAnalysisManager CGAM;
-    ModuleAnalysisManager MAM;
-    PB.registerModuleAnalyses(MAM);
-    PB.registerCGSCCAnalyses(CGAM);
-    PB.registerFunctionAnalyses(FAM);
-    PB.registerLoopAnalyses(LAM);
-    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
-    ModulePassManager MPM;
-    MPM.addPass(ThinLTOBitcodeWriterPass(OutStream, nullptr));
-    MPM.run(*M.M, MAM);
-  } else {
-    std::unique_ptr<ModuleSummaryIndex> Index;
-    if (M.LTOInfo && M.LTOInfo->HasSummary) {
-      ProfileSummaryInfo PSI(M);
-      Index = std::make_unique<ModuleSummaryIndex>(
-          buildModuleSummaryIndex(M, nullptr, &PSI));
-    }
-    WriteBitcodeToFile(M, OutStream, Index.get());
-  }
+  if (ReplaceInput) { // In-place
+    OutputFilename = InputFilename.c_str();
+    OutputBitcode |= StringRef(OutputFilename).endswith(".bc");
+  } else if (OutputFilename.empty() || OutputFilename == "-") {
+    // Default to producing bitcode if the input was bitcode, if not explicitly
+    // requested.
+
+    OutputBitcode |= InputIsBitcode;
+    OutputFilename =
+        IsMIR ? "reduced.mir" : (OutputBitcode ? "reduced.bc" : "reduced.ll");
+  } else
+    OutputBitcode |= StringRef(OutputFilename).endswith(".bc");
+
+  return {OutputFilename, OutputBitcode};
 }
 
 void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx, const char *ToolName) {
@@ -174,15 +152,20 @@ int main(int Argc, char **Argv) {
   LLVMContext Context;
   std::unique_ptr<TargetMachine> TM;
 
-  std::unique_ptr<ReducerWorkItem> OriginalProgram =
+  auto [OriginalProgram, InputIsBitcode] =
       parseReducerWorkItem(Argv[0], InputFilename, Context, TM, ReduceModeMIR);
   if (!OriginalProgram) {
     return 1;
   }
 
+  StringRef OutputFilename;
+  bool OutputBitcode;
+  std::tie(OutputFilename, OutputBitcode) =
+      determineOutputType(ReduceModeMIR, InputIsBitcode);
+
   // Initialize test environment
   TestRunner Tester(TestFilename, TestArguments, std::move(OriginalProgram),
-                    std::move(TM), Argv[0]);
+                    std::move(TM), Argv[0], OutputFilename, OutputBitcode);
 
   // This parses and writes out the testcase into a temporary file copy for the
   // test, rather than evaluating the source IR directly. This is for the
@@ -200,7 +183,7 @@ int main(int Argc, char **Argv) {
   if (OutputFilename == "-")
     Tester.getProgram().print(outs(), nullptr);
   else
-    writeOutput(Tester.getProgram(), "Done reducing! Reduced testcase: ");
+    Tester.writeOutput("Done reducing! Reduced testcase: ");
 
   return 0;
 }
