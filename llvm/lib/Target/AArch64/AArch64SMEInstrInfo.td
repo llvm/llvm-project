@@ -420,6 +420,16 @@ defm URSHL_VG4_4ZZ  :  sme2_int_sve_destructive_vector_vg4_single<"urshl", 0b010
 defm URSHL_VG2_2Z2Z :  sme2_int_sve_destructive_vector_vg2_multi<"urshl",  0b0100011>;
 defm URSHL_VG4_4Z4Z :  sme2_int_sve_destructive_vector_vg4_multi<"urshl",  0b0100011>;
 
+defm FCLAMP_VG2_2Z2Z : sme2_fp_clamp_vector_vg2_multi<"fclamp">;
+defm FCLAMP_VG4_4Z4Z : sme2_fp_clamp_vector_vg4_multi<"fclamp">;
+
+defm SCLAMP_VG2_2Z2Z : sme2_int_clamp_vector_vg2_multi<"sclamp", 0b0>;
+defm SCLAMP_VG4_4Z4Z : sme2_int_clamp_vector_vg4_multi<"sclamp", 0b0>;
+
+defm UCLAMP_VG2_2Z2Z : sme2_int_clamp_vector_vg2_multi<"uclamp", 0b1>;
+defm UCLAMP_VG4_4Z4Z : sme2_int_clamp_vector_vg4_multi<"uclamp", 0b1>;
+
+
 }
 
 
