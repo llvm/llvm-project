@@ -1011,15 +1011,6 @@ private:
   /// invoked (at which point the last position is popped).
   std::vector<CachedTokensTy::size_type> BacktrackPositions;
 
-  struct MacroInfoChain {
-    MacroInfo MI;
-    MacroInfoChain *Next;
-  };
-
-  /// MacroInfos are managed as a chain for easy disposal.  This is the head
-  /// of that list.
-  MacroInfoChain *MIChainHead = nullptr;
-
   /// True if \p Preprocessor::SkipExcludedConditionalBlock() is running.
   /// This is used to guard against calling this function recursively.
   ///
