@@ -240,6 +240,9 @@ defm ADD_VG4_M4ZZ_S  : sme2_mla_add_sub_array_vg4_single_S<"add", 0b10>;
 defm ADD_VG2_M2Z2Z_S : sme2_mla_add_sub_array_vg2_multi_S<"add", 0b10>;
 defm ADD_VG4_M4Z4Z_S : sme2_mla_add_sub_array_vg4_multi_S<"add", 0b10>;
 
+defm ADD_VG2_2ZZ  : sme2_int_sve_destructive_vector_vg2_single<"add", 0b0110000>;
+defm ADD_VG4_4ZZ  : sme2_int_sve_destructive_vector_vg4_single<"add", 0b0110000>;
+
 defm SUB_VG2_M2ZZ_S  : sme2_mla_add_sub_array_vg2_single_S<"sub", 0b11>;
 defm SUB_VG4_M4ZZ_S  : sme2_mla_add_sub_array_vg4_single_S<"sub", 0b11>;
 defm SUB_VG2_M2Z2Z_S : sme2_mla_add_sub_array_vg2_multi_S<"sub", 0b11>;
@@ -254,10 +257,6 @@ defm FMLS_VG2_M2ZZ_S  : sme2_mla_add_sub_array_vg2_single_S<"fmls", 0b01>;
 defm FMLS_VG4_M4ZZ_S  : sme2_mla_add_sub_array_vg4_single_S<"fmls", 0b01>;
 defm FMLS_VG2_M2Z2Z_S : sme2_mla_add_sub_array_vg2_multi_S<"fmls", 0b01>;
 defm FMLS_VG4_M4Z4Z_S : sme2_mla_add_sub_array_vg4_multi_S<"fmls", 0b01>;
-
-defm ADD_VG2_2ZZ  : sme2_sqdmulh_add_vector_vg2_single<"add", 0b011000>;
-defm ADD_VG4_4ZZ  : sme2_sqdmulh_add_vector_vg4_single<"add", 0b011000>;
-
 defm ADDA_VG2_M2Z2Z_S : sme2_multivec_accum_add_sub_vg2_S<"add", 0b10>;
 defm ADDA_VG4_M4Z4Z_S : sme2_multivec_accum_add_sub_vg4_S<"add", 0b10>;
 
@@ -270,10 +269,10 @@ defm FADD_VG4_M4Z4Z_S : sme2_multivec_accum_add_sub_vg4_S<"fadd", 0b00>;
 defm FSUB_VG2_M2Z2Z_S : sme2_multivec_accum_add_sub_vg2_S<"fsub", 0b01>;
 defm FSUB_VG4_M4Z4Z_S : sme2_multivec_accum_add_sub_vg4_S<"fsub", 0b01>;
 
-defm SQDMULH_2ZZ : sme2_sqdmulh_add_vector_vg2_single<"sqdmulh", 0b100000>;
-defm SQDMULH_4ZZ : sme2_sqdmulh_add_vector_vg4_single<"sqdmulh", 0b100000>;
-defm SQDMULH_2Z2Z2Z : sme2_sqdmulh_vector_vg2_multi<"sqdmulh">;
-defm SQDMULH_4Z4Z4Z : sme2_sqdmulh_vector_vg4_multi<"sqdmulh">;
+defm SQDMULH_VG2_2ZZ : sme2_int_sve_destructive_vector_vg2_single<"sqdmulh", 0b1000000>;
+defm SQDMULH_VG4_4ZZ : sme2_int_sve_destructive_vector_vg4_single<"sqdmulh", 0b1000000>;
+defm SQDMULH_VG2_2Z2Z : sme2_int_sve_destructive_vector_vg2_multi<"sqdmulh", 0b1000000>;
+defm SQDMULH_VG4_4Z4Z : sme2_int_sve_destructive_vector_vg4_multi<"sqdmulh", 0b1000000>;
 
 defm FMLAL_MZZI      : sme2_mla_long_array_index<"fmlal",  0b10,   0b00>;
 defm FMLAL_VG2_M2ZZI : sme2_fp_mla_long_array_vg2_index<"fmlal",   0b00>;
@@ -370,6 +369,56 @@ def SCVTF_2Z2Z_StoS  : sme2_fp_cvt_vg2_multi<"scvtf", 0b100>;
 def SCVTF_4Z4Z_StoS  : sme2_fp_cvt_vg4_multi<"scvtf", 0b100>;
 def UCVTF_2Z2Z_StoS  : sme2_fp_cvt_vg2_multi<"ucvtf", 0b101>;
 def UCVTF_4Z4Z_StoS  : sme2_fp_cvt_vg4_multi<"ucvtf", 0b101>;
+
+defm SMAX_VG2_2ZZ  : sme2_int_sve_destructive_vector_vg2_single<"smax", 0b0000000>;
+defm SMAX_VG4_4ZZ  : sme2_int_sve_destructive_vector_vg4_single<"smax", 0b0000000>;
+defm SMAX_VG2_2Z2Z : sme2_int_sve_destructive_vector_vg2_multi<"smax",  0b0000000>;
+defm SMAX_VG4_4Z4Z : sme2_int_sve_destructive_vector_vg4_multi<"smax",  0b0000000>;
+
+defm UMAX_VG2_2ZZ  : sme2_int_sve_destructive_vector_vg2_single<"umax", 0b0000001>;
+defm UMAX_VG4_4ZZ  : sme2_int_sve_destructive_vector_vg4_single<"umax", 0b0000001>;
+defm UMAX_VG2_2Z2Z : sme2_int_sve_destructive_vector_vg2_multi<"umax",  0b0000001>;
+defm UMAX_VG4_4Z4Z : sme2_int_sve_destructive_vector_vg4_multi<"umax",  0b0000001>;
+
+defm SMIN_VG2_2ZZ  : sme2_int_sve_destructive_vector_vg2_single<"smin", 0b0000010>;
+defm SMIN_VG4_4ZZ  : sme2_int_sve_destructive_vector_vg4_single<"smin", 0b0000010>;
+defm SMIN_VG2_2Z2Z : sme2_int_sve_destructive_vector_vg2_multi<"smin",  0b0000010>;
+defm SMIN_VG4_4Z4Z : sme2_int_sve_destructive_vector_vg4_multi<"smin",  0b0000010>;
+
+defm UMIN_VG2_2ZZ  : sme2_int_sve_destructive_vector_vg2_single<"umin", 0b0000011>;
+defm UMIN_VG4_4ZZ  : sme2_int_sve_destructive_vector_vg4_single<"umin", 0b0000011>;
+defm UMIN_VG2_2Z2Z : sme2_int_sve_destructive_vector_vg2_multi<"umin",  0b0000011>;
+defm UMIN_VG4_4Z4Z : sme2_int_sve_destructive_vector_vg4_multi<"umin",  0b0000011>;
+
+defm FMAX_VG2_2ZZ  : sme2_fp_sve_destructive_vector_vg2_single<"fmax", 0b0010000>;
+defm FMAX_VG4_4ZZ  : sme2_fp_sve_destructive_vector_vg4_single<"fmax", 0b0010000>;
+defm FMAX_VG2_2Z2Z : sme2_fp_sve_destructive_vector_vg2_multi<"fmax",  0b0010000>;
+defm FMAX_VG4_4Z4Z : sme2_fp_sve_destructive_vector_vg4_multi<"fmax",  0b0010000>;
+
+defm FMIN_VG2_2ZZ  : sme2_fp_sve_destructive_vector_vg2_single<"fmin", 0b0010001>;
+defm FMIN_VG4_4ZZ  : sme2_fp_sve_destructive_vector_vg4_single<"fmin", 0b0010001>;
+defm FMIN_VG2_2Z2Z : sme2_fp_sve_destructive_vector_vg2_multi<"fmin",  0b0010001>;
+defm FMIN_VG4_4Z4Z : sme2_fp_sve_destructive_vector_vg4_multi<"fmin",  0b0010001>;
+
+defm FMAXNM_VG2_2ZZ  : sme2_fp_sve_destructive_vector_vg2_single<"fmaxnm", 0b0010010>;
+defm FMAXNM_VG4_4ZZ  : sme2_fp_sve_destructive_vector_vg4_single<"fmaxnm", 0b0010010>;
+defm FMAXNM_VG2_2Z2Z : sme2_fp_sve_destructive_vector_vg2_multi<"fmaxnm",  0b0010010>;
+defm FMAXNM_VG4_4Z4Z : sme2_fp_sve_destructive_vector_vg4_multi<"fmaxnm",  0b0010010>;
+
+defm FMINNM_VG2_2ZZ  : sme2_fp_sve_destructive_vector_vg2_single<"fminnm", 0b0010011>;
+defm FMINNM_VG4_4ZZ  : sme2_fp_sve_destructive_vector_vg4_single<"fminnm", 0b0010011>;
+defm FMINNM_VG2_2Z2Z : sme2_fp_sve_destructive_vector_vg2_multi<"fminnm",  0b0010011>;
+defm FMINNM_VG4_4Z4Z : sme2_fp_sve_destructive_vector_vg4_multi<"fminnm",  0b0010011>;
+
+defm SRSHL_VG2_2ZZ  :  sme2_int_sve_destructive_vector_vg2_single<"srshl", 0b0100010>;
+defm SRSHL_VG4_4ZZ  :  sme2_int_sve_destructive_vector_vg4_single<"srshl", 0b0100010>;
+defm SRSHL_VG2_2Z2Z :  sme2_int_sve_destructive_vector_vg2_multi<"srshl",  0b0100010>;
+defm SRSHL_VG4_4Z4Z :  sme2_int_sve_destructive_vector_vg4_multi<"srshl",  0b0100010>;
+
+defm URSHL_VG2_2ZZ  :  sme2_int_sve_destructive_vector_vg2_single<"urshl", 0b0100011>;
+defm URSHL_VG4_4ZZ  :  sme2_int_sve_destructive_vector_vg4_single<"urshl", 0b0100011>;
+defm URSHL_VG2_2Z2Z :  sme2_int_sve_destructive_vector_vg2_multi<"urshl",  0b0100011>;
+defm URSHL_VG4_4Z4Z :  sme2_int_sve_destructive_vector_vg4_multi<"urshl",  0b0100011>;
 
 }
 
