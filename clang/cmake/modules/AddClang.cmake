@@ -37,7 +37,7 @@ macro(set_clang_windows_version_resource_properties name)
       VERSION_MAJOR ${CLANG_VERSION_MAJOR}
       VERSION_MINOR ${CLANG_VERSION_MINOR}
       VERSION_PATCHLEVEL ${CLANG_VERSION_PATCHLEVEL}
-      VERSION_STRING "${CLANG_VERSION} (${BACKEND_PACKAGE_STRING})"
+      VERSION_STRING "${CLANG_VERSION}"
       PRODUCT_NAME "clang")
   endif()
 endmacro()
