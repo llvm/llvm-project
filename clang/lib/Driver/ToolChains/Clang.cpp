@@ -1057,26 +1057,6 @@ static bool UseRelaxAll(Compilation &C, const ArgList &Args) {
                       RelaxDefault);
 }
 
-// Extract the integer N from a string spelled "-dwarf-N", returning 0
-// on mismatch. The StringRef input (rather than an Arg) allows
-// for use by the "-Xassembler" option parser.
-static unsigned DwarfVersionNum(StringRef ArgValue) {
-  return llvm::StringSwitch<unsigned>(ArgValue)
-      .Case("-gdwarf-2", 2)
-      .Case("-gdwarf-3", 3)
-      .Case("-gdwarf-4", 4)
-      .Case("-gdwarf-5", 5)
-      .Default(0);
-}
-
-// Find a DWARF format version option.
-// This function is a complementary for DwarfVersionNum().
-static const Arg *getDwarfNArg(const ArgList &Args) {
-  return Args.getLastArg(options::OPT_gdwarf_2, options::OPT_gdwarf_3,
-                         options::OPT_gdwarf_4, options::OPT_gdwarf_5,
-                         options::OPT_gdwarf);
-}
-
 static void RenderDebugEnablingArgs(const ArgList &Args, ArgStringList &CmdArgs,
                                     codegenoptions::DebugInfoKind DebugInfoKind,
                                     unsigned DwarfVersion,
@@ -4204,19 +4184,12 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
   }
 
   // If a -gdwarf argument appeared, remember it.
-  const Arg *GDwarfN = getDwarfNArg(Args);
   bool EmitDwarf = false;
-  if (GDwarfN) {
-    if (checkDebugInfoOption(GDwarfN, Args, D, TC))
-      EmitDwarf = true;
-    else
-      GDwarfN = nullptr;
-  }
+  if (const Arg *A = getDwarfNArg(Args))
+    EmitDwarf = checkDebugInfoOption(A, Args, D, TC);
 
-  if (const Arg *A = Args.getLastArg(options::OPT_gcodeview)) {
-    if (checkDebugInfoOption(A, Args, D, TC))
-      EmitCodeView = true;
-  }
+  if (const Arg *A = Args.getLastArg(options::OPT_gcodeview))
+    EmitCodeView = checkDebugInfoOption(A, Args, D, TC);
 
   // If the user asked for debug info but did not explicitly specify -gcodeview
   // or -gdwarf, ask the toolchain for the default format.
@@ -4235,22 +4208,8 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
   unsigned RequestedDWARFVersion = 0; // DWARF version requested by the user
   unsigned EffectiveDWARFVersion = 0; // DWARF version TC can generate. It may
                                       // be lower than what the user wanted.
-  unsigned DefaultDWARFVersion = ParseDebugDefaultVersion(TC, Args);
   if (EmitDwarf) {
-    // Start with the platform default DWARF version
-    RequestedDWARFVersion = TC.GetDefaultDwarfVersion();
-    assert(RequestedDWARFVersion &&
-           "toolchain default DWARF version must be nonzero");
-
-    // If the user specified a default DWARF version, that takes precedence
-    // over the platform default.
-    if (DefaultDWARFVersion)
-      RequestedDWARFVersion = DefaultDWARFVersion;
-
-    // Override with a user-specified DWARF version
-    if (GDwarfN)
-      if (auto ExplicitVersion = DwarfVersionNum(GDwarfN->getSpelling()))
-        RequestedDWARFVersion = ExplicitVersion;
+    RequestedDWARFVersion = getDwarfVersion(TC, Args);
     // Clamp effective DWARF version to the max supported by the toolchain.
     EffectiveDWARFVersion =
         std::min(RequestedDWARFVersion, TC.getMaxDwarfVersion());
@@ -7981,13 +7940,6 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
     WantDebug = !A->getOption().matches(options::OPT_g0) &&
                 !A->getOption().matches(options::OPT_ggdb0);
 
-  unsigned DwarfVersion = ParseDebugDefaultVersion(getToolChain(), Args);
-  if (const Arg *GDwarfN = getDwarfNArg(Args))
-    DwarfVersion = DwarfVersionNum(GDwarfN->getSpelling());
-
-  if (DwarfVersion == 0)
-    DwarfVersion = getToolChain().GetDefaultDwarfVersion();
-
   codegenoptions::DebugInfoKind DebugInfoKind = codegenoptions::NoDebugInfo;
 
   // Add the -fdebug-compilation-dir flag if needed.
@@ -8014,6 +7966,7 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
     // And pass along -I options
     Args.AddAllArgs(CmdArgs, options::OPT_I);
   }
+  const unsigned DwarfVersion = getDwarfVersion(getToolChain(), Args);
   RenderDebugEnablingArgs(Args, CmdArgs, DebugInfoKind, DwarfVersion,
                           llvm::DebuggerKind::Default);
   renderDwarfFormat(D, Triple, Args, CmdArgs, DwarfVersion);
