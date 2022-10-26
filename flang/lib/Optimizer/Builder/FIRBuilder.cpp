@@ -1350,3 +1350,12 @@ fir::BoxValue fir::factory::createBoxValue(fir::FirOpBuilder &builder,
       [](const auto &) {});
   return fir::BoxValue(box, lbounds, explicitTypeParams);
 }
+
+mlir::Value fir::factory::genCPtrOrCFunptrValue(fir::FirOpBuilder &builder,
+                                                mlir::Location loc,
+                                                mlir::Value cPtr) {
+  mlir::Type cPtrTy = fir::unwrapRefType(cPtr.getType());
+  mlir::Value cPtrAddr =
+      fir::factory::genCPtrOrCFunptrAddr(builder, loc, cPtr, cPtrTy);
+  return builder.create<fir::LoadOp>(loc, cPtrAddr);
+}
