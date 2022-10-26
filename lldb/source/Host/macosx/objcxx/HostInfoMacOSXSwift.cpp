@@ -21,6 +21,8 @@
 
 using namespace lldb_private;
 
+#ifdef LLDB_ENABLE_SWIFT
+
 bool HostInfoMacOSX::ComputeSwiftResourceDirectory(FileSpec &lldb_shlib_spec,
                                                    FileSpec &file_spec,
                                                    bool verify) {
@@ -289,3 +291,5 @@ HostInfoMacOSX::GetSwiftResourceDir(llvm::Triple triple,
   g_resource_dir_cache.insert({key, value});
   return g_resource_dir_cache[key];
 }
+
+#endif
