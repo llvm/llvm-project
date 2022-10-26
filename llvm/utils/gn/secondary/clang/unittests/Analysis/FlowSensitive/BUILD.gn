@@ -25,6 +25,7 @@ unittest("ClangAnalysisFlowSensitiveTests") {
     "MapLatticeTest.cpp",
     "MatchSwitchTest.cpp",
     "MultiVarConstantPropagationTest.cpp",
+    "SignAnalysisTest.cpp",
     "SingleVarConstantPropagationTest.cpp",
     "SolverTest.cpp",
     "TestingSupport.cpp",
