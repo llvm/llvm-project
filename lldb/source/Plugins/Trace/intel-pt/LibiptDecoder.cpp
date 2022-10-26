@@ -329,12 +329,18 @@ public:
   /// \param[in] decoded_thread
   ///     A \a DecodedThread object where the decoded instructions will be
   ///     appended to. It might have already some instructions.
+  ///
+  /// \param[in] tsc_upper_bound
+  ///   Maximum allowed value of TSCs decoded from this PSB block.
+  ///   Any of this PSB's data occurring after this TSC will be excluded.
   PSBBlockDecoder(PtInsnDecoderUP &&decoder_up, const PSBBlock &psb_block,
                   Optional<lldb::addr_t> next_block_ip,
-                  DecodedThread &decoded_thread, TraceIntelPT &trace_intel_pt)
+                  DecodedThread &decoded_thread, TraceIntelPT &trace_intel_pt,
+                  llvm::Optional<DecodedThread::TSC> tsc_upper_bound)
       : m_decoder_up(std::move(decoder_up)), m_psb_block(psb_block),
         m_next_block_ip(next_block_ip), m_decoded_thread(decoded_thread),
-        m_anomaly_detector(*m_decoder_up, trace_intel_pt, decoded_thread) {}
+        m_anomaly_detector(*m_decoder_up, trace_intel_pt, decoded_thread),
+        m_tsc_upper_bound(tsc_upper_bound) {}
 
   /// \param[in] trace_intel_pt
   ///     The main Trace object that own the PSB block.
@@ -362,14 +368,15 @@ public:
   static Expected<PSBBlockDecoder>
   Create(TraceIntelPT &trace_intel_pt, const PSBBlock &psb_block,
          ArrayRef<uint8_t> buffer, Process &process,
-         Optional<lldb::addr_t> next_block_ip, DecodedThread &decoded_thread) {
+         Optional<lldb::addr_t> next_block_ip, DecodedThread &decoded_thread,
+         llvm::Optional<DecodedThread::TSC> tsc_upper_bound) {
     Expected<PtInsnDecoderUP> decoder_up =
         CreateInstructionDecoder(trace_intel_pt, buffer, process);
     if (!decoder_up)
       return decoder_up.takeError();
 
     return PSBBlockDecoder(std::move(*decoder_up), psb_block, next_block_ip,
-                           decoded_thread, trace_intel_pt);
+                           decoded_thread, trace_intel_pt, tsc_upper_bound);
   }
 
   void DecodePSBBlock() {
@@ -451,6 +458,41 @@ private:
     }
   }
 
+  /// Process the TSC of a decoded PT event. Specifically, check if this TSC
+  /// is below the TSC upper bound for this PSB. If the TSC exceeds the upper
+  /// bound, return an error to abort decoding. Otherwise add the it to the
+  /// underlying DecodedThread and decoding should continue as expected.
+  ///
+  /// \param[in] tsc
+  ///   The TSC of the a decoded event.
+  Error ProcessPTEventTSC(DecodedThread::TSC tsc) {
+    if (m_tsc_upper_bound && tsc >= *m_tsc_upper_bound) {
+      // This event and all the remaining events of this PSB have a TSC
+      // outside the range of the "owning" ThreadContinuousExecution. For
+      // now we drop all of these events/instructions, future work can
+      // improve upon this by determining the "owning"
+      // ThreadContinuousExecution of the remaining PSB data.
+      std::string err_msg = formatv("decoding truncated: TSC {0} exceeds "
+                                    "maximum TSC value {1}, will skip decoding"
+                                    " the remaining data of the PSB",
+                                    tsc, *m_tsc_upper_bound)
+                                .str();
+
+      uint64_t offset;
+      int status = pt_insn_get_offset(m_decoder_up.get(), &offset);
+      if (!IsLibiptError(status)) {
+        err_msg = formatv("{2} (skipping {0} of {1} bytes)", offset,
+                          m_psb_block.size, err_msg)
+                      .str();
+      }
+      m_decoded_thread.AppendCustomError(err_msg);
+      return createStringError(inconvertibleErrorCode(), err_msg);
+    } else {
+      m_decoded_thread.NotifyTsc(tsc);
+      return Error::success();
+    }
+  }
+
   /// Before querying instructions, we need to query the events associated with
   /// that instruction, e.g. timing and trace disablement events.
   ///
@@ -471,8 +513,12 @@ private:
         return status;
       }
 
-      if (event.has_tsc)
-        m_decoded_thread.NotifyTsc(event.tsc);
+      if (event.has_tsc) {
+        if (Error err = ProcessPTEventTSC(event.tsc)) {
+          consumeError(std::move(err));
+          return -pte_internal;
+        }
+      }
 
       switch (event.type) {
       case ptev_disabled:
@@ -506,6 +552,7 @@ private:
   Optional<lldb::addr_t> m_next_block_ip;
   DecodedThread &m_decoded_thread;
   PSBBlockAnomalyDetector m_anomaly_detector;
+  llvm::Optional<DecodedThread::TSC> m_tsc_upper_bound;
 };
 
 Error lldb_private::trace_intel_pt::DecodeSingleTraceForThread(
@@ -523,7 +570,7 @@ Error lldb_private::trace_intel_pt::DecodeSingleTraceForThread(
         trace_intel_pt, block, buffer.slice(block.psb_offset, block.size),
         *decoded_thread.GetThread()->GetProcess(),
         i + 1 < blocks->size() ? blocks->at(i + 1).starting_ip : None,
-        decoded_thread);
+        decoded_thread, llvm::None);
     if (!decoder)
       return decoder.takeError();
 
@@ -585,13 +632,13 @@ Error lldb_private::trace_intel_pt::DecodeSystemWideTraceForThread(
 
       Expected<PSBBlockDecoder> decoder = PSBBlockDecoder::Create(
           trace_intel_pt, psb_block,
-          buffers.lookup(executions[i].thread_execution.cpu_id)
+          buffers.lookup(execution.thread_execution.cpu_id)
               .slice(psb_block.psb_offset, psb_block.size),
           *decoded_thread.GetThread()->GetProcess(),
           j + 1 < execution.psb_blocks.size()
               ? execution.psb_blocks[j + 1].starting_ip
               : None,
-          decoded_thread);
+          decoded_thread, execution.thread_execution.GetEndTSC());
       if (!decoder)
         return decoder.takeError();
 

@@ -35,6 +35,7 @@
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Runtime/entry-names.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "llvm/Support/CommandLine.h"
@@ -1084,6 +1085,12 @@ llvm::cl::opt<MathRuntimeVersion> mathRuntimeVersion(
         clEnumValN(preciseVersion, "precise", "use precise runtime behavior")),
     llvm::cl::init(fastVersion));
 
+static llvm::cl::opt<bool>
+    disableMlirComplex("disable-mlir-complex",
+                       llvm::cl::desc("Use libm instead of the MLIR complex "
+                                      "dialect to lower complex operations"),
+                       llvm::cl::init(false));
+
 struct RuntimeFunction {
   // llvm::StringRef comparison operator are not constexpr, so use string_view.
   using Key = std::string_view;
@@ -1320,6 +1327,49 @@ static mlir::Value genMathOp(fir::FirOpBuilder &builder, mlir::Location loc,
   return result;
 }
 
+template <typename T>
+static mlir::Value genComplexMathOp(fir::FirOpBuilder &builder,
+                                    mlir::Location loc,
+                                    llvm::StringRef mathLibFuncName,
+                                    mlir::FunctionType mathLibFuncType,
+                                    llvm::ArrayRef<mlir::Value> args) {
+  mlir::Value result;
+  if (disableMlirComplex ||
+      (mathRuntimeVersion == preciseVersion && !mathLibFuncName.empty())) {
+    result = genLibCall(builder, loc, mathLibFuncName, mathLibFuncType, args);
+    LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
+    return result;
+  }
+
+  LLVM_DEBUG(llvm::dbgs() << "Generating '" << mathLibFuncName
+                          << "' operation with type ";
+             mathLibFuncType.dump(); llvm::dbgs() << "\n");
+  auto type = mathLibFuncType.getInput(0).cast<fir::ComplexType>();
+  auto kind = type.getElementType().cast<fir::RealType>().getFKind();
+  auto realTy = builder.getRealType(kind);
+  auto mComplexTy = mlir::ComplexType::get(realTy);
+
+  llvm::SmallVector<mlir::Value, 2> cargs;
+  for (const mlir::Value &arg : args) {
+    // Convert the fir.complex to a mlir::complex
+    cargs.push_back(builder.createConvert(loc, mComplexTy, arg));
+  }
+
+  // Builder expects an extra return type to be provided if different to
+  // the argument types for an operation
+  if constexpr (T::template hasTrait<
+                    mlir::OpTrait::SameOperandsAndResultType>()) {
+    result = builder.create<T>(loc, cargs);
+    result = builder.createConvert(loc, mathLibFuncType.getResult(0), result);
+  } else {
+    result = builder.create<T>(loc, realTy, cargs);
+    result = builder.createConvert(loc, mathLibFuncType.getResult(0), result);
+  }
+
+  LLVM_DEBUG(result.dump(); llvm::dbgs() << "\n");
+  return result;
+}
+
 /// Mapping between mathematical intrinsic operations and MLIR operations
 /// of some appropriate dialect (math, complex, etc.) or libm calls.
 /// TODO: support remaining Fortran math intrinsics.
@@ -1330,8 +1380,10 @@ static constexpr MathOperation mathOperations[] = {
     {"abs", "fabs", genF64F64FuncType, genMathOp<mlir::math::AbsFOp>},
     {"abs", "llvm.fabs.f128", genF128F128FuncType,
      genMathOp<mlir::math::AbsFOp>},
-    {"abs", "cabsf", genF32ComplexFuncType, genLibCall},
-    {"abs", "cabs", genF64ComplexFuncType, genLibCall},
+    {"abs", "cabsf", genF32ComplexFuncType,
+     genComplexMathOp<mlir::complex::AbsOp>},
+    {"abs", "cabs", genF64ComplexFuncType,
+     genComplexMathOp<mlir::complex::AbsOp>},
     {"acos", "acosf", genF32F32FuncType, genLibCall},
     {"acos", "acos", genF64F64FuncType, genLibCall},
     {"acos", "cacosf", genComplexComplexFuncType<4>, genLibCall},
@@ -1386,8 +1438,10 @@ static constexpr MathOperation mathOperations[] = {
     {"ceil", "ceil", genF64F64FuncType, genMathOp<mlir::math::CeilOp>},
     {"cos", "cosf", genF32F32FuncType, genMathOp<mlir::math::CosOp>},
     {"cos", "cos", genF64F64FuncType, genMathOp<mlir::math::CosOp>},
-    {"cos", "ccosf", genComplexComplexFuncType<4>, genLibCall},
-    {"cos", "ccos", genComplexComplexFuncType<8>, genLibCall},
+    {"cos", "ccosf", genComplexComplexFuncType<4>,
+     genComplexMathOp<mlir::complex::CosOp>},
+    {"cos", "ccos", genComplexComplexFuncType<8>,
+     genComplexMathOp<mlir::complex::CosOp>},
     {"cosh", "coshf", genF32F32FuncType, genLibCall},
     {"cosh", "cosh", genF64F64FuncType, genLibCall},
     {"cosh", "ccoshf", genComplexComplexFuncType<4>, genLibCall},
@@ -1398,8 +1452,10 @@ static constexpr MathOperation mathOperations[] = {
     {"erfc", "erfc", genF64F64FuncType, genLibCall},
     {"exp", "expf", genF32F32FuncType, genMathOp<mlir::math::ExpOp>},
     {"exp", "exp", genF64F64FuncType, genMathOp<mlir::math::ExpOp>},
-    {"exp", "cexpf", genComplexComplexFuncType<4>, genLibCall},
-    {"exp", "cexp", genComplexComplexFuncType<8>, genLibCall},
+    {"exp", "cexpf", genComplexComplexFuncType<4>,
+     genComplexMathOp<mlir::complex::ExpOp>},
+    {"exp", "cexp", genComplexComplexFuncType<8>,
+     genComplexMathOp<mlir::complex::ExpOp>},
     // math::FloorOp returns a real, while Fortran FLOOR returns integer.
     {"floor", "floorf", genF32F32FuncType, genMathOp<mlir::math::FloorOp>},
     {"floor", "floor", genF64F64FuncType, genMathOp<mlir::math::FloorOp>},
@@ -1409,8 +1465,10 @@ static constexpr MathOperation mathOperations[] = {
     {"hypot", "hypot", genF64F64F64FuncType, genLibCall},
     {"log", "logf", genF32F32FuncType, genMathOp<mlir::math::LogOp>},
     {"log", "log", genF64F64FuncType, genMathOp<mlir::math::LogOp>},
-    {"log", "clogf", genComplexComplexFuncType<4>, genLibCall},
-    {"log", "clog", genComplexComplexFuncType<8>, genLibCall},
+    {"log", "clogf", genComplexComplexFuncType<4>,
+     genComplexMathOp<mlir::complex::LogOp>},
+    {"log", "clog", genComplexComplexFuncType<8>,
+     genComplexMathOp<mlir::complex::LogOp>},
     {"log10", "log10f", genF32F32FuncType, genMathOp<mlir::math::Log10Op>},
     {"log10", "log10", genF64F64FuncType, genMathOp<mlir::math::Log10Op>},
     {"log_gamma", "lgammaf", genF32F32FuncType, genLibCall},
@@ -1426,8 +1484,10 @@ static constexpr MathOperation mathOperations[] = {
     {"pow", {}, genIntIntIntFuncType<64>, genMathOp<mlir::math::IPowIOp>},
     {"pow", "powf", genF32F32F32FuncType, genMathOp<mlir::math::PowFOp>},
     {"pow", "pow", genF64F64F64FuncType, genMathOp<mlir::math::PowFOp>},
-    {"pow", "cpowf", genComplexComplexComplexFuncType<4>, genLibCall},
-    {"pow", "cpow", genComplexComplexComplexFuncType<8>, genLibCall},
+    {"pow", "cpowf", genComplexComplexComplexFuncType<4>,
+     genComplexMathOp<mlir::complex::PowOp>},
+    {"pow", "cpow", genComplexComplexComplexFuncType<8>,
+     genComplexMathOp<mlir::complex::PowOp>},
     // TODO: add PowIOp in math and complex dialects.
     {"pow", "llvm.powi.f32.i32", genF32F32IntFuncType<32>, genLibCall},
     {"pow", "llvm.powi.f64.i32", genF64F64IntFuncType<32>, genLibCall},
@@ -1449,24 +1509,32 @@ static constexpr MathOperation mathOperations[] = {
      genMathOp<mlir::math::CopySignOp>},
     {"sin", "sinf", genF32F32FuncType, genMathOp<mlir::math::SinOp>},
     {"sin", "sin", genF64F64FuncType, genMathOp<mlir::math::SinOp>},
-    {"sin", "csinf", genComplexComplexFuncType<4>, genLibCall},
-    {"sin", "csin", genComplexComplexFuncType<8>, genLibCall},
+    {"sin", "csinf", genComplexComplexFuncType<4>,
+     genComplexMathOp<mlir::complex::SinOp>},
+    {"sin", "csin", genComplexComplexFuncType<8>,
+     genComplexMathOp<mlir::complex::SinOp>},
     {"sinh", "sinhf", genF32F32FuncType, genLibCall},
     {"sinh", "sinh", genF64F64FuncType, genLibCall},
     {"sinh", "csinhf", genComplexComplexFuncType<4>, genLibCall},
     {"sinh", "csinh", genComplexComplexFuncType<8>, genLibCall},
     {"sqrt", "sqrtf", genF32F32FuncType, genMathOp<mlir::math::SqrtOp>},
     {"sqrt", "sqrt", genF64F64FuncType, genMathOp<mlir::math::SqrtOp>},
-    {"sqrt", "csqrtf", genComplexComplexFuncType<4>, genLibCall},
-    {"sqrt", "csqrt", genComplexComplexFuncType<8>, genLibCall},
+    {"sqrt", "csqrtf", genComplexComplexFuncType<4>,
+     genComplexMathOp<mlir::complex::SqrtOp>},
+    {"sqrt", "csqrt", genComplexComplexFuncType<8>,
+     genComplexMathOp<mlir::complex::SqrtOp>},
     {"tan", "tanf", genF32F32FuncType, genMathOp<mlir::math::TanOp>},
     {"tan", "tan", genF64F64FuncType, genMathOp<mlir::math::TanOp>},
-    {"tan", "ctanf", genComplexComplexFuncType<4>, genLibCall},
-    {"tan", "ctan", genComplexComplexFuncType<8>, genLibCall},
+    {"tan", "ctanf", genComplexComplexFuncType<4>,
+     genComplexMathOp<mlir::complex::TanOp>},
+    {"tan", "ctan", genComplexComplexFuncType<8>,
+     genComplexMathOp<mlir::complex::TanOp>},
     {"tanh", "tanhf", genF32F32FuncType, genMathOp<mlir::math::TanhOp>},
     {"tanh", "tanh", genF64F64FuncType, genMathOp<mlir::math::TanhOp>},
-    {"tanh", "ctanhf", genComplexComplexFuncType<4>, genLibCall},
-    {"tanh", "ctanh", genComplexComplexFuncType<8>, genLibCall},
+    {"tanh", "ctanhf", genComplexComplexFuncType<4>,
+     genComplexMathOp<mlir::complex::TanhOp>},
+    {"tanh", "ctanh", genComplexComplexFuncType<8>,
+     genComplexMathOp<mlir::complex::TanhOp>},
 };
 
 // This helper class computes a "distance" between two function types.

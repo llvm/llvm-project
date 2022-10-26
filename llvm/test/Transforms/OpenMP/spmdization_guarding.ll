@@ -344,7 +344,10 @@ define internal void @__omp_outlined__1_wrapper(i16 zeroext %0, i32 %1) {
 
 declare void @__kmpc_parallel_51(%struct.ident_t*, i32, i32, i32, i32, i8*, i8*, i8**, i64)
 
-declare i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1)
+; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
+define weak i32 @__kmpc_target_init(%struct.ident_t*, i8, i1, i1) {
+  ret i32 0
+}
 
 ; Function Attrs: convergent
 declare i32 @no_openmp(i32*) #1

@@ -37,18 +37,14 @@ define void @t() nounwind  {
 ;
 ; YMM-LABEL: t:
 ; YMM:       ## %bb.0: ## %entry
-; YMM-NEXT:    pushl %ebp
-; YMM-NEXT:    movl %esp, %ebp
-; YMM-NEXT:    andl $-32, %esp
-; YMM-NEXT:    subl $96, %esp
+; YMM-NEXT:    subl $60, %esp
 ; YMM-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; YMM-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; YMM-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
+; YMM-NEXT:    vmovups %ymm0, {{[0-9]+}}(%esp)
 ; YMM-NEXT:    movl %eax, (%esp)
 ; YMM-NEXT:    vzeroupper
 ; YMM-NEXT:    calll _foo
-; YMM-NEXT:    movl %ebp, %esp
-; YMM-NEXT:    popl %ebp
+; YMM-NEXT:    addl $60, %esp
 ; YMM-NEXT:    retl
 entry:
 	%up_mvd = alloca [8 x %struct.x]		; <ptr> [#uses=2]

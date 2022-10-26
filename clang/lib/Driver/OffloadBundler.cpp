@@ -14,10 +14,10 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "clang/Driver/OffloadBundler.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
-#include "clang/Driver/OffloadBundler.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -63,14 +63,13 @@ using namespace clang;
 
 OffloadTargetInfo::OffloadTargetInfo(const StringRef Target,
                                      const OffloadBundlerConfig &BC)
-                                     : BundlerConfig(BC) {
+    : BundlerConfig(BC) {
 
   // TODO: Add error checking from ClangOffloadBundler.cpp
   auto TargetFeatures = Target.split(':');
   auto TripleOrGPU = TargetFeatures.first.rsplit('-');
 
-  if (clang::StringToCudaArch(TripleOrGPU.second) !=
-      clang::CudaArch::UNKNOWN) {
+  if (clang::StringToCudaArch(TripleOrGPU.second) != clang::CudaArch::UNKNOWN) {
     auto KindTriple = TripleOrGPU.first.split('-');
     this->OffloadKind = KindTriple.first;
     this->Triple = llvm::Triple(KindTriple.second);
@@ -89,20 +88,19 @@ bool OffloadTargetInfo::hasHostKind() const {
 
 bool OffloadTargetInfo::isOffloadKindValid() const {
   return OffloadKind == "host" || OffloadKind == "openmp" ||
-    OffloadKind == "hip" || OffloadKind == "hipv4";
+         OffloadKind == "hip" || OffloadKind == "hipv4";
 }
 
 bool OffloadTargetInfo::isOffloadKindCompatible(
-  const StringRef TargetOffloadKind) const {
+    const StringRef TargetOffloadKind) const {
   if (OffloadKind == TargetOffloadKind)
     return true;
   if (BundlerConfig.HipOpenmpCompatible) {
-    bool HIPCompatibleWithOpenMP =
-      OffloadKind.startswith_insensitive("hip") &&
-      TargetOffloadKind == "openmp";
+    bool HIPCompatibleWithOpenMP = OffloadKind.startswith_insensitive("hip") &&
+                                   TargetOffloadKind == "openmp";
     bool OpenMPCompatibleWithHIP =
-      OffloadKind == "openmp" &&
-      TargetOffloadKind.startswith_insensitive("hip");
+        OffloadKind == "openmp" &&
+        TargetOffloadKind.startswith_insensitive("hip");
     return HIPCompatibleWithOpenMP || OpenMPCompatibleWithHIP;
   }
   return false;
@@ -670,18 +668,16 @@ public:
         InputFile = *TempFileOrErr;
       }
 
-      ObjcopyArgs.push_back(SS.save(Twine("--add-section=") +
-                                    OFFLOAD_BUNDLER_MAGIC_STR +
-                                    BundlerConfig.TargetNames[I] +
-                                    "=" + InputFile));
-      ObjcopyArgs.push_back(SS.save(Twine("--set-section-flags=") +
-                                    OFFLOAD_BUNDLER_MAGIC_STR +
-                                    BundlerConfig.TargetNames[I] +
-                                    "=readonly,exclude"));
+      ObjcopyArgs.push_back(
+          SS.save(Twine("--add-section=") + OFFLOAD_BUNDLER_MAGIC_STR +
+                  BundlerConfig.TargetNames[I] + "=" + InputFile));
+      ObjcopyArgs.push_back(
+          SS.save(Twine("--set-section-flags=") + OFFLOAD_BUNDLER_MAGIC_STR +
+                  BundlerConfig.TargetNames[I] + "=readonly,exclude"));
     }
     ObjcopyArgs.push_back("--");
     ObjcopyArgs.push_back(
-      BundlerConfig.InputFileNames[BundlerConfig.HostInputIndex]);
+        BundlerConfig.InputFileNames[BundlerConfig.HostInputIndex]);
     ObjcopyArgs.push_back(BundlerConfig.OutputFileNames.front());
 
     if (Error Err = executeObjcopy(BundlerConfig.ObjcopyPath, ObjcopyArgs))
@@ -884,8 +880,8 @@ CreateFileHandler(MemoryBuffer &FirstInput,
 }
 
 // List bundle IDs. Return true if an error was found.
-Error OffloadBundler::ListBundleIDsInFile(StringRef InputFileName,
-                          const OffloadBundlerConfig &BundlerConfig) {
+Error OffloadBundler::ListBundleIDsInFile(
+    StringRef InputFileName, const OffloadBundlerConfig &BundlerConfig) {
   // Open Input file.
   ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
       MemoryBuffer::getFileOrSTDIN(InputFileName);
@@ -910,8 +906,8 @@ Error OffloadBundler::BundleFiles() {
   std::error_code EC;
 
   // Create output file.
-  raw_fd_ostream OutputFile(BundlerConfig.OutputFileNames.front(),
-                            EC, sys::fs::OF_None);
+  raw_fd_ostream OutputFile(BundlerConfig.OutputFileNames.front(), EC,
+                            sys::fs::OF_None);
   if (EC)
     return createFileError(BundlerConfig.OutputFileNames.front(), EC);
 
@@ -929,10 +925,10 @@ Error OffloadBundler::BundleFiles() {
   // Get the file handler. We use the host buffer as reference.
   assert((BundlerConfig.HostInputIndex != ~0u || BundlerConfig.AllowNoHost) &&
          "Host input index undefined??");
-  Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr =
-      CreateFileHandler(*InputBuffers[BundlerConfig.AllowNoHost ? 0
-                        : BundlerConfig.HostInputIndex],
-                        BundlerConfig);
+  Expected<std::unique_ptr<FileHandler>> FileHandlerOrErr = CreateFileHandler(
+      *InputBuffers[BundlerConfig.AllowNoHost ? 0
+                                              : BundlerConfig.HostInputIndex],
+      BundlerConfig);
   if (!FileHandlerOrErr)
     return FileHandlerOrErr.takeError();
 
@@ -1202,8 +1198,7 @@ Error OffloadBundler::UnbundleArchive() {
       auto CodeObjectInfo = OffloadTargetInfo(CodeObject, BundlerConfig);
       if (CodeObjectInfo.hasHostKind()) {
         // Do nothing, we don't extract host code yet.
-      } else if (getCompatibleOffloadTargets(CodeObjectInfo,
-                                             CompatibleTargets,
+      } else if (getCompatibleOffloadTargets(CodeObjectInfo, CompatibleTargets,
                                              BundlerConfig)) {
         std::string BundleData;
         raw_string_ostream DataStream(BundleData);

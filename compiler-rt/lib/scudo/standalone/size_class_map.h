@@ -318,7 +318,7 @@ struct TrustySizeClassConfig {
   static const uptr MinSizeLog = 7;
   static const uptr MidSizeLog = 7;
   static const uptr MaxSizeLog = 7;
-  static const u16 MaxNumCachedHint = 8;
+  static const u16 MaxNumCachedHint = 12;
   static const uptr MaxBytesCachedLog = 10;
   static const uptr SizeDelta = 0;
 };

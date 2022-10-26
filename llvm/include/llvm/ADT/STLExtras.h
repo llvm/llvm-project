@@ -1636,6 +1636,57 @@ OutputIt copy_if(R &&Range, OutputIt Out, UnaryPredicate P) {
   return std::copy_if(adl_begin(Range), adl_end(Range), Out, P);
 }
 
+/// Return the single value in \p Range that satisfies
+/// \p P(<member of \p Range> *, AllowRepeats)->T * returning nullptr
+/// when no values or multiple values were found.
+/// When \p AllowRepeats is true, multiple values that compare equal
+/// are allowed.
+template <typename T, typename R, typename Predicate>
+T *find_singleton(R &&Range, Predicate P, bool AllowRepeats = false) {
+  T *RC = nullptr;
+  for (auto *A : Range) {
+    if (T *PRC = P(A, AllowRepeats)) {
+      if (RC) {
+        if (!AllowRepeats || PRC != RC)
+          return nullptr;
+      } else
+        RC = PRC;
+    }
+  }
+  return RC;
+}
+
+/// Return a pair consisting of the single value in \p Range that satisfies
+/// \p P(<member of \p Range> *, AllowRepeats)->std::pair<T*, bool> returning
+/// nullptr when no values or multiple values were found, and a bool indicating
+/// whether multiple values were found to cause the nullptr.
+/// When \p AllowRepeats is true, multiple values that compare equal are
+/// allowed.  The predicate \p P returns a pair<T *, bool> where T is the
+/// singleton while the bool indicates whether multiples have already been
+/// found.  It is expected that first will be nullptr when second is true.
+/// This allows using find_singleton_nested within the predicate \P.
+template <typename T, typename R, typename Predicate>
+std::pair<T *, bool> find_singleton_nested(R &&Range, Predicate P,
+                                           bool AllowRepeats = false) {
+  T *RC = nullptr;
+  for (auto *A : Range) {
+    std::pair<T *, bool> PRC = P(A, AllowRepeats);
+    if (PRC.second) {
+      assert(PRC.first == nullptr &&
+             "Inconsistent return values in find_singleton_nested.");
+      return PRC;
+    }
+    if (PRC.first) {
+      if (RC) {
+        if (!AllowRepeats || PRC.first != RC)
+          return {nullptr, true};
+      } else
+        RC = PRC.first;
+    }
+  }
+  return {RC, false};
+}
+
 template <typename R, typename OutputIt>
 OutputIt copy(R &&Range, OutputIt Out) {
   return std::copy(adl_begin(Range), adl_end(Range), Out);

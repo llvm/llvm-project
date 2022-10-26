@@ -165,12 +165,6 @@ Preprocessor::~Preprocessor() {
 
   IncludeMacroStack.clear();
 
-  // Destroy any macro definitions.
-  while (MacroInfoChain *I = MIChainHead) {
-    MIChainHead = I->Next;
-    I->~MacroInfoChain();
-  }
-
   // Free any cached macro expanders.
   // This populates MacroArgCache, so all TokenLexers need to be destroyed
   // before the code below that frees up the MacroArgCache list.

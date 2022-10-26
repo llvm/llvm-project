@@ -147,17 +147,17 @@ defm ORX     : F3_12<"or",  0b000010, or,  I64Regs, i64, i64imm>;
 defm XORX    : F3_12<"xor", 0b000011, xor, I64Regs, i64, i64imm>;
 
 def ANDXNrr  : F3_1<2, 0b000101,
-                 (outs I64Regs:$dst), (ins I64Regs:$b, I64Regs:$c),
-                 "andn $b, $c, $dst",
-                 [(set i64:$dst, (and i64:$b, (not i64:$c)))]>;
+                 (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2),
+                 "andn $rs1, $rs2, $rd",
+                 [(set i64:$rd, (and i64:$rs1, (not i64:$rs2)))]>;
 def ORXNrr   : F3_1<2, 0b000110,
-                 (outs I64Regs:$dst), (ins I64Regs:$b, I64Regs:$c),
-                 "orn $b, $c, $dst",
-                 [(set i64:$dst, (or i64:$b, (not i64:$c)))]>;
+                 (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2),
+                 "orn $rs1, $rs2, $rd",
+                 [(set i64:$rd, (or i64:$rs1, (not i64:$rs2)))]>;
 def XNORXrr  : F3_1<2, 0b000111,
-                   (outs I64Regs:$dst), (ins I64Regs:$b, I64Regs:$c),
-                   "xnor $b, $c, $dst",
-                   [(set i64:$dst, (not (xor i64:$b, i64:$c)))]>;
+                   (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2),
+                   "xnor $rs1, $rs2, $rd",
+                   [(set i64:$rd, (not (xor i64:$rs1, i64:$rs2)))]>;
 
 defm ADDX    : F3_12<"add", 0b000000, add, I64Regs, i64, i64imm>;
 defm SUBX    : F3_12<"sub", 0b000100, sub, I64Regs, i64, i64imm>;
@@ -170,9 +170,9 @@ def TLS_ADDXrr : F3_1<2, 0b000000, (outs I64Regs:$rd),
 
 // "LEA" form of add
 def LEAX_ADDri : F3_2<2, 0b000000,
-                     (outs I64Regs:$dst), (ins MEMri:$addr),
-                     "add ${addr:arith}, $dst",
-                     [(set iPTR:$dst, ADDRri:$addr)]>;
+                     (outs I64Regs:$rd), (ins (MEMri $rs1, $simm13):$addr),
+                     "add ${addr:arith}, $rd",
+                     [(set iPTR:$rd, ADDRri:$addr)]>;
 }
 
 def : Pat<(SPcmpicc i64:$a, i64:$b), (CMPrr $a, $b)>;
@@ -240,16 +240,16 @@ let DecoderMethod = "DecodeLoadInt" in
 
 let mayLoad = 1, isAsmParserOnly = 1 in {
   def TLS_LDXrr : F3_1<3, 0b001011,
-                       (outs IntRegs:$dst),
-                       (ins MEMrr:$addr, TailRelocSymTLSLoad:$sym),
-                       "ldx [$addr], $dst, $sym",
-                       [(set i64:$dst,
+                       (outs IntRegs:$rd),
+                       (ins (MEMrr $rs1, $rs2):$addr, TailRelocSymTLSLoad:$sym),
+                       "ldx [$addr], $rd, $sym",
+                       [(set i64:$rd,
                            (tlsld ADDRrr:$addr, tglobaltlsaddr:$sym))]>;
   def GDOP_LDXrr : F3_1<3, 0b001011,
-                       (outs I64Regs:$dst),
-                       (ins MEMrr:$addr, TailRelocSymGOTLoad:$sym),
-                       "ldx [$addr], $dst, $sym",
-                       [(set i64:$dst,
+                       (outs I64Regs:$rd),
+                       (ins (MEMrr $rs1, $rs2):$addr, TailRelocSymGOTLoad:$sym),
+                       "ldx [$addr], $rd, $sym",
+                       [(set i64:$rd,
                            (load_gdop ADDRrr:$addr, tglobaladdr:$sym))]>;
 }
 

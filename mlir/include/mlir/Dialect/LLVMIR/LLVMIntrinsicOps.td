@@ -11,96 +11,114 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 // operations and intrinsics. However, we systematically prefix them with
 // "intr." to avoid potential name clashes.
 
-class LLVM_UnaryIntrinsicOp<string func, list<Trait> traits = []> :
+class LLVM_UnaryIntrOpBase<string func, Type element,
+                           list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([Pure, SameOperandsAndResultType], traits)> {
-  let arguments = (ins LLVM_Type:$in);
+  let arguments = (ins LLVM_ScalarOrVectorOf<element>:$in);
 }
 
-class LLVM_BinarySameArgsIntrinsicOp<string func, list<Trait> traits = []> :
+class LLVM_UnaryIntrOpI<string func, list<Trait> traits = []> :
+    LLVM_UnaryIntrOpBase<func, AnySignlessInteger, traits>;
+
+class LLVM_UnaryIntrOpF<string func, list<Trait> traits = []> :
+    LLVM_UnaryIntrOpBase<func, LLVM_AnyFloat, traits>;
+
+class LLVM_BinarySameArgsIntrOpBase<string func, Type element,
+                                    list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([Pure, SameOperandsAndResultType], traits)> {
-  let arguments = (ins LLVM_Type:$a, LLVM_Type:$b);
+  let arguments = (ins LLVM_ScalarOrVectorOf<element>:$a,
+                       LLVM_ScalarOrVectorOf<element>:$b);
 }
 
-class LLVM_BinaryIntrinsicOp<string func, list<Trait> traits = []> :
-    LLVM_OneResultIntrOp<func, [], [0,1],
+class LLVM_BinarySameArgsIntrOpI<string func, list<Trait> traits = []> :
+    LLVM_BinarySameArgsIntrOpBase<func, AnySignlessInteger, traits>;
+
+class LLVM_BinarySameArgsIntrOpF<string func, list<Trait> traits = []> :
+    LLVM_BinarySameArgsIntrOpBase<func, LLVM_AnyFloat, traits>;
+
+class LLVM_TernarySameArgsIntrOpF<string func, list<Trait> traits = []> :
+    LLVM_OneResultIntrOp<func, [], [0],
+           !listconcat([Pure, SameOperandsAndResultType], traits)> {
+  let arguments = (ins LLVM_ScalarOrVectorOf<AnyFloat>:$a,
+                       LLVM_ScalarOrVectorOf<AnyFloat>:$b,
+                       LLVM_ScalarOrVectorOf<AnyFloat>:$c);
+}
+
+class LLVM_CountZerosIntrOp<string func, list<Trait> traits = []> :
+    LLVM_OneResultIntrOp<func, [], [0],
            !listconcat([Pure], traits)> {
-  let arguments = (ins LLVM_Type:$a, LLVM_Type:$b);
-}
-
-class LLVM_TernarySameArgsIntrinsicOp<string func, list<Trait> traits = []> :
-    LLVM_OneResultIntrOp<func, [], [0],
-           !listconcat([Pure, SameOperandsAndResultType], traits)> {
-  let arguments = (ins LLVM_Type:$a, LLVM_Type:$b, LLVM_Type:$c);
-}
-
-class LLVM_CountZerosIntrinsicOp<string func, list<Trait> traits = []> :
-    LLVM_OneResultIntrOp<func, [], [0],
-           !listconcat([Pure], traits)> {
-  let arguments = (ins LLVM_Type:$in, I1:$zero_undefined);
+  let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$in,
+                   I1:$zero_undefined);
 }
 
 def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure]> {
-  let arguments = (ins LLVM_Type:$in, I1:$is_int_min_poison);
+  let arguments = (ins LLVM_ScalarOrVectorOf<AnySignlessInteger>:$in,
+                   I1:$is_int_min_poison);
 }
 
 def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure]> {
-  let arguments = (ins LLVM_Type:$in, I32:$bit);
+  let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$in, I32:$bit);
 }
 
-def LLVM_CopySignOp : LLVM_BinarySameArgsIntrinsicOp<"copysign">;
-def LLVM_CosOp : LLVM_UnaryIntrinsicOp<"cos">;
-def LLVM_ExpOp : LLVM_UnaryIntrinsicOp<"exp">;
-def LLVM_Exp2Op : LLVM_UnaryIntrinsicOp<"exp2">;
-def LLVM_FAbsOp : LLVM_UnaryIntrinsicOp<"fabs">;
-def LLVM_FCeilOp : LLVM_UnaryIntrinsicOp<"ceil">;
-def LLVM_FFloorOp : LLVM_UnaryIntrinsicOp<"floor">;
-def LLVM_FMAOp : LLVM_TernarySameArgsIntrinsicOp<"fma">;
-def LLVM_FMulAddOp : LLVM_TernarySameArgsIntrinsicOp<"fmuladd">;
-def LLVM_Log10Op : LLVM_UnaryIntrinsicOp<"log10">;
-def LLVM_Log2Op : LLVM_UnaryIntrinsicOp<"log2">;
-def LLVM_LogOp : LLVM_UnaryIntrinsicOp<"log">;
+def LLVM_CopySignOp : LLVM_BinarySameArgsIntrOpF<"copysign">;
+def LLVM_CosOp : LLVM_UnaryIntrOpF<"cos">;
+def LLVM_ExpOp : LLVM_UnaryIntrOpF<"exp">;
+def LLVM_Exp2Op : LLVM_UnaryIntrOpF<"exp2">;
+def LLVM_FAbsOp : LLVM_UnaryIntrOpF<"fabs">;
+def LLVM_FCeilOp : LLVM_UnaryIntrOpF<"ceil">;
+def LLVM_FFloorOp : LLVM_UnaryIntrOpF<"floor">;
+def LLVM_FMAOp : LLVM_TernarySameArgsIntrOpF<"fma">;
+def LLVM_FMulAddOp : LLVM_TernarySameArgsIntrOpF<"fmuladd">;
+def LLVM_Log10Op : LLVM_UnaryIntrOpF<"log10">;
+def LLVM_Log2Op : LLVM_UnaryIntrOpF<"log2">;
+def LLVM_LogOp : LLVM_UnaryIntrOpF<"log">;
 def LLVM_Prefetch : LLVM_ZeroResultIntrOp<"prefetch", [0]> {
-  let arguments = (ins LLVM_Type:$addr, LLVM_Type:$rw, LLVM_Type:$hint,
-                   LLVM_Type:$cache);
+  let arguments = (ins LLVM_AnyPointer:$addr, I32:$rw, I32:$hint, I32:$cache);
 }
-def LLVM_SinOp : LLVM_UnaryIntrinsicOp<"sin">;
-def LLVM_RoundEvenOp : LLVM_UnaryIntrinsicOp<"roundeven">;
-def LLVM_RoundOp : LLVM_UnaryIntrinsicOp<"round">;
-def LLVM_FTruncOp : LLVM_UnaryIntrinsicOp<"trunc">;
-def LLVM_SqrtOp : LLVM_UnaryIntrinsicOp<"sqrt">;
-def LLVM_PowOp : LLVM_BinarySameArgsIntrinsicOp<"pow">;
-def LLVM_PowIOp : LLVM_BinaryIntrinsicOp<"powi">;
-def LLVM_BitReverseOp : LLVM_UnaryIntrinsicOp<"bitreverse">;
-def LLVM_CountLeadingZerosOp : LLVM_CountZerosIntrinsicOp<"ctlz">;
-def LLVM_CountTrailingZerosOp : LLVM_CountZerosIntrinsicOp<"cttz">;
-def LLVM_CtPopOp : LLVM_UnaryIntrinsicOp<"ctpop">;
-def LLVM_MaxNumOp : LLVM_BinarySameArgsIntrinsicOp<"maxnum">;
-def LLVM_MinNumOp : LLVM_BinarySameArgsIntrinsicOp<"minnum">;
-def LLVM_MaximumOp : LLVM_BinarySameArgsIntrinsicOp<"maximum">;
-def LLVM_MinimumOp : LLVM_BinarySameArgsIntrinsicOp<"minimum">;
-def LLVM_SMaxOp : LLVM_BinarySameArgsIntrinsicOp<"smax">;
-def LLVM_SMinOp : LLVM_BinarySameArgsIntrinsicOp<"smin">;
-def LLVM_UMaxOp : LLVM_BinarySameArgsIntrinsicOp<"umax">;
-def LLVM_UMinOp : LLVM_BinarySameArgsIntrinsicOp<"umin">;
+def LLVM_SinOp : LLVM_UnaryIntrOpF<"sin">;
+def LLVM_RoundEvenOp : LLVM_UnaryIntrOpF<"roundeven">;
+def LLVM_RoundOp : LLVM_UnaryIntrOpF<"round">;
+def LLVM_FTruncOp : LLVM_UnaryIntrOpF<"trunc">;
+def LLVM_SqrtOp : LLVM_UnaryIntrOpF<"sqrt">;
+def LLVM_PowOp : LLVM_BinarySameArgsIntrOpF<"pow">;
+def LLVM_PowIOp : LLVM_OneResultIntrOp<"powi"> {
+  let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$val,
+                   AnySignlessInteger:$power);
+}
+def LLVM_BitReverseOp : LLVM_UnaryIntrOpI<"bitreverse">;
+def LLVM_CountLeadingZerosOp : LLVM_CountZerosIntrOp<"ctlz">;
+def LLVM_CountTrailingZerosOp : LLVM_CountZerosIntrOp<"cttz">;
+def LLVM_CtPopOp : LLVM_UnaryIntrOpI<"ctpop">;
+def LLVM_MaxNumOp : LLVM_BinarySameArgsIntrOpF<"maxnum">;
+def LLVM_MinNumOp : LLVM_BinarySameArgsIntrOpF<"minnum">;
+def LLVM_MaximumOp : LLVM_BinarySameArgsIntrOpF<"maximum">;
+def LLVM_MinimumOp : LLVM_BinarySameArgsIntrOpF<"minimum">;
+def LLVM_SMaxOp : LLVM_BinarySameArgsIntrOpI<"smax">;
+def LLVM_SMinOp : LLVM_BinarySameArgsIntrOpI<"smin">;
+def LLVM_UMaxOp : LLVM_BinarySameArgsIntrOpI<"umax">;
+def LLVM_UMinOp : LLVM_BinarySameArgsIntrOpI<"umin">;
 
 def LLVM_MemcpyOp : LLVM_ZeroResultIntrOp<"memcpy", [0, 1, 2]> {
-  let arguments = (ins Arg<LLVM_Type,"",[MemWrite]>:$dst, Arg<LLVM_Type,"",[MemRead]>:$src, LLVM_Type:$len,
-                   LLVM_Type:$isVolatile);
+  let arguments = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
+                       Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
+                       AnySignlessInteger:$len, I1:$isVolatile);
 }
 def LLVM_MemcpyInlineOp : LLVM_ZeroResultIntrOp<"memcpy.inline", [0, 1, 2]> {
-  let arguments = (ins Arg<LLVM_Type,"",[MemWrite]>:$dst, Arg<LLVM_Type,"",[MemRead]>:$src, LLVM_Type:$len,
-                   LLVM_Type:$isVolatile);
+  let arguments = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
+                       Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
+                       AnySignlessInteger:$len, I1:$isVolatile);
 }
 def LLVM_MemmoveOp : LLVM_ZeroResultIntrOp<"memmove", [0, 1, 2]> {
-  let arguments = (ins Arg<LLVM_Type,"",[MemWrite]>:$dst, Arg<LLVM_Type,"",[MemRead]>:$src, LLVM_Type:$len,
-                   LLVM_Type:$isVolatile);
+  let arguments = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
+                       Arg<LLVM_AnyPointer,"",[MemRead]>:$src,
+                       AnySignlessInteger:$len, I1:$isVolatile);
 }
 
 def LLVM_MemsetOp : LLVM_ZeroResultIntrOp<"memset", [0, 2]> {
-  let arguments = (ins Arg<LLVM_Type,"",[MemWrite]>:$dst, LLVM_Type:$val, LLVM_Type:$len,
-                   LLVM_Type:$isVolatile);
+  let arguments = (ins Arg<LLVM_AnyPointer,"",[MemWrite]>:$dst,
+                       I8:$val, AnySignlessInteger:$len, I1:$isVolatile);
 }
 
 //===----------------------------------------------------------------------===//
@@ -143,36 +161,20 @@ def LLVM_LifetimeEndOp : LLVM_LifetimeBaseOp<"lifetime.end"> {
 
 // Intrinsics with multiple returns.
 
-def LLVM_SAddWithOverflowOp
-    : LLVM_IntrOp<"sadd.with.overflow", [0], [], [], 2> {
-  let arguments = (ins LLVM_Type, LLVM_Type);
-}
-def LLVM_UAddWithOverflowOp
-    : LLVM_IntrOp<"uadd.with.overflow", [0], [], [], 2> {
-  let arguments = (ins LLVM_Type, LLVM_Type);
-}
-def LLVM_SSubWithOverflowOp
-    : LLVM_IntrOp<"ssub.with.overflow", [0], [], [], 2> {
-  let arguments = (ins LLVM_Type, LLVM_Type);
-}
-def LLVM_USubWithOverflowOp
-    : LLVM_IntrOp<"usub.with.overflow", [0], [], [], 2> {
-  let arguments = (ins LLVM_Type, LLVM_Type);
-}
-def LLVM_SMulWithOverflowOp
-    : LLVM_IntrOp<"smul.with.overflow", [0], [], [], 2> {
-  let arguments = (ins LLVM_Type, LLVM_Type);
-}
-def LLVM_UMulWithOverflowOp
-    : LLVM_IntrOp<"umul.with.overflow", [0], [], [], 2> {
-  let arguments = (ins LLVM_Type, LLVM_Type);
-}
+class LLVM_ArithWithOverflowOp<string mnem>
+    : LLVM_IntrOp<mnem, [0], [], [SameOperandsElementType], 2>,
+      Arguments<(ins LLVM_ScalarOrVectorOf<AnySignlessInteger>,
+                 LLVM_ScalarOrVectorOf<AnySignlessInteger>)>;
 
+def LLVM_SAddWithOverflowOp : LLVM_ArithWithOverflowOp<"sadd.with.overflow">;
+def LLVM_UAddWithOverflowOp : LLVM_ArithWithOverflowOp<"uadd.with.overflow">;
+def LLVM_SSubWithOverflowOp : LLVM_ArithWithOverflowOp<"ssub.with.overflow">;
+def LLVM_USubWithOverflowOp : LLVM_ArithWithOverflowOp<"usub.with.overflow">;
+def LLVM_SMulWithOverflowOp : LLVM_ArithWithOverflowOp<"smul.with.overflow">;
+def LLVM_UMulWithOverflowOp : LLVM_ArithWithOverflowOp<"umul.with.overflow">;
 
-def LLVM_AssumeOp : LLVM_ZeroResultIntrOp<"assume", []> {
-  let arguments = (ins LLVM_Type:$cond);
-}
-
+def LLVM_AssumeOp
+  : LLVM_ZeroResultIntrOp<"assume", []>, Arguments<(ins I1:$cond)>;
 
 //
 // Coroutine intrinsics.
@@ -318,20 +320,66 @@ def LLVM_StackRestoreOp : LLVM_ZeroResultIntrOp<"stackrestore"> {
 // Vector Reductions.
 //
 
-def LLVM_vector_reduce_add : LLVM_VectorReduction<"add">;
-def LLVM_vector_reduce_and : LLVM_VectorReduction<"and">;
-def LLVM_vector_reduce_mul : LLVM_VectorReduction<"mul">;
-def LLVM_vector_reduce_fmax : LLVM_VectorReduction<"fmax">;
-def LLVM_vector_reduce_fmin : LLVM_VectorReduction<"fmin">;
-def LLVM_vector_reduce_or : LLVM_VectorReduction<"or">;
-def LLVM_vector_reduce_smax : LLVM_VectorReduction<"smax">;
-def LLVM_vector_reduce_smin : LLVM_VectorReduction<"smin">;
-def LLVM_vector_reduce_umax : LLVM_VectorReduction<"umax">;
-def LLVM_vector_reduce_umin : LLVM_VectorReduction<"umin">;
-def LLVM_vector_reduce_xor : LLVM_VectorReduction<"xor">;
+// LLVM vector reduction over a single vector.
+class LLVM_VecReductionBase<string mnem, Type element>
+    : LLVM_OneResultIntrOp<"vector.reduce." # mnem, [], [0],
+                           [Pure, SameOperandsAndResultElementType]>,
+      Arguments<(ins LLVM_VectorOf<element>)>;
 
-def LLVM_vector_reduce_fadd : LLVM_VectorReductionAcc<"fadd">;
-def LLVM_vector_reduce_fmul : LLVM_VectorReductionAcc<"fmul">;
+class LLVM_VecReductionF<string mnem>
+    : LLVM_VecReductionBase<mnem, AnyFloat>;
+
+class LLVM_VecReductionI<string mnem>
+    : LLVM_VecReductionBase<mnem, AnySignlessInteger>;
+
+// LLVM vector reduction over a single vector, with an initial value,
+// and with permission to reassociate the reduction operations.
+class LLVM_VecReductionAccBase<string mnem, Type element>
+    : LLVM_OneResultIntrOp<"vector.reduce." # mnem, [], [0],
+                           [Pure, SameOperandsAndResultElementType]>,
+      Arguments<(ins element:$start_value, LLVM_VectorOf<element>:$input,
+                 DefaultValuedAttr<BoolAttr, "false">:$reassoc)> {
+  let llvmBuilder = [{
+    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Function *fn = llvm::Intrinsic::getDeclaration(
+        module,
+        llvm::Intrinsic::vector_reduce_}] # mnem # [{,
+        { }] # !interleave(ListIntSubst<LLVM_IntrPatterns.operand, [1]>.lst,
+                           ", ") # [{
+        });
+    auto operands = moduleTranslation.lookupValues(opInst.getOperands());
+    llvm::FastMathFlags origFM = builder.getFastMathFlags();
+    llvm::FastMathFlags tempFM = origFM;
+    tempFM.setAllowReassoc($reassoc);
+    builder.setFastMathFlags(tempFM);  // set fastmath flag
+    $res = builder.CreateCall(fn, operands);
+    builder.setFastMathFlags(origFM);  // restore fastmath flag
+  }];
+  let mlirBuilder = [{
+    bool allowReassoc = inst->getFastMathFlags().allowReassoc();
+    $res = $_builder.create<$_qualCppClassName>($_location,
+      $_resultType, $start_value, $input, allowReassoc);
+  }];
+}
+
+class LLVM_VecReductionAccF<string mnem>
+    : LLVM_VecReductionAccBase<mnem, AnyFloat>;
+
+def LLVM_vector_reduce_add : LLVM_VecReductionI<"add">;
+def LLVM_vector_reduce_and : LLVM_VecReductionI<"and">;
+def LLVM_vector_reduce_mul : LLVM_VecReductionI<"mul">;
+def LLVM_vector_reduce_or : LLVM_VecReductionI<"or">;
+def LLVM_vector_reduce_smax : LLVM_VecReductionI<"smax">;
+def LLVM_vector_reduce_smin : LLVM_VecReductionI<"smin">;
+def LLVM_vector_reduce_umax : LLVM_VecReductionI<"umax">;
+def LLVM_vector_reduce_umin : LLVM_VecReductionI<"umin">;
+def LLVM_vector_reduce_xor : LLVM_VecReductionI<"xor">;
+
+def LLVM_vector_reduce_fmax : LLVM_VecReductionF<"fmax">;
+def LLVM_vector_reduce_fmin : LLVM_VecReductionF<"fmin">;
+
+def LLVM_vector_reduce_fadd : LLVM_VecReductionAccF<"fadd">;
+def LLVM_vector_reduce_fmul : LLVM_VecReductionAccF<"fmul">;
 
 //
 // LLVM Matrix operations.
@@ -345,12 +393,12 @@ def LLVM_vector_reduce_fmul : LLVM_VectorReductionAcc<"fmul">;
 /// columns    - Number of columns in matrix (must be a constant)
 /// stride     - Space between columns
 def LLVM_MatrixColumnMajorLoadOp : LLVM_OneResultIntrOp<"matrix.column.major.load"> {
-  let arguments = (ins LLVM_Type:$data, LLVM_Type:$stride, I1Attr:$isVolatile,
+  let arguments = (ins LLVM_AnyPointer:$data, AnySignlessInteger:$stride, I1Attr:$isVolatile,
                    I32Attr:$rows, I32Attr:$columns);
   let results = (outs LLVM_AnyVector:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "$data `,` `<` `stride` `=` $stride `>` attr-dict"
-    "`:` type($res) `from` type($data) `stride` type($stride)";
+    "`:` type($res) `from` qualified(type($data)) `stride` type($stride)";
 
   string llvmBuilder = [{
     llvm::MatrixBuilder mb(builder);
@@ -379,12 +427,12 @@ def LLVM_MatrixColumnMajorLoadOp : LLVM_OneResultIntrOp<"matrix.column.major.loa
 /// columns    - Number of columns in matrix (must be a constant)
 /// stride     - Space between columns
 def LLVM_MatrixColumnMajorStoreOp : LLVM_ZeroResultIntrOp<"matrix.column.major.store"> {
-  let arguments = (ins LLVM_AnyVector:$matrix, LLVM_Type:$data,
-                   LLVM_Type:$stride, I1Attr:$isVolatile, I32Attr:$rows,
+  let arguments = (ins LLVM_AnyVector:$matrix, LLVM_AnyPointer:$data,
+                   AnySignlessInteger:$stride, I1Attr:$isVolatile, I32Attr:$rows,
                    I32Attr:$columns);
   let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
   let assemblyFormat = "$matrix `,` $data `,` `<` `stride` `=` $stride `>` "
-    "attr-dict`:` type($matrix) `to` type($data) `stride` type($stride)";
+    "attr-dict`:` type($matrix) `to` qualified(type($data)) `stride` type($stride)";
 
   string llvmBuilder = [{
     llvm::MatrixBuilder mb(builder);
@@ -407,9 +455,9 @@ def LLVM_MatrixColumnMajorStoreOp : LLVM_ZeroResultIntrOp<"matrix.column.major.s
 /// Create a llvm.matrix.multiply call, multiplying 2-D matrices LHS and RHS, as
 /// specified in the LLVM MatrixBuilder.
 def LLVM_MatrixMultiplyOp : LLVM_OneResultIntrOp<"matrix.multiply"> {
-  let arguments = (ins LLVM_Type:$lhs, LLVM_Type:$rhs, I32Attr:$lhs_rows,
+  let arguments = (ins LLVM_AnyVector:$lhs, LLVM_AnyVector:$rhs, I32Attr:$lhs_rows,
                    I32Attr:$lhs_columns, I32Attr:$rhs_columns);
-  let results = (outs LLVM_Type:$res);
+  let results = (outs LLVM_AnyVector:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "$lhs `,` $rhs attr-dict "
     "`:` `(` type($lhs) `,` type($rhs) `)` `->` type($res)";
@@ -430,8 +478,8 @@ def LLVM_MatrixMultiplyOp : LLVM_OneResultIntrOp<"matrix.multiply"> {
 /// Create a llvm.matrix.transpose call, transposing a `rows` x `columns` 2-D
 /// `matrix`, as specified in the LLVM MatrixBuilder.
 def LLVM_MatrixTransposeOp : LLVM_OneResultIntrOp<"matrix.transpose"> {
-  let arguments = (ins LLVM_Type:$matrix, I32Attr:$rows, I32Attr:$columns);
-  let results = (outs LLVM_Type:$res);
+  let arguments = (ins LLVM_AnyVector:$matrix, I32Attr:$rows, I32Attr:$columns);
+  let results = (outs LLVM_AnyVector:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "$matrix attr-dict `:` type($matrix) `into` type($res)";
 
@@ -454,15 +502,15 @@ def LLVM_MatrixTransposeOp : LLVM_OneResultIntrOp<"matrix.transpose"> {
 /// Create a llvm.get.active.lane.mask to set a mask up to a given position.
 def LLVM_GetActiveLaneMaskOp
     : LLVM_OneResultIntrOp<"get.active.lane.mask", [0], [0], [Pure]> {
-  let arguments = (ins LLVM_Type:$base, LLVM_Type:$n);
+  let arguments = (ins AnySignlessInteger:$base, AnySignlessInteger:$n);
   let assemblyFormat = "$base `,` $n attr-dict `:` "
     "type($base) `,` type($n) `to` type($res)";
 }
 
 /// Create a call to Masked Load intrinsic.
 def LLVM_MaskedLoadOp : LLVM_OneResultIntrOp<"masked.load"> {
-  let arguments = (ins LLVM_Type:$data, LLVM_Type:$mask,
-                   Variadic<LLVM_Type>:$pass_thru, I32Attr:$alignment);
+  let arguments = (ins LLVM_AnyPointer:$data, LLVM_VectorOf<I1>:$mask,
+                   Variadic<LLVM_AnyVector>:$pass_thru, I32Attr:$alignment);
   let results = (outs LLVM_AnyVector:$res);
   let assemblyFormat =
     "operands attr-dict `:` functional-type(operands, results)";
@@ -482,11 +530,11 @@ def LLVM_MaskedLoadOp : LLVM_OneResultIntrOp<"masked.load"> {
 
 /// Create a call to Masked Store intrinsic.
 def LLVM_MaskedStoreOp : LLVM_ZeroResultIntrOp<"masked.store"> {
-  let arguments = (ins LLVM_Type:$value, LLVM_Type:$data, LLVM_Type:$mask,
-                   I32Attr:$alignment);
+  let arguments = (ins LLVM_AnyVector:$value, LLVM_AnyPointer:$data,
+                   LLVM_VectorOf<I1>:$mask, I32Attr:$alignment);
   let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
   let assemblyFormat = "$value `,` $data `,` $mask attr-dict `:` "
-    "type($value) `,` type($mask) `into` type($data)";
+    "type($value) `,` type($mask) `into` qualified(type($data))";
 
   string llvmBuilder = [{
     builder.CreateMaskedStore(
@@ -501,9 +549,10 @@ def LLVM_MaskedStoreOp : LLVM_ZeroResultIntrOp<"masked.store"> {
 
 /// Create a call to Masked Gather intrinsic.
 def LLVM_masked_gather : LLVM_OneResultIntrOp<"masked.gather"> {
-  let arguments = (ins LLVM_AnyVector:$ptrs, LLVM_Type:$mask,
-                   Variadic<LLVM_Type>:$pass_thru, I32Attr:$alignment);
-  let results = (outs LLVM_Type:$res);
+  let arguments = (ins LLVM_VectorOf<LLVM_AnyPointer>:$ptrs,
+                   LLVM_VectorOf<I1>:$mask, Variadic<LLVM_AnyVector>:$pass_thru,
+                   I32Attr:$alignment);
+  let results = (outs LLVM_AnyVector:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat =
     "operands attr-dict `:` functional-type(operands, results)";
@@ -523,8 +572,8 @@ def LLVM_masked_gather : LLVM_OneResultIntrOp<"masked.gather"> {
 
 /// Create a call to Masked Scatter intrinsic.
 def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
-  let arguments = (ins LLVM_Type:$value, LLVM_Type:$ptrs, LLVM_Type:$mask,
-                   I32Attr:$alignment);
+  let arguments = (ins LLVM_AnyVector:$value, LLVM_VectorOf<LLVM_AnyPointer>:$ptrs,
+                   LLVM_VectorOf<I1>:$mask, I32Attr:$alignment);
   let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
   let assemblyFormat = "$value `,` $ptrs `,` $mask attr-dict `:` "
     "type($value) `,` type($mask) `into` type($ptrs)";
@@ -542,13 +591,13 @@ def LLVM_masked_scatter : LLVM_ZeroResultIntrOp<"masked.scatter"> {
 
 /// Create a call to Masked Expand Load intrinsic.
 def LLVM_masked_expandload : LLVM_IntrOp<"masked.expandload", [0], [], [], 1> {
-  let arguments = (ins LLVM_Type, LLVM_Type, LLVM_Type);
+  let arguments = (ins LLVM_AnyPointer, LLVM_VectorOf<I1>, LLVM_AnyVector);
 }
 
 /// Create a call to Masked Compress Store intrinsic.
 def LLVM_masked_compressstore
     : LLVM_IntrOp<"masked.compressstore", [], [0], [], 0> {
-  let arguments = (ins LLVM_Type, LLVM_Type, LLVM_Type);
+  let arguments = (ins LLVM_AnyVector, LLVM_AnyPointer, LLVM_VectorOf<I1>);
 }
 
 /// Create a call to vscale intrinsic.
@@ -558,7 +607,7 @@ def LLVM_vscale : LLVM_IntrOp<"vscale", [0], [], [], 1>;
 def LLVM_StepVectorOp
     : LLVM_IntrOp<"experimental.stepvector", [0], [], [Pure], 1> {
   let arguments = (ins);
-  let results = (outs LLVM_Type:$res);
+  let results = (outs LLVM_VectorOf<AnySignlessInteger>:$res);
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
@@ -640,7 +689,7 @@ class LLVM_VPBinaryBase<string mnem, Type element>
       Arguments<(ins LLVM_VectorOf<element>:$lhs, LLVM_VectorOf<element>:$rhs,
                      LLVM_VectorOf<I1>:$mask, I32:$evl)>;
 
-class LLVM_VPBinaryI<string mnem> : LLVM_VPBinaryBase<mnem, AnyInteger>;
+class LLVM_VPBinaryI<string mnem> : LLVM_VPBinaryBase<mnem, AnySignlessInteger>;
 
 class LLVM_VPBinaryF<string mnem> : LLVM_VPBinaryBase<mnem, AnyFloat>;
 
@@ -664,7 +713,7 @@ class LLVM_VPReductionBase<string mnem, Type element>
       Arguments<(ins element:$satrt_value, LLVM_VectorOf<element>:$val,
                      LLVM_VectorOf<I1>:$mask, I32:$evl)>;
 
-class LLVM_VPReductionI<string mnem> : LLVM_VPReductionBase<mnem, AnyInteger>;
+class LLVM_VPReductionI<string mnem> : LLVM_VPReductionBase<mnem, AnySignlessInteger>;
 
 class LLVM_VPReductionF<string mnem> : LLVM_VPReductionBase<mnem, AnyFloat>;
 
@@ -678,7 +727,7 @@ class LLVM_VPCastBase<string mnem, Type element>
       Arguments<(ins LLVM_VectorOf<element>:$src,
                      LLVM_VectorOf<I1>:$mask, I32:$evl)>;
 
-class LLVM_VPCastI<string mnem>   : LLVM_VPCastBase<mnem, AnyInteger>;
+class LLVM_VPCastI<string mnem>   : LLVM_VPCastBase<mnem, AnySignlessInteger>;
 
 class LLVM_VPCastF<string mnem>   : LLVM_VPCastBase<mnem, AnyFloat>;
 
@@ -747,13 +796,13 @@ def LLVM_VPStoreOp
 // Strided load/store
 def LLVM_VPStridedLoadOp
     : LLVM_OneResultIntrOp<"experimental.vp.strided.load", [0], [0, 1], []>,
-      Arguments<(ins LLVM_AnyPointer:$ptr, AnyInteger:$stride,
+      Arguments<(ins LLVM_AnyPointer:$ptr, AnySignlessInteger:$stride,
                      LLVM_VectorOf<I1>:$mask, I32:$evl)>;
 
 def LLVM_VPStridedStoreOp
     : LLVM_ZeroResultIntrOp<"experimental.vp.strided.store",[0, 1, 2], []>,
       Arguments<(ins LLVM_AnyVector:$val, LLVM_AnyPointer:$ptr,
-                     AnyInteger:$stride, LLVM_VectorOf<I1>:$mask, I32:$evl)>;
+                     AnySignlessInteger:$stride, LLVM_VectorOf<I1>:$mask, I32:$evl)>;
 
 def LLVM_VPTruncOp : LLVM_VPCastI<"trunc">;
 def LLVM_VPZExtOp  : LLVM_VPCastI<"zext">;

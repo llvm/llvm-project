@@ -1579,6 +1579,25 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
   return ICmpInst::BAD_ICMP_PREDICATE;
 }
 
+static Constant *constantFoldCompareGlobalToNull(CmpInst::Predicate Predicate,
+                                                 Constant *C1, Constant *C2) {
+  const GlobalValue *GV = dyn_cast<GlobalValue>(C2);
+  if (!GV || !C1->isNullValue())
+    return nullptr;
+
+  // Don't try to evaluate aliases.  External weak GV can be null.
+  if (!isa<GlobalAlias>(GV) && !GV->hasExternalWeakLinkage() &&
+      !NullPointerIsDefined(nullptr /* F */,
+                            GV->getType()->getAddressSpace())) {
+    if (Predicate == ICmpInst::ICMP_EQ)
+      return ConstantInt::getFalse(C1->getContext());
+    else if (Predicate == ICmpInst::ICMP_NE)
+      return ConstantInt::getTrue(C1->getContext());
+  }
+
+  return nullptr;
+}
+
 Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
                                                Constant *C1, Constant *C2) {
   Type *ResultTy;
@@ -1618,31 +1637,14 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
   }
 
   // icmp eq/ne(null,GV) -> false/true
-  if (C1->isNullValue()) {
-    if (const GlobalValue *GV = dyn_cast<GlobalValue>(C2))
-      // Don't try to evaluate aliases.  External weak GV can be null.
-      if (!isa<GlobalAlias>(GV) && !GV->hasExternalWeakLinkage() &&
-          !NullPointerIsDefined(nullptr /* F */,
-                                GV->getType()->getAddressSpace())) {
-        if (Predicate == ICmpInst::ICMP_EQ)
-          return ConstantInt::getFalse(C1->getContext());
-        else if (Predicate == ICmpInst::ICMP_NE)
-          return ConstantInt::getTrue(C1->getContext());
-      }
-  // icmp eq/ne(GV,null) -> false/true
-  } else if (C2->isNullValue()) {
-    if (const GlobalValue *GV = dyn_cast<GlobalValue>(C1)) {
-      // Don't try to evaluate aliases.  External weak GV can be null.
-      if (!isa<GlobalAlias>(GV) && !GV->hasExternalWeakLinkage() &&
-          !NullPointerIsDefined(nullptr /* F */,
-                                GV->getType()->getAddressSpace())) {
-        if (Predicate == ICmpInst::ICMP_EQ)
-          return ConstantInt::getFalse(C1->getContext());
-        else if (Predicate == ICmpInst::ICMP_NE)
-          return ConstantInt::getTrue(C1->getContext());
-      }
-    }
+  if (Constant *Folded = constantFoldCompareGlobalToNull(Predicate, C1, C2))
+    return Folded;
 
+  // icmp eq/ne(GV,null) -> false/true
+  if (Constant *Folded = constantFoldCompareGlobalToNull(Predicate, C2, C1))
+    return Folded;
+
+  if (C2->isNullValue()) {
     // The caller is expected to commute the operands if the constant expression
     // is C2.
     // C1 >= 0 --> true
