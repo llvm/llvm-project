@@ -849,34 +849,6 @@ bool SoftPointerAuth::transformPointerAuthCall(CallBase *oldCall,
 /**************************** Pass Manager Support ***************************/
 /*****************************************************************************/
 
-namespace {
-
-class SoftPointerAuthLegacyPass : public ModulePass {
-public:
-  static char ID;
-  SoftPointerAuthLegacyPass() : ModulePass(ID) {
-    initializeSoftPointerAuthLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-  StringRef getPassName() const override {
-    return "Soft Pointer Auth Lowering";
-  }
-  bool runOnModule(Module &M) override { return Pass.runOnModule(M); }
-
-private:
-  SoftPointerAuth Pass;
-};
-
-} // end anonymous namespace
-
-char SoftPointerAuthLegacyPass::ID = 0;
-INITIALIZE_PASS(SoftPointerAuthLegacyPass, "soft-ptrauth",
-                "Lower pointer authentication intrinsics for soft targets",
-                false, false)
-
-ModulePass *llvm::createSoftPointerAuthPass() {
-  return new SoftPointerAuthLegacyPass();
-}
-
 PreservedAnalyses SoftPointerAuthPass::run(Module &M,
                                            ModuleAnalysisManager &AM) {
   SoftPointerAuth Pass;

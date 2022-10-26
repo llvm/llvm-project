@@ -149,7 +149,6 @@ int main(int argc, char **argv) {
   initializeTransformUtils(Registry);
   initializeInstCombine(Registry);
   initializeAggressiveInstCombine(Registry);
-  initializeInstrumentation(Registry);
   initializeTarget(Registry);
 
   if (std::getenv("bar") == (char*) -1) {
