@@ -854,4 +854,13 @@ TEST(OptionalTest, GCCIsTriviallyMoveConstructibleCompat) {
   EXPECT_FALSE(V);
 }
 
+TEST(OptionalTest, DeductionGuide) {
+  Optional V = MoveOnly(1);
+  EXPECT_TRUE(V);
+  EXPECT_EQ(V->val, 1);
+}
+
+static_assert(
+    std::is_same_v<Optional<MoveOnly>, decltype(Optional(MoveOnly(1)))>);
+
 } // end anonymous namespace
