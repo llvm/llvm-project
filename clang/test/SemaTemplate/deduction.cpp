@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11
 // RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++1z
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++2b
 
 // Template argument deduction with template template parameters.
 template<typename T, template<T> class A> 
@@ -662,25 +661,3 @@ namespace PR49724 {
   template<void (A::*P)()> void f(Y<P>);
   void g(Y<nullptr> y) { f(y); }
 }
-
-namespace sugared_deduction {
-using Int = int;
-
-template <class T, int C> void f1(T(&)[C], T(&)[C+1]);
-// expected-note@-1 {{candidate template ignored: deduced type 'int[3]' of 2nd parameter does not match adjusted type 'Int[2]' (aka 'int[2]') of argument [with T = Int, C = 2]}}
-
-void t1() {
-  Int a[2], b[2];
-  f1(a, b); // expected-error {{no matching function for call to 'f1'}}
-}
-
-#if defined(__cpp_concepts)
-template <class T> void f2() requires false {}
-// expected-note@-1 {{candidate template ignored: constraints not satisfied [with T = Int]}}
-// expected-note@-2 {{because 'false' evaluated to false}}
-
-void t2() {
-  f2<Int>(); // expected-error {{no matching function for call to 'f2'}}
-}
-#endif
-} // namespace sugared_deduction

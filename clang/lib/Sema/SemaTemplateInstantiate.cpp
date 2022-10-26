@@ -1831,16 +1831,14 @@ TemplateInstantiator::TransformSubstNonTypeTemplateParmExpr(
   //                                                          Type=char)),
   //                                           Type=decltype(2)))
   // The call to CheckTemplateArgument here produces the ImpCast.
-  TemplateArgument SugaredConverted, CanonicalConverted;
-  if (SemaRef
-          .CheckTemplateArgument(E->getParameter(), SubstType,
-                                 SubstReplacement.get(), SugaredConverted,
-                                 CanonicalConverted, Sema::CTAK_Specified)
-          .isInvalid())
+  TemplateArgument Converted;
+  if (SemaRef.CheckTemplateArgument(E->getParameter(), SubstType,
+                                    SubstReplacement.get(),
+                                    Converted).isInvalid())
     return true;
   return transformNonTypeTemplateParmRef(E->getAssociatedDecl(),
                                          E->getParameter(), E->getExprLoc(),
-                                         CanonicalConverted, E->getPackIndex());
+                                         Converted, E->getPackIndex());
 }
 
 ExprResult TemplateInstantiator::RebuildVarDeclRefExpr(VarDecl *PD,
@@ -3447,7 +3445,7 @@ getPatternForClassTemplateSpecialization(
       } else {
         Matched.push_back(PartialSpecMatchResult());
         Matched.back().Partial = Partial;
-        Matched.back().Args = Info.takeCanonical();
+        Matched.back().Args = Info.take();
       }
     }
 
