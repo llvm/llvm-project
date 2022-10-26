@@ -399,8 +399,8 @@ hash_code IndexRecordHasher::hashImpl(CanQualType CQT) {
   if (const TemplateSpecializationType *Spec
       = dyn_cast<TemplateSpecializationType>(T)) {
     COMBINE_HASH('>', computeHash(Spec->getTemplateName(), *this));
-    for (unsigned I = 0, N = Spec->getNumArgs(); I != N; ++I)
-      COMBINE_HASH(computeHash(Spec->getArg(I), *this));
+    for (unsigned I = 0, N = Spec->template_arguments().size(); I != N; ++I)
+      COMBINE_HASH(computeHash(Spec->template_arguments()[I], *this));
     return Hash;
   }
   if (const DependentNameType *DNT = dyn_cast<DependentNameType>(T)) {
