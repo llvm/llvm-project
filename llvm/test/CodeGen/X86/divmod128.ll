@@ -482,8 +482,8 @@ define i128 @udiv_i128_3(i128 %x) nounwind {
 ; X86-64-NEXT:    imulq %rdi, %rcx
 ; X86-64-NEXT:    movq %rdi, %rax
 ; X86-64-NEXT:    mulq %r8
-; X86-64-NEXT:    addq %rcx, %rdx
 ; X86-64-NEXT:    imulq %rsi, %r8
+; X86-64-NEXT:    addq %rcx, %r8
 ; X86-64-NEXT:    addq %r8, %rdx
 ; X86-64-NEXT:    retq
 ;
@@ -505,8 +505,8 @@ define i128 @udiv_i128_3(i128 %x) nounwind {
 ; WIN64-NEXT:    imulq %rcx, %r9
 ; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    mulq %r10
-; WIN64-NEXT:    addq %r9, %rdx
 ; WIN64-NEXT:    imulq %r10, %r8
+; WIN64-NEXT:    addq %r9, %r8
 ; WIN64-NEXT:    addq %r8, %rdx
 ; WIN64-NEXT:    retq
 entry:
@@ -532,8 +532,8 @@ define i128 @udiv_i128_5(i128 %x) nounwind {
 ; X86-64-NEXT:    imulq %rdi, %rcx
 ; X86-64-NEXT:    movq %rdi, %rax
 ; X86-64-NEXT:    mulq %r8
-; X86-64-NEXT:    addq %rcx, %rdx
 ; X86-64-NEXT:    imulq %rsi, %r8
+; X86-64-NEXT:    addq %rcx, %r8
 ; X86-64-NEXT:    addq %r8, %rdx
 ; X86-64-NEXT:    retq
 ;
@@ -555,8 +555,8 @@ define i128 @udiv_i128_5(i128 %x) nounwind {
 ; WIN64-NEXT:    imulq %rcx, %r9
 ; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    mulq %r10
-; WIN64-NEXT:    addq %r9, %rdx
 ; WIN64-NEXT:    imulq %r10, %r8
+; WIN64-NEXT:    addq %r9, %r8
 ; WIN64-NEXT:    addq %r8, %rdx
 ; WIN64-NEXT:    retq
 entry:
@@ -584,8 +584,8 @@ define i128 @udiv_i128_15(i128 %x) nounwind {
 ; X86-64-NEXT:    movabsq $-1229782938247303441, %r8 # imm = 0xEEEEEEEEEEEEEEEF
 ; X86-64-NEXT:    movq %rdi, %rax
 ; X86-64-NEXT:    mulq %r8
-; X86-64-NEXT:    addq %rcx, %rdx
 ; X86-64-NEXT:    imulq %rsi, %r8
+; X86-64-NEXT:    addq %rcx, %r8
 ; X86-64-NEXT:    addq %r8, %rdx
 ; X86-64-NEXT:    retq
 ;
@@ -609,8 +609,8 @@ define i128 @udiv_i128_15(i128 %x) nounwind {
 ; WIN64-NEXT:    movabsq $-1229782938247303441, %r10 # imm = 0xEEEEEEEEEEEEEEEF
 ; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    mulq %r10
-; WIN64-NEXT:    addq %r9, %rdx
 ; WIN64-NEXT:    imulq %r10, %r8
+; WIN64-NEXT:    addq %r9, %r8
 ; WIN64-NEXT:    addq %r8, %rdx
 ; WIN64-NEXT:    retq
 entry:
@@ -638,8 +638,8 @@ define i128 @udiv_i128_17(i128 %x) nounwind {
 ; X86-64-NEXT:    imulq %rdi, %rcx
 ; X86-64-NEXT:    movq %rdi, %rax
 ; X86-64-NEXT:    mulq %r8
-; X86-64-NEXT:    addq %rcx, %rdx
 ; X86-64-NEXT:    imulq %rsi, %r8
+; X86-64-NEXT:    addq %rcx, %r8
 ; X86-64-NEXT:    addq %r8, %rdx
 ; X86-64-NEXT:    retq
 ;
@@ -663,8 +663,8 @@ define i128 @udiv_i128_17(i128 %x) nounwind {
 ; WIN64-NEXT:    imulq %rcx, %r9
 ; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    mulq %r10
-; WIN64-NEXT:    addq %r9, %rdx
 ; WIN64-NEXT:    imulq %r10, %r8
+; WIN64-NEXT:    addq %r9, %r8
 ; WIN64-NEXT:    addq %r8, %rdx
 ; WIN64-NEXT:    retq
 entry:
@@ -694,8 +694,8 @@ define i128 @udiv_i128_255(i128 %x) nounwind {
 ; X86-64-NEXT:    movabsq $-72340172838076673, %r8 # imm = 0xFEFEFEFEFEFEFEFF
 ; X86-64-NEXT:    movq %rdi, %rax
 ; X86-64-NEXT:    mulq %r8
-; X86-64-NEXT:    addq %rcx, %rdx
 ; X86-64-NEXT:    imulq %rsi, %r8
+; X86-64-NEXT:    addq %rcx, %r8
 ; X86-64-NEXT:    addq %r8, %rdx
 ; X86-64-NEXT:    retq
 ;
@@ -721,8 +721,8 @@ define i128 @udiv_i128_255(i128 %x) nounwind {
 ; WIN64-NEXT:    movabsq $-72340172838076673, %r10 # imm = 0xFEFEFEFEFEFEFEFF
 ; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    mulq %r10
-; WIN64-NEXT:    addq %r9, %rdx
 ; WIN64-NEXT:    imulq %r10, %r8
+; WIN64-NEXT:    addq %r9, %r8
 ; WIN64-NEXT:    addq %r8, %rdx
 ; WIN64-NEXT:    retq
 entry:
@@ -750,8 +750,8 @@ define i128 @udiv_i128_257(i128 %x) nounwind {
 ; X86-64-NEXT:    imulq %rdi, %rcx
 ; X86-64-NEXT:    movq %rdi, %rax
 ; X86-64-NEXT:    mulq %r8
-; X86-64-NEXT:    addq %rcx, %rdx
 ; X86-64-NEXT:    imulq %rsi, %r8
+; X86-64-NEXT:    addq %rcx, %r8
 ; X86-64-NEXT:    addq %r8, %rdx
 ; X86-64-NEXT:    retq
 ;
@@ -775,8 +775,8 @@ define i128 @udiv_i128_257(i128 %x) nounwind {
 ; WIN64-NEXT:    imulq %rcx, %r9
 ; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    mulq %r10
-; WIN64-NEXT:    addq %r9, %rdx
 ; WIN64-NEXT:    imulq %r10, %r8
+; WIN64-NEXT:    addq %r9, %r8
 ; WIN64-NEXT:    addq %r8, %rdx
 ; WIN64-NEXT:    retq
 entry:
@@ -806,8 +806,8 @@ define i128 @udiv_i128_65535(i128 %x) nounwind {
 ; X86-64-NEXT:    movabsq $-281479271743489, %r8 # imm = 0xFFFEFFFEFFFEFFFF
 ; X86-64-NEXT:    movq %rdi, %rax
 ; X86-64-NEXT:    mulq %r8
-; X86-64-NEXT:    addq %rcx, %rdx
 ; X86-64-NEXT:    imulq %rsi, %r8
+; X86-64-NEXT:    addq %rcx, %r8
 ; X86-64-NEXT:    addq %r8, %rdx
 ; X86-64-NEXT:    retq
 ;
@@ -833,8 +833,8 @@ define i128 @udiv_i128_65535(i128 %x) nounwind {
 ; WIN64-NEXT:    movabsq $-281479271743489, %r10 # imm = 0xFFFEFFFEFFFEFFFF
 ; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    mulq %r10
-; WIN64-NEXT:    addq %r9, %rdx
 ; WIN64-NEXT:    imulq %r10, %r8
+; WIN64-NEXT:    addq %r9, %r8
 ; WIN64-NEXT:    addq %r8, %rdx
 ; WIN64-NEXT:    retq
 entry:
@@ -862,8 +862,8 @@ define i128 @udiv_i128_65537(i128 %x) nounwind {
 ; X86-64-NEXT:    imulq %rdi, %rcx
 ; X86-64-NEXT:    movq %rdi, %rax
 ; X86-64-NEXT:    mulq %r8
-; X86-64-NEXT:    addq %rcx, %rdx
 ; X86-64-NEXT:    imulq %rsi, %r8
+; X86-64-NEXT:    addq %rcx, %r8
 ; X86-64-NEXT:    addq %r8, %rdx
 ; X86-64-NEXT:    retq
 ;
@@ -887,8 +887,8 @@ define i128 @udiv_i128_65537(i128 %x) nounwind {
 ; WIN64-NEXT:    imulq %rcx, %r9
 ; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    mulq %r10
-; WIN64-NEXT:    addq %r9, %rdx
 ; WIN64-NEXT:    imulq %r10, %r8
+; WIN64-NEXT:    addq %r9, %r8
 ; WIN64-NEXT:    addq %r8, %rdx
 ; WIN64-NEXT:    retq
 entry:
@@ -916,8 +916,8 @@ define i128 @udiv_i128_12(i128 %x) nounwind {
 ; X86-64-NEXT:    imulq %rdi, %rcx
 ; X86-64-NEXT:    movq %rdi, %rax
 ; X86-64-NEXT:    mulq %r8
-; X86-64-NEXT:    addq %rcx, %rdx
 ; X86-64-NEXT:    imulq %rsi, %r8
+; X86-64-NEXT:    addq %rcx, %r8
 ; X86-64-NEXT:    addq %r8, %rdx
 ; X86-64-NEXT:    retq
 ;
@@ -941,8 +941,8 @@ define i128 @udiv_i128_12(i128 %x) nounwind {
 ; WIN64-NEXT:    imulq %rcx, %r9
 ; WIN64-NEXT:    movq %rcx, %rax
 ; WIN64-NEXT:    mulq %r10
-; WIN64-NEXT:    addq %r9, %rdx
 ; WIN64-NEXT:    imulq %r10, %r8
+; WIN64-NEXT:    addq %r9, %r8
 ; WIN64-NEXT:    addq %r8, %rdx
 ; WIN64-NEXT:    retq
 entry:

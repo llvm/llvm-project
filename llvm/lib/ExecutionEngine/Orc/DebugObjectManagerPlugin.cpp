@@ -289,6 +289,9 @@ ELFDebugObject::CreateArchType(MemoryBufferRef Buffer,
       continue;
     HasDwarfSection |= isDwarfSection(*Name);
 
+    if (!(Header.sh_flags & ELF::SHF_ALLOC))
+      continue;
+
     auto Wrapped = std::make_unique<ELFDebugObjectSection<ELFT>>(&Header);
     if (Error Err = DebugObj->recordSection(*Name, std::move(Wrapped)))
       return std::move(Err);

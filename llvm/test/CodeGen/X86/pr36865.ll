@@ -13,10 +13,10 @@ define void @main() {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl (%rax), %ecx
 ; CHECK-NEXT:    addl 0, %eax
-; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    addl %ecx, %eax
-; CHECK-NEXT:    addl {{[0-9]+}}(%rsp), %eax
-; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    addl %ecx, %ecx
+; CHECK-NEXT:    addl %eax, %ecx
+; CHECK-NEXT:    addl {{[0-9]+}}(%rsp), %ecx
+; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movl %eax, %ecx
 ; CHECK-NEXT:    imull %eax, %ecx

@@ -117,8 +117,8 @@ func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10x
 // CHECK-RWT:          %[[E0:.*]] = memref.load %[[P0]]{{\[}}%[[C1]]] : memref<?xindex>
 // CHECK-RWT:          scf.for %[[I:.*]] = %[[S0]] to %[[E0]] step %[[C1]] {
 // CHECK-RWT:            %[[SI0:.*]] = memref.load %[[I0]]{{\[}}%[[I]]] : memref<?xindex>
-// CHECK-RWT:            %[[PE1:.*]] = arith.addi %[[I]], %[[C1]] : index
-// CHECK-RWT:            %[[S1:.*]] = memref.load %[[P1]]{{\[}}%[[I]]] : memref<?xindex>
+// CHECK-RWT-DAG:        %[[S1:.*]] = memref.load %[[P1]]{{\[}}%[[I]]] : memref<?xindex>
+// CHECK-RWT-DAG:        %[[PE1:.*]] = arith.addi %[[I]], %[[C1]] : index
 // CHECK-RWT:            %[[E1:.*]] = memref.load %[[P1]]{{\[}}%[[PE1]]] : memref<?xindex>
 // CHECK-RWT:            scf.for %[[J:.*]] = %[[S1]] to %[[E1]] step %[[C1]] {
 // CHECK-RWT:              %[[SI1:.*]] = memref.load %[[I1]]{{\[}}%[[J]]] : memref<?xindex>
@@ -266,8 +266,8 @@ func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<
 // CHECK-RWT:          %[[E0:.*]] = memref.load %[[P0]]{{\[}}%[[C1]]] : memref<?xindex>
 // CHECK-RWT:          scf.for %[[I:.*]] = %[[S0]] to %[[E0]] step %[[C1]] {
 // CHECK-RWT:            %[[SI0:.*]] = memref.load %[[I0]]{{\[}}%[[I]]] : memref<?xindex>
-// CHECK-RWT:            %[[PE1:.*]] = arith.addi %[[I]], %[[C1]] : index
-// CHECK-RWT:            %[[S1:.*]] = memref.load %[[P1]]{{\[}}%[[I]]] : memref<?xindex>
+// CHECK-RWT-DAG:        %[[S1:.*]] = memref.load %[[P1]]{{\[}}%[[I]]] : memref<?xindex>
+// CHECK-RWT-DAG:        %[[PE1:.*]] = arith.addi %[[I]], %[[C1]] : index
 // CHECK-RWT:            %[[E1:.*]] = memref.load %[[P1]]{{\[}}%[[PE1]]] : memref<?xindex>
 // CHECK-RWT:            scf.for %[[J:.*]] = %[[S1]] to %[[E1]] step %[[C1]] {
 // CHECK-RWT:              %[[SI1:.*]] = memref.load %[[I1]]{{\[}}%[[J]]] : memref<?xindex>

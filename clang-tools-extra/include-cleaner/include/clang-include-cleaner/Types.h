@@ -19,8 +19,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_INCLUDE_CLEANER_RECORD_H
-#define CLANG_INCLUDE_CLEANER_RECORD_H
+#ifndef CLANG_INCLUDE_CLEANER_TYPES_H
+#define CLANG_INCLUDE_CLEANER_TYPES_H
 
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include <memory>

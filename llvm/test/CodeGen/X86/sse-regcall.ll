@@ -196,7 +196,7 @@ define x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    pushl %ebp
 ; WIN32-NEXT:    pushl %ebx
-; WIN32-NEXT:    subl $12, %esp
+; WIN32-NEXT:    subl $16, %esp
 ; WIN32-NEXT:    movl %esi, (%esp) # 4-byte Spill
 ; WIN32-NEXT:    movl %edi, %esi
 ; WIN32-NEXT:    movl %edx, %ebx
@@ -207,36 +207,37 @@ define x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a
 ; WIN32-NEXT:    subl %esi, %ebx
 ; WIN32-NEXT:    movl %edi, %eax
 ; WIN32-NEXT:    subl %ecx, %eax
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; WIN32-NEXT:    movl %ebp, %ecx
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
 ; WIN32-NEXT:    imull %eax, %ecx
+; WIN32-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; WIN32-NEXT:    movl %esi, %eax
-; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    imull %ebx, %eax
-; WIN32-NEXT:    addl %ecx, %eax
+; WIN32-NEXT:    movl %esi, %edx
+; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %edx
+; WIN32-NEXT:    imull %ebx, %edx
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; WIN32-NEXT:    movl (%esp), %ebx # 4-byte Reload
-; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %ebx
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:    movl %edx, %ecx
+; WIN32-NEXT:    subl %ebp, %ebx
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    movl %eax, %ecx
 ; WIN32-NEXT:    subl {{[0-9]+}}(%esp), %ecx
 ; WIN32-NEXT:    imull %ebx, %ecx
-; WIN32-NEXT:    addl %eax, %ecx
+; WIN32-NEXT:    addl %edx, %ecx
 ; WIN32-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    addl (%esp), %eax # 4-byte Folded Reload
-; WIN32-NEXT:    addl {{[0-9]+}}(%esp), %ebp
-; WIN32-NEXT:    imull %ebp, %edi
+; WIN32-NEXT:    addl (%esp), %ebp # 4-byte Folded Reload
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; WIN32-NEXT:    addl {{[0-9]+}}(%esp), %edx
+; WIN32-NEXT:    imull %edx, %edi
 ; WIN32-NEXT:    addl {{[0-9]+}}(%esp), %esi
 ; WIN32-NEXT:    imull {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
-; WIN32-NEXT:    addl %esi, %edi
-; WIN32-NEXT:    addl {{[0-9]+}}(%esp), %edx
-; WIN32-NEXT:    imull %eax, %edx
-; WIN32-NEXT:    addl %edx, %edi
+; WIN32-NEXT:    addl {{[0-9]+}}(%esp), %eax
+; WIN32-NEXT:    imull %ebp, %eax
+; WIN32-NEXT:    addl %esi, %eax
+; WIN32-NEXT:    addl %eax, %edi
 ; WIN32-NEXT:    addl %ecx, %edi
+; WIN32-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
 ; WIN32-NEXT:    movl %edi, %eax
-; WIN32-NEXT:    addl $12, %esp
+; WIN32-NEXT:    addl $16, %esp
 ; WIN32-NEXT:    popl %ebx
 ; WIN32-NEXT:    popl %ebp
 ; WIN32-NEXT:    retl
@@ -270,18 +271,18 @@ define x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a
 ; WIN64-NEXT:    # kill: def $r11d killed $r11d killed $r11
 ; WIN64-NEXT:    subl %r12d, %r11d
 ; WIN64-NEXT:    imull %edx, %r11d
-; WIN64-NEXT:    addl %r9d, %r11d
 ; WIN64-NEXT:    leal (%r14,%r15), %edx
-; WIN64-NEXT:    movl %r14d, %r9d
-; WIN64-NEXT:    subl %r15d, %r9d
-; WIN64-NEXT:    imull %esi, %r9d
-; WIN64-NEXT:    addl %r11d, %r9d
+; WIN64-NEXT:    # kill: def $r14d killed $r14d killed $r14
+; WIN64-NEXT:    subl %r15d, %r14d
+; WIN64-NEXT:    imull %esi, %r14d
+; WIN64-NEXT:    addl %r11d, %r14d
 ; WIN64-NEXT:    addl %ecx, %eax
 ; WIN64-NEXT:    imull %r8d, %eax
 ; WIN64-NEXT:    imull %ebx, %r10d
-; WIN64-NEXT:    addl %r10d, %eax
 ; WIN64-NEXT:    imull %edi, %edx
+; WIN64-NEXT:    addl %r10d, %edx
 ; WIN64-NEXT:    addl %edx, %eax
+; WIN64-NEXT:    addl %r14d, %eax
 ; WIN64-NEXT:    addl %r9d, %eax
 ; WIN64-NEXT:    popq %rbx
 ; WIN64-NEXT:    retq
@@ -311,19 +312,19 @@ define x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a
 ; LINUXOSX-NEXT:    leal (%r13,%r14), %r11d
 ; LINUXOSX-NEXT:    movl %r13d, %r12d
 ; LINUXOSX-NEXT:    subl %r14d, %r12d
+; LINUXOSX-NEXT:    movl {{[0-9]+}}(%rsp), %r14d
 ; LINUXOSX-NEXT:    imull %edx, %r12d
-; LINUXOSX-NEXT:    movl {{[0-9]+}}(%rsp), %edx
-; LINUXOSX-NEXT:    addl %r9d, %r12d
-; LINUXOSX-NEXT:    movl %r15d, %r9d
-; LINUXOSX-NEXT:    subl %edx, %r9d
-; LINUXOSX-NEXT:    imull %esi, %r9d
-; LINUXOSX-NEXT:    addl %r12d, %r9d
+; LINUXOSX-NEXT:    movl %r15d, %edx
+; LINUXOSX-NEXT:    subl %r14d, %edx
+; LINUXOSX-NEXT:    imull %esi, %edx
+; LINUXOSX-NEXT:    addl %r12d, %edx
 ; LINUXOSX-NEXT:    addl %ecx, %eax
 ; LINUXOSX-NEXT:    imull %r8d, %eax
 ; LINUXOSX-NEXT:    imull %r10d, %r11d
-; LINUXOSX-NEXT:    addl %r11d, %eax
-; LINUXOSX-NEXT:    addl %r15d, %edx
-; LINUXOSX-NEXT:    imull %edi, %edx
+; LINUXOSX-NEXT:    addl %r15d, %r14d
+; LINUXOSX-NEXT:    imull %edi, %r14d
+; LINUXOSX-NEXT:    addl %r11d, %r14d
+; LINUXOSX-NEXT:    addl %r14d, %eax
 ; LINUXOSX-NEXT:    addl %edx, %eax
 ; LINUXOSX-NEXT:    addl %r9d, %eax
 ; LINUXOSX-NEXT:    retq

@@ -1,7 +1,7 @@
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mcpu=mvp -mattr=+multivalue,+tail-call | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mcpu=mvp -mattr=+reference-types,+multivalue,+tail-call | FileCheck --check-prefix REF %s
-; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mcpu=mvp -mattr=+multivalue,+tail-call | FileCheck %s --check-prefix REGS
-; RUN: llc < %s --filetype=obj -mcpu=mvp -mattr=+multivalue,+tail-call | obj2yaml | FileCheck %s --check-prefix OBJ
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mattr=+multivalue,+tail-call | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -mattr=+reference-types,+multivalue,+tail-call | FileCheck --check-prefix REF %s
+; RUN: llc < %s -asm-verbose=false -verify-machineinstrs -disable-wasm-fallthrough-return-opt -wasm-disable-explicit-locals -wasm-keep-registers -mattr=+multivalue,+tail-call | FileCheck %s --check-prefix REGS
+; RUN: llc < %s --filetype=obj -mattr=+multivalue,+tail-call | obj2yaml | FileCheck %s --check-prefix OBJ
 
 ; Test that the multivalue calls, returns, function types, and block
 ; types work as expected.
