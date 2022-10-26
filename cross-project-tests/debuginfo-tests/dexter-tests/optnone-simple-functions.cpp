@@ -5,7 +5,7 @@
 // RUN:     --builder 'clang' --debugger 'lldb' \
 // RUN:     --cflags "-O0 -g" -- %s
 
-// REQUIRES: lldb
+// REQUIRES: lldb, D136396
 // UNSUPPORTED: system-windows
 
 //// Check that the debugging experience with __attribute__((optnone)) at O2
