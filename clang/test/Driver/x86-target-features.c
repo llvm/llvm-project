@@ -317,6 +317,11 @@
 // AVX512FP16: "-target-feature" "+avx512fp16"
 // NO-AVX512FP16: "-target-feature" "-avx512fp16"
 
+// RUN: %clang --target=x86_64 -mcmpccxadd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CMPCCXADD %s
+// RUN: %clang --target=x86_64 -mno-cmpccxadd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-CMPCCXADD %s
+// CMPCCXADD: "-target-feature" "+cmpccxadd"
+// NO-CMPCCXADD: "-target-feature" "-cmpccxadd"
+
 // RUN: %clang --target=i386 -march=i386 -mcrc32 %s -### 2>&1 | FileCheck -check-prefix=CRC32 %s
 // RUN: %clang --target=i386 -march=i386 -mno-crc32 %s -### 2>&1 | FileCheck -check-prefix=NO-CRC32 %s
 // CRC32: "-target-feature" "+crc32"

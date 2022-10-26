@@ -255,6 +255,9 @@ Bug Fixes
 - Reject non-type template arguments formed by casting a non-zero integer
   to a pointer in pre-C++17 modes, instead of treating them as null
   pointers.
+- Fix missing diagnostics for uses of declarations when performing typename access,
+  such as when performing member access on a '[[deprecated]]' type alias.
+  `Issue 58547 <https://github.com/llvm/llvm-project/issues/58547>`
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -603,6 +606,9 @@ X86 Support in Clang
 - Add ISA of ``AMX-FP16`` which support ``_tile_dpfp16ps``.
 - Switch ``AVX512-BF16`` intrinsics types from ``short`` to ``__bf16``.
 - Add support for ``PREFETCHI`` instructions.
+- Support ISA of ``CMPCCXADD``.
+  * Support intrinsic of ``__cmpccxadd_epi32``.
+  * Support intrinsic of ``__cmpccxadd_epi64``.
 
 DWARF Support in Clang
 ----------------------

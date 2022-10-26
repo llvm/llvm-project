@@ -13,8 +13,6 @@
 
 #include "asan_poisoning.h"
 
-#include <assert.h>
-
 #include "asan_report.h"
 #include "asan_stack.h"
 #include "sanitizer_common/sanitizer_atomic.h"
@@ -315,37 +313,30 @@ void __asan_set_shadow_00(uptr addr, uptr size) {
 }
 
 void __asan_set_shadow_01(uptr addr, uptr size) {
-  assert(size == 1);
   REAL(memset)((void *)addr, 0x01, size);
 }
 
 void __asan_set_shadow_02(uptr addr, uptr size) {
-  assert(size == 1);
   REAL(memset)((void *)addr, 0x02, size);
 }
 
 void __asan_set_shadow_03(uptr addr, uptr size) {
-  assert(size == 1);
   REAL(memset)((void *)addr, 0x03, size);
 }
 
 void __asan_set_shadow_04(uptr addr, uptr size) {
-  assert(size == 1);
   REAL(memset)((void *)addr, 0x04, size);
 }
 
 void __asan_set_shadow_05(uptr addr, uptr size) {
-  assert(size == 1);
   REAL(memset)((void *)addr, 0x05, size);
 }
 
 void __asan_set_shadow_06(uptr addr, uptr size) {
-  assert(size == 1);
   REAL(memset)((void *)addr, 0x06, size);
 }
 
 void __asan_set_shadow_07(uptr addr, uptr size) {
-  assert(size == 1);
   REAL(memset)((void *)addr, 0x07, size);
 }
 

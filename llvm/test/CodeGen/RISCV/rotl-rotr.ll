@@ -543,7 +543,7 @@ define i64 @rotl_64_mask(i64 %x, i64 %y) nounwind {
 ;
 ; RV64I-LABEL: rotl_64_mask:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    neg a2, a1
+; RV64I-NEXT:    negw a2, a1
 ; RV64I-NEXT:    sll a1, a0, a1
 ; RV64I-NEXT:    srl a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
@@ -646,7 +646,7 @@ define i64 @rotl_64_mask_and_127_and_63(i64 %x, i64 %y) nounwind {
 ; RV64I-LABEL: rotl_64_mask_and_127_and_63:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sll a2, a0, a1
-; RV64I-NEXT:    neg a1, a1
+; RV64I-NEXT:    negw a1, a1
 ; RV64I-NEXT:    srl a0, a0, a1
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    ret
@@ -788,7 +788,7 @@ define i64 @rotr_64_mask(i64 %x, i64 %y) nounwind {
 ;
 ; RV64I-LABEL: rotr_64_mask:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    neg a2, a1
+; RV64I-NEXT:    negw a2, a1
 ; RV64I-NEXT:    srl a1, a0, a1
 ; RV64I-NEXT:    sll a0, a0, a2
 ; RV64I-NEXT:    or a0, a1, a0
@@ -891,7 +891,7 @@ define i64 @rotr_64_mask_and_127_and_63(i64 %x, i64 %y) nounwind {
 ; RV64I-LABEL: rotr_64_mask_and_127_and_63:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srl a2, a0, a1
-; RV64I-NEXT:    neg a1, a1
+; RV64I-NEXT:    negw a1, a1
 ; RV64I-NEXT:    sll a0, a0, a1
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    ret
@@ -1083,7 +1083,7 @@ define signext i64 @rotl_64_mask_shared(i64 signext %a, i64 signext %b, i64 sign
 ; RV64I-LABEL: rotl_64_mask_shared:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sll a3, a0, a2
-; RV64I-NEXT:    neg a4, a2
+; RV64I-NEXT:    negw a4, a2
 ; RV64I-NEXT:    srl a0, a0, a4
 ; RV64I-NEXT:    or a0, a3, a0
 ; RV64I-NEXT:    sll a1, a1, a2
@@ -1239,7 +1239,7 @@ define signext i64 @rotr_64_mask_shared(i64 signext %a, i64 signext %b, i64 sign
 ; RV64I-LABEL: rotr_64_mask_shared:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srl a3, a0, a2
-; RV64I-NEXT:    neg a4, a2
+; RV64I-NEXT:    negw a4, a2
 ; RV64I-NEXT:    sll a0, a0, a4
 ; RV64I-NEXT:    or a0, a3, a0
 ; RV64I-NEXT:    sll a1, a1, a2
@@ -1398,7 +1398,7 @@ define i64 @rotl_64_mask_multiple(i64 %a, i64 %b, i64 %amt) nounwind {
 ; RV64I-LABEL: rotl_64_mask_multiple:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sll a3, a0, a2
-; RV64I-NEXT:    neg a4, a2
+; RV64I-NEXT:    negw a4, a2
 ; RV64I-NEXT:    srl a0, a0, a4
 ; RV64I-NEXT:    or a0, a3, a0
 ; RV64I-NEXT:    sll a2, a1, a2
@@ -1558,7 +1558,7 @@ define i64 @rotr_64_mask_multiple(i64 %a, i64 %b, i64 %amt) nounwind {
 ; RV64I-LABEL: rotr_64_mask_multiple:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srl a3, a0, a2
-; RV64I-NEXT:    neg a4, a2
+; RV64I-NEXT:    negw a4, a2
 ; RV64I-NEXT:    sll a0, a0, a4
 ; RV64I-NEXT:    or a0, a3, a0
 ; RV64I-NEXT:    srl a2, a1, a2
