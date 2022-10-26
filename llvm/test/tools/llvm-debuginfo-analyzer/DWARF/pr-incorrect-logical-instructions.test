@@ -1,0 +1,205 @@
+; * Added incorrect logical instructions for: --print=lines,instructions
+;   'bar' and 'foo' showing extra instruction from compiler generated functions:
+;   '_cxx_global_var_init' and '_GLOBAL_sub_l_suite_lexical_01.cpp'
+;
+; * Missing logical instructions for: --print=instructions
+;   Only 'foo' showing logical instructions.
+
+; pr-incorrect-instructions-dwarf-clang.cpp
+;  1 int ABCDE = 56; int XYZ = ABCDE * 65;
+;  2 int bar(int Param) {
+;  3   return Param + 999999 * Param - 66;
+;  4 }
+;  5
+;  6 int foo(int Param) {
+;  7   return Param - bar(Param) / Param * 66 + ABCDE;
+;  8 }
+;  9
+; 10 int test(int P1) {
+; 11  int Local_1 = P1 - ABCDE;
+; 12  {
+; 13    int Local_A = 0;
+; 14    Local_A = P1 + foo(Local_1);
+; 15    ++Local_1;
+; 16  }
+; 17  return Local_1;
+; 18 }
+; 19
+; 20 int main() {
+; 21  return 0;
+; 22 }
+
+; RUN: llvm-debuginfo-analyzer --attribute=level \
+; RUN:                         --print=lines,instructions \
+; RUN:                         %p/Inputs/pr-incorrect-instructions-dwarf-clang.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; ONE:      Logical View:
+; ONE-NEXT: [000]           {File} 'pr-incorrect-instructions-dwarf-clang.o'
+; ONE-EMPTY:
+; ONE-NEXT: [001]             {CompileUnit} 'pr-incorrect-instructions-dwarf-clang.cpp'
+; ONE-NEXT: [002]     2         {Function} extern not_inlined 'bar' -> 'int'
+; ONE-NEXT: [003]     2           {Line}
+; ONE-NEXT: [003]                 {Code} 'pushq	%rbp'
+; ONE-NEXT: [003]                 {Code} 'movq	%rsp, %rbp'
+; ONE-NEXT: [003]                 {Code} 'movl	%edi, -0x4(%rbp)'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} 'movl	-0x4(%rbp), %eax'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} 'imull	$0xf423f, -0x4(%rbp), %ecx'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} 'addl	%ecx, %eax'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} 'subl	$0x42, %eax'
+; ONE-NEXT: [003]     3           {Line}
+; ONE-NEXT: [003]                 {Code} 'popq	%rbp'
+; ONE-NEXT: [003]                 {Code} 'retq'
+; ONE-NEXT: [002]     6         {Function} extern not_inlined 'foo' -> 'int'
+; ONE-NEXT: [003]     6           {Line}
+; ONE-NEXT: [003]                 {Code} 'pushq	%rbp'
+; ONE-NEXT: [003]                 {Code} 'movq	%rsp, %rbp'
+; ONE-NEXT: [003]                 {Code} 'subq	$0x10, %rsp'
+; ONE-NEXT: [003]                 {Code} 'movl	%edi, -0x4(%rbp)'
+; ONE-NEXT: [003]     7           {Line}
+; ONE-NEXT: [003]                 {Code} 'movl	-0x4(%rbp), %eax'
+; ONE-NEXT: [003]                 {Code} 'movl	%eax, -0x8(%rbp)'
+; ONE-NEXT: [003]     7           {Line}
+; ONE-NEXT: [003]                 {Code} 'movl	-0x4(%rbp), %edi'
+; ONE-NEXT: [003]     7           {Line}
+; ONE-NEXT: [003]                 {Code} 'callq	0x0'
+; ONE-NEXT: [003]     7           {Line}
+; ONE-NEXT: [003]                 {Code} 'cltd'
+; ONE-NEXT: [003]                 {Code} 'idivl	-0x4(%rbp)'
+; ONE-NEXT: [003]                 {Code} 'movl	%eax, %ecx'
+; ONE-NEXT: [003]                 {Code} 'movl	-0x8(%rbp), %eax'
+; ONE-NEXT: [003]     7           {Line}
+; ONE-NEXT: [003]                 {Code} 'imull	$0x42, %ecx, %ecx'
+; ONE-NEXT: [003]     7           {Line}
+; ONE-NEXT: [003]                 {Code} 'subl	%ecx, %eax'
+; ONE-NEXT: [003]     7           {Line}
+; ONE-NEXT: [003]                 {Code} 'addl	(%rip), %eax'
+; ONE-NEXT: [003]     7           {Line}
+; ONE-NEXT: [003]                 {Code} 'addq	$0x10, %rsp'
+; ONE-NEXT: [003]                 {Code} 'popq	%rbp'
+; ONE-NEXT: [003]                 {Code} 'retq'
+; ONE-NEXT: [003]                 {Code} 'data16'
+; ONE-NEXT: [002]    10         {Function} extern not_inlined 'test' -> 'int'
+; ONE-NEXT: [003]                 {Block}
+; ONE-NEXT: [004]    13             {Line}
+; ONE-NEXT: [004]                   {Code} 'movl	$0x0, -0xc(%rbp)'
+; ONE-NEXT: [004]    14             {Line}
+; ONE-NEXT: [004]                   {Code} 'movl	-0x4(%rbp), %eax'
+; ONE-NEXT: [004]                   {Code} 'movl	%eax, -0x10(%rbp)'
+; ONE-NEXT: [004]    14             {Line}
+; ONE-NEXT: [004]                   {Code} 'movl	-0x8(%rbp), %edi'
+; ONE-NEXT: [004]    14             {Line}
+; ONE-NEXT: [004]                   {Code} 'callq	0x0'
+; ONE-NEXT: [004]                   {Code} 'movl	%eax, %ecx'
+; ONE-NEXT: [004]                   {Code} 'movl	-0x10(%rbp), %eax'
+; ONE-NEXT: [004]    14             {Line}
+; ONE-NEXT: [004]                   {Code} 'addl	%ecx, %eax'
+; ONE-NEXT: [004]    14             {Line}
+; ONE-NEXT: [004]                   {Code} 'movl	%eax, -0xc(%rbp)'
+; ONE-NEXT: [004]    15             {Line}
+; ONE-NEXT: [004]                   {Code} 'movl	-0x8(%rbp), %eax'
+; ONE-NEXT: [004]                   {Code} 'addl	$0x1, %eax'
+; ONE-NEXT: [004]                   {Code} 'movl	%eax, -0x8(%rbp)'
+; ONE-NEXT: [004]    17             {Line}
+; ONE-NEXT: [004]                   {Code} 'movl	-0x8(%rbp), %eax'
+; ONE-NEXT: [003]    10           {Line}
+; ONE-NEXT: [003]                 {Code} 'pushq	%rbp'
+; ONE-NEXT: [003]                 {Code} 'movq	%rsp, %rbp'
+; ONE-NEXT: [003]                 {Code} 'subq	$0x10, %rsp'
+; ONE-NEXT: [003]                 {Code} 'movl	%edi, -0x4(%rbp)'
+; ONE-NEXT: [003]    11           {Line}
+; ONE-NEXT: [003]                 {Code} 'movl	-0x4(%rbp), %eax'
+; ONE-NEXT: [003]    11           {Line}
+; ONE-NEXT: [003]                 {Code} 'subl	(%rip), %eax'
+; ONE-NEXT: [003]    11           {Line}
+; ONE-NEXT: [003]                 {Code} 'movl	%eax, -0x8(%rbp)'
+; ONE-NEXT: [003]    17           {Line}
+; ONE-NEXT: [003]                 {Code} 'addq	$0x10, %rsp'
+; ONE-NEXT: [003]                 {Code} 'popq	%rbp'
+; ONE-NEXT: [003]                 {Code} 'retq'
+; ONE-NEXT: [002]    20         {Function} extern not_inlined 'main' -> 'int'
+; ONE-NEXT: [003]    20           {Line}
+; ONE-NEXT: [003]                 {Code} 'pushq	%rbp'
+; ONE-NEXT: [003]                 {Code} 'movq	%rsp, %rbp'
+; ONE-NEXT: [003]                 {Code} 'movl	$0x0, -0x4(%rbp)'
+; ONE-NEXT: [003]    21           {Line}
+; ONE-NEXT: [003]                 {Code} 'xorl	%eax, %eax'
+; ONE-NEXT: [003]                 {Code} 'popq	%rbp'
+; ONE-NEXT: [003]                 {Code} 'retq'
+; ONE-NEXT: [003]    21           {Line}
+
+; RUN: llvm-debuginfo-analyzer --attribute=level \
+; RUN:                         --print=instructions \
+; RUN:                         %p/Inputs/pr-incorrect-instructions-dwarf-clang.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=TWO %s
+
+; TWO:      Logical View:
+; TWO-NEXT: [000]           {File} 'pr-incorrect-instructions-dwarf-clang.o'
+; TWO-EMPTY:
+; TWO-NEXT: [001]             {CompileUnit} 'pr-incorrect-instructions-dwarf-clang.cpp'
+; TWO-NEXT: [002]     2         {Function} extern not_inlined 'bar' -> 'int'
+; TWO-NEXT: [003]                 {Code} 'pushq	%rbp'
+; TWO-NEXT: [003]                 {Code} 'movq	%rsp, %rbp'
+; TWO-NEXT: [003]                 {Code} 'movl	%edi, -0x4(%rbp)'
+; TWO-NEXT: [003]                 {Code} 'movl	-0x4(%rbp), %eax'
+; TWO-NEXT: [003]                 {Code} 'imull	$0xf423f, -0x4(%rbp), %ecx'
+; TWO-NEXT: [003]                 {Code} 'addl	%ecx, %eax'
+; TWO-NEXT: [003]                 {Code} 'subl	$0x42, %eax'
+; TWO-NEXT: [003]                 {Code} 'popq	%rbp'
+; TWO-NEXT: [003]                 {Code} 'retq'
+; TWO-NEXT: [002]     6         {Function} extern not_inlined 'foo' -> 'int'
+; TWO-NEXT: [003]                 {Code} 'pushq	%rbp'
+; TWO-NEXT: [003]                 {Code} 'movq	%rsp, %rbp'
+; TWO-NEXT: [003]                 {Code} 'subq	$0x10, %rsp'
+; TWO-NEXT: [003]                 {Code} 'movl	%edi, -0x4(%rbp)'
+; TWO-NEXT: [003]                 {Code} 'movl	-0x4(%rbp), %eax'
+; TWO-NEXT: [003]                 {Code} 'movl	%eax, -0x8(%rbp)'
+; TWO-NEXT: [003]                 {Code} 'movl	-0x4(%rbp), %edi'
+; TWO-NEXT: [003]                 {Code} 'callq	0x0'
+; TWO-NEXT: [003]                 {Code} 'cltd'
+; TWO-NEXT: [003]                 {Code} 'idivl	-0x4(%rbp)'
+; TWO-NEXT: [003]                 {Code} 'movl	%eax, %ecx'
+; TWO-NEXT: [003]                 {Code} 'movl	-0x8(%rbp), %eax'
+; TWO-NEXT: [003]                 {Code} 'imull	$0x42, %ecx, %ecx'
+; TWO-NEXT: [003]                 {Code} 'subl	%ecx, %eax'
+; TWO-NEXT: [003]                 {Code} 'addl	(%rip), %eax'
+; TWO-NEXT: [003]                 {Code} 'addq	$0x10, %rsp'
+; TWO-NEXT: [003]                 {Code} 'popq	%rbp'
+; TWO-NEXT: [003]                 {Code} 'retq'
+; TWO-NEXT: [003]                 {Code} 'data16'
+; TWO-NEXT: [002]    10         {Function} extern not_inlined 'test' -> 'int'
+; TWO-NEXT: [003]                 {Block}
+; TWO-NEXT: [004]                   {Code} 'movl	$0x0, -0xc(%rbp)'
+; TWO-NEXT: [004]                   {Code} 'movl	-0x4(%rbp), %eax'
+; TWO-NEXT: [004]                   {Code} 'movl	%eax, -0x10(%rbp)'
+; TWO-NEXT: [004]                   {Code} 'movl	-0x8(%rbp), %edi'
+; TWO-NEXT: [004]                   {Code} 'callq	0x0'
+; TWO-NEXT: [004]                   {Code} 'movl	%eax, %ecx'
+; TWO-NEXT: [004]                   {Code} 'movl	-0x10(%rbp), %eax'
+; TWO-NEXT: [004]                   {Code} 'addl	%ecx, %eax'
+; TWO-NEXT: [004]                   {Code} 'movl	%eax, -0xc(%rbp)'
+; TWO-NEXT: [004]                   {Code} 'movl	-0x8(%rbp), %eax'
+; TWO-NEXT: [004]                   {Code} 'addl	$0x1, %eax'
+; TWO-NEXT: [004]                   {Code} 'movl	%eax, -0x8(%rbp)'
+; TWO-NEXT: [004]                   {Code} 'movl	-0x8(%rbp), %eax'
+; TWO-NEXT: [003]                 {Code} 'pushq	%rbp'
+; TWO-NEXT: [003]                 {Code} 'movq	%rsp, %rbp'
+; TWO-NEXT: [003]                 {Code} 'subq	$0x10, %rsp'
+; TWO-NEXT: [003]                 {Code} 'movl	%edi, -0x4(%rbp)'
+; TWO-NEXT: [003]                 {Code} 'movl	-0x4(%rbp), %eax'
+; TWO-NEXT: [003]                 {Code} 'subl	(%rip), %eax'
+; TWO-NEXT: [003]                 {Code} 'movl	%eax, -0x8(%rbp)'
+; TWO-NEXT: [003]                 {Code} 'addq	$0x10, %rsp'
+; TWO-NEXT: [003]                 {Code} 'popq	%rbp'
+; TWO-NEXT: [003]                 {Code} 'retq'
+; TWO-NEXT: [002]    20         {Function} extern not_inlined 'main' -> 'int'
+; TWO-NEXT: [003]                 {Code} 'pushq	%rbp'
+; TWO-NEXT: [003]                 {Code} 'movq	%rsp, %rbp'
+; TWO-NEXT: [003]                 {Code} 'movl	$0x0, -0x4(%rbp)'
+; TWO-NEXT: [003]                 {Code} 'xorl	%eax, %eax'
+; TWO-NEXT: [003]                 {Code} 'popq	%rbp'
+; TWO-NEXT: [003]                 {Code} 'retq'
