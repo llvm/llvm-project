@@ -481,6 +481,10 @@ struct IntrinsicLibrary {
   fir::ExtendedValue genCount(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   void genCpuTime(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCshift(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genCAssociatedCFunPtr(mlir::Type,
+                                           llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genCAssociatedCPtr(mlir::Type,
+                                        llvm::ArrayRef<fir::ExtendedValue>);
   void genCFPointer(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCFunLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genCLoc(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
@@ -731,6 +735,14 @@ static constexpr IntrinsicHandler handlers[]{
     {"ble", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::ule>},
     {"blt", &I::genBitwiseCompare<mlir::arith::CmpIPredicate::ult>},
     {"btest", &I::genBtest},
+    {"c_associated_c_funptr",
+     &I::genCAssociatedCFunPtr,
+     {{{"c_ptr_1", asAddr}, {"c_ptr_2", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
+    {"c_associated_c_ptr",
+     &I::genCAssociatedCPtr,
+     {{{"c_ptr_1", asAddr}, {"c_ptr_2", asAddr, handleDynamicOptional}}},
+     /*isElemental=*/false},
     {"c_f_pointer",
      &I::genCFPointer,
      {{{"cptr", asValue},
@@ -2611,16 +2623,61 @@ genCLocOrCFunLoc(fir::FirOpBuilder &builder, mlir::Location loc,
   return res;
 }
 
+/// C_ASSOCIATED
+static fir::ExtendedValue
+genCAssociated(fir::FirOpBuilder &builder, mlir::Location loc,
+               mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 2);
+  mlir::Value cPtr1 = fir::getBase(args[0]);
+  mlir::Value cPtrVal1 =
+      fir::factory::genCPtrOrCFunptrValue(builder, loc, cPtr1);
+  mlir::Value zero = builder.createIntegerConstant(loc, cPtrVal1.getType(), 0);
+  mlir::Value res = builder.create<mlir::arith::CmpIOp>(
+      loc, mlir::arith::CmpIPredicate::ne, cPtrVal1, zero);
+
+  if (isStaticallyPresent(args[1])) {
+    mlir::Type i1Ty = builder.getI1Type();
+    mlir::Value cPtr2 = fir::getBase(args[1]);
+    mlir::Value isDynamicallyAbsent = builder.genIsNullAddr(loc, cPtr2);
+    res =
+        builder
+            .genIfOp(loc, {i1Ty}, isDynamicallyAbsent, /*withElseRegion=*/true)
+            .genThen([&]() { builder.create<fir::ResultOp>(loc, res); })
+            .genElse([&]() {
+              mlir::Value cPtrVal2 =
+                  fir::factory::genCPtrOrCFunptrValue(builder, loc, cPtr2);
+              mlir::Value cmpVal = builder.create<mlir::arith::CmpIOp>(
+                  loc, mlir::arith::CmpIPredicate::eq, cPtrVal1, cPtrVal2);
+              mlir::Value newRes =
+                  builder.create<mlir::arith::AndIOp>(loc, res, cmpVal);
+              builder.create<fir::ResultOp>(loc, newRes);
+            })
+            .getResults()[0];
+  }
+  return builder.createConvert(loc, resultType, res);
+}
+
+/// C_ASSOCIATED (C_FUNPTR [, C_FUNPTR])
+fir::ExtendedValue IntrinsicLibrary::genCAssociatedCFunPtr(
+    mlir::Type resultType, llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genCAssociated(builder, loc, resultType, args);
+}
+
+/// C_ASSOCIATED (C_PTR [, C_PTR])
+fir::ExtendedValue
+IntrinsicLibrary::genCAssociatedCPtr(mlir::Type resultType,
+                                     llvm::ArrayRef<fir::ExtendedValue> args) {
+  return genCAssociated(builder, loc, resultType, args);
+}
+
 // C_F_POINTER
 void IntrinsicLibrary::genCFPointer(llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
   // Handle CPTR argument
   // Get the value of the C address or the result of a reference to C_LOC.
   mlir::Value cPtr = fir::getBase(args[0]);
-  mlir::Type cPtrTy = fir::unwrapRefType(cPtr.getType());
-  mlir::Value cPtrAddr =
-      fir::factory::genCPtrOrCFunptrAddr(builder, loc, cPtr, cPtrTy);
-  mlir::Value cPtrAddrVal = builder.create<fir::LoadOp>(loc, cPtrAddr);
+  mlir::Value cPtrAddrVal =
+      fir::factory::genCPtrOrCFunptrValue(builder, loc, cPtr);
 
   // Handle FPTR argument
   const auto *fPtr = args[1].getBoxOf<fir::MutableBoxValue>();
