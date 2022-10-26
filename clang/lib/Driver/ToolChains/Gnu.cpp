@@ -23,6 +23,7 @@
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Path.h"
@@ -969,9 +970,16 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
   for (const auto &II : Inputs)
     CmdArgs.push_back(II.getFilename());
 
-  if (Arg *A = Args.getLastArg(options::OPT_g_Flag, options::OPT_gN_Group))
-    if (!A->getOption().matches(options::OPT_g0))
+  if (Arg *A = Args.getLastArg(options::OPT_g_Flag, options::OPT_gN_Group,
+        options::OPT_gdwarf_2, options::OPT_gdwarf_3, options::OPT_gdwarf_4,
+        options::OPT_gdwarf_5, options::OPT_gdwarf))
+    if (!A->getOption().matches(options::OPT_g0)) {
       Args.AddLastArg(CmdArgs, options::OPT_g_Flag);
+
+      unsigned DwarfVersion = getDwarfVersion(getToolChain(), Args);
+      Twine DV = "-gdwarf-" + Twine(DwarfVersion);
+      CmdArgs.push_back(Args.MakeArgString(DV));
+    }
 
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath(DefaultAssembler));
