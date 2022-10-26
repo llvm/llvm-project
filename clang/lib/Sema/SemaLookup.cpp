@@ -3694,11 +3694,11 @@ Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
         // is a well-formed template argument for the template parameter.
         if (StringLit) {
           SFINAETrap Trap(*this);
-          SmallVector<TemplateArgument, 1> SugaredChecked, CanonicalChecked;
+          SmallVector<TemplateArgument, 1> Checked;
           TemplateArgumentLoc Arg(TemplateArgument(StringLit), StringLit);
-          if (CheckTemplateArgument(
-                  Params->getParam(0), Arg, FD, R.getNameLoc(), R.getNameLoc(),
-                  0, SugaredChecked, CanonicalChecked, CTAK_Specified) ||
+          if (CheckTemplateArgument(Params->getParam(0), Arg, FD,
+                                    R.getNameLoc(), R.getNameLoc(), 0,
+                                    Checked) ||
               Trap.hasErrorOccurred())
             IsTemplate = false;
         }
