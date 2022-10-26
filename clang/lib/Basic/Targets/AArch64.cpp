@@ -84,6 +84,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   HasLegalHalfType = true;
   HalfArgsAndReturns = true;
   HasFloat16 = true;
+  HasStrictFP = true;
 
   if (Triple.isArch64Bit())
     LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
