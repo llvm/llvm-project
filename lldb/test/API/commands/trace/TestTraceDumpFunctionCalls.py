@@ -11,15 +11,15 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
         error=True, substrs=['error: no thread with index: "2"'])
 
       self.expect("thread trace dump function-calls 1 -j",
-        substrs=['[{"tracedSegments":[{"firstInstructionId":"1","lastInstructionId":"22"}]}]'])
+        substrs=['[{"tracedSegments":[{"firstInstructionId":"3","lastInstructionId":"26"}]}]'])
 
       self.expect("thread trace dump function-calls 1 -J",
         substrs=['''[
   {
     "tracedSegments": [
       {
-        "firstInstructionId": "1",
-        "lastInstructionId": "22"
+        "firstInstructionId": "3",
+        "lastInstructionId": "26"
       }
     ]
   }
@@ -30,7 +30,7 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
         substrs=['''thread #1: tid = 3842849
 
 [call tree #0]
-a.out`main + 4 at main.cpp:2 to 4:0  [1, 22]'''])
+a.out`main + 4 at main.cpp:2 to 4:0  [3, 26]'''])
 
     def testFunctionCallsWithErrors(self):
       self.expect("trace load -v " +
@@ -104,43 +104,43 @@ m.out`bar() + 30 at multi_thread.cpp:19:3 to 20:6  [5, 61831]
       self.expect("c")
       self.expect("thread trace dump function-calls",
         substrs=['''[call tree #0]
-a.out`main + 8 at inline.cpp:15:7 to 16:14  [1, 5]
-  a.out`foo(int) at inline.cpp:8:16 to 9:15  [6, 13]
-    a.out`foo(int) + 22 [inlined] mult(int, int) at inline.cpp:2:7 to 5:10  [14, 21]
-  a.out`foo(int) + 49 at inline.cpp:9:15 to 12:1  [22, 26]
-a.out`main + 25 at inline.cpp:16:14 to 16:14  [27, 27]'''])
+a.out`main + 8 at inline.cpp:15:7 to 16:14  [2, 6]
+  a.out`foo(int) at inline.cpp:8:16 to 9:15  [7, 14]
+    a.out`foo(int) + 22 [inlined] mult(int, int) at inline.cpp:2:7 to 5:10  [15, 22]
+  a.out`foo(int) + 49 at inline.cpp:9:15 to 12:1  [23, 27]
+a.out`main + 25 at inline.cpp:16:14 to 16:14  [28, 28]'''])
 
       self.expect("thread trace dump function-calls -J",
         substrs=['''[
   {
     "tracedSegments": [
       {
-        "firstInstructionId": "1",
-        "lastInstructionId": "5",
+        "firstInstructionId": "2",
+        "lastInstructionId": "6",
         "nestedCall": {
           "tracedSegments": [
             {
-              "firstInstructionId": "6",
-              "lastInstructionId": "13",
+              "firstInstructionId": "7",
+              "lastInstructionId": "14",
               "nestedCall": {
                 "tracedSegments": [
                   {
-                    "firstInstructionId": "14",
-                    "lastInstructionId": "21"
+                    "firstInstructionId": "15",
+                    "lastInstructionId": "22"
                   }
                 ]
               }
             },
             {
-              "firstInstructionId": "22",
-              "lastInstructionId": "26"
+              "firstInstructionId": "23",
+              "lastInstructionId": "27"
             }
           ]
         }
       },
       {
-        "firstInstructionId": "27",
-        "lastInstructionId": "27"
+        "firstInstructionId": "28",
+        "lastInstructionId": "28"
       }
     ]
   }
@@ -157,9 +157,9 @@ a.out`main + 25 at inline.cpp:16:14 to 16:14  [27, 27]'''])
         substrs=['''[call tree #0]
 a.out`main
   a.out`foo(int)
-    a.out`foo(int) + 36 [inlined] mult(int, int) + 14 at inline.cpp:4:5 to 5:10  [1, 5]
-  a.out`foo(int) + 49 at inline.cpp:9:15 to 12:1  [6, 10]
-a.out`main + 25 at inline.cpp:16:14 to 16:14  [11, 11]'''])
+    a.out`foo(int) + 36 [inlined] mult(int, int) + 14 at inline.cpp:4:5 to 5:10  [2, 6]
+  a.out`foo(int) + 49 at inline.cpp:9:15 to 12:1  [7, 11]
+a.out`main + 25 at inline.cpp:16:14 to 16:14  [12, 12]'''])
 
       self.expect("thread trace dump function-calls -J",
         substrs=['''[
@@ -170,24 +170,24 @@ a.out`main + 25 at inline.cpp:16:14 to 16:14  [11, 11]'''])
           "nestedCall": {
             "tracedSegments": [
               {
-                "firstInstructionId": "1",
-                "lastInstructionId": "5"
+                "firstInstructionId": "2",
+                "lastInstructionId": "6"
               }
             ]
           }
         },
         "tracedSegments": [
           {
-            "firstInstructionId": "6",
-            "lastInstructionId": "10"
+            "firstInstructionId": "7",
+            "lastInstructionId": "11"
           }
         ]
       }
     },
     "tracedSegments": [
       {
-        "firstInstructionId": "11",
-        "lastInstructionId": "11"
+        "firstInstructionId": "12",
+        "lastInstructionId": "12"
       }
     ]
   }
@@ -210,41 +210,41 @@ a.out`main + 25 at inline.cpp:16:14 to 16:14  [11, 11]'''])
         substrs=['''thread #1: tid = 815455
 
 [call tree #0]
-a.out`main + 15 at main.cpp:10 to 10:0  [1, 1]
-  a.out`symbol stub for: foo() to <+11>  [3, 5]
-    a.out`a.out[0x0000000000400510] to a.out[0x0000000000400516]  [6, 7]
+a.out`main + 15 at main.cpp:10 to 10:0  [3, 3]
+  a.out`symbol stub for: foo() to <+11>  [7, 9]
+    a.out`a.out[0x0000000000400510] to a.out[0x0000000000400516]  [10, 11]
 
 [call tree #1]
-<tracing errors>  [8, 8]
+<tracing errors>  [12, 12]
 
 [call tree #2]
-a.out`main + 20 at main.cpp:10 to 12:0  [10, 14]
-  a.out`main + 34 [inlined] inline_function() at main.cpp:4 to 6:0  [16, 20]
-a.out`main + 55 at main.cpp:14 to 16:0  [21, 25]
-  a.out`symbol stub for: foo() to <+0>  [26, 26]
-    libfoo.so`foo() at foo.cpp:3 to 4:0  [27, 30]
-      libfoo.so`symbol stub for: bar() to <+0>  [31, 31]
-        libbar.so`bar() at bar.cpp:1 to 4:0  [32, 40]
-    libfoo.so`foo() + 13 at foo.cpp:4 to 6:0  [41, 48]
-a.out`main + 68 at main.cpp:16 to 16:0  [49, 51]'''])
+a.out`main + 20 at main.cpp:10 to 12:0  [16, 22]
+  a.out`main + 34 [inlined] inline_function() at main.cpp:4 to 6:0  [26, 30]
+a.out`main + 55 at main.cpp:14 to 16:0  [31, 37]
+  a.out`symbol stub for: foo() to <+0>  [38, 38]
+    libfoo.so`foo() at foo.cpp:3 to 4:0  [39, 42]
+      libfoo.so`symbol stub for: bar() to <+0>  [43, 43]
+        libbar.so`bar() at bar.cpp:1 to 4:0  [44, 52]
+    libfoo.so`foo() + 13 at foo.cpp:4 to 6:0  [53, 60]
+a.out`main + 68 at main.cpp:16 to 16:0  [61, 63]'''])
 
       self.expect("thread trace dump function-calls -J",
         substrs=['''[
   {
     "tracedSegments": [
       {
-        "firstInstructionId": "1",
-        "lastInstructionId": "1",
+        "firstInstructionId": "3",
+        "lastInstructionId": "3",
         "nestedCall": {
           "tracedSegments": [
             {
-              "firstInstructionId": "3",
-              "lastInstructionId": "5",
+              "firstInstructionId": "7",
+              "lastInstructionId": "9",
               "nestedCall": {
                 "tracedSegments": [
                   {
-                    "firstInstructionId": "6",
-                    "lastInstructionId": "7"
+                    "firstInstructionId": "10",
+                    "lastInstructionId": "11"
                   }
                 ]
               }
@@ -257,48 +257,48 @@ a.out`main + 68 at main.cpp:16 to 16:0  [49, 51]'''])
   {
     "tracedSegments": [
       {
-        "firstInstructionId": "8",
-        "lastInstructionId": "8"
+        "firstInstructionId": "12",
+        "lastInstructionId": "12"
       }
     ]
   },
   {
     "tracedSegments": [
       {
-        "firstInstructionId": "10",
-        "lastInstructionId": "14",
+        "firstInstructionId": "16",
+        "lastInstructionId": "22",
         "nestedCall": {
           "tracedSegments": [
             {
-              "firstInstructionId": "16",
-              "lastInstructionId": "20"
+              "firstInstructionId": "26",
+              "lastInstructionId": "30"
             }
           ]
         }
       },
       {
-        "firstInstructionId": "21",
-        "lastInstructionId": "25",
+        "firstInstructionId": "31",
+        "lastInstructionId": "37",
         "nestedCall": {
           "tracedSegments": [
             {
-              "firstInstructionId": "26",
-              "lastInstructionId": "26",
+              "firstInstructionId": "38",
+              "lastInstructionId": "38",
               "nestedCall": {
                 "tracedSegments": [
                   {
-                    "firstInstructionId": "27",
-                    "lastInstructionId": "30",
+                    "firstInstructionId": "39",
+                    "lastInstructionId": "42",
                     "nestedCall": {
                       "tracedSegments": [
                         {
-                          "firstInstructionId": "31",
-                          "lastInstructionId": "31",
+                          "firstInstructionId": "43",
+                          "lastInstructionId": "43",
                           "nestedCall": {
                             "tracedSegments": [
                               {
-                                "firstInstructionId": "32",
-                                "lastInstructionId": "40"
+                                "firstInstructionId": "44",
+                                "lastInstructionId": "52"
                               }
                             ]
                           }
@@ -307,8 +307,8 @@ a.out`main + 68 at main.cpp:16 to 16:0  [49, 51]'''])
                     }
                   },
                   {
-                    "firstInstructionId": "41",
-                    "lastInstructionId": "48"
+                    "firstInstructionId": "53",
+                    "lastInstructionId": "60"
                   }
                 ]
               }
@@ -317,8 +317,8 @@ a.out`main + 68 at main.cpp:16 to 16:0  [49, 51]'''])
         }
       },
       {
-        "firstInstructionId": "49",
-        "lastInstructionId": "51"
+        "firstInstructionId": "61",
+        "lastInstructionId": "63"
       }
     ]
   }

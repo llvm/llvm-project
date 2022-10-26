@@ -1404,13 +1404,15 @@ multiclass VOPC_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
         VOPCe<op{7-0}>,
         MnemonicAlias<!if(!empty(pseudo_mnemonic), ps32.Mnemonic,
                           pseudo_mnemonic),
-                      asm_name>, Requires<[Gen.AssemblerPredicate]>;
+                      asm_name, ps32.AsmVariantName>,
+        Requires<[Gen.AssemblerPredicate]>;
       def _e64#Gen.Suffix :
             VOP3_Real<ps64, Gen.Subtarget, asm_name>,
             VOP3a_gfx11_gfx12<{0, op}, ps64.Pfl>,
             MnemonicAlias<!if(!empty(pseudo_mnemonic), ps64.Mnemonic,
                               pseudo_mnemonic),
-                          asm_name>, Requires<[Gen.AssemblerPredicate]> {
+                          asm_name, ps64.AsmVariantName>,
+            Requires<[Gen.AssemblerPredicate]> {
         // Encoding used for VOPC instructions encoded as VOP3 differs from
         // VOP3e by destination name (sdst) as VOPC doesn't have vector dst.
         bits<8> sdst;
@@ -1571,7 +1573,7 @@ multiclass VOPCX_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
           : VOPC_Real<ps32, Gen.Subtarget, asm_name>,
             MnemonicAlias<!if(!empty(pseudo_mnemonic), !subst("_nosdst", "", ps32.Mnemonic),
                               pseudo_mnemonic),
-                          asm_name>,
+                          asm_name, ps32.AsmVariantName>,
             Requires<[Gen.AssemblerPredicate]>,
             VOPCe<op{7-0}> {
         let AsmString = asm_name # "{_e32} " # ps32.AsmOperands;
@@ -1580,7 +1582,7 @@ multiclass VOPCX_Real_with_name<GFXGen Gen, bits<9> op, string OpName,
           : VOP3_Real<ps64, Gen.Subtarget, asm_name>,
             MnemonicAlias<!if(!empty(pseudo_mnemonic), !subst("_nosdst", "", ps64.Mnemonic),
                               pseudo_mnemonic),
-                          asm_name>,
+                          asm_name, ps64.AsmVariantName>,
             Requires<[Gen.AssemblerPredicate]>,
             VOP3a_gfx11_gfx12<{0, op}, ps64.Pfl> {
         let Inst{7-0} = ? ; // sdst

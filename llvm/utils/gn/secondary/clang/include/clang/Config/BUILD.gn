@@ -25,7 +25,6 @@ write_cmake_config("Config") {
     "CLANG_SPAWN_CC1=",
     "DEFAULT_SYSROOT=",
     "GCC_INSTALL_PREFIX=",
-    "BACKEND_PACKAGE_STRING=LLVM ${llvm_version}git",
     "ENABLE_LINKER_BUILD_ID=",
     "ENABLE_X86_RELAX_RELOCATIONS=1",
     "CLANG_ENABLE_OBJC_REWRITER=1",  # FIXME: flag?

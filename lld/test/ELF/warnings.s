@@ -9,6 +9,10 @@
 # RUN: not ld.lld --warn-common --fatal-warnings %t1.o %t2.o -o /dev/null 2>&1 | \
 # RUN:   FileCheck -check-prefix=ERR %s
 
+## --no-warnings/-w suppresses warnings and cancel --fatal-warnings.
+# RUN: ld.lld --no-warnings --warn-common %t1.o %t2.o -o /dev/null 2>&1 | count 0
+# RUN: ld.lld -w --fatal-warnings --warn-common %t1.o %t2.o -o /dev/null 2>&1 | count 0
+
 .globl _start
 _start:
 

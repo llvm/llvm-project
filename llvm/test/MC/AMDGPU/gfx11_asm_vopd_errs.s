@@ -266,4 +266,4 @@ v_dual_fmac_f32     v7, v1, v2                   :: v_dual_fmamk_f32      v6, v2
 v_dual_fmamk_f32    v6, v1, 0xaf123456, v3       :: v_dual_fmac_f32       v5, v2, v3
 // GFX11: error: src2 operands must use different VGPR banks
 // GFX11-NEXT:{{^}}v_dual_fmamk_f32    v6, v1, 0xaf123456, v3       :: v_dual_fmac_f32       v5, v2, v3
-// GFX11-NEXT:{{^}}                                        ^
+// GFX11-NEXT:{{^}}                                                                          ^

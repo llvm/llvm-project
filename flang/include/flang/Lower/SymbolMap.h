@@ -348,6 +348,9 @@ public:
     symbolMapStack.back().try_emplace(sym, definingOp);
   }
 
+  llvm::Optional<fir::FortranVariableOpInterface>
+  lookupVariableDefinition(semantics::SymbolRef sym);
+
 private:
   /// Add `symbol` to the current map and bind a `box`.
   void makeSym(semantics::SymbolRef symRef, const SymbolBox &box,

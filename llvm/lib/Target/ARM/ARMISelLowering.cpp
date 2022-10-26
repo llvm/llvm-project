@@ -2630,11 +2630,11 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   const TargetMachine &TM = getTargetMachine();
   const Module *Mod = MF.getFunction().getParent();
-  const GlobalValue *GV = nullptr;
+  const GlobalValue *GVal = nullptr;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
-    GV = G->getGlobal();
+    GVal = G->getGlobal();
   bool isStub =
-      !TM.shouldAssumeDSOLocal(*Mod, GV) && Subtarget->isTargetMachO();
+      !TM.shouldAssumeDSOLocal(*Mod, GVal) && Subtarget->isTargetMachO();
 
   bool isARMFunc = !Subtarget->isThumb() || (isStub && !Subtarget->isMClass());
   bool isLocalARMFunc = false;
@@ -2647,36 +2647,58 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // those, the target's already in a register, so we don't need to do
     // anything extra.
     if (isa<GlobalAddressSDNode>(Callee)) {
-      // Create a constant pool entry for the callee address
-      unsigned ARMPCLabelIndex = AFI->createPICLabelUId();
-      ARMConstantPoolValue *CPV =
-        ARMConstantPoolConstant::Create(GV, ARMPCLabelIndex, ARMCP::CPValue, 0);
+      // When generating execute-only code we use movw movt pair.
+      // Currently execute-only is only available for architectures that
+      // support movw movt, so we are safe to assume that.
+      if (Subtarget->genExecuteOnly()) {
+        assert(Subtarget->useMovt() &&
+               "long-calls with execute-only requires movt and movw!");
+        ++NumMovwMovt;
+        Callee = DAG.getNode(ARMISD::Wrapper, dl, PtrVt,
+                             DAG.getTargetGlobalAddress(GVal, dl, PtrVt));
+      } else {
+        // Create a constant pool entry for the callee address
+        unsigned ARMPCLabelIndex = AFI->createPICLabelUId();
+        ARMConstantPoolValue *CPV = ARMConstantPoolConstant::Create(
+            GVal, ARMPCLabelIndex, ARMCP::CPValue, 0);
 
-      // Get the address of the callee into a register
-      SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVt, Align(4));
-      CPAddr = DAG.getNode(ARMISD::Wrapper, dl, MVT::i32, CPAddr);
-      Callee = DAG.getLoad(
-          PtrVt, dl, DAG.getEntryNode(), CPAddr,
-          MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+        // Get the address of the callee into a register
+        SDValue Addr = DAG.getTargetConstantPool(CPV, PtrVt, Align(4));
+        Addr = DAG.getNode(ARMISD::Wrapper, dl, MVT::i32, Addr);
+        Callee = DAG.getLoad(
+            PtrVt, dl, DAG.getEntryNode(), Addr,
+            MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+      }
     } else if (ExternalSymbolSDNode *S=dyn_cast<ExternalSymbolSDNode>(Callee)) {
       const char *Sym = S->getSymbol();
 
-      // Create a constant pool entry for the callee address
-      unsigned ARMPCLabelIndex = AFI->createPICLabelUId();
-      ARMConstantPoolValue *CPV =
-        ARMConstantPoolSymbol::Create(*DAG.getContext(), Sym,
-                                      ARMPCLabelIndex, 0);
-      // Get the address of the callee into a register
-      SDValue CPAddr = DAG.getTargetConstantPool(CPV, PtrVt, Align(4));
-      CPAddr = DAG.getNode(ARMISD::Wrapper, dl, MVT::i32, CPAddr);
-      Callee = DAG.getLoad(
-          PtrVt, dl, DAG.getEntryNode(), CPAddr,
-          MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+      // When generating execute-only code we use movw movt pair.
+      // Currently execute-only is only available for architectures that
+      // support movw movt, so we are safe to assume that.
+      if (Subtarget->genExecuteOnly()) {
+        assert(Subtarget->useMovt() &&
+               "long-calls with execute-only requires movt and movw!");
+        ++NumMovwMovt;
+        Callee = DAG.getNode(ARMISD::Wrapper, dl, PtrVt,
+                             DAG.getTargetGlobalAddress(GVal, dl, PtrVt));
+      } else {
+        // Create a constant pool entry for the callee address
+        unsigned ARMPCLabelIndex = AFI->createPICLabelUId();
+        ARMConstantPoolValue *CPV = ARMConstantPoolSymbol::Create(
+            *DAG.getContext(), Sym, ARMPCLabelIndex, 0);
+
+        // Get the address of the callee into a register
+        SDValue Addr = DAG.getTargetConstantPool(CPV, PtrVt, Align(4));
+        Addr = DAG.getNode(ARMISD::Wrapper, dl, MVT::i32, Addr);
+        Callee = DAG.getLoad(
+            PtrVt, dl, DAG.getEntryNode(), Addr,
+            MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+      }
     }
   } else if (isa<GlobalAddressSDNode>(Callee)) {
     if (!PreferIndirect) {
       isDirect = true;
-      bool isDef = GV->isStrongDefinitionForLinker();
+      bool isDef = GVal->isStrongDefinitionForLinker();
 
       // ARM call to a local ARM function is predicable.
       isLocalARMFunc = !Subtarget->isThumb() && (isDef || !ARMInterworking);
@@ -2685,7 +2707,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         assert(Subtarget->isTargetMachO() && "WrapperPIC use on non-MachO?");
         Callee = DAG.getNode(
             ARMISD::WrapperPIC, dl, PtrVt,
-            DAG.getTargetGlobalAddress(GV, dl, PtrVt, 0, ARMII::MO_NONLAZY));
+            DAG.getTargetGlobalAddress(GVal, dl, PtrVt, 0, ARMII::MO_NONLAZY));
         Callee = DAG.getLoad(
             PtrVt, dl, DAG.getEntryNode(), Callee,
             MachinePointerInfo::getGOT(DAG.getMachineFunction()), MaybeAlign(),
@@ -2695,11 +2717,11 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         assert(Subtarget->isTargetWindows() &&
                "Windows is the only supported COFF target");
         unsigned TargetFlags = ARMII::MO_NO_FLAG;
-        if (GV->hasDLLImportStorageClass())
+        if (GVal->hasDLLImportStorageClass())
           TargetFlags = ARMII::MO_DLLIMPORT;
-        else if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
+        else if (!TM.shouldAssumeDSOLocal(*GVal->getParent(), GVal))
           TargetFlags = ARMII::MO_COFFSTUB;
-        Callee = DAG.getTargetGlobalAddress(GV, dl, PtrVt, /*offset=*/0,
+        Callee = DAG.getTargetGlobalAddress(GVal, dl, PtrVt, /*offset=*/0,
                                             TargetFlags);
         if (TargetFlags & (ARMII::MO_DLLIMPORT | ARMII::MO_COFFSTUB))
           Callee =
@@ -2707,7 +2729,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                           DAG.getNode(ARMISD::Wrapper, dl, PtrVt, Callee),
                           MachinePointerInfo::getGOT(DAG.getMachineFunction()));
       } else {
-        Callee = DAG.getTargetGlobalAddress(GV, dl, PtrVt, 0, 0);
+        Callee = DAG.getTargetGlobalAddress(GVal, dl, PtrVt, 0, 0);
       }
     }
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {

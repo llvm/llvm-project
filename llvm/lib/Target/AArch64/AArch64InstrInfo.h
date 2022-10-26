@@ -125,7 +125,7 @@ public:
 
   /// Return the opcode that set flags when possible.  The caller is
   /// responsible for ensuring the opc has a flag setting equivalent.
-  static unsigned convertToFlagSettingOpc(unsigned Opc, bool &Is64Bit);
+  static unsigned convertToFlagSettingOpc(unsigned Opc);
 
   /// Return true if this is a load/store that can be potentially paired/merged.
   bool isCandidateToMergeOrPair(const MachineInstr &MI) const;
@@ -500,6 +500,40 @@ static inline bool isPTrueOpcode(unsigned Opc) {
 
 /// Return opcode to be used for indirect calls.
 unsigned getBLRCallOpcode(const MachineFunction &MF);
+
+/// Return XPAC opcode to be used for a ptrauth strip using the given key.
+static inline unsigned getXPACOpcodeForKey(AArch64PACKey::ID K) {
+  using namespace AArch64PACKey;
+  switch (K) {
+  case IA: case IB: return AArch64::XPACI;
+  case DA: case DB: return AArch64::XPACD;
+  }
+  llvm_unreachable("Unhandled AArch64PACKey::ID enum");
+}
+
+/// Return AUT opcode to be used for a ptrauth auth using the given key, or its
+/// AUT*Z variant that doesn't take a discriminator operand, using zero instead.
+static inline unsigned getAUTOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
+  using namespace AArch64PACKey;
+  switch (K) {
+  case IA: return Zero ? AArch64::AUTIZA : AArch64::AUTIA;
+  case IB: return Zero ? AArch64::AUTIZB : AArch64::AUTIB;
+  case DA: return Zero ? AArch64::AUTDZA : AArch64::AUTDA;
+  case DB: return Zero ? AArch64::AUTDZB : AArch64::AUTDB;
+  }
+}
+
+/// Return PAC opcode to be used for a ptrauth sign using the given key, or its
+/// PAC*Z variant that doesn't take a discriminator operand, using zero instead.
+static inline unsigned getPACOpcodeForKey(AArch64PACKey::ID K, bool Zero) {
+  using namespace AArch64PACKey;
+  switch (K) {
+  case IA: return Zero ? AArch64::PACIZA : AArch64::PACIA;
+  case IB: return Zero ? AArch64::PACIZB : AArch64::PACIB;
+  case DA: return Zero ? AArch64::PACDZA : AArch64::PACDA;
+  case DB: return Zero ? AArch64::PACDZB : AArch64::PACDB;
+  }
+}
 
 // struct TSFlags {
 #define TSFLAG_ELEMENT_SIZE_TYPE(X)      (X)       // 3-bits

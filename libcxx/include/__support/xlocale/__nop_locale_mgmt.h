@@ -10,6 +10,8 @@
 #ifndef _LIBCPP_SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
 #define _LIBCPP_SUPPORT_XLOCALE_NOP_LOCALE_MGMT_H
 
+#include <__config>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -9772,8 +9772,11 @@ SDValue PPCTargetLowering::lowerToXXSPLTI32DX(ShuffleVectorSDNode *SVN,
   // Canonicalize the RHS being a BUILD_VECTOR when lowering to xxsplti32dx.
   if (RHS->getOpcode() != ISD::BUILD_VECTOR) {
     std::swap(LHS, RHS);
-    VecShuffle = DAG.getCommutedVectorShuffle(*SVN);
-    ShuffleMask = cast<ShuffleVectorSDNode>(VecShuffle)->getMask();
+    VecShuffle = peekThroughBitcasts(DAG.getCommutedVectorShuffle(*SVN));
+    ShuffleVectorSDNode *CommutedSV = dyn_cast<ShuffleVectorSDNode>(VecShuffle);
+    if (!CommutedSV)
+      return SDValue();
+    ShuffleMask = CommutedSV->getMask();
   }
 
   // Ensure that the RHS is a vector of constants.

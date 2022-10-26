@@ -356,11 +356,8 @@ llvm.func @test_omp_master() -> () {
 // -----
 
 // CHECK: %struct.ident_t = type
-// CHECK: @[[$parallel_loc:.*]] = private unnamed_addr constant {{.*}} c";LLVMDialectModule;wsloop_simple;{{[0-9]+}};{{[0-9]+}};;\00"
-// CHECK: @[[$parallel_loc_struct:.*]] = private unnamed_addr constant %struct.ident_t {{.*}} @[[$parallel_loc]] {{.*}}
-
-// CHECK: @[[$wsloop_loc:.*]] = private unnamed_addr constant {{.*}} c";LLVMDialectModule;wsloop_simple;{{[0-9]+}};{{[0-9]+}};;\00"
-// CHECK: @[[$wsloop_loc_struct:.*]] = private unnamed_addr constant %struct.ident_t {{.*}} @[[$wsloop_loc]] {{.*}}
+// CHECK: @[[$loc:.*]] = private unnamed_addr constant {{.*}} c";unknown;unknown;{{[0-9]+}};{{[0-9]+}};;\00"
+// CHECK: @[[$loc_struct:.*]] = private unnamed_addr constant %struct.ident_t {{.*}} @[[$loc]] {{.*}}
 
 // CHECK-LABEL: @wsloop_simple
 llvm.func @wsloop_simple(%arg0: !llvm.ptr<f32>) {
@@ -373,12 +370,12 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr<f32>) {
       // The form of the emitted IR is controlled by OpenMPIRBuilder and
       // tested there. Just check that the right functions are called.
       // CHECK: call i32 @__kmpc_global_thread_num
-      // CHECK: call void @__kmpc_for_static_init_{{.*}}(ptr @[[$wsloop_loc_struct]],
+      // CHECK: call void @__kmpc_for_static_init_{{.*}}(ptr @[[$loc_struct]],
       %3 = llvm.mlir.constant(2.000000e+00 : f32) : f32
       %4 = llvm.getelementptr %arg0[%arg1] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
       llvm.store %3, %4 : !llvm.ptr<f32>
       omp.yield
-      // CHECK: call void @__kmpc_for_static_fini(ptr @[[$wsloop_loc_struct]],
+      // CHECK: call void @__kmpc_for_static_fini(ptr @[[$loc_struct]],
     }) {operand_segment_sizes = array<i32: 1, 1, 1, 0, 0, 0, 0>} : (i64, i64, i64) -> ()
     omp.terminator
   }
@@ -2317,7 +2314,7 @@ llvm.func @omp_task(%x: i32, %y: i32, %zaddr: !llvm.ptr<i32>) {
 // CHECK-SAME: (i32 %[[x:.+]], i32 %[[y:.+]], ptr %[[zaddr:.+]])
 module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu"} {
   llvm.func @omp_task(%x: i32, %y: i32, %zaddr: !llvm.ptr<i32>) {
-    // CHECK: %[[diff:.+]] = sub i32 %[[x]], %[[y]],
+    // CHECK: %[[diff:.+]] = sub i32 %[[x]], %[[y]]
     %diff = llvm.sub %x, %y : i32
     // CHECK: store i32 %[[diff]], ptr %2
     llvm.store %diff, %zaddr : !llvm.ptr<i32>

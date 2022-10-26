@@ -1205,6 +1205,16 @@ def POSIX : StandardSpec<"POSIX"> {
     ]
   >;
 
+  HeaderSpec SysTypes = HeaderSpec<
+    "sys/types.h",
+    [], // Macros
+    [BlkCntT, BlkSizeT, ClockIdT, DevT, GidT, InoT, ModeTType, NLinkT, OffTType, PidT,
+     PThreadAttrTType, PThreadKeyT, PThreadMutexTType, PThreadMutexAttrTType, PThreadOnceT, PThreadTType,
+     SizeTType, SSizeTType, SuSecondsT, TimeTType, UidT],
+    [], // Enumerations
+    []  // Functions
+  >;
+
   let Headers = [
     CType,
     Dirent,
@@ -1220,6 +1230,7 @@ def POSIX : StandardSpec<"POSIX"> {
     SysResource,
     SysSelect,
     SysStat,
+    SysTypes,
     SysUtsName,
     SysWait,
     Time,

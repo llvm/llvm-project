@@ -2662,6 +2662,7 @@ cc_library(
         ":Core",
         ":ExecutionEngine",
         ":MC",
+        ":MCA",
         ":MCDisassembler",
         ":MCJIT",
         ":Object",

@@ -1589,6 +1589,10 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
       MIB.add(ImplicitOp);
 
     NewMI = addOffset(MIB, -Imm);
+
+    // Add kills if classifyLEAReg created a new register.
+    if (LV && SrcReg != Src.getReg())
+      LV->getVarInfo(SrcReg).Kills.push_back(NewMI);
     break;
   }
 
@@ -1692,6 +1696,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
               .add(MI.getOperand(5))
               .add(MI.getOperand(6))
               .add(MI.getOperand(7));
+    NumRegOperands = 4;
     break;
   }
 
@@ -8704,6 +8709,10 @@ bool X86InstrInfo::hasReassociableOperands(const MachineInstr &Inst,
 //       3. Other forms of the same operation (intrinsics and other variants)
 bool X86InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
   switch (Inst.getOpcode()) {
+  case X86::ADD8rr:
+  case X86::ADD16rr:
+  case X86::ADD32rr:
+  case X86::ADD64rr:
   case X86::AND8rr:
   case X86::AND16rr:
   case X86::AND32rr:

@@ -27,16 +27,22 @@ program test_sync_team
   !ERROR: Must have CHARACTER type, but is LOGICAL(4)
   sync team(warriors, errmsg=invalid_type)
 
-  ! No specifier shall appear more than once in a given sync-stat-list
+  !ERROR: The stat-variable in a sync-stat-list may not be repeated
   sync team(warriors, stat=sync_status, stat=superfluous_stat)
 
-  ! No specifier shall appear more than once in a given sync-stat-list
+  !ERROR: The errmsg-variable in a sync-stat-list may not be repeated
   sync team(warriors, errmsg=error_message, errmsg=superfluous_errmsg)
 
-  ! Fortran 2018 standard C1173: `stat` shall not be coindexed
+  !ERROR: The stat-variable in a sync-stat-list may not be repeated
+  sync team(warriors, stat=sync_status, errmsg=error_message, stat=superfluous_stat)
+
+  !ERROR: The errmsg-variable in a sync-stat-list may not be repeated
+  sync team(warriors, stat=sync_status, errmsg=error_message, errmsg=superfluous_errmsg)
+
+  !ERROR: The stat-variable or errmsg-variable in a sync-stat-list may not be a coindexed object
   sync team(warriors, stat=co_indexed_integer[1])
 
-  ! Fortran 2018 standard C1173: `errmsg` shall not be coindexed
+  !ERROR: The stat-variable or errmsg-variable in a sync-stat-list may not be a coindexed object
   sync team(warriors, errmsg=co_indexed_character[1])
 
 end program test_sync_team

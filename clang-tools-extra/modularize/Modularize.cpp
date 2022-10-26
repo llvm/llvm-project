@@ -561,10 +561,7 @@ public:
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) {
     return true;
   }
-  bool TraverseTemplateArguments(const TemplateArgument *Args,
-                                 unsigned NumArgs) {
-    return true;
-  }
+  bool TraverseTemplateArguments(ArrayRef<TemplateArgument>) { return true; }
   bool TraverseConstructorInitializer(CXXCtorInitializer *Init) { return true; }
   bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C,
                              Expr *Init) {
@@ -750,10 +747,7 @@ public:
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &ArgLoc) {
     return true;
   }
-  bool TraverseTemplateArguments(const TemplateArgument *Args,
-    unsigned NumArgs) {
-    return true;
-  }
+  bool TraverseTemplateArguments(ArrayRef<TemplateArgument>) { return true; }
   bool TraverseConstructorInitializer(CXXCtorInitializer *Init) { return true; }
   bool TraverseLambdaCapture(LambdaExpr *LE, const LambdaCapture *C,
                              Expr *Init) {

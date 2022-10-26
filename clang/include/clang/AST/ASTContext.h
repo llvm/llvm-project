@@ -1659,10 +1659,9 @@ public:
                                 const IdentifierInfo *Name,
                                 QualType Canon = QualType()) const;
 
-  QualType getDependentTemplateSpecializationType(ElaboratedTypeKeyword Keyword,
-                                                  NestedNameSpecifier *NNS,
-                                                  const IdentifierInfo *Name,
-                                    const TemplateArgumentListInfo &Args) const;
+  QualType getDependentTemplateSpecializationType(
+      ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
+      const IdentifierInfo *Name, ArrayRef<TemplateArgumentLoc> Args) const;
   QualType getDependentTemplateSpecializationType(
       ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
       const IdentifierInfo *Name, ArrayRef<TemplateArgument> Args) const;

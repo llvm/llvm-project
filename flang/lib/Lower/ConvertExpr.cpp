@@ -1063,10 +1063,15 @@ public:
     for (const auto &value : ctor.values()) {
       const Fortran::semantics::Symbol &sym = *value.first;
       const Fortran::lower::SomeExpr &expr = value.second.value();
-      // Parent components need more work because they do not appear in the
-      // fir.rec type.
-      if (sym.test(Fortran::semantics::Symbol::Flag::ParentComp))
-        TODO(loc, "parent component in structure constructor");
+      if (sym.test(Fortran::semantics::Symbol::Flag::ParentComp)) {
+        ExtValue from = gen(expr);
+        mlir::Type fromTy = fir::unwrapPassByRefType(
+            fir::unwrapRefType(fir::getBase(from).getType()));
+        mlir::Value resCast =
+            builder.createConvert(loc, builder.getRefType(fromTy), res);
+        fir::factory::genRecordAssignment(builder, loc, resCast, from);
+        continue;
+      }
 
       if (isDerivedTypeWithLenParameters(sym))
         TODO(loc, "component with length parameters in structure constructor");

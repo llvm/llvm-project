@@ -221,14 +221,21 @@ public:
   /// Returns true if Li and Lj only differ in dense.
   bool onlyDenseDiff(unsigned i, unsigned j);
 
-  /// Bit translation.
+  /// Bit translation (get tensor ID).
   unsigned tensor(unsigned b) const { return b % numTensors; }
+  /// Bit translation (get loop index).
   unsigned index(unsigned b) const { return b / numTensors; }
 
   /// Returns true if bit corresponds to index of output tensor.
   bool isOutTensor(unsigned b, unsigned i) const {
     return tensor(b) == outTensor && index(b) == i;
   }
+
+  /// Gets tensor ID for the output tensor.
+  unsigned getOutTensorID() const { return outTensor; }
+  /// Gets tensor ID for the synthetic tensor (used for all invariant tensor
+  /// expressions).
+  unsigned getSynTensorID() const { return syntheticTensor; }
 
   /// Returns true if given tensor iterates *only* in the given tensor
   /// expression. For the output tensor, this defines a "simply dynamic"

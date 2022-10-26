@@ -2896,7 +2896,7 @@ DependentTemplateSpecializationType::DependentTemplateSpecializationType(
   DependentTemplateSpecializationTypeBits.NumArgs = Args.size();
   assert((!NNS || NNS->isDependent()) &&
          "DependentTemplateSpecializatonType requires dependent qualifier");
-  TemplateArgument *ArgBuffer = getArgBuffer();
+  auto *ArgBuffer = const_cast<TemplateArgument *>(template_arguments().data());
   for (const TemplateArgument &Arg : Args) {
     addDependence(toTypeDependence(Arg.getDependence() &
                                    TemplateArgumentDependence::UnexpandedPack));
@@ -3769,8 +3769,20 @@ TemplateSpecializationType::TemplateSpecializationType(
   // Store the aliased type if this is a type alias template specialization.
   if (isTypeAlias()) {
     auto *Begin = reinterpret_cast<TemplateArgument *>(this + 1);
-    *reinterpret_cast<QualType*>(Begin + getNumArgs()) = AliasedType;
+    *reinterpret_cast<QualType *>(Begin + Args.size()) = AliasedType;
   }
+}
+
+QualType TemplateSpecializationType::getAliasedType() const {
+  assert(isTypeAlias() && "not a type alias template specialization");
+  return *reinterpret_cast<const QualType *>(template_arguments().end());
+}
+
+void TemplateSpecializationType::Profile(llvm::FoldingSetNodeID &ID,
+                                         const ASTContext &Ctx) {
+  Profile(ID, Template, template_arguments(), Ctx);
+  if (isTypeAlias())
+    getAliasedType().Profile(ID);
 }
 
 void
@@ -4487,7 +4499,8 @@ AutoType::AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
   AutoTypeBits.NumArgs = TypeConstraintArgs.size();
   this->TypeConstraintConcept = TypeConstraintConcept;
   if (TypeConstraintConcept) {
-    TemplateArgument *ArgBuffer = getArgBuffer();
+    auto *ArgBuffer =
+        const_cast<TemplateArgument *>(getTypeConstraintArguments().data());
     for (const TemplateArgument &Arg : TypeConstraintArgs) {
       addDependence(
           toSyntacticDependence(toTypeDependence(Arg.getDependence())));
@@ -4507,4 +4520,9 @@ void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
   ID.AddPointer(CD);
   for (const TemplateArgument &Arg : Arguments)
     Arg.Profile(ID, Context);
+}
+
+void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
+  Profile(ID, Context, getDeducedType(), getKeyword(), isDependentType(),
+          getTypeConstraintConcept(), getTypeConstraintArguments());
 }

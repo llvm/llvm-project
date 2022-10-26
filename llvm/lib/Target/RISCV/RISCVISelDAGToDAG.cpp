@@ -2295,6 +2295,18 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
       if (Bits < 32)
         return false;
       break;
+    case RISCV::SLL:
+    case RISCV::SRA:
+    case RISCV::SRL:
+    case RISCV::ROL:
+    case RISCV::ROR:
+    case RISCV::BSET:
+    case RISCV::BCLR:
+    case RISCV::BINV:
+      // Shift amount operands only use log2(Xlen) bits.
+      if (UI.getOperandNo() != 1 || Bits < Log2_32(Subtarget->getXLen()))
+        return false;
+      break;
     case RISCV::SLLI:
       // SLLI only uses the lower (XLen - ShAmt) bits.
       if (Bits < Subtarget->getXLen() - User->getConstantOperandVal(1))
@@ -2304,6 +2316,12 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
       if (Bits < (64 - countLeadingZeros(User->getConstantOperandVal(1))))
         return false;
       break;
+    case RISCV::ORI: {
+      uint64_t Imm = cast<ConstantSDNode>(User->getOperand(1))->getSExtValue();
+      if (Bits < (64 - countLeadingOnes(Imm)))
+        return false;
+      break;
+    }
     case RISCV::SEXT_B:
       if (Bits < 8)
         return false;

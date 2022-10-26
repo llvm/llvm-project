@@ -597,7 +597,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        pslld	$1, %xmm2
 # CHECK-NEXT:  1      1     1.00                        pslld	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     1.00    *                   pslld	(%rax), %xmm2
-# CHECK-NEXT:  1      1     1.00                        pslldq	$1, %xmm2
+# CHECK-NEXT:  1      1     0.25                        pslldq	$1, %xmm2
 # CHECK-NEXT:  1      1     1.00                        psllq	$1, %xmm2
 # CHECK-NEXT:  1      1     1.00                        psllq	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     1.00    *                   psllq	(%rax), %xmm2
@@ -613,7 +613,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        psrld	$1, %xmm2
 # CHECK-NEXT:  1      1     1.00                        psrld	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     1.00    *                   psrld	(%rax), %xmm2
-# CHECK-NEXT:  1      1     1.00                        psrldq	$1, %xmm2
+# CHECK-NEXT:  1      1     0.25                        psrldq	$1, %xmm2
 # CHECK-NEXT:  1      1     1.00                        psrlq	$1, %xmm2
 # CHECK-NEXT:  1      1     1.00                        psrlq	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     1.00    *                   psrlq	(%rax), %xmm2
@@ -691,7 +691,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 66.50  66.50   -      -      -      -      -     54.92  46.42  85.75  123.92  -
+# CHECK-NEXT: 66.50  66.50   -      -      -      -      -     55.42  46.92  84.25  124.42  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -885,7 +885,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     pslld	$1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     pslld	%xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00    -      -     pslld	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     pslldq	$1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     pslldq	$1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     psllq	$1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     psllq	%xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00    -      -     psllq	(%rax), %xmm2
@@ -901,7 +901,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     psrld	$1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     psrld	%xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00    -      -     psrld	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     psrldq	$1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     psrldq	$1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     psrlq	$1, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     psrlq	%xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -     1.00    -      -     psrlq	(%rax), %xmm2

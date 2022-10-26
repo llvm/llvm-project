@@ -5628,6 +5628,8 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.align = Align(1);
       Info.flags |= MachineMemOperand::MOLoad;
       return true;
+    case Intrinsic::x86_cmpccxadd32:
+    case Intrinsic::x86_cmpccxadd64:
     case Intrinsic::x86_atomic_bts:
     case Intrinsic::x86_atomic_btc:
     case Intrinsic::x86_atomic_btr: {
@@ -28234,6 +28236,20 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
                           DAG.getShiftAmountConstant(Imm, VT, DL));
       return DAG.getNode(ISD::MERGE_VALUES, DL, Op->getVTList(), Res, Chain);
     }
+    case Intrinsic::x86_cmpccxadd32:
+    case Intrinsic::x86_cmpccxadd64: {
+      SDLoc DL(Op);
+      SDValue Chain = Op.getOperand(0);
+      SDValue Addr = Op.getOperand(2);
+      SDValue Src1 = Op.getOperand(3);
+      SDValue Src2 = Op.getOperand(4);
+      SDValue CC = Op.getOperand(5);
+      MachineMemOperand *MMO = cast<MemIntrinsicSDNode>(Op)->getMemOperand();
+      SDValue Operation = DAG.getMemIntrinsicNode(
+          X86ISD::CMPCCXADD, DL, Op->getVTList(), {Chain, Addr, Src1, Src2, CC},
+          MVT::i32, MMO);
+      return Operation;
+    }
     }
     return SDValue();
   }
@@ -34154,6 +34170,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(AESDECWIDE128KL)
   NODE_NAME_CASE(AESENCWIDE256KL)
   NODE_NAME_CASE(AESDECWIDE256KL)
+  NODE_NAME_CASE(CMPCCXADD)
   NODE_NAME_CASE(TESTUI)
   }
   return nullptr;
@@ -40271,6 +40288,21 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
             BCVT.getScalarType().getTypeForEVT(*DAG.getContext()))) {
       EVT NewVT = EVT::getVectorVT(*DAG.getContext(), BCVT.getScalarType(),
                                    VT.getVectorNumElements());
+      return DAG.getBitcast(VT, DAG.getNode(X86ISD::VBROADCAST, DL, NewVT, BC));
+    }
+
+    // vbroadcast(bitcast(vbroadcast(src))) -> bitcast(vbroadcast(src))
+    // If we're re-broadcasting a smaller type then broadcast with that type and
+    // bitcast.
+    // TODO: Do this for any splat?
+    if (Src.getOpcode() == ISD::BITCAST &&
+        (BC.getOpcode() == X86ISD::VBROADCAST ||
+         BC.getOpcode() == X86ISD::VBROADCAST_LOAD) &&
+        (VT.getScalarSizeInBits() % BCVT.getScalarSizeInBits()) == 0 &&
+        (VT.getSizeInBits() % BCVT.getSizeInBits()) == 0) {
+      MVT NewVT =
+          MVT::getVectorVT(BCVT.getSimpleVT().getScalarType(),
+                           VT.getSizeInBits() / BCVT.getScalarSizeInBits());
       return DAG.getBitcast(VT, DAG.getNode(X86ISD::VBROADCAST, DL, NewVT, BC));
     }
 
@@ -54428,11 +54460,20 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     unsigned NumOps = Ops.size();
     switch (Op0.getOpcode()) {
     case X86ISD::VBROADCAST: {
-      if (!IsSplat && VT == MVT::v4f64 && llvm::all_of(Ops, [](SDValue Op) {
+      if (!IsSplat && llvm::all_of(Ops, [](SDValue Op) {
             return Op.getOperand(0).getValueType().is128BitVector();
-          }))
-        return DAG.getNode(X86ISD::MOVDDUP, DL, VT,
-                           ConcatSubOperand(VT, Ops, 0));
+          })) {
+        if (VT == MVT::v4f64 || VT == MVT::v4i64)
+          return DAG.getNode(X86ISD::UNPCKL, DL, VT,
+                             ConcatSubOperand(VT, Ops, 0),
+                             ConcatSubOperand(VT, Ops, 0));
+        // TODO: Add pseudo v8i32 PSHUFD handling to AVX1Only targets.
+        if (VT == MVT::v8f32 || (VT == MVT::v8i32 && Subtarget.hasInt256()))
+          return DAG.getNode(VT == MVT::v8f32 ? X86ISD::VPERMILPI
+                                              : X86ISD::PSHUFD,
+                             DL, VT, ConcatSubOperand(VT, Ops, 0),
+                             getV4X86ShuffleImm8ForMask({0, 0, 0, 0}, DL, DAG));
+      }
       break;
     }
     case X86ISD::MOVDDUP:

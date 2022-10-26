@@ -705,7 +705,7 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   Builder.defineMacro("__cpp_named_character_escapes", "202207L");
 
   if (LangOpts.Char8)
-    Builder.defineMacro("__cpp_char8_t", "201811L");
+    Builder.defineMacro("__cpp_char8_t", "202207L");
   Builder.defineMacro("__cpp_impl_destroying_delete", "201806L");
 
   // TS features.

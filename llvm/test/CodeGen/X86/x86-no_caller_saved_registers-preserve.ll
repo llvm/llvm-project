@@ -38,8 +38,8 @@ define x86_64_sysvcc float @foo(i32 %a0, i32 %a1, float %b0) {
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    movl %edi, %edx
 ; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    addl %ecx, %eax
+; CHECK-NEXT:    addl %edx, %eax
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    cvtsi2ss %eax, %xmm0
 ; CHECK-NEXT:    addss %xmm1, %xmm0

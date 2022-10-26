@@ -10,7 +10,7 @@
 ; e. g. if the constants are disjoint and the original inverted mask of
 ; the outer bitfieldInsert can be reconstructed, aim to generate multiple
 ; v_bfi instructions.
-define float @v_bfi_single_nesting_level (float %x, float %y, float %z) {
+define float @v_bfi_single_nesting_level(float %x, float %y, float %z) {
 ; GFX10-LABEL: v_bfi_single_nesting_level:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -41,6 +41,37 @@ define float @v_bfi_single_nesting_level (float %x, float %y, float %z) {
   %and.outer = and i32 %shl.outer.insert, 1072693248
   %or.outer = or i32 %bfi1.or, %and.outer
   %result = bitcast i32 %or.outer to float
+  ret float %result
+}
+
+define float @v_bfi_single_nesting_level_inner_use(float %x, float %y, float %z) {
+; GFX10-LABEL: v_bfi_single_nesting_level_inner_use:
+; GFX10:       ; %bb.0: ; %.entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    v_mul_f32_e32 v0, 0x447fc000, v2
+; GFX10-NEXT:    v_cvt_u32_f32_e32 v1, v1
+; GFX10-NEXT:    v_cvt_u32_f32_e32 v0, v0
+; GFX10-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
+; GFX10-NEXT:    v_and_b32_e32 v0, 0x400003ff, v0
+; GFX10-NEXT:    v_and_or_b32 v0, 0xffc00, v1, v0
+; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 1, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+.entry:
+  %mul.base = fmul reassoc nnan nsz arcp contract afn float %z, 1.023000e+03
+  %mul.base.i32 = fptoui float %mul.base to i32
+  %y.i32 = fptoui float %y to i32
+  %shl.inner.insert = shl i32 %y.i32, 10
+  %bfi1.and = and i32 %shl.inner.insert, 1047552
+  %bfi1.andnot = and i32 %mul.base.i32, -1073740801
+  %bfi1.or = or i32 %bfi1.and, %bfi1.andnot
+  %mul.outer.insert = fmul reassoc nnan nsz arcp contract afn float %x, 1.023000e+03
+  %mul.outer.insert.i32 = fptoui float %mul.outer.insert to i32
+  %shl.outer.insert = shl i32 %mul.outer.insert.i32, 20
+  %and.outer = and i32 %shl.outer.insert, 1072693248
+  %or.outer = or i32 %bfi1.or, %and.outer
+  %bfi1.or.seconduse = mul i32 %bfi1.or, 2
+  %result = bitcast i32 %bfi1.or.seconduse to float
   ret float %result
 }
 

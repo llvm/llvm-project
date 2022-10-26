@@ -33,24 +33,24 @@
 ; ILPMIN: imull
 ; ILPMIN: addl
 ; ILPMIN: imull
-; ILPMIN: addl
 ; ILPMIN: imull
+; ILPMIN: addl
 ; ILPMIN: addl
 ; ILPMIN: movl %{{.*}}, 4(
 ; ILPMIN: imull
 ; ILPMIN: imull
 ; ILPMIN: addl
 ; ILPMIN: imull
-; ILPMIN: addl
 ; ILPMIN: imull
+; ILPMIN: addl
 ; ILPMIN: addl
 ; ILPMIN: movl %{{.*}}, 8(
 ; ILPMIN: imull
 ; ILPMIN: imull
 ; ILPMIN: addl
 ; ILPMIN: imull
-; ILPMIN: addl
 ; ILPMIN: imull
+; ILPMIN: addl
 ; ILPMIN: addl
 ; ILPMIN: movl %{{.*}}, 12(
 ; ILPMIN-LABEL: %for.end

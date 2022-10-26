@@ -454,6 +454,15 @@ static FailureOr<BaseMemRefType> computeLoopRegionIterArgBufferType(
       yieldedRanked.getMemorySpaceAsInt());
 }
 
+/// Return `true` if the given loop may have 0 iterations.
+bool mayHaveZeroIterations(scf::ForOp forOp) {
+  Optional<int64_t> lb = getConstantIntValue(forOp.getLowerBound());
+  Optional<int64_t> ub = getConstantIntValue(forOp.getUpperBound());
+  if (!lb.has_value() || !ub.has_value())
+    return true;
+  return *ub <= *lb;
+}
+
 /// Bufferization of scf.for. Replace with a new scf.for that operates on
 /// memrefs.
 struct ForOpInterface
@@ -461,9 +470,15 @@ struct ForOpInterface
                                                     scf::ForOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
+    auto forOp = cast<scf::ForOp>(op);
+
+    // If the loop has zero iterations, the results of the op are their
+    // corresponding init_args, meaning that the init_args bufferize to a read.
+    if (mayHaveZeroIterations(forOp))
+      return true;
+
     // scf::ForOp alone doesn't bufferize to a memory read, one of the uses of
     // its matching bbArg may.
-    auto forOp = cast<scf::ForOp>(op);
     return state.isValueRead(forOp.getRegionIterArgForOpOperand(opOperand));
   }
 
@@ -1039,6 +1054,19 @@ struct YieldOpInterface
   }
 };
 
+/// Return `true` if the given loop may have 0 iterations.
+bool mayHaveZeroIterations(scf::ForeachThreadOp foreachThreadOp) {
+  int64_t p = 1;
+  for (Value v : foreachThreadOp.getNumThreads()) {
+    if (Optional<int64_t> c = getConstantIntValue(v)) {
+      p *= *c;
+    } else {
+      return true;
+    }
+  }
+  return p == 0;
+}
+
 /// Bufferization of ForeachThreadOp. This also bufferizes the terminator of the
 /// region. There are op interfaces for the terminators (PerformConcurrentlyOp
 /// and ParallelInsertSliceOp), but these are only used during analysis. Not
@@ -1048,9 +1076,16 @@ struct ForeachThreadOpInterface
                                                     ForeachThreadOp> {
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
+    auto foreachThreadOp = cast<ForeachThreadOp>(op);
+
+    // If the loop has zero iterations, the results of the op are their
+    // corresponding shared_outs, meaning that the shared_outs bufferize to a
+    // read.
+    if (mayHaveZeroIterations(foreachThreadOp))
+      return true;
+
     // scf::ForeachThreadOp alone doesn't bufferize to a memory read, one of the
     // uses of its matching bbArg may.
-    auto foreachThreadOp = cast<ForeachThreadOp>(op);
     return state.isValueRead(foreachThreadOp.getTiedBlockArgument(&opOperand));
   }
 
