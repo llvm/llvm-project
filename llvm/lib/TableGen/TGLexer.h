@@ -52,9 +52,9 @@ namespace tgtok {
     String, Then, TrueKW,
 
     // Bang operators.
-    XConcat, XADD, XSUB, XMUL, XDIV, XNOT, XAND, XOR, XXOR, XSRA, XSRL, XSHL,
-    XListConcat, XListSplat, XStrConcat, XInterleave, XSubstr, XFind, XCast,
-    XSubst, XForEach, XFilter, XFoldl, XHead, XTail, XSize, XEmpty, XIf,
+    XConcat, XADD, XSUB, XMUL, XDIV, XNOT, XLOG2, XAND, XOR, XXOR, XSRA, XSRL,
+    XSHL, XListConcat, XListSplat, XStrConcat, XInterleave, XSubstr, XFind,
+    XCast, XSubst, XForEach, XFilter, XFoldl, XHead, XTail, XSize, XEmpty, XIf,
     XCond, XEq, XIsA, XDag, XNe, XLe, XLt, XGe, XGt, XSetDagOp, XGetDagOp,
     XExists,
 

@@ -160,9 +160,9 @@ static llvm::FastMathFlags getFastmathFlags(FastmathFlagsInterface &op) {
       // clang-format on
   };
   llvm::FastMathFlags ret;
-  auto fmf = op.getFastmathFlags();
+  ::mlir::LLVM::FastmathFlags fmfMlir = op.getFastmathAttr().getValue();
   for (auto it : handlers)
-    if (bitEnumContainsAll(fmf, it.first))
+    if (bitEnumContainsAll(fmfMlir, it.first))
       (ret.*(it.second))(true);
   return ret;
 }

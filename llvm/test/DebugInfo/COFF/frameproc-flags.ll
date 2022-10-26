@@ -100,7 +100,7 @@
 ; CHECK:   flags = has inline asm | naked | safe buffers | opt speed
 ; CHECK-LABEL: S_GPROC32_ID [size = 52] `stack_guard`
 ; CHECK: S_FRAMEPROC [size = 32]
-; CHECK:   local fp reg = VFRAME, param fp reg = EBP
+; CHECK:   local fp reg = VFRAME, param fp reg = VFRAME
 ; CHECK:   flags = secure checks | strict secure checks | opt speed
 
 ; ModuleID = 'frameproc-flags.cpp'

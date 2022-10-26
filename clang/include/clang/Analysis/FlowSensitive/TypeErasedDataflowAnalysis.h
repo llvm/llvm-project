@@ -84,6 +84,14 @@ public:
   virtual void transferTypeErased(const CFGElement *, TypeErasedLattice &,
                                   Environment &) = 0;
 
+  /// Applies the analysis transfer function for a given edge from a CFG block
+  /// of a conditional statement.
+  /// @param Stmt The condition which is responsible for the split in the CFG.
+  /// @param Branch True if the edge goes to the basic block where the
+  /// condition is true.
+  virtual void transferBranchTypeErased(bool Branch, const Stmt *,
+                                        TypeErasedLattice &, Environment &) = 0;
+
   /// If the built-in transfer functions (which model the heap and stack in the
   /// `Environment`) are to be applied, returns the options to be passed to
   /// them. Otherwise returns empty.

@@ -1,5 +1,9 @@
-! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s
+! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX-FAST"
+! RUN: bbc --math-runtime=precise -emit-fir -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX-PRECISE"
+! RUN: bbc --disable-mlir-complex -emit-fir -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX-PRECISE"
+! RUN: %flang_fc1 -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX-FAST"
+! RUN: %flang_fc1 -emit-fir -mllvm --math-runtime=precise -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX-PRECISE"
+! RUN: %flang_fc1 -emit-fir -mllvm --disable-mlir-complex -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX-PRECISE"
 
 ! CHECK-LABEL: sqrt_testr
 subroutine sqrt_testr(a, b)
@@ -36,7 +40,9 @@ end subroutine
 ! CHECK: math.sqrt %{{.*}} : f64
 
 ! CHECK-LABEL: func private @fir.sqrt.z4.z4
-! CHECK: fir.call @csqrtf
+! CMPLX-FAST: complex.sqrt %{{.*}} : complex<f32>
+! CMPLX-PRECISE: fir.call @csqrtf
 
 ! CHECK-LABEL: @fir.sqrt.z8.z8
-! CHECK: fir.call @csqrt
+! CMPLX-FAST: complex.sqrt %{{.*}} : complex<f64>
+! CMPLX-PRECISE: fir.call @csqrt
