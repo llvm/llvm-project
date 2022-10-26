@@ -51,13 +51,13 @@ struct LowerToIntrinsic : public OpConversionPattern<OpTy> {
     Type elementType = getSrcVectorElementType<OpTy>(op);
     unsigned bitwidth = elementType.getIntOrFloatBitWidth();
     if (bitwidth == 32)
-      return LLVM::detail::oneToOneRewrite(op, Intr32OpTy::getOperationName(),
-                                           adaptor.getOperands(),
-                                           getTypeConverter(), rewriter);
+      return LLVM::detail::oneToOneRewrite(
+          op, Intr32OpTy::getOperationName(), adaptor.getOperands(),
+          op->getAttrs(), getTypeConverter(), rewriter);
     if (bitwidth == 64)
-      return LLVM::detail::oneToOneRewrite(op, Intr64OpTy::getOperationName(),
-                                           adaptor.getOperands(),
-                                           getTypeConverter(), rewriter);
+      return LLVM::detail::oneToOneRewrite(
+          op, Intr64OpTy::getOperationName(), adaptor.getOperands(),
+          op->getAttrs(), getTypeConverter(), rewriter);
     return rewriter.notifyMatchFailure(
         op, "expected 'src' to be either f32 or f64");
   }

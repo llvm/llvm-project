@@ -308,7 +308,8 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
 /// and given operands.
 LogicalResult LLVM::detail::oneToOneRewrite(
     Operation *op, StringRef targetOp, ValueRange operands,
-    LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter) {
+    ArrayRef<NamedAttribute> targetAttrs, LLVMTypeConverter &typeConverter,
+    ConversionPatternRewriter &rewriter) {
   unsigned numResults = op->getNumResults();
 
   SmallVector<Type> resultTypes;
@@ -322,7 +323,7 @@ LogicalResult LLVM::detail::oneToOneRewrite(
   // Create the operation through state since we don't know its C++ type.
   Operation *newOp =
       rewriter.create(op->getLoc(), rewriter.getStringAttr(targetOp), operands,
-                      resultTypes, op->getAttrs());
+                      resultTypes, targetAttrs);
 
   // If the operation produced 0 or 1 result, return them immediately.
   if (numResults == 0)

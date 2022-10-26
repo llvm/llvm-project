@@ -977,8 +977,7 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
       Args.AddLastArg(CmdArgs, options::OPT_g_Flag);
 
       unsigned DwarfVersion = getDwarfVersion(getToolChain(), Args);
-      Twine DV = "-gdwarf-" + Twine(DwarfVersion);
-      CmdArgs.push_back(Args.MakeArgString(DV));
+      CmdArgs.push_back(Args.MakeArgString("-gdwarf-" + Twine(DwarfVersion)));
     }
 
   const char *Exec =
