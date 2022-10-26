@@ -11,11 +11,13 @@ using test1 = __type_pack_element<0, int>;
 // CHECK-NEXT:       |     `-IntegerLiteral 0x{{[0-9A-Fa-f]+}} <col:35> 'int' 0
 // CHECK-NEXT:       |-TemplateArgument type 'int'
 // CHECK-NEXT:       | `-BuiltinType 0x{{[0-9A-Fa-f]+}} 'int'
-// CHECK-NEXT:       `-BuiltinType 0x{{[0-9A-Fa-f]+}} 'int'
+// CHECK-NEXT:       `-SubstTemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'int' sugar typename depth 0 index 1 ... pack_index 0
+// CHECK-NEXT:         |-BuiltinTemplate 0x{{[0-9A-Fa-f]+}} '__type_pack_element'
+// CHECK-NEXT:         `-BuiltinType 0x{{[0-9A-Fa-f]+}} 'int'
 
 template<int N, class ...Ts> struct A {
   using test2 = __type_pack_element<N, Ts...>;
-//      CHECK: |-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <line:17:3, col:45> col:9 test2 '__type_pack_element<N, Ts...>':'__type_pack_element<N, type-parameter-0-1...>'
+//      CHECK: |-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <line:19:3, col:45> col:9 test2 '__type_pack_element<N, Ts...>':'__type_pack_element<N, type-parameter-0-1...>'
 // CHECK-NEXT:   `-ElaboratedType 0x{{[0-9A-Fa-f]+}} '__type_pack_element<N, Ts...>' sugar dependent
 // CHECK-NEXT:     `-TemplateSpecializationType 0x{{[0-9A-Fa-f]+}} '__type_pack_element<N, Ts...>' sugar dependent alias __type_pack_element
 // CHECK-NEXT:       |-TemplateArgument expr
@@ -35,7 +37,7 @@ template<int N, class ...Ts> struct A {
 // CHECK-NEXT:               `-TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'type-parameter-0-1' dependent contains_unexpanded_pack depth 0 index 1 pack
 
   using test3 = __type_pack_element<0, Ts...>;
-//      CHECK: |-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <line:37:3, col:45> col:9 test3 '__type_pack_element<0, Ts...>':'__type_pack_element<0, type-parameter-0-1...>'
+//      CHECK: |-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <line:39:3, col:45> col:9 test3 '__type_pack_element<0, Ts...>':'__type_pack_element<0, type-parameter-0-1...>'
 // CHECK-NEXT:   `-ElaboratedType 0x{{[0-9A-Fa-f]+}} '__type_pack_element<0, Ts...>' sugar dependent
 // CHECK-NEXT:     `-TemplateSpecializationType 0x{{[0-9A-Fa-f]+}} '__type_pack_element<0, Ts...>' sugar dependent alias __type_pack_element
 // CHECK-NEXT:       |-TemplateArgument expr
@@ -55,7 +57,7 @@ template<int N, class ...Ts> struct A {
 // CHECK-NEXT:               `-TemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'type-parameter-0-1' dependent contains_unexpanded_pack depth 0 index 1 pack
 
   using test4 = __type_pack_element<N, int>;
-//      CHECK: `-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <line:57:3, col:43> col:9 test4 '__type_pack_element<N, int>':'__type_pack_element<N, int>'
+//      CHECK: `-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <line:59:3, col:43> col:9 test4 '__type_pack_element<N, int>':'__type_pack_element<N, int>'
 // CHECK-NEXT:   `-ElaboratedType 0x{{[0-9A-Fa-f]+}} '__type_pack_element<N, int>' sugar dependent
 // CHECK-NEXT:     `-TemplateSpecializationType 0x{{[0-9A-Fa-f]+}} '__type_pack_element<N, int>' sugar dependent alias __type_pack_element
 // CHECK-NEXT:       |-TemplateArgument expr
