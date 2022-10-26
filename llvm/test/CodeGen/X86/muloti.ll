@@ -22,8 +22,8 @@ define %0 @x(i64 %a.coerce0, i64 %a.coerce1, i64 %b.coerce0, i64 %b.coerce1) nou
 ; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    mulq %rbx
 ; CHECK-NEXT:    movq %rax, %r8
-; CHECK-NEXT:    addq %rdi, %rdx
 ; CHECK-NEXT:    imulq %rcx, %rbx
+; CHECK-NEXT:    addq %rdi, %rbx
 ; CHECK-NEXT:    addq %rdx, %rbx
 ; CHECK-NEXT:    movq %rcx, %rdi
 ; CHECK-NEXT:    sarq $63, %rdi
@@ -32,8 +32,8 @@ define %0 @x(i64 %a.coerce0, i64 %a.coerce1, i64 %b.coerce0, i64 %b.coerce1) nou
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    mulq %r9
 ; CHECK-NEXT:    movq %rax, %r10
-; CHECK-NEXT:    addq %r14, %rdx
 ; CHECK-NEXT:    imulq %r9, %rdi
+; CHECK-NEXT:    addq %r14, %rdi
 ; CHECK-NEXT:    addq %rdx, %rdi
 ; CHECK-NEXT:    addq %r8, %r10
 ; CHECK-NEXT:    adcq %rbx, %rdi

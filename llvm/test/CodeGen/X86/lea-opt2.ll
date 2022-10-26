@@ -35,13 +35,11 @@ entry:
 define i32 @test2(ptr %p, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    addl %eax, %ecx
 ; CHECK-NEXT:    addl %edx, %ecx
+; CHECK-NEXT:    addl %esi, %ecx
 ; CHECK-NEXT:    movl %ecx, (%rdi)
 ; CHECK-NEXT:    subl %edx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
 entry:
   %0 = add i32 %a, %b
@@ -55,13 +53,11 @@ entry:
 define i32 @test3(ptr %p, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    addl %eax, %ecx
 ; CHECK-NEXT:    addl %edx, %ecx
+; CHECK-NEXT:    addl %esi, %ecx
 ; CHECK-NEXT:    movl %ecx, (%rdi)
 ; CHECK-NEXT:    subl %edx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
 entry:
   %0 = add i32 %a, %b
@@ -114,8 +110,8 @@ define i64 @test6(ptr %p, i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    addq %rdx, %rcx
 ; CHECK-NEXT:    addq %rax, %rcx
+; CHECK-NEXT:    addq %rdx, %rcx
 ; CHECK-NEXT:    movq %rcx, (%rdi)
 ; CHECK-NEXT:    subq %rdx, %rax
 ; CHECK-NEXT:    retq
@@ -132,8 +128,8 @@ define i64 @test7(ptr %p, i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    addq %rdx, %rcx
 ; CHECK-NEXT:    addq %rax, %rcx
+; CHECK-NEXT:    addq %rdx, %rcx
 ; CHECK-NEXT:    movq %rcx, (%rdi)
 ; CHECK-NEXT:    subq %rdx, %rax
 ; CHECK-NEXT:    retq
