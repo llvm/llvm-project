@@ -15,4 +15,4 @@ Sections:
     ShOffset:        0x99999
     AddressAlign:    0x0000000000000008
 
-# CHECK: error: '[[FILENAME]]': The end of the file was unexpectedly encountered
+# CHECK: error: '[[FILENAME]]': while extracting offloading files: The end of the file was unexpectedly encountered
