@@ -490,6 +490,10 @@ public:
   /// Socket path for remote caching service.
   std::string CompilationCachingServicePath;
 
+  // Currently this is only used as part of the `-extract-api` action.
+  /// The file providing a list of APIs to ignore when extracting documentation
+  std::string ExtractAPIIgnoresFile;
+
   /// Args to pass to the plugins
   std::map<std::string, std::vector<std::string>> PluginArgs;
 
