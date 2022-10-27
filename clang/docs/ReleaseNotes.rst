@@ -614,6 +614,11 @@ X86 Support in Clang
 - Support ISA of ``CMPCCXADD``.
   * Support intrinsic of ``__cmpccxadd_epi32``.
   * Support intrinsic of ``__cmpccxadd_epi64``.
+- Add support for ``RAO-INT`` instructions.
+  * Support intrinsic of ``_aadd_i32/64``
+  * Support intrinsic of ``_aand_i32/64``
+  * Support intrinsic of ``_aor_i32/64``
+  * Support intrinsic of ``_axor_i32/64``
 
 WebAssembly Support in Clang
 ----------------------------

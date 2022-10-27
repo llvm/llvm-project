@@ -180,6 +180,7 @@ set(x86_files
   prfchwintrin.h
   ptrauth.h
   ptwriteintrin.h
+  raointintrin.h
   rdpruintrin.h
   rdseedintrin.h
   rtmintrin.h
