@@ -48,6 +48,18 @@
 #define AMD_COMGR_CALL
 #endif
 
+// Add deprecated support for Comgr on both Windows and Linux
+// This can be removed in favor of genereic [[deprecated]] in C23
+#ifndef AMD_COMGR_DEPRECATED
+#ifdef __GNUC__
+#define AMD_COMGR_DEPRECATED(msg) __attribute__((deprecated(msg)))
+#elif defined(_MSC_VER)
+//#define AMD_COMGR_DEPRECATED(msg) __declspec(deprecated(msg))
+//#else
+#define AMD_COMGR_DEPRECATED(msg)
+#endif
+#endif
+
 #ifndef AMD_COMGR_EXPORT_DECORATOR
 #ifdef __GNUC__
 #define AMD_COMGR_EXPORT_DECORATOR __attribute__ ((visibility ("default")))
@@ -1208,6 +1220,8 @@ amd_comgr_action_info_get_language(
  * @deprecated since 1.3
  * @see amd_comgr_action_info_set_option_list
  */
+AMD_COMGR_DEPRECATED("Will be removed in Comgr v3.0 (Rocm v6.0). Use "
+                     "amd_comgr_action_info_set_option_list() instead")
 amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_set_options(
   amd_comgr_action_info_t action_info,
@@ -1248,6 +1262,10 @@ amd_comgr_action_info_set_options(
  * @see amd_comgr_action_info_get_option_list_count and
  * amd_comgr_action_info_get_option_list_item
  */
+AMD_COMGR_DEPRECATED("Will be removed in Comgr v3.0 (Rocm v6.0). Use "
+                     "amd_comgr_action_info_get_option_list_count() "
+                     "and amd_comgr_action_info_get_option_list_item() "
+                     "instead")
 amd_comgr_status_t AMD_COMGR_API
 amd_comgr_action_info_get_options(
   amd_comgr_action_info_t action_info,
@@ -1538,7 +1556,10 @@ typedef enum amd_comgr_action_kind_s {
    * The @c AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC action can
    * be used as a workaround which ensures the link occurs correctly.
    */
-  AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES = 0x3,
+  AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES
+  AMD_COMGR_DEPRECATED("Will be removed in Comgr v3.0 (Rocm v6.0). Use "
+                       "AMD_COMGR_ACTION_COMPILE_SOURCE_WITH_DEVICE_LIBS_TO_BC "
+                       "instead") = 0x3,
   /**
    * Link a collection of bitcodes, bundled bitcodes, and bundled bitcode
    * archives in @p into a single composite (unbundled) bitcode @p.
@@ -1681,8 +1702,15 @@ typedef enum amd_comgr_action_kind_s {
    *
    * Return @p AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT
    * if isa name or language is not set in @p info.
+   *
+   * @deprecated since 2.5
+   * @see in-process compilation via AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC, etc.
+   * insteaad
    */
-  AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN = 0xE,
+  AMD_COMGR_ACTION_COMPILE_SOURCE_TO_FATBIN
+  AMD_COMGR_DEPRECATED("Will be removed in Comgr v3.0 (Rocm v6.0). Use "
+                       "AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC, etc. "
+                       "instead") = 0xE,
   /**
    * Compile each source data object in @p input in order. For each
    * successful compilation add a bc data object to @p result. Resolve
