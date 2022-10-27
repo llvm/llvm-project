@@ -10,7 +10,16 @@
 #ifndef _LIBCPP___CONFIG
 #define _LIBCPP___CONFIG
 
-#include <__config_site>
+/*
+ * ClickHouse specific options.
+ * Unstable ABI to provide better performance
+ * Availability annotations are not supported.
+ * _LIBCPP_ABI_NAMESPACE to preserve namespace compatibility
+ */
+#define _LIBCPP_ABI_VERSION 999
+#define _LIBCPP_ABI_UNSTABLE
+#define _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS
+#define _LIBCPP_ABI_NAMESPACE __1
 
 #if defined(_MSC_VER) && !defined(__clang__)
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -1148,6 +1157,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_HAS_NO_FGETPOS_FSETPOS
 #  endif
 
+#ifndef _LIBCPP_INIT_PRIORITY_MAX
 #  if __has_attribute(init_priority)
 // TODO: Remove this once we drop support for building libc++ with old Clangs
 #    if (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1200) ||                                                    \
@@ -1159,6 +1169,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #  else
 #    define _LIBCPP_INIT_PRIORITY_MAX
 #  endif
+#endif
 
 #  if defined(__GNUC__) || defined(__clang__)
 // The attribute uses 1-based indices for ordinary and static member functions.
