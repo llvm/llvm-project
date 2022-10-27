@@ -455,11 +455,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.unistd.execv
     libc.src.unistd.fork
     libc.src.unistd.__llvm_libc_syscall
-    libc.src.unistd.getopt
-    libc.src.unistd.optarg
-    libc.src.unistd.optind
-    libc.src.unistd.optopt
-    libc.src.unistd.opterr
 
     # sys/select.h entrypoints
     libc.src.sys.select.select

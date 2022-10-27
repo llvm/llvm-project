@@ -402,16 +402,3 @@ add_libc_unittest(
     libc.include.unistd
     libc.src.unistd.sysconf
 )
-
-add_libc_unittest(
-  getopt_test
-  SUITE
-    libc_unistd_unittests
-  SRCS
-    getopt_test.cpp
-  DEPENDS
-    libc.src.unistd.getopt
-    libc.src.__support.CPP.array
-    libc.src.stdio.fopencookie
-    libc.src.stdio.fflush
-)

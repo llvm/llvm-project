@@ -185,7 +185,6 @@ add_gen_header(
     .llvm-libc-types.size_t
     .llvm-libc-types.ssize_t
     .llvm-libc-types.uid_t
-    .llvm-libc-types.__getoptargv_t
 )
 
 add_gen_header(
