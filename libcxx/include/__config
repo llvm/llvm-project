@@ -256,6 +256,9 @@ If there are users of this configuration we are happy to provide support.
 #    define _LIBCPP_HAS_NO_INCOMPLETE_RANGES
 #  endif
 
+#undef _LIBCPP_HAS_NO_INCOMPLETE_FORMAT
+#undef _LIBCPP_HAS_NO_INCOMPLETE_RANGES
+
 // Need to detect which libc we're using if we're on Linux.
 #  if defined(__linux__)
 #    include <features.h>
