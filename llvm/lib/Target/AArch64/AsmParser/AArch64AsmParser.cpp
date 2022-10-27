@@ -1,4 +1,3 @@
-
 //==- AArch64AsmParser.cpp - Parse AArch64 assembly to MCInst instructions -==//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
