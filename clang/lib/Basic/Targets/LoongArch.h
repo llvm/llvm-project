@@ -24,10 +24,14 @@ namespace targets {
 class LLVM_LIBRARY_VISIBILITY LoongArchTargetInfo : public TargetInfo {
 protected:
   std::string ABI;
+  bool HasFeatureD;
+  bool HasFeatureF;
 
 public:
   LoongArchTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple) {
+    HasFeatureD = false;
+    HasFeatureF = false;
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
@@ -58,6 +62,9 @@ public:
   std::string convertConstraint(const char *&Constraint) const override;
 
   bool hasBitIntType() const override { return true; }
+
+  bool handleTargetFeatures(std::vector<std::string> &Features,
+                            DiagnosticsEngine &Diags) override;
 };
 
 class LLVM_LIBRARY_VISIBILITY LoongArch32TargetInfo
