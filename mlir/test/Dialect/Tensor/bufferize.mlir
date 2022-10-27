@@ -191,7 +191,8 @@ func.func @tensor.from_elements_3d(%f0 : f32) -> tensor<3x2x2xf32> {
 // CHECK-DAG:       %[[ARG_M:.*]] = bufferization.to_memref %[[ARG]] : memref<*xf32>
 // CHECK-DAG:       %[[ALLOC:.*]] = memref.alloc(%[[DYNAMIC_EXTENT]]) {{.*}} : memref<?xindex>
 // CHECK:           %[[ALLOC_T:.*]] = bufferization.to_tensor %[[ALLOC]]
-// CHECK:           %[[MAPPED:.*]] = linalg.map outs(%[[ALLOC_T]] : tensor<?xindex>)() {
+// CHECK:           %[[MAPPED:.*]] = linalg.map
+// CHECK:                 outs(%[[ALLOC_T]] : tensor<?xindex>)
 // CHECK:             %[[INDEX:.*]] = linalg.index 0 : index
 // CHECK:             %[[ELEM:.*]] = memref.dim %[[ARG_M]], %[[INDEX]] : memref<*xf32>
 // CHECK:             linalg.yield %[[ELEM]]
@@ -216,7 +217,8 @@ func.func @tensor.generate(%arg: tensor<*xf32>, %dynamic_extent: index) -> tenso
 // CHECK-SAME:        %[[DYNAMIC_EXTENT:.*]]: index) -> tensor<16x?xindex> {
 // CHECK:           %[[ALLOC:.*]] = memref.alloc(%[[DYNAMIC_EXTENT]]) {{.*}} : memref<16x?xindex>
 // CHECK:           %[[ALLOC_T:.*]] = bufferization.to_tensor %[[ALLOC]]
-// CHECK:           %[[MAPPED:.*]] = linalg.map outs(%[[ALLOC_T]] : tensor<16x?xindex>)() {
+// CHECK:           %[[MAPPED:.*]] = linalg.map
+// CHECK:                 outs(%[[ALLOC_T]] : tensor<16x?xindex>)
 // CHECK:             %[[INDEX0:.*]] = linalg.index 0
 // CHECK:             %[[INDEX1:.*]] = linalg.index 1
 // CHECK:             %[[ADD:.*]] = arith.addi %[[INDEX0]], %[[INDEX1]]
@@ -552,7 +554,8 @@ func.func @tensor.pad(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
   // CHECK-DAG: %[[size1:.*]] = affine.apply #[[$sum_map]]()[%[[dim1]], %[[l2]], %[[h2]]]
   // CHECK:     %[[alloc:.*]] = memref.alloc(%[[size0]], %[[size1]]) {{.*}} : memref<?x?xindex>
   // CHECK:     %[[alloc_t:.*]] = bufferization.to_tensor %[[alloc]]
-  // CHECK:     %[[mapped:.*]] = linalg.map outs(%[[alloc_t]] : tensor<?x?xindex>)() {
+  // CHECK:     %[[mapped:.*]] = linalg.map
+  // CHECK:           outs(%[[alloc_t]] : tensor<?x?xindex>)
   // CHECK:       %[[index0:.*]] = linalg.index 0
   // CHECK:       %[[index1:.*]] = linalg.index 1
   // CHECK:       %[[mul:.*]] = arith.muli %[[index0]], %[[index1]]
