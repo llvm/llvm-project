@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.13.4)
+include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Modules/CMakePolicy.cmake
+  NO_POLICY_SCOPE)
 
 # Add path for custom modules.
 set(CMAKE_MODULE_PATH
