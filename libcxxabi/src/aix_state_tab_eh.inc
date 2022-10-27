@@ -559,7 +559,7 @@ __xlcxx_personality_v0(int version, _Unwind_Action actions, uint64_t exceptionCl
       // reserved for compilers (SP + 3 * sizeof(uintptr_t)) in the stack of
       // the caller of the function containing the landing pad (within the link
       // area for the call to the latter) for __xlc_exception_handle()
-      // to retrieve.
+      // to retrieve when it is called by the landing pad.
       uintptr_t *currentSP = reinterpret_cast<uintptr_t*>(_Unwind_GetGR(context, 1));
       uintptr_t *callersSP = reinterpret_cast<uintptr_t*>(currentSP[0]);
       callersSP[3] = reinterpret_cast<uintptr_t>(unwind_exception);
