@@ -991,6 +991,7 @@ def HasENQCMD    : Predicate<"Subtarget->hasENQCMD()">;
 def HasAMXFP16   : Predicate<"Subtarget->hasAMXFP16()">;
 def HasCMPCCXADD : Predicate<"Subtarget->hasCMPCCXADD()">;
 def HasKL        : Predicate<"Subtarget->hasKL()">;
+def HasRAOINT    : Predicate<"Subtarget->hasRAOINT()">;
 def HasWIDEKL    : Predicate<"Subtarget->hasWIDEKL()">;
 def HasHRESET    : Predicate<"Subtarget->hasHRESET()">;
 def HasSERIALIZE : Predicate<"Subtarget->hasSERIALIZE()">;
@@ -3238,6 +3239,9 @@ include "X86InstrKL.td"
 
 // AMX instructions
 include "X86InstrAMX.td"
+
+// RAO-INT instructions
+include "X86InstrRAOINT.td"
 
 // System instructions.
 include "X86InstrSystem.td"

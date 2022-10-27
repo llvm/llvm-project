@@ -2065,6 +2065,12 @@ TARGET_BUILTIN(__builtin_ia32_serialize, "v", "n", "serialize")
 TARGET_BUILTIN(__builtin_ia32_xsusldtrk, "v", "n", "tsxldtrk")
 TARGET_BUILTIN(__builtin_ia32_xresldtrk, "v", "n", "tsxldtrk")
 
+// RAO-INT
+TARGET_BUILTIN(__builtin_ia32_aadd32, "vv*Si", "n", "raoint")
+TARGET_BUILTIN(__builtin_ia32_aand32, "vv*Si", "n", "raoint")
+TARGET_BUILTIN(__builtin_ia32_aor32, "vv*Si", "n", "raoint")
+TARGET_BUILTIN(__builtin_ia32_axor32, "vv*Si", "n", "raoint")
+
 // MSVC
 TARGET_HEADER_BUILTIN(_BitScanForward, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(_BitScanReverse, "UcUNi*UNi", "nh", "intrin.h", ALL_MS_LANGUAGES, "")
