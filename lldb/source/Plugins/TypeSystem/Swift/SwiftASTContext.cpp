@@ -2985,20 +2985,28 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   // Determine the Swift module loading mode to use.
   const auto &props = ModuleList::GetGlobalModuleListProperties();
   swift::ModuleLoadingMode loading_mode;
+  const char *mode = nullptr;
   switch (props.GetSwiftModuleLoadingMode()) {
   case eSwiftModuleLoadingModePreferSerialized:
     loading_mode = swift::ModuleLoadingMode::PreferSerialized;
+    mode = "PreferSerialized";
     break;
   case eSwiftModuleLoadingModePreferInterface:
     loading_mode = swift::ModuleLoadingMode::PreferInterface;
+    mode = "PreferInterface";
     break;
   case eSwiftModuleLoadingModeOnlySerialized:
     loading_mode = swift::ModuleLoadingMode::OnlySerialized;
+    mode = "OnlySerialized";
     break;
   case eSwiftModuleLoadingModeOnlyInterface:
     loading_mode = swift::ModuleLoadingMode::OnlyInterface;
+    mode = "OnlyInterface";
     break;
   }
+  if (mode)
+    LOG_PRINTF(GetLog(LLDBLog::Types), "Swift module loading mode forced to %s",
+               mode);
 
   // The order here matters due to fallback behaviors:
   //
