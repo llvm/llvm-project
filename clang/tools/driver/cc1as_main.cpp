@@ -151,6 +151,9 @@ struct AssemblerInvocation {
   /// Darwin target variant triple, the variant of the deployment target
   /// for which the code is being compiled.
   llvm::Optional<llvm::Triple> DarwinTargetVariantTriple;
+
+  /// The name of a file to use with \c .secure_log_unique directives.
+  std::string AsSecureLogFile;
   /// @}
 
 public:
@@ -333,6 +336,8 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
             .Case("default", EmitDwarfUnwindType::Default);
   }
 
+  Opts.AsSecureLogFile = Args.getLastArgValue(OPT_as_secure_log_file);
+
   return Success;
 }
 
@@ -384,6 +389,7 @@ static bool ExecuteAssemblerImpl(AssemblerInvocation &Opts,
 
   MCTargetOptions MCOptions;
   MCOptions.EmitDwarfUnwind = Opts.EmitDwarfUnwind;
+  MCOptions.AsSecureLogFile = Opts.AsSecureLogFile;
 
   std::unique_ptr<MCAsmInfo> MAI(
       TheTarget->createMCAsmInfo(*MRI, Opts.Triple, MCOptions));
