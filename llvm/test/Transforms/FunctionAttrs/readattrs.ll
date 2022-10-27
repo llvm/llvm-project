@@ -322,3 +322,46 @@ loop:
 exit:
   ret void
 }
+
+declare void @readnone_param(ptr nocapture readnone %p)
+declare void @readonly_param(ptr nocapture readonly %p)
+
+define void @op_bundle_readnone_deopt(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@op_bundle_readnone_deopt
+; CHECK-SAME: (ptr nocapture readnone [[P:%.*]]) {
+; CHECK-NEXT:    call void @readnone_param(ptr [[P]]) [ "deopt"() ]
+; CHECK-NEXT:    ret void
+;
+  call void @readnone_param(ptr %p) ["deopt"()]
+  ret void
+}
+
+define void @op_bundle_readnone_unknown(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@op_bundle_readnone_unknown
+; CHECK-SAME: (ptr nocapture readnone [[P:%.*]]) {
+; CHECK-NEXT:    call void @readnone_param(ptr [[P]]) [ "unknown"() ]
+; CHECK-NEXT:    ret void
+;
+  call void @readnone_param(ptr %p) ["unknown"()]
+  ret void
+}
+
+define void @op_bundle_readonly_deopt(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@op_bundle_readonly_deopt
+; CHECK-SAME: (ptr nocapture readonly [[P:%.*]]) {
+; CHECK-NEXT:    call void @readonly_param(ptr [[P]]) [ "deopt"() ]
+; CHECK-NEXT:    ret void
+;
+  call void @readonly_param(ptr %p) ["deopt"()]
+  ret void
+}
+
+define void @op_bundle_readonly_unknown(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@op_bundle_readonly_unknown
+; CHECK-SAME: (ptr nocapture readonly [[P:%.*]]) {
+; CHECK-NEXT:    call void @readonly_param(ptr [[P]]) [ "unknown"() ]
+; CHECK-NEXT:    ret void
+;
+  call void @readonly_param(ptr %p) ["unknown"()]
+  ret void
+}
