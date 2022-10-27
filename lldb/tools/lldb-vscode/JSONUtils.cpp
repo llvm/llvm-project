@@ -132,27 +132,28 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
 
 void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
                     llvm::StringRef key) {
-
-  llvm::StringRef value = v.GetValue();
-  llvm::StringRef summary = v.GetSummary();
-  llvm::StringRef type_name = v.GetType().GetDisplayTypeName();
-  lldb::SBError error = v.GetError();
-
   std::string result;
   llvm::raw_string_ostream strm(result);
+
+  lldb::SBError error = v.GetError();
   if (!error.Success()) {
     strm << "<error: " << error.GetCString() << ">";
-  } else if (!value.empty()) {
-    strm << value;
-    if (!summary.empty())
+  } else {
+    llvm::StringRef value = v.GetValue();
+    llvm::StringRef summary = v.GetSummary();
+    llvm::StringRef type_name = v.GetType().GetDisplayTypeName();
+    if (!value.empty()) {
+      strm << value;
+      if (!summary.empty())
+        strm << ' ' << summary;
+    } else if (!summary.empty()) {
       strm << ' ' << summary;
-  } else if (!summary.empty()) {
-    strm << ' ' << summary;
-  } else if (!type_name.empty()) {
-    strm << type_name;
-    lldb::addr_t address = v.GetLoadAddress();
-    if (address != LLDB_INVALID_ADDRESS)
-      strm << " @ " << llvm::format_hex(address, 0);
+    } else if (!type_name.empty()) {
+      strm << type_name;
+      lldb::addr_t address = v.GetLoadAddress();
+      if (address != LLDB_INVALID_ADDRESS)
+        strm << " @ " << llvm::format_hex(address, 0);
+    }
   }
   strm.flush();
   EmplaceSafeString(object, key, result);
