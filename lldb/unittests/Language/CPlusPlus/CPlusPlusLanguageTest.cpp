@@ -17,130 +17,136 @@ using namespace lldb_private;
 TEST(CPlusPlusLanguage, MethodNameParsing) {
   struct TestCase {
     std::string input;
-    std::string context, basename, arguments, qualifiers, scope_qualified_name;
+    std::string return_type, context, basename, arguments, qualifiers,
+        scope_qualified_name;
   };
 
   TestCase test_cases[] = {
-      {"main(int, char *[]) ", "", "main", "(int, char *[])", "", "main"},
-      {"foo::bar(baz) const", "foo", "bar", "(baz)", "const", "foo::bar"},
-      {"foo::~bar(baz)", "foo", "~bar", "(baz)", "", "foo::~bar"},
-      {"a::b::c::d(e,f)", "a::b::c", "d", "(e,f)", "", "a::b::c::d"},
-      {"void f(int)", "", "f", "(int)", "", "f"},
+      {"main(int, char *[]) ", "", "", "main", "(int, char *[])", "", "main"},
+      {"foo::bar(baz) const", "", "foo", "bar", "(baz)", "const", "foo::bar"},
+      {"foo::~bar(baz)", "", "foo", "~bar", "(baz)", "", "foo::~bar"},
+      {"a::b::c::d(e,f)", "", "a::b::c", "d", "(e,f)", "", "a::b::c::d"},
+      {"void f(int)", "void", "", "f", "(int)", "", "f"},
 
       // Operators
       {"std::basic_ostream<char, std::char_traits<char> >& "
-       "std::operator<<<std::char_traits<char> >"
-       "(std::basic_ostream<char, std::char_traits<char> >&, char const*)",
-       "std", "operator<<<std::char_traits<char> >",
+       "std::operator<<<std::char_traits<char> >(std::basic_ostream<char, "
+       "std::char_traits<char> >&, char const*)",
+       "std::basic_ostream<char, std::char_traits<char> >&", "std",
+       "operator<<<std::char_traits<char> >",
        "(std::basic_ostream<char, std::char_traits<char> >&, char const*)", "",
        "std::operator<<<std::char_traits<char> >"},
       {"operator delete[](void*, clang::ASTContext const&, unsigned long)", "",
-       "operator delete[]", "(void*, clang::ASTContext const&, unsigned long)",
-       "", "operator delete[]"},
-      {"llvm::Optional<clang::PostInitializer>::operator bool() const",
+       "", "operator delete[]",
+       "(void*, clang::ASTContext const&, unsigned long)", "",
+       "operator delete[]"},
+      {"llvm::Optional<clang::PostInitializer>::operator bool() const", "",
        "llvm::Optional<clang::PostInitializer>", "operator bool", "()", "const",
        "llvm::Optional<clang::PostInitializer>::operator bool"},
-      {"(anonymous namespace)::FactManager::operator[](unsigned short)",
+      {"(anonymous namespace)::FactManager::operator[](unsigned short)", "",
        "(anonymous namespace)::FactManager", "operator[]", "(unsigned short)",
        "", "(anonymous namespace)::FactManager::operator[]"},
       {"const int& std::map<int, pair<short, int>>::operator[](short) const",
-       "std::map<int, pair<short, int>>", "operator[]", "(short)", "const",
-       "std::map<int, pair<short, int>>::operator[]"},
-      {"CompareInsn::operator()(llvm::StringRef, InsnMatchEntry const&)",
+       "const int&", "std::map<int, pair<short, int>>", "operator[]", "(short)",
+       "const", "std::map<int, pair<short, int>>::operator[]"},
+      {"CompareInsn::operator()(llvm::StringRef, InsnMatchEntry const&)", "",
        "CompareInsn", "operator()", "(llvm::StringRef, InsnMatchEntry const&)",
        "", "CompareInsn::operator()"},
-      {"llvm::Optional<llvm::MCFixupKind>::operator*() const &",
+      {"llvm::Optional<llvm::MCFixupKind>::operator*() const &", "",
        "llvm::Optional<llvm::MCFixupKind>", "operator*", "()", "const &",
        "llvm::Optional<llvm::MCFixupKind>::operator*"},
       {"auto std::__1::ranges::__begin::__fn::operator()[abi:v160000]<char "
        "const, 18ul>(char const (&) [18ul]) const",
-       "std::__1::ranges::__begin::__fn",
+       "auto", "std::__1::ranges::__begin::__fn",
        "operator()[abi:v160000]<char const, 18ul>", "(char const (&) [18ul])",
        "const",
        "std::__1::ranges::__begin::__fn::operator()[abi:v160000]<char const, "
        "18ul>"},
       // Internal classes
-      {"operator<<(Cls, Cls)::Subclass::function()",
+      {"operator<<(Cls, Cls)::Subclass::function()", "",
        "operator<<(Cls, Cls)::Subclass", "function", "()", "",
        "operator<<(Cls, Cls)::Subclass::function"},
-      {"SAEC::checkFunction(context&) const::CallBack::CallBack(int)",
+      {"SAEC::checkFunction(context&) const::CallBack::CallBack(int)", "",
        "SAEC::checkFunction(context&) const::CallBack", "CallBack", "(int)", "",
        "SAEC::checkFunction(context&) const::CallBack::CallBack"},
       // Anonymous namespace
-      {"XX::(anonymous namespace)::anon_class::anon_func() const",
+      {"XX::(anonymous namespace)::anon_class::anon_func() const", "",
        "XX::(anonymous namespace)::anon_class", "anon_func", "()", "const",
        "XX::(anonymous namespace)::anon_class::anon_func"},
 
       // Lambda
       {"main::{lambda()#1}::operator()() const::{lambda()#1}::operator()() "
        "const",
-       "main::{lambda()#1}::operator()() const::{lambda()#1}", "operator()",
+       "", "main::{lambda()#1}::operator()() const::{lambda()#1}", "operator()",
        "()", "const",
        "main::{lambda()#1}::operator()() const::{lambda()#1}::operator()"},
 
       // Function pointers
-      {"string (*f(vector<int>&&))(float)", "", "f", "(vector<int>&&)", "",
-       "f"},
-      {"void (*&std::_Any_data::_M_access<void (*)()>())()", "std::_Any_data",
-       "_M_access<void (*)()>", "()", "",
+      {"string (*f(vector<int>&&))(float)", "", "", "f",
+       "(vector<int>&&)", "", "f"},
+      {"void (*&std::_Any_data::_M_access<void (*)()>())()", "",
+       "std::_Any_data", "_M_access<void (*)()>", "()", "",
        "std::_Any_data::_M_access<void (*)()>"},
       {"void (*(*(*(*(*(*(*(* const&func1(int))())())())())())())())()", "",
-       "func1", "(int)", "", "func1"},
+       "", "func1", "(int)", "", "func1"},
 
       // Decltype
       {"decltype(nullptr)&& std::forward<decltype(nullptr)>"
        "(std::remove_reference<decltype(nullptr)>::type&)",
-       "std", "forward<decltype(nullptr)>",
+       "decltype(nullptr)&&", "std", "forward<decltype(nullptr)>",
        "(std::remove_reference<decltype(nullptr)>::type&)", "",
        "std::forward<decltype(nullptr)>"},
 
       // Templates
       {"void llvm::PM<llvm::Module, llvm::AM<llvm::Module>>::"
        "addPass<llvm::VP>(llvm::VP)",
-       "llvm::PM<llvm::Module, llvm::AM<llvm::Module>>", "addPass<llvm::VP>",
-       "(llvm::VP)", "",
+       "void", "llvm::PM<llvm::Module, llvm::AM<llvm::Module>>",
+       "addPass<llvm::VP>", "(llvm::VP)", "",
        "llvm::PM<llvm::Module, llvm::AM<llvm::Module>>::"
        "addPass<llvm::VP>"},
       {"void std::vector<Class, std::allocator<Class> >"
        "::_M_emplace_back_aux<Class const&>(Class const&)",
-       "std::vector<Class, std::allocator<Class> >",
+       "void", "std::vector<Class, std::allocator<Class> >",
        "_M_emplace_back_aux<Class const&>", "(Class const&)", "",
        "std::vector<Class, std::allocator<Class> >::"
        "_M_emplace_back_aux<Class const&>"},
       {"unsigned long llvm::countTrailingOnes<unsigned int>"
        "(unsigned int, llvm::ZeroBehavior)",
-       "llvm", "countTrailingOnes<unsigned int>",
+       "unsigned long", "llvm", "countTrailingOnes<unsigned int>",
        "(unsigned int, llvm::ZeroBehavior)", "",
        "llvm::countTrailingOnes<unsigned int>"},
       {"std::enable_if<(10u)<(64), bool>::type llvm::isUInt<10u>(unsigned "
        "long)",
-       "llvm", "isUInt<10u>", "(unsigned long)", "", "llvm::isUInt<10u>"},
-      {"f<A<operator<(X,Y)::Subclass>, sizeof(B)<sizeof(C)>()", "",
+       "std::enable_if<(10u)<(64), bool>::type", "llvm", "isUInt<10u>",
+       "(unsigned long)", "", "llvm::isUInt<10u>"},
+      {"f<A<operator<(X,Y)::Subclass>, sizeof(B)<sizeof(C)>()", "", "",
        "f<A<operator<(X,Y)::Subclass>, sizeof(B)<sizeof(C)>", "()", "",
        "f<A<operator<(X,Y)::Subclass>, sizeof(B)<sizeof(C)>"},
-      {"llvm::Optional<llvm::MCFixupKind>::operator*() const volatile &&",
+      {"llvm::Optional<llvm::MCFixupKind>::operator*() const volatile &&", "",
        "llvm::Optional<llvm::MCFixupKind>", "operator*", "()",
        "const volatile &&", "llvm::Optional<llvm::MCFixupKind>::operator*"},
-      {"void foo<Dummy<char [10]>>()", "", "foo<Dummy<char [10]>>", "()", "",
-       "foo<Dummy<char [10]>>"},
-      {"void foo<Bar<Bar<int>[10]>>()", "", "foo<Bar<Bar<int>[10]>>", "()", "",
-       "foo<Bar<Bar<int>[10]>>"},
-      {"void foo<Bar[10]>()", "", "foo<Bar[10]>", "()", "",
+      {"void foo<Dummy<char [10]>>()", "void", "", "foo<Dummy<char [10]>>",
+       "()", "", "foo<Dummy<char [10]>>"},
+      {"void foo<Bar<Bar<int>[10]>>()", "void", "", "foo<Bar<Bar<int>[10]>>",
+       "()", "", "foo<Bar<Bar<int>[10]>>"},
+      {"void foo<Bar[10]>()", "void", "", "foo<Bar[10]>", "()", "",
        "foo<Bar[10]>"},
-      {"void foo<Bar[]>()", "", "foo<Bar[]>", "()", "",
-       "foo<Bar[]>"},
+      {"void foo<Bar[]>()", "void", "", "foo<Bar[]>", "()", "", "foo<Bar[]>"},
 
       // auto return type
-      {"auto std::test_return_auto<int>() const", "std",
+      {"auto std::test_return_auto<int>() const", "auto", "std",
        "test_return_auto<int>", "()", "const", "std::test_return_auto<int>"},
-      {"decltype(auto) std::test_return_auto<int>(int) const", "std",
-       "test_return_auto<int>", "(int)", "const", "std::test_return_auto<int>"},
+      {"decltype(auto) std::test_return_auto<int>(int) const", "decltype(auto)",
+       "std", "test_return_auto<int>", "(int)", "const",
+       "std::test_return_auto<int>"},
 
       // abi_tag on class method
       {"v1::v2::Dummy[abi:c1][abi:c2]<v1::v2::Dummy[abi:c1][abi:c2]<int>> "
        "v1::v2::Dummy[abi:c1][abi:c2]<v1::v2::Dummy[abi:c1][abi:c2]<int>>"
        "::method2<v1::v2::Dummy[abi:c1][abi:c2]<v1::v2::Dummy[abi:c1][abi:c2]<"
        "int>>>(int, v1::v2::Dummy<int>) const &&",
+       // Return type
+       "v1::v2::Dummy[abi:c1][abi:c2]<v1::v2::Dummy[abi:c1][abi:c2]<int>>",
        // Context
        "v1::v2::Dummy[abi:c1][abi:c2]<v1::v2::Dummy[abi:c1][abi:c2]<int>>",
        // Basename
@@ -158,6 +164,8 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "v1::v2::with_tag_in_ns[abi:f1][abi:f2]<v1::v2::Dummy[abi:c1][abi:c2]"
        "<v1::v2::Dummy[abi:c1][abi:c2]<int>>>(int, v1::v2::Dummy<int>) const "
        "&&",
+       // Return type
+       "v1::v2::Dummy[abi:c1][abi:c2]<v1::v2::Dummy[abi:c1][abi:c2]<int>>",
        // Context
        "v1::v2",
        // Basename
@@ -173,6 +181,8 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
       {"auto ns::with_tag_in_ns[abi:special tag,0.0][abi:special "
        "tag,1.0]<Dummy<int>>"
        "(float) const &&",
+       // Return type
+       "auto",
        // Context
        "ns",
        // Basename
@@ -184,15 +194,15 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "tag,1.0]<Dummy<int>>"},
 
       // abi_tag on operator overloads
-      {"std::__1::error_code::operator bool[abi:v160000]() const",
+      {"std::__1::error_code::operator bool[abi:v160000]() const", "",
        "std::__1::error_code", "operator bool[abi:v160000]", "()", "const",
        "std::__1::error_code::operator bool[abi:v160000]"},
 
-      {"auto ns::foo::operator[][abi:v160000](size_t) const", "ns::foo",
+      {"auto ns::foo::operator[][abi:v160000](size_t) const", "auto", "ns::foo",
        "operator[][abi:v160000]", "(size_t)", "const",
        "ns::foo::operator[][abi:v160000]"},
 
-      {"auto Foo[abi:abc]<int>::operator<<<Foo[abi:abc]<int>>(int) &",
+      {"auto Foo[abi:abc]<int>::operator<<<Foo[abi:abc]<int>>(int) &", "auto",
        "Foo[abi:abc]<int>", "operator<<<Foo[abi:abc]<int>>", "(int)", "&",
        "Foo[abi:abc]<int>::operator<<<Foo[abi:abc]<int>>"}};
 
@@ -200,6 +210,7 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
     CPlusPlusLanguage::MethodName method(ConstString(test.input));
     EXPECT_TRUE(method.IsValid()) << test.input;
     if (method.IsValid()) {
+      EXPECT_EQ(test.return_type, method.GetReturnType().str());
       EXPECT_EQ(test.context, method.GetContext().str());
       EXPECT_EQ(test.basename, method.GetBasename().str());
       EXPECT_EQ(test.arguments, method.GetArguments().str());
