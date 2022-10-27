@@ -98,7 +98,8 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
   if (const auto Ctor = dyn_cast<CXXConstructorDecl>(F)) {
     const RecordDecl *RD = Ctor->getParent();
     const Record *R = this->getRecord(RD);
-    assert(R);
+    if (!R)
+      return false;
 
     for (const auto *Init : Ctor->inits()) {
       const Expr *InitExpr = Init->getInit();
