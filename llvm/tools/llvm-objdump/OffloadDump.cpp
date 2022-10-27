@@ -49,9 +49,10 @@ static void printBinary(const OffloadBinary &OB, uint64_t Index) {
 
 /// Print the embedded offloading contents of an ObjectFile \p O.
 void llvm::dumpOffloadBinary(const ObjectFile &O) {
-  if (!O.isELF()) {
-    reportWarning("--offloading is currently only supported for ELF targets",
-                  O.getFileName());
+  if (!O.isELF() && !O.isCOFF()) {
+    reportWarning(
+        "--offloading is currently only supported for COFF and ELF targets",
+        O.getFileName());
     return;
   }
 
