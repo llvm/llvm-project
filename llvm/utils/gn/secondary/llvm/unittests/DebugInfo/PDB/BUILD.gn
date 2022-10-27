@@ -24,7 +24,7 @@ unittest("DebugInfoPDBTests") {
   # dependency, and the cwd while tests requiring input files run should
   # be required to be some fixed directory.
   # FIXME: Also, the GN way is to write this file at build time. But since
-  # there's only one use of this, and since this is a pattern that hopefully
+  # there's only two uses of this, and since this is a pattern that hopefully
   # will disappear again, and since it doesn't have any measurable performance
   # hit, write the file at GN time.
   # Note: This line here implicitly depends on unittest() setting output_dir to
