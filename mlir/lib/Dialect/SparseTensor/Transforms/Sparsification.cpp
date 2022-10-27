@@ -1130,13 +1130,13 @@ static void translateBitsToTidDimPairs(Merger &merger, CodeGen &codegen,
       assert(all.test(b));
       assert(merger.index(b) == idx);
       if (isUndefDLT(merger.getDimLevelType(b))) {
-        // This could be a synthetic tensor (for invariants and sparse output
-        // tensor).
-        // In both cases, we mean to generate loops over output tensor.
-        // e.g.,
-        // out[i][j] = invariant;
-        if (merger.getSynTensorID() == tid)
-          tid = merger.getOutTensorID();
+        // An undefined dlt in the lattices, we probably mean to iterate based
+        // on the dim of output tensor.
+        // E.g., this could be a synthetic tensor (for invariants and sparse
+        // output tensor).
+        // out[i][j] = invariant; or a broadcast
+        // out[i][j] = in[i] (j is undef for input)
+        tid = merger.getOutTensorID();
       }
       auto dim = codegen.loopIdxToDim[tid][idx];
       if (dim != INVALID_ID) {
