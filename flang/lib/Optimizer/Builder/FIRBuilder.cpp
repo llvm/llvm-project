@@ -527,6 +527,12 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
         return create<fir::LoadOp>(
             loc, fir::factory::getMutableIRBox(*this, loc, x));
       },
+      [&](const fir::PolymorphicValue &p) -> mlir::Value {
+        mlir::Value empty;
+        mlir::ValueRange emptyRange;
+        return create<fir::EmboxOp>(loc, boxTy, itemAddr, empty, empty,
+                                    emptyRange, p.getTdesc());
+      },
       [&](const auto &) -> mlir::Value {
         mlir::Value empty;
         mlir::ValueRange emptyRange;
