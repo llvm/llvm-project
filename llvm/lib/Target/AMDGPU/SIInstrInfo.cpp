@@ -5588,7 +5588,7 @@ emitLoadSRsrcFromVGPRLoop(const SIInstrInfo &TII, MachineRegisterInfo &MRI,
 
   // Update Rsrc operand to use the SGPR Rsrc.
   Rsrc.setReg(SRsrc);
-  Rsrc.setIsKill(true);
+  Rsrc.setIsKill();
 
   Register SaveExec = MRI.createVirtualRegister(BoolXExecRC);
   MRI.setSimpleHint(SaveExec, CondReg);
