@@ -76,9 +76,7 @@ stages there is no ABI stability in any form.
    header_generation
    implementation_standard
    api_test
-   layering
    mechanics_of_public_api
-   redirectors
    source_layout
 
 .. toctree::
