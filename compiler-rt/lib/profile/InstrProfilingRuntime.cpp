@@ -12,21 +12,13 @@ extern "C" {
 
 static int RegisterRuntime() {
   __llvm_profile_initialize();
+#ifdef _AIX
+  extern COMPILER_RT_VISIBILITY void *__llvm_profile_keep[];
+  (void)*(void *volatile *)__llvm_profile_keep;
+#endif
   return 0;
 }
 
-#ifndef _AIX
 /* int __llvm_profile_runtime  */
-COMPILER_RT_VISIBILITY int INSTR_PROF_PROFILE_RUNTIME_VAR;
-
-static int Registration = RegisterRuntime();
-#else
-extern COMPILER_RT_VISIBILITY void *__llvm_profile_keep[];
-/* On AIX, when linking with -bcdtors:csect, the variable whose constructor does
- * the registration needs to be explicitly kept, hence we reuse the runtime hook
- * variable to do the registration since it'll be kept via the -u linker flag.
- * Create a volatile reference to __llvm_profile_keep to keep the array alive.*/
-COMPILER_RT_VISIBILITY int INSTR_PROF_PROFILE_RUNTIME_VAR =
-    ((void)*(void *volatile *)__llvm_profile_keep, RegisterRuntime());
-#endif
+COMPILER_RT_VISIBILITY int INSTR_PROF_PROFILE_RUNTIME_VAR = RegisterRuntime();
 }
