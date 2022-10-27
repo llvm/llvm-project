@@ -325,12 +325,14 @@ bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
 
 bool GCNDownwardRPTracker::advanceBeforeNext() {
   assert(MRI && "call reset first");
+  if (!LastTrackedMI)
+    return NextMI == MBBEnd;
 
-  NextMI = skipDebugInstructionsForward(NextMI, MBBEnd);
-  if (NextMI == MBBEnd)
-    return false;
+  assert(NextMI == MBBEnd || !NextMI->isDebugInstr());
 
-  SlotIndex SI = LIS.getInstructionIndex(*NextMI).getBaseIndex();
+  SlotIndex SI = NextMI == MBBEnd
+                     ? LIS.getInstructionIndex(*LastTrackedMI).getDeadSlot()
+                     : LIS.getInstructionIndex(*NextMI).getBaseIndex();
   assert(SI.isValid());
 
   // Remove dead registers or mask bits.
@@ -355,7 +357,9 @@ bool GCNDownwardRPTracker::advanceBeforeNext() {
 
   MaxPressure = max(MaxPressure, CurPressure);
 
-  return true;
+  LastTrackedMI = nullptr;
+
+  return NextMI == MBBEnd;
 }
 
 void GCNDownwardRPTracker::advanceToNext() {
@@ -379,9 +383,9 @@ void GCNDownwardRPTracker::advanceToNext() {
 }
 
 bool GCNDownwardRPTracker::advance() {
-  // If we have just called reset live set is actual.
-  if ((NextMI == MBBEnd) || (LastTrackedMI && !advanceBeforeNext()))
+  if (NextMI == MBBEnd)
     return false;
+  advanceBeforeNext();
   advanceToNext();
   return true;
 }
