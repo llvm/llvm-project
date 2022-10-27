@@ -3586,4 +3586,7 @@ def SDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"sdot", 0b0>;
 def UDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"udot", 0b1>;
 def SDOT_ZZZI_HtoS : sve2p1_two_way_dot_vvi<"sdot", 0b0>;
 def UDOT_ZZZI_HtoS : sve2p1_two_way_dot_vvi<"udot", 0b1>;
+
+defm PEXT_PCI : sve2p1_pred_as_ctr_to_mask<"pext">;
+defm PTRUE_C  : sve2p1_ptrue_pn<"ptrue">;
 } // End HasSVE2p1_or_HasSME2
