@@ -2084,6 +2084,35 @@ getIntrinsicForMaskedAtomicRMWBinOp(unsigned GRLen,
   llvm_unreachable("Unexpected GRLen\n");
 }
 
+TargetLowering::AtomicExpansionKind
+LoongArchTargetLowering::shouldExpandAtomicCmpXchgInIR(
+    AtomicCmpXchgInst *CI) const {
+  unsigned Size = CI->getCompareOperand()->getType()->getPrimitiveSizeInBits();
+  if (Size == 8 || Size == 16)
+    return AtomicExpansionKind::MaskedIntrinsic;
+  return AtomicExpansionKind::None;
+}
+
+Value *LoongArchTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
+    IRBuilderBase &Builder, AtomicCmpXchgInst *CI, Value *AlignedAddr,
+    Value *CmpVal, Value *NewVal, Value *Mask, AtomicOrdering Ord) const {
+  Value *Ordering =
+      Builder.getIntN(Subtarget.getGRLen(), static_cast<uint64_t>(Ord));
+
+  // TODO: Support cmpxchg on LA32.
+  Intrinsic::ID CmpXchgIntrID = Intrinsic::loongarch_masked_cmpxchg_i64;
+  CmpVal = Builder.CreateSExt(CmpVal, Builder.getInt64Ty());
+  NewVal = Builder.CreateSExt(NewVal, Builder.getInt64Ty());
+  Mask = Builder.CreateSExt(Mask, Builder.getInt64Ty());
+  Type *Tys[] = {AlignedAddr->getType()};
+  Function *MaskedCmpXchg =
+      Intrinsic::getDeclaration(CI->getModule(), CmpXchgIntrID, Tys);
+  Value *Result = Builder.CreateCall(
+      MaskedCmpXchg, {AlignedAddr, CmpVal, NewVal, Mask, Ordering});
+  Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
+  return Result;
+}
+
 Value *LoongArchTargetLowering::emitMaskedAtomicRMWIntrinsic(
     IRBuilderBase &Builder, AtomicRMWInst *AI, Value *AlignedAddr, Value *Incr,
     Value *Mask, Value *ShiftAmt, AtomicOrdering Ord) const {
