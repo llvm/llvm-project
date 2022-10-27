@@ -410,6 +410,7 @@ LLVM_16 {
     clang_getUnqualifiedType;
     clang_getNonReferenceType;
     clang_CXXMethod_isDeleted;
+    clang_CXXMethod_isCopyAssignmentOperator;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol

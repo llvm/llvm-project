@@ -255,6 +255,9 @@ Bug Fixes
 - Reject non-type template arguments formed by casting a non-zero integer
   to a pointer in pre-C++17 modes, instead of treating them as null
   pointers.
+- Fix template arguments of pointer and reference not taking the type as
+  part of their identity.
+  `Issue 47136 <https://github.com/llvm/llvm-project/issues/47136>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -670,8 +673,11 @@ libclang
   the behavior of ``QualType::getNonReferenceType`` for ``CXType``.
 - Introduced the new function ``clang_CXXMethod_isDeleted``, which queries
   whether the method is declared ``= delete``.
-- ``clang_Cursor_getNumTemplateArguments``, ``clang_Cursor_getTemplateArgumentKind``,
-  ``clang_Cursor_getTemplateArgumentType``, ``clang_Cursor_getTemplateArgumentValue`` and
+- Introduced the new function ``clang_CXXMethod_isCopyAssignmentOperator``,
+  which identifies whether a method cursor is a copy-assignment
+  operator.
+- ``clang_Cursor_getNumTemplateArguments``, ``clang_Cursor_getTemplateArgumentKind``, 
+  ``clang_Cursor_getTemplateArgumentType``, ``clang_Cursor_getTemplateArgumentValue`` and 
   ``clang_Cursor_getTemplateArgumentUnsignedValue`` now work on struct, class,
   and partial template specialization cursors in addition to function cursors.
 
