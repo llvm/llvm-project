@@ -166,6 +166,7 @@ static AffineMap makePermutationMap(
             countInvariantIndices == numIndices - 1) &&
            "Vectorization prerequisite violated: at most 1 index may be "
            "invariant wrt a vectorized loop");
+    (void)countInvariantIndices;
   }
   return AffineMap::get(indices.size(), 0, perm, context);
 }
