@@ -443,6 +443,9 @@ also be seen inline below:
 Guidance on what to put into LLVM community calendar invites
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+To add your event, create a calendar event for it and invite calendar@llvm.org
+on it. Your event should then show up on the community calendar.
+ 
 Please put the following pieces of information in your calendar invite:
 
 * Write a single paragraph describing what the event is about. Include things
