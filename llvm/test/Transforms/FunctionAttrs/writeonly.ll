@@ -178,6 +178,16 @@ define void @direct3b(ptr %p) {
   ret void
 }
 
+define void @direct3c(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@direct3c
+; CHECK-SAME: (ptr nocapture writeonly [[P:%.*]]) {
+; CHECK-NEXT:    call void @direct3_callee(ptr [[P]]) [ "may-read"() ]
+; CHECK-NEXT:    ret void
+;
+  call void @direct3_callee(ptr %p) ["may-read"()]
+  ret void
+}
+
 define void @fptr_test1(ptr %p, ptr %f) {
 ; CHECK-LABEL: define {{[^@]+}}@fptr_test1
 ; CHECK-SAME: (ptr [[P:%.*]], ptr nocapture readonly [[F:%.*]]) {
