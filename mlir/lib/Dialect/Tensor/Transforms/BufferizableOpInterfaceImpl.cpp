@@ -779,7 +779,8 @@ struct InsertSliceOpInterface
   }
 };
 
-/// Bufferization of tensor.pad. Replace with tensor.generate + insert_slice.
+/// Bufferization of tensor.pad. Replace with bufferization.alloc_tensor +
+/// linalg.map + insert_slice.
 /// For best performance, vectorize before bufferization (better performance in
 /// case of padding with a constant).
 struct PadOpInterface
@@ -802,6 +803,21 @@ struct PadOpInterface
   SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     return {};
+  }
+
+  FailureOr<BaseMemRefType>
+  getBufferType(Operation *op, Value value, const BufferizationOptions &options,
+                const DenseMap<Value, BaseMemRefType> &fixedTypes) const {
+    // Infer memory space from the source tensor.
+    auto padOp = cast<tensor::PadOp>(op);
+    auto maybeSrcBufferType =
+        bufferization::getBufferType(padOp.getSource(), options, fixedTypes);
+    if (failed(maybeSrcBufferType))
+      return failure();
+    MemRefLayoutAttrInterface layout;
+    return MemRefType::get(padOp.getResultType().getShape(),
+                           padOp.getResultType().getElementType(), layout,
+                           maybeSrcBufferType->getMemorySpace());
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -837,17 +853,22 @@ struct PadOpInterface
       dynamicSizes.push_back(sum);
     }
 
-    // Create tensor::GenerateOp.
-    auto generateOp =
-        rewriter.create<tensor::GenerateOp>(loc, resultType, dynamicSizes);
-    // Move over "escape" attribute if present.
-    if (padOp->hasAttr(BufferizationDialect::kEscapeAttrName))
-      generateOp->setAttr(
-          BufferizationDialect::kEscapeAttrName,
-          padOp->getAttr(BufferizationDialect::kEscapeAttrName));
-    // TODO: Memory space
-    rewriter.inlineRegionBefore(padOp.getRegion(), generateOp.getBody(),
-                                generateOp.getBody().begin());
+    // Should the buffer be deallocated?
+    bool dealloc =
+        shouldDeallocateOpResult(padOp.getResult().cast<OpResult>(), options);
+    // Allocate a buffer for the padded result.
+    FailureOr<Value> tensorAlloc =
+        allocateTensorForShapedValue(rewriter, loc, padOp.getResult(),
+                                     /*escape=*/!dealloc, options,
+                                     /*copy=*/false);
+    if (failed(tensorAlloc))
+      return failure();
+
+    // tensor::PadOp is like tensor::GenerateOp: The only difference is that
+    // only a part of the generated tensor is needed. For simplicity, we reuse
+    // the same functionality here.
+    Value filledBuffer = lowerGenerateLikeOpBody(
+        rewriter, loc, *tensorAlloc, dynamicSizes, padOp.getBodyRegion());
 
     // Create tensor::InsertSliceOp.
     SmallVector<OpFoldResult> sliceSizes =
@@ -855,7 +876,7 @@ struct PadOpInterface
     SmallVector<OpFoldResult> sliceStrides(srcType.getRank(),
                                            rewriter.getIndexAttr(1));
     rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
-        padOp, padOp.getSource(), generateOp.getResult(),
+        padOp, padOp.getSource(), filledBuffer,
         /*offsets=*/padOp.getMixedLowPad(), sliceSizes, sliceStrides);
 
     return success();
