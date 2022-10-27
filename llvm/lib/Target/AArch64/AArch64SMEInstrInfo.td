@@ -53,8 +53,8 @@ let Predicates = [HasSME] in {
 // Outer products
 //===----------------------------------------------------------------------===//
 
-defm BFMOPA_MPPZZ  : sme_bf16_outer_product<0b0, "bfmopa", int_aarch64_sme_mopa_wide>;
-defm BFMOPS_MPPZZ  : sme_bf16_outer_product<0b1, "bfmops", int_aarch64_sme_mops_wide>;
+defm BFMOPA_MPPZZ  : sme_bf16_outer_product<0b000, "bfmopa", int_aarch64_sme_mopa_wide>;
+defm BFMOPS_MPPZZ  : sme_bf16_outer_product<0b001, "bfmops", int_aarch64_sme_mops_wide>;
 
 defm FMOPA_MPPZZ_S : sme_outer_product_fp32<0b0, "fmopa", int_aarch64_sme_mopa>;
 defm FMOPS_MPPZZ_S : sme_outer_product_fp32<0b1, "fmops", int_aarch64_sme_mops>;
@@ -66,8 +66,8 @@ defm FMOPS_MPPZZ_D : sme_outer_product_fp64<0b1, "fmops", int_aarch64_sme_mops>;
 }
 
 let Predicates = [HasSME] in {
-defm FMOPAL_MPPZZ  : sme_f16_outer_product<0b0, "fmopa", int_aarch64_sme_mopa_wide>;
-defm FMOPSL_MPPZZ  : sme_f16_outer_product<0b1, "fmops", int_aarch64_sme_mops_wide>;
+defm FMOPAL_MPPZZ  : sme_f16_outer_product<0b010, "fmopa", int_aarch64_sme_mopa_wide>;
+defm FMOPSL_MPPZZ  : sme_f16_outer_product<0b011, "fmops", int_aarch64_sme_mops_wide>;
 
 defm SMOPA_MPPZZ_S  : sme_int_outer_product_i32<0b000, "smopa",  int_aarch64_sme_smopa_wide>;
 defm SMOPS_MPPZZ_S  : sme_int_outer_product_i32<0b001, "smops",  int_aarch64_sme_smops_wide>;
@@ -550,8 +550,16 @@ defm UMLSLL_VG2_M2ZZ_BtoS  : sme2_mla_ll_array_vg24_single<"umlsll", 0b00110, Ma
 defm UMLSLL_VG4_M4ZZ_BtoS  : sme2_mla_ll_array_vg24_single<"umlsll", 0b01110, MatrixOp32, ZZZZ_b, ZPR4b8>;
 defm UMLSLL_VG2_M2Z2Z_BtoS : sme2_mla_ll_array_vg2_multi<"umlsll", 0b0110, MatrixOp32, ZZ_b_mul_r>;
 defm UMLSLL_VG4_M4Z4Z_BtoS : sme2_mla_ll_array_vg4_multi<"umlsll", 0b0110, MatrixOp32, ZZZZ_b_mul_r>;
-}
 
+defm BMOPA_MPPZZ_S : sme2_bfp_mopx_tile<"bmopa", 0b100>;
+defm BMOPS_MPPZZ_S : sme2_bfp_mopx_tile<"bmops", 0b101>;
+
+defm SMOPA_MPPZZ_HtoS : sme2_int_mopx_tile<"smopa", 0b000>;
+defm SMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"smops", 0b001>;
+
+defm UMOPA_MPPZZ_HtoS : sme2_int_mopx_tile<"umopa", 0b100>;
+defm UMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"umops", 0b101>;
+}
 
 let Predicates = [HasSME2, HasSMEI16I64] in {
 defm ADD_VG2_M2ZZ_D  : sme2_dot_mla_add_sub_array_vg24_single<"add", 0b1011010, MatrixOp64, ZZ_d, ZPR4b64>;
