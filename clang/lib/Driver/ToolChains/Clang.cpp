@@ -2737,6 +2737,11 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   if (C.getDriver().embedBitcodeEnabled() ||
       C.getDriver().embedBitcodeMarkerOnly())
     Args.AddLastArg(CmdArgs, options::OPT_fembed_bitcode_EQ);
+
+  if (const char *AsSecureLogFile = getenv("AS_SECURE_LOG_FILE")) {
+    CmdArgs.push_back("-as-secure-log-file");
+    CmdArgs.push_back(Args.MakeArgString(AsSecureLogFile));
+  }
 }
 
 static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
