@@ -1207,6 +1207,8 @@ HANDLE_DW_IDX(0x02, type_unit)
 HANDLE_DW_IDX(0x03, die_offset)
 HANDLE_DW_IDX(0x04, parent)
 HANDLE_DW_IDX(0x05, type_hash)
+HANDLE_DW_IDX(0x2000, GNU_internal)
+HANDLE_DW_IDX(0x2001, GNU_external)
 
 // DWARF package file section identifiers.
 // DWARFv5, section 7.3.5.3, table 7.1.
