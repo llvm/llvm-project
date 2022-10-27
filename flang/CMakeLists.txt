@@ -1,6 +1,4 @@
 cmake_minimum_required(VERSION 3.13.4)
-include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Modules/CMakePolicy.cmake
-  NO_POLICY_SCOPE)
 
 set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 

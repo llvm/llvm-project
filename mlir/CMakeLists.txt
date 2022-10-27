@@ -1,7 +1,4 @@
 # MLIR project.
-cmake_minimum_required(VERSION 3.13.4)
-include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Modules/CMakePolicy.cmake
-  NO_POLICY_SCOPE)
 
 # Check if MLIR is built as a standalone project.
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -13,6 +10,8 @@ endif()
 include(GNUInstallDirs)
 
 if(MLIR_STANDALONE_BUILD)
+  cmake_minimum_required(VERSION 3.13.4)
+
   find_package(LLVM CONFIG REQUIRED)
   set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${LLVM_CMAKE_DIR})
   include(HandleLLVMOptions)

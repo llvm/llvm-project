@@ -1,6 +1,4 @@
 cmake_minimum_required(VERSION 3.13.4)
-include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/Modules/CMakePolicy.cmake
-  NO_POLICY_SCOPE)
 
 # If we are not building as a part of LLVM, build Clang as an
 # standalone project, using LLVM as an external library:
