@@ -49,7 +49,9 @@ stages there is no ABI stability in any form.
    :maxdepth: 1
    :caption: Using
 
-   runtimes_build
+   usage_modes
+   overlay_mode
+   fullbuild_mode
 
 .. toctree::
    :hidden:
