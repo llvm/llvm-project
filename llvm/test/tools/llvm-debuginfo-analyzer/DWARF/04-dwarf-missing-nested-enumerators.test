@@ -1,3 +1,5 @@
+; REQUIRES: x86-registered-target
+
 ; Test case 4 - Missing nested enumerations.
 
 ; pr-46466.cpp

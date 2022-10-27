@@ -1,3 +1,5 @@
+; REQUIRES: x86-registered-target
+
 ; Test case 5 - Incorrect lexical scope variable.
 
 ; pr-43860.cpp

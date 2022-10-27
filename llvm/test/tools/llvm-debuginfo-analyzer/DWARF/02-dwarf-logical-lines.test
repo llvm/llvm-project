@@ -1,3 +1,5 @@
+; REQUIRES: x86-registered-target
+
 ; Test case 2 - Assembler instructions.
 
 ; hello-world.cpp
