@@ -173,6 +173,16 @@ static void printCommonStructuredOpParts(OpAsmPrinter &p, ValueRange inputs,
     p << " outs(" << outputs << " : " << outputs.getTypes() << ")";
 }
 
+static void printCommonStructuredOpPartsWithNewLine(OpAsmPrinter &p,
+                                                    ValueRange inputs,
+                                                    ValueRange outputs) {
+  p.printNewline();
+  if (!inputs.empty())
+    p << "ins(" << inputs << " : " << inputs.getTypes() << ")";
+  p.printNewline();
+  if (!outputs.empty())
+    p << "outs(" << outputs << " : " << outputs.getTypes() << ")";
+}
 //===----------------------------------------------------------------------===//
 // Specific parsing and printing for named structured ops created by ods-gen.
 //===----------------------------------------------------------------------===//
@@ -1335,16 +1345,20 @@ ParseResult MapOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void MapOp::print(OpAsmPrinter &p) {
-  printCommonStructuredOpParts(p, SmallVector<Value>(getInputOperands()),
-                               SmallVector<Value>(getOutputOperands()));
+  p.increaseIndent();
+  printCommonStructuredOpPartsWithNewLine(
+      p, SmallVector<Value>(getInputOperands()),
+      SmallVector<Value>(getOutputOperands()));
   p.printOptionalAttrDict((*this)->getAttrs());
 
+  p.printNewline();
   p << "(";
   llvm::interleaveComma(getMapper().getArguments(), p,
                         [&](auto arg) { p.printRegionArgument(arg); });
   p << ") ";
 
   p.printRegion(getMapper(), /*printEntryBlockArgs=*/false);
+  p.decreaseIndent();
 }
 
 LogicalResult MapOp::verify() {
@@ -1481,21 +1495,26 @@ ParseResult ReduceOp::parse(OpAsmParser &parser, OperationState &result) {
 
 static void printDenseI64ArrayAttr(OpAsmPrinter &p, StringRef attributeName,
                                    ArrayRef<int64_t> attributeValue) {
-  p << " " << attributeName << " = [" << attributeValue << "] ";
+  p << attributeName << " = [" << attributeValue << "] ";
 }
 
 void ReduceOp::print(OpAsmPrinter &p) {
-  printCommonStructuredOpParts(p, SmallVector<Value>(getInputOperands()),
-                               SmallVector<Value>(getOutputOperands()));
+  p.increaseIndent();
+  printCommonStructuredOpPartsWithNewLine(
+      p, SmallVector<Value>(getInputOperands()),
+      SmallVector<Value>(getOutputOperands()));
+  p.printNewline();
   printDenseI64ArrayAttr(p, getDimensionsAttrName(), getDimensions());
   p.printOptionalAttrDict((*this)->getAttrs(), {getDimensionsAttrName()});
 
+  p.printNewline();
   p << "(";
   llvm::interleaveComma(getCombiner().getArguments(), p,
                         [&](auto arg) { p.printRegionArgument(arg); });
   p << ") ";
 
   p.printRegion(getCombiner(), /*printEntryBlockArgs=*/false);
+  p.decreaseIndent();
 }
 
 LogicalResult ReduceOp::verify() {
@@ -1657,10 +1676,14 @@ void TransposeOp::getAsmResultNames(
 }
 
 void TransposeOp::print(OpAsmPrinter &p) {
-  printCommonStructuredOpParts(p, SmallVector<Value>(getInputOperands()),
-                               SmallVector<Value>(getOutputOperands()));
+  p.increaseIndent();
+  printCommonStructuredOpPartsWithNewLine(
+      p, SmallVector<Value>(getInputOperands()),
+      SmallVector<Value>(getOutputOperands()));
+  p.printNewline();
   printDenseI64ArrayAttr(p, getPermutationAttrName(), getPermutation());
   p.printOptionalAttrDict((*this)->getAttrs(), {getPermutationAttrName()});
+  p.decreaseIndent();
 }
 
 LogicalResult TransposeOp::verify() {
