@@ -1,3 +1,5 @@
+; REQUIRES: x86-registered-target
+
 ; Test case 3 - Incorrect lexical scope for typedef.
 
 ; pr-44884.cpp

@@ -1,3 +1,5 @@
+; REQUIRES: x86-registered-target
+
 ; Test case 1 - General options
 
 ; test.cpp
