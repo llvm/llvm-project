@@ -77,6 +77,11 @@ LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
+static void reportOutOfRangeError(MCContext &Ctx, SMLoc Loc, unsigned N) {
+  Ctx.reportError(Loc, "fixup value out of range [" + Twine(llvm::minIntN(N)) +
+                           ", " + Twine(llvm::maxIntN(N)) + "]");
+}
+
 static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
                                  MCContext &Ctx) {
   switch (Fixup.getTargetKind()) {
@@ -89,21 +94,21 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     return Value;
   case LoongArch::fixup_loongarch_b16: {
     if (!isInt<18>(Value))
-      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+      reportOutOfRangeError(Ctx, Fixup.getLoc(), 18);
     if (Value % 4)
       Ctx.reportError(Fixup.getLoc(), "fixup value must be 4-byte aligned");
     return (Value >> 2) & 0xffff;
   }
   case LoongArch::fixup_loongarch_b21: {
     if (!isInt<23>(Value))
-      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+      reportOutOfRangeError(Ctx, Fixup.getLoc(), 23);
     if (Value % 4)
       Ctx.reportError(Fixup.getLoc(), "fixup value must be 4-byte aligned");
     return ((Value & 0x3fffc) << 8) | ((Value >> 18) & 0x1f);
   }
   case LoongArch::fixup_loongarch_b26: {
     if (!isInt<28>(Value))
-      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+      reportOutOfRangeError(Ctx, Fixup.getLoc(), 28);
     if (Value % 4)
       Ctx.reportError(Fixup.getLoc(), "fixup value must be 4-byte aligned");
     return ((Value & 0x3fffc) << 8) | ((Value >> 18) & 0x3ff);
