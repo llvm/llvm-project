@@ -211,36 +211,31 @@ combineOptionalValuesInAAValueLatice(const Optional<Value *> &A,
 
 /// Helper to represent an access offset and size, with logic to deal with
 /// uncertainty and check for overlapping accesses.
-struct OffsetAndSize : public std::pair<int64_t, int64_t> {
-  using BaseTy = std::pair<int64_t, int64_t>;
-  OffsetAndSize(int64_t Offset, int64_t Size) : BaseTy(Offset, Size) {}
-  OffsetAndSize(const BaseTy &P) : BaseTy(P) {}
-  int64_t getOffset() const { return first; }
-  int64_t getSize() const { return second; }
-  static OffsetAndSize getUnknown() { return OffsetAndSize(Unknown, Unknown); }
-  static OffsetAndSize getUnassigned() {
-    return OffsetAndSize(Unassigned, Unassigned);
-  }
+struct OffsetAndSize {
+  int64_t Offset = Unassigned;
+  int64_t Size = Unassigned;
+
+  OffsetAndSize(int64_t Offset, int64_t Size) : Offset(Offset), Size(Size) {}
+  OffsetAndSize() = default;
+  static OffsetAndSize getUnknown() { return OffsetAndSize{Unknown, Unknown}; }
 
   /// Return true if offset or size are unknown.
   bool offsetOrSizeAreUnknown() const {
-    return getOffset() == OffsetAndSize::Unknown ||
-           getSize() == OffsetAndSize::Unknown;
+    return Offset == OffsetAndSize::Unknown || Size == OffsetAndSize::Unknown;
   }
 
   /// Return true if offset and size are unknown, thus this is the default
   /// unknown object.
   bool offsetAndSizeAreUnknown() const {
-    return getOffset() == OffsetAndSize::Unknown &&
-           getSize() == OffsetAndSize::Unknown;
+    return Offset == OffsetAndSize::Unknown && Size == OffsetAndSize::Unknown;
   }
 
   /// Return true if the offset and size are unassigned.
   bool isUnassigned() const {
-    assert((getOffset() == OffsetAndSize::Unassigned) ==
-               (getSize() == OffsetAndSize::Unassigned) &&
+    assert((Offset == OffsetAndSize::Unassigned) ==
+               (Size == OffsetAndSize::Unassigned) &&
            "Inconsistent state!");
-    return getOffset() == OffsetAndSize::Unassigned;
+    return Offset == OffsetAndSize::Unassigned;
   }
 
   /// Return true if this offset and size pair might describe an address that
@@ -252,14 +247,24 @@ struct OffsetAndSize : public std::pair<int64_t, int64_t> {
 
     // Check if one offset point is in the other interval [offset,
     // offset+size].
-    return OAS.getOffset() + OAS.getSize() > getOffset() &&
-           OAS.getOffset() < getOffset() + getSize();
+    return OAS.Offset + OAS.Size > Offset && OAS.Offset < Offset + Size;
   }
 
   /// Constants used to represent special offsets or sizes.
+  /// - This assumes that Offset and Size are non-negative.
+  /// - The constants should not clash with DenseMapInfo, such as EmptyKey
+  ///   (INT64_MAX) and TombstoneKey (INT64_MIN).
   static constexpr int64_t Unassigned = -1;
   static constexpr int64_t Unknown = -2;
 };
+
+inline bool operator==(const OffsetAndSize &A, const OffsetAndSize &B) {
+  return A.Offset == B.Offset && A.Size == B.Size;
+}
+
+inline bool operator!=(const OffsetAndSize &A, const OffsetAndSize &B) {
+  return !(A == B);
+}
 
 /// Return the initial value of \p Obj with type \p Ty if that is a constant.
 Constant *getInitialValueForObj(Value &Obj, Type &Ty,
