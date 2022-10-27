@@ -6258,12 +6258,12 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
 
         bool is_executable = true;
         uint32_t major_version, minor_version, patch_version;
-        auto *platform =
+        std::optional<std::string> platform =
             DNBGetDeploymentInfo(pid, is_executable, lc, load_command_addr,
                                  major_version, minor_version, patch_version);
         if (platform) {
           os_handled = true;
-          rep << "ostype:" << platform << ";";
+          rep << "ostype:" << *platform << ";";
           break;
         }
         load_command_addr = load_command_addr + lc.cmdsize;
