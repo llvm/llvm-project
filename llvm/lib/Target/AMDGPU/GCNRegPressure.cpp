@@ -260,6 +260,22 @@ void GCNRPTracker::reset(const MachineInstr &MI,
   }
 
   MaxPressure = CurPressure = getRegPressure(*MRI, LiveRegs);
+
+  LLVM_DEBUG(dbgs() << "\nReset " << (After ? "after" : "before") << ": " << MI
+                    << print(LiveRegs, *MRI));
+#if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
+  if (LiveRegsCopy) {
+    auto LISLRS =
+        After ? getLiveRegsAfter(MI, LIS) : getLiveRegsBefore(MI, LIS);
+    if (!isEqual(LISLRS, *LiveRegsCopy)) {
+      dbgs() << "RP mismatch: "
+             << reportMismatch(LISLRS, *LiveRegsCopy,
+                               MRI->getTargetRegisterInfo());
+      llvm_unreachable("GCNRPTracker::reset LiveRegsCopy doens't match those "
+                       "calculated by LIS");
+    }
+  }
+#endif
 }
 
 void GCNUpwardRPTracker::reset(const MachineInstr &MI,
