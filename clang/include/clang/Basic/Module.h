@@ -349,7 +349,7 @@ public:
 
   /// The set of top-level modules that affected the compilation of this module,
   /// but were not imported.
-  llvm::SmallSetVector<Module *, 2> AffectingModules;
+  llvm::SmallSetVector<Module *, 2> AffectingClangModules;
 
   /// Describes an exported module.
   ///
