@@ -56,8 +56,8 @@ private:
 #endif
 
 #if _LIBCPP_STD_VER > 17
-    static_assert(__is_cpp17_bidirectional_iterator<_Iter>::value || bidirectional_iterator<_Iter>,
-        "reverse_iterator<It> requires It to be a bidirectional iterator.");
+    /// static_assert(__is_cpp17_bidirectional_iterator<_Iter>::value || bidirectional_iterator<_Iter>,
+    ///     "reverse_iterator<It> requires It to be a bidirectional iterator.");
 #endif // _LIBCPP_STD_VER > 17
 
 protected:
