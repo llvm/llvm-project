@@ -10049,13 +10049,13 @@ bool clang::isBetterOverloadCandidate(
   //      parameter-type-lists, and F1 is more constrained than F2 [...],
   if (!Cand1IsSpecialization && !Cand2IsSpecialization &&
       sameFunctionParameterTypeLists(S, Cand1, Cand2)) {
-    Expr *RC1 = Cand1.Function->getTrailingRequiresClause();
-    Expr *RC2 = Cand2.Function->getTrailingRequiresClause();
+    const Expr *RC1 = Cand1.Function->getTrailingRequiresClause();
+    const Expr *RC2 = Cand2.Function->getTrailingRequiresClause();
     if (RC1 && RC2) {
       bool AtLeastAsConstrained1, AtLeastAsConstrained2;
-      if (S.IsAtLeastAsConstrained(Cand1.Function, {RC1}, Cand2.Function, {RC2},
+      if (S.IsAtLeastAsConstrained(Cand1.Function, RC1, Cand2.Function, RC2,
                                    AtLeastAsConstrained1) ||
-          S.IsAtLeastAsConstrained(Cand2.Function, {RC2}, Cand1.Function, {RC1},
+          S.IsAtLeastAsConstrained(Cand2.Function, RC2, Cand1.Function, RC1,
                                    AtLeastAsConstrained2))
         return false;
       if (AtLeastAsConstrained1 != AtLeastAsConstrained2)

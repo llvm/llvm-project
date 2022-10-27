@@ -75,7 +75,8 @@ struct Response {
 // Add template arguments from a variable template instantiation.
 Response
 HandleVarTemplateSpec(const VarTemplateSpecializationDecl *VarTemplSpec,
-                      MultiLevelTemplateArgumentList &Result) {
+                      MultiLevelTemplateArgumentList &Result,
+                      bool SkipForSpecialization) {
   // For a class-scope explicit specialization, there are no template arguments
   // at this level, but there may be enclosing template arguments.
   if (VarTemplSpec->isClassScopeExplicitSpecialization())
@@ -93,16 +94,18 @@ HandleVarTemplateSpec(const VarTemplateSpecializationDecl *VarTemplSpec,
       Specialized = VarTemplSpec->getSpecializedTemplateOrPartial();
   if (VarTemplatePartialSpecializationDecl *Partial =
           Specialized.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
-    Result.addOuterTemplateArguments(
-        Partial, VarTemplSpec->getTemplateInstantiationArgs().asArray(),
-        /*Final=*/false);
+    if (!SkipForSpecialization)
+      Result.addOuterTemplateArguments(
+          Partial, VarTemplSpec->getTemplateInstantiationArgs().asArray(),
+          /*Final=*/false);
     if (Partial->isMemberSpecialization())
       return Response::Done();
   } else {
     VarTemplateDecl *Tmpl = Specialized.get<VarTemplateDecl *>();
-    Result.addOuterTemplateArguments(
-        Tmpl, VarTemplSpec->getTemplateInstantiationArgs().asArray(),
-        /*Final=*/false);
+    if (!SkipForSpecialization)
+      Result.addOuterTemplateArguments(
+          Tmpl, VarTemplSpec->getTemplateInstantiationArgs().asArray(),
+          /*Final=*/false);
     if (Tmpl->isMemberSpecialization())
       return Response::Done();
   }
@@ -126,17 +129,19 @@ HandleDefaultTempArgIntoTempTempParam(const TemplateTemplateParmDecl *TTP,
 // Add template arguments from a class template instantiation.
 Response
 HandleClassTemplateSpec(const ClassTemplateSpecializationDecl *ClassTemplSpec,
-                        MultiLevelTemplateArgumentList &Result) {
+                        MultiLevelTemplateArgumentList &Result,
+                        bool SkipForSpecialization) {
   if (!ClassTemplSpec->isClassScopeExplicitSpecialization()) {
     // We're done when we hit an explicit specialization.
     if (ClassTemplSpec->getSpecializationKind() == TSK_ExplicitSpecialization &&
         !isa<ClassTemplatePartialSpecializationDecl>(ClassTemplSpec))
       return Response::Done();
 
-    Result.addOuterTemplateArguments(
-        const_cast<ClassTemplateSpecializationDecl *>(ClassTemplSpec),
-        ClassTemplSpec->getTemplateInstantiationArgs().asArray(),
-        /*Final=*/false);
+    if (!SkipForSpecialization)
+      Result.addOuterTemplateArguments(
+          const_cast<ClassTemplateSpecializationDecl *>(ClassTemplSpec),
+          ClassTemplSpec->getTemplateInstantiationArgs().asArray(),
+          /*Final=*/false);
 
     // If this class template specialization was instantiated from a
     // specialized member that is a class template, we're done.
@@ -279,7 +284,7 @@ Response HandleGenericDeclContext(const Decl *CurDecl) {
 MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
     const NamedDecl *ND, bool Final, const TemplateArgumentList *Innermost,
     bool RelativeToPrimary, const FunctionDecl *Pattern,
-    bool ForConstraintInstantiation) {
+    bool ForConstraintInstantiation, bool SkipForSpecialization) {
   assert(ND && "Can't find arguments for a decl if one isn't provided");
   // Accumulate the set of template argument lists in this structure.
   MultiLevelTemplateArgumentList Result;
@@ -295,10 +300,11 @@ MultiLevelTemplateArgumentList Sema::getTemplateInstantiationArgs(
     Response R;
     if (const auto *VarTemplSpec =
             dyn_cast<VarTemplateSpecializationDecl>(CurDecl)) {
-      R = HandleVarTemplateSpec(VarTemplSpec, Result);
+      R = HandleVarTemplateSpec(VarTemplSpec, Result, SkipForSpecialization);
     } else if (const auto *ClassTemplSpec =
                    dyn_cast<ClassTemplateSpecializationDecl>(CurDecl)) {
-      R = HandleClassTemplateSpec(ClassTemplSpec, Result);
+      R = HandleClassTemplateSpec(ClassTemplSpec, Result,
+                                  SkipForSpecialization);
     } else if (const auto *Function = dyn_cast<FunctionDecl>(CurDecl)) {
       R = HandleFunction(Function, Result, Pattern, RelativeToPrimary,
                          ForConstraintInstantiation);
