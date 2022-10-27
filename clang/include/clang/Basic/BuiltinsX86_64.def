@@ -140,6 +140,12 @@ TARGET_BUILTIN(__builtin_ia32_cmpccxadd64, "SLLiv*SLLiSLLiIi", "n", "cmpccxadd")
 // AMX_FP16 FP16
 TARGET_BUILTIN(__builtin_ia32_tdpfp16ps, "vIUcIUcIUc", "n", "amx-fp16")
 
+// RAO-INT
+TARGET_BUILTIN(__builtin_ia32_aadd64, "vv*SOi", "n", "raoint")
+TARGET_BUILTIN(__builtin_ia32_aand64, "vv*SOi", "n", "raoint")
+TARGET_BUILTIN(__builtin_ia32_aor64, "vv*SOi", "n", "raoint")
+TARGET_BUILTIN(__builtin_ia32_axor64, "vv*SOi", "n", "raoint")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN
 #undef TARGET_HEADER_BUILTIN

@@ -28,6 +28,10 @@
 #if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
     defined(__PRFCHI__)
 #include <prfchiintrin.h>
+
+#if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
+    defined(__RAOINT__)
+#include <raointintrin.h>
 #endif
 
 #if defined(__i386__)
