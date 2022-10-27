@@ -1845,13 +1845,13 @@ bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   Amt->setReg(NewAmt);
   Amt->setIsKill(false);
   // We do not update liveness, so verifier may see it as undef.
-  Amt->setIsUndef(true);
+  Amt->setIsUndef();
   if (OverlappedDst)
     MI->getOperand(0).setReg(NewReg);
   if (OverlappedSrc) {
     Src1->setReg(NewReg);
     Src1->setIsKill(false);
-    Src1->setIsUndef(true);
+    Src1->setIsUndef();
   }
 
   return true;
