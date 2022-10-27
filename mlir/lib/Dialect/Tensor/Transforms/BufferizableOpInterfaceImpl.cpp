@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -487,6 +488,57 @@ struct FromElementsOpInterface
   }
 };
 
+/// Lower the body of a tensor.generate like op (one index-typed bbArg per dim).
+/// Such ops are lowered to linalg.map with the given tensor as a destination.
+///
+/// Example:
+/// ```
+/// %r = tensor.generate %x, %y {
+///   ^bb0(%arg0: index, %arg1: index):
+///   %0 = "some_op"(%arg0, %arg1) : (index, index) -> (index)
+///   tensor.yield %0 : index
+/// } : tensor<?x?xindex>
+/// ```
+///
+/// Is lowered to:
+/// ```
+/// linalg.map ins() outs(%dest) {
+///   %d0 = linalg.index 0 : index
+///   %d1 = linalg.index 1 : index
+///   %0 = "some_op"(%d0, %d1) : (index, index) -> (index)
+///   linalg.yield %0 : index
+/// }
+/// ```
+static Value lowerGenerateLikeOpBody(RewriterBase &rewriter, Location loc,
+                                     Value tensorDestination,
+                                     ValueRange dynamicSizes,
+                                     Region &generateBody) {
+  assert(generateBody.hasOneBlock() && "expected body with single block");
+  auto tensorType = tensorDestination.getType().cast<RankedTensorType>();
+  assert(generateBody.getNumArguments() == tensorType.getRank() &&
+         "rank mismatch");
+
+  // Create linalg::MapOp.
+  OpBuilder::InsertionGuard g(rewriter);
+  auto linalgOp =
+      rewriter.create<linalg::MapOp>(loc, tensorType, /*inputs=*/ValueRange(),
+                                     /*init=*/tensorDestination);
+  Block &linalgBody = linalgOp.getMapper().emplaceBlock();
+
+  // Create linalg::IndexOps.
+  rewriter.setInsertionPointToStart(&linalgBody);
+  SmallVector<Value> indices;
+  for (int64_t dim = 0; dim < tensorType.getRank(); ++dim)
+    indices.push_back(rewriter.create<linalg::IndexOp>(loc, dim));
+
+  // Move over body.
+  rewriter.mergeBlocks(&generateBody.front(), &linalgBody, indices);
+  auto yieldOp = cast<tensor::YieldOp>(linalgBody.getTerminator());
+  rewriter.replaceOpWithNewOp<linalg::YieldOp>(yieldOp, yieldOp.getValue());
+
+  return linalgOp.getResult()[0];
+}
+
 /// Bufferization of tensor.generate.
 struct GenerateOpInterface
     : public BufferizableOpInterface::ExternalModel<GenerateOpInterface,
@@ -507,57 +559,19 @@ struct GenerateOpInterface
     if (options.defaultMemorySpace != static_cast<unsigned>(0))
       return op->emitError("memory space not implemented yet");
 
-    auto tensorType = generateOp.getType().cast<RankedTensorType>();
     // Allocate memory.
     Location loc = op->getLoc();
-    // TODO: Create alloc_tensor ops during TensorCopyInsertion.
     FailureOr<Value> tensorAlloc =
         allocateTensorForShapedValue(rewriter, loc, generateOp.getResult(),
                                      /*escape=*/!dealloc, options,
                                      /*copy=*/false);
     if (failed(tensorAlloc))
       return failure();
-    auto memrefType =
-        MemRefType::get(tensorType.getShape(), tensorType.getElementType());
-    Value buffer = rewriter.create<bufferization::ToMemrefOp>(
-        op->getLoc(), memrefType, *tensorAlloc);
 
-    // Collect loop bounds.
-    int64_t rank = memrefType.getRank();
-    Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    Value one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-    SmallVector<Value, 4> lowerBounds(rank, zero);
-    SmallVector<Value, 4> steps(rank, one);
-    SmallVector<Value, 4> upperBounds;
-    int nextDynamicIndex = 0;
-    for (int i = 0; i < rank; i++) {
-      Value upperBound =
-          memrefType.isDynamicDim(i)
-              ? generateOp.getDynamicExtents()[nextDynamicIndex++]
-              : rewriter.create<arith::ConstantIndexOp>(
-                    loc, memrefType.getDimSize(i));
-      upperBounds.push_back(upperBound);
-    }
-
-    // Generate tensor elements with a parallel loop that stores into
-    // each element of the resulting memref. We use mergeBlockBefore to "move"
-    // this op's body into the scf.parallel's body.
-    auto parallel =
-        rewriter.create<scf::ParallelOp>(loc, lowerBounds, upperBounds, steps);
-    Block *parallelBody = parallel.getBody();
-    rewriter.mergeBlockBefore(&generateOp.getBody().front(),
-                              parallelBody->getTerminator(),
-                              parallelBody->getArguments());
-    // Replace the inlined yield op with a store op. The scf.parallel's builder
-    // already populated an scf.yield at the end, so we don't need to worry
-    // about creating that.
-    Operation *elementYield = parallelBody->getTerminator()->getPrevNode();
-    rewriter.setInsertionPointAfter(elementYield);
-    rewriter.replaceOpWithNewOp<memref::StoreOp>(
-        elementYield, elementYield->getOperands()[0], buffer,
-        parallelBody->getArguments());
-
-    replaceOpWithBufferizedValues(rewriter, op, buffer);
+    Value result = lowerGenerateLikeOpBody(rewriter, loc, *tensorAlloc,
+                                           generateOp.getDynamicExtents(),
+                                           generateOp.getBody());
+    rewriter.replaceOp(generateOp, result);
 
     return success();
   }
@@ -1019,6 +1033,6 @@ void mlir::tensor::registerBufferizableOpInterfaceExternalModels(
     ReshapeOp::attachInterface<ReshapeOpInterface>(*ctx);
 
     // Load additional dialects of which ops may get created.
-    ctx->loadDialect<arith::ArithDialect, scf::SCFDialect>();
+    ctx->loadDialect<arith::ArithDialect, linalg::LinalgDialect>();
   });
 }
