@@ -238,7 +238,7 @@ Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty,
     return UndefValue::get(&Ty);
 
   if (OASPtr && !OASPtr->offsetOrSizeAreUnknown()) {
-    APInt Offset = APInt(64, OASPtr->getOffset());
+    APInt Offset = APInt(64, OASPtr->Offset);
     return ConstantFoldLoadFromConst(GV->getInitializer(), &Ty, Offset, DL);
   }
 
@@ -452,7 +452,7 @@ static bool getPotentialCopiesOfMemoryValue(
     // object.
     bool HasBeenWrittenTo = false;
 
-    AA::OffsetAndSize OAS = AA::OffsetAndSize::getUnassigned();
+    AA::OffsetAndSize OAS;
     auto &PI = A.getAAFor<AAPointerInfo>(QueryingAA, IRPosition::value(*Obj),
                                          DepClassTy::NONE);
     if (!PI.forallInterferingAccesses(A, QueryingAA, I, CheckAccess,
