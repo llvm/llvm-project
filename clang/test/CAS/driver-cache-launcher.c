@@ -80,6 +80,10 @@
 // ASM: warning: caching disabled because assembler language mode is enabled
 // ASM-NOT: "-cc1depscan"
 
+// RUN: env AS_SECURE_LOG_FILE=%t/log %clang-cache %clang -target arm64-apple-macosx12 -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=AS_SECURE_LOG_FILE
+// AS_SECURE_LOG_FILE: warning: caching disabled because AS_SECURE_LOG_FILE is set
+// AS_SECURE_LOG_FILE-NOT: "-cc1depscan"
+
 // RUN: env LLVM_CACHE_WARNINGS=-Wno-clang-cache %clang-cache %clang -x c++ -fmodules -fmodules-cache-path=%t/mcp -fcxx-modules -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=MOD_HIDE -DPREFIX=%t
 // MOD_HIDE-NOT: warning: caching disabled
 // MOD_HIDE-NOT: "-cc1depscan"

@@ -58,6 +58,12 @@ static bool shouldCacheInvocation(ArrayRef<const char *> Args,
         << "assembler language mode is enabled";
     return false;
   }
+  if (llvm::sys::Process::GetEnv("AS_SECURE_LOG_FILE")) {
+    // AS_SECURE_LOG_FILE causes uncaptured output in MC assembler.
+    Diags->Report(diag::warn_clang_cache_disabled_caching)
+        << "AS_SECURE_LOG_FILE is set";
+    return false;
+  }
   return true;
 }
 
