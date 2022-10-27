@@ -15,7 +15,8 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, memcmp,
                    (const void *lhs, const void *rhs, size_t count)) {
-  return inline_memcmp(lhs, rhs, count);
+  return inline_memcmp(static_cast<const char *>(lhs),
+                       static_cast<const char *>(rhs), count);
 }
 
 } // namespace __llvm_libc

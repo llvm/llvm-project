@@ -371,7 +371,7 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     MDC.addFileDep(MDC.ScanInstance.getPreprocessorOpts().ImplicitPCHInclude);
 
   for (const Module *M :
-       MDC.ScanInstance.getPreprocessor().getAffectingModules())
+       MDC.ScanInstance.getPreprocessor().getAffectingClangModules())
     if (!MDC.isPrebuiltModule(M))
       DirectModularDeps.insert(M);
 
@@ -444,7 +444,7 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   llvm::DenseSet<const Module *> SeenDeps;
   addAllSubmodulePrebuiltDeps(M, MD, SeenDeps);
   addAllSubmoduleDeps(M, MD, SeenDeps);
-  addAllAffectingModules(M, MD, SeenDeps);
+  addAllAffectingClangModules(M, MD, SeenDeps);
 
   MDC.ScanInstance.getASTReader()->visitTopLevelModuleMaps(
       *MF, [&](const FileEntry *FE) {
@@ -527,19 +527,19 @@ void ModuleDepCollectorPP::addModuleDep(
   }
 }
 
-void ModuleDepCollectorPP::addAllAffectingModules(
+void ModuleDepCollectorPP::addAllAffectingClangModules(
     const Module *M, ModuleDeps &MD,
     llvm::DenseSet<const Module *> &AddedModules) {
-  addAffectingModule(M, MD, AddedModules);
+  addAffectingClangModule(M, MD, AddedModules);
 
   for (const Module *SubM : M->submodules())
-    addAllAffectingModules(SubM, MD, AddedModules);
+    addAllAffectingClangModules(SubM, MD, AddedModules);
 }
 
-void ModuleDepCollectorPP::addAffectingModule(
+void ModuleDepCollectorPP::addAffectingClangModule(
     const Module *M, ModuleDeps &MD,
     llvm::DenseSet<const Module *> &AddedModules) {
-  for (const Module *Affecting : M->AffectingModules) {
+  for (const Module *Affecting : M->AffectingClangModules) {
     assert(Affecting == Affecting->getTopLevelModule() &&
            "Not quite import not top-level module");
     if (Affecting != M->getTopLevelModule() &&

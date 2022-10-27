@@ -315,14 +315,14 @@ private:
   /// lexed, if any.
   SourceLocation ModuleImportLoc;
 
-  /// The module import path that we're currently processing.
-  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> ModuleImportPath;
+  /// The import path for named module that we're currently processing.
+  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> NamedModuleImportPath;
 
   /// Whether the last token we lexed was an '@'.
   bool LastTokenWasAt = false;
 
   /// A position within a C++20 import-seq.
-  class ImportSeq {
+  class StdCXXImportSeq {
   public:
     enum State : int {
       // Positive values represent a number of unclosed brackets.
@@ -332,7 +332,7 @@ private:
       AfterImportSeq = -3,
     };
 
-    ImportSeq(State S) : S(S) {}
+    StdCXXImportSeq(State S) : S(S) {}
 
     /// Saw any kind of open bracket.
     void handleOpenBracket() {
@@ -398,7 +398,7 @@ private:
   };
 
   /// Our current position within a C++20 import-seq.
-  ImportSeq ImportSeqState = ImportSeq::AfterTopLevelTokenSeq;
+  StdCXXImportSeq StdCXXImportSeqState = StdCXXImportSeq::AfterTopLevelTokenSeq;
 
   /// Track whether we are in a Global Module Fragment
   class TrackGMF {
@@ -865,7 +865,7 @@ private:
 
   /// The set of top-level modules that affected preprocessing, but were not
   /// imported.
-  llvm::SmallSetVector<Module *, 2> AffectingModules;
+  llvm::SmallSetVector<Module *, 2> AffectingClangModules;
 
   /// The set of known macros exported from modules.
   llvm::FoldingSet<ModuleMacro> ModuleMacros;
@@ -1329,20 +1329,21 @@ public:
 
   /// \}
 
-  /// Mark the given module as affecting the current module or translation unit.
-  void markModuleAsAffecting(Module *M) {
+  /// Mark the given clang module as affecting the current clang module or translation unit.
+  void markClangModuleAsAffecting(Module *M) {
+    assert(M->isModuleMapModule());
     if (!BuildingSubmoduleStack.empty()) {
       if (M != BuildingSubmoduleStack.back().M)
-        BuildingSubmoduleStack.back().M->AffectingModules.insert(M);
+        BuildingSubmoduleStack.back().M->AffectingClangModules.insert(M);
     } else {
-      AffectingModules.insert(M);
+      AffectingClangModules.insert(M);
     }
   }
 
-  /// Get the set of top-level modules that affected preprocessing, but were not
+  /// Get the set of top-level clang modules that affected preprocessing, but were not
   /// imported.
-  const llvm::SmallSetVector<Module *, 2> &getAffectingModules() const {
-    return AffectingModules;
+  const llvm::SmallSetVector<Module *, 2> &getAffectingClangModules() const {
+    return AffectingClangModules;
   }
 
   /// Mark the file as included.

@@ -427,7 +427,10 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":DebugInfoDWARF",
+        ":DebugInfoPDB",
         ":MC",
+        ":MCDisassembler",
         ":Object",
         ":Support",
     ],

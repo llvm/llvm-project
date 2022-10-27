@@ -3032,12 +3032,43 @@ TEST_F(DIExpressionTest, createFragmentExpression) {
   EXPECT_VALID_FRAGMENT(16, 16, dwarf::DW_OP_LLVM_fragment, 0, 32);
 
   // Invalid fragment expressions (incompatible ops).
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 6, dwarf::DW_OP_plus);
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 14, dwarf::DW_OP_minus);
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shr);
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shl);
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shra);
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 6, dwarf::DW_OP_plus,
+                          dwarf::DW_OP_stack_value);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 14, dwarf::DW_OP_minus,
+                          dwarf::DW_OP_stack_value);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shr,
+                          dwarf::DW_OP_stack_value);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shl,
+                          dwarf::DW_OP_stack_value);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shra,
+                          dwarf::DW_OP_stack_value);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                          dwarf::DW_OP_stack_value);
+
+  // Fragments can be created for expressions using DW_OP_plus to compute an
+  // address.
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 6, dwarf::DW_OP_plus);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6, dwarf::DW_OP_deref);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6, dwarf::DW_OP_deref,
+                        dwarf::DW_OP_stack_value);
+
+  // Check the other deref operations work in the same way.
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                        dwarf::DW_OP_deref_size, 1);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                        dwarf::DW_OP_deref_type, 1, 1);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                        dwarf::DW_OP_xderef);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                        dwarf::DW_OP_xderef_size, 1);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                        dwarf::DW_OP_xderef_type, 1, 1);
+
+  // Fragments cannot be created for expressions using DW_OP_plus to compute an
+  // implicit value (check that this correctly fails even though there is a
+  // deref in the expression).
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_deref, dwarf::DW_OP_plus_uconst,
+                          2, dwarf::DW_OP_stack_value);
 
 #undef EXPECT_VALID_FRAGMENT
 #undef EXPECT_INVALID_FRAGMENT

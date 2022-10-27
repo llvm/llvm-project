@@ -5137,6 +5137,27 @@ let TargetPrefix = "x86" in {
                                     ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
 }
 //===----------------------------------------------------------------------===//
+// RAO-INT intrinsics
+let TargetPrefix = "x86" in {
+  def int_x86_aadd32 : ClangBuiltin<"__builtin_ia32_aadd32">,
+                       Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty], []>;
+  def int_x86_aadd64 : ClangBuiltin<"__builtin_ia32_aadd64">,
+                       Intrinsic<[], [llvm_ptr_ty, llvm_i64_ty], []>;
+  def int_x86_aand32 : ClangBuiltin<"__builtin_ia32_aand32">,
+                       Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty], []>;
+  def int_x86_aand64 : ClangBuiltin<"__builtin_ia32_aand64">,
+                       Intrinsic<[], [llvm_ptr_ty, llvm_i64_ty], []>;
+  def int_x86_aor32 : ClangBuiltin<"__builtin_ia32_aor32">,
+                      Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty], []>;
+  def int_x86_aor64 : ClangBuiltin<"__builtin_ia32_aor64">,
+                      Intrinsic<[], [llvm_ptr_ty, llvm_i64_ty], []>;
+  def int_x86_axor32 : ClangBuiltin<"__builtin_ia32_axor32">,
+                       Intrinsic<[], [llvm_ptr_ty, llvm_i32_ty], []>;
+  def int_x86_axor64 : ClangBuiltin<"__builtin_ia32_axor64">,
+                       Intrinsic<[], [llvm_ptr_ty, llvm_i64_ty], []>;
+}
+
+//===----------------------------------------------------------------------===//
 // UINTR - User Level Interrupt
 
 let TargetPrefix = "x86" in {

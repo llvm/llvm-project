@@ -29,10 +29,15 @@ LogicalResult detail::verifyDestinationStyleOpInterface(Operation *op) {
   SmallVector<OpOperand *> outputBufferOperands, outputTensorOperands;
   for (OpOperand *operand : dstStyleOp.getOutputOperands()) {
     Type type = operand->get().getType();
-    if (type.isa<MemRefType>())
+    if (type.isa<MemRefType>()) {
       outputBufferOperands.push_back(operand);
-    if (type.isa<RankedTensorType>())
+    } else if (type.isa<RankedTensorType>()) {
       outputTensorOperands.push_back(operand);
+    } else {
+      return op->emitOpError("expected that operand #")
+             << operand->getOperandNumber()
+             << " is a ranked tensor or a ranked memref";
+    }
   }
 
   // Expect at least one output operand.

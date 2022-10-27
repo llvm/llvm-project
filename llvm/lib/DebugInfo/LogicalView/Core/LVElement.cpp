@@ -516,3 +516,15 @@ void LVElement::printLinkageName(raw_ostream &OS, bool Full,
                     /*UseQuotes=*/true, /*PrintRef=*/false);
   }
 }
+
+void LVElement::printLinkageName(raw_ostream &OS, bool Full, LVElement *Parent,
+                                 LVScope *Scope) const {
+  if (options().getPrintFormatting() && options().getAttributeLinkage()) {
+    LVSectionIndex SectionIndex = getReader().getSectionIndex(Scope);
+    std::string Text = (Twine(" 0x") + Twine::utohexstr(SectionIndex) +
+                        Twine(" '") + Twine(getLinkageName()) + Twine("'"))
+                           .str();
+    printAttributes(OS, Full, "{Linkage} ", Parent, Text,
+                    /*UseQuotes=*/false, /*PrintRef=*/false);
+  }
+}

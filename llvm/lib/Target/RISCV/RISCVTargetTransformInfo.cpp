@@ -486,6 +486,18 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                     TTI::TargetCostKind CostKind) {
   auto *RetTy = ICA.getReturnType();
   switch (ICA.getID()) {
+  case Intrinsic::ceil:
+  case Intrinsic::floor:
+  case Intrinsic::trunc:
+  case Intrinsic::rint:
+  case Intrinsic::round:
+  case Intrinsic::roundeven: {
+    // These all use the same code.
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (!LT.second.isVector() && TLI->isOperationCustom(ISD::FCEIL, LT.second))
+      return LT.first * 8;
+    break;
+  }
   case Intrinsic::umin:
   case Intrinsic::umax:
   case Intrinsic::smin:

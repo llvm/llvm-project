@@ -64,7 +64,7 @@ public:
     llvm::StringRef arithFMFAttrName = SourceOp::getFastMathAttrName();
     // Remove the source fastmath attribute.
     auto arithFMFAttr = convertedAttr.erase(arithFMFAttrName)
-                            .dyn_cast_or_null<arith::FastMathFlagsAttr>();
+                            .template dyn_cast_or_null<arith::FastMathFlagsAttr>();
     if (arithFMFAttr) {
       llvm::StringRef targetAttrName = TargetOp::getFastmathAttrName();
       convertedAttr.set(targetAttrName, convertArithFastMathAttr(arithFMFAttr));

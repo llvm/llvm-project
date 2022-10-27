@@ -2151,12 +2151,12 @@ define i8 @shrink_sub_from_constant_lowbits_uses(i8 %x) {
 define i8 @shrink_sub_from_constant_lowbits2(i8 %x) {
 ; CHECK-LABEL: @shrink_sub_from_constant_lowbits2(
 ; CHECK-NEXT:    [[X000:%.*]] = and i8 [[X:%.*]], -8
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 30, [[X000]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 30, [[X000]]
 ; CHECK-NEXT:    [[R:%.*]] = and i8 [[SUB]], -16
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %x000 = and i8 %x, -8   ; 3 low bits are known zero
-  %sub = sub i8 30, %x000 ; 0b0001_1110
+  %sub = sub nsw i8 30, %x000 ; 0b0001_1110
   %r = and i8 %sub, -16   ; 4 low bits are not demanded
   ret i8 %r
 }
@@ -2164,12 +2164,56 @@ define i8 @shrink_sub_from_constant_lowbits2(i8 %x) {
 define <2 x i8> @shrink_sub_from_constant_lowbits3(<2 x i8> %x) {
 ; CHECK-LABEL: @shrink_sub_from_constant_lowbits3(
 ; CHECK-NEXT:    [[X0000:%.*]] = shl <2 x i8> [[X:%.*]], <i8 4, i8 4>
-; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i8> <i8 31, i8 31>, [[X0000]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> <i8 31, i8 31>, [[X0000]]
 ; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> [[SUB]], <i8 3, i8 3>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %x0000 = shl <2 x i8> %x, <i8 4, i8 4>     ; 4 low bits are known zero
-  %sub = sub <2 x i8> <i8 31, i8 31>, %x0000
+  %sub = sub nuw <2 x i8> <i8 31, i8 31>, %x0000
   %r = lshr <2 x i8> %sub, <i8 3, i8 3>      ; 3 low bits are not demanded
   ret <2 x i8> %r
+}
+
+define i8 @demand_sub_from_variable_lowbits(i8 %x, i8 %y) {
+; CHECK-LABEL: @demand_sub_from_variable_lowbits(
+; CHECK-NEXT:    [[X000:%.*]] = shl i8 [[X:%.*]], 3
+; CHECK-NEXT:    [[Y000:%.*]] = and i8 [[Y:%.*]], -8
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[Y000]], [[X000]]
+; CHECK-NEXT:    ret i8 [[SUB]]
+;
+  %x000 = shl i8 %x, 3   ; 3 low bits are known zero
+  %y000 = and i8 %y, -8
+  %sub = sub i8 %y000, %x000
+  %r = and i8 %sub, -8   ; 3 low bits are not demanded
+  ret i8 %r
+}
+
+define i8 @demand_sub_from_variable_lowbits2(i8 %x, i8 %y) {
+; CHECK-LABEL: @demand_sub_from_variable_lowbits2(
+; CHECK-NEXT:    [[X0000:%.*]] = shl i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[Y111:%.*]] = or i8 [[Y:%.*]], 7
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i8 [[Y111]], [[X0000]]
+; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[SUB]], 4
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x0000 = shl i8 %x, 4   ; 4 low bits are known zero
+  %y111 = or i8 %y, 7
+  %sub = sub nsw nuw i8 %y111, %x0000
+  %r = lshr i8 %sub, 4    ; 4 low bits are not demanded
+  ret i8 %r
+}
+
+define i8 @demand_sub_from_variable_lowbits3(i8 %x, i8 %y) {
+; CHECK-LABEL: @demand_sub_from_variable_lowbits3(
+; CHECK-NEXT:    [[X0000:%.*]] = shl i8 [[X:%.*]], 4
+; CHECK-NEXT:    [[Y00000:%.*]] = and i8 [[Y:%.*]], -32
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 [[Y00000]], [[X0000]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 [[SUB]], 4
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %x0000 = shl i8 %x, 4   ; 4 low bits are known zero
+  %y00000 = and i8 %y, -32
+  %sub = sub i8 %y00000, %x0000
+  %r = lshr i8 %sub, 4    ; 4 low bits are not demanded
+  ret i8 %r
 }

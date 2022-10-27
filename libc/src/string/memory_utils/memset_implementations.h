@@ -10,109 +10,127 @@
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_IMPLEMENTATIONS_H
 
 #include "src/__support/architectures.h"
-#include "src/string/memory_utils/op_aarch64.h"
-#include "src/string/memory_utils/op_builtin.h"
-#include "src/string/memory_utils/op_generic.h"
-#include "src/string/memory_utils/op_x86.h"
+#include "src/string/memory_utils/elements.h"
 #include "src/string/memory_utils/utils.h"
 
 #include <stddef.h> // size_t
 
 namespace __llvm_libc {
 
-[[maybe_unused]] inline static void
-inline_memset_embedded_tiny(Ptr dst, uint8_t value, size_t count) {
-#pragma nounroll
-  for (size_t offset = 0; offset < count; ++offset)
-    generic::Memset<1, 1>::block(dst + offset, value);
-}
-
+// A general purpose implementation assuming cheap unaligned writes for sizes:
+// 1, 2, 4, 8, 16, 32 and 64 Bytes. Note that some architecture can't store 32
+// or 64 Bytes at a time, the compiler will expand them as needed.
+//
+// This implementation is subject to change as we benchmark more processors. We
+// may also want to customize it for processors with specialized instructions
+// that performs better (e.g. `rep stosb`).
+//
+// A note on the apparent discrepancy in the use of 32 vs 64 Bytes writes.
+// We want to balance two things here:
+//  - The number of redundant writes (when using `SetBlockOverlap`),
+//  - The number of conditionals for sizes <=128 (~90% of memset calls are for
+//    such sizes).
+//
+// For the range 64-128:
+//  - SetBlockOverlap<64> uses no conditionals but always writes 128 Bytes this
+//  is wasteful near 65 but efficient toward 128.
+//  - SetAlignedBlocks<32> would consume between 3 and 4 conditionals and write
+//  96 or 128 Bytes.
+//  - Another approach could be to use an hybrid approach copy<64>+Overlap<32>
+//  for 65-96 and copy<96>+Overlap<32> for 97-128
+//
+// Benchmarks showed that redundant writes were cheap (for Intel X86) but
+// conditional were expensive, even on processor that do not support writing 64B
+// at a time (pre-AVX512F). We also want to favor short functions that allow
+// more hot code to fit in the iL1 cache.
+//
+// Above 128 we have to use conditionals since we don't know the upper bound in
+// advance. SetAlignedBlocks<64> may waste up to 63 Bytes, SetAlignedBlocks<32>
+// may waste up to 31 Bytes. Benchmarks showed that SetAlignedBlocks<64> was not
+// superior for sizes that mattered.
+inline static void inline_memset(char *dst, unsigned char value, size_t count) {
 #if defined(LLVM_LIBC_ARCH_X86)
-template <size_t MaxSize>
-[[maybe_unused]] inline static void inline_memset_x86(Ptr dst, uint8_t value,
-                                                      size_t count) {
+  /////////////////////////////////////////////////////////////////////////////
+  // LLVM_LIBC_ARCH_X86
+  /////////////////////////////////////////////////////////////////////////////
+  using namespace __llvm_libc::x86;
   if (count == 0)
     return;
   if (count == 1)
-    return generic::Memset<1, MaxSize>::block(dst, value);
+    return splat_set<_1>(dst, value);
   if (count == 2)
-    return generic::Memset<2, MaxSize>::block(dst, value);
+    return splat_set<_2>(dst, value);
   if (count == 3)
-    return generic::Memset<3, MaxSize>::block(dst, value);
+    return splat_set<_3>(dst, value);
   if (count <= 8)
-    return generic::Memset<4, MaxSize>::head_tail(dst, value, count);
+    return splat_set<HeadTail<_4>>(dst, value, count);
   if (count <= 16)
-    return generic::Memset<8, MaxSize>::head_tail(dst, value, count);
+    return splat_set<HeadTail<_8>>(dst, value, count);
   if (count <= 32)
-    return generic::Memset<16, MaxSize>::head_tail(dst, value, count);
+    return splat_set<HeadTail<_16>>(dst, value, count);
   if (count <= 64)
-    return generic::Memset<32, MaxSize>::head_tail(dst, value, count);
+    return splat_set<HeadTail<_32>>(dst, value, count);
   if (count <= 128)
-    return generic::Memset<64, MaxSize>::head_tail(dst, value, count);
-  // Aligned loop
-  generic::Memset<32, MaxSize>::block(dst, value);
-  align_to_next_boundary<32>(dst, count);
-  return generic::Memset<32, MaxSize>::loop_and_tail(dst, value, count);
-}
-#endif // defined(LLVM_LIBC_ARCH_X86)
-
-#if defined(LLVM_LIBC_ARCH_AARCH64)
-template <size_t MaxSize>
-[[maybe_unused]] inline static void
-inline_memset_aarch64(Ptr dst, uint8_t value, size_t count) {
+    return splat_set<HeadTail<_64>>(dst, value, count);
+  return splat_set<Align<_32, Arg::Dst>::Then<Loop<_32>>>(dst, value, count);
+#elif defined(LLVM_LIBC_ARCH_AARCH64)
+  /////////////////////////////////////////////////////////////////////////////
+  // LLVM_LIBC_ARCH_AARCH64
+  /////////////////////////////////////////////////////////////////////////////
+  using namespace __llvm_libc::aarch64_memset;
   if (count == 0)
     return;
   if (count <= 3) {
-    generic::Memset<1, MaxSize>::block(dst, value);
+    splat_set<_1>(dst, value);
     if (count > 1)
-      generic::Memset<2, MaxSize>::tail(dst, value, count);
+      splat_set<Tail<_2>>(dst, value, count);
     return;
   }
   if (count <= 8)
-    return generic::Memset<4, MaxSize>::head_tail(dst, value, count);
+    return splat_set<HeadTail<_4>>(dst, value, count);
   if (count <= 16)
-    return generic::Memset<8, MaxSize>::head_tail(dst, value, count);
+    return splat_set<HeadTail<_8>>(dst, value, count);
   if (count <= 32)
-    return generic::Memset<16, MaxSize>::head_tail(dst, value, count);
+    return splat_set<HeadTail<_16>>(dst, value, count);
   if (count <= (32 + 64)) {
-    generic::Memset<32, MaxSize>::block(dst, value);
+    splat_set<_32>(dst, value);
     if (count <= 64)
-      return generic::Memset<32, MaxSize>::tail(dst, value, count);
-    generic::Memset<32, MaxSize>::block(dst + 32, value);
-    generic::Memset<32, MaxSize>::tail(dst, value, count);
+      return splat_set<Tail<_32>>(dst, value, count);
+    splat_set<Skip<32>::Then<_32>>(dst, value);
+    splat_set<Tail<_32>>(dst, value, count);
     return;
   }
-  if (count >= 448 && value == 0 && aarch64::neon::hasZva()) {
-    generic::Memset<64, MaxSize>::block(dst, 0);
-    align_to_next_boundary<64>(dst, count);
-    return aarch64::neon::BzeroCacheLine<64>::loop_and_tail(dst, 0, count);
-  } else {
-    generic::Memset<16, MaxSize>::block(dst, value);
-    align_to_next_boundary<16>(dst, count);
-    return generic::Memset<64, MaxSize>::loop_and_tail(dst, value, count);
-  }
-}
-#endif // defined(LLVM_LIBC_ARCH_AARCH64)
-
-inline static void inline_memset(Ptr dst, uint8_t value, size_t count) {
-#if defined(LLVM_LIBC_ARCH_X86)
-  static constexpr size_t kMaxSize = x86::kAvx512F ? 64
-                                     : x86::kAvx   ? 32
-                                     : x86::kSse2  ? 16
-                                                   : 8;
-  return inline_memset_x86<kMaxSize>(dst, value, count);
-#elif defined(LLVM_LIBC_ARCH_AARCH64)
-  static constexpr size_t kMaxSize = aarch64::kNeon ? 16 : 8;
-  return inline_memset_aarch64<kMaxSize>(dst, value, count);
-#elif defined(LLVM_LIBC_ARCH_ARM)
-  return inline_memset_embedded_tiny(dst, value, count);
+  if (count >= 448 && value == 0 && hasZva())
+    return splat_set<Align<_64, Arg::P1>::Then<Loop<Zva64, _64>>>(dst, 0,
+                                                                  count);
+  else
+    return splat_set<Align<_16, Arg::P1>::Then<Loop<_64>>>(dst, value, count);
 #else
-#error "Unsupported platform"
-#endif
-}
+  /////////////////////////////////////////////////////////////////////////////
+  // Default
+  /////////////////////////////////////////////////////////////////////////////
+  using namespace ::__llvm_libc::scalar;
 
-inline static void inline_memset(void *dst, uint8_t value, size_t count) {
-  inline_memset(reinterpret_cast<Ptr>(dst), value, count);
+  if (count == 0)
+    return;
+  if (count == 1)
+    return splat_set<_1>(dst, value);
+  if (count == 2)
+    return splat_set<_2>(dst, value);
+  if (count == 3)
+    return splat_set<_3>(dst, value);
+  if (count <= 8)
+    return splat_set<HeadTail<_4>>(dst, value, count);
+  if (count <= 16)
+    return splat_set<HeadTail<_8>>(dst, value, count);
+  if (count <= 32)
+    return splat_set<HeadTail<_16>>(dst, value, count);
+  if (count <= 64)
+    return splat_set<HeadTail<_32>>(dst, value, count);
+  if (count <= 128)
+    return splat_set<HeadTail<_64>>(dst, value, count);
+  return splat_set<Align<_32, Arg::Dst>::Then<Loop<_32>>>(dst, value, count);
+#endif
 }
 
 } // namespace __llvm_libc

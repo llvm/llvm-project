@@ -169,9 +169,9 @@ private:
 
   /// Traverses the affecting modules and updates \c MD with references to the
   /// parent \c ModuleDepCollector info.
-  void addAllAffectingModules(const Module *M, ModuleDeps &MD,
+  void addAllAffectingClangModules(const Module *M, ModuleDeps &MD,
                               llvm::DenseSet<const Module *> &AddedModules);
-  void addAffectingModule(const Module *M, ModuleDeps &MD,
+  void addAffectingClangModule(const Module *M, ModuleDeps &MD,
                           llvm::DenseSet<const Module *> &AddedModules);
 };
 

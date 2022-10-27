@@ -15,7 +15,8 @@ namespace __llvm_libc {
 LLVM_LIBC_FUNCTION(void *, memcpy,
                    (void *__restrict dst, const void *__restrict src,
                     size_t size)) {
-  inline_memcpy(dst, src, size);
+  inline_memcpy(reinterpret_cast<char *>(dst),
+                reinterpret_cast<const char *>(src), size);
   return dst;
 }
 
