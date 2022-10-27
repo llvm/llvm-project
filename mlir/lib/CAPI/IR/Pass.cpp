@@ -24,6 +24,11 @@ MlirPassManager mlirPassManagerCreate(MlirContext ctx) {
   return wrap(new PassManager(unwrap(ctx)));
 }
 
+MlirPassManager mlirPassManagerCreateOnOperation(MlirContext ctx,
+                                                 MlirStringRef anchorOp) {
+  return wrap(new PassManager(unwrap(ctx), unwrap(anchorOp)));
+}
+
 void mlirPassManagerDestroy(MlirPassManager passManager) {
   delete unwrap(passManager);
 }
