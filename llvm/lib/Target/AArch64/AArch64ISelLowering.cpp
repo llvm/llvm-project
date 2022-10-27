@@ -19521,6 +19521,35 @@ static SDValue performSETCCCombine(SDNode *N,
     }
   }
 
+  // Try to express conjunction "cmp 0 (or (xor A0 A1) (xor B0 B1))" as:
+  // cmp A0, A0; ccmp A0, B1, 0, eq; cmp inv(Cond) flag
+  if (!DCI.isBeforeLegalize() && VT.isScalarInteger() &&
+      (Cond == ISD::SETEQ || Cond == ISD::SETNE) && isNullConstant(RHS) &&
+      LHS->getOpcode() == ISD::OR &&
+      (LHS.getOperand(0)->getOpcode() == ISD::XOR &&
+       LHS.getOperand(1)->getOpcode() == ISD::XOR) &&
+      LHS.hasOneUse() && LHS.getOperand(0)->hasOneUse() &&
+      LHS.getOperand(1)->hasOneUse()) {
+    SDValue XOR0 = LHS.getOperand(0);
+    SDValue XOR1 = LHS.getOperand(1);
+    SDValue CCVal = DAG.getConstant(AArch64CC::EQ, DL, MVT_CC);
+    EVT TstVT = LHS->getValueType(0);
+    SDValue Cmp =
+        DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(TstVT, MVT::Glue),
+                    XOR0.getOperand(0), XOR0.getOperand(1));
+    SDValue Overflow = Cmp.getValue(1);
+    SDValue NZCVOp = DAG.getConstant(0, DL, MVT::i32);
+    SDValue CCmp = DAG.getNode(AArch64ISD::CCMP, DL, MVT_CC, XOR1.getOperand(0),
+                               XOR1.getOperand(1), NZCVOp, CCVal, Overflow);
+    // Invert CSEL's operands.
+    SDValue TVal = DAG.getConstant(1, DL, VT);
+    SDValue FVal = DAG.getConstant(0, DL, VT);
+    AArch64CC::CondCode CC = changeIntCCToAArch64CC(Cond);
+    AArch64CC::CondCode InvCC = AArch64CC::getInvertedCondCode(CC);
+    return DAG.getNode(AArch64ISD::CSEL, DL, VT, FVal, TVal,
+                       DAG.getConstant(InvCC, DL, MVT::i32), CCmp);
+  }
+
   return SDValue();
 }
 
