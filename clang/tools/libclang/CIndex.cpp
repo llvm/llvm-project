@@ -8899,6 +8899,17 @@ unsigned clang_CXXMethod_isVirtual(CXCursor C) {
   return (Method && Method->isVirtual()) ? 1 : 0;
 }
 
+unsigned clang_CXXMethod_isCopyAssignmentOperator(CXCursor C) {
+  if (!clang_isDeclaration(C.kind))
+    return 0;
+
+  const Decl *D = cxcursor::getCursorDecl(C);
+  const CXXMethodDecl *Method =
+      D ? dyn_cast_or_null<CXXMethodDecl>(D->getAsFunction()) : nullptr;
+
+  return (Method && Method->isCopyAssignmentOperator()) ? 1 : 0;
+}
+
 unsigned clang_CXXRecord_isAbstract(CXCursor C) {
   if (!clang_isDeclaration(C.kind))
     return 0;
