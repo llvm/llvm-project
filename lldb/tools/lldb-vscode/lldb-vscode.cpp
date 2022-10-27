@@ -204,7 +204,7 @@ void SendTerminatedEvent() {
     g_vsc.sent_terminated_event = true;
     g_vsc.RunTerminateCommands();
     // Send a "terminated" event
-    llvm::json::Object event(CreateTerminatedEventObject());
+    llvm::json::Object event(CreateEventObject("terminated"));
     g_vsc.SendJSON(llvm::json::Value(std::move(event)));
   }
 }
