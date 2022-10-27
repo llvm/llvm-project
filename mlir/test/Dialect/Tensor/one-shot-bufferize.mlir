@@ -211,8 +211,7 @@ func.func @dealloc_generate_buffer(%arg: tensor<*xf32>, %sz: index, %idx: index)
   -> index
 {
   // CHECK: memref.alloc
-  // CHECK: scf.parallel
-  // CHECK: memref.load
+  // CHECK: linalg.map
   // CHECK: memref.dealloc
   %0 = tensor.generate %sz {
   ^bb0(%i : index):
@@ -229,8 +228,7 @@ func.func @dealloc_generate_buffer(%arg: tensor<*xf32>, %sz: index, %idx: index)
 func.func @dealloc_pad_buffer(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
                               %h2: index, %idx: index) -> index {
   // CHECK: memref.alloc
-  // CHECK: scf.parallel
-  // CHECK: memref.load
+  // CHECK: linalg.map
   // CHECK: memref.dealloc
   %0 = tensor.pad %t1 low[5, %l2] high[%h1, %h2] {
   ^bb0(%arg0: index, %arg1: index):
