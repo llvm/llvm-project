@@ -1106,6 +1106,9 @@ public:
             fir::emitFatalError(loc, "derived type components must not be "
                                      "represented by fir::BoxValue");
           },
+          [&](const fir::PolymorphicValue &) {
+            TODO(loc, "polymorphic component in derived type assignment");
+          },
           [&](const fir::MutableBoxValue &toBox) {
             if (toBox.isPointer()) {
               Fortran::lower::associateMutableBox(

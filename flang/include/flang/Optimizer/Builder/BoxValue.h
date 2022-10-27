@@ -32,6 +32,7 @@ class BoxValue;
 class CharBoxValue;
 class CharArrayBoxValue;
 class MutableBoxValue;
+class PolymorphicValue;
 class ProcBoxValue;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const CharBoxValue &);
@@ -40,6 +41,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const CharArrayBoxValue &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ProcBoxValue &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const MutableBoxValue &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const BoxValue &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const PolymorphicValue &);
 
 //===----------------------------------------------------------------------===//
 //
@@ -94,6 +96,24 @@ public:
 
 protected:
   mlir::Value len;
+};
+
+/// Polymorphic value associated with a dynamic type descriptor.
+class PolymorphicValue : public AbstractBox {
+public:
+  PolymorphicValue(mlir::Value addr, mlir::Value tdesc)
+      : AbstractBox{addr}, tdesc{tdesc} {}
+
+  PolymorphicValue clone(mlir::Value newBase) const { return {newBase, tdesc}; }
+
+  mlir::Value getTdesc() const { return tdesc; }
+
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &,
+                                       const PolymorphicValue &);
+  LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this; }
+
+protected:
+  mlir::Value tdesc;
 };
 
 /// Abstract base class.
@@ -456,7 +476,7 @@ class ExtendedValue : public details::matcher<ExtendedValue> {
 public:
   using VT =
       std::variant<UnboxedValue, CharBoxValue, ArrayBoxValue, CharArrayBoxValue,
-                   ProcBoxValue, BoxValue, MutableBoxValue>;
+                   ProcBoxValue, BoxValue, MutableBoxValue, PolymorphicValue>;
 
   ExtendedValue() : box{UnboxedValue{}} {}
   template <typename A, typename = std::enable_if_t<
@@ -492,6 +512,7 @@ public:
     return match([](const fir::UnboxedValue &box) -> unsigned { return 0; },
                  [](const fir::CharBoxValue &box) -> unsigned { return 0; },
                  [](const fir::ProcBoxValue &box) -> unsigned { return 0; },
+                 [](const fir::PolymorphicValue &box) -> unsigned { return 0; },
                  [](const auto &box) -> unsigned { return box.rank(); });
   }
 
