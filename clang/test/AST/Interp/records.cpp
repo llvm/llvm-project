@@ -133,6 +133,20 @@ constexpr C RVOAndParams(const C *c) {
 constexpr C RVOAndParamsResult = RVOAndParams(&c);
 #endif
 
+class Bar { // expected-note {{definition of 'Bar' is not complete}} \
+            // ref-note {{definition of 'Bar' is not complete}}
+public:
+  constexpr Bar(){}
+  constexpr Bar b; // expected-error {{cannot be constexpr}} \
+                   // expected-error {{has incomplete type 'const Bar'}} \
+                   // ref-error {{cannot be constexpr}} \
+                   // ref-error {{has incomplete type 'const Bar'}}
+};
+constexpr Bar B; // expected-error {{must be initialized by a constant expression}} \
+                 // expected-error {{failed to evaluate an expression}} \
+                 // ref-error {{must be initialized by a constant expression}}
+constexpr Bar *pb = nullptr;
+
 constexpr int locals() {
   C c;
   c.a = 10;
