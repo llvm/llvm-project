@@ -16,7 +16,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser/Parser.h"
-#include "mlir/Tools/ParseUtilties.h"
+#include "mlir/Tools/ParseUtilities.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;

@@ -6203,7 +6203,7 @@ cc_library(
     srcs = glob([
         "lib/Tools/mlir-translate/*.cpp",
     ]) + [
-        "include/mlir/Tools/ParseUtilties.h",
+        "include/mlir/Tools/ParseUtilities.h",
     ],
     hdrs = glob(["include/mlir/Tools/mlir-translate/*.h"]),
     includes = ["include"],
@@ -6497,7 +6497,7 @@ cc_library(
 cc_library(
     name = "MlirOptLib",
     srcs = [
-        "include/mlir/Tools/ParseUtilties.h",
+        "include/mlir/Tools/ParseUtilities.h",
         "lib/Tools/mlir-opt/MlirOptMain.cpp",
     ],
     hdrs = ["include/mlir/Tools/mlir-opt/MlirOptMain.h"],
@@ -6733,7 +6733,7 @@ cc_library(
     srcs = ["lib/ExecutionEngine/JitRunner.cpp"],
     hdrs = [
         "include/mlir/ExecutionEngine/JitRunner.h",
-        "include/mlir/Tools/ParseUtilties.h",
+        "include/mlir/Tools/ParseUtilities.h",
     ],
     includes = ["include"],
     deps = [
@@ -9999,7 +9999,7 @@ cc_library(
     name = "MlirReduceLib",
     srcs = ["lib/Tools/mlir-reduce/MlirReduceMain.cpp"],
     hdrs = [
-        "include/mlir/Tools/ParseUtilties.h",
+        "include/mlir/Tools/ParseUtilities.h",
         "include/mlir/Tools/mlir-reduce/MlirReduceMain.h",
     ],
     includes = ["include"],
