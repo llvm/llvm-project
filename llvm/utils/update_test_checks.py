@@ -7,7 +7,15 @@ FileCheck patterns. It can either update all of the tests in the file or
 a single test function.
 
 Example usage:
-$ update_test_checks.py --opt=../bin/opt test/foo.ll
+
+# Default to using `opt` as found in your PATH.
+$ update_test_checks.py test/foo.ll
+
+# Override the path lookup.
+$ update_test_checks.py --tool-binary=../bin/opt test/foo.ll
+
+# Use a custom tool instead of `opt`.
+$ update_test_checks.py --tool=yourtool test/foo.ll
 
 Workflow:
 1. Make a compiler patch that requires updating some number of FileCheck lines
@@ -37,8 +45,10 @@ from UpdateTestChecks import common
 def main():
   from argparse import RawTextHelpFormatter
   parser = argparse.ArgumentParser(description=__doc__, formatter_class=RawTextHelpFormatter)
-  parser.add_argument('--opt-binary', default='opt',
-                      help='The opt binary used to generate the test case')
+  parser.add_argument('--tool', default='opt',
+                      help='The name of the tool used to generate the test case (defaults to "opt")')
+  parser.add_argument('--tool-binary', '--opt-binary',
+                      help='The tool binary used to generate the test case')
   parser.add_argument(
       '--function', help='The function in the test file to update')
   parser.add_argument('-p', '--preserve-names', action='store_true',
@@ -55,11 +65,13 @@ def main():
   initial_args = common.parse_commandline_args(parser)
 
   script_name = os.path.basename(__file__)
-  opt_basename = os.path.basename(initial_args.opt_binary)
-  if not re.match(r'^opt(-\d+)?(\.exe)?$', opt_basename):
-    common.error('Unexpected opt name: ' + opt_basename)
-    sys.exit(1)
-  opt_basename = 'opt'
+
+  if initial_args.tool_binary:
+    tool_basename = os.path.basename(initial_args.tool_binary)
+    if not re.match(r'^%s(-\d+)?(\.exe)?$' % (initial_args.tool), tool_basename):
+      common.error('Unexpected tool name: ' + tool_basename)
+      sys.exit(1)
+  tool_basename = initial_args.tool
 
   for ti in common.itertests(initial_args.tests, parser,
                              script_name='utils/' + script_name):
@@ -83,15 +95,15 @@ def main():
       tool_cmd = commands[-2]
       filecheck_cmd = commands[-1]
       common.verify_filecheck_prefixes(filecheck_cmd)
-      if not tool_cmd.startswith(opt_basename + ' '):
-        common.warn('Skipping non-%s RUN line: %s' % (opt_basename, l))
+      if not tool_cmd.startswith(tool_basename + ' '):
+        common.warn('Skipping non-%s RUN line: %s' % (tool_basename, l))
         continue
 
       if not filecheck_cmd.startswith('FileCheck '):
         common.warn('Skipping non-FileChecked RUN line: ' + l)
         continue
 
-      tool_cmd_args = tool_cmd[len(opt_basename):].strip()
+      tool_cmd_args = tool_cmd[len(tool_basename):].strip()
       tool_cmd_args = tool_cmd_args.replace('< %s', '').replace('%s', '').strip()
 
       check_prefixes = [item for m in
@@ -111,11 +123,15 @@ def main():
       scrubber_args=[],
       path=ti.path)
 
-    for prefixes, opt_args, preprocess_cmd in prefix_list:
-      common.debug('Extracted opt cmd: ' + opt_basename + ' ' + opt_args)
+    tool_binary = ti.args.tool_binary
+    if not tool_binary:
+      tool_binary = tool_basename
+
+    for prefixes, tool_args, preprocess_cmd in prefix_list:
+      common.debug('Extracted tool cmd: ' + tool_basename + ' ' + tool_args)
       common.debug('Extracted FileCheck prefixes: ' + str(prefixes))
 
-      raw_tool_output = common.invoke_tool(ti.args.opt_binary, opt_args,
+      raw_tool_output = common.invoke_tool(tool_binary, tool_args,
                                            ti.path, preprocess_cmd=preprocess_cmd,
                                            verbose=ti.args.verbose)
       builder.process_run_line(common.OPT_FUNCTION_RE, common.scrub_body,

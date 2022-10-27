@@ -143,6 +143,10 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           Return the OpResult that aliases with a given OpOperand when
           bufferized in-place. This method will never be called on OpOperands
           that do not have a tensor type.
+
+          Note: This method can return multiple OpResults, indicating that a
+          given OpOperand may at runtime alias with any (or multiple) of the
+          returned OpResults.
         }],
         /*retType=*/"SmallVector<OpResult>",
         /*methodName=*/"getAliasingOpResult",
@@ -165,8 +169,9 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           return the OpOperands that are yielded by the terminator.
 
           Note: This method can return multiple OpOperands, indicating that the
-          given OpResult may at runtime alias with any of the OpOperands. This
-          is useful for branches and for ops such as `arith.select`.
+          given OpResult may at runtime alias with any (or multiple) of the
+          returned OpOperands. This can be useful for branches and for ops such
+          as `arith.select`.
         }],
         /*retType=*/"SmallVector<OpOperand *>",
         /*methodName=*/"getAliasingOpOperand",

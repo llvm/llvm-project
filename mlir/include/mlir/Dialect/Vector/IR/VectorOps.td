@@ -16,6 +16,7 @@
 include "mlir/Dialect/Vector/Interfaces/MaskingInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/VectorInterfaces.td"
@@ -1270,7 +1271,8 @@ def Vector_TransferWriteOp :
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
       DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-      AttrSizedOperandSegments
+      AttrSizedOperandSegments,
+      DestinationStyleOpInterface
   ]>,
     Arguments<(ins AnyVectorOfAnyRank:$vector,
                    AnyShaped:$source,
@@ -1393,6 +1395,10 @@ def Vector_TransferWriteOp :
     /// This method is added to maintain uniformity with load/store
     ///  ops of other dialects.
     Value getValue() { return getVector(); }
+
+    std::pair<int64_t, int64_t> getOutputsPositionRange() {
+      return {1, 2};  // `source` operand
+    }
   }];
 
   let hasFolder = 1;

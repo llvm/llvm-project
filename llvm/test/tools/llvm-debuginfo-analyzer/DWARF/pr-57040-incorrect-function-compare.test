@@ -1,3 +1,5 @@
+; REQUIRES: x86-registered-target
+
 ; Incorrect function matching during comparison.
 ; https://github.com/llvm/llvm-project/issues/57040
 

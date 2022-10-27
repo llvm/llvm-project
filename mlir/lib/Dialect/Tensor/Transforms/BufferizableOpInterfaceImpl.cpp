@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -563,32 +564,12 @@ struct GenerateOpInterface
 };
 
 /// Bufferization of tensor.insert. Replace with memref.store.
+///
+/// Note: DstBufferizableOpInterfaceExternalModel provides many default method
+/// implementations for DestinationStyle ops.
 struct InsertOpInterface
-    : public BufferizableOpInterface::ExternalModel<InsertOpInterface,
-                                                    tensor::InsertOp> {
-  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const AnalysisState &state) const {
-    return true;
-  }
-
-  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const AnalysisState &state) const {
-    return true;
-  }
-
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
-    assert(&opOperand == &op->getOpOperand(1) /*dest*/ &&
-           "expected dest OpOperand");
-    return {op->getOpResult(0)};
-  }
-
-  SmallVector<OpOperand *>
-  getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const AnalysisState &state) const {
-    return {&op->getOpOperand(1) /*dest*/};
-  }
-
+    : public DstBufferizableOpInterfaceExternalModel<InsertOpInterface,
+                                                     tensor::InsertOp> {
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto insertOp = cast<tensor::InsertOp>(op);
@@ -600,11 +581,6 @@ struct InsertOpInterface
                                      *destMemref, insertOp.getIndices());
     replaceOpWithBufferizedValues(rewriter, op, *destMemref);
     return success();
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
   }
 };
 
@@ -732,31 +708,12 @@ static bool isNotConflictingInsertSliceLikeOp(Operation *op, OpOperand *uRead,
 
 /// Bufferization of tensor.insert_slice. Replace with a memory copy. Under
 /// certain circumstances, this op can also be a no-op.
+///
+/// Note: DstBufferizableOpInterfaceExternalModel provides many default method
+/// implementations for DestinationStyle ops.
 struct InsertSliceOpInterface
-    : public BufferizableOpInterface::ExternalModel<InsertSliceOpInterface,
-                                                    tensor::InsertSliceOp> {
-  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const AnalysisState &state) const {
-    return true;
-  }
-
-  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const AnalysisState &state) const {
-    return &opOperand == &op->getOpOperand(1) /*dest*/;
-  }
-
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
-    if (&opOperand == &op->getOpOperand(1) /*dest*/)
-      return {op->getResult(0)};
-    return {};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
-  }
-
+    : public DstBufferizableOpInterfaceExternalModel<InsertSliceOpInterface,
+                                                     tensor::InsertSliceOp> {
   bool isNotConflicting(Operation *op, OpOperand *uRead,
                         OpOperand *uConflictingWrite,
                         const AnalysisState &state) const {

@@ -2031,7 +2031,7 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
         Sub = loadModule(ImportLoc, PrivPath, Visibility, IsInclusionDirective);
       if (Sub) {
         MapPrivateSubModToTopLevel = true;
-        PP->markModuleAsAffecting(Module);
+        PP->markClangModuleAsAffecting(Module);
         if (!getDiagnostics().isIgnored(
                 diag::warn_no_priv_submodule_use_toplevel, ImportLoc)) {
           getDiagnostics().Report(Path[I].second,
