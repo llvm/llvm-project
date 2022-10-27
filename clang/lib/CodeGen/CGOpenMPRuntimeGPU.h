@@ -153,12 +153,6 @@ protected:
   /// Constant for NVPTX for better optimization.
   bool isDefaultLocationConstant() const override { return true; }
 
-  /// Returns additional flags that can be stored in reserved_2 field of the
-  /// default location.
-  /// For NVPTX target contains data about SPMD/Non-SPMD execution mode +
-  /// Full/Lightweight runtime mode. Used for better optimization.
-  unsigned getDefaultLocationReserved2Flags() const override;
-
 public:
   explicit CGOpenMPRuntimeGPU(CodeGenModule &CGM);
   void clear() override;
@@ -380,14 +374,9 @@ private:
   /// to emit optimized code.
   ExecutionMode CurrentExecutionMode = EM_Unknown;
 
-  /// true if we're emitting the code for the target region and next parallel
-  /// region is L0 for sure.
-  bool IsInTargetMasterThreadRegion = false;
   /// true if currently emitting code for target/teams/distribute region, false
   /// - otherwise.
   bool IsInTTDRegion = false;
-  /// true if we're definitely in the parallel region.
-  bool IsInParallelRegion = false;
 
   /// Map between an outlined function and its wrapper.
   llvm::DenseMap<llvm::Function *, llvm::Function *> WrapperFunctionsMap;
@@ -412,12 +401,10 @@ private:
   using EscapedParamsTy = llvm::SmallPtrSet<const Decl *, 4>;
   struct FunctionData {
     DeclToAddrMapTy LocalVarData;
-    llvm::Optional<DeclToAddrMapTy> SecondaryLocalVarData = std::nullopt;
     EscapedParamsTy EscapedParameters;
     llvm::SmallVector<const ValueDecl*, 4> EscapedVariableLengthDecls;
     llvm::SmallVector<std::pair<llvm::Value *, llvm::Value *>, 4>
         EscapedVariableLengthDeclsAddrs;
-    llvm::Value *IsInSPMDModeFlag = nullptr;
     std::unique_ptr<CodeGenFunction::OMPMapVars> MappedParams;
   };
   /// Maps the function to the list of the globalized variables with their
@@ -429,9 +416,6 @@ private:
   /// reductions.
   /// All the records are gathered into a union `union.type` is created.
   llvm::SmallVector<const RecordDecl *, 4> TeamsReductions;
-  /// Shared pointer for the global memory in the global memory buffer used for
-  /// the given kernel.
-  llvm::GlobalVariable *KernelStaticGlobalized = nullptr;
   /// Pair of the Non-SPMD team and all reductions variables in this team
   /// region.
   std::pair<const Decl *, llvm::SmallVector<const ValueDecl *, 4>>
