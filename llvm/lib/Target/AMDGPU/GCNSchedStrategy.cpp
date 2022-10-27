@@ -511,11 +511,19 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
   // If the block has the only successor then live-ins of that successor are
   // live-outs of the current block. We can reuse calculated live set if the
   // successor will be sent to scheduling past current block.
+
+  // However, due to the bug in LiveInterval analysis it may happen that two
+  // predecessors of the same successor block have different lane bitmasks for
+  // a live-out register. Workaround that by sticking to one-to-one relationship
+  // i.e. one predecessor with one successor block.
   const MachineBasicBlock *OnlySucc = nullptr;
-  if (MBB->succ_size() == 1 && !(*MBB->succ_begin())->empty()) {
-    SlotIndexes *Ind = LIS->getSlotIndexes();
-    if (Ind->getMBBStartIdx(MBB) < Ind->getMBBStartIdx(*MBB->succ_begin()))
-      OnlySucc = *MBB->succ_begin();
+  if (MBB->succ_size() == 1) {
+    auto *Candidate = *MBB->succ_begin();
+    if (!Candidate->empty() && Candidate->pred_size() == 1) {
+      SlotIndexes *Ind = LIS->getSlotIndexes();
+      if (Ind->getMBBStartIdx(MBB) < Ind->getMBBStartIdx(Candidate))
+        OnlySucc = Candidate;
+    }
   }
 
   // Scheduler sends regions from the end of the block upwards.
