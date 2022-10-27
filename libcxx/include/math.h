@@ -333,7 +333,7 @@ inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_floating_point<_A1>::value, bool>::type
 signbit(_A1 __x) _NOEXCEPT
 {
-    return __libcpp_signbit((typename std::__promote<_A1>::type)__x);
+    return __libcpp_signbit(__x);
 }
 
 template <class _A1>
@@ -357,7 +357,7 @@ inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_floating_point<_A1>::value, bool>::type
 signbit(_A1 __x) _NOEXCEPT
 {
-  return ::signbit(static_cast<typename std::__promote<_A1>::type>(__x));
+  return ::signbit(__x);
 }
 
 template <class _A1>
@@ -400,7 +400,7 @@ inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_floating_point<_A1>::value, int>::type
 fpclassify(_A1 __x) _NOEXCEPT
 {
-    return __libcpp_fpclassify((typename std::__promote<_A1>::type)__x);
+    return __libcpp_fpclassify(__x);
 }
 
 template <class _A1>
@@ -416,7 +416,7 @@ inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_floating_point<_A1>::value, bool>::type
 fpclassify(_A1 __x) _NOEXCEPT
 {
-  return ::fpclassify(static_cast<typename std::__promote<_A1>::type>(__x));
+  return ::fpclassify(__x);
 }
 
 template <class _A1>
@@ -540,7 +540,7 @@ inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_floating_point<_A1>::value, bool>::type
 isnan(_A1 __x) _NOEXCEPT
 {
-    return __libcpp_isnan((typename std::__promote<_A1>::type)__x);
+    return __libcpp_isnan(__x);
 }
 
 template <class _A1>
@@ -588,7 +588,7 @@ inline _LIBCPP_HIDE_FROM_ABI
 typename std::enable_if<std::is_floating_point<_A1>::value, bool>::type
 isnormal(_A1 __x) _NOEXCEPT
 {
-    return __libcpp_isnormal((typename std::__promote<_A1>::type)__x);
+    return __libcpp_isnormal(__x);
 }
 
 template <class _A1>
