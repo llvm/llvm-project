@@ -40,16 +40,32 @@ contains
     class(p1), pointer :: p
     class(p1), pointer :: c1, c2
     class(p1), pointer, dimension(:) :: c3, c4
+    integer :: i
 
     print*, 'test allocation of polymorphic pointers'
 
     allocate(p)
+    call p%proc1()
 
     allocate(p1::c1)
     allocate(p2::c2)
 
+    call c1%proc1()
+    call c2%proc1()
+
+    call c1%proc2()
+    call c2%proc2()
+
     allocate(p1::c3(10))
     allocate(p2::c4(20))
+
+    do i = 1, 10
+      call c3(i)%proc2()
+    end do
+
+    do i = 1, 20
+      call c4(i)%proc2()
+    end do
 
   end subroutine
 
@@ -99,6 +115,28 @@ contains
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[C2_LOAD]] : (!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
 ! CHECK: fir.store %[[BOX_ADDR]] to %[[C2_ADDR]] : !fir.ref<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>
 
+! call c1%proc1()
+! CHECK: %[[C1_DESC_CAST:.*]] = fir.convert %[[C1_DESC]] : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>
+! CHECK: fir.dispatch "proc1"(%[[C1_DESC_CAST]] : !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>)
+
+! call c2%proc1()
+! CHECK: %[[C2_DESC_CAST:.*]] = fir.convert %[[C2_DESC]] : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>
+! CHECK: fir.dispatch "proc1"(%[[C2_DESC_CAST]] : !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>)
+
+! call c1%proc2()
+! CHECK: %[[C1_LOAD:.*]] = fir.load %[[C1_ADDR]] : !fir.ref<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>
+! CHECK: %[[C1_DESC_LOAD:.*]] = fir.load %[[C1_DESC]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
+! CHECK: %[[C1_TDESC:.*]] = fir.box_tdesc %[[C1_DESC_LOAD]] : (!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.tdesc<none>
+! CHECK: %[[C1_BOXED:.*]] = fir.embox %[[C1_LOAD]] tdesc %[[C1_TDESC]] : (!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>, !fir.tdesc<none>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
+! CHECK: fir.dispatch "proc2"(%[[C1_BOXED]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[C1_BOXED]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+
+! call c2%proc2()
+! CHECK: %[[C2_LOAD:.*]] = fir.load %[[C2_ADDR]] : !fir.ref<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>
+! CHECK: %[[C2_DESC_LOAD:.*]] = fir.load %[[C2_DESC]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
+! CHECK: %[[C2_TDESC:.*]] = fir.box_tdesc %[[C2_DESC_LOAD]] : (!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>) -> !fir.tdesc<none>
+! CHECK: %[[C2_BOXED:.*]] = fir.embox %[[C2_LOAD]] tdesc %[[C2_TDESC]] : (!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>, !fir.tdesc<none>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
+! CHECK: fir.dispatch "proc2"(%[[C2_BOXED]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[C2_BOXED]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+
 ! CHECK: %[[TYPE_DESC_P1:.*]] = fir.address_of(@_QMpolyE.dt.p1) : !fir.ref<!fir.type<{{.*}}>>
 ! CHECK: %[[C3_CAST:.*]] = fir.convert %[[C3_DESC]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[TYPE_DESC_P1_CAST:.*]] = fir.convert %[[TYPE_DESC_P1]] : (!fir.ref<!fir.type<_QM__fortran_type_infoTderivedtype{binding:!fir.box<!fir.ptr<!fir.array<?x!fir.type<{{.*}}>>) -> !fir.ref<none>
@@ -121,6 +159,19 @@ contains
 ! CHECK: %[[C4_CAST:.*]] = fir.convert %[[C4_DESC]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAPointerAllocate(%[[C4_CAST]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
+! CHECK-LABEL: fir.do_loop
+! CHECK: %[[C3_LOAD:.*]] = fir.load %[[C3_DESC]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>
+! CHECK: %[[C3_COORD:.*]] = fir.coordinate_of %[[C3_LOAD]], %{{.*}} : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, i64) -> !fir.ref<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
+! CHECK: %[[C3_TDESC:.*]] = fir.box_tdesc %[[C3_LOAD]] : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.tdesc<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
+! CHECK: %[[C3_BOXED:.*]] = fir.embox %[[C3_COORD]] tdesc %[[C3_TDESC]] : (!fir.ref<!fir.type<_QMpolyTp1{a:i32,b:i32}>>, !fir.tdesc<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
+! CHECK: fir.dispatch "proc2"(%[[C3_BOXED]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[C3_BOXED]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+
+! CHECK-LABEL: fir.do_loop
+! CHECK: %[[C4_LOAD:.*]] = fir.load %[[C4_DESC]] : !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>
+! CHECK: %[[C4_COORD:.*]] = fir.coordinate_of %[[C4_LOAD]], %{{.*}} : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>, i64) -> !fir.ref<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
+! CHECK: %[[C4_TDESC:.*]] = fir.box_tdesc %[[C4_LOAD]] : (!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.tdesc<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
+! CHECK: %[[C4_BOXED:.*]] = fir.embox %[[C4_COORD]] tdesc %[[C4_TDESC]] : (!fir.ref<!fir.type<_QMpolyTp1{a:i32,b:i32}>>, !fir.tdesc<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
+! CHECK: fir.dispatch "proc2"(%[[C4_BOXED]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) (%[[C4_BOXED]] : !fir.class<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
 end module
 
