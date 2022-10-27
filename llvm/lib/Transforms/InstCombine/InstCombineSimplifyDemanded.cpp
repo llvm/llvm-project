@@ -549,6 +549,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         SimplifyDemandedBits(I, 0, DemandedFromOps, LHSKnown, Depth + 1))
       return disableWrapFlagsBasedOnUnusedHighBits(I, NLZ);
 
+    // If low order bits are not demanded and are known to be zero in RHS,
+    // then we don't need to demand them from LHS, since they can't cause a
+    // borrow from any bits that are demanded in the result.
+    unsigned NTZ = (~DemandedMask & RHSKnown.Zero).countTrailingOnes();
+    APInt DemandedFromLHS = DemandedFromOps;
+    DemandedFromLHS.clearLowBits(NTZ);
+    if (ShrinkDemandedConstant(I, 0, DemandedFromLHS) ||
+        SimplifyDemandedBits(I, 0, DemandedFromLHS, LHSKnown, Depth + 1))
+      return I;
+
     // If we are known to be subtracting zeros from every bit below
     // the highest demanded bit, we just return the other side.
     if (DemandedFromOps.isSubsetOf(RHSKnown.Zero))
