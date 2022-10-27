@@ -17,22 +17,23 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     as initial tensor values for the results of the operation or the output
     buffers to which the results of the op will be written.
 
-    Output operands must be tensors or memrefs. Input operands can have any
-    type. All non-output operands are inputs.
+    Output operands must be ranked tensors or ranked memrefs. Input operands can
+    have any type. All non-output operands are inputs.
 
     It is assumed that the output operands of the op are the operands at
     position [start, end). The positions are defined by getOutputsPositionRange
     method. All non-output operands are "inputs" of the DPS op.
 
     If the op has "tensor semantics", then the input operands are either scalars
-    or tensors. The output operands are tensors and every tensor output is tied
-    to a corresponding tensor OpResult in a 1-to-1 fashion. The i-th output
-    tensor is tied to the i-th OpResult. The op may not have any additional
-    OpResults. Output operands and their tied OpResults have the same type.
+    or ranked tensors. The output operands are ranked tensors and every tensor
+    output is tied to a corresponding tensor OpResult in a 1-to-1 fashion.
+    The i-th output tensor is tied to the i-th OpResult. The op may not have any
+    additional OpResults. Output operands and their tied OpResults have the same
+    type.
 
-    If the op has "buffer semantics", then the input operands are either memrefs
-    or other non-tensor types, e.g. scalar types. Furthermore, the output
-    operands are memrefs and the op has no results.
+    If the op has "buffer semantics", then the input operands are either ranked
+    memrefs or other non-tensor types, e.g. scalar types. Furthermore, the
+    output operands are ranked memrefs and the op has no results.
 
     Destination-passing style abstraction makes certain transformations easier.
     For example, tiling implementation can extract/insert slices from/into the
@@ -234,7 +235,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     // Other interface methods.
     //===------------------------------------------------------------------===//
     InterfaceMethod<
-      /*desc=*/"Return whether the op has only MemRef input and outputs.",
+      /*desc=*/"Return whether the op has only ranked MemRef inputs/outputs.",
       /*retTy=*/"bool",
       /*methodName=*/"hasBufferSemantics",
       /*args=*/(ins),
@@ -249,7 +250,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
       }]
     >,
     InterfaceMethod<
-      /*desc=*/"Return whether the op has only RankedTensor input and outputs.",
+      /*desc=*/"Return whether the op has only ranked tensor inputs/outputs.",
       /*retTy=*/"bool",
       /*methodName=*/"hasTensorSemantics",
       /*args=*/(ins),
