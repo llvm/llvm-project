@@ -42,7 +42,7 @@ static inline constexpr bool kAvx512BW = LLVM_LIBC_IS_DEFINED(__AVX512BW__);
 ///////////////////////////////////////////////////////////////////////////////
 // Memcpy repmovsb implementation
 struct Memcpy {
-  static void repmovsb(void *dst, const void *src, size_t count) {
+  static void repmovsb(char *dst, const char *src, size_t count) {
     asm volatile("rep movsb" : "+D"(dst), "+S"(src), "+c"(count) : : "memory");
   }
 };
