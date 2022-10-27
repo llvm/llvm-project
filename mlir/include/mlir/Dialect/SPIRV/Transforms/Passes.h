@@ -22,6 +22,7 @@ class ModuleOp;
 namespace spirv {
 
 class ModuleOp;
+class TargetEnvAttr;
 
 //===----------------------------------------------------------------------===//
 // Passes
@@ -69,8 +70,9 @@ std::unique_ptr<OperationPass<spirv::ModuleOp>> createRewriteInsertsPass();
 
 /// Creates an operation pass that unifies access of multiple aliased resources
 /// into access of one single resource.
+using GetTargetEnvFn = std::function<spirv::TargetEnvAttr(spirv::ModuleOp)>;
 std::unique_ptr<OperationPass<spirv::ModuleOp>>
-createUnifyAliasedResourcePass();
+createUnifyAliasedResourcePass(GetTargetEnvFn getTargetEnv = nullptr);
 
 //===----------------------------------------------------------------------===//
 // Registration
