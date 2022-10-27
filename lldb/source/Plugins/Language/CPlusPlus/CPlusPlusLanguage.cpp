@@ -23,11 +23,13 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
+#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/DataFormatters/CXXFunctionPointer.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/VectorType.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -169,6 +171,40 @@ static bool IsTrivialBasename(const llvm::StringRef &basename) {
 
   // We processed all characters. It is a vaild basename.
   return idx == basename.size();
+}
+
+/// Writes out the function name in 'full_name' to 'out_stream'
+/// but replaces each argument type with the variable name
+/// and the corresponding pretty-printed value
+static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
+                                            char const *full_name,
+                                            ExecutionContextScope *exe_scope,
+                                            VariableList const &args) {
+  CPlusPlusLanguage::MethodName cpp_method{ConstString(full_name)};
+
+  if (!cpp_method.IsValid())
+    return false;
+
+  llvm::StringRef return_type = cpp_method.GetReturnType();
+  if (!return_type.empty()) {
+    out_stream.PutCString(return_type);
+    out_stream.PutChar(' ');
+  }
+
+  out_stream.PutCString(cpp_method.GetScopeQualifiedName());
+  out_stream.PutChar('(');
+
+  FormatEntity::PrettyPrintFunctionArguments(out_stream, args, exe_scope);
+
+  out_stream.PutChar(')');
+
+  llvm::StringRef qualifiers = cpp_method.GetQualifiers();
+  if (!qualifiers.empty()) {
+    out_stream.PutChar(' ');
+    out_stream.PutCString(qualifiers);
+  }
+
+  return true;
 }
 
 bool CPlusPlusLanguage::MethodName::TrySimplifiedParse() {
@@ -1469,4 +1505,67 @@ bool CPlusPlusLanguage::IsSourceFile(llvm::StringRef file_path) const {
   // Check if we're in a STL path (where the files usually have no extension
   // that we could check for.
   return file_path.contains("/usr/include/c++/");
+}
+
+bool CPlusPlusLanguage::GetFunctionDisplayName(
+    const SymbolContext *sc, const ExecutionContext *exe_ctx,
+    FunctionNameRepresentation representation, Stream &s) {
+  switch (representation) {
+  case FunctionNameRepresentation::eNameWithArgs: {
+    // Print the function name with arguments in it
+    if (sc->function) {
+      ExecutionContextScope *exe_scope =
+          exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
+      const char *cstr = sc->function->GetName().AsCString(nullptr);
+      if (cstr) {
+        const InlineFunctionInfo *inline_info = nullptr;
+        VariableListSP variable_list_sp;
+        bool get_function_vars = true;
+        if (sc->block) {
+          Block *inline_block = sc->block->GetContainingInlinedBlock();
+
+          if (inline_block) {
+            get_function_vars = false;
+            inline_info = sc->block->GetInlinedFunctionInfo();
+            if (inline_info)
+              variable_list_sp = inline_block->GetBlockVariableList(true);
+          }
+        }
+
+        if (get_function_vars) {
+          variable_list_sp =
+              sc->function->GetBlock(true).GetBlockVariableList(true);
+        }
+
+        if (inline_info) {
+          s.PutCString(cstr);
+          s.PutCString(" [inlined] ");
+          cstr = inline_info->GetName().GetCString();
+        }
+
+        VariableList args;
+        if (variable_list_sp)
+          variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
+                                                     args);
+        if (args.GetSize() > 0) {
+          if (!PrettyPrintFunctionNameWithArgs(s, cstr, exe_scope, args))
+            return false;
+        } else {
+          s.PutCString(cstr);
+        }
+        return true;
+      }
+    } else if (sc->symbol) {
+      const char *cstr = sc->symbol->GetName().AsCString(nullptr);
+      if (cstr) {
+        s.PutCString(cstr);
+        return true;
+      }
+    }
+  } break;
+  default:
+    return false;
+  }
+
+  return false;
 }
