@@ -178,6 +178,7 @@ backwards-incompatible change introduced.
 
 ISA Metadata and Versioning
 ---------------------------
+
 Comgr supports multiple instruction set architectures (ISA) and APIs to query
 metadata associated with an ISA. The queried metadata follows a semantic
 versioning scheme e.g. major.minor.patch. The major version changes signifies
@@ -190,6 +191,20 @@ backward incompatible changes.
   supplied in a map format with details of target triple, features and
   resource limits associated with registers and memory addressing. The
   version key is absent in the Metadata.
+
+Thread Saftey
+-------------
+
+Comgr strives to be thread-safe when called from multiple threads in the same
+process. Because of complications from a shared global state in LLVM, to
+accomplish this Comgr internally implements locking mechanisms around LLVM-based
+actions.
+
+Although the locks in Comgr can allow independent actions to be safely executed
+in a multithreaded environment, the user-code must still guard against
+concurrent method calls which may access any particular Comgr object's state.
+A Comgr object shared between threads is only safe to use as long as each thread
+carefully locks out access by any other thread while it uses the shared object.
 
 Coding Standards
 ----------------
