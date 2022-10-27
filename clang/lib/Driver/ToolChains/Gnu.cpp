@@ -971,8 +971,9 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     CmdArgs.push_back(II.getFilename());
 
   if (Arg *A = Args.getLastArg(options::OPT_g_Flag, options::OPT_gN_Group,
-        options::OPT_gdwarf_2, options::OPT_gdwarf_3, options::OPT_gdwarf_4,
-        options::OPT_gdwarf_5, options::OPT_gdwarf))
+                               options::OPT_gdwarf_2, options::OPT_gdwarf_3,
+                               options::OPT_gdwarf_4, options::OPT_gdwarf_5,
+                               options::OPT_gdwarf))
     if (!A->getOption().matches(options::OPT_g0)) {
       Args.AddLastArg(CmdArgs, options::OPT_g_Flag);
 
@@ -1883,8 +1884,15 @@ bool Generic_GCC::GCCVersion::isOlderThan(int RHSMajor, int RHSMinor,
                                           StringRef RHSPatchSuffix) const {
   if (Major != RHSMajor)
     return Major < RHSMajor;
-  if (Minor != RHSMinor)
+  if (Minor != RHSMinor) {
+    // Note that versions without a specified minor sort higher than those with
+    // a minor.
+    if (RHSMinor == -1)
+      return true;
+    if (Minor == -1)
+      return false;
     return Minor < RHSMinor;
+  }
   if (Patch != RHSPatch) {
     // Note that versions without a specified patch sort higher than those with
     // a patch.

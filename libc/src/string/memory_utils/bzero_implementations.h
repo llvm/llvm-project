@@ -15,12 +15,8 @@
 
 namespace __llvm_libc {
 
-inline static void inline_bzero(Ptr dst, size_t count) {
+inline static void inline_bzero(char *dst, size_t count) {
   inline_memset(dst, 0, count);
-}
-
-inline static void inline_bzero(void *dst, size_t count) {
-  inline_bzero(reinterpret_cast<Ptr>(dst), count);
 }
 
 } // namespace __llvm_libc

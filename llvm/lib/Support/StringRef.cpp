@@ -382,16 +382,16 @@ void StringRef::split(SmallVectorImpl<StringRef> &A, char Separator,
 /// the string.
 size_t StringRef::count(StringRef Str) const {
   size_t Count = 0;
+  size_t Pos = 0;
   size_t N = Str.size();
-  if (!N || N > Length)
+  // TODO: For an empty `Str` we return 0 for legacy reasons. Consider changing
+  //       this to `Length + 1` which is more in-line with the function
+  //       description.
+  if (!N)
     return 0;
-  for (size_t i = 0, e = Length - N + 1; i < e;) {
-    if (substr(i, N).equals(Str)) {
-      ++Count;
-      i += N;
-    }
-    else
-      ++i;
+  while ((Pos = find(Str, Pos)) != npos) {
+    ++Count;
+    Pos += N;
   }
   return Count;
 }

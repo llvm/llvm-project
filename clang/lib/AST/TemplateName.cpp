@@ -67,17 +67,37 @@ void SubstTemplateTemplateParmStorage::Profile(llvm::FoldingSetNodeID &ID,
   ID.AddInteger(PackIndex ? *PackIndex + 1 : 0);
 }
 
+SubstTemplateTemplateParmPackStorage::SubstTemplateTemplateParmPackStorage(
+    ArrayRef<TemplateArgument> ArgPack, Decl *AssociatedDecl, unsigned Index,
+    bool Final)
+    : UncommonTemplateNameStorage(SubstTemplateTemplateParmPack, Index,
+                                  ArgPack.size()),
+      Arguments(ArgPack.data()), AssociatedDeclAndFinal(AssociatedDecl, Final) {
+  assert(AssociatedDecl != nullptr);
+}
+
 void SubstTemplateTemplateParmPackStorage::Profile(llvm::FoldingSetNodeID &ID,
                                                    ASTContext &Context) {
-  Profile(ID, Context, getArgumentPack(), getAssociatedDecl(), getIndex());
+  Profile(ID, Context, getArgumentPack(), getAssociatedDecl(), getIndex(),
+          getFinal());
+}
+
+Decl *SubstTemplateTemplateParmPackStorage::getAssociatedDecl() const {
+  return AssociatedDeclAndFinal.getPointer();
+}
+
+bool SubstTemplateTemplateParmPackStorage::getFinal() const {
+  return AssociatedDeclAndFinal.getInt();
 }
 
 void SubstTemplateTemplateParmPackStorage::Profile(
     llvm::FoldingSetNodeID &ID, ASTContext &Context,
-    const TemplateArgument &ArgPack, Decl *AssociatedDecl, unsigned Index) {
+    const TemplateArgument &ArgPack, Decl *AssociatedDecl, unsigned Index,
+    bool Final) {
   ArgPack.Profile(ID, Context);
   ID.AddPointer(AssociatedDecl);
   ID.AddInteger(Index);
+  ID.AddBoolean(Final);
 }
 
 TemplateName::TemplateName(void *Ptr) {

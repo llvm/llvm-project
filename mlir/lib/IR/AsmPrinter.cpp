@@ -716,6 +716,8 @@ private:
   void printAffineMapOfSSAIds(AffineMapAttr, ValueRange) override {}
   void printAffineExprOfSSAIds(AffineExpr, ValueRange, ValueRange) override {}
   void printNewline() override {}
+  void increaseIndent() override {}
+  void decreaseIndent() override {}
   void printOperand(Value) override {}
   void printOperand(Value, raw_ostream &os) override {
     // Users expect the output string to have at least the prefixed % to signal
@@ -2767,6 +2769,12 @@ public:
     os << newLine;
     os.indent(currentIndent);
   }
+
+  /// Increase indentation.
+  void increaseIndent() override { currentIndent += indentWidth; }
+
+  /// Decrease indentation.
+  void decreaseIndent() override { currentIndent -= indentWidth; }
 
   /// Print a block argument in the usual format of:
   ///   %ssaName : type {attr1=42} loc("here")

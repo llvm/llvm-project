@@ -559,6 +559,10 @@ TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
   return CCK_Default;
 }
 
+bool TargetInfo::areDefaultedSMFStillPOD(const LangOptions &LangOpts) const {
+  return LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver15;
+}
+
 LangAS TargetInfo::getOpenCLTypeAddrSpace(OpenCLTypeKind TK) const {
   switch (TK) {
   case OCLTK_Image:

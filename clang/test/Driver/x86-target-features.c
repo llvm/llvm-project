@@ -322,6 +322,11 @@
 // CMPCCXADD: "-target-feature" "+cmpccxadd"
 // NO-CMPCCXADD: "-target-feature" "-cmpccxadd"
 
+// RUN: %clang --target=i386 -march=i386 -mraoint %s -### 2>&1 | FileCheck -check-prefix=RAOINT %s
+// RUN: %clang --target=i386 -march=i386 -mno-raoint %s -### 2>&1 | FileCheck -check-prefix=NO-RAOINT %s
+// RAOINT: "-target-feature" "+raoint"
+// NO-RAOINT: "-target-feature" "-raoint"
+
 // RUN: %clang --target=i386 -march=i386 -mcrc32 %s -### 2>&1 | FileCheck -check-prefix=CRC32 %s
 // RUN: %clang --target=i386 -march=i386 -mno-crc32 %s -### 2>&1 | FileCheck -check-prefix=NO-CRC32 %s
 // CRC32: "-target-feature" "+crc32"

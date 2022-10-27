@@ -1,6 +1,6 @@
-# RUN: llvm-mc %s -filetype obj -triple arm64-apple-darwin -o - \
-# RUN: | llvm-dwarfdump --debug-info - \
-# RUN: | FileCheck %s
+# RUN: llvm-mc %s -filetype obj -triple arm64-apple-darwin -o %t
+# RUN: llvm-dwarfdump --debug-info %t | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t
 
 # CHECK: 0x0000001e:   DW_TAG_variable
 # CHECK:                 DW_AT_name      ("p1")

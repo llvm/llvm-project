@@ -334,6 +334,12 @@ public:
   /// operation.
   virtual void printNewline() = 0;
 
+  /// Increase indentation.
+  virtual void increaseIndent() = 0;
+
+  /// Decrease indentation.
+  virtual void decreaseIndent() = 0;
+
   /// Print a block argument in the usual format of:
   ///   %ssaName : type {attr1=42} loc("here")
   /// where location printing is controlled by the standard internal option.
