@@ -39,6 +39,11 @@ static void ctorArrayTy(Block *, char *Ptr, bool, bool, bool, Descriptor *D) {
 
 template <typename T>
 static void dtorArrayTy(Block *, char *Ptr, Descriptor *D) {
+  InitMap *IM = *reinterpret_cast<InitMap **>(Ptr);
+  if (IM != (InitMap *)-1)
+    free(IM);
+
+  Ptr += sizeof(InitMap *);
   for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
     reinterpret_cast<T *>(Ptr)[I].~T();
   }
@@ -178,7 +183,7 @@ static BlockCtorFn getCtorArrayPrim(PrimType Type) {
 }
 
 static BlockDtorFn getDtorArrayPrim(PrimType Type) {
-  COMPOSITE_TYPE_SWITCH(Type, return dtorArrayTy<T>, return nullptr);
+  TYPE_SWITCH(Type, return dtorArrayTy<T>);
 }
 
 static BlockMoveFn getMoveArrayPrim(PrimType Type) {
