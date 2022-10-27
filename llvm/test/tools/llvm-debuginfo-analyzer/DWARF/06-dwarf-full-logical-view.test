@@ -1,3 +1,5 @@
+; REQUIRES: x86-registered-target
+
 ; Test case 6 - Full logical view
 
 ; test.cpp
