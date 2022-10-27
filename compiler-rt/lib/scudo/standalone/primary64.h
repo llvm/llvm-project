@@ -728,6 +728,9 @@ private:
       Context.markFreeBlocks(BG.Batches, DecompactPtr, Region->RegionBeg);
     }
 
+    if (!Context.hasBlockMarked())
+      return 0;
+
     auto SkipRegion = [](UNUSED uptr RegionIndex) { return false; };
     releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
 
