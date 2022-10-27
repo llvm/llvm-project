@@ -1921,8 +1921,9 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
                                    ArgStringList &CmdArgs) const {
   CmdArgs.push_back("-target-abi");
-  CmdArgs.push_back(
-      loongarch::getLoongArchABI(Args, getToolChain().getTriple()).data());
+  CmdArgs.push_back(loongarch::getLoongArchABI(getToolChain().getDriver(), Args,
+                                               getToolChain().getTriple())
+                        .data());
 }
 
 void Clang::AddMIPSTargetArgs(const ArgList &Args,
