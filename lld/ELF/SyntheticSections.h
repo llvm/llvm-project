@@ -31,7 +31,6 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Threading.h"
-#include <map>
 
 namespace lld::elf {
 class Defined;
@@ -391,26 +390,26 @@ protected:
   uint64_t size = 0;
 
 private:
-  void addEntry(const Symbol &symbol, std::map<std::string, int> &entriesList);
+  void addEntry(const Symbol &symbol, llvm::DenseMap<llvm::CachedHashStringRef, int> &entriesList);
   uint32_t getEntry(const Symbol &symbol,
-                    std::vector<std::pair<std::string, int>> &entriesList);
+                    SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0> &entriesList);
   void writeEntries(uint8_t *buf,
-                    std::vector<std::pair<std::string, int>> &entriesList);
+                    SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0> &entriesList);
   void padUntil(uint8_t *buf, const uint8_t index);
 
   const size_t xlen = config->is64 ? 64 : 32;
 
-  std::map<std::string, int> CMJTEntryCandidates;
-  std::vector<std::pair<std::string, int>> finalizedCMJTEntries;
-  std::map<std::string, int> CMJALTEntryCandidates;
-  std::vector<std::pair<std::string, int>> finalizedCMJALTEntries;
-
   // used in finalizeContents function.
-  const size_t maxCMJTEntrySize = 32;
-  const size_t maxCMJALTEntrySize = 224;
+  static const size_t maxCMJTEntrySize = 32;
+  static const size_t maxCMJALTEntrySize = 224;
 
-  const size_t startCMJTEntryIdx = 0;
-  const size_t startCMJALTEntryIdx = 32;
+  static const size_t startCMJTEntryIdx = 0;
+  static const size_t startCMJALTEntryIdx = 32;
+
+  llvm::DenseMap<llvm::CachedHashStringRef, int> CMJTEntryCandidates;
+  SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0> finalizedCMJTEntries;
+  llvm::DenseMap<llvm::CachedHashStringRef, int> CMJALTEntryCandidates;
+  SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0> finalizedCMJALTEntries;
 };
 
 // The IgotPltSection is a Got associated with the PltSection for GNU Ifunc

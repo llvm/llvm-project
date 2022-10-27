@@ -340,8 +340,8 @@ defm use_android_relr_tags: BB<"use-android-relr-tags",
     "Use SHT_ANDROID_RELR / DT_ANDROID_RELR* tags instead of SHT_RELR / DT_RELR*",
     "Use SHT_RELR / DT_RELR* tags (default)">;
 
-def riscv_tbljal: F<"riscv-tbljal">,
-  HelpText<"(RISCV only) Enable table jump instructions from the Zce extension">;
+def riscv_tbljal: FF<"riscv-tbljal">,
+  HelpText<"(RISC-V only) Enable table jump instructions from the Zce extension">;
 
 def pic_veneer: F<"pic-veneer">,
   HelpText<"Always generate position independent thunks (veneers)">;

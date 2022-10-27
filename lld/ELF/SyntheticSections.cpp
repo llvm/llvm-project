@@ -1194,19 +1194,18 @@ int TableJumpSection::getCMJALTEntryIndex(const Symbol &symbol) {
 }
 
 void TableJumpSection::addEntry(const Symbol &symbol,
-                                std::map<std::string, int> &entriesList) {
-  ++entriesList[symbol.getName().str()];
+                                llvm::DenseMap<llvm::CachedHashStringRef, int> &entriesList) {
+  ++entriesList[llvm::CachedHashStringRef(symbol.getName().str())];
 }
 
-uint32_t TableJumpSection::getEntry(
-    const Symbol &symbol,
-    std::vector<std::pair<std::string, int>> &entriesList) {
+uint32_t TableJumpSection::getEntry(const Symbol &symbol,
+                    SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0> &entriesList){
   // Prevent adding duplicate entries
   uint32_t i = 0;
   for (; i < entriesList.size(); ++i) {
     // If this is a duplicate addition, do not add it and return the address
     // offset of the original entry.
-    if (symbol.getName().compare(entriesList[i].first) == 0) {
+    if (symbol.getName().compare(entriesList[i].first.val()) == 0) {
       return i;
     }
   }
@@ -1233,22 +1232,18 @@ void TableJumpSection::scanTableJumpEntrys(const InputSection &sec) const {
 }
 
 void TableJumpSection::finalizeContents() {
-  auto cmp = [](const std::pair<std::string, int> &p1,
-                const std::pair<std::string, int> &p2) {
+  auto cmp = [](const llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int> &p1,
+                const llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int> &p2) {
     return p1.second > p2.second;
   };
 
   std::copy(CMJTEntryCandidates.begin(), CMJTEntryCandidates.end(),
             std::back_inserter(finalizedCMJTEntries));
   std::sort(finalizedCMJTEntries.begin(), finalizedCMJTEntries.end(), cmp);
-  if (finalizedCMJTEntries.size() > maxCMJTEntrySize)
-    finalizedCMJTEntries.resize(maxCMJTEntrySize);
 
   std::copy(CMJALTEntryCandidates.begin(), CMJALTEntryCandidates.end(),
             std::back_inserter(finalizedCMJALTEntries));
   std::sort(finalizedCMJALTEntries.begin(), finalizedCMJALTEntries.end(), cmp);
-  if (finalizedCMJALTEntries.size() > maxCMJALTEntrySize)
-    finalizedCMJALTEntries.resize(maxCMJALTEntrySize);
 }
 
 size_t TableJumpSection::getSize() const {
@@ -1259,11 +1254,11 @@ size_t TableJumpSection::getSize() const {
 }
 
 void TableJumpSection::writeTo(uint8_t *buf) {
-  target->writeTableJumpHeader(buf);
-  writeEntries(buf + startCMJTEntryIdx, finalizedCMJTEntries);
-  padUntil(buf + ((startCMJTEntryIdx + finalizedCMJTEntries.size()) * xlen),
-           startCMJALTEntryIdx * xlen);
-  writeEntries(buf + startCMJALTEntryIdx, finalizedCMJALTEntries);
+  // target->writeTableJumpHeader(buf);
+  // writeEntries(buf + startCMJTEntryIdx, finalizedCMJTEntries);
+  // padUntil(buf + ((startCMJTEntryIdx + finalizedCMJTEntries.size()) * xlen),
+  //          startCMJALTEntryIdx * xlen);
+  // writeEntries(buf + startCMJALTEntryIdx, finalizedCMJALTEntries);
 }
 
 void TableJumpSection::padUntil(uint8_t *buf, const uint8_t address) {
@@ -1276,21 +1271,21 @@ void TableJumpSection::padUntil(uint8_t *buf, const uint8_t address) {
 }
 
 void TableJumpSection::writeEntries(
-    uint8_t *buf, std::vector<std::pair<std::string, int>> &entriesList) {
-  for (const auto &symbolName : entriesList) {
-    // Use the symbol from in.symTab to ensure we have the final adjusted
-    // symbol.
-    for (const auto &symbol : in.symTab->getSymbols()) {
-      if (symbol.sym->getName() != symbolName.first)
-        continue;
-      // Only process defined symbols.
-      auto *definedSymbol = dyn_cast<Defined>(symbol.sym);
-      if (!definedSymbol)
-        continue;
-      target->writeTableJump(buf, definedSymbol->getVA());
-      buf += config->wordsize;
-    }
-  }
+    uint8_t *buf, SmallVector<llvm::detail::DenseMapPair<llvm::CachedHashStringRef, int>, 0> &entriesList) {
+  // for (const auto &symbolName : entriesList) {
+  //   // Use the symbol from in.symTab to ensure we have the final adjusted
+  //   // symbol.
+  //   for (const auto &symbol : in.symTab->getSymbols()) {
+  //     if (symbol.sym->getName() != symbolName.first)
+  //       continue;
+  //     // Only process defined symbols.
+  //     auto *definedSymbol = dyn_cast<Defined>(symbol.sym);
+  //     if (!definedSymbol)
+  //       continue;
+  //     target->writeTableJump(buf, definedSymbol->getVA());
+  //     buf += config->wordsize;
+  //   }
+  // }
 }
 
 bool TableJumpSection::isNeeded() const { return config->riscvTbljal; }
