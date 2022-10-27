@@ -87,7 +87,7 @@ multiclass sme_outer_product_fp64<bit S, string mnemonic, SDPatternOperator op> 
             (!cast<Instruction>(NAME # _PSEUDO) timm32_0_7:$tile, $pn, $pm, $zn, $zm)>;
 }
 
-class sme_int_outer_product_inst<bit u0, bit u1, bit S, bit sz,
+class sme_int_outer_product_inst<bits<3> opc, bit sz, bit sme2,
                                  MatrixTileOperand za_ty, ZPRRegOp zpr_ty,
                                  string mnemonic>
     : I<(outs za_ty:$ZAda),
@@ -100,23 +100,23 @@ class sme_int_outer_product_inst<bit u0, bit u1, bit S, bit sz,
   bits<3> Pn;
   bits<5> Zn;
   let Inst{31-25} = 0b1010000;
-  let Inst{24}    = u0;
+  let Inst{24}    = opc{2}; // u0
   let Inst{23}    = 0b1;
   let Inst{22}    = sz;
-  let Inst{21}    = u1;
+  let Inst{21}    = opc{1}; // u1
   let Inst{20-16} = Zm;
   let Inst{15-13} = Pm;
   let Inst{12-10} = Pn;
   let Inst{9-5}   = Zn;
-  let Inst{4}     = S;
-  let Inst{3}     = 0b0;
+  let Inst{4}     = opc{0};  //S;
+  let Inst{3}     = sme2;
 
   let Constraints = "$ZAda = $_ZAda";
 }
 
 multiclass sme_int_outer_product_i32<bits<3> opc, string mnemonic,
                                      SDPatternOperator op> {
-  def NAME : sme_int_outer_product_inst<opc{2}, opc{1}, opc{0}, 0b0, TileOp32,
+  def NAME : sme_int_outer_product_inst<opc, 0b0, 0b0,  TileOp32,
                                         ZPR8, mnemonic> {
     bits<2> ZAda;
     let Inst{1-0} = ZAda;
@@ -132,7 +132,7 @@ multiclass sme_int_outer_product_i32<bits<3> opc, string mnemonic,
 
 multiclass sme_int_outer_product_i64<bits<3> opc, string mnemonic,
                                      SDPatternOperator op> {
-  def NAME : sme_int_outer_product_inst<opc{2}, opc{1}, opc{0}, 0b1, TileOp64,
+  def NAME : sme_int_outer_product_inst<opc, 0b1, 0b0, TileOp64,
                                         ZPR16, mnemonic> {
     bits<3> ZAda;
     let Inst{2-0} = ZAda;
@@ -145,9 +145,9 @@ multiclass sme_int_outer_product_i64<bits<3> opc, string mnemonic,
             (!cast<Instruction>(NAME # _PSEUDO) timm32_0_7:$tile, $pn, $pm, $zn, $zm)>;
 }
 
-class sme_outer_product_widening_inst<bit op, bit S, string mnemonic>
+class sme_outer_product_widening_inst<bits<3> opc, ZPRRegOp zpr_ty, string mnemonic>
     : I<(outs TileOp32:$ZAda),
-        (ins  TileOp32:$_ZAda, PPR3bAny:$Pn, PPR3bAny:$Pm, ZPR16:$Zn, ZPR16:$Zm),
+        (ins  TileOp32:$_ZAda, PPR3bAny:$Pn, PPR3bAny:$Pm, zpr_ty:$Zn, zpr_ty:$Zm),
         mnemonic, "\t$ZAda, $Pn/m, $Pm/m, $Zn, $Zm",
         "", []>,
       Sched<[]> {
@@ -156,21 +156,24 @@ class sme_outer_product_widening_inst<bit op, bit S, string mnemonic>
   bits<3> Pn;
   bits<5> Zn;
   bits<2> ZAda;
-  let Inst{31-22} = 0b1000000110;
-  let Inst{21}    = op;
+  let Inst{31-25} = 0b1000000;
+  let Inst{24}    = !if(opc{2}, 0, 1);
+  let Inst{23-22} = 0b10;
+  let Inst{21}    = opc{1};
   let Inst{20-16} = Zm;
   let Inst{15-13} = Pm;
   let Inst{12-10} = Pn;
   let Inst{9-5}   = Zn;
-  let Inst{4}     = S;
-  let Inst{3-2}   = 0b00;
+  let Inst{4}     = opc{0};
+  let Inst{3}     = opc{2};
+  let Inst{2}     = 0b0;
   let Inst{1-0}   = ZAda;
 
   let Constraints = "$ZAda = $_ZAda";
 }
 
-multiclass sme_bf16_outer_product<bit S, string mnemonic, SDPatternOperator op> {
-  def NAME : sme_outer_product_widening_inst<0b0, S, mnemonic>;
+multiclass sme_bf16_outer_product<bits<3> opc, string mnemonic, SDPatternOperator op> {
+  def NAME : sme_outer_product_widening_inst<opc, ZPR16, mnemonic>;
 
   def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR16>;
 
@@ -179,8 +182,8 @@ multiclass sme_bf16_outer_product<bit S, string mnemonic, SDPatternOperator op> 
             (!cast<Instruction>(NAME # _PSEUDO) timm32_0_3:$tile, $pn, $pm, $zn, $zm)>;
 }
 
-multiclass sme_f16_outer_product<bit S, string mnemonic, SDPatternOperator op> {
-  def NAME : sme_outer_product_widening_inst<0b1, S, mnemonic>;
+multiclass sme_f16_outer_product<bits<3> opc, string mnemonic, SDPatternOperator op> {
+  def NAME : sme_outer_product_widening_inst<opc, ZPR16, mnemonic>;
 
   def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR16>;
 
@@ -2360,4 +2363,19 @@ multiclass sme2_mla_ll_array_vg4_multi<string mnemonic, bits<4> op,
 
   def : InstAlias<mnemonic # "\t$ZAda[$Rv, $imm], $Zn, $Zm",
                  (!cast<Instruction>(NAME) matrix_ty:$ZAda, MatrixIndexGPR32Op8_11:$Rv, uimm1s4range:$imm, vector_ty:$Zn, vector_ty:$Zm), 0>;
+}
+
+//===----------------------------------------------------------------------===//
+// SME2 Outer Product and Accumulate
+
+multiclass sme2_int_mopx_tile<string mnemonic, bits<3> op> {
+  def NAME : sme_int_outer_product_inst<op, 0b0, 0b1, TileOp32, ZPR16, mnemonic> {
+    bits<2> ZAda;
+    let Inst{1-0} = ZAda;
+    let Inst{2}   = 0b0;
+  }
+}
+
+multiclass  sme2_bfp_mopx_tile<string mnemonic, bits<3> op> {
+  def NAME : sme_outer_product_widening_inst<op, ZPR32, mnemonic>;
 }
