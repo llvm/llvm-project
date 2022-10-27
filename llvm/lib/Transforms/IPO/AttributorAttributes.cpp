@@ -720,9 +720,27 @@ struct DenseMapInfo<AAPointerInfo::Access> : DenseMapInfo<Instruction *> {
 };
 
 /// Helper that allows OffsetAndSize as a key in a DenseMap.
-template <>
-struct DenseMapInfo<AA::OffsetAndSize>
-    : DenseMapInfo<std::pair<int64_t, int64_t>> {};
+template <> struct DenseMapInfo<AA::OffsetAndSize> {
+  static inline AA::OffsetAndSize getEmptyKey() {
+    auto EmptyKey = DenseMapInfo<int64_t>::getEmptyKey();
+    return AA::OffsetAndSize{EmptyKey, EmptyKey};
+  }
+
+  static inline AA::OffsetAndSize getTombstoneKey() {
+    auto TombstoneKey = DenseMapInfo<int64_t>::getTombstoneKey();
+    return AA::OffsetAndSize{TombstoneKey, TombstoneKey};
+  }
+
+  static unsigned getHashValue(const AA::OffsetAndSize &OAS) {
+    return detail::combineHashValue(
+        DenseMapInfo<int64_t>::getHashValue(OAS.Offset),
+        DenseMapInfo<int64_t>::getHashValue(OAS.Size));
+  }
+
+  static bool isEqual(const AA::OffsetAndSize &A, const AA::OffsetAndSize B) {
+    return A == B;
+  }
+};
 
 /// Helper for AA::PointerInfo::Access DenseMap/Set usage ignoring everythign
 /// but the instruction
@@ -914,7 +932,7 @@ protected:
       return false;
 
     // First find the offset and size of I.
-    AA::OffsetAndSize OAS = AA::OffsetAndSize::getUnassigned();
+    AA::OffsetAndSize OAS;
     for (const auto &It : AccessBins) {
       for (auto &Access : *It.getSecond()) {
         if (Access.getRemoteInst() == &I) {
@@ -922,7 +940,7 @@ protected:
           break;
         }
       }
-      if (OAS.getSize() != AA::OffsetAndSize::Unassigned)
+      if (OAS.Size != AA::OffsetAndSize::Unassigned)
         break;
     }
 
@@ -930,7 +948,7 @@ protected:
       *OASPtr = OAS;
 
     // No access for I was found, we are done.
-    if (OAS.getSize() == AA::OffsetAndSize::Unassigned)
+    if (OAS.Size == AA::OffsetAndSize::Unassigned)
       return true;
 
     // Now that we have an offset and size, find all overlapping ones and use
@@ -1157,8 +1175,7 @@ struct AAPointerInfoImpl
     for (const auto &It : OtherAAImpl.getState()) {
       AA::OffsetAndSize OAS = AA::OffsetAndSize::getUnknown();
       if (Offset != AA::OffsetAndSize::Unknown)
-        OAS = AA::OffsetAndSize(It.first.getOffset() + Offset,
-                                It.first.getSize());
+        OAS = AA::OffsetAndSize(It.first.Offset + Offset, It.first.Size);
       Accesses *Bin = AccessBins.lookup(OAS);
       for (const AAPointerInfo::Access &RAcc : *It.second) {
         if (IsByval && !RAcc.isRead())
@@ -1174,8 +1191,8 @@ struct AAPointerInfoImpl
           AK = AccessKind(AK | (RAcc.isMayAccess() ? AK_MAY : AK_MUST));
         }
         Changed =
-            Changed | addAccess(A, OAS.getOffset(), OAS.getSize(), CB, Content,
-                                AK, RAcc.getType(), RAcc.getRemoteInst(), Bin);
+            Changed | addAccess(A, OAS.Offset, OAS.Size, CB, Content, AK,
+                                RAcc.getType(), RAcc.getRemoteInst(), Bin);
       }
     }
     return Changed;
@@ -1188,8 +1205,7 @@ struct AAPointerInfoImpl
   /// Dump the state into \p O.
   void dumpState(raw_ostream &O) {
     for (auto &It : AccessBins) {
-      O << "[" << It.first.getOffset() << "-"
-        << It.first.getOffset() + It.first.getSize()
+      O << "[" << It.first.Offset << "-" << It.first.Offset + It.first.Size
         << "] : " << It.getSecond()->size() << "\n";
       for (auto &Acc : *It.getSecond()) {
         O << "     - " << Acc.getKind() << " - " << *Acc.getLocalInst() << "\n";
