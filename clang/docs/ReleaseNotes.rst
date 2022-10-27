@@ -560,6 +560,9 @@ C++20 Feature Support
 - Implemented `P2113R0: Proposed resolution for 2019 comment CA 112 <https://wg21.link/P2113R0>`_
   ([temp.func.order]p6.2.1 is not implemented, matching GCC).
 
+- Do not hide templated base members introduced via using-decl in derived class
+  (useful specially for constrained members). Fixes `GH50886 <https://github.com/llvm/llvm-project/issues/50886>`_.
+
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 

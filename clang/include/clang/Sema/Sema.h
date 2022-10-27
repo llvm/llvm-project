@@ -3674,9 +3674,9 @@ public:
                              FunctionDecl *New,
                              const LookupResult &OldDecls,
                              NamedDecl *&OldDecl,
-                             bool IsForUsingDecl);
-  bool IsOverload(FunctionDecl *New, FunctionDecl *Old, bool IsForUsingDecl,
-                  bool ConsiderCudaAttrs = true,
+                             bool UseMemberUsingDeclRules);
+  bool IsOverload(FunctionDecl *New, FunctionDecl *Old,
+                  bool UseMemberUsingDeclRules, bool ConsiderCudaAttrs = true,
                   bool ConsiderRequiresClauses = true);
 
   // Calculates whether the expression Constraint depends on an enclosing
