@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx906 -x hip -fcuda-is-device -emit-codegen-only %s 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx906 -debug-info-kind=standalone -x hip -fcuda-is-device -emit-codegen-only < %s 2>&1 | FileCheck -DFILE=%s %s
 
 #define __global__ __attribute__((global))
 #define __shared__ __attribute__((shared))
@@ -10,10 +10,10 @@ __global__ void use_huge_lds() {
   huge[0] = 2;
 }
 
-// CHECK: error: local memory (480000) exceeds limit (65536) in function '_Z12use_huge_ldsIiEvv'
+// CHECK: error: <stdin>:[[#@LINE-5]]:0: local memory (480000) exceeds limit (65536) in function '_Z12use_huge_ldsIiEvv'
 template
 __global__ void use_huge_lds<int>();
 
-// CHECK: error: local memory (960000) exceeds limit (65536) in function '_Z12use_huge_ldsIdEvv'
+// CHECK: error: <stdin>:[[#@LINE-9]]:0: local memory (960000) exceeds limit (65536) in function '_Z12use_huge_ldsIdEvv'
 template
 __global__ void use_huge_lds<double>();
