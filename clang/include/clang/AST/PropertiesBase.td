@@ -730,8 +730,11 @@ let Class = PropertyTypeCase<TemplateName, "SubstTemplateTemplateParmPack"> in {
   def : Property<"index", UInt32> {
     let Read = [{ parm->getIndex() }];
   }
+  def : Property<"final", Bool> {
+    let Read = [{ parm->getFinal() }];
+  }
   def : Creator<[{
-    return ctx.getSubstTemplateTemplateParmPack(argumentPack, associatedDecl, index);
+    return ctx.getSubstTemplateTemplateParmPack(argumentPack, associatedDecl, index, final);
   }]>;
 }
 
