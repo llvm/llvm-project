@@ -115,12 +115,12 @@ func.func @fold_insert(%arg0 : index) -> (tensor<4xf32>) {
 // -----
 
 // CHECK-LABEL: func @extract_from_tensor.cast
-// CHECK-SAME: %[[TENSOR:.*]]: tensor<*xf32>
-func.func @extract_from_tensor.cast(%tensor: tensor<*xf32>) -> f32 {
+// CHECK-SAME: %[[TENSOR:.*]]: tensor<9xf32>
+func.func @extract_from_tensor.cast(%tensor: tensor<9xf32>) -> f32 {
   // CHECK-NEXT: %[[C0:.*]] = arith.constant 0 : index
   %c0 = arith.constant 0 : index
   // CHECK-NOT: tensor.cast
-  %casted = tensor.cast %tensor : tensor<*xf32> to tensor<?xf32>
+  %casted = tensor.cast %tensor : tensor<9xf32> to tensor<?xf32>
   // CHECK-NEXT: tensor.extract %[[TENSOR]][%[[C0]]]
   %result = tensor.extract %casted[%c0] : tensor<?xf32>
   return %result : f32

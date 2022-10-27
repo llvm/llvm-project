@@ -1477,15 +1477,15 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
   Record.push_back(SM.getMainFileID().getOpaqueValue());
   Stream.EmitRecord(ORIGINAL_FILE_ID, Record);
 
-  std::set<const FileEntry *> AffectingModuleMaps;
+  std::set<const FileEntry *> AffectingClangModuleMaps;
   if (WritingModule) {
-    AffectingModuleMaps =
+    AffectingClangModuleMaps =
         GetAllModuleMaps(PP.getHeaderSearchInfo(), WritingModule);
   }
 
   WriteInputFiles(Context.SourceMgr,
                   PP.getHeaderSearchInfo().getHeaderSearchOpts(),
-                  AffectingModuleMaps);
+                  AffectingClangModuleMaps);
   Stream.ExitBlock();
 }
 
@@ -1505,7 +1505,7 @@ struct InputFileEntry {
 
 void ASTWriter::WriteInputFiles(
     SourceManager &SourceMgr, HeaderSearchOptions &HSOpts,
-    std::set<const FileEntry *> &AffectingModuleMaps) {
+    std::set<const FileEntry *> &AffectingClangModuleMaps) {
   using namespace llvm;
 
   Stream.EnterSubblock(INPUT_FILES_BLOCK_ID, 4);
@@ -1547,9 +1547,9 @@ void ASTWriter::WriteInputFiles(
 
     if (isModuleMap(File.getFileCharacteristic()) &&
         !isSystem(File.getFileCharacteristic()) &&
-        !AffectingModuleMaps.empty() &&
-        AffectingModuleMaps.find(Cache->OrigEntry) ==
-            AffectingModuleMaps.end()) {
+        !AffectingClangModuleMaps.empty() &&
+        AffectingClangModuleMaps.find(Cache->OrigEntry) ==
+            AffectingClangModuleMaps.end()) {
       SkippedModuleMaps.insert(Cache->OrigEntry);
       // Do not emit modulemaps that do not affect current module.
       continue;
@@ -2876,9 +2876,9 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
     }
 
     // Emit the modules affecting compilation that were not imported.
-    if (!Mod->AffectingModules.empty()) {
+    if (!Mod->AffectingClangModules.empty()) {
       RecordData Record;
-      for (auto *I : Mod->AffectingModules)
+      for (auto *I : Mod->AffectingClangModules)
         Record.push_back(getSubmoduleID(I));
       Stream.EmitRecord(SUBMODULE_AFFECTING_MODULES, Record);
     }

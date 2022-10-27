@@ -3246,6 +3246,7 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":ControlFlowInterfaces",
+        ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
@@ -5132,6 +5133,7 @@ td_library(
     deps = [
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
+        ":DestinationStyleOpInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":ParallelCombiningOpInterfaceTdFiles",
@@ -5291,6 +5293,7 @@ cc_library(
         ":DialectUtils",
         ":FuncDialect",
         ":IR",
+        ":LinalgDialect",
         ":MemRefDialect",
         ":Pass",
         ":SCFDialect",
@@ -8210,6 +8213,7 @@ td_library(
     includes = ["include"],
     deps = [
         ":ControlFlowInterfacesTdFiles",
+        ":DestinationStyleOpInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":MaskingInterfacesTdFiles",
         ":OpBaseTdFiles",
@@ -9003,6 +9007,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":ArithOpsInterfacesTdFiles",
         ":BuiltinDialectTdFiles",
         ":CastInterfacesTdFiles",
         ":InferIntRangeInterfaceTdFiles",
@@ -9010,6 +9015,17 @@ td_library(
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
         ":VectorInterfacesTdFiles",
+    ],
+)
+
+td_library(
+    name = "ArithOpsInterfacesTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Arith/IR/ArithOpsInterfaces.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
     ],
 )
 
@@ -9057,11 +9073,45 @@ gentbl_cc_library(
             ["-gen-op-defs"],
             "include/mlir/Dialect/Arith/IR/ArithOps.cpp.inc",
         ),
+        (
+            [
+                "-gen-attrdef-decls",
+                "-attrdefs-dialect=arith",
+            ],
+            "include/mlir/Dialect/Arith/IR/ArithOpsAttributes.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-attrdefs-dialect=arith",
+            ],
+            "include/mlir/Dialect/Arith/IR/ArithOpsAttributes.cpp.inc",
+        ),
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Arith/IR/ArithOps.td",
     deps = [
         ":ArithOpsTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "ArithOpsInterfacesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/Arith/IR/ArithOpsInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/Arith/IR/ArithOpsInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Arith/IR/ArithOpsInterfaces.td",
+    deps = [
+        ":ArithOpsInterfacesTdFiles",
     ],
 )
 
@@ -9100,6 +9150,7 @@ cc_library(
         ":ArithBaseIncGen",
         ":ArithCanonicalizationIncGen",
         ":ArithOpsIncGen",
+        ":ArithOpsInterfacesIncGen",
         ":CommonFolders",
         ":IR",
         ":InferIntRangeInterface",
@@ -9769,6 +9820,7 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h",
         "include/mlir/Dialect/Bufferization/IR/Bufferization.h",
+        "include/mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h",
     ],
     includes = ["include"],
     deps = [
@@ -9780,6 +9832,7 @@ cc_library(
         ":BufferizationOpsIncGen",
         ":ControlFlowInterfaces",
         ":CopyOpInterface",
+        ":DestinationStyleOpInterface",
         ":FuncDialect",
         ":IR",
         ":InferTypeOpInterface",

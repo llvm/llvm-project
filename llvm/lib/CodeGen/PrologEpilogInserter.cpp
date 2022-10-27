@@ -57,6 +57,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -283,13 +284,35 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
     assert(!Failed && "Invalid warn-stack-size fn attr value");
     (void)Failed;
   }
-  if (MF.getFunction().hasFnAttribute(Attribute::SafeStack)) {
-    StackSize += MFI.getUnsafeStackSize();
-  }
+  uint64_t UnsafeStackSize = MFI.getUnsafeStackSize();
+  if (MF.getFunction().hasFnAttribute(Attribute::SafeStack))
+    StackSize += UnsafeStackSize;
+
   if (StackSize > Threshold) {
     DiagnosticInfoStackSize DiagStackSize(F, StackSize, Threshold, DS_Warning);
     F.getContext().diagnose(DiagStackSize);
+    int64_t SpillSize = 0;
+    for (int Idx = MFI.getObjectIndexBegin(), End = MFI.getObjectIndexEnd();
+         Idx != End; ++Idx) {
+      if (MFI.isSpillSlotObjectIndex(Idx))
+        SpillSize += MFI.getObjectSize(Idx);
+    }
+
+    float SpillPct =
+        static_cast<float>(SpillSize) / static_cast<float>(StackSize);
+    float VarPct = 1.0f - SpillPct;
+    int64_t VariableSize = StackSize - SpillSize;
+    dbgs() << formatv("{0}/{1} ({3:P}) spills, {2}/{1} ({4:P}) variables",
+                      SpillSize, StackSize, VariableSize, SpillPct, VarPct);
+    if (UnsafeStackSize != 0) {
+      float UnsafePct =
+          static_cast<float>(UnsafeStackSize) / static_cast<float>(StackSize);
+      dbgs() << formatv(", {0}/{2} ({1:P}) unsafe stack", UnsafeStackSize,
+                        UnsafePct, StackSize);
+    }
+    dbgs() << "\n";
   }
+
   ORE->emit([&]() {
     return MachineOptimizationRemarkAnalysis(DEBUG_TYPE, "StackSize",
                                              MF.getFunction().getSubprogram(),

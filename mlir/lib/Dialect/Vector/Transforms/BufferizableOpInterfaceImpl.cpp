@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Vector/Transforms/BufferizableOpInterfaceImpl.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
+#include "mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Operation.h"
@@ -63,35 +64,12 @@ struct TransferReadOpInterface
 
 /// Bufferization of vector.transfer_write. Replace with a new
 /// vector.transfer_write that operates on a memref.
+///
+/// Note: DstBufferizableOpInterfaceExternalModel provides many default method
+/// implementations for DestinationStyle ops.
 struct TransferWriteOpInterface
-    : public BufferizableOpInterface::ExternalModel<TransferWriteOpInterface,
-                                                    vector::TransferWriteOp> {
-  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const AnalysisState &state) const {
-    assert(opOperand.get().getType().isa<TensorType>() &&
-           "only tensor types expected");
-    return true;
-  }
-
-  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const AnalysisState &state) const {
-    assert(opOperand.get().getType().isa<TensorType>() &&
-           "only tensor types expected");
-    return true;
-  }
-
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
-    assert(opOperand.get().getType().isa<TensorType>() &&
-           "only tensor types expected");
-    return {op->getOpResult(0)};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
-  }
-
+    : public DstBufferizableOpInterfaceExternalModel<TransferWriteOpInterface,
+                                                     vector::TransferWriteOp> {
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto writeOp = cast<vector::TransferWriteOp>(op);

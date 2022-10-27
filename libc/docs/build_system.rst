@@ -26,18 +26,3 @@ the ``lib`` directory as ``add_entrypoint_library`` targets. An
 ``add_entrypoint_library`` target  takes a list of ``add_entrypoint_object``
 targets and produces a static library containing the object files corresponding
 to the ``add_entrypoint_targets``.
-
-Targets for redirectors
------------------------
-
-Similar to how every entrypoint in LLVM-libc has its own build target, every
-redirector function also has its own build target. This target is listed using
-the ``add_redirector_object`` rule. This rule generates a single object file
-which can be packaged along with other redirector objects into shared library
-of redirectors (see below).
-
-Targets for library of redirectors
-----------------------------------
-
-Targets for shared libraries of redirectors are listed using the
-``add_redirector_library`` rule.

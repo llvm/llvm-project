@@ -603,6 +603,14 @@
 
 // NO-CMPCCXADD-NOT: #define __CMPCCXADD__ 1
 
+// RUN: %clang -target i386-unknown-linux-gnu -march=atom -mraoint -x c -E -dM -o - %s | FileCheck  -check-prefix=RAOINT %s
+
+// RAOINT: #define __RAOINT__ 1
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=atom -mno-raoint -x c -E -dM -o - %s | FileCheck  -check-prefix=NO-RAOINT %s
+
+// NO-RAOINT-NOT: #define __RAOINT__ 1
+
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mcrc32 -x c -E -dM -o - %s | FileCheck -check-prefix=CRC32 %s
 
 // CRC32: #define __CRC32__ 1

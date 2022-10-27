@@ -323,6 +323,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtZfh()) {
     setOperationAction(FPLegalNodeTypes, MVT::f16, Legal);
+    setOperationAction(ISD::FCEIL, MVT::f16, Custom);
+    setOperationAction(ISD::FFLOOR, MVT::f16, Custom);
+    setOperationAction(ISD::FTRUNC, MVT::f16, Custom);
+    setOperationAction(ISD::FRINT, MVT::f16, Custom);
+    setOperationAction(ISD::FROUND, MVT::f16, Custom);
+    setOperationAction(ISD::FROUNDEVEN, MVT::f16, Custom);
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f32, Legal);
     setCondCodeAction(FPCCToExpand, MVT::f16, Expand);
@@ -330,11 +336,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT, MVT::f16, Custom);
     setOperationAction(ISD::BR_CC, MVT::f16, Expand);
 
-    setOperationAction({ISD::FREM, ISD::FCEIL, ISD::FFLOOR, ISD::FNEARBYINT,
-                        ISD::FRINT, ISD::FROUND, ISD::FROUNDEVEN, ISD::FTRUNC,
-                        ISD::FPOW, ISD::FPOWI, ISD::FCOS, ISD::FSIN,
-                        ISD::FSINCOS, ISD::FEXP, ISD::FEXP2, ISD::FLOG,
-                        ISD::FLOG2, ISD::FLOG10},
+    setOperationAction({ISD::FREM, ISD::FNEARBYINT, ISD::FPOW, ISD::FPOWI,
+                        ISD::FCOS, ISD::FSIN, ISD::FSINCOS, ISD::FEXP,
+                        ISD::FEXP2, ISD::FLOG, ISD::FLOG2, ISD::FLOG10},
                        MVT::f16, Promote);
 
     // FIXME: Need to promote f16 STRICT_* to f32 libcalls, but we don't have
@@ -352,6 +356,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtF()) {
     setOperationAction(FPLegalNodeTypes, MVT::f32, Legal);
+    setOperationAction(ISD::FCEIL, MVT::f32, Custom);
+    setOperationAction(ISD::FFLOOR, MVT::f32, Custom);
+    setOperationAction(ISD::FTRUNC, MVT::f32, Custom);
+    setOperationAction(ISD::FRINT, MVT::f32, Custom);
+    setOperationAction(ISD::FROUND, MVT::f32, Custom);
+    setOperationAction(ISD::FROUNDEVEN, MVT::f32, Custom);
     setCondCodeAction(FPCCToExpand, MVT::f32, Expand);
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
     setOperationAction(ISD::SELECT, MVT::f32, Custom);
@@ -366,6 +376,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.hasStdExtD()) {
     setOperationAction(FPLegalNodeTypes, MVT::f64, Legal);
+    if (Subtarget.is64Bit()) {
+      setOperationAction(ISD::FCEIL, MVT::f64, Custom);
+      setOperationAction(ISD::FFLOOR, MVT::f64, Custom);
+      setOperationAction(ISD::FTRUNC, MVT::f64, Custom);
+      setOperationAction(ISD::FRINT, MVT::f64, Custom);
+      setOperationAction(ISD::FROUND, MVT::f64, Custom);
+      setOperationAction(ISD::FROUNDEVEN, MVT::f64, Custom);
+    }
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
     setOperationAction(ISD::STRICT_FP_EXTEND, MVT::f64, Legal);
     setCondCodeAction(FPCCToExpand, MVT::f64, Expand);
@@ -1978,6 +1996,8 @@ static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
   case ISD::FROUND:
   case ISD::VP_FROUND:
     return RISCVFPRndMode::RMM;
+  case ISD::FRINT:
+    return RISCVFPRndMode::DYN;
   }
 
   return RISCVFPRndMode::Invalid;
@@ -2083,6 +2103,34 @@ lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
     return Truncated;
 
   return convertFromScalableVector(VT, Truncated, DAG, Subtarget);
+}
+
+static SDValue
+lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
+                                const RISCVSubtarget &Subtarget) {
+  MVT VT = Op.getSimpleValueType();
+  if (VT.isVector())
+    return lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
+
+  if (DAG.shouldOptForSize())
+    return SDValue();
+
+  SDLoc DL(Op);
+  SDValue Src = Op.getOperand(0);
+
+  // Create an integer the size of the mantissa with the MSB set. This and all
+  // values larger than it don't have any fractional bits so don't need to be
+  // converted.
+  const fltSemantics &FltSem = DAG.EVTToAPFloatSemantics(VT);
+  unsigned Precision = APFloat::semanticsPrecision(FltSem);
+  APFloat MaxVal = APFloat(FltSem);
+  MaxVal.convertFromAPInt(APInt::getOneBitSet(Precision, Precision - 1),
+                          /*IsSigned*/ false, APFloat::rmNearestTiesToEven);
+  SDValue MaxValNode = DAG.getConstantFP(MaxVal, DL, VT);
+
+  RISCVFPRndMode::RoundingMode FRM = matchRoundingOp(Op.getOpcode());
+  return DAG.getNode(RISCVISD::FROUND, DL, VT, Src, MaxValNode,
+                     DAG.getTargetConstant(FRM, DL, Subtarget.getXLenVT()));
 }
 
 struct VIDSequence {
@@ -3711,9 +3759,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::FTRUNC:
   case ISD::FCEIL:
   case ISD::FFLOOR:
+  case ISD::FRINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
-    return lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
+    return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
   case ISD::VECREDUCE_ADD:
   case ISD::VECREDUCE_UMAX:
   case ISD::VECREDUCE_SMAX:
@@ -10718,6 +10767,113 @@ emitVFCVT_RM_MASK(MachineInstr &MI, MachineBasicBlock *BB, unsigned Opcode) {
   return BB;
 }
 
+static MachineBasicBlock *emitFROUND(MachineInstr &MI, MachineBasicBlock *MBB,
+                                     const RISCVSubtarget &Subtarget) {
+  unsigned CmpOpc, F2IOpc, I2FOpc, FSGNJOpc, FSGNJXOpc;
+  const TargetRegisterClass *RC;
+  switch (MI.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected opcode");
+  case RISCV::PseudoFROUND_H:
+    CmpOpc = RISCV::FLT_H;
+    F2IOpc = RISCV::FCVT_W_H;
+    I2FOpc = RISCV::FCVT_H_W;
+    FSGNJOpc = RISCV::FSGNJ_H;
+    FSGNJXOpc = RISCV::FSGNJX_H;
+    RC = &RISCV::FPR16RegClass;
+    break;
+  case RISCV::PseudoFROUND_S:
+    CmpOpc = RISCV::FLT_S;
+    F2IOpc = RISCV::FCVT_W_S;
+    I2FOpc = RISCV::FCVT_S_W;
+    FSGNJOpc = RISCV::FSGNJ_S;
+    FSGNJXOpc = RISCV::FSGNJX_S;
+    RC = &RISCV::FPR32RegClass;
+    break;
+  case RISCV::PseudoFROUND_D:
+    assert(Subtarget.is64Bit() && "Expected 64-bit GPR.");
+    CmpOpc = RISCV::FLT_D;
+    F2IOpc = RISCV::FCVT_L_D;
+    I2FOpc = RISCV::FCVT_D_L;
+    FSGNJOpc = RISCV::FSGNJ_D;
+    FSGNJXOpc = RISCV::FSGNJX_D;
+    RC = &RISCV::FPR64RegClass;
+    break;
+  }
+
+  const BasicBlock *BB = MBB->getBasicBlock();
+  DebugLoc DL = MI.getDebugLoc();
+  MachineFunction::iterator I = ++MBB->getIterator();
+
+  MachineFunction *F = MBB->getParent();
+  MachineBasicBlock *CvtMBB = F->CreateMachineBasicBlock(BB);
+  MachineBasicBlock *DoneMBB = F->CreateMachineBasicBlock(BB);
+
+  F->insert(I, CvtMBB);
+  F->insert(I, DoneMBB);
+  // Move all instructions after the sequence to DoneMBB.
+  DoneMBB->splice(DoneMBB->end(), MBB, MachineBasicBlock::iterator(MI),
+                  MBB->end());
+  // Update machine-CFG edges by transferring all successors of the current
+  // block to the new block which will contain the Phi nodes for the selects.
+  DoneMBB->transferSuccessorsAndUpdatePHIs(MBB);
+  // Set the successors for MBB.
+  MBB->addSuccessor(CvtMBB);
+  MBB->addSuccessor(DoneMBB);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  Register MaxReg = MI.getOperand(2).getReg();
+  int64_t FRM = MI.getOperand(3).getImm();
+
+  const RISCVInstrInfo &TII = *Subtarget.getInstrInfo();
+  MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+
+  Register FabsReg = MRI.createVirtualRegister(RC);
+  BuildMI(MBB, DL, TII.get(FSGNJXOpc), FabsReg).addReg(SrcReg).addReg(SrcReg);
+
+  // Compare the FP value to the max value.
+  Register CmpReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  auto MIB =
+      BuildMI(MBB, DL, TII.get(CmpOpc), CmpReg).addReg(FabsReg).addReg(MaxReg);
+  if (MI.getFlag(MachineInstr::MIFlag::NoFPExcept))
+    MIB->setFlag(MachineInstr::MIFlag::NoFPExcept);
+
+  // Insert branch.
+  BuildMI(MBB, DL, TII.get(RISCV::BEQ))
+      .addReg(CmpReg)
+      .addReg(RISCV::X0)
+      .addMBB(DoneMBB);
+
+  CvtMBB->addSuccessor(DoneMBB);
+
+  // Convert to integer.
+  Register F2IReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+  MIB = BuildMI(CvtMBB, DL, TII.get(F2IOpc), F2IReg).addReg(SrcReg).addImm(FRM);
+  if (MI.getFlag(MachineInstr::MIFlag::NoFPExcept))
+    MIB->setFlag(MachineInstr::MIFlag::NoFPExcept);
+
+  // Convert back to FP.
+  Register I2FReg = MRI.createVirtualRegister(RC);
+  MIB = BuildMI(CvtMBB, DL, TII.get(I2FOpc), I2FReg).addReg(F2IReg).addImm(FRM);
+  if (MI.getFlag(MachineInstr::MIFlag::NoFPExcept))
+    MIB->setFlag(MachineInstr::MIFlag::NoFPExcept);
+
+  // Restore the sign bit.
+  Register CvtReg = MRI.createVirtualRegister(RC);
+  BuildMI(CvtMBB, DL, TII.get(FSGNJOpc), CvtReg).addReg(I2FReg).addReg(SrcReg);
+
+  // Merge the results.
+  BuildMI(*DoneMBB, DoneMBB->begin(), DL, TII.get(RISCV::PHI), DstReg)
+      .addReg(SrcReg)
+      .addMBB(MBB)
+      .addReg(CvtReg)
+      .addMBB(CvtMBB);
+
+  MI.eraseFromParent();
+  return DoneMBB;
+}
+
 MachineBasicBlock *
 RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                  MachineBasicBlock *BB) const {
@@ -10761,6 +10917,10 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF2_MASK);
   case RISCV::PseudoVFCVT_RM_X_F_V_MF4_MASK:
     return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF4_MASK);
+  case RISCV::PseudoFROUND_H:
+  case RISCV::PseudoFROUND_S:
+  case RISCV::PseudoFROUND_D:
+    return emitFROUND(MI, BB, Subtarget);
   }
 }
 
@@ -12236,6 +12396,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FCVT_WU_RV64)
   NODE_NAME_CASE(STRICT_FCVT_W_RV64)
   NODE_NAME_CASE(STRICT_FCVT_WU_RV64)
+  NODE_NAME_CASE(FROUND)
   NODE_NAME_CASE(READ_CYCLE_WIDE)
   NODE_NAME_CASE(BREV8)
   NODE_NAME_CASE(ORC_B)
