@@ -5504,17 +5504,16 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysArguments) {
 
 TEST_F(OpenMPIRBuilderTest, OffloadEntriesInfoManager) {
   OffloadEntriesInfoManager InfoManager;
-  TargetRegionEntryInfo EntryInfo("parent", 1, 2, 4);
-  InfoManager.initializeTargetRegionEntryInfo(EntryInfo, 0);
+  InfoManager.initializeTargetRegionEntryInfo(1, 2, "parent", 4, 0);
   InfoManager.initializeDeviceGlobalVarEntryInfo(
       "gvar", OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo, 0);
   InfoManager.registerTargetRegionEntryInfo(
-      EntryInfo, nullptr, nullptr,
+      1, 2, "parent", 4, nullptr, nullptr,
       OffloadEntriesInfoManager::OMPTargetRegionEntryTargetRegion, true);
   InfoManager.registerDeviceGlobalVarEntryInfo(
       "gvar", 0x0, 8, OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo,
       GlobalValue::WeakAnyLinkage, true);
-  EXPECT_TRUE(InfoManager.hasTargetRegionEntryInfo(EntryInfo, true));
+  EXPECT_TRUE(InfoManager.hasTargetRegionEntryInfo(1, 2, "parent", 4, true));
   EXPECT_TRUE(InfoManager.hasDeviceGlobalVarEntryInfo("gvar"));
 }
 } // namespace
