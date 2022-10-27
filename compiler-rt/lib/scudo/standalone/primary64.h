@@ -702,16 +702,49 @@ private:
           BG.PushedBlocks - BG.PushedBlocksAtLastCheckpoint;
       if (PushedBytesDelta * BlockSize < PageSize)
         continue;
+
+      // Group boundary does not necessarily have the same alignment as Region.
+      // It may sit across a Region boundary. Which means that we may have the
+      // following two cases,
+      //
+      // 1. Group boundary sits before RegionBeg.
+      //
+      //                (BatchGroupBeg)
+      // batchGroupBase  RegionBeg       BatchGroupEnd
+      //        |            |                |
+      //        v            v                v
+      //        +------------+----------------+
+      //         \                           /
+      //          ------   GroupSize   ------
+      //
+      // 2. Group boundary sits after RegionBeg.
+      //
+      //               (BatchGroupBeg)
+      //    RegionBeg  batchGroupBase               BatchGroupEnd
+      //        |           |                             |
+      //        v           v                             v
+      //        +-----------+-----------------------------+
+      //                     \                           /
+      //                      ------   GroupSize   ------
+      //
+      // Note that in the first case, the group range before RegionBeg is never
+      // used. Therefore, while calculating the used group size, we should
+      // exclude that part to get the correct size.
+      const uptr BatchGroupBeg =
+          Max(batchGroupBase(BG.GroupId, CompactPtrBase), Region->RegionBeg);
+      DCHECK_GE(AllocatedUserEnd, BatchGroupBeg);
       const uptr BatchGroupEnd =
           batchGroupBase(BG.GroupId, CompactPtrBase) + GroupSize;
       const uptr AllocatedGroupSize = AllocatedUserEnd >= BatchGroupEnd
-                                          ? GroupSize
-                                          : AllocatedUserEnd - BatchGroupEnd;
+                                          ? BatchGroupEnd - BatchGroupBeg
+                                          : AllocatedUserEnd - BatchGroupBeg;
       if (AllocatedGroupSize == 0)
         continue;
 
+      // TransferBatches are pushed in front of BG.Batches. The first one may
+      // not have all caches used.
       const uptr NumBlocks = (BG.Batches.size() - 1) * BG.MaxCachedPerBatch +
-                             BG.Batches.back()->getCount();
+                             BG.Batches.front()->getCount();
       const uptr BytesInBG = NumBlocks * BlockSize;
       // Given the randomness property, we try to release the pages only if the
       // bytes used by free blocks exceed certain proportion of group size. Note
