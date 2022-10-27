@@ -13,11 +13,10 @@
 
 #include "Options.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVOptions.h"
-#include "llvm/Object/Archive.h"
+#include "llvm/DebugInfo/LogicalView/LVReaderHandler.h"
 #include "llvm/Support/COM.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
@@ -37,6 +36,16 @@ static void error(std::error_code EC, char const *Fmt, const Ts &...Vals) {
   Stream << format(Fmt, Vals...);
   WithColor::error(errs(), ToolName) << Stream.str() << "\n";
   exit(1);
+}
+
+static void error(Error EC) {
+  if (!EC)
+    return;
+  handleAllErrors(std::move(EC), [&](const ErrorInfoBase &EI) {
+    errs() << "\n";
+    WithColor::error(errs(), ToolName) << EI.message() << ".\n";
+    exit(1);
+  });
 }
 
 /// If the input path is a .dSYM bundle (as created by the dsymutil tool),
@@ -113,6 +122,7 @@ int main(int argc, char **argv) {
 
   propagateOptions();
   ScopedPrinter W(OutputFile.os());
+  LVReaderHandler ReaderHandler(Objects, W, ReaderOptions);
 
   // Print the command line.
   if (options().getInternalCmdline()) {
@@ -122,6 +132,10 @@ int main(int argc, char **argv) {
       Stream << "  " << argv[Index] << "\n";
     Stream << "\n";
   }
+
+  // Create readers and perform requested tasks on them.
+  if (Error Err = ReaderHandler.process())
+    error(std::move(Err));
 
   return EXIT_SUCCESS;
 }

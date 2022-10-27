@@ -430,11 +430,11 @@ public:
     return DWARFDie(this, &DieArray[0]);
   }
 
-  DWARFDie getNonSkeletonUnitDIE(bool ExtractUnitDIEOnly = true) {
-    parseDWO();
-    if (DWO)
-      return DWO->getUnitDIE(ExtractUnitDIEOnly);
-    return getUnitDIE(ExtractUnitDIEOnly);
+  DWARFDie getNonSkeletonUnitDIE(bool ExtractUnitDIEOnly = true,
+                                 StringRef DWOAlternativeLocation = {}) {
+    parseDWO(DWOAlternativeLocation);
+    return DWO ? DWO->getUnitDIE(ExtractUnitDIEOnly)
+               : getUnitDIE(ExtractUnitDIEOnly);
   }
 
   const char *getCompilationDir();
@@ -569,7 +569,10 @@ private:
 
   /// parseDWO - Parses .dwo file for current compile unit. Returns true if
   /// it was actually constructed.
-  bool parseDWO();
+  /// The \p AlternativeLocation specifies an alternative location to get
+  /// the DWARF context for the DWO object; this is the case when it has
+  /// been moved from its original location.
+  bool parseDWO(StringRef AlternativeLocation = {});
 };
 
 inline bool isCompileUnit(const std::unique_ptr<DWARFUnit> &U) {
