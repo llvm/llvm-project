@@ -176,12 +176,14 @@ static void printCommonStructuredOpParts(OpAsmPrinter &p, ValueRange inputs,
 static void printCommonStructuredOpPartsWithNewLine(OpAsmPrinter &p,
                                                     ValueRange inputs,
                                                     ValueRange outputs) {
-  p.printNewline();
-  if (!inputs.empty())
+  if (!inputs.empty()) {
+    p.printNewline();
     p << "ins(" << inputs << " : " << inputs.getTypes() << ")";
-  p.printNewline();
-  if (!outputs.empty())
+  }
+  if (!outputs.empty()) {
+    p.printNewline();
     p << "outs(" << outputs << " : " << outputs.getTypes() << ")";
+  }
 }
 //===----------------------------------------------------------------------===//
 // Specific parsing and printing for named structured ops created by ods-gen.

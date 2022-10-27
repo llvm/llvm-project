@@ -326,6 +326,25 @@ func.func @mixed_parallel_reduced_results(%arg0 : tensor<?x?x?xf32>,
 
 // -----
 
+func.func @map_no_inputs(%init: tensor<64xf32>) -> tensor<64xf32> {
+   %add = linalg.map
+      outs(%init:tensor<64xf32>)
+      () {
+        %0 = arith.constant 0.0: f32
+        linalg.yield %0: f32
+      }
+  func.return %add : tensor<64xf32>
+}
+// CHECK-LABEL: func @map_no_inputs
+//       CHECK:   linalg.map
+//  CHECK-NEXT:   outs
+//  CHECK-NEXT:   () {
+//  CHECK-NEXT:     arith.constant
+//  CHECK-NEXT:     linalg.yield
+//  CHECK-NEXT:   }
+
+// -----
+
 func.func @map_binary(%lhs: tensor<64xf32>, %rhs: tensor<64xf32>,
                       %init: tensor<64xf32>) -> tensor<64xf32> {
    %add = linalg.map
