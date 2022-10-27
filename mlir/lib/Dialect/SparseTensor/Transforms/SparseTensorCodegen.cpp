@@ -31,8 +31,6 @@ using namespace mlir::sparse_tensor;
 
 namespace {
 
-static constexpr uint64_t DimSizesIdx = 0;
-static constexpr uint64_t DimCursorIdx = 1;
 static constexpr uint64_t MemSizesIdx = 2;
 static constexpr uint64_t FieldsIdx = 3;
 
