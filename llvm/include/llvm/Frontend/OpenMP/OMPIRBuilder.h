@@ -1681,6 +1681,19 @@ public:
                                         BasicBlock *PreInsertBefore,
                                         BasicBlock *PostInsertBefore,
                                         const Twine &Name = {});
+  /// OMP Offload Info Metadata name string
+  const std::string ompOffloadInfoName = "omp_offload.info";
+
+  /// Loads all the offload entries information from the host IR
+  /// metadata. This function is only meant to be used with device code
+  /// generation.
+  ///
+  /// \param M         Module to load Metadata info from. Module passed maybe
+  /// loaded from bitcode file, i.e, different from OpenMPIRBuilder::M module.
+  /// \param OffloadEntriesInfoManager Initialize Offload Entry information.
+  void
+  loadOffloadInfoMetadata(Module &M,
+                          OffloadEntriesInfoManager &OffloadEntriesInfoManager);
 };
 
 /// Data structure to contain the information needed to uniquely identify
