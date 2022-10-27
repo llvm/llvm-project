@@ -98,9 +98,6 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
         with open(self.getBuildArtifact("sdk-root.txt"), "r") as sdkroot:
             return sdkroot.read().rstrip()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def do_test(self):
         # The custom swift module cache location
         swift_mod_cache = self.getBuildArtifact("MCP")

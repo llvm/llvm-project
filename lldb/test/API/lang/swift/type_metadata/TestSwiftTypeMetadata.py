@@ -29,9 +29,6 @@ class SwiftTypeMetadataTest(TestBase):
         self.build()
         self.var_commands()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def var_commands(self):
         """Test that LLDB can effectively use the type metadata to reconstruct dynamic types for Swift"""
         lldbutil.run_to_source_breakpoint(self, "// Set breakpoint here", lldb.SBFileSpec("main.swift"))

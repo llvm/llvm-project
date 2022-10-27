@@ -22,9 +22,6 @@ class TestSwiftHeadermapConflict(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @skipIf(bugnumber="rdar://60396797",
             setting=('symbols.use-swift-clangimporter', 'false'))
     @skipUnlessDarwin

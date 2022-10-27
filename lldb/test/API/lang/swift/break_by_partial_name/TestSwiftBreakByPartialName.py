@@ -30,9 +30,6 @@ class SwiftPartialBreakTest(TestBase):
         self.build()
         self.break_commands()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def break_commands(self):
         """Tests that we can break on a partial name of a Swift function"""
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)

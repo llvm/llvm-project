@@ -45,9 +45,6 @@ class TestSwiftInterfaceStaticNoDebugInfo(TestBase):
             open(self.getBuildArtifact(module), 'w').close()
         self.do_test()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def do_test(self):
         # The custom swift module cache location
         swift_mod_cache = self.getBuildArtifact("MCP")

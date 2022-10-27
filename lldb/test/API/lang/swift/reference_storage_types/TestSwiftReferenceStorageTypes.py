@@ -24,9 +24,6 @@ class TestSwiftReferenceStorageTypes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @decorators.skipIf(archs=['ppc64le']) #SR-10215
     @swiftTest
     @skipIf(oslist=["linux"], bugnumber="rdar://76592966")

@@ -8,9 +8,6 @@ import shutil
 
 class TestSwiftHardMacroConflict(TestBase):
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     # Don't run ClangImporter tests if Clangimporter is disabled.

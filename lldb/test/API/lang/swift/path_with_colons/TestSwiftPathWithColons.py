@@ -35,9 +35,6 @@ class TestSwiftPathWithColon(TestBase):
         """Test that LLDB correctly handles paths with colons"""
         self.do_test()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def do_test(self):
         """Test that LLDB correctly handles paths with colons"""
         src = os.path.join(self.getSourceDir(), 'main.swift')

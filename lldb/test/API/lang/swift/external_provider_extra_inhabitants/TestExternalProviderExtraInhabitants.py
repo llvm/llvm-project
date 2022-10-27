@@ -8,9 +8,6 @@ from lldbsuite.test.decorators import *
 
 class TestExternalProviderExtraInhabitants(TestBase):
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @skipUnlessDarwin
     @swiftTest
     def test(self):

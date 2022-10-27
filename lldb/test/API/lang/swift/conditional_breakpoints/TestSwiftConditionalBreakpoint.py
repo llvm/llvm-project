@@ -29,9 +29,6 @@ class TestSwiftConditionalBreakpoint(TestBase):
         self.build()
         self.break_commands()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def check_x_and_y(self, frame, x, y):
         x_var = frame.FindVariable("x")
         y_var = frame.FindVariable("y")

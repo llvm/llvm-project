@@ -24,9 +24,6 @@ class TestSwiftAnyObjectType(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @swiftTest
     def test_any_object_type(self):
         """Test the AnyObject type"""

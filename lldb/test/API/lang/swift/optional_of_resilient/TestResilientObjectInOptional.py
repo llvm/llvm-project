@@ -29,9 +29,6 @@ class TestResilientObjectInOptional(TestBase):
         self.build()
         self.doTest()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def doTest(self):
         target, process, thread, breakpoint = lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.swift"),

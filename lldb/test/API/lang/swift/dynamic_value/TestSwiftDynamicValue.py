@@ -29,9 +29,6 @@ class SwiftDynamicValueTest(TestBase):
         self.build()
         self.dynamic_val_commands()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def dynamic_val_commands(self):
         """Tests that dynamic values work correctly for Swift"""
         lldbutil.run_to_source_breakpoint(self, "// Set a breakpoint here", lldb.SBFileSpec("main.swift"))

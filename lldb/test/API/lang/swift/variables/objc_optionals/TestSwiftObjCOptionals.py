@@ -33,9 +33,6 @@ class TestSwiftObjCOptionalType(TestBase):
         self.do_check_visuals()
         self.do_check_api()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def do_check_consistency(self):
         """Check formatting for T? and T! when T is an ObjC type"""
         lldbutil.run_to_source_breakpoint(

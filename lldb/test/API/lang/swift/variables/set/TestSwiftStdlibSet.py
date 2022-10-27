@@ -24,9 +24,6 @@ class TestSwiftStdlibSet(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @swiftTest
     def test_swift_stdlib_set(self):
         """Tests that we properly vend synthetic children for Swift.Set"""

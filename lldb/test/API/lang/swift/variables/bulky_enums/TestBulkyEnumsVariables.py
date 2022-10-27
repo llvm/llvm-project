@@ -30,9 +30,6 @@ class TestBulkyEnumVariables(TestBase):
         self.build()
         self.do_test()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def do_test(self):
         """Tests that large-size Enum variables display correctly"""
         self.build()

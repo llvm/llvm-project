@@ -24,9 +24,6 @@ class TestSwiftExpressionsInClassFunctions(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def check_expression(self, expression, expected_result, use_summary=True):
         opts = lldb.SBExpressionOptions()
         opts.SetFetchDynamicValue(lldb.eDynamicCanRunTarget)

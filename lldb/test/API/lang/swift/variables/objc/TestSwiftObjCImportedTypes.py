@@ -24,9 +24,6 @@ class TestSwiftObjCImportedTypes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @swiftTest
     @skipUnlessDarwin
     def test_swift_objc_imported_types(self):

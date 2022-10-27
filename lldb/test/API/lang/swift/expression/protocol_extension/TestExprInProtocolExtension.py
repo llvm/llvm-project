@@ -24,9 +24,6 @@ class TestSwiftExprInProtocolExtension(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def check_expression(self, expression, expected_result, use_summary=True):
         value = self.frame().EvaluateExpression(
             expression, lldb.eDynamicCanRunTarget)

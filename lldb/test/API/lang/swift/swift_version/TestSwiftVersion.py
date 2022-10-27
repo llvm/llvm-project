@@ -32,9 +32,6 @@ class TestSwiftVersion(TestBase):
         self.build()
         self.do_test()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def do_test(self):
         """Test that LLDB can debug different Swift language versions"""
         exe_name = "main"

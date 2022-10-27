@@ -30,9 +30,6 @@ class TestSwiftMetadataSymbols(TestBase):
         self.build()
         self.do_test()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def do_test(self):
         """Tests that we can break and display simple types"""
         exe_name = "a.out"

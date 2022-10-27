@@ -29,9 +29,6 @@ class SwiftDynamicTypeGenericsTest(TestBase):
         self.build()
         self.genericresolution_commands()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def genericresolution_commands(self):
         """Check that we can correctly figure out the dynamic type of generic things"""
         lldbutil.run_to_source_breakpoint(self, "//Break here", lldb.SBFileSpec("main.swift"))

@@ -29,9 +29,6 @@ class SwiftGetValueAsUnsignedAPITest(TestBase):
         self.build()
         self.getvalue_commands()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def getvalue_commands(self):
         """Tests that the SBValue::GetValueAsUnsigned() API works for Swift types"""
         (target, process, thread, breakpoint) = lldbutil.run_to_source_breakpoint(self, 

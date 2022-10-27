@@ -21,9 +21,6 @@ import unittest2
 class TestSwiftInterfaceDSYM(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @swiftTest
     @skipIf(archs=no_match("x86_64"))
     @skipIf(debug_info=no_match(["dsym"]))

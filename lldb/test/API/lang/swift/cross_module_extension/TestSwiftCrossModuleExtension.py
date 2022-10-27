@@ -24,9 +24,6 @@ class TestSwiftCrossModuleExtension(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @skipUnlessDarwin
     @swiftTest
     def test_cross_module_extension(self):

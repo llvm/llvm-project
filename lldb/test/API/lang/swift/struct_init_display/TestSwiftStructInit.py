@@ -24,9 +24,6 @@ class TestSwiftStructInit(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @swiftTest
     @skipIf(oslist=['windows'])
     def test_swift_struct_init(self):

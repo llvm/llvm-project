@@ -31,9 +31,6 @@ class TestSwiftCoreGraphicsTypes(TestBase):
         self.build()
         self.do_test()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def do_test(self):
         """Test that we are able to properly format basic CG types"""
         self.build()

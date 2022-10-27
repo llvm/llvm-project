@@ -62,9 +62,6 @@ class TestSwiftResilience(TestBase):
         self.doTestWithFlavor("b", "b")
 
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def createSymlinks(self, exe_flavor, mod_flavor):
         execute_command("cp " + self.getBuildArtifact("main." + exe_flavor) + " " + self.getBuildArtifact("main"))
         execute_command("ln -sf " + self.getBuildArtifact("main." + exe_flavor + ".dSYM") + " " + self.getBuildArtifact("main.dSYM"))

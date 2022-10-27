@@ -38,9 +38,6 @@ class SwiftNSErrorTest(TestBase):
         self.build()
         self.nserror_commands(check_userInfo=True)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def nserror_commands(self, check_userInfo=True):
         """Tests that Swift displays NSError correctly"""
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)

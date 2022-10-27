@@ -8,9 +8,6 @@ import unittest2
 
 class TestSwiftOtherArchDylib(TestBase):
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @swiftTest

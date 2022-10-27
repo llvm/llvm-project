@@ -24,9 +24,6 @@ class TestSwiftMetatype(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @swiftTest
     def test_metatype(self):
         """Test the formatting of Swift metatypes"""

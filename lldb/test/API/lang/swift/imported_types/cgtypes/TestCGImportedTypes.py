@@ -24,9 +24,6 @@ class TestSwiftCGImportedTypes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @skipUnlessDarwin
     @swiftTest
     def test_swift_cg_imported_types(self):

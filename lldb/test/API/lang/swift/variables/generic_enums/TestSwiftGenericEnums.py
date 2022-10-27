@@ -24,9 +24,6 @@ class TestSwiftGenericEnumTypes(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def get_variable(self, name):
         var = self.frame().FindVariable(
             name).GetDynamicValue(lldb.eDynamicCanRunTarget)

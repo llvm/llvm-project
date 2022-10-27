@@ -67,9 +67,6 @@ class TestUnitTests(TestBase):
         self.build()
         self.do_test("Fooey.CompareEm3", "false", 3)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def do_test(self, bkpt_name, compare_value, counter_value):
         """Test that we resolve expression operators correctly"""
         lldbutil.run_to_name_breakpoint(self, bkpt_name,

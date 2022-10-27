@@ -24,9 +24,6 @@ class TestSwiftRangeType(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @swiftTest
     def test_swift_range_type(self):
         """Test the Swift.Range<T> type"""

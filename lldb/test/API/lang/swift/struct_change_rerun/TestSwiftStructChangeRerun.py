@@ -25,9 +25,6 @@ class TestSwiftStructChangeRerun(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @swiftTest
     def test_swift_struct_change_rerun(self):
         """Test that we display self correctly for an inline-initialized struct"""

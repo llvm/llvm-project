@@ -30,9 +30,6 @@ class TestSwiftDebugPrefixMap(TestBase):
     def test_debug_prefix_map(self):
         self.do_test()
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def do_test(self):
         # Mirror the same source tree layout used in the Makefile. When lldb is
         # invoked in the CWD, it should find the source files with the same

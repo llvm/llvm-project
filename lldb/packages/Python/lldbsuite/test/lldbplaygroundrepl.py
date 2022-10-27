@@ -37,9 +37,6 @@ class PlaygroundREPLTest(TestBase):
         (exit_status, output) = subprocess.getstatusoutput(command)
         return exit_status
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def repl_set_up(self):
         """
         Playgrounds REPL test specific setup that must happen after class setup
