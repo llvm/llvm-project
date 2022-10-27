@@ -75,12 +75,6 @@ STATISTIC(SearchLimitReached, "Number of times the limit to "
                               "decompose GEPs is reached");
 STATISTIC(SearchTimes, "Number of times a GEP is decomposed");
 
-/// Cutoff after which to stop analysing a set of phi nodes potentially involved
-/// in a cycle. Because we are analysing 'through' phi nodes, we need to be
-/// careful with value equivalence. We use reachability to make sure a value
-/// cannot be involved in a cycle.
-const unsigned MaxNumPhiBBsValueReachabilityCheck = 20;
-
 // The max limit of the search depth in DecomposeGEPExpression() and
 // getUnderlyingObject().
 static const unsigned MaxLookupSearchDepth = 6;
