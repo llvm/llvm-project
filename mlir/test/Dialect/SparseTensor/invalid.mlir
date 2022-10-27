@@ -574,3 +574,13 @@ func.func @sparse_sort_mismatch_x_type(%arg0: index, %arg1: memref<10xindex>, %a
   sparse_tensor.sort %arg0, %arg1, %arg2 : memref<10xindex>, memref<10xi8>
   return
 }
+
+// -----
+
+#CSR = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
+
+func.func @sparse_alloc_escapes(%arg0: index) -> tensor<10x?xf64, #CSR> {
+  // expected-error@+1 {{sparse tensor allocation should not escape function}}
+  %0 = bufferization.alloc_tensor(%arg0) : tensor<10x?xf64, #CSR>
+  return %0: tensor<10x?xf64, #CSR>
+}

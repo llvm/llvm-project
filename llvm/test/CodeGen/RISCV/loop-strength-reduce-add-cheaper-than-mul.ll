@@ -75,13 +75,12 @@ define void @test(i32 signext %i) nounwind {
 entry:
 	%k_addr.012 = shl i32 %i, 1
 	%tmp14 = icmp sgt i32 %k_addr.012, 8192
-	%tmp. = shl i32 %i, 1
 	br i1 %tmp14, label %return, label %bb
 
 bb:
 	%indvar = phi i32 [ 0, %entry ], [ %indvar.next, %bb ]
 	%tmp.15 = mul i32 %indvar, %i
-	%tmp.16 = add i32 %tmp.15, %tmp.
+	%tmp.16 = add i32 %tmp.15, %k_addr.012
 	%gep.upgrd.1 = zext i32 %tmp.16 to i64
 	%tmp = getelementptr [8193 x i8], [8193 x i8]* @flags2, i32 0, i64 %gep.upgrd.1
 	store i8 0, i8* %tmp

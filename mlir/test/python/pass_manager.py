@@ -36,10 +36,8 @@ def testParseSuccess():
     # An unregistered pass should not parse.
     try:
       pm = PassManager.parse("builtin.module(func.func(not-existing-pass{json=false}))")
-      # TODO: this error should be propagate to Python but the C API does not help right now.
-      # CHECK: error: 'not-existing-pass' does not refer to a registered pass or pass pipeline
     except ValueError as e:
-      # CHECK: ValueError exception: invalid pass pipeline 'builtin.module(func.func(not-existing-pass{json=false}))'.
+      # CHECK: ValueError exception: {{.+}} 'not-existing-pass' does not refer to a registered pass
       log("ValueError exception:", e)
     else:
       log("Exception not produced")
@@ -57,7 +55,10 @@ def testParseFail():
     try:
       pm = PassManager.parse("unknown-pass")
     except ValueError as e:
-      # CHECK: ValueError exception: invalid pass pipeline 'unknown-pass'.
+      #      CHECK: ValueError exception: MLIR Textual PassPipeline Parser:1:1: error:
+      # CHECK-SAME: 'unknown-pass' does not refer to a registered pass or pass pipeline
+      #      CHECK: unknown-pass
+      #      CHECK: ^
       log("ValueError exception:", e)
     else:
       log("Exception not produced")
@@ -71,8 +72,7 @@ def testInvalidNesting():
     try:
       pm = PassManager.parse("func.func(normalize-memrefs)")
     except ValueError as e:
-      # CHECK: Can't add pass 'NormalizeMemRefs' restricted to 'builtin.module' on a PassManager intended to run on 'func.func', did you intend to nest?
-      # CHECK: ValueError exception: invalid pass pipeline 'func.func(normalize-memrefs)'.
+      # CHECK: ValueError exception: Can't add pass 'NormalizeMemRefs' restricted to 'builtin.module' on a PassManager intended to run on 'func.func', did you intend to nest?
       log("ValueError exception:", e)
     else:
       log("Exception not produced")

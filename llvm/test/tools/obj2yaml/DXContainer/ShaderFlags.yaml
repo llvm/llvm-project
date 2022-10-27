@@ -54,7 +54,7 @@ Parts:
   - Name:            STAT
     Size:            8
   - Name:            HASH
-    Size:            8
+    Size:            20
   - Name:            CXIL
     Size:            8
 ...

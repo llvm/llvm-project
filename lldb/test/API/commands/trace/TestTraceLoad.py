@@ -13,11 +13,11 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         trace_description_file_path = os.path.join(src_dir, "intelpt-multi-core-trace", "trace.json")
         self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
         self.expect("thread trace dump instructions 2 -t",
-          substrs=["19532: [20456513.000 ns] (error) expected tracing enabled event",
+          substrs=["19526: [19691636.212 ns] (error) decoding truncated: TSC 40450075478109270 exceeds maximum TSC value 40450075477704372, will skip decoding the remaining data of the PSB (skipping 774 of 825 bytes)",
                    "m.out`foo() + 65 at multi_thread.cpp:12:21",
-                   "9524: [19691630.226 ns] 0x0000000000400ba7    jg     0x400bb3"])
+                   "9524: [19691632.221 ns] 0x0000000000400ba7    jg     0x400bb3"])
         self.expect("thread trace dump instructions 3 -t",
-          substrs=["61831: [19736134.073 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+          substrs=["61831: [19736132.088 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
         self.expect("thread trace dump info --json",
@@ -62,20 +62,20 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
   "traceTechnology": "intel-pt",
   "threadStats": {
     "tid": 3497496,
-    "traceItemsCount": 19533,
+    "traceItemsCount": 19527,
     "memoryUsage": {
-      "totalInBytes": "176065",
-      "avgPerItemInBytes": 9.''', '''},
+      "totalInBytes": "175819",
+      "avgPerItemInBytes": 9.0038920469094084''', '''},
     "timingInSeconds": {
       "Decoding instructions": ''', '''
     },
     "events": {
-      "totalCount": 11,
+      "totalCount": 5,
       "individualCounts": {
         "software disabled tracing": 1,
         "trace synchronization point": 1,
         "CPU core changed": 1,
-        "HW clock tick": 8
+        "HW clock tick": 2
       }
     },
     "errors": {
@@ -116,11 +116,12 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         # we'll load the compact trace and make sure it works
         self.traceLoad(os.path.join(compact_trace_bundle_dir, "trace.json"), substrs=["intel-pt"])
         self.expect("thread trace dump instructions 2 -t",
-          substrs=["19532: [20456513.000 ns] (error) expected tracing enabled event",
+          substrs=["19526: [19691636.212 ns] (error) decoding truncated: TSC 40450075478109270 exceeds maximum TSC value 40450075477704372, will skip decoding the remaining data of the PSB (skipping 774 of 825 bytes)",
                    "m.out`foo() + 65 at multi_thread.cpp:12:21",
-                   "19524: [19691630.226 ns] 0x0000000000400ba7    jg     0x400bb3"])
+                   "19524: [19691632.221 ns] 0x0000000000400ba7    jg     0x400bb3"])
         self.expect("thread trace dump instructions 3 -t",
-          substrs=["61831: [19736134.073 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+          substrs=["61833: [19736136.079 ns] (error) decoding truncated: TSC 40450075478174268 exceeds maximum TSC value 40450075477820383, will skip decoding the remaining data of the PSB (skipping 296 of 297 bytes)",
+                   "61831: [19736132.088 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
         # This reduced the number of continuous executions to look at
@@ -135,11 +136,11 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         trace_description_file_path = os.path.join(src_dir, "intelpt-multi-core-trace", "trace_with_string_numbers.json")
         self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
         self.expect("thread trace dump instructions 2 -t",
-          substrs=["19532: [20456513.000 ns] (error) expected tracing enabled event",
+          substrs=["19526: [19691636.212 ns] (error) decoding truncated: TSC 40450075478109270 exceeds maximum TSC value 40450075477704372, will skip decoding the remaining data of the PSB (skipping 774 of 825 bytes)",
                    "m.out`foo() + 65 at multi_thread.cpp:12:21",
-                   "19524: [19691630.226 ns] 0x0000000000400ba7    jg     0x400bb3"])
+                   "19524: [19691632.221 ns] 0x0000000000400ba7    jg     0x400bb3"])
         self.expect("thread trace dump instructions 3 -t",
-          substrs=["61831: [19736134.073 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+          substrs=["61831: [19736132.088 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
     @testSBAPIAndCommands
@@ -148,11 +149,11 @@ class TestTraceLoad(TraceIntelPTTestCaseBase):
         trace_description_file_path = os.path.join(src_dir, "intelpt-multi-core-trace", "trace_missing_threads.json")
         self.traceLoad(traceDescriptionFilePath=trace_description_file_path, substrs=["intel-pt"])
         self.expect("thread trace dump instructions 3 -t",
-          substrs=["19532: [20456513.000 ns] (error) expected tracing enabled event",
+          substrs=["19526: [19691636.212 ns] (error) decoding truncated: TSC 40450075478109270 exceeds maximum TSC value 40450075477704372, will skip decoding the remaining data of the PSB (skipping 774 of 825 bytes)",
                    "m.out`foo() + 65 at multi_thread.cpp:12:21",
-                   "19524: [19691630.226 ns] 0x0000000000400ba7    jg     0x400bb3"])
+                   "19524: [19691632.221 ns] 0x0000000000400ba7    jg     0x400bb3"])
         self.expect("thread trace dump instructions 2 -t",
-          substrs=["61831: [19736134.073 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
+          substrs=["61831: [19736132.088 ns] 0x0000000000400bd7    addl   $0x1, -0x4(%rbp)",
                    "m.out`bar() + 26 at multi_thread.cpp:20:6"])
 
     @testSBAPIAndCommands
@@ -300,10 +301,10 @@ Context:
         self.assertEqual(cursor.GetEventTypeAsString(), "CPU core changed")
         self.assertEqual(cursor.GetCPU(), 51)
 
-        cursor.GoToId(19532)
+        cursor.GoToId(19526)
 
         self.assertTrue(cursor.IsError())
-        self.assertEqual(cursor.GetError(), "expected tracing enabled event")
+        self.assertEqual(cursor.GetError(), "decoding truncated: TSC 40450075478109270 exceeds maximum TSC value 40450075477704372, will skip decoding the remaining data of the PSB (skipping 774 of 825 bytes)")
 
         cursor.GoToId(19524)
 

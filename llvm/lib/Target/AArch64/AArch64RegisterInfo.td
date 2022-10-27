@@ -871,15 +871,16 @@ class ZPRRegOp <string Suffix, AsmOperandClass C, ElementSizeEnum Size,
 //******************************************************************************
 
 // SVE predicate register classes.
-class PPRClass<int lastreg> : RegisterClass<
+class PPRClass<int firstreg, int lastreg> : RegisterClass<
                                   "AArch64",
                                   [ nxv16i1, nxv8i1, nxv4i1, nxv2i1, nxv1i1 ], 16,
-                                  (sequence "P%u", 0, lastreg)> {
+                                  (sequence "P%u", firstreg, lastreg)> {
   let Size = 16;
 }
 
-def PPR    : PPRClass<15>;
-def PPR_3b : PPRClass<7>; // Restricted 3 bit SVE predicate register class.
+def PPR    : PPRClass<0, 15>;
+def PPR_3b : PPRClass<0, 7>; // Restricted 3 bit SVE predicate register class.
+def PPR_p8to15 : PPRClass<8, 15>;
 
 class PPRAsmOperand <string name, string RegClass, int Width>: AsmOperandClass {
   let Name = "SVE" # name # "Reg";
@@ -905,6 +906,38 @@ def PPR64  : PPRRegOp<"d", PPRAsmOp64,  ElementSizeD,  PPR>;
 def PPRAsmOp3bAny : PPRAsmOperand<"Predicate3bAny", "PPR_3b",  0>;
 
 def PPR3bAny : PPRRegOp<"",  PPRAsmOp3bAny, ElementSizeNone, PPR_3b>;
+
+
+// SVE predicate-as-counter operand
+class PNRAsmOperand<string name, string RegClass, int Width>
+    : PPRAsmOperand<name, RegClass, Width> {
+  let PredicateMethod = "isSVEPredicateAsCounterRegOfWidth<"
+                            # Width # ", " # "AArch64::"
+                            # RegClass # "RegClassID>";
+  let DiagnosticType = "InvalidSVE" # name # "Reg";
+  let ParserMethod   = "tryParseSVEPredicateAsCounter";
+}
+
+class PNRP8to15RegOp<string Suffix, AsmOperandClass C, int EltSize, RegisterClass RC>
+    : PPRRegOp<Suffix, C, ElementSizeNone, RC> {
+  let PrintMethod   = "printPredicateAsCounter<" # EltSize # ">";
+  let EncoderMethod = "EncodePPR_p8to15";
+  let DecoderMethod = "DecodePPR_p8to15RegisterClass";
+}
+
+def PNRAsmAny_p8to15  : PNRAsmOperand<"PNPredicateAny_p8to15", "PPR_p8to15", 0>;
+def PNRAsmOp8_p8to15  : PNRAsmOperand<"PNPredicateB_p8to15",   "PPR_p8to15", 8>;
+def PNRAsmOp16_p8to15 : PNRAsmOperand<"PNPredicateH_p8to15",   "PPR_p8to15", 16>;
+def PNRAsmOp32_p8to15 : PNRAsmOperand<"PNPredicateS_p8to15",   "PPR_p8to15", 32>;
+def PNRAsmOp64_p8to15 : PNRAsmOperand<"PNPredicateD_p8to15",   "PPR_p8to15", 64>;
+
+def PNRAny_p8to15 : PNRP8to15RegOp<"",  PNRAsmAny_p8to15,  0,  PPR_p8to15>;
+def PNR8_p8to15   : PNRP8to15RegOp<"b", PNRAsmOp8_p8to15,  8,  PPR_p8to15>;
+def PNR16_p8to15  : PNRP8to15RegOp<"h", PNRAsmOp16_p8to15, 16, PPR_p8to15>;
+def PNR32_p8to15  : PNRP8to15RegOp<"s", PNRAsmOp32_p8to15, 32, PPR_p8to15>;
+def PNR64_p8to15  : PNRP8to15RegOp<"d", PNRAsmOp64_p8to15, 64, PPR_p8to15>;
+
+
 
 //******************************************************************************
 
