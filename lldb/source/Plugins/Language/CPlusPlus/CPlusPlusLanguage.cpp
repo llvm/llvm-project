@@ -109,6 +109,7 @@ void CPlusPlusLanguage::MethodName::Clear() {
   m_context = llvm::StringRef();
   m_arguments = llvm::StringRef();
   m_qualifiers = llvm::StringRef();
+  m_return_type = llvm::StringRef();
   m_parsed = false;
   m_parse_error = false;
 }
@@ -206,6 +207,7 @@ bool CPlusPlusLanguage::MethodName::TrySimplifiedParse() {
       m_basename = llvm::StringRef();
       m_arguments = llvm::StringRef();
       m_qualifiers = llvm::StringRef();
+      m_return_type = llvm::StringRef();
       return false;
     }
   }
@@ -223,6 +225,7 @@ void CPlusPlusLanguage::MethodName::Parse() {
         m_context = function.value().name.context;
         m_arguments = function.value().arguments;
         m_qualifiers = function.value().qualifiers;
+        m_return_type = function.value().return_type;
         m_parse_error = false;
       } else {
         m_parse_error = true;
@@ -254,6 +257,12 @@ llvm::StringRef CPlusPlusLanguage::MethodName::GetQualifiers() {
   if (!m_parsed)
     Parse();
   return m_qualifiers;
+}
+
+llvm::StringRef CPlusPlusLanguage::MethodName::GetReturnType() {
+  if (!m_parsed)
+    Parse();
+  return m_return_type;
 }
 
 std::string CPlusPlusLanguage::MethodName::GetScopeQualifiedName() {

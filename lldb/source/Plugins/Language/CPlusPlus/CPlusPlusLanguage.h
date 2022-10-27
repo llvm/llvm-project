@@ -55,7 +55,13 @@ public:
     llvm::StringRef GetArguments();
 
     llvm::StringRef GetQualifiers();
-    
+
+    /// Returns the methods return-type.
+    ///
+    /// Currently returns an empty llvm::StringRef
+    /// if the return-type is a function pointer.
+    llvm::StringRef GetReturnType();
+
     bool ContainsPath(llvm::StringRef path);
 
   private:
@@ -78,12 +84,13 @@ public:
     bool TrySimplifiedParse();
 
     ConstString m_full; // Full name:
-                        // "lldb::SBTarget::GetBreakpointAtIndex(unsigned int)
-                        // const"
-    llvm::StringRef m_basename;   // Basename:     "GetBreakpointAtIndex"
-    llvm::StringRef m_context;    // Decl context: "lldb::SBTarget"
-    llvm::StringRef m_arguments;  // Arguments:    "(unsigned int)"
-    llvm::StringRef m_qualifiers; // Qualifiers:   "const"
+                        // "size_t lldb::SBTarget::GetBreakpointAtIndex(unsigned
+                        // int) const"
+    llvm::StringRef m_basename;    // Basename:     "GetBreakpointAtIndex"
+    llvm::StringRef m_context;     // Decl context: "lldb::SBTarget"
+    llvm::StringRef m_arguments;   // Arguments:    "(unsigned int)"
+    llvm::StringRef m_qualifiers;  // Qualifiers:   "const"
+    llvm::StringRef m_return_type; // Return type:  "size_t"
     bool m_parsed = false;
     bool m_parse_error = false;
   };
