@@ -177,7 +177,12 @@ Changes to the Metadata Info
 Changes to the Debug Info
 ---------------------------------
 
-During this release ...
+Previously when emitting DWARF v4 and tuning for GDB, llc would use DWARF v2's
+``DW_AT_bit_offset`` and ``DW_AT_data_member_location``. llc now uses DWARF v4's
+``DW_AT_data_bit_offset`` regardless of tuning.
+
+Support for ``DW_AT_data_bit_offset`` was added in GDB 8.0. For earlier versions,
+you can use llc's ``-dwarf-version=3`` option to emit compatible DWARF.
 
 Changes to the LLVM tools
 ---------------------------------

@@ -624,6 +624,13 @@ proposals are standardized and available in all major engines.
 DWARF Support in Clang
 ----------------------
 
+Previously when emitting DWARFv4 and tuning for GDB, Clang would use DWARF v2's
+``DW_AT_bit_offset`` and ``DW_AT_data_member_location``. Clang now uses DWARF v4's
+``DW_AT_data_bit_offset`` regardless of tuning.
+
+Support for ``DW_AT_data_bit_offset`` was added in GDB 8.0. For earlier versions,
+you can use the ``-gdwarf-3`` option to emit compatible DWARF.
+
 Arm and AArch64 Support in Clang
 --------------------------------
 

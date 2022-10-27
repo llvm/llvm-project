@@ -1,8 +1,9 @@
 ; RUN: llc -mtriple x86_64-apple-macosx -O0 -filetype=obj -o - %s \
 ; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ; RUN: llc -mtriple x86_64-gnu-linux -O0 -filetype=obj -o - %s \
-; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefix=LINUX
-; LINUX-NOT: DW_AT_data_bit_offset
+; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llc -mtriple x86_64-gnu-linux -O0 -debugger-tune=gdb -filetype=obj -o - %s \
+; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ;
 ; Generated from:
 ;   #include <stdint.h>
