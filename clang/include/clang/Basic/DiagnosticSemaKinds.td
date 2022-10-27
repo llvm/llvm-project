@@ -8694,6 +8694,8 @@ def warn_bad_function_cast : Warning<
 def warn_cast_function_type : Warning<
   "cast %diff{from $ to $ |}0,1converts to incompatible function type">,
   InGroup<CastFunctionType>, DefaultIgnore;
+def warn_cast_function_type_strict : Warning<warn_cast_function_type.Text>,
+  InGroup<CastFunctionTypeStrict>, DefaultIgnore;
 def err_cast_pointer_to_non_pointer_int : Error<
   "pointer cannot be cast to type %0">;
 def err_nullptr_cast : Error<

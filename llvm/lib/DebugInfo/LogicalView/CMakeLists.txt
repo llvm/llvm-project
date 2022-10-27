@@ -19,9 +19,16 @@ add_lv_impl_folder(Core
   Core/LVType.cpp
   )
 
+add_lv_impl_folder(Readers
+  LVReaderHandler.cpp
+  Readers/LVBinaryReader.cpp
+  Readers/LVELFReader.cpp
+  )
+
 list(APPEND LIBLV_ADDITIONAL_HEADER_DIRS
   "${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/LogicalView"
   "${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/LogicalView/Core"
+  "${LLVM_MAIN_INCLUDE_DIR}/llvm/DebugInfo/LogicalView/Readers"
   )
 
 add_llvm_component_library(LLVMDebugInfoLogicalView

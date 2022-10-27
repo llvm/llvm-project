@@ -255,6 +255,9 @@ Bug Fixes
 - Reject non-type template arguments formed by casting a non-zero integer
   to a pointer in pre-C++17 modes, instead of treating them as null
   pointers.
+- Fix template arguments of pointer and reference not taking the type as
+  part of their identity.
+  `Issue 47136 <https://github.com/llvm/llvm-project/issues/47136>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -328,6 +331,11 @@ Improvements to Clang's diagnostics
 - Clang now correctly points to the problematic parameter for the ``-Wnonnull``
   warning. This fixes
   `Issue 58273 <https://github.com/llvm/llvm-project/issues/58273>`_.
+- Introduced ``-Wcast-function-type-strict`` to warn about function type mismatches
+  in casts that may result in runtime indirect call `Control-Flow Integrity (CFI)
+  <https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_ failures. This diagnostic
+  is grouped under ``-Wcast-function-type`` as it identifies a more strict set of
+  potentially problematic function type casts.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -552,6 +560,9 @@ C++20 Feature Support
 - Implemented `P2113R0: Proposed resolution for 2019 comment CA 112 <https://wg21.link/P2113R0>`_
   ([temp.func.order]p6.2.1 is not implemented, matching GCC).
 
+- Do not hide templated base members introduced via using-decl in derived class
+  (useful specially for constrained members). Fixes `GH50886 <https://github.com/llvm/llvm-project/issues/50886>`_.
+
 C++2b Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -606,6 +617,11 @@ X86 Support in Clang
 - Support ISA of ``CMPCCXADD``.
   * Support intrinsic of ``__cmpccxadd_epi32``.
   * Support intrinsic of ``__cmpccxadd_epi64``.
+- Add support for ``RAO-INT`` instructions.
+  * Support intrinsic of ``_aadd_i32/64``
+  * Support intrinsic of ``_aand_i32/64``
+  * Support intrinsic of ``_aor_i32/64``
+  * Support intrinsic of ``_axor_i32/64``
 
 WebAssembly Support in Clang
 ----------------------------
@@ -615,6 +631,13 @@ proposals are standardized and available in all major engines.
 
 DWARF Support in Clang
 ----------------------
+
+Previously when emitting DWARFv4 and tuning for GDB, Clang would use DWARF v2's
+``DW_AT_bit_offset`` and ``DW_AT_data_member_location``. Clang now uses DWARF v4's
+``DW_AT_data_bit_offset`` regardless of tuning.
+
+Support for ``DW_AT_data_bit_offset`` was added in GDB 8.0. For earlier versions,
+you can use the ``-gdwarf-3`` option to emit compatible DWARF.
 
 Arm and AArch64 Support in Clang
 --------------------------------
@@ -665,8 +688,11 @@ libclang
   the behavior of ``QualType::getNonReferenceType`` for ``CXType``.
 - Introduced the new function ``clang_CXXMethod_isDeleted``, which queries
   whether the method is declared ``= delete``.
-- ``clang_Cursor_getNumTemplateArguments``, ``clang_Cursor_getTemplateArgumentKind``,
-  ``clang_Cursor_getTemplateArgumentType``, ``clang_Cursor_getTemplateArgumentValue`` and
+- Introduced the new function ``clang_CXXMethod_isCopyAssignmentOperator``,
+  which identifies whether a method cursor is a copy-assignment
+  operator.
+- ``clang_Cursor_getNumTemplateArguments``, ``clang_Cursor_getTemplateArgumentKind``, 
+  ``clang_Cursor_getTemplateArgumentType``, ``clang_Cursor_getTemplateArgumentValue`` and 
   ``clang_Cursor_getTemplateArgumentUnsignedValue`` now work on struct, class,
   and partial template specialization cursors in addition to function cursors.
 

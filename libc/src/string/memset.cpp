@@ -13,7 +13,8 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(void *, memset, (void *dst, int value, size_t count)) {
-  inline_memset(dst, static_cast<uint8_t>(value), count);
+  inline_memset(reinterpret_cast<char *>(dst),
+                static_cast<unsigned char>(value), count);
   return dst;
 }
 

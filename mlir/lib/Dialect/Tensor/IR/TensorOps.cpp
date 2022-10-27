@@ -773,6 +773,34 @@ void EmptyOp::getCanonicalizationPatterns(RewritePatternSet &results,
 // ExtractOp
 //===----------------------------------------------------------------------===//
 
+namespace {
+
+/// Canonicalizes the pattern of the form
+///
+/// %val = tensor.cast %source : : tensor<?xi32> to tensor<2xi32>
+/// %extracted_element = tensor.extract %val[%c0] : tensor<2xi32>
+///
+/// to
+///
+/// %extracted_element = tensor.extract %source[%c0] : tensor<?xi32>
+struct ExtractFromTensorCast : public OpRewritePattern<tensor::ExtractOp> {
+  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ExtractOp extract,
+                                PatternRewriter &rewriter) const final {
+    auto tensorCast = extract.getTensor().getDefiningOp<tensor::CastOp>();
+    if (!tensorCast)
+      return failure();
+    if (!tensorCast.getSource().getType().isa<RankedTensorType>())
+      return failure();
+    rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
+        extract, tensorCast.getSource(), extract.getIndices());
+    return success();
+  }
+};
+
+} // namespace
+
 void ExtractOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
   setNameFn(getResult(), "extracted");
@@ -780,10 +808,9 @@ void ExtractOp::getAsmResultNames(
 
 LogicalResult ExtractOp::verify() {
   // Verify the # indices match if we have a ranked type.
-  if (auto tensorType = getTensor().getType().dyn_cast<RankedTensorType>())
-    if (tensorType.getRank() != static_cast<int64_t>(getIndices().size()))
-      return emitOpError("incorrect number of indices for extract_element");
-
+  auto tensorType = getTensor().getType().cast<RankedTensorType>();
+  if (tensorType.getRank() != static_cast<int64_t>(getIndices().size()))
+    return emitOpError("incorrect number of indices for extract_element");
   return success();
 }
 
@@ -831,6 +858,11 @@ OpFoldResult ExtractOp::fold(ArrayRef<Attribute> operands) {
   }
 
   return {};
+}
+
+void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                            MLIRContext *context) {
+  results.add<ExtractFromTensorCast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1009,9 +1041,9 @@ void InsertOp::getAsmResultNames(
 
 LogicalResult InsertOp::verify() {
   // Verify the # indices match if we have a ranked type.
-  if (auto destType = getDest().getType().dyn_cast<RankedTensorType>())
-    if (destType.getRank() != static_cast<int64_t>(getIndices().size()))
-      return emitOpError("incorrect number of indices");
+  auto destType = getDest().getType().cast<RankedTensorType>();
+  if (destType.getRank() != static_cast<int64_t>(getIndices().size()))
+    return emitOpError("incorrect number of indices");
   return success();
 }
 
@@ -1181,36 +1213,12 @@ struct ExtractFromTensorGenerate : public OpRewritePattern<tensor::ExtractOp> {
   }
 };
 
-/// Canonicalizes the pattern of the form
-///
-/// %val = tensor.cast %source : : tensor<?xi32> to tensor<2xi32>
-/// %extracted_element = tensor.extract %val[%c0] : tensor<2xi32>
-///
-/// to
-///
-/// %extracted_element = tensor.extract %source[%c0] : tensor<?xi32>
-struct ExtractFromTensorCast : public OpRewritePattern<tensor::ExtractOp> {
-  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tensor::ExtractOp extract,
-                                PatternRewriter &rewriter) const final {
-    auto tensorCast = extract.getTensor().getDefiningOp<tensor::CastOp>();
-    if (!tensorCast)
-      return failure();
-
-    rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
-        extract, tensorCast.getSource(), extract.getIndices());
-    return success();
-  }
-};
-
 } // namespace
 
 void GenerateOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                              MLIRContext *context) {
-  // TODO: Move extract patterns to tensor::ExtractOp.
-  results.add<ExtractFromTensorGenerate, ExtractFromTensorCast,
-              StaticTensorGenerate>(context);
+  // TODO: Move extract pattern to tensor::ExtractOp.
+  results.add<ExtractFromTensorGenerate, StaticTensorGenerate>(context);
 }
 
 //===----------------------------------------------------------------------===//

@@ -229,6 +229,7 @@ public:
     /// This causes clang to:
     ///   - Reverse the implementation for DR692, DR1395 and DR1432.
     ///   - pack non-POD members of packed structs.
+    ///   - consider classes with defaulted special member functions non-pod.
     Ver15,
 
     /// Conform to the underlying platform's C and C++ ABIs as closely

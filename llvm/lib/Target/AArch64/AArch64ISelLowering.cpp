@@ -16854,6 +16854,32 @@ static SDValue performBuildVectorCombine(SDNode *N,
   return SDValue();
 }
 
+// ((X >> C) - Y) + Z --> (Z - Y) + (X >> C)
+static SDValue performAddCombineSubShift(SDNode *N, SDValue SUB, SDValue Z,
+                                         SelectionDAG &DAG) {
+  // DAGCombiner will revert the combination when Z is constant cause
+  // dead loop. So don't enable the combination when Z is constant.
+  if (isa<ConstantSDNode>(Z))
+    return SDValue();
+
+  if (SUB.getOpcode() != ISD::SUB || !SUB.hasOneUse())
+    return SDValue();
+
+  SDValue SHL = SUB.getOperand(0);
+  if (SHL.getOpcode() != ISD::SHL || !SHL.hasOneUse())
+    return SDValue();
+
+  if (!isa<ConstantSDNode>(SHL.getOperand(1)))
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  SDValue Y = SUB.getOperand(1);
+  SDValue NewSub = DAG.getNode(ISD::SUB, DL, VT, Z, Y);
+  return DAG.getNode(ISD::ADD, DL, VT, NewSub, SHL);
+}
+
 static SDValue performAddCombineForShiftedOperands(SDNode *N,
                                                    SelectionDAG &DAG) {
   // NOTE: Swapping LHS and RHS is not done for SUB, since SUB is not
@@ -16870,6 +16896,11 @@ static SDValue performAddCombineForShiftedOperands(SDNode *N,
   SDLoc DL(N);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
+
+  if (SDValue Val = performAddCombineSubShift(N, LHS, RHS, DAG))
+    return Val;
+  if (SDValue Val = performAddCombineSubShift(N, RHS, LHS, DAG))
+    return Val;
 
   uint64_t LHSImm = 0, RHSImm = 0;
   // If both operand are shifted by imm and shift amount is not greater than 4
