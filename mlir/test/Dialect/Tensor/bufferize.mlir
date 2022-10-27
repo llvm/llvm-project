@@ -539,7 +539,8 @@ func.func @tensor.reshape(%t1: tensor<?x10xf32>) -> tensor<2x2x5xf32> {
 
 // -----
 
-// CHECK:       #[[$sum_map:.+]] = affine_map<()[s0, s1, s2] -> (s0 + s1 + s2)>
+// CHECK:       #[[$sum_map_1:.+]] = affine_map<()[s0, s1] -> (s1 + s0 + 5)>
+// CHECK:       #[[$sum_map_2:.+]] = affine_map<()[s0, s1] -> (s0 + s1 + 10)>
 // CHECK-LABEL: func @tensor.pad(
 //  CHECK-SAME:   %[[t1:.*]]: tensor<?x10xindex>, %[[l2:.*]]: index, %[[h1:.*]]: index, %[[h2:.*]]: index
 func.func @tensor.pad(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
@@ -547,11 +548,10 @@ func.func @tensor.pad(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
   // CHECK-DAG: %[[m1:.*]] = bufferization.to_memref %[[t1]] : memref<?x10xindex>
   // CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
   // CHECK-DAG: %[[c1:.*]] = arith.constant 1 : index
-  // CHECK-DAG: %[[c5:.*]] = arith.constant 5 : index
   // CHECK-DAG: %[[dim0:.*]] = memref.dim %[[m1]], %[[c0]]
   // CHECK-DAG: %[[dim1:.*]] = memref.dim %[[m1]], %[[c1]]
-  // CHECK-DAG: %[[size0:.*]] = affine.apply #[[$sum_map]]()[%[[dim0]], %[[c5]], %[[h1]]]
-  // CHECK-DAG: %[[size1:.*]] = affine.apply #[[$sum_map]]()[%[[dim1]], %[[l2]], %[[h2]]]
+  // CHECK-DAG: %[[size0:.*]] = affine.apply #[[$sum_map_1]]()[%[[h1]], %[[dim0]]]
+  // CHECK-DAG: %[[size1:.*]] = affine.apply #[[$sum_map_2]]()[%[[l2]], %[[h2]]]
   // CHECK:     %[[alloc:.*]] = memref.alloc(%[[size0]], %[[size1]]) {{.*}} : memref<?x?xindex>
   // CHECK:     %[[alloc_t:.*]] = bufferization.to_tensor %[[alloc]]
   // CHECK:     %[[mapped:.*]] = linalg.map
