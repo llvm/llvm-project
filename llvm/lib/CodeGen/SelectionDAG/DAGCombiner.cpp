@@ -20258,7 +20258,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
     unsigned BCTruncElt = IsLE ? 0 : NumElts - 1;
     SDValue BCSrc = VecOp.getOperand(0);
     if (ExtractIndex == BCTruncElt && BCSrc.getValueType().isScalarInteger())
-      return DAG.getNode(ISD::TRUNCATE, DL, ScalarVT, BCSrc);
+      return DAG.getAnyExtOrTrunc(BCSrc, DL, ScalarVT);
 
     if (LegalTypes && BCSrc.getValueType().isInteger() &&
         BCSrc.getOpcode() == ISD::SCALAR_TO_VECTOR) {
