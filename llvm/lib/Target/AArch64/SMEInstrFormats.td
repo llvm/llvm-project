@@ -2379,3 +2379,191 @@ multiclass sme2_int_mopx_tile<string mnemonic, bits<3> op> {
 multiclass  sme2_bfp_mopx_tile<string mnemonic, bits<3> op> {
   def NAME : sme_outer_product_widening_inst<op, ZPR32, mnemonic>;
 }
+
+//===----------------------------------------------------------------------===///
+// SME2 Zero Lookup Table.
+class sme2_zero_zt<string mnemonic, bits<4> opc>
+    : I<(outs ZTR:$ZT), (ins ),
+         mnemonic, "\t\\{ $ZT \\}",
+         "", []>, Sched<[]> {
+  let Inst{31-4} = 0b1100000001001000000000000000;
+  let Inst{3-0}  = opc;
+}
+
+//===----------------------------------------------------------------------===//
+// SME2 lookup table load/store
+class sme2_spill_fill_vector<string mnemonic, bits<8> opc>
+    : I<!if(opc{7}, (outs ), (outs ZTR:$ZTt)),
+        !if(opc{7}, (ins ZTR:$ZTt, GPR64sp:$Rn), (ins GPR64sp:$Rn)),
+        mnemonic, "\t$ZTt, [$Rn]",
+        "", []>, Sched<[]> {
+  bits<5> Rn;
+  let Inst{31-22} = 0b1110000100;
+  let Inst{21-16} = opc{7-2};
+  let Inst{15-10} = 0b100000;
+  let Inst{9-5}   = Rn;
+  let Inst{4-2}   = 0b000;
+  let Inst{1-0}   = opc{1-0};
+
+  let mayLoad     = !not(opc{7});
+  let mayStore    = opc{7};
+}
+
+//===----------------------------------------------------------------------===///
+// SME2 move to/from lookup table
+class sme2_movt_zt_to_scalar<string mnemonic, bits<7> opc>
+    : I<(outs GPR64:$Rt), (ins ZTR:$ZTt, uimm3s8:$imm3),
+         mnemonic, "\t$Rt, $ZTt$imm3",
+         "", []>, Sched<[]> {
+  bits<3> imm3;
+  bits<5> Rt;
+  let Inst{31-15} = 0b11000000010011000;
+  let Inst{14-12} = imm3;
+  let Inst{11-5}  = opc;
+  let Inst{4-0}   = Rt;
+}
+
+class sme2_movt_scalar_to_zt<string mnemonic, bits<7> opc>
+    : I<(outs ZTR:$ZTt), (ins uimm3s8:$imm3, GPR64:$Rt),
+         mnemonic, "\t$ZTt$imm3, $Rt",
+         "", []>, Sched<[]> {
+  bits<3> imm3;
+  bits<5> Rt;
+  let Inst{31-15} = 0b11000000010011100;
+  let Inst{14-12} = imm3;
+  let Inst{11-5}  = opc;
+  let Inst{4-0}   = Rt;
+}
+
+//===----------------------------------------------------------------------===//
+// SME2 lookup table expand one register
+class sme2_luti_vector_index<bits<2> sz, bits<7> opc, RegisterOperand vector_ty,
+                             AsmVectorIndexOpnd index_ty, string mnemonic>
+    : I<(outs vector_ty:$Zd),
+        (ins ZTR:$ZTt, ZPRAny:$Zn, index_ty:$i),
+        mnemonic, "\t$Zd, $ZTt, $Zn$i",
+        "", []>, Sched<[]> {
+  bits<5> Zn;
+  bits<5> Zd;
+  let Inst{31-19} = 0b1100000011001;
+  let Inst{18-14} = opc{6-2};
+  let Inst{13-12} = sz;
+  let Inst{11-10} = opc{1-0};
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+class sme2_luti2_vector_index<bits<2> sz, RegisterOperand vector_ty,
+                              string mnemonic>
+    : sme2_luti_vector_index<sz, {1,?,?,?,?,0,0}, vector_ty, VectorIndexB, mnemonic> {
+  bits<4> i;
+  let Inst{17-14} = i;
+}
+
+multiclass sme2_luti2_vector_index<string mnemonic> {
+  def _B : sme2_luti2_vector_index<0b00, ZPR8, mnemonic>;
+  def _H : sme2_luti2_vector_index<0b01, ZPR16, mnemonic>;
+  def _S : sme2_luti2_vector_index<0b10, ZPR32, mnemonic>;
+}
+
+class sme2_luti4_vector_index<bits<2> sz, RegisterOperand vector_ty,
+                              string mnemonic>
+    : sme2_luti_vector_index<sz, {0,1,?,?,?,0,0}, vector_ty, VectorIndexH, mnemonic> {
+  bits<3> i;
+  let Inst{16-14} = i;
+}
+
+multiclass sme2_luti4_vector_index<string mnemonic> {
+  def _B : sme2_luti4_vector_index<0b00, ZPR8, mnemonic>;
+  def _H : sme2_luti4_vector_index<0b01, ZPR16, mnemonic>;
+  def _S : sme2_luti4_vector_index<0b10, ZPR32, mnemonic>;
+}
+
+// SME2 lookup table expand two contiguous registers
+class sme2_luti_vector_vg2_index<bits<2> sz, bits<6> opc, RegisterOperand vector_ty,
+                                 AsmVectorIndexOpnd index_ty, string mnemonic>
+    : I<(outs vector_ty:$Zd),
+        (ins ZTR:$ZTt, ZPRAny:$Zn, index_ty:$i),
+        mnemonic, "\t$Zd, $ZTt, $Zn$i",
+        "", []>, Sched<[]> {
+  bits<5> Zn;
+  bits<4> Zd;
+  let Inst{31-19} = 0b1100000010001;
+  let Inst{18-15} = opc{5-2};
+  let Inst{14}    = 0b1;
+  let Inst{13-12} = sz;
+  let Inst{11-10} = opc{1-0};
+  let Inst{9-5}   = Zn;
+  let Inst{4-1}   = Zd;
+  let Inst{0}     = 0b0;
+}
+
+class sme2_luti2_vector_vg2_index<bits<2> sz, RegisterOperand vector_ty,
+                                  string mnemonic>
+    : sme2_luti_vector_vg2_index<sz, {1,?,?,?,0,0}, vector_ty, VectorIndexH, mnemonic> {
+  bits<3> i;
+  let Inst{17-15} = i;
+}
+
+multiclass sme2_luti2_vector_vg2_index<string mnemonic> {
+  def _B : sme2_luti2_vector_vg2_index<0b00, ZZ_b_mul_r, mnemonic>;
+  def _H : sme2_luti2_vector_vg2_index<0b01, ZZ_h_mul_r, mnemonic>;
+  def _S : sme2_luti2_vector_vg2_index<0b10, ZZ_s_mul_r, mnemonic>;
+}
+
+class sme2_luti4_vector_vg2_index<bits<2> sz, RegisterOperand vector_ty,
+                                 string mnemonic>
+    : sme2_luti_vector_vg2_index<sz, {0,1,?,?,0,0}, vector_ty, VectorIndexS, mnemonic> {
+  bits<2> i;
+  let Inst{16-15} = i;
+}
+
+multiclass sme2_luti4_vector_vg2_index<string mnemonic> {
+  def _B : sme2_luti4_vector_vg2_index<0b00, ZZ_b_mul_r, mnemonic>;
+  def _H : sme2_luti4_vector_vg2_index<0b01, ZZ_h_mul_r, mnemonic>;
+  def _S : sme2_luti4_vector_vg2_index<0b10, ZZ_s_mul_r, mnemonic>;
+}
+
+// SME2 lookup table expand four contiguous registers
+class sme2_luti_vector_vg4_index<bits<2> sz, bits<5>opc, RegisterOperand vector_ty,
+                                 AsmVectorIndexOpnd index_ty, string mnemonic>
+    : I<(outs vector_ty:$Zd),
+        (ins ZTR:$ZTt, ZPRAny:$Zn, index_ty:$i),
+        mnemonic, "\t$Zd, $ZTt, $Zn$i",
+        "", []>, Sched<[]> {
+  bits<5> Zn;
+  bits<3> Zd;
+  let Inst{31-19} = 0b1100000010001;
+  let Inst{18-16} = opc{4-2};
+  let Inst{15-14} = 0b10;
+  let Inst{13-12} = sz;
+  let Inst{11-10} = opc{1-0};
+  let Inst{9-5}   = Zn;
+  let Inst{4-2}   = Zd;
+  let Inst{1-0}   = 0b00;
+}
+
+class sme2_luti2_vector_vg4_index<bits<2> sz, RegisterOperand vector_ty,
+                                  string mnemonic>
+    : sme2_luti_vector_vg4_index<sz, {1,?,?,0,0}, vector_ty, VectorIndexS, mnemonic> {
+  bits<2> i;
+  let Inst{17-16} = i;
+}
+
+multiclass sme2_luti2_vector_vg4_index<string mnemonic> {
+  def _B : sme2_luti2_vector_vg4_index<0b00, ZZZZ_b_mul_r, mnemonic>;
+  def _H : sme2_luti2_vector_vg4_index<0b01, ZZZZ_h_mul_r, mnemonic>;
+  def _S : sme2_luti2_vector_vg4_index<0b10, ZZZZ_s_mul_r, mnemonic>;
+}
+
+class sme2_luti4_vector_vg4_index<bits<2> sz, RegisterOperand vector_ty,
+                                  string mnemonic>
+    : sme2_luti_vector_vg4_index<sz, {0,1,?,0,0}, vector_ty, VectorIndexD, mnemonic> {
+  bits<1> i;
+  let Inst{16}    = i;
+}
+
+multiclass sme2_luti4_vector_vg4_index<string mnemonic> {
+  def _H : sme2_luti4_vector_vg4_index<0b01, ZZZZ_h_mul_r, mnemonic>;
+  def _S : sme2_luti4_vector_vg4_index<0b10, ZZZZ_s_mul_r, mnemonic>;
+}
