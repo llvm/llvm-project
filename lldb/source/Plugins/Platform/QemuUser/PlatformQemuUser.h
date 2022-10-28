@@ -42,6 +42,16 @@ public:
     return nullptr;
   }
 
+  uint32_t FindProcesses(const ProcessInstanceInfoMatch &match_info,
+                         ProcessInstanceInfoList &proc_infos) override {
+    return 0;
+  }
+
+  bool GetProcessInfo(lldb::pid_t pid,
+                      ProcessInstanceInfo &proc_info) override {
+    return false;
+  }
+
   bool IsConnected() const override { return true; }
 
   void CalculateTrapHandlerSymbolNames() override {}
