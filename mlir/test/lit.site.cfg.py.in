@@ -34,6 +34,7 @@ config.enable_vulkan_runner = @MLIR_ENABLE_VULKAN_RUNNER@
 config.enable_bindings_python = @MLIR_ENABLE_BINDINGS_PYTHON@
 config.intel_sde_executable = "@INTEL_SDE_EXECUTABLE@"
 config.mlir_run_amx_tests = @MLIR_RUN_AMX_TESTS@
+config.mlir_run_arm_sve_tests = @MLIR_RUN_ARM_SVE_TESTS@
 config.mlir_run_x86vector_tests = @MLIR_RUN_X86VECTOR_TESTS@
 config.mlir_run_cuda_tensor_core_tests = @MLIR_RUN_CUDA_TENSOR_CORE_TESTS@
 config.mlir_include_integration_tests = @MLIR_INCLUDE_INTEGRATION_TESTS@
@@ -41,7 +42,6 @@ config.arm_emulator_executable = "@ARM_EMULATOR_EXECUTABLE@"
 config.arm_emulator_options = "@ARM_EMULATOR_OPTIONS@"
 config.arm_emulator_lli_executable = "@ARM_EMULATOR_LLI_EXECUTABLE@"
 config.arm_emulator_utils_lib_dir = "@ARM_EMULATOR_UTILS_LIB_DIR@"
-config.mlir_run_arm_sve_tests = "@MLIR_RUN_ARM_SVE_TESTS@"
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
