@@ -12,8 +12,10 @@ define i1 @test_b2(i8* %s1, i8* %s2) {
 ; CHECKN-NEXT:    ldr x9, [x1]
 ; CHECKN-NEXT:    ldur x10, [x0, #7]
 ; CHECKN-NEXT:    ldur x11, [x1, #7]
-; CHECKN-NEXT:    cmp x8, x9
-; CHECKN-NEXT:    ccmp x10, x11, #0, eq
+; CHECKN-NEXT:    eor x8, x8, x9
+; CHECKN-NEXT:    eor x9, x10, x11
+; CHECKN-NEXT:    orr x8, x8, x9
+; CHECKN-NEXT:    cmp x8, #0
 ; CHECKN-NEXT:    cset w0, eq
 ; CHECKN-NEXT:    ret
 ;
@@ -42,8 +44,10 @@ define i1 @test_b2_align8(i8* align 8 %s1, i8* align 8 %s2) {
 ; CHECKN-NEXT:    ldr x9, [x1]
 ; CHECKN-NEXT:    ldur x10, [x0, #7]
 ; CHECKN-NEXT:    ldur x11, [x1, #7]
-; CHECKN-NEXT:    cmp x8, x9
-; CHECKN-NEXT:    ccmp x10, x11, #0, eq
+; CHECKN-NEXT:    eor x8, x8, x9
+; CHECKN-NEXT:    eor x9, x10, x11
+; CHECKN-NEXT:    orr x8, x8, x9
+; CHECKN-NEXT:    cmp x8, #0
 ; CHECKN-NEXT:    cset w0, eq
 ; CHECKN-NEXT:    ret
 ;

@@ -113,8 +113,10 @@ define i1 @bcmp7(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldr w9, [x1]
 ; CHECK-NEXT:    ldur w10, [x0, #3]
 ; CHECK-NEXT:    ldur w11, [x1, #3]
-; CHECK-NEXT:    cmp w8, w9
-; CHECK-NEXT:    ccmp w10, w11, #0, eq
+; CHECK-NEXT:    eor w8, w8, w9
+; CHECK-NEXT:    eor w9, w10, w11
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 7)
@@ -180,8 +182,10 @@ define i1 @bcmp11(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldr x9, [x1]
 ; CHECK-NEXT:    ldur x10, [x0, #3]
 ; CHECK-NEXT:    ldur x11, [x1, #3]
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    ccmp x10, x11, #0, eq
+; CHECK-NEXT:    eor x8, x8, x9
+; CHECK-NEXT:    eor x9, x10, x11
+; CHECK-NEXT:    orr x8, x8, x9
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 11)
@@ -214,8 +218,10 @@ define i1 @bcmp13(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldr x9, [x1]
 ; CHECK-NEXT:    ldur x10, [x0, #5]
 ; CHECK-NEXT:    ldur x11, [x1, #5]
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    ccmp x10, x11, #0, eq
+; CHECK-NEXT:    eor x8, x8, x9
+; CHECK-NEXT:    eor x9, x10, x11
+; CHECK-NEXT:    orr x8, x8, x9
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 13)
@@ -230,8 +236,10 @@ define i1 @bcmp14(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldr x9, [x1]
 ; CHECK-NEXT:    ldur x10, [x0, #6]
 ; CHECK-NEXT:    ldur x11, [x1, #6]
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    ccmp x10, x11, #0, eq
+; CHECK-NEXT:    eor x8, x8, x9
+; CHECK-NEXT:    eor x9, x10, x11
+; CHECK-NEXT:    orr x8, x8, x9
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 14)
@@ -246,8 +254,10 @@ define i1 @bcmp15(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldr x9, [x1]
 ; CHECK-NEXT:    ldur x10, [x0, #7]
 ; CHECK-NEXT:    ldur x11, [x1, #7]
-; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    ccmp x10, x11, #0, eq
+; CHECK-NEXT:    eor x8, x8, x9
+; CHECK-NEXT:    eor x9, x10, x11
+; CHECK-NEXT:    orr x8, x8, x9
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 15)
@@ -260,8 +270,10 @@ define i1 @bcmp16(ptr %a, ptr %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldp x8, x9, [x0]
 ; CHECK-NEXT:    ldp x10, x11, [x1]
-; CHECK-NEXT:    cmp x8, x10
-; CHECK-NEXT:    ccmp x9, x11, #0, eq
+; CHECK-NEXT:    eor x8, x8, x10
+; CHECK-NEXT:    eor x9, x9, x11
+; CHECK-NEXT:    orr x8, x8, x9
+; CHECK-NEXT:    cmp x8, #0
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %cr = call i32 @bcmp(ptr %a, ptr %b, i64 16)
