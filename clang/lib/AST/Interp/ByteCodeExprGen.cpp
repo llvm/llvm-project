@@ -397,6 +397,18 @@ bool ByteCodeExprGen<Emitter>::VisitAbstractConditionalOperator(
   return true;
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
+  unsigned StringIndex = P.createGlobalString(E);
+  return this->emitGetPtrGlobal(StringIndex, E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCharacterLiteral(
+    const CharacterLiteral *E) {
+  return this->emitConst(E, E->getValue());
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true);
   return this->Visit(E);
