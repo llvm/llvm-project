@@ -267,12 +267,6 @@ def MapOp : LinalgStructuredBase_Op<"map", [
   let results = (outs Variadic<AnyTensor>:$result);
   let regions = (region SizedRegion<1>:$mapper);
 
-  let builders = [
-    OpBuilder<(ins "ValueRange":$inputs, "Value":$init,
-      "function_ref<void(OpBuilder &, Location, ValueRange)>",
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
-  ];
-
   let extraClassDeclaration = structuredOpsBaseDecls # [{
     // Implement functions necessary for LinalgStructuredInterface.
     SmallVector<StringRef> getIteratorTypesArray();
@@ -346,13 +340,6 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
   );
   let results = (outs Variadic<AnyTensor>);
   let regions = (region SizedRegion<1>:$combiner);
-
-  let builders = [
-    OpBuilder<(ins "ValueRange":$inputs, "ValueRange":$inits,
-      "ArrayRef<int64_t>":$dimensions,
-      "function_ref<void(OpBuilder &, Location, ValueRange)>",
-      CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
-  ];
 
   let extraClassDeclaration = structuredOpsBaseDecls # [{
     // Declare functions necessary for LinalgStructuredInterface.
