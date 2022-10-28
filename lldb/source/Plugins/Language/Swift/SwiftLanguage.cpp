@@ -418,6 +418,10 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
   AddCXXSummary(swift_category_sp, string_summary_provider,
                 "Swift.String summary provider", ConstString("Swift.String"),
                 summary_flags);
+  AddCXXSummary(swift_category_sp,
+                lldb_private::formatters::swift::StringIndex_SummaryProvider,
+                "Swift String.Index summary provider",
+                ConstString("Swift.String.Index"), summary_flags);
   bool (*staticstring_summary_provider)(ValueObject &, Stream &,
                                         const TypeSummaryOptions &) =
       lldb_private::formatters::swift::StaticString_SummaryProvider;

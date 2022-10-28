@@ -11,11 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "SwiftFormatters.h"
+#include "Plugins/Language/Swift/SwiftStringIndex.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timer.h"
@@ -367,6 +369,26 @@ bool lldb_private::formatters::swift::String_SummaryProvider(
     return StringGuts_SummaryProvider(*guts_sp, stream, summary_options,
                                       read_options);
   return false;
+}
+
+bool lldb_private::formatters::swift::StringIndex_SummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  static ConstString g__rawBits("_rawBits");
+  auto raw_bits_sp = valobj.GetChildMemberWithName(g__rawBits, true);
+  if (!raw_bits_sp)
+    return false;
+
+  bool success = false;
+  StringIndex index =
+      raw_bits_sp->GetSyntheticValue()->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  stream.Printf("%llu[%s]", index.encodedOffset(), index.encodingName());
+  if (index.transcodedOffset() != 0)
+    stream.Printf("+%u", index.transcodedOffset());
+
+  return true;
 }
 
 bool lldb_private::formatters::swift::StaticString_SummaryProvider(
