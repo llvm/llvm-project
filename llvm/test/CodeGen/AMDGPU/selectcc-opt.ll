@@ -33,7 +33,6 @@ ENDIF:
 
 ; EG-LABEL: {{^}}test_b:
 ; EG: SET{{[GTEQN]+}}_DX10
-; EG-NEXT: 0(0.000000e+00), 0(0.000000e+00)
 ; EG-NEXT: PRED_
 ; EG-NEXT: ALU clause starting
 define amdgpu_kernel void @test_b(i32 addrspace(1)* %out, float %in) {
