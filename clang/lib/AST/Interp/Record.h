@@ -48,6 +48,8 @@ public:
 public:
   /// Returns the underlying declaration.
   const RecordDecl *getDecl() const { return Decl; }
+  /// Returns the name of the underlying declaration.
+  const std::string getName() const { return Decl->getNameAsString(); }
   /// Checks if the record is a union.
   bool isUnion() const { return getDecl()->isUnion(); }
   /// Returns the size of the record.
