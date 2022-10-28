@@ -291,6 +291,23 @@ define <4 x i32> @extelt0_twice_sub_pslli_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x
   ret <4 x i32> %r
 }
 
+; This would crash because the scalar shift amount has a different type than the shift result.
+
+define <2 x i8> @PR58661(<2 x i8> %a0) {
+; CHECK-LABEL: PR58661:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    psrlw $8, %xmm0
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    shll $8, %eax
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %shuffle = shufflevector <2 x i8> %a0, <2 x i8> <i8 poison, i8 0>, <2 x i32> <i32 1, i32 3>
+  %x = bitcast <2 x i8> %shuffle to i16
+  %shl = shl nuw i16 %x, 8
+  %y = bitcast i16 %shl to <2 x i8>
+  ret <2 x i8> %y
+}
+
 declare <8 x i16> @llvm.x86.sse2.pslli.w(<8 x i16>, i32)
 declare <8 x i16> @llvm.x86.sse2.psrli.w(<8 x i16>, i32)
 declare <8 x i16> @llvm.x86.sse2.psrai.w(<8 x i16>, i32)
