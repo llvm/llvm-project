@@ -11,37 +11,34 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @A = constant [2 x i8] c"A\00"
 @hello = constant [7 x i8] c"hello\0A\00"
 
-declare i32 @fputs(i8*, %FILE*)
+declare i32 @fputs(ptr, ptr)
 
 ; Check fputs(str, fp) --> fwrite(str, strlen(s), 1, fp).
 
-define void @test_simplify1(%FILE* %fp) {
+define void @test_simplify1(ptr %fp) {
 ; CHECK-LABEL: @test_simplify1(
 ; CHECK-NEXT:    ret void
 ;
-  %str = getelementptr [1 x i8], [1 x i8]* @empty, i32 0, i32 0
-  call i32 @fputs(i8* %str, %FILE* %fp)
+  call i32 @fputs(ptr @empty, ptr %fp)
   ret void
 }
 
 ; NOTE: The fwrite simplifier simplifies this further to fputc.
 
-define void @test_simplify2(%FILE* %fp) {
+define void @test_simplify2(ptr %fp) {
 ; CHECK-LABEL: @test_simplify2(
-; CHECK-NEXT:    [[FPUTC:%.*]] = call i32 @fputc(i32 65, %FILE* [[FP:%.*]])
+; CHECK-NEXT:    [[FPUTC:%.*]] = call i32 @fputc(i32 65, ptr [[FP:%.*]])
 ; CHECK-NEXT:    ret void
 ;
-  %str = getelementptr [2 x i8], [2 x i8]* @A, i32 0, i32 0
-  call i32 @fputs(i8* %str, %FILE* %fp)
+  call i32 @fputs(ptr @A, ptr %fp)
   ret void
 }
 
-define void @test_simplify3(%FILE* %fp) {
+define void @test_simplify3(ptr %fp) {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @fwrite(i8* nonnull getelementptr inbounds ([7 x i8], [7 x i8]* @hello, i32 0, i32 0), i32 6, i32 1, %FILE* [[FP:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @fwrite(ptr nonnull @hello, i32 6, i32 1, ptr [[FP:%.*]])
 ; CHECK-NEXT:    ret void
 ;
-  %str = getelementptr [7 x i8], [7 x i8]* @hello, i32 0, i32 0
-  call i32 @fputs(i8* %str, %FILE* %fp)
+  call i32 @fputs(ptr @hello, ptr %fp)
   ret void
 }
