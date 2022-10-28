@@ -1614,7 +1614,7 @@ std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
 TransposeOp::getRegionBuilder() {
   return [](mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
             mlir::ArrayRef<mlir::NamedAttribute>) {
-    b.create<linalg::YieldOp>(block.getArguments().back());
+    b.create<linalg::YieldOp>(block.getArguments().front());
   };
 }
 
