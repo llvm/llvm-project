@@ -1332,6 +1332,12 @@ static bool shouldRunLdsBranchVmemWARHazardFixup(const MachineFunction &MF,
   return false;
 }
 
+static bool isStoreCountWaitZero(const MachineInstr &I) {
+  return I.getOpcode() == AMDGPU::S_WAITCNT_VSCNT &&
+         I.getOperand(0).getReg() == AMDGPU::SGPR_NULL &&
+         !I.getOperand(1).getImm();
+}
+
 bool GCNHazardRecognizer::fixLdsBranchVmemWARHazard(MachineInstr *MI) {
   if (!RunLdsBranchVmemWARHazardFixup)
     return false;
@@ -1351,9 +1357,7 @@ bool GCNHazardRecognizer::fixLdsBranchVmemWARHazard(MachineInstr *MI) {
     return false;
 
   auto IsExpiredFn = [&IsHazardInst](const MachineInstr &I, int) {
-    return IsHazardInst(I) || (I.getOpcode() == AMDGPU::S_WAITCNT_VSCNT &&
-                               I.getOperand(0).getReg() == AMDGPU::SGPR_NULL &&
-                               !I.getOperand(1).getImm());
+    return IsHazardInst(I) || isStoreCountWaitZero(I);
   };
 
   auto IsHazardFn = [InstType, &IsHazardInst](const MachineInstr &I) {
@@ -1370,9 +1374,7 @@ bool GCNHazardRecognizer::fixLdsBranchVmemWARHazard(MachineInstr *MI) {
       if (InstType == InstType2)
         return true;
 
-      return I.getOpcode() == AMDGPU::S_WAITCNT_VSCNT &&
-             I.getOperand(0).getReg() == AMDGPU::SGPR_NULL &&
-             !I.getOperand(1).getImm();
+      return isStoreCountWaitZero(I);
     };
 
     return ::getWaitStatesSince(IsHazardFn, &I, IsExpiredFn) !=
