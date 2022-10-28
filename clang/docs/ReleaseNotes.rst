@@ -336,6 +336,8 @@ Improvements to Clang's diagnostics
   <https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_ failures. This diagnostic
   is grouped under ``-Wcast-function-type`` as it identifies a more strict set of
   potentially problematic function type casts.
+- Clang will now disambiguate NTTP types when printing diagnostic that contain NTTP types.
+  Fixes `Issue 57562 <https://github.com/llvm/llvm-project/issues/57562>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
