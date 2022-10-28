@@ -23518,8 +23518,11 @@ SDValue DAGCombiner::visitSCALAR_TO_VECTOR(SDNode *N) {
   // TODO: Generalize this, so it can be called from visitINSERT_VECTOR_ELT().
   SDValue Scalar = N->getOperand(0);
   unsigned Opcode = Scalar.getOpcode();
+  EVT VecEltVT = VT.getScalarType();
   if (Scalar.hasOneUse() && Scalar->getNumValues() == 1 &&
-      TLI.isBinOp(Opcode) && VT.getScalarType() == Scalar.getValueType() &&
+      TLI.isBinOp(Opcode) && Scalar.getValueType() == VecEltVT &&
+      Scalar.getOperand(0).getValueType() == VecEltVT &&
+      Scalar.getOperand(1).getValueType() == VecEltVT &&
       DAG.isSafeToSpeculativelyExecute(Opcode) && hasOperation(Opcode, VT)) {
     // Match an extract element and get a shuffle mask equivalent.
     SmallVector<int, 8> ShufMask(VT.getVectorNumElements(), -1);
@@ -23564,11 +23567,9 @@ SDValue DAGCombiner::visitSCALAR_TO_VECTOR(SDNode *N) {
     return SDValue();
 
   // If we have an implicit truncate, truncate here if it is legal.
-  if (VT.getScalarType() != Scalar.getValueType() &&
-      Scalar.getValueType().isScalarInteger() &&
-      isTypeLegal(VT.getScalarType())) {
-    SDValue Val =
-        DAG.getNode(ISD::TRUNCATE, SDLoc(Scalar), VT.getScalarType(), Scalar);
+  if (VecEltVT != Scalar.getValueType() &&
+      Scalar.getValueType().isScalarInteger() && isTypeLegal(VecEltVT)) {
+    SDValue Val = DAG.getNode(ISD::TRUNCATE, SDLoc(Scalar), VecEltVT, Scalar);
     return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), VT, Val);
   }
 
@@ -23580,7 +23581,7 @@ SDValue DAGCombiner::visitSCALAR_TO_VECTOR(SDNode *N) {
   EVT SrcVT = SrcVec.getValueType();
   unsigned SrcNumElts = SrcVT.getVectorNumElements();
   unsigned VTNumElts = VT.getVectorNumElements();
-  if (VT.getScalarType() == SrcVT.getScalarType() && VTNumElts <= SrcNumElts) {
+  if (VecEltVT == SrcVT.getScalarType() && VTNumElts <= SrcNumElts) {
     // Create a shuffle equivalent for scalar-to-vector: {ExtIndex, -1, -1, ...}
     SmallVector<int, 8> Mask(SrcNumElts, -1);
     Mask[0] = ExtIndexC->getZExtValue();
