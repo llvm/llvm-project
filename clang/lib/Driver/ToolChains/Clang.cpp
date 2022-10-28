@@ -4218,6 +4218,8 @@ static void renderDebugOptions(const ToolChain &TC, const Driver &D,
     // Clamp effective DWARF version to the max supported by the toolchain.
     EffectiveDWARFVersion =
         std::min(RequestedDWARFVersion, TC.getMaxDwarfVersion());
+  } else {
+    Args.ClaimAllArgs(options::OPT_fdebug_default_version);
   }
 
   // -gline-directives-only supported only for the DWARF debug info.
