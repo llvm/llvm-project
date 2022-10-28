@@ -130,6 +130,7 @@ copy("Headers") {
     "avx512vpopcntdqvlintrin.h",
     "avxifmaintrin.h",
     "avxintrin.h",
+    "avxvnniint8intrin.h",
     "avxvnniintrin.h",
     "bmi2intrin.h",
     "bmiintrin.h",
