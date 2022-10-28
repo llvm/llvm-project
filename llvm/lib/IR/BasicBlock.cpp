@@ -452,7 +452,11 @@ BasicBlock *BasicBlock::splitBasicBlockBefore(iterator I, const Twine &BBName) {
   // If there were PHI nodes in 'this' block, the PHI nodes are updated
   // to reflect that the incoming branches will be from the New block and not
   // from predecessors of the 'this' block.
-  for (BasicBlock *Pred : predecessors(this)) {
+  // Save predecessors to separate vector before modifying them.
+  SmallVector<BasicBlock *, 4> Predecessors;
+  for (BasicBlock *Pred : predecessors(this))
+    Predecessors.push_back(Pred);
+  for (BasicBlock *Pred : Predecessors) {
     Instruction *TI = Pred->getTerminator();
     TI->replaceSuccessorWith(this, New);
     this->replacePhiUsesWith(Pred, New);

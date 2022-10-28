@@ -19,6 +19,8 @@
 namespace llvm {
 namespace logicalview {
 
+using LVLineRange = std::pair<LVLine *, LVLine *>;
+
 // The DW_AT_data_member_location attribute is a simple member offset.
 const LVSmall LVLocationMemberOffset = 0;
 

@@ -27,20 +27,25 @@ LogicalResult detail::verifyDestinationStyleOpInterface(Operation *op) {
       cast<DestinationStyleOpInterface>(op);
 
   SmallVector<OpOperand *> outputBufferOperands, outputTensorOperands;
-  for (OpOperand *operand : dstStyleOp.getOutputOperands()) {
+  for (OpOperand *operand : dstStyleOp.getDpsInitOperands()) {
     Type type = operand->get().getType();
-    if (type.isa<MemRefType>())
+    if (type.isa<MemRefType>()) {
       outputBufferOperands.push_back(operand);
-    if (type.isa<RankedTensorType>())
+    } else if (type.isa<RankedTensorType>()) {
       outputTensorOperands.push_back(operand);
+    } else {
+      return op->emitOpError("expected that operand #")
+             << operand->getOperandNumber()
+             << " is a ranked tensor or a ranked memref";
+    }
   }
 
   // Expect at least one output operand.
-  int64_t numInputs = dstStyleOp.getNumInputs();
-  int64_t numOutputs = dstStyleOp.getNumOutputs();
-  if (numOutputs == 0)
+  int64_t numInputs = dstStyleOp.getNumDpsInputs();
+  int64_t numInits = dstStyleOp.getNumDpsInits();
+  if (numInits == 0)
     return op->emitOpError("expected at least one output operand");
-  if (failed(OpTrait::impl::verifyNOperands(op, numInputs + numOutputs)))
+  if (failed(OpTrait::impl::verifyNOperands(op, numInputs + numInits)))
     return failure();
   // Verify the number of results matches the number of output tensors.
   if (op->getNumResults() != outputTensorOperands.size())

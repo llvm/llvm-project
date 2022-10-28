@@ -17,6 +17,7 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
+#include "llvm/ADT/StringExtras.h"
 
 //===----------------------------------------------------------------------===//
 // ArithDialect
@@ -29,6 +30,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/ArithOpsEnums.h.inc"
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/Arith/IR/ArithOpsAttributes.h.inc"
+
+//===----------------------------------------------------------------------===//
+// Arith Interfaces
+//===----------------------------------------------------------------------===//
+#include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.h.inc"
 
 //===----------------------------------------------------------------------===//
 // Arith Dialect Operations

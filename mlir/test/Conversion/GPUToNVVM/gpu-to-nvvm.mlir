@@ -479,6 +479,20 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
+  // CHECK-LABEL: func @gpu_unroll
+  func.func @gpu_unroll(%arg0 : vector<4xf32>) -> vector<4xf32> {
+    %result = math.exp %arg0 : vector<4xf32>
+    // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
+    // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
+    // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
+    // CHECK: llvm.call @__nv_expf(%{{.*}}) : (f32) -> f32
+    func.return %result : vector<4xf32>
+  }
+}
+
+// -----
+
+gpu.module @test_module {
   // CHECK-LABEL: @kernel_func
   // CHECK: attributes
   // CHECK: gpu.kernel

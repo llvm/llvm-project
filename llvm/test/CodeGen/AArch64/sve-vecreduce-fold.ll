@@ -53,8 +53,7 @@ define i1 @reduce_and_insert_subvec_into_ones(<vscale x 4 x i1> %in) {
 ; CHECK-LABEL: reduce_and_insert_subvec_into_ones:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    nots p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %allones.ins = insertelement <vscale x 16 x i1> poison, i1 1, i32 0
@@ -68,8 +67,7 @@ define i1 @reduce_and_insert_subvec_into_poison(<vscale x 4 x i1> %in) {
 ; CHECK-LABEL: reduce_and_insert_subvec_into_poison:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    not p0.b, p1/z, p0.b
-; CHECK-NEXT:    ptest p1, p0.b
+; CHECK-NEXT:    nots p0.b, p1/z, p0.b
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %t = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv4i1(<vscale x 16 x i1> poison, <vscale x 4 x i1> %in, i64 0)
@@ -86,8 +84,7 @@ define i1 @reduce_and_insert_subvec_into_var(<vscale x 4 x i1> %in, <vscale x 16
 ; CHECK-NEXT:    ptrue p2.b
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p3.h
 ; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
-; CHECK-NEXT:    not p0.b, p2/z, p0.b
-; CHECK-NEXT:    ptest p2, p0.b
+; CHECK-NEXT:    nots p0.b, p2/z, p0.b
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %t = call <vscale x 16 x i1> @llvm.vector.insert.nxv16i1.nxv4i1(<vscale x 16 x i1> %vec, <vscale x 4 x i1> %in, i64 0)

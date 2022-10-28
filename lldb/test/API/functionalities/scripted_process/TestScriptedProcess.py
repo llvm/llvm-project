@@ -14,12 +14,6 @@ class ScriptedProcesTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
 
-    def setUp(self):
-        TestBase.setUp(self)
-
-    def tearDown(self):
-        TestBase.tearDown(self)
-
     def test_python_plugin_package(self):
         """Test that the lldb python module has a `plugins.scripted_process`
         package."""

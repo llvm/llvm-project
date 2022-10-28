@@ -1,15 +1,28 @@
+//===--- WalkASTTest.cpp ------------------------------------------- C++-*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 #include "AnalysisInternal.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Testing/TestAST.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Annotations.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cstddef>
+#include <vector>
 
-namespace clang {
-namespace include_cleaner {
+namespace clang::include_cleaner {
 namespace {
+using testing::Pair;
+using testing::UnorderedElementsAre;
 
 // Specifies a test of which symbols are referenced by a piece of code.
 //
@@ -25,6 +38,7 @@ void testWalk(llvm::StringRef TargetCode, llvm::StringRef ReferencingCode) {
   Inputs.ExtraFiles["target.h"] = Target.code().str();
   Inputs.ExtraArgs.push_back("-include");
   Inputs.ExtraArgs.push_back("target.h");
+  Inputs.ExtraArgs.push_back("-std=c++17");
   TestAST AST(Inputs);
   const auto &SM = AST.sourceManager();
 
@@ -84,6 +98,8 @@ TEST(WalkAST, DeclRef) {
   testWalk("struct S { static int ^x; };", "int y = S::^x;");
   // Canonical declaration only.
   testWalk("extern int ^x; int x;", "int y = ^x;");
+  // Return type of `foo` isn't used.
+  testWalk("struct S{}; S ^foo();", "auto bar() { return ^foo(); }");
 }
 
 TEST(WalkAST, TagType) {
@@ -98,13 +114,67 @@ TEST(WalkAST, Alias) {
     using ns::^x;
   )cpp",
            "int y = ^x;");
+  testWalk("using ^foo = int;", "^foo x;");
+  testWalk("struct S {}; using ^foo = S;", "^foo x;");
+}
+
+TEST(WalkAST, Using) {
+  testWalk("namespace ns { void ^x(); void ^x(int); }", "using ns::^x;");
+  testWalk("namespace ns { struct S; } using ns::^S;", "^S *s;");
+}
+
+TEST(WalkAST, Namespaces) {
+  testWalk("namespace ns { void x(); }", "using namespace ^ns;");
+}
+
+TEST(WalkAST, TemplateNames) {
+  testWalk("template<typename> struct ^S {};", "^S<int> s;");
+  // FIXME: Template decl has the wrong primary location for type-alias template
+  // decls.
   testWalk(R"cpp(
-    namespace ns { struct S; } // Not used
-    using ns::S; // FIXME: S should be used
-  )cpp",
-           "^S *x;");
+      template <typename> struct S {};
+      template <typename T> ^using foo = S<T>;)cpp",
+           "^foo<int> x;");
+  testWalk(R"cpp(
+      namespace ns {template <typename> struct S {}; }
+      using ns::^S;)cpp",
+           "^S<int> x;");
+  testWalk("template<typename> struct ^S {};",
+           R"cpp(
+      template <template <typename> typename> struct X {};
+      X<^S> x;)cpp");
+  testWalk("template<typename T> struct ^S { S(T); };", "^S s(42);");
+  // Should we mark the specialization instead?
+  testWalk("template<typename> struct ^S {}; template <> struct S<int> {};",
+           "^S<int> s;");
+}
+
+TEST(WalkAST, MemberExprs) {
+  testWalk("struct S { void ^foo(); };", "void foo() { S{}.^foo(); }");
+  testWalk("struct S { void foo(); }; struct X : S { using S::^foo; };",
+           "void foo() { X{}.^foo(); }");
+}
+
+TEST(WalkAST, ConstructExprs) {
+  testWalk("struct ^S {};", "S ^t;");
+  testWalk("struct S { ^S(int); };", "S ^t(42);");
+}
+
+TEST(WalkAST, Functions) {
+  // Definition uses declaration, not the other way around.
+  testWalk("void ^foo();", "void ^foo() {}");
+  testWalk("void foo() {}", "void ^foo();");
+
+  // Unresolved calls marks all the overloads.
+  testWalk("void ^foo(int); void ^foo(char);",
+           "template <typename T> void bar() { ^foo(T{}); }");
+}
+
+TEST(WalkAST, Enums) {
+  testWalk("enum E { ^A = 42, B = 43 };", "int e = ^A;");
+  testWalk("enum class ^E : int;", "enum class ^E : int {};");
+  testWalk("enum class E : int {};", "enum class ^E : int ;");
 }
 
 } // namespace
-} // namespace include_cleaner
-} // namespace clang
+} // namespace clang::include_cleaner

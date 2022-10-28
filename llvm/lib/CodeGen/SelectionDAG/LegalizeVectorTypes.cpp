@@ -7036,7 +7036,7 @@ SDValue DAGTypeLegalizer::ModifyToType(SDValue InOp, EVT NVT,
   unsigned InNumElts = InEC.getFixedValue();
   unsigned WidenNumElts = WidenEC.getFixedValue();
 
-  // Fall back to extract and build.
+  // Fall back to extract and build (+ mask, if padding with zeros).
   SmallVector<SDValue, 16> Ops(WidenNumElts);
   EVT EltVT = NVT.getVectorElementType();
   unsigned MinNumElts = std::min(WidenNumElts, InNumElts);
@@ -7045,9 +7045,21 @@ SDValue DAGTypeLegalizer::ModifyToType(SDValue InOp, EVT NVT,
     Ops[Idx] = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, EltVT, InOp,
                            DAG.getVectorIdxConstant(Idx, dl));
 
-  SDValue FillVal = FillWithZeroes ? DAG.getConstant(0, dl, EltVT) :
-    DAG.getUNDEF(EltVT);
-  for ( ; Idx < WidenNumElts; ++Idx)
-    Ops[Idx] = FillVal;
-  return DAG.getBuildVector(NVT, dl, Ops);
+  SDValue UndefVal = DAG.getUNDEF(EltVT);
+  for (; Idx < WidenNumElts; ++Idx)
+    Ops[Idx] = UndefVal;
+
+  SDValue Widened = DAG.getBuildVector(NVT, dl, Ops);
+  if (!FillWithZeroes)
+    return Widened;
+
+  assert(NVT.isInteger() &&
+         "We expect to never want to FillWithZeroes for non-integral types.");
+
+  SmallVector<SDValue, 16> MaskOps;
+  MaskOps.append(MinNumElts, DAG.getAllOnesConstant(dl, EltVT));
+  MaskOps.append(WidenNumElts - MinNumElts, DAG.getConstant(0, dl, EltVT));
+
+  return DAG.getNode(ISD::AND, dl, NVT, Widened,
+                     DAG.getBuildVector(NVT, dl, MaskOps));
 }

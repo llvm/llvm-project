@@ -17,6 +17,7 @@
 #include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Semantics/semantics.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -142,6 +143,11 @@ void CompilerInstance::clearOutputFiles(bool eraseFiles) {
 
 bool CompilerInstance::executeAction(FrontendAction &act) {
   auto &invoc = this->getInvocation();
+
+  llvm::Triple targetTriple{llvm::Triple(invoc.getTargetOpts().triple)};
+  if (targetTriple.getArch() == llvm::Triple::ArchType::x86_64) {
+    invoc.getDefaultKinds().set_quadPrecisionKind(10);
+  }
 
   // Set some sane defaults for the frontend.
   invoc.setDefaultFortranOpts();

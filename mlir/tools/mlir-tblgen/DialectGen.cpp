@@ -107,7 +107,7 @@ public:
 /// Registration for a single dependent dialect: to be inserted in the ctor
 /// above for each dependent dialect.
 const char *const dialectRegistrationTemplate = R"(
-    getContext()->getOrLoadDialect<{0}>();
+    getContext()->loadDialect<{0}>();
 )";
 
 /// The code block for the attribute parser/printer hooks.

@@ -8,7 +8,7 @@ Clang ``-gmodules`` debug info
 
 On Darwin platforms, including Apple macOS and iOS, Clang can emit
 DWARF debug info for types found in `Clang
-modules<https://clang.llvm.org/docs/Modules.html>`_ more efficiently.
+modules <https://clang.llvm.org/docs/Modules.html>`_ more efficiently.
 
 From an on-disk storage perspective, Clang modules are precompiled
 header files that contain serialized Clang ASTs of all the
@@ -16,7 +16,7 @@ declarations found in a Clang module. In traditional DWARF debug info,
 two object files that were built from sources that imported the same
 header file will both contain DWARF debug type info for types in that
 header file. This can lead to a lot of redundant `debug
-info<https://llvm.org/devmtg/2015-10/#talk19>`_.
+info <https://llvm.org/devmtg/2015-10/#talk19>`_.
 
 When Clang compiles a Clang module or precompiled header with the
 ``-gmodules`` option, the precompiled header (``.pch``) or module
@@ -57,6 +57,7 @@ M.h
 M.pcm
 
 ::
+
    DW_TAG_compile_unit
      DW_AT_GNU_dwo_id  (0xabcdef)
      DW_TAG_module
@@ -69,11 +70,13 @@ M.pcm
 A.c
    
 ::
+
    A a;
 
 A.o
 
 ::
+
    DW_TAG_compile_unit
      DW_TAG_module
        DW_AT_name "M"

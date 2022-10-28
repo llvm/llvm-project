@@ -515,7 +515,7 @@ ompd_rc_t _print(const char *str, int category) {
   return ompd_rc_ok;
 }
 
-void _printf(char *format, ...) {
+void _printf(const char *format, ...) {
   va_list args;
   va_start(args, format);
   char output[1024];

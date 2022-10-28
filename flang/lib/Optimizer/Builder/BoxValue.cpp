@@ -85,6 +85,12 @@ llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
 }
 
 llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
+                                   const fir::PolymorphicValue &p) {
+  return os << "polymorphicvalue: { addr: " << p.getAddr()
+            << ", tdesc: " << p.getTdesc() << " }";
+}
+
+llvm::raw_ostream &fir::operator<<(llvm::raw_ostream &os,
                                    const fir::ArrayBoxValue &box) {
   os << "boxarray { addr: " << box.getAddr();
   if (box.getLBounds().size()) {

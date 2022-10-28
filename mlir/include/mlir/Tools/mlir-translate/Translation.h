@@ -106,6 +106,9 @@ struct TranslationParser : public llvm::cl::parser<const TranslateFunction *> {
                        size_t globalWidth) const override;
 };
 
+/// Register command-line options used by the translation registry.
+void registerTranslationCLOptions();
+
 } // namespace mlir
 
 #endif // MLIR_TOOLS_MLIRTRANSLATE_TRANSLATION_H

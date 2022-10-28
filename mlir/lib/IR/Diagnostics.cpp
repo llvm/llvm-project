@@ -389,27 +389,14 @@ struct SourceMgrDiagnosticHandlerImpl {
 } // namespace detail
 } // namespace mlir
 
-/// Return a processable FileLineColLoc from the given location.
-static Optional<FileLineColLoc> getFileLineColLoc(Location loc) {
-  Optional<FileLineColLoc> firstFileLoc;
-  loc->walk([&](Location loc) {
-    if (FileLineColLoc fileLoc = loc.dyn_cast<FileLineColLoc>()) {
-      firstFileLoc = fileLoc;
-      return WalkResult::interrupt();
-    }
-    return WalkResult::advance();
-  });
-  return firstFileLoc;
-}
-
 /// Return a processable CallSiteLoc from the given location.
 static Optional<CallSiteLoc> getCallSiteLoc(Location loc) {
-  if (auto nameLoc = loc.dyn_cast<NameLoc>())
-    return getCallSiteLoc(loc.cast<NameLoc>().getChildLoc());
-  if (auto callLoc = loc.dyn_cast<CallSiteLoc>())
+  if (auto nameLoc = dyn_cast<NameLoc>(loc))
+    return getCallSiteLoc(cast<NameLoc>(loc).getChildLoc());
+  if (auto callLoc = dyn_cast<CallSiteLoc>(loc))
     return callLoc;
-  if (auto fusedLoc = loc.dyn_cast<FusedLoc>()) {
-    for (auto subLoc : loc.cast<FusedLoc>().getLocations()) {
+  if (auto fusedLoc = dyn_cast<FusedLoc>(loc)) {
+    for (auto subLoc : cast<FusedLoc>(loc).getLocations()) {
       if (auto callLoc = getCallSiteLoc(subLoc)) {
         return callLoc;
       }
@@ -454,7 +441,7 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
                                                 DiagnosticSeverity kind,
                                                 bool displaySourceLine) {
   // Extract a file location from this loc.
-  auto fileLoc = getFileLineColLoc(loc);
+  auto fileLoc = loc->findInstanceOf<FileLineColLoc>();
 
   // If one doesn't exist, then print the raw message without a source location.
   if (!fileLoc) {
@@ -469,7 +456,7 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
   // Otherwise if we are displaying the source line, try to convert the file
   // location to an SMLoc.
   if (displaySourceLine) {
-    auto smloc = convertLocToSMLoc(*fileLoc);
+    auto smloc = convertLocToSMLoc(fileLoc);
     if (smloc.isValid())
       return mgr.PrintMessage(os, smloc, getDiagKind(kind), message);
   }
@@ -479,8 +466,8 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
   // the constructor of SMDiagnostic that takes a location.
   std::string locStr;
   llvm::raw_string_ostream locOS(locStr);
-  locOS << fileLoc->getFilename().getValue() << ":" << fileLoc->getLine() << ":"
-        << fileLoc->getColumn();
+  locOS << fileLoc.getFilename().getValue() << ":" << fileLoc.getLine() << ":"
+        << fileLoc.getColumn();
   llvm::SMDiagnostic diag(locOS.str(), getDiagKind(kind), message.str());
   diag.print(nullptr, os);
 }
@@ -853,8 +840,8 @@ void SourceMgrDiagnosticVerifierHandler::process(Diagnostic &diag) {
   auto kind = diag.getSeverity();
 
   // Process a FileLineColLoc.
-  if (auto fileLoc = getFileLineColLoc(diag.getLocation()))
-    return process(*fileLoc, diag.str(), kind);
+  if (auto fileLoc = diag.getLocation()->findInstanceOf<FileLineColLoc>())
+    return process(fileLoc, diag.str(), kind);
 
   emitDiagnostic(diag.getLocation(),
                  "unexpected " + getDiagKindStr(kind) + ": " + diag.str(),

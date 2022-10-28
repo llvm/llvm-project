@@ -24,6 +24,11 @@ MlirPassManager mlirPassManagerCreate(MlirContext ctx) {
   return wrap(new PassManager(unwrap(ctx)));
 }
 
+MlirPassManager mlirPassManagerCreateOnOperation(MlirContext ctx,
+                                                 MlirStringRef anchorOp) {
+  return wrap(new PassManager(unwrap(ctx), unwrap(anchorOp)));
+}
+
 void mlirPassManagerDestroy(MlirPassManager passManager) {
   delete unwrap(passManager);
 }
@@ -63,6 +68,15 @@ void mlirPassManagerAddOwnedPass(MlirPassManager passManager, MlirPass pass) {
 void mlirOpPassManagerAddOwnedPass(MlirOpPassManager passManager,
                                    MlirPass pass) {
   unwrap(passManager)->addPass(std::unique_ptr<Pass>(unwrap(pass)));
+}
+
+MlirLogicalResult mlirOpPassManagerAddPipeline(MlirOpPassManager passManager,
+                                               MlirStringRef pipelineElements,
+                                               MlirStringCallback callback,
+                                               void *userData) {
+  detail::CallbackOstream stream(callback, userData);
+  return wrap(parsePassPipeline(unwrap(pipelineElements), *unwrap(passManager),
+                                stream));
 }
 
 void mlirPrintPassPipeline(MlirOpPassManager passManager,

@@ -1177,13 +1177,17 @@ private:
         if (CurrentToken->isOneOf(tok::star, tok::amp))
           CurrentToken->setType(TT_PointerOrReference);
         consumeToken();
-        if (CurrentToken && CurrentToken->is(tok::comma) &&
+        if (!CurrentToken)
+          continue;
+        if (CurrentToken->is(tok::comma) &&
             CurrentToken->Previous->isNot(tok::kw_operator)) {
           break;
         }
-        if (CurrentToken && CurrentToken->Previous->isOneOf(
-                                TT_BinaryOperator, TT_UnaryOperator, tok::comma,
-                                tok::star, tok::arrow, tok::amp, tok::ampamp)) {
+        if (CurrentToken->Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator,
+                                            tok::comma, tok::star, tok::arrow,
+                                            tok::amp, tok::ampamp) ||
+            // User defined literal.
+            CurrentToken->Previous->TokenText.startswith("\"\"")) {
           CurrentToken->Previous->setType(TT_OverloadedOperator);
         }
       }
@@ -1337,12 +1341,14 @@ private:
     if (CurrentToken &&
         CurrentToken->isOneOf(Keywords.kw_mark, Keywords.kw_option,
                               Keywords.kw_region)) {
-      bool IsMark = CurrentToken->is(Keywords.kw_mark);
+      bool IsMarkOrRegion =
+          CurrentToken->isOneOf(Keywords.kw_mark, Keywords.kw_region);
       next();
       next(); // Consume first token (so we fix leading whitespace).
       while (CurrentToken) {
-        if (IsMark || CurrentToken->Previous->is(TT_BinaryOperator))
+        if (IsMarkOrRegion || CurrentToken->Previous->is(TT_BinaryOperator)) {
           CurrentToken->setType(TT_ImplicitStringLiteral);
+        }
         next();
       }
     }
@@ -2110,6 +2116,9 @@ private:
 
     // Empty parens aren't casts and there are no casts at the end of the line.
     if (Tok.Previous == Tok.MatchingParen || !Tok.Next || !Tok.MatchingParen)
+      return false;
+
+    if (Tok.MatchingParen->is(TT_OverloadedOperatorLParen))
       return false;
 
     FormatToken *LeftOfParens = Tok.MatchingParen->getPreviousNonComment();
@@ -3097,6 +3106,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
   if (Left.is(tok::semi))
     return 0;
 
+  // Language specific handling.
   if (Style.Language == FormatStyle::LK_Java) {
     if (Right.isOneOf(Keywords.kw_extends, Keywords.kw_throws))
       return 1;
@@ -3116,13 +3126,16 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     // Prefer breaking call chains (".foo") over empty "{}", "[]" or "()".
     if (Left.opensScope() && Right.closesScope())
       return 200;
+  } else if (Style.isProto()) {
+    if (Right.is(tok::l_square))
+      return 1;
+    if (Right.is(tok::period))
+      return 500;
   }
 
   if (Right.is(tok::identifier) && Right.Next && Right.Next->is(TT_DictLiteral))
     return 1;
   if (Right.is(tok::l_square)) {
-    if (Style.Language == FormatStyle::LK_Proto)
-      return 1;
     if (Left.is(tok::r_square))
       return 200;
     // Slightly prefer formatting local lambda definitions like functions.
@@ -3135,10 +3148,8 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     }
   }
 
-  if (Left.is(tok::coloncolon) ||
-      (Right.is(tok::period) && Style.Language == FormatStyle::LK_Proto)) {
+  if (Left.is(tok::coloncolon))
     return 500;
-  }
   if (Right.isOneOf(TT_StartOfName, TT_FunctionDeclarationName) ||
       Right.is(tok::kw_operator)) {
     if (Line.startsWith(tok::kw_for) && Right.PartOfMultiVariableDeclStmt)
@@ -3157,7 +3168,7 @@ unsigned TokenAnnotator::splitPenalty(const AnnotatedLine &Line,
     return 160;
   if (Left.is(TT_CastRParen))
     return 100;
-  if (Left.isOneOf(tok::kw_class, tok::kw_struct))
+  if (Left.isOneOf(tok::kw_class, tok::kw_struct, tok::kw_union))
     return 5000;
   if (Left.is(tok::comment))
     return 1000;

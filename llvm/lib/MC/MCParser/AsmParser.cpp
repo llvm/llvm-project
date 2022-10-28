@@ -5904,10 +5904,16 @@ bool AsmParser::parseDirectivePseudoProbe() {
     InlineStack.push_back(Site);
   }
 
+  // Parse function entry name
+  StringRef FnName;
+  if (parseIdentifier(FnName))
+    return Error(getLexer().getLoc(), "unexpected token in '.pseudoprobe' directive");
+  MCSymbol *FnSym = getContext().lookupSymbol(FnName);
+
   if (parseEOL())
     return true;
 
-  getStreamer().emitPseudoProbe(Guid, Index, Type, Attr, InlineStack);
+  getStreamer().emitPseudoProbe(Guid, Index, Type, Attr, InlineStack, FnSym);
   return false;
 }
 

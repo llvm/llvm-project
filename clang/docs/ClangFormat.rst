@@ -168,7 +168,7 @@ your `.vimrc`:
 
   function! Formatonsave()
     let l:formatdiff = 1
-    pyf ~/llvm/tools/clang/tools/clang-format/clang-format.py
+    pyf <path-to-this-file>/clang-format.py
   endfunction
   autocmd BufWritePre *.h,*.cc,*.cpp call Formatonsave()
 

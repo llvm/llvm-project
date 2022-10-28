@@ -92,7 +92,7 @@ public:
 private:
   struct DecomposedGEP;
 
-  /// Tracks phi nodes we have visited.
+  /// Tracks whether the accesses may be on different cycle iterations.
   ///
   /// When interpret "Value" pointer equality as value equality we need to make
   /// sure that the "Value" is not part of a cycle. Otherwise, two uses could
@@ -106,7 +106,7 @@ private:
   ///   %addr2 = gep  %alloca2, 0, (%l + 1)
   ///      alias(%p, %addr1) -> MayAlias !
   ///   store %l, ...
-  SmallPtrSet<const BasicBlock *, 8> VisitedPhiBBs;
+  bool MayBeCrossIteration = false;
 
   /// Tracks instructions visited by pointsToConstantMemory.
   SmallPtrSet<const Value *, 16> Visited;

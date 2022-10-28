@@ -486,6 +486,18 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                     TTI::TargetCostKind CostKind) {
   auto *RetTy = ICA.getReturnType();
   switch (ICA.getID()) {
+  case Intrinsic::ceil:
+  case Intrinsic::floor:
+  case Intrinsic::trunc:
+  case Intrinsic::rint:
+  case Intrinsic::round:
+  case Intrinsic::roundeven: {
+    // These all use the same code.
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (!LT.second.isVector() && TLI->isOperationCustom(ISD::FCEIL, LT.second))
+      return LT.first * 8;
+    break;
+  }
   case Intrinsic::umin:
   case Intrinsic::umax:
   case Intrinsic::smin:
@@ -511,15 +523,15 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     auto LT = getTypeLegalizationCost(RetTy);
     return Cost + (LT.first - 1);
   }
-  default:
-    if (ST->hasVInstructions() && RetTy->isVectorTy()) {
-      auto LT = getTypeLegalizationCost(RetTy);
-      if (const auto *Entry = CostTableLookup(VectorIntrinsicCostTable,
-                                              ICA.getID(), LT.second))
-        return LT.first * Entry->Cost;
-    }
-    break;
   }
+
+  if (ST->hasVInstructions() && RetTy->isVectorTy()) {
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (const auto *Entry = CostTableLookup(VectorIntrinsicCostTable,
+                                            ICA.getID(), LT.second))
+      return LT.first * Entry->Cost;
+  }
+
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 

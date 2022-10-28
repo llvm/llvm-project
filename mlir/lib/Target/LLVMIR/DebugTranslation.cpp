@@ -8,6 +8,7 @@
 
 #include "DebugTranslation.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/FileSystem.h"
@@ -25,23 +26,15 @@ static WalkResult interruptIfValidLocation(Operation *op) {
 }
 
 DebugTranslation::DebugTranslation(Operation *module, llvm::Module &llvmModule)
-    : builder(llvmModule), llvmCtx(llvmModule.getContext()),
-      compileUnit(nullptr) {
-
+    : debugEmissionIsEnabled(false), llvmModule(llvmModule),
+      llvmCtx(llvmModule.getContext()) {
   // If the module has no location information, there is nothing to do.
   if (!module->walk(interruptIfValidLocation).wasInterrupted())
     return;
+  debugEmissionIsEnabled = true;
 
-  // TODO: Several parts of this are incorrect. Different source
-  // languages may interpret different parts of the debug information
-  // differently. Frontends will also want to pipe in various information, like
-  // flags. This is fine for now as we only emit line-table information and not
-  // types or variables. This should disappear as the debug information story
-  // evolves; i.e. when we have proper attributes for LLVM debug metadata.
-  compileUnit = builder.createCompileUnit(
-      llvm::dwarf::DW_LANG_C,
-      builder.createFile(llvmModule.getModuleIdentifier(), "/"),
-      /*Producer=*/"mlir", /*isOptimized=*/true, /*Flags=*/"", /*RV=*/0);
+  // TODO: The version information should be encoded on the LLVM module itself,
+  // not implicitly set here.
 
   // Mark this module as having debug information.
   StringRef debugVersionKey = "Debug Info Version";
@@ -62,24 +55,11 @@ DebugTranslation::DebugTranslation(Operation *module, llvm::Module &llvmModule)
 }
 
 /// Finalize the translation of debug information.
-void DebugTranslation::finalize() { builder.finalize(); }
-
-/// Attempt to extract a filename for the given loc.
-static FileLineColLoc extractFileLoc(Location loc) {
-  if (auto fileLoc = loc.dyn_cast<FileLineColLoc>())
-    return fileLoc;
-  if (auto nameLoc = loc.dyn_cast<NameLoc>())
-    return extractFileLoc(nameLoc.getChildLoc());
-  if (auto opaqueLoc = loc.dyn_cast<OpaqueLoc>())
-    return extractFileLoc(opaqueLoc.getFallbackLocation());
-  return FileLineColLoc();
-}
+void DebugTranslation::finalize() {}
 
 /// Translate the debug information for the given function.
 void DebugTranslation::translate(LLVMFuncOp func, llvm::Function &llvmFunc) {
-  // If the function doesn't have location information, there is nothing to
-  // translate.
-  if (!compileUnit || !func.walk(interruptIfValidLocation).wasInterrupted())
+  if (!debugEmissionIsEnabled)
     return;
 
   // If we are to create debug info for the function, we need to ensure that all
@@ -96,23 +76,150 @@ void DebugTranslation::translate(LLVMFuncOp func, llvm::Function &llvmFunc) {
   if (hasCallWithoutDebugInfo)
     return;
 
-  FileLineColLoc fileLoc = extractFileLoc(func.getLoc());
-  auto *file =
-      translateFile(fileLoc ? fileLoc.getFilename().strref() : "<unknown>");
-  unsigned line = fileLoc ? fileLoc.getLine() : 0;
+  // Look for a sub program attached to the function.
+  auto spLoc =
+      func.getLoc()->findInstanceOf<FusedLocWith<LLVM::DISubprogramAttr>>();
+  if (!spLoc)
+    return;
+  llvmFunc.setSubprogram(translate(spLoc.getMetadata()));
+}
 
-  // TODO: This is the bare essentials for now. We will likely end
-  // up with wrapper metadata around LLVMs metadata in the future, so this
-  // doesn't need to be smart until then.
-  llvm::DISubroutineType *type =
-      builder.createSubroutineType(builder.getOrCreateTypeArray(llvm::None));
-  llvm::DISubprogram::DISPFlags spFlags = llvm::DISubprogram::SPFlagDefinition |
-                                          llvm::DISubprogram::SPFlagOptimized;
-  llvm::DISubprogram *program =
-      builder.createFunction(compileUnit, func.getName(), func.getName(), file,
-                             line, type, line, llvm::DINode::FlagZero, spFlags);
-  llvmFunc.setSubprogram(program);
-  builder.finalizeSubprogram(program);
+//===----------------------------------------------------------------------===//
+// Attributes
+//===----------------------------------------------------------------------===//
+
+llvm::DIBasicType *DebugTranslation::translateImpl(DIBasicTypeAttr attr) {
+  return llvm::DIBasicType::get(
+      llvmCtx, attr.getTag(), attr.getName(), attr.getSizeInBits(),
+      /*AlignInBits=*/0, attr.getEncoding(), llvm::DINode::FlagZero);
+}
+
+llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
+  llvm::DIBuilder builder(llvmModule);
+  return builder.createCompileUnit(
+      attr.getSourceLanguage(), translate(attr.getFile()), attr.getProducer(),
+      attr.getIsOptimized(), /*Flags=*/"", /*RV=*/0);
+}
+
+llvm::DICompositeType *
+DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
+  SmallVector<llvm::Metadata *> elements;
+  for (auto member : attr.getElements())
+    elements.push_back(translate(member));
+  return llvm::DICompositeType::get(
+      llvmCtx, attr.getTag(), attr.getName(), translate(attr.getFile()),
+      attr.getLine(), translate(attr.getScope()), /*BaseType=*/nullptr,
+      attr.getSizeInBits(), attr.getAlignInBits(),
+      /*OffsetInBits=*/0, /*Flags=*/llvm::DINode::FlagZero,
+      llvm::MDNode::get(llvmCtx, elements),
+      /*RuntimeLang=*/0, /*VTableHolder=*/nullptr);
+}
+
+llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
+  return llvm::DIDerivedType::get(
+      llvmCtx, attr.getTag(), attr.getName(), /*File=*/nullptr, /*Line=*/0,
+      /*Scope=*/nullptr, translate(attr.getBaseType()), attr.getSizeInBits(),
+      attr.getAlignInBits(), attr.getOffsetInBits(),
+      /*DWARFAddressSpace=*/llvm::None, /*Flags=*/llvm::DINode::FlagZero);
+}
+
+llvm::DIFile *DebugTranslation::translateImpl(DIFileAttr attr) {
+  return llvm::DIFile::get(llvmCtx, attr.getName(), attr.getDirectory());
+}
+
+llvm::DILexicalBlock *DebugTranslation::translateImpl(DILexicalBlockAttr attr) {
+  return llvm::DILexicalBlock::getDistinct(llvmCtx, translate(attr.getScope()),
+                                           translate(attr.getFile()),
+                                           attr.getLine(), attr.getColumn());
+}
+
+llvm::DILexicalBlockFile *
+DebugTranslation::translateImpl(DILexicalBlockFileAttr attr) {
+  return llvm::DILexicalBlockFile::getDistinct(
+      llvmCtx, translate(attr.getScope()), translate(attr.getFile()),
+      attr.getDescriminator());
+}
+
+llvm::DILocalVariable *
+DebugTranslation::translateImpl(DILocalVariableAttr attr) {
+  return llvm::DILocalVariable::get(
+      llvmCtx, translate(attr.getScope()),
+      llvm::MDString::get(llvmCtx, attr.getName()), translate(attr.getFile()),
+      attr.getLine(), translate(attr.getType()), attr.getArg(),
+      /*Flags=*/llvm::DINode::FlagZero, attr.getAlignInBits(),
+      /*Annotations=*/nullptr);
+}
+
+llvm::DIScope *DebugTranslation::translateImpl(DIScopeAttr attr) {
+  return cast<llvm::DIScope>(translate(DINodeAttr(attr)));
+}
+
+/// Return a new subprogram that is either distinct or not, depending on
+/// `isDistinct`.
+template <class... Ts>
+static llvm::DISubprogram *getSubprogram(bool isDistinct, Ts &&...args) {
+  if (isDistinct)
+    return llvm::DISubprogram::getDistinct(std::forward<Ts>(args)...);
+  return llvm::DISubprogram::get(std::forward<Ts>(args)...);
+}
+
+llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
+  bool isDefinition = static_cast<bool>(attr.getSubprogramFlags() &
+                                        LLVM::DISubprogramFlags::Definition);
+  return getSubprogram(
+      isDefinition, llvmCtx, translate(attr.getScope()),
+      llvm::MDString::get(llvmCtx, attr.getName()),
+      llvm::MDString::get(llvmCtx, attr.getLinkageName()),
+      translate(attr.getFile()), attr.getLine(), translate(attr.getType()),
+      attr.getScopeLine(), /*ContainingType=*/nullptr, /*VirtualIndex=*/0,
+      /*ThisAdjustment=*/0, llvm::DINode::FlagZero,
+      static_cast<llvm::DISubprogram::DISPFlags>(attr.getSubprogramFlags()),
+      translate(attr.getCompileUnit()));
+}
+
+llvm::DISubrange *DebugTranslation::translateImpl(DISubrangeAttr attr) {
+  auto getMetadataOrNull = [&](IntegerAttr attr) -> llvm::Metadata * {
+    if (!attr)
+      return nullptr;
+    return llvm::ConstantAsMetadata::get(llvm::ConstantInt::getSigned(
+        llvm::Type::getInt64Ty(llvmCtx), attr.getInt()));
+  };
+  return llvm::DISubrange::get(llvmCtx, getMetadataOrNull(attr.getCount()),
+                               getMetadataOrNull(attr.getLowerBound()),
+                               getMetadataOrNull(attr.getUpperBound()),
+                               getMetadataOrNull(attr.getStride()));
+}
+
+llvm::DISubroutineType *
+DebugTranslation::translateImpl(DISubroutineTypeAttr attr) {
+  SmallVector<llvm::Metadata *> types;
+  for (auto type : attr.getTypes())
+    types.push_back(translate(type));
+  return llvm::DISubroutineType::get(
+      llvmCtx, llvm::DINode::FlagZero, attr.getCallingConvention(),
+      llvm::DITypeRefArray(llvm::MDNode::get(llvmCtx, types)));
+}
+
+llvm::DIType *DebugTranslation::translateImpl(DITypeAttr attr) {
+  return cast<llvm::DIType>(translate(DINodeAttr(attr)));
+}
+
+llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
+  if (!attr)
+    return nullptr;
+  // Check for a cached instance.
+  if (llvm::DINode *node = attrToNode.lookup(attr))
+    return node;
+
+  llvm::DINode *node =
+      TypeSwitch<DINodeAttr, llvm::DINode *>(attr)
+          .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
+                DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
+                DILexicalBlockFileAttr, DILocalVariableAttr, DISubprogramAttr,
+                DISubroutineTypeAttr>(
+              [&](auto attr) { return translateImpl(attr); });
+  attrToNode.insert({attr, node});
+  return node;
 }
 
 //===----------------------------------------------------------------------===//
@@ -122,8 +229,12 @@ void DebugTranslation::translate(LLVMFuncOp func, llvm::Function &llvmFunc) {
 /// Translate the given location to an llvm debug location.
 const llvm::DILocation *
 DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope) {
-  if (!compileUnit)
+  if (!debugEmissionIsEnabled)
     return nullptr;
+
+  // Check for a scope encoded with the location.
+  if (auto scopedLoc = loc->findInstanceOf<FusedLocWith<LLVM::DIScopeAttr>>())
+    scope = cast<llvm::DILocalScope>(translate(scopedLoc.getMetadata()));
   return translateLoc(loc, scope, /*inlinedAt=*/nullptr);
 }
 
@@ -148,7 +259,8 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
 
   } else if (auto fileLoc = loc.dyn_cast<FileLineColLoc>()) {
     auto *file = translateFile(fileLoc.getFilename());
-    auto *fileScope = builder.createLexicalBlockFile(scope, file);
+    auto *fileScope = llvm::DILexicalBlockFile::get(llvmCtx, scope, file,
+                                                    /*Discriminator=*/0);
     llvmLoc = llvm::DILocation::get(llvmCtx, fileLoc.getLine(),
                                     fileLoc.getColumn(), fileScope,
                                     const_cast<llvm::DILocation *>(inlinedAt));
@@ -210,5 +322,5 @@ llvm::DIFile *DebugTranslation::translateFile(StringRef fileName) {
       fileName = fileBuf;
     }
   }
-  return (file = builder.createFile(fileName, directory));
+  return (file = llvm::DIFile::get(llvmCtx, fileName, directory));
 }

@@ -297,6 +297,9 @@ def no_omagic: F<"no-omagic">, MetaVarName<"<magic>">,
 def no_undefined: F<"no-undefined">,
   HelpText<"Report unresolved symbols even if the linker is creating a shared library">;
 
+def no_warnings: FF<"no-warnings">, HelpText<"Suppress warnings and cancel --fatal-warnings">;
+def : Flag<["-"], "w">, Alias<no_warnings>, HelpText<"Alias for --no-warnings">;
+
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 

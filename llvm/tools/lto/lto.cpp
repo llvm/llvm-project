@@ -290,6 +290,8 @@ lto_module_t lto_module_create_in_codegen_context(const void *mem,
       codegen::InitTargetOptionsFromCodeGenFlags(Triple());
   ErrorOr<std::unique_ptr<LTOModule>> M = LTOModule::createFromBuffer(
       unwrap(cg)->getContext(), mem, length, Options, StringRef(path));
+  if (!M)
+    return nullptr;
   return wrap(M->release());
 }
 

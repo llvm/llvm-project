@@ -3246,10 +3246,12 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":ControlFlowInterfaces",
+        ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
-        ":MaskingInterfaces",
+        ":MaskableOpInterface",
+        ":MaskingOpInterface",
         ":MemRefDialect",
         ":SideEffectInterfaces",
         ":Support",
@@ -4350,6 +4352,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/LLVMIR/NVVMDialect.h"],
     includes = ["include"],
     deps = [
+        ":DialectUtils",
         ":IR",
         ":LLVMDialect",
         ":NVVMOpsIncGen",
@@ -5132,6 +5135,7 @@ td_library(
     deps = [
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
+        ":DestinationStyleOpInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":ParallelCombiningOpInterfaceTdFiles",
@@ -5291,6 +5295,7 @@ cc_library(
         ":DialectUtils",
         ":FuncDialect",
         ":IR",
+        ":LinalgDialect",
         ":MemRefDialect",
         ":Pass",
         ":SCFDialect",
@@ -6200,7 +6205,7 @@ cc_library(
     srcs = glob([
         "lib/Tools/mlir-translate/*.cpp",
     ]) + [
-        "include/mlir/Tools/ParseUtilties.h",
+        "include/mlir/Tools/ParseUtilities.h",
     ],
     hdrs = glob(["include/mlir/Tools/mlir-translate/*.h"]),
     includes = ["include"],
@@ -6310,9 +6315,11 @@ cc_library(
     hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/NVVM/*.h"]),
     includes = ["include"],
     deps = [
+        ":DialectUtils",
         ":IR",
         ":NVVMConversionIncGen",
         ":NVVMDialect",
+        ":Support",
         ":ToLLVMIRTranslation",
         "//llvm:Core",
         "//llvm:Support",
@@ -6494,7 +6501,7 @@ cc_library(
 cc_library(
     name = "MlirOptLib",
     srcs = [
-        "include/mlir/Tools/ParseUtilties.h",
+        "include/mlir/Tools/ParseUtilities.h",
         "lib/Tools/mlir-opt/MlirOptMain.cpp",
     ],
     hdrs = ["include/mlir/Tools/mlir-opt/MlirOptMain.h"],
@@ -6730,7 +6737,7 @@ cc_library(
     srcs = ["lib/ExecutionEngine/JitRunner.cpp"],
     hdrs = [
         "include/mlir/ExecutionEngine/JitRunner.h",
-        "include/mlir/Tools/ParseUtilties.h",
+        "include/mlir/Tools/ParseUtilities.h",
     ],
     includes = ["include"],
     deps = [
@@ -8198,8 +8205,15 @@ cc_library(
 ##---------------------------------------------------------------------------##
 
 td_library(
-    name = "MaskingInterfacesTdFiles",
-    srcs = ["include/mlir/Dialect/Vector/Interfaces/MaskingInterfaces.td"],
+    name = "MaskingOpInterfaceTdFiles",
+    srcs = ["include/mlir/Dialect/Vector/Interfaces/MaskingOpInterface.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+td_library(
+    name = "MaskableOpInterfaceTdFiles",
+    srcs = ["include/mlir/Dialect/Vector/Interfaces/MaskableOpInterface.td"],
     includes = ["include"],
     deps = [":OpBaseTdFiles"],
 )
@@ -8210,8 +8224,10 @@ td_library(
     includes = ["include"],
     deps = [
         ":ControlFlowInterfacesTdFiles",
+        ":DestinationStyleOpInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
-        ":MaskingInterfacesTdFiles",
+        ":MaskableOpInterfaceTdFiles",
+        ":MaskingOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
         ":VectorInterfacesTdFiles",
@@ -8220,21 +8236,39 @@ td_library(
 )
 
 gentbl_cc_library(
-    name = "MaskingInterfacesIncGen",
+    name = "MaskableOpInterfaceIncGen",
     strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
-            "include/mlir/Dialect/Vector/Interfaces/MaskingInterfaces.h.inc",
+            "include/mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h.inc",
         ),
         (
             ["-gen-op-interface-defs"],
-            "include/mlir/Dialect/Vector/Interfaces/MaskingInterfaces.cpp.inc",
+            "include/mlir/Dialect/Vector/Interfaces/MaskableOpInterface.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Vector/Interfaces/MaskingInterfaces.td",
-    deps = [":MaskingInterfacesTdFiles"],
+    td_file = "include/mlir/Dialect/Vector/Interfaces/MaskableOpInterface.td",
+    deps = [":MaskableOpInterfaceTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MaskingOpInterfaceIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/Vector/Interfaces/MaskingOpInterface.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/Vector/Interfaces/MaskingOpInterface.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Vector/Interfaces/MaskingOpInterface.td",
+    deps = [":MaskingOpInterfaceTdFiles"],
 )
 
 gentbl_cc_library(
@@ -8290,13 +8324,27 @@ gentbl_cc_library(
 )
 
 cc_library(
-    name = "MaskingInterfaces",
-    srcs = ["lib/Dialect/Vector/Interfaces/MaskingInterfaces.cpp"],
-    hdrs = ["include/mlir/Dialect/Vector/Interfaces/MaskingInterfaces.h"],
+    name = "MaskableOpInterface",
+    srcs = ["lib/Dialect/Vector/Interfaces/MaskableOpInterface.cpp"],
+    hdrs = ["include/mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"],
     includes = ["include"],
     deps = [
         ":IR",
-        ":MaskingInterfacesIncGen",
+        ":MaskableOpInterfaceIncGen",
+        ":MaskingOpInterface",
+        ":Support",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "MaskingOpInterface",
+    srcs = ["lib/Dialect/Vector/Interfaces/MaskingOpInterface.cpp"],
+    hdrs = ["include/mlir/Dialect/Vector/Interfaces/MaskingOpInterface.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":MaskingOpInterfaceIncGen",
         ":Support",
         "//llvm:Support",
     ],
@@ -9003,6 +9051,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":ArithOpsInterfacesTdFiles",
         ":BuiltinDialectTdFiles",
         ":CastInterfacesTdFiles",
         ":InferIntRangeInterfaceTdFiles",
@@ -9010,6 +9059,17 @@ td_library(
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
         ":VectorInterfacesTdFiles",
+    ],
+)
+
+td_library(
+    name = "ArithOpsInterfacesTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Arith/IR/ArithOpsInterfaces.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
     ],
 )
 
@@ -9057,11 +9117,45 @@ gentbl_cc_library(
             ["-gen-op-defs"],
             "include/mlir/Dialect/Arith/IR/ArithOps.cpp.inc",
         ),
+        (
+            [
+                "-gen-attrdef-decls",
+                "-attrdefs-dialect=arith",
+            ],
+            "include/mlir/Dialect/Arith/IR/ArithOpsAttributes.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-attrdefs-dialect=arith",
+            ],
+            "include/mlir/Dialect/Arith/IR/ArithOpsAttributes.cpp.inc",
+        ),
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Arith/IR/ArithOps.td",
     deps = [
         ":ArithOpsTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "ArithOpsInterfacesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/Arith/IR/ArithOpsInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/Arith/IR/ArithOpsInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Arith/IR/ArithOpsInterfaces.td",
+    deps = [
+        ":ArithOpsInterfacesTdFiles",
     ],
 )
 
@@ -9100,6 +9194,7 @@ cc_library(
         ":ArithBaseIncGen",
         ":ArithCanonicalizationIncGen",
         ":ArithOpsIncGen",
+        ":ArithOpsInterfacesIncGen",
         ":CommonFolders",
         ":IR",
         ":InferIntRangeInterface",
@@ -9769,6 +9864,7 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h",
         "include/mlir/Dialect/Bufferization/IR/Bufferization.h",
+        "include/mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h",
     ],
     includes = ["include"],
     deps = [
@@ -9780,6 +9876,7 @@ cc_library(
         ":BufferizationOpsIncGen",
         ":ControlFlowInterfaces",
         ":CopyOpInterface",
+        ":DestinationStyleOpInterface",
         ":FuncDialect",
         ":IR",
         ":InferTypeOpInterface",
@@ -9946,7 +10043,7 @@ cc_library(
     name = "MlirReduceLib",
     srcs = ["lib/Tools/mlir-reduce/MlirReduceMain.cpp"],
     hdrs = [
-        "include/mlir/Tools/ParseUtilties.h",
+        "include/mlir/Tools/ParseUtilities.h",
         "include/mlir/Tools/mlir-reduce/MlirReduceMain.h",
     ],
     includes = ["include"],

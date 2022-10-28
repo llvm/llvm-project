@@ -1160,11 +1160,11 @@ MCObjectFileInfo::getKCFITrapSection(const MCSection &TextSec) const {
 }
 
 MCSection *
-MCObjectFileInfo::getPseudoProbeSection(const MCSection *TextSec) const {
+MCObjectFileInfo::getPseudoProbeSection(const MCSection &TextSec) const {
   if (Ctx->getObjectFileType() == MCContext::IsELF) {
-    const auto *ElfSec = static_cast<const MCSectionELF *>(TextSec);
+    const auto &ElfSec = static_cast<const MCSectionELF &>(TextSec);
     // Create a separate section for probes that comes with a comdat function.
-    if (const MCSymbol *Group = ElfSec->getGroup()) {
+    if (const MCSymbol *Group = ElfSec.getGroup()) {
       auto *S = static_cast<MCSectionELF *>(PseudoProbeSection);
       auto Flags = S->getFlags() | ELF::SHF_GROUP;
       return Ctx->getELFSection(S->getName(), S->getType(), Flags,

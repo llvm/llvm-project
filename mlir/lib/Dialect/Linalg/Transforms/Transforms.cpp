@@ -138,7 +138,7 @@ static FailureOr<Value> padOperandToSmallestStaticBoundingBox(
   OpOperand *currOpOperand = opOperand;
   while (auto linalgOp = currOpOperand->get().getDefiningOp<LinalgOp>()) {
     OpResult result = currOpOperand->get().cast<OpResult>();
-    currOpOperand = linalgOp.getOutputOperand(result.getResultNumber());
+    currOpOperand = linalgOp.getDpsInitOperand(result.getResultNumber());
   }
 
   // Fail if `currOpOperand` is not defined by an ExtractSliceOp.
@@ -222,7 +222,7 @@ linalg::rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
 
   // Clone `opToPad` to operate on the statically padded shapes.
   auto resultTensorTypes =
-      ValueRange(newOperands).take_back(opToPad.getNumOutputs()).getTypes();
+      ValueRange(newOperands).take_back(opToPad.getNumDpsInits()).getTypes();
   paddedOp = opToPad.clone(b, loc, resultTensorTypes, newOperands);
 
   // Recover the slice out of the new static results. This keeps the original

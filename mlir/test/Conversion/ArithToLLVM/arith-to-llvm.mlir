@@ -448,3 +448,20 @@ func.func @minmaxf(%arg0 : f32, %arg1 : f32) -> f32 {
   %1 = arith.maxf %arg0, %arg1 : f32
   return %0 : f32
 }
+
+// -----
+
+// CHECK-LABEL: @fastmath
+func.func @fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
+// CHECK: {{.*}} = llvm.fadd %arg0, %arg1  {fastmathFlags = #llvm.fastmath<fast>} : f32
+// CHECK: {{.*}} = llvm.fmul %arg0, %arg1  {fastmathFlags = #llvm.fastmath<fast>} : f32
+// CHECK: {{.*}} = llvm.fneg %arg0  {fastmathFlags = #llvm.fastmath<fast>} : f32
+// CHECK: {{.*}} = llvm.fadd %arg0, %arg1  : f32
+// CHECK: {{.*}} = llvm.fadd %arg0, %arg1  {fastmathFlags = #llvm.fastmath<nnan, ninf>} : f32
+  %0 = arith.addf %arg0, %arg1 fastmath<fast> : f32
+  %1 = arith.mulf %arg0, %arg1 fastmath<fast> : f32
+  %2 = arith.negf %arg0 fastmath<fast> : f32
+  %3 = arith.addf %arg0, %arg1 fastmath<none> : f32
+  %4 = arith.addf %arg0, %arg1 fastmath<nnan,ninf> : f32
+  return
+}

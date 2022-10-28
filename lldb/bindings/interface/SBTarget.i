@@ -947,7 +947,7 @@ public:
     %feature("docstring", "
     Returns true if the module has been loaded in this `SBTarget`.
     A module can be loaded either by the dynamic loader or by being manually
-    added to the target (see `SBTarget.AddModule` and the `target module add` command).
+    added to the target (see `SBTarget.AddModule` and the ``target module add`` command).
 
     :rtype: bool
     ") IsLoaded;

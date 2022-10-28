@@ -156,7 +156,8 @@ public:
   Merger(unsigned t, unsigned l)
       : outTensor(t - 1), syntheticTensor(t), numTensors(t + 1), numLoops(l),
         hasSparseOut(false),
-        dimTypes(t + 1, std::vector<DimLevelType>(l, DimLevelType::Undef)) {}
+        dimTypes(t + 1, std::vector<DimLevelType>(l, DimLevelType::Undef)),
+        loopIdxToDim(t + 1, std::vector<Optional<unsigned>>(l, llvm::None)) {}
 
   /// Adds a tensor expression. Returns its index.
   unsigned addExp(Kind k, unsigned e0, unsigned e1 = -1u, Value v = Value(),
@@ -221,14 +222,21 @@ public:
   /// Returns true if Li and Lj only differ in dense.
   bool onlyDenseDiff(unsigned i, unsigned j);
 
-  /// Bit translation.
+  /// Bit translation (get tensor ID).
   unsigned tensor(unsigned b) const { return b % numTensors; }
+  /// Bit translation (get loop index).
   unsigned index(unsigned b) const { return b / numTensors; }
 
   /// Returns true if bit corresponds to index of output tensor.
   bool isOutTensor(unsigned b, unsigned i) const {
     return tensor(b) == outTensor && index(b) == i;
   }
+
+  /// Gets tensor ID for the output tensor.
+  unsigned getOutTensorID() const { return outTensor; }
+  /// Gets tensor ID for the synthetic tensor (used for all invariant tensor
+  /// expressions).
+  unsigned getSynTensorID() const { return syntheticTensor; }
 
   /// Returns true if given tensor iterates *only* in the given tensor
   /// expression. For the output tensor, this defines a "simply dynamic"
@@ -239,7 +247,7 @@ public:
   /// Returns true if any set bit corresponds to sparse dimension level type.
   bool hasAnySparse(const BitVector &bits) const;
 
-  /// Gets the dimension level type of the `i`th loop of the `t`th tensor.
+  /// Gets the dimension level type of the `t`th tensor on `i`th loop.
   DimLevelType getDimLevelType(unsigned t, unsigned i) const {
     assert(t < numTensors && i < numLoops);
     return dimTypes[t][i];
@@ -250,10 +258,35 @@ public:
     return getDimLevelType(tensor(b), index(b));
   }
 
-  /// Sets the dimension level type of the `i`th loop of the `t`th tensor.
-  void setDimLevelType(unsigned t, unsigned i, DimLevelType d) {
-    assert(isValidDLT(d));
-    dimTypes[t][i] = d;
+  /// Gets the dimension number of the the `t`th tensor on `i`th loop.
+  Optional<unsigned> getDimNum(unsigned t, unsigned i) const {
+    assert(t < numTensors && i < numLoops);
+    return loopIdxToDim[t][i];
+  }
+
+  /// Gets the dimension number of `b`.
+  Optional<unsigned> getDimNum(unsigned b) const {
+    return getDimNum(tensor(b), index(b));
+  }
+
+  /// Sets the dimension and dimension level type of the `t`th tensor on `i`th
+  /// loop.
+  void setDimAndDimLevelType(unsigned t, unsigned i, unsigned dim,
+                             DimLevelType dlt) {
+    assert(isValidDLT(dlt));
+    dimTypes[t][i] = dlt;
+    loopIdxToDim[t][i] = dim;
+  }
+
+  // Iterates the bits of a lattice, for each set bit, converts it into the
+  // corresponding tensor dimension and invokes the callback.
+  void foreachTidDimPairInBits(
+      const BitVector &bits,
+      function_ref<void(unsigned b, unsigned tid, Optional<unsigned> dim,
+                        DimLevelType dlt)>
+          cb) {
+    for (unsigned b : bits.set_bits())
+      cb(b, tensor(b), getDimNum(b), getDimLevelType(b));
   }
 
   // Has sparse output tensor setter.
@@ -303,7 +336,11 @@ private:
   const unsigned numTensors;
   const unsigned numLoops;
   bool hasSparseOut;
+  // Map that converts pair<tensor id, loop id> to the corresponding dimension
+  // level type.
   std::vector<std::vector<DimLevelType>> dimTypes;
+  // Map that converts pair<tensor id, loop id> to the corresponding dimension.
+  std::vector<std::vector<Optional<unsigned>>> loopIdxToDim;
   llvm::SmallVector<TensorExp, 32> tensorExps;
   llvm::SmallVector<LatPoint, 16> latPoints;
   llvm::SmallVector<SmallVector<unsigned, 16>, 8> latSets;

@@ -3,374 +3,374 @@
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu < %s -passes=instcombine -S | FileCheck %s --check-prefixes=CHECK,GNU
 
 
-declare noalias i8* @malloc(i64) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
-declare noalias i8* @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc"
-declare noalias i8* @realloc(i8* nocapture, i64) allockind("realloc") allocsize(1) "alloc-family"="malloc"
-declare noalias nonnull i8* @_Znam(i64) ; throwing version of 'new'
-declare noalias nonnull i8* @_Znwm(i64) ; throwing version of 'new'
-declare noalias i8* @strdup(i8*)
-declare noalias i8* @aligned_alloc(i64 allocalign, i64) allockind("alloc,uninitialized,aligned") allocsize(1) "alloc-family"="malloc"
-declare noalias align 16 i8* @memalign(i64, i64)
+declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
+declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc"
+declare noalias ptr @realloc(ptr nocapture, i64) allockind("realloc") allocsize(1) "alloc-family"="malloc"
+declare noalias nonnull ptr @_Znam(i64) ; throwing version of 'new'
+declare noalias nonnull ptr @_Znwm(i64) ; throwing version of 'new'
+declare noalias ptr @strdup(ptr)
+declare noalias ptr @aligned_alloc(i64 allocalign, i64) allockind("alloc,uninitialized,aligned") allocsize(1) "alloc-family"="malloc"
+declare noalias align 16 ptr @memalign(i64, i64)
 ; new[](unsigned int, align_val_t)
-declare noalias i8* @_ZnamSt11align_val_t(i64 %size, i64 %align)
+declare noalias ptr @_ZnamSt11align_val_t(i64 %size, i64 %align)
 
-declare i8* @my_malloc(i64) allocsize(0)
-declare i8* @my_calloc(i64, i64) allocsize(0, 1)
+declare ptr @my_malloc(i64) allocsize(0)
+declare ptr @my_calloc(i64, i64) allocsize(0, 1)
 
 @.str = private unnamed_addr constant [6 x i8] c"hello\00", align 1
 
-define noalias i8* @malloc_nonconstant_size(i64 %n) {
+define noalias ptr @malloc_nonconstant_size(i64 %n) {
 ; CHECK-LABEL: @malloc_nonconstant_size(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @malloc(i64 [[N:%.*]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @malloc(i64 [[N:%.*]])
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @malloc(i64 %n)
-  ret i8* %call
+  %call = tail call noalias ptr @malloc(i64 %n)
+  ret ptr %call
 }
 
-define noalias i8* @malloc_constant_size() {
+define noalias ptr @malloc_constant_size() {
 ; CHECK-LABEL: @malloc_constant_size(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(40) i8* @malloc(i64 40)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(40) ptr @malloc(i64 40)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @malloc(i64 40)
-  ret i8* %call
+  %call = tail call noalias ptr @malloc(i64 40)
+  ret ptr %call
 }
 
-define noalias i8* @aligned_alloc_constant_size() {
+define noalias ptr @aligned_alloc_constant_size() {
 ; CHECK-LABEL: @aligned_alloc_constant_size(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias align 32 dereferenceable_or_null(512) i8* @aligned_alloc(i64 32, i64 512)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias align 32 dereferenceable_or_null(512) ptr @aligned_alloc(i64 32, i64 512)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @aligned_alloc(i64 32, i64 512)
-  ret i8* %call
+  %call = tail call noalias ptr @aligned_alloc(i64 32, i64 512)
+  ret ptr %call
 }
 
-define noalias i8* @aligned_alloc_unknown_size_nonzero(i1 %c) {
+define noalias ptr @aligned_alloc_unknown_size_nonzero(i1 %c) {
 ; CHECK-LABEL: @aligned_alloc_unknown_size_nonzero(
 ; CHECK-NEXT:    [[SIZE:%.*]] = select i1 [[C:%.*]], i64 64, i64 128
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias align 32 i8* @aligned_alloc(i64 32, i64 [[SIZE]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias align 32 ptr @aligned_alloc(i64 32, i64 [[SIZE]])
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
   %size = select i1 %c, i64 64, i64 128
-  %call = tail call noalias i8* @aligned_alloc(i64 32, i64 %size)
-  ret i8* %call
+  %call = tail call noalias ptr @aligned_alloc(i64 32, i64 %size)
+  ret ptr %call
 }
 
-define noalias i8* @aligned_alloc_unknown_size_possibly_zero(i1 %c) {
+define noalias ptr @aligned_alloc_unknown_size_possibly_zero(i1 %c) {
 ; CHECK-LABEL: @aligned_alloc_unknown_size_possibly_zero(
 ; CHECK-NEXT:    [[SIZE:%.*]] = select i1 [[C:%.*]], i64 64, i64 0
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias align 32 i8* @aligned_alloc(i64 32, i64 [[SIZE]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias align 32 ptr @aligned_alloc(i64 32, i64 [[SIZE]])
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
   %size = select i1 %c, i64 64, i64 0
-  %call = tail call noalias i8* @aligned_alloc(i64 32, i64 %size)
-  ret i8* %call
+  %call = tail call noalias ptr @aligned_alloc(i64 32, i64 %size)
+  ret ptr %call
 }
 
-define noalias i8* @aligned_alloc_unknown_align(i64 %align) {
+define noalias ptr @aligned_alloc_unknown_align(i64 %align) {
 ; CHECK-LABEL: @aligned_alloc_unknown_align(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(128) i8* @aligned_alloc(i64 [[ALIGN:%.*]], i64 128)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(128) ptr @aligned_alloc(i64 [[ALIGN:%.*]], i64 128)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @aligned_alloc(i64 %align, i64 128)
-  ret i8* %call
+  %call = tail call noalias ptr @aligned_alloc(i64 %align, i64 128)
+  ret ptr %call
 }
 
-declare noalias i8* @foo(i8*, i8*, i8*)
+declare noalias ptr @foo(ptr, ptr, ptr)
 
-define noalias i8* @aligned_alloc_dynamic_args(i64 %align, i64 %size) {
+define noalias ptr @aligned_alloc_dynamic_args(i64 %align, i64 %size) {
 ; CHECK-LABEL: @aligned_alloc_dynamic_args(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(1024) i8* @aligned_alloc(i64 [[ALIGN:%.*]], i64 1024)
-; CHECK-NEXT:    [[CALL_1:%.*]] = tail call noalias dereferenceable_or_null(1024) i8* @aligned_alloc(i64 0, i64 1024)
-; CHECK-NEXT:    [[CALL_2:%.*]] = tail call noalias align 32 i8* @aligned_alloc(i64 32, i64 [[SIZE:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @foo(i8* [[CALL]], i8* [[CALL_1]], i8* [[CALL_2]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(1024) ptr @aligned_alloc(i64 [[ALIGN:%.*]], i64 1024)
+; CHECK-NEXT:    [[CALL_1:%.*]] = tail call noalias dereferenceable_or_null(1024) ptr @aligned_alloc(i64 0, i64 1024)
+; CHECK-NEXT:    [[CALL_2:%.*]] = tail call noalias align 32 ptr @aligned_alloc(i64 32, i64 [[SIZE:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @foo(ptr [[CALL]], ptr [[CALL_1]], ptr [[CALL_2]])
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @aligned_alloc(i64 %align, i64 1024)
-  %call_1 = tail call noalias i8* @aligned_alloc(i64 0, i64 1024)
-  %call_2 = tail call noalias i8* @aligned_alloc(i64 32, i64 %size)
+  %call = tail call noalias ptr @aligned_alloc(i64 %align, i64 1024)
+  %call_1 = tail call noalias ptr @aligned_alloc(i64 0, i64 1024)
+  %call_2 = tail call noalias ptr @aligned_alloc(i64 32, i64 %size)
 
-  call i8* @foo(i8* %call, i8* %call_1, i8* %call_2)
-  ret i8* %call
+  call ptr @foo(ptr %call, ptr %call_1, ptr %call_2)
+  ret ptr %call
 }
 
-define noalias i8* @memalign_constant_size() {
+define noalias ptr @memalign_constant_size() {
 ; GNU-LABEL: @memalign_constant_size(
-; GNU-NEXT:    [[CALL:%.*]] = tail call noalias align 32 dereferenceable_or_null(512) i8* @memalign(i64 32, i64 512)
-; GNU-NEXT:    ret i8* [[CALL]]
+; GNU-NEXT:    [[CALL:%.*]] = tail call noalias align 32 dereferenceable_or_null(512) ptr @memalign(i64 32, i64 512)
+; GNU-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @memalign(i64 32, i64 512)
-  ret i8* %call
+  %call = tail call noalias ptr @memalign(i64 32, i64 512)
+  ret ptr %call
 }
 
-define noalias i8* @memalign_unknown_size_nonzero(i1 %c) {
+define noalias ptr @memalign_unknown_size_nonzero(i1 %c) {
 ; GNU-LABEL: @memalign_unknown_size_nonzero(
 ; GNU-NEXT:    [[SIZE:%.*]] = select i1 [[C:%.*]], i64 64, i64 128
-; GNU-NEXT:    [[CALL:%.*]] = tail call noalias align 32 i8* @memalign(i64 32, i64 [[SIZE]])
-; GNU-NEXT:    ret i8* [[CALL]]
+; GNU-NEXT:    [[CALL:%.*]] = tail call noalias align 32 ptr @memalign(i64 32, i64 [[SIZE]])
+; GNU-NEXT:    ret ptr [[CALL]]
 ;
   %size = select i1 %c, i64 64, i64 128
-  %call = tail call noalias i8* @memalign(i64 32, i64 %size)
-  ret i8* %call
+  %call = tail call noalias ptr @memalign(i64 32, i64 %size)
+  ret ptr %call
 }
 
-define noalias i8* @memalign_unknown_size_possibly_zero(i1 %c) {
+define noalias ptr @memalign_unknown_size_possibly_zero(i1 %c) {
 ; GNU-LABEL: @memalign_unknown_size_possibly_zero(
 ; GNU-NEXT:    [[SIZE:%.*]] = select i1 [[C:%.*]], i64 64, i64 0
-; GNU-NEXT:    [[CALL:%.*]] = tail call noalias align 32 i8* @memalign(i64 32, i64 [[SIZE]])
-; GNU-NEXT:    ret i8* [[CALL]]
+; GNU-NEXT:    [[CALL:%.*]] = tail call noalias align 32 ptr @memalign(i64 32, i64 [[SIZE]])
+; GNU-NEXT:    ret ptr [[CALL]]
 ;
   %size = select i1 %c, i64 64, i64 0
-  %call = tail call noalias i8* @memalign(i64 32, i64 %size)
-  ret i8* %call
+  %call = tail call noalias ptr @memalign(i64 32, i64 %size)
+  ret ptr %call
 }
 
-define noalias i8* @memalign_unknown_align(i64 %align) {
+define noalias ptr @memalign_unknown_align(i64 %align) {
 ; GNU-LABEL: @memalign_unknown_align(
-; GNU-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(128) i8* @memalign(i64 [[ALIGN:%.*]], i64 128)
-; GNU-NEXT:    ret i8* [[CALL]]
+; GNU-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(128) ptr @memalign(i64 [[ALIGN:%.*]], i64 128)
+; GNU-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @memalign(i64 %align, i64 128)
-  ret i8* %call
+  %call = tail call noalias ptr @memalign(i64 %align, i64 128)
+  ret ptr %call
 }
 
-define noalias i8* @malloc_constant_size2() {
+define noalias ptr @malloc_constant_size2() {
 ; CHECK-LABEL: @malloc_constant_size2(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(40) i8* @malloc(i64 40)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(40) ptr @malloc(i64 40)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias dereferenceable_or_null(80) i8* @malloc(i64 40)
-  ret i8* %call
+  %call = tail call noalias dereferenceable_or_null(80) ptr @malloc(i64 40)
+  ret ptr %call
 }
 
-define noalias i8* @malloc_constant_size3() {
+define noalias ptr @malloc_constant_size3() {
 ; CHECK-LABEL: @malloc_constant_size3(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable(80) dereferenceable_or_null(40) i8* @malloc(i64 40)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable(80) dereferenceable_or_null(40) ptr @malloc(i64 40)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias dereferenceable(80) i8* @malloc(i64 40)
-  ret i8* %call
+  %call = tail call noalias dereferenceable(80) ptr @malloc(i64 40)
+  ret ptr %call
 }
 
-define noalias i8* @malloc_constant_zero_size() {
+define noalias ptr @malloc_constant_zero_size() {
 ; CHECK-LABEL: @malloc_constant_zero_size(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @malloc(i64 0)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @malloc(i64 0)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @malloc(i64 0)
-  ret i8* %call
+  %call = tail call noalias ptr @malloc(i64 0)
+  ret ptr %call
 }
 
-define noalias i8* @realloc_nonconstant_size(i8* %p, i64 %n) {
+define noalias ptr @realloc_nonconstant_size(ptr %p, i64 %n) {
 ; CHECK-LABEL: @realloc_nonconstant_size(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @realloc(i8* [[P:%.*]], i64 [[N:%.*]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @realloc(ptr [[P:%.*]], i64 [[N:%.*]])
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @realloc(i8* %p, i64 %n)
-  ret i8* %call
+  %call = tail call noalias ptr @realloc(ptr %p, i64 %n)
+  ret ptr %call
 }
 
-define noalias i8* @realloc_constant_zero_size(i8* %p) {
+define noalias ptr @realloc_constant_zero_size(ptr %p) {
 ; CHECK-LABEL: @realloc_constant_zero_size(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @realloc(i8* [[P:%.*]], i64 0)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @realloc(ptr [[P:%.*]], i64 0)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @realloc(i8* %p, i64 0)
-  ret i8* %call
+  %call = tail call noalias ptr @realloc(ptr %p, i64 0)
+  ret ptr %call
 }
 
-define noalias i8* @realloc_constant_size(i8* %p) {
+define noalias ptr @realloc_constant_size(ptr %p) {
 ; CHECK-LABEL: @realloc_constant_size(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(40) i8* @realloc(i8* [[P:%.*]], i64 40)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(40) ptr @realloc(ptr [[P:%.*]], i64 40)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @realloc(i8* %p, i64 40)
-  ret i8* %call
+  %call = tail call noalias ptr @realloc(ptr %p, i64 40)
+  ret ptr %call
 }
 
-define noalias i8* @calloc_nonconstant_size(i64 %n) {
+define noalias ptr @calloc_nonconstant_size(i64 %n) {
 ; CHECK-LABEL: @calloc_nonconstant_size(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @calloc(i64 1, i64 [[N:%.*]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @calloc(i64 1, i64 [[N:%.*]])
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @calloc(i64 1, i64 %n)
-  ret i8* %call
+  %call = tail call noalias ptr @calloc(i64 1, i64 %n)
+  ret ptr %call
 }
 
-define noalias i8* @calloc_nonconstant_size2(i64 %n) {
+define noalias ptr @calloc_nonconstant_size2(i64 %n) {
 ; CHECK-LABEL: @calloc_nonconstant_size2(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @calloc(i64 [[N:%.*]], i64 0)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @calloc(i64 [[N:%.*]], i64 0)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @calloc(i64 %n, i64 0)
-  ret i8* %call
+  %call = tail call noalias ptr @calloc(i64 %n, i64 0)
+  ret ptr %call
 }
 
-define noalias i8* @calloc_nonconstant_size3(i64 %n) {
+define noalias ptr @calloc_nonconstant_size3(i64 %n) {
 ; CHECK-LABEL: @calloc_nonconstant_size3(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @calloc(i64 [[N:%.*]], i64 [[N]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @calloc(i64 [[N:%.*]], i64 [[N]])
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @calloc(i64 %n, i64 %n)
-  ret i8* %call
+  %call = tail call noalias ptr @calloc(i64 %n, i64 %n)
+  ret ptr %call
 }
 
-define noalias i8* @calloc_constant_zero_size() {
+define noalias ptr @calloc_constant_zero_size() {
 ; CHECK-LABEL: @calloc_constant_zero_size(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @calloc(i64 0, i64 0)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @calloc(i64 0, i64 0)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @calloc(i64 0, i64 0)
-  ret i8* %call
+  %call = tail call noalias ptr @calloc(i64 0, i64 0)
+  ret ptr %call
 }
 
-define noalias i8* @calloc_constant_zero_size2(i64 %n) {
+define noalias ptr @calloc_constant_zero_size2(i64 %n) {
 ; CHECK-LABEL: @calloc_constant_zero_size2(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @calloc(i64 [[N:%.*]], i64 0)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @calloc(i64 [[N:%.*]], i64 0)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @calloc(i64 %n, i64 0)
-  ret i8* %call
+  %call = tail call noalias ptr @calloc(i64 %n, i64 0)
+  ret ptr %call
 }
 
 
-define noalias i8* @calloc_constant_zero_size3(i64 %n) {
+define noalias ptr @calloc_constant_zero_size3(i64 %n) {
 ; CHECK-LABEL: @calloc_constant_zero_size3(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @calloc(i64 0, i64 [[N:%.*]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @calloc(i64 0, i64 [[N:%.*]])
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @calloc(i64 0, i64 %n)
-  ret i8* %call
+  %call = tail call noalias ptr @calloc(i64 0, i64 %n)
+  ret ptr %call
 }
 
-define noalias i8* @calloc_constant_zero_size4(i64 %n) {
+define noalias ptr @calloc_constant_zero_size4(i64 %n) {
 ; CHECK-LABEL: @calloc_constant_zero_size4(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @calloc(i64 0, i64 1)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @calloc(i64 0, i64 1)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @calloc(i64 0, i64 1)
-  ret i8* %call
+  %call = tail call noalias ptr @calloc(i64 0, i64 1)
+  ret ptr %call
 }
 
-define noalias i8* @calloc_constant_zero_size5(i64 %n) {
+define noalias ptr @calloc_constant_zero_size5(i64 %n) {
 ; CHECK-LABEL: @calloc_constant_zero_size5(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @calloc(i64 1, i64 0)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @calloc(i64 1, i64 0)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @calloc(i64 1, i64 0)
-  ret i8* %call
+  %call = tail call noalias ptr @calloc(i64 1, i64 0)
+  ret ptr %call
 }
 
-define noalias i8* @calloc_constant_size() {
+define noalias ptr @calloc_constant_size() {
 ; CHECK-LABEL: @calloc_constant_size(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(128) i8* @calloc(i64 16, i64 8)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(128) ptr @calloc(i64 16, i64 8)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @calloc(i64 16, i64 8)
-  ret i8* %call
+  %call = tail call noalias ptr @calloc(i64 16, i64 8)
+  ret ptr %call
 }
 
-define noalias i8* @calloc_constant_size_overflow() {
+define noalias ptr @calloc_constant_size_overflow() {
 ; CHECK-LABEL: @calloc_constant_size_overflow(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @calloc(i64 2000000000000, i64 80000000000)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @calloc(i64 2000000000000, i64 80000000000)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @calloc(i64 2000000000000, i64 80000000000)
-  ret i8* %call
+  %call = tail call noalias ptr @calloc(i64 2000000000000, i64 80000000000)
+  ret ptr %call
 }
 
-define noalias i8* @op_new_nonconstant_size(i64 %n) {
+define noalias ptr @op_new_nonconstant_size(i64 %n) {
 ; CHECK-LABEL: @op_new_nonconstant_size(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @_Znam(i64 [[N:%.*]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @_Znam(i64 [[N:%.*]])
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call i8* @_Znam(i64 %n)
-  ret i8* %call
+  %call = tail call ptr @_Znam(i64 %n)
+  ret ptr %call
 }
 
-define noalias i8* @op_new_constant_size() {
+define noalias ptr @op_new_constant_size() {
 ; CHECK-LABEL: @op_new_constant_size(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable(40) i8* @_Znam(i64 40)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable(40) ptr @_Znam(i64 40)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call i8* @_Znam(i64 40)
-  ret i8* %call
+  %call = tail call ptr @_Znam(i64 40)
+  ret ptr %call
 }
 
-define noalias i8* @op_new_constant_size2() {
+define noalias ptr @op_new_constant_size2() {
 ; CHECK-LABEL: @op_new_constant_size2(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable(40) i8* @_Znwm(i64 40)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable(40) ptr @_Znwm(i64 40)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call i8* @_Znwm(i64 40)
-  ret i8* %call
+  %call = tail call ptr @_Znwm(i64 40)
+  ret ptr %call
 }
 
-define noalias i8* @op_new_constant_zero_size() {
+define noalias ptr @op_new_constant_zero_size() {
 ; CHECK-LABEL: @op_new_constant_zero_size(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @_Znam(i64 0)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @_Znam(i64 0)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call i8* @_Znam(i64 0)
-  ret i8* %call
+  %call = tail call ptr @_Znam(i64 0)
+  ret ptr %call
 }
 
-define noalias i8* @strdup_constant_str() {
+define noalias ptr @strdup_constant_str() {
 ; CHECK-LABEL: @strdup_constant_str(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(6) i8* @strdup(i8* nonnull getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0))
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(6) ptr @strdup(ptr nonnull @.str)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @strdup(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0))
-  ret i8* %call
+  %call = tail call noalias ptr @strdup(ptr @.str)
+  ret ptr %call
 }
 
-define noalias i8* @strdup_notconstant_str(i8 * %str) {
+define noalias ptr @strdup_notconstant_str(ptr %str) {
 ; CHECK-LABEL: @strdup_notconstant_str(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias i8* @strdup(i8* [[STR:%.*]])
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias ptr @strdup(ptr [[STR:%.*]])
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call noalias i8* @strdup(i8* %str)
-  ret i8* %call
+  %call = tail call noalias ptr @strdup(ptr %str)
+  ret ptr %call
 }
 
 ; OSS-Fuzz #23214
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=23214
-define noalias i8* @ossfuzz_23214() {
+define noalias ptr @ossfuzz_23214() {
 ; CHECK-LABEL: @ossfuzz_23214(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(512) i8* @aligned_alloc(i64 -9223372036854775808, i64 512)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(512) ptr @aligned_alloc(i64 -9223372036854775808, i64 512)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
 bb:
   %and = and i64 -1, -9223372036854775808
-  %call = tail call noalias i8* @aligned_alloc(i64 %and, i64 512)
-  ret i8* %call
+  %call = tail call noalias ptr @aligned_alloc(i64 %and, i64 512)
+  ret ptr %call
 }
 
-define noalias i8* @op_new_align() {
+define noalias ptr @op_new_align() {
 ; CHECK-LABEL: @op_new_align(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call align 32 dereferenceable_or_null(32) i8* @_ZnamSt11align_val_t(i64 32, i64 32)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call align 32 dereferenceable_or_null(32) ptr @_ZnamSt11align_val_t(i64 32, i64 32)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = tail call i8* @_ZnamSt11align_val_t(i64 32, i64 32)
-  ret i8* %call
+  %call = tail call ptr @_ZnamSt11align_val_t(i64 32, i64 32)
+  ret ptr %call
 }
 
-define i8* @my_malloc_constant_size() {
+define ptr @my_malloc_constant_size() {
 ; CHECK-LABEL: @my_malloc_constant_size(
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(32) i8* @my_malloc(i64 32)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(32) ptr @my_malloc(i64 32)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = call i8* @my_malloc(i64 32)
-  ret i8* %call
+  %call = call ptr @my_malloc(i64 32)
+  ret ptr %call
 }
 
-define i8* @my_calloc_constant_size() {
+define ptr @my_calloc_constant_size() {
 ; CHECK-LABEL: @my_calloc_constant_size(
-; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(128) i8* @my_calloc(i64 32, i64 4)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(128) ptr @my_calloc(i64 32, i64 4)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = call i8* @my_calloc(i64 32, i64 4)
-  ret i8* %call
+  %call = call ptr @my_calloc(i64 32, i64 4)
+  ret ptr %call
 }

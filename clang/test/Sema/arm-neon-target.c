@@ -33,6 +33,17 @@ void bf16(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t v16i8
   vcvt_bf16_f32(v4f32);
 }
 
+__attribute__((target("v8.1a")))
+void test_v81(int32x2_t d, int32x4_t v, int s) {
+  vqrdmlahq_s32(v, v, v);
+}
+
+__attribute__((target("v8.3a,fullfp16")))
+void test_v83(float32x4_t v4f32, float16x4_t v4f16) {
+  vcaddq_rot90_f32(v4f32, v4f32);
+  vcmla_rot90_f16(v4f16, v4f16, v4f16);
+}
+
 void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t v16i8, uint8x8_t v8i8, float32x2_t v2f32, float32x4_t v4f32, float16x4_t v4f16, bfloat16x4_t v4bf16, __bf16 bf16) {
   // dotprod
   vdot_u32(v2i32, v8i8, v8i8); // expected-error {{always_inline function 'vdot_u32' requires target feature 'dotprod'}}
@@ -50,4 +61,9 @@ void undefined(uint32x2_t v2i32, uint32x4_t v4i32, uint16x8_t v8i16, uint8x16_t 
   vld1_bf16(0); // expected-error {{'__builtin_neon_vld1_bf16' needs target feature bf16}}
   vcvt_f32_bf16(v4bf16); // expected-error {{always_inline function 'vcvt_f32_bf16' requires target feature 'bf16'}}
   vcvt_bf16_f32(v4f32); // expected-error {{always_inline function 'vcvt_bf16_f32' requires target feature 'bf16'}}
+  // v8.1 - qrdmla
+  vqrdmlahq_s32(v4i32, v4i32, v4i32); // expected-error {{always_inline function 'vqrdmlahq_s32' requires target feature 'v8.1a'}}
+  // 8.3 - complex
+  vcaddq_rot90_f32(v4f32, v4f32); // expected-error {{always_inline function 'vcaddq_rot90_f32' requires target feature 'v8.3a'}}
+  vcmla_rot90_f16(v4f16, v4f16, v4f16); // expected-error {{always_inline function 'vcmla_rot90_f16' requires target feature 'v8.3a'}}
 }

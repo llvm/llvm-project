@@ -1162,3 +1162,26 @@ func.func @extract_aligned_pointer_as_index(%m: memref<?xf32>) -> index {
   // CHECK: return %[[R:.*]] : index
   return %0: index
 }
+
+// -----
+
+// CHECK-LABEL: func @extract_strided_metadata(
+// CHECK-SAME: %[[ARG:.*]]: memref
+// CHECK: %[[MEM_DESC:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : memref<?x?xf32, strided<[?, ?], offset: ?>> to !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK: %[[BASE:.*]] = llvm.extractvalue %[[MEM_DESC]][0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK: %[[OFFSET:.*]] = llvm.extractvalue %[[MEM_DESC]][2] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK: %[[SIZE0:.*]] = llvm.extractvalue %[[MEM_DESC]][3, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK: %[[SIZE1:.*]] = llvm.extractvalue %[[MEM_DESC]][3, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK: %[[STRIDE0:.*]] = llvm.extractvalue %[[MEM_DESC]][4, 0] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
+// CHECK: %[[STRIDE1:.*]] = llvm.extractvalue %[[MEM_DESC]][4, 1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<2 x i64>, array<2 x i64>)>
+func.func @extract_strided_metadata(
+    %ref: memref<?x?xf32, strided<[?,?], offset: ?>>) {
+
+  %base, %offset, %sizes:2, %strides:2 =
+    memref.extract_strided_metadata %ref : memref<?x?xf32, strided<[?,?], offset: ?>>
+    -> memref<f32>, index,
+       index, index,
+       index, index
+
+  return
+}

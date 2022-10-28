@@ -93,10 +93,10 @@ class VSCodeTestCaseBase(TestBase):
                         return
         self.assertTrue(False, "breakpoint not hit")
 
-    def verify_exception_breakpoint_hit(self, filter_label):
+    def verify_stop_exception_info(self, expected_description):
         '''Wait for the process we are debugging to stop, and verify the stop
            reason is 'exception' and that the description matches
-           'filter_label'
+           'expected_description'
         '''
         stopped_events = self.vscode.wait_for_stopped()
         for stopped_event in stopped_events:
@@ -109,7 +109,7 @@ class VSCodeTestCaseBase(TestBase):
                 if 'description' not in body:
                     continue
                 description = body['description']
-                if filter_label == description:
+                if expected_description == description:
                     return True
         return False
 
@@ -236,7 +236,7 @@ class VSCodeTestCaseBase(TestBase):
 
     def continue_to_exception_breakpoint(self, filter_label):
         self.vscode.request_continue()
-        self.assertTrue(self.verify_exception_breakpoint_hit(filter_label),
+        self.assertTrue(self.verify_stop_exception_info(filter_label),
                         'verify we got "%s"' % (filter_label))
 
     def continue_to_exit(self, exitCode=0):

@@ -83,7 +83,7 @@ public:
         return llvm::None;
       if (OpOperand *operand = opView.dyn_cast<OpOperand *>())
         return owner.getMatchingIndexingMap(operand);
-      return owner.getMatchingIndexingMap(owner.getOutputOperand(
+      return owner.getMatchingIndexingMap(owner.getDpsInitOperand(
           opView.get<Value>().cast<OpResult>().getResultNumber()));
     }
     // Return the operand number if the `opView` is an OpOperand *. Otherwise

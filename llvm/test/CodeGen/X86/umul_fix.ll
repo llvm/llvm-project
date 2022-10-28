@@ -185,8 +185,8 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    mull %esi
 ; X86-NEXT:    imull {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    addl %ecx, %edx
 ; X86-NEXT:    imull {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    addl %ecx, %esi
 ; X86-NEXT:    addl %esi, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl

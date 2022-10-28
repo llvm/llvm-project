@@ -18,24 +18,6 @@
 using namespace mlir;
 using namespace mlir::tensor;
 
-PadOp mlir::tensor::createPadScalarOp(Type type, Value source, Value pad,
-                                      ArrayRef<OpFoldResult> low,
-                                      ArrayRef<OpFoldResult> high, bool nofold,
-                                      Location loc, OpBuilder &builder) {
-  auto padTensorOp =
-      builder.create<PadOp>(loc, type, source, low, high, nofold);
-  int rank = padTensorOp.getResultType().getRank();
-  SmallVector<Type> blockArgTypes(rank, builder.getIndexType());
-  SmallVector<Location> blockArgLocs(rank, loc);
-  auto &region = padTensorOp.getRegion();
-  // `builder.createBlock` changes the insertion point within the block. Create
-  // a guard to reset the insertion point of the builder after it is destroyed.
-  OpBuilder::InsertionGuard guard(builder);
-  builder.createBlock(&region, region.end(), blockArgTypes, blockArgLocs);
-  builder.create<YieldOp>(loc, pad);
-  return padTensorOp;
-}
-
 PadOp mlir::tensor::createPadHighOp(RankedTensorType type, Value source,
                                     Value pad, bool nofold, Location loc,
                                     OpBuilder &b) {
@@ -53,7 +35,7 @@ PadOp mlir::tensor::createPadHighOp(RankedTensorType type, Value source,
     high[en.index()] =
         makeComposedAffineApply(b, loc, en.value() - d0, {dimOp}).getResult();
   }
-  return createPadScalarOp(type, source, pad, low, high, nofold, loc, b);
+  return b.create<PadOp>(loc, type, source, low, high, pad, nofold);
 }
 
 SmallVector<Value> mlir::tensor::createDynamicDimValues(OpBuilder &b,
@@ -69,13 +51,17 @@ SmallVector<Value> mlir::tensor::createDynamicDimValues(OpBuilder &b,
   return dynamicDims;
 }
 
-SmallVector<Value> mlir::tensor::createDimValues(OpBuilder &b, Location loc,
-                                                 Value rankedTensor) {
+SmallVector<OpFoldResult>
+mlir::tensor::createDimValues(OpBuilder &b, Location loc, Value rankedTensor) {
   auto tensorTy = rankedTensor.getType().cast<RankedTensorType>();
-  SmallVector<Value> dims;
+  SmallVector<OpFoldResult> dims;
   for (const auto &en : llvm::enumerate(tensorTy.getShape())) {
-    dims.push_back(
-        b.createOrFold<tensor::DimOp>(loc, rankedTensor, en.index()));
+    if (ShapedType::isDynamic(en.value())) {
+      dims.push_back(
+          b.createOrFold<tensor::DimOp>(loc, rankedTensor, en.index()));
+    } else {
+      dims.push_back(b.getIndexAttr(en.value()));
+    }
   }
   return dims;
 }

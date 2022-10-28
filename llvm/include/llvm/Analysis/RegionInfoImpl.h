@@ -159,20 +159,14 @@ typename Tr::LoopT *RegionBase<Tr>::outermostLoopInRegion(LoopInfoT *LI,
 
 template <class Tr>
 typename RegionBase<Tr>::BlockT *RegionBase<Tr>::getEnteringBlock() const {
+  auto isEnteringBlock = [&](BlockT *Pred, bool AllowRepeats) -> BlockT * {
+    assert(!AllowRepeats && "Unexpected parameter value.");
+    return DT->getNode(Pred) && !contains(Pred) ? Pred : nullptr;
+  };
   BlockT *entry = getEntry();
-  BlockT *enteringBlock = nullptr;
-
-  for (BlockT *Pred : make_range(InvBlockTraits::child_begin(entry),
-                                 InvBlockTraits::child_end(entry))) {
-    if (DT->getNode(Pred) && !contains(Pred)) {
-      if (enteringBlock)
-        return nullptr;
-
-      enteringBlock = Pred;
-    }
-  }
-
-  return enteringBlock;
+  return find_singleton<BlockT>(make_range(InvBlockTraits::child_begin(entry),
+                                           InvBlockTraits::child_end(entry)),
+                                isEnteringBlock);
 }
 
 template <class Tr>
@@ -201,22 +195,16 @@ bool RegionBase<Tr>::getExitingBlocks(
 template <class Tr>
 typename RegionBase<Tr>::BlockT *RegionBase<Tr>::getExitingBlock() const {
   BlockT *exit = getExit();
-  BlockT *exitingBlock = nullptr;
-
   if (!exit)
     return nullptr;
 
-  for (BlockT *Pred : make_range(InvBlockTraits::child_begin(exit),
-                                 InvBlockTraits::child_end(exit))) {
-    if (contains(Pred)) {
-      if (exitingBlock)
-        return nullptr;
-
-      exitingBlock = Pred;
-    }
-  }
-
-  return exitingBlock;
+  auto isContained = [&](BlockT *Pred, bool AllowRepeats) -> BlockT * {
+    assert(!AllowRepeats && "Unexpected parameter value.");
+    return contains(Pred) ? Pred : nullptr;
+  };
+  return find_singleton<BlockT>(make_range(InvBlockTraits::child_begin(exit),
+                                           InvBlockTraits::child_end(exit)),
+                                isContained);
 }
 
 template <class Tr>

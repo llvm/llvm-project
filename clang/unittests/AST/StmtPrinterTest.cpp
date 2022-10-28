@@ -161,9 +161,9 @@ TEST(StmtPrinter, TestStringLiteralOperatorTemplate_Pack) {
 }
 
 TEST(StmtPrinter, TestStringLiteralOperatorTemplate_Class) {
-  ASSERT_TRUE(
-      PrintedStmtCXXMatches(StdVer::CXX20,
-                            R"cpp(
+  ASSERT_TRUE(PrintedStmtCXXMatches(
+      StdVer::CXX20,
+      R"cpp(
     struct C {
       template <unsigned N> constexpr C(const char (&)[N]) : n(N) {}
       unsigned n;
@@ -173,8 +173,8 @@ TEST(StmtPrinter, TestStringLiteralOperatorTemplate_Class) {
       constexpr auto waldo = "abc"_c;
     }
 )cpp",
-                            FunctionBodyMatcher("A"),
-                            "constexpr auto waldo = operator\"\"_c<{4}>();\n"));
+      FunctionBodyMatcher("A"),
+      "constexpr auto waldo = operator\"\"_c<C{4}>();\n"));
 }
 
 TEST(StmtPrinter, TestCXXConversionDeclImplicit) {

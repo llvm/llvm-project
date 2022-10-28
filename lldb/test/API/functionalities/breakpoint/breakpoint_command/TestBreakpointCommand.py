@@ -106,6 +106,43 @@ class BreakpointCommandTestCase(TestBase):
                 'Incorrectly resolved a breakpoint using full path "%s" with '
                 'debug info that has relative path with matching suffix' % (path))
 
+    @no_debug_info_test
+    def test_breakpoints_with_bad_aranges(self):
+        """
+            Test that we can set breakpoints in a file that has an invalid
+            .debug_aranges. Older versions of LLDB would find a line entry
+            in the line table and then would use the start address of the line
+            entry to do an address lookup on the entry from the line table. If
+            this address to symbol context lookup would fail, due to a bad
+            .debug_aranges, it would cause the breakpoint to not get resolved.
+            Verify that even in these conditions we are able to resolve a
+            breakpoint.
+
+            The "bad_aranges.yaml" contains a line table that is:
+
+            Line table for /tmp/ab/main.cpp in `a.out
+            0x0000000100003f94: /tmp/ab/main.cpp:1
+            0x0000000100003fb0: /tmp/ab/main.cpp:2:3
+            0x0000000100003fb8: /tmp/ab/main.cpp:2:3
+
+            The .debug_aranges has one range for this compile unit that is
+            invalid: [0x0000000200003f94-0x0000000200003fb8). This will cause
+            the resolving of the addresses to fail.
+        """
+        src_dir = self.getSourceDir()
+        yaml_path = os.path.join(src_dir, "bad_aranges.yaml")
+        yaml_base, ext = os.path.splitext(yaml_path)
+        obj_path = self.getBuildArtifact("a.out")
+        self.yaml2obj(yaml_path, obj_path)
+
+        # Create a target with the object file we just created from YAML
+        target = self.dbg.CreateTarget(obj_path)
+        src_path = '/tmp/ab/main.cpp'
+        bkpt = target.BreakpointCreateByLocation(src_path, 2)
+        self.assertTrue(bkpt.GetNumLocations() > 0,
+            'Couldn\'t resolve breakpoint using "%s" in executate "%s" with '
+            'debug info that has a bad .debug_aranges section' % (src_path, self.getBuildArtifact("a.out")))
+
 
     def setUp(self):
         # Call super's setUp().

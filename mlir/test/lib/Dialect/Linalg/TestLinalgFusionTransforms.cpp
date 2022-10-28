@@ -56,7 +56,7 @@ static LogicalResult fuseLinalgOpsGreedily(func::FuncOp f) {
         changed = true;
       } else if (opOperand.get().getType().isa<RankedTensorType>()) {
         // Tile and Fuse tensor input.
-        if (opOperand.getOperandNumber() >= linalgOp.getNumInputs())
+        if (opOperand.getOperandNumber() >= linalgOp.getNumDpsInputs())
           continue;
         auto info = fuseProducerOfTensor(b, opOperand);
         if (failed(info))

@@ -432,6 +432,8 @@ void ClangDocBitcodeWriter::emitBlock(const TypedefInfo &T) {
   emitRecord(T.Name, TYPEDEF_NAME);
   for (const auto &N : T.Namespace)
     emitBlock(N, FieldId::F_namespace);
+  for (const auto &CI : T.Description)
+    emitBlock(CI);
   if (T.DefLoc)
     emitRecord(*T.DefLoc, TYPEDEF_DEFLOCATION);
   emitRecord(T.IsUsing, TYPEDEF_IS_USING);

@@ -1615,25 +1615,25 @@ llvm.func @useInlineAsm(%arg0: i32) {
   // Constraints string is checked at LLVM InlineAsm instruction construction time.
   // So we can't just use "bar" everywhere, number of in/out arguments has to match.
 
-  // CHECK-NEXT:  call void asm "foo", "r"(i32 {{.*}}), !dbg !7
+  // CHECK-NEXT:  call void asm "foo", "r"(i32 {{.*}})
   llvm.inline_asm "foo", "r" %arg0 : (i32) -> ()
 
-  // CHECK-NEXT:  call i8 asm "foo", "=r,r"(i32 {{.*}}), !dbg !9
+  // CHECK-NEXT:  call i8 asm "foo", "=r,r"(i32 {{.*}})
   %0 = llvm.inline_asm "foo", "=r,r" %arg0 : (i32) -> i8
 
-  // CHECK-NEXT:  call i8 asm "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}}), !dbg !10
+  // CHECK-NEXT:  call i8 asm "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}})
   %1 = llvm.inline_asm "foo", "=r,r,r" %arg0, %arg0 : (i32, i32) -> i8
 
-  // CHECK-NEXT:  call i8 asm sideeffect "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}}), !dbg !11
+  // CHECK-NEXT:  call i8 asm sideeffect "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}})
   %2 = llvm.inline_asm has_side_effects "foo", "=r,r,r" %arg0, %arg0 : (i32, i32) -> i8
 
-  // CHECK-NEXT:  call i8 asm alignstack "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}}), !dbg !12
+  // CHECK-NEXT:  call i8 asm alignstack "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}})
   %3 = llvm.inline_asm is_align_stack "foo", "=r,r,r" %arg0, %arg0 : (i32, i32) -> i8
 
-  // CHECK-NEXT:  call i8 asm inteldialect "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}}), !dbg !13
+  // CHECK-NEXT:  call i8 asm inteldialect "foo", "=r,r,r"(i32 {{.*}}, i32 {{.*}})
   %4 = llvm.inline_asm asm_dialect = "intel" "foo", "=r,r,r" %arg0, %arg0 : (i32, i32) -> i8
 
-  // CHECK-NEXT:  call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}}), !dbg !14
+  // CHECK-NEXT:  call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
   %5 = llvm.inline_asm "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
 
   llvm.return

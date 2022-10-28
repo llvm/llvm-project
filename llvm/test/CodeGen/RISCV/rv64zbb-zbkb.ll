@@ -167,7 +167,7 @@ define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: rol_i64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    sll a2, a0, a1
-; RV64I-NEXT:    neg a1, a1
+; RV64I-NEXT:    negw a1, a1
 ; RV64I-NEXT:    srl a0, a0, a1
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    ret
@@ -245,7 +245,7 @@ define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; RV64I-LABEL: ror_i64:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srl a2, a0, a1
-; RV64I-NEXT:    neg a1, a1
+; RV64I-NEXT:    negw a1, a1
 ; RV64I-NEXT:    sll a0, a0, a1
 ; RV64I-NEXT:    or a0, a2, a0
 ; RV64I-NEXT:    ret

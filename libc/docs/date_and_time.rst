@@ -41,7 +41,7 @@ clock_nanosleep
 clock_settime
 ctime
 ctime_r
-difftime
+difftime              |check|
 getdate
 gmtime                |check|
 gmtime_r              |check|

@@ -419,7 +419,9 @@ Execution Commands
                </td>
                <td class="content">
                   <b>(lldb)</b> frame select
+                  <br>
                   <b>(lldb)</b> f
+                  <br>
                   <b>(lldb)</b> process status
                </td>
          </tr>

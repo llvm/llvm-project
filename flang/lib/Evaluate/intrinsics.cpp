@@ -1124,7 +1124,37 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"stat", AnyInt, Rank::scalar, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
+    {"atomic_fetch_add",
+        {{"atom", AtomicInt, Rank::atom, Optionality::required,
+             common::Intent::InOut},
+            {"value", AnyInt, Rank::scalar, Optionality::required,
+                common::Intent::In},
+            {"old", AtomicInt, Rank::scalar, Optionality::required,
+                common::Intent::Out},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
+    {"atomic_fetch_and",
+        {{"atom", AtomicInt, Rank::atom, Optionality::required,
+             common::Intent::InOut},
+            {"value", AnyInt, Rank::scalar, Optionality::required,
+                common::Intent::In},
+            {"old", AtomicInt, Rank::scalar, Optionality::required,
+                common::Intent::Out},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
     {"atomic_fetch_or",
+        {{"atom", AtomicInt, Rank::atom, Optionality::required,
+             common::Intent::InOut},
+            {"value", AnyInt, Rank::scalar, Optionality::required,
+                common::Intent::In},
+            {"old", AtomicInt, Rank::scalar, Optionality::required,
+                common::Intent::Out},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
+    {"atomic_fetch_xor",
         {{"atom", AtomicInt, Rank::atom, Optionality::required,
              common::Intent::InOut},
             {"value", AnyInt, Rank::scalar, Optionality::required,
@@ -2660,7 +2690,8 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
   } else if (name == "atomic_define") {
     return CheckAtomicDefineAndRef(
         context, call.arguments[0], call.arguments[1], call.arguments[2], name);
-  } else if (name == "atomic_fetch_or") {
+  } else if (name == "atomic_fetch_add" || name == "atomic_fetch_and" ||
+      name == "atomic_fetch_or" || name == "atomic_fetch_xor") {
     return CheckForCoindexedObject(context, call.arguments[3], name, "stat");
   } else if (name == "atomic_ref") {
     return CheckAtomicDefineAndRef(

@@ -587,7 +587,7 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
   return Error::success();
 }
 
-bool DWARFUnit::parseDWO() {
+bool DWARFUnit::parseDWO(StringRef DWOAlternativeLocation) {
   if (IsDWO)
     return false;
   if (DWO.get())
@@ -611,8 +611,17 @@ bool DWARFUnit::parseDWO() {
   if (!DWOId)
     return false;
   auto DWOContext = Context.getDWOContext(AbsolutePath);
-  if (!DWOContext)
-    return false;
+  if (!DWOContext) {
+    // Use the alternative location to get the DWARF context for the DWO object.
+    if (DWOAlternativeLocation.empty())
+      return false;
+    // If the alternative context does not correspond to the original DWO object
+    // (different hashes), the below 'getDWOCompileUnitForHash' call will catch
+    // the issue, with a returned null context.
+    DWOContext = Context.getDWOContext(DWOAlternativeLocation);
+    if (!DWOContext)
+      return false;
+  }
 
   DWARFCompileUnit *DWOCU = DWOContext->getDWOCompileUnitForHash(*DWOId);
   if (!DWOCU)

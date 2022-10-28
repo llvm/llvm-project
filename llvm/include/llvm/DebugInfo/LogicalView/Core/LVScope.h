@@ -17,12 +17,18 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVElement.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVLocation.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVSort.h"
+#include "llvm/Object/ObjectFile.h"
 #include <list>
 #include <map>
 #include <set>
 
 namespace llvm {
 namespace logicalview {
+
+// Name address, Code size.
+using LVNameInfo = std::pair<LVAddress, uint64_t>;
+using LVPublicNames = std::map<LVScope *, LVNameInfo>;
+using LVPublicAddresses = std::map<LVAddress, LVNameInfo>;
 
 class LVRange;
 
@@ -392,6 +398,12 @@ class LVScopeCompileUnit final : public LVScope {
   // Names (files and directories) used by the Compile Unit.
   std::vector<size_t> Filenames;
 
+  // As the .debug_pubnames section has been removed in DWARF5, we have a
+  // similar functionality, which is used by the decoded functions. We use
+  // the low-pc and high-pc for those scopes that are marked as public, in
+  // order to support DWARF and CodeView.
+  LVPublicNames PublicNames;
+
   // Toolchain producer.
   size_t ProducerIndex = 0;
 
@@ -410,9 +422,10 @@ class LVScopeCompileUnit final : public LVScope {
 
   // It records the mapping between logical lines representing a debug line
   // entry and its address in the text section. It is used to find a line
-  // giving its exact or closest address.
+  // giving its exact or closest address. To support comdat functions, all
+  // addresses for the same section are recorded in the same map.
   using LVAddressToLine = std::map<LVAddress, LVLine *>;
-  LVAddressToLine AddressToLine;
+  LVDoubleMap<LVSectionIndex, LVAddress, LVLine *> SectionMappings;
 
   // DWARF Tags (Tag, Element list).
   LVTagOffsetsMap DebugTags;
@@ -456,6 +469,10 @@ class LVScopeCompileUnit final : public LVScope {
   // in the 'Totals' vector are valid values.
   LVLevel MaxSeenLevel = 0;
 
+  // Get the line located at the given address.
+  LVLine *lineLowerBound(LVAddress Address, LVScope *Scope) const;
+  LVLine *lineUpperBound(LVAddress Address, LVScope *Scope) const;
+
   void printScopeSize(const LVScope *Scope, raw_ostream &OS);
   void printScopeSize(const LVScope *Scope, raw_ostream &OS) const {
     (const_cast<LVScopeCompileUnit *>(this))->printScopeSize(Scope, OS);
@@ -483,9 +500,28 @@ public:
     return static_cast<LVScope *>(const_cast<LVScopeCompileUnit *>(this));
   }
 
-  // Get the line located at the given address.
-  LVLine *lineLowerBound(LVAddress Address) const;
-  LVLine *lineUpperBound(LVAddress Address) const;
+  // Add line to address mapping.
+  void addMapping(LVLine *Line, LVSectionIndex SectionIndex);
+  LVLineRange lineRange(LVLocation *Location) const;
+
+  LVNameInfo NameNone = {UINT64_MAX, 0};
+  void addPublicName(LVScope *Scope, LVAddress LowPC, LVAddress HighPC) {
+    PublicNames.emplace(std::piecewise_construct, std::forward_as_tuple(Scope),
+                        std::forward_as_tuple(LowPC, HighPC - LowPC));
+  }
+  const LVNameInfo &findPublicName(LVScope *Scope) {
+    LVPublicNames::iterator Iter = PublicNames.find(Scope);
+    return (Iter != PublicNames.end()) ? Iter->second : NameNone;
+  }
+  const LVPublicNames &getPublicNames() const { return PublicNames; }
+
+  // The base address of the scope for any of the debugging information
+  // entries listed, is given by either the DW_AT_low_pc attribute or the
+  // first address in the first range entry in the list of ranges given by
+  // the DW_AT_ranges attribute.
+  LVAddress getBaseAddress() const {
+    return Ranges ? Ranges->front()->getLowerAddress() : 0;
+  }
 
   StringRef getCompilationDirectory() const {
     return getStringPool().getString(CompilationDirectoryIndex);

@@ -769,10 +769,13 @@ static bool isObjectSizeLessThanOrEq(Value *V, uint64_t MaxSize,
       if (!CS)
         return false;
 
-      uint64_t TypeSize = DL.getTypeAllocSize(AI->getAllocatedType());
+      TypeSize TS = DL.getTypeAllocSize(AI->getAllocatedType());
+      if (TS.isScalable())
+        return false;
       // Make sure that, even if the multiplication below would wrap as an
       // uint64_t, we still do the right thing.
-      if ((CS->getValue().zext(128) * APInt(128, TypeSize)).ugt(MaxSize))
+      if ((CS->getValue().zext(128) * APInt(128, TS.getFixedSize()))
+              .ugt(MaxSize))
         return false;
       continue;
     }

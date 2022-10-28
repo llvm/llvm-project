@@ -554,12 +554,12 @@ define i64 @test11(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movl %edi, %ebx
-; CHECK-NEXT:    movl %esi, %r15d
+; CHECK-NEXT:    movl %edi, %ebp
+; CHECK-NEXT:    movl %esi, %ebx
 ; CHECK-NEXT:    movl %edx, %r12d
 ; CHECK-NEXT:    movl %ecx, %r13d
-; CHECK-NEXT:    movl %r8d, %ebp
-; CHECK-NEXT:    movl %r9d, %r14d
+; CHECK-NEXT:    movl %r8d, %r14d
+; CHECK-NEXT:    movl %r9d, %r15d
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
@@ -584,11 +584,10 @@ define i64 @test11(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-NEXT:    callq _bar ## 160-byte Folded Reload
 ; CHECK-NEXT:  Ltmp14:
-; CHECK-NEXT:    addq %r15, %rbx
 ; CHECK-NEXT:    addq %r12, %rbx
 ; CHECK-NEXT:    addq %r13, %rbx
-; CHECK-NEXT:    addq %rbp, %rbx
 ; CHECK-NEXT:    addq %r14, %rbx
+; CHECK-NEXT:    addq %r15, %rbx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    addq %rax, %rbx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
@@ -629,6 +628,7 @@ define i64 @test11(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %
 ; CHECK-NEXT:    addq %rax, %rbx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
 ; CHECK-NEXT:    addq %rax, %rbx
+; CHECK-NEXT:    addq %rbp, %rbx
 ; CHECK-NEXT:    movq %rbx, %rax
 ; CHECK-NEXT:    addq $168, %rsp
 ; CHECK-NEXT:    popq %rbx

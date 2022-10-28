@@ -12,9 +12,11 @@ add_mlir_dialect_library(MLIRVectorDialect
   MLIRArithDialect
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
+  MLIRDestinationStyleOpInterface
   MLIRDialectUtils
   MLIRIR
-  MLIRMaskingInterfaces
+  MLIRMaskableOpInterface
+  MLIRMaskingOpInterface
   MLIRMemRefDialect
   MLIRSideEffectInterfaces
   MLIRTensorDialect

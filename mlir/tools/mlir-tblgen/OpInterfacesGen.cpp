@@ -289,6 +289,11 @@ void InterfaceGenerator::emitModelDecl(const Interface &interface) {
 }
 
 void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
+  llvm::SmallVector<StringRef, 2> namespaces;
+  llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
+  for (StringRef ns : namespaces)
+    os << "namespace " << ns << " {\n";
+
   for (auto &method : interface.getMethods()) {
     os << "template<typename " << valueTemplate << ">\n";
     emitCPPType(method.getReturnType(), os);
@@ -384,6 +389,9 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
                         method.isStatic() ? &ctx : &nonStaticMethodFmt);
     os << "\n}\n";
   }
+
+  for (StringRef ns : llvm::reverse(namespaces))
+    os << "} // namespace " << ns << "\n";
 }
 
 void InterfaceGenerator::emitTraitDecl(const Interface &interface,
@@ -498,8 +506,6 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
   emitTraitDecl(interface, interfaceName, interfaceTraitsName);
   os << "}// namespace detail\n";
 
-  emitModelMethodsDef(interface);
-
   for (StringRef ns : llvm::reverse(namespaces))
     os << "} // namespace " << ns << "\n";
 }
@@ -507,8 +513,10 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
 bool InterfaceGenerator::emitInterfaceDecls() {
   llvm::emitSourceFileHeader("Interface Declarations", os);
 
-  for (const auto *def : defs)
+  for (const llvm::Record *def : defs)
     emitInterfaceDecl(Interface(def));
+  for (const llvm::Record *def : defs)
+    emitModelMethodsDef(Interface(def));
   return false;
 }
 

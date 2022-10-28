@@ -549,18 +549,20 @@ private:
   //   OpXMnemo dstX src0X [vsrc1X|imm vsrc1X|vsrc1X imm] '::'
   //   OpYMnemo dstY src0Y [vsrc1Y|imm vsrc1Y|vsrc1Y imm]
   // Each ComponentKind has operand indices defined below.
-  static constexpr unsigned PARSED_DST_IDX[] = {1, 1, 4 /* + OpXSrcNum */};
-  static constexpr unsigned FIRST_PARSED_SRC_IDX[] = {2, 2,
-                                                      5 /* + OpXSrcNum */};
+  static constexpr unsigned PARSED_DST_IDX[] = {1, 1,
+                                                4 /* + ParsedOpXSrcNum */};
+  static constexpr unsigned FIRST_PARSED_SRC_IDX[] = {
+      2, 2, 5 /* + ParsedOpXSrcNum */};
 
 private:
   ComponentKind Kind;
   unsigned OpXSrcNum;
+  unsigned ParsedOpXSrcNum;
 
 public:
-  ComponentLayout(ComponentKind Kind_ = ComponentKind::SINGLE,
-                  unsigned OpXSrcNum_ = 0)
-      : Kind(Kind_), OpXSrcNum(OpXSrcNum_) {
+  ComponentLayout(ComponentKind Kind = ComponentKind::SINGLE,
+                  unsigned OpXSrcNum = 0, unsigned ParsedOpXSrcNum = 0)
+      : Kind(Kind), OpXSrcNum(OpXSrcNum), ParsedOpXSrcNum(ParsedOpXSrcNum) {
     assert(Kind <= ComponentKind::MAX);
     assert((Kind == ComponentKind::COMPONENT_Y) == (OpXSrcNum > 0));
   }
@@ -573,11 +575,15 @@ public:
   }
 
   unsigned getParsedDstIndex() const {
-    return PARSED_DST_IDX[Kind] + OpXSrcNum;
+    return PARSED_DST_IDX[Kind] + ParsedOpXSrcNum;
   }
-  unsigned getParsedSrcIndex(unsigned SrcIdx) const {
+  unsigned getParsedSrcIndex(unsigned SrcIdx, bool ComponentHasSrc2Acc) const {
     assert(SrcIdx < Component::MAX_SRC_NUM);
-    return FIRST_PARSED_SRC_IDX[Kind] + OpXSrcNum + SrcIdx;
+    // FMAC and DOT2C have a src2 operand on the MCInst but
+    // not on the asm representation. src2 is tied to dst.
+    if (ComponentHasSrc2Acc && SrcIdx == (MAX_SRC_NUM - 1))
+      return getParsedDstIndex();
+    return FIRST_PARSED_SRC_IDX[Kind] + ParsedOpXSrcNum + SrcIdx;
   }
 };
 
@@ -616,8 +622,9 @@ class ComponentInfo : public ComponentLayout, public ComponentProps {
 public:
   ComponentInfo(const MCInstrDesc &OpDesc,
                 ComponentKind Kind = ComponentKind::SINGLE,
-                unsigned OpXSrcNum = 0)
-      : ComponentLayout(Kind, OpXSrcNum), ComponentProps(OpDesc) {}
+                unsigned OpXSrcNum = 0, unsigned ParsedOpXSrcNum = 0)
+      : ComponentLayout(Kind, OpXSrcNum, ParsedOpXSrcNum),
+        ComponentProps(OpDesc) {}
 
   // Map MC operand index to parsed operand index.
   // Return 0 if the specified operand does not exist.

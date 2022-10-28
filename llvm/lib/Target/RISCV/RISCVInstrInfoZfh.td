@@ -337,6 +337,8 @@ def : PatSetCC<FPR16, any_fsetccs, SETLE, FLE_H>;
 def : PatSetCC<FPR16, any_fsetccs, SETOLE, FLE_H>;
 
 defm Select_FPR16 : SelectCC_GPR_rrirr<FPR16>;
+
+def PseudoFROUND_H : PseudoFROUND<FPR16>;
 } // Predicates = [HasStdExtZfh]
 
 let Predicates = [HasStdExtZfhOrZfhmin] in {

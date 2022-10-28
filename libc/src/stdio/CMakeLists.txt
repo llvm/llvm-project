@@ -113,6 +113,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fgets
+  SRCS
+    fgets.cpp
+  HDRS
+    fgets.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
   fflush
   SRCS
     fflush.cpp

@@ -343,6 +343,8 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
     const Record *R = getRecord(RD);
     const Record::Field *F = R->getField(FD);
     // Leave a pointer to the field on the stack.
+    if (F->Decl->getType()->isReferenceType())
+      return this->emitGetFieldPop(PT_Ptr, F->Offset, E);
     return this->emitGetPtrField(F->Offset, E);
   }
 
@@ -395,6 +397,18 @@ bool ByteCodeExprGen<Emitter>::VisitAbstractConditionalOperator(
   this->emitLabel(LabelEnd);
 
   return true;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
+  unsigned StringIndex = P.createGlobalString(E);
+  return this->emitGetPtrGlobal(StringIndex, E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCharacterLiteral(
+    const CharacterLiteral *E) {
+  return this->emitConst(E, E->getValue());
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
@@ -541,7 +555,7 @@ bool ByteCodeExprGen<Emitter>::dereferenceVar(
         return false;
       return DiscardResult ? true : this->emitGetPtrLocal(L.Offset, LV);
     }
-  } else if (auto Idx = getGlobalIdx(VD)) {
+  } else if (auto Idx = P.getGlobal(VD)) {
     switch (AK) {
     case DerefKind::Read:
       if (!this->emitGetGlobal(T, *Idx, LV))
@@ -797,7 +811,7 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
       if (!this->emitDupPtr(Initializer))
         return false;
 
-      if (Optional<PrimType> T = classify(Init->getType())) {
+      if (Optional<PrimType> T = classify(Init)) {
         if (!this->visit(Init))
           return false;
 
@@ -853,21 +867,6 @@ bool ByteCodeExprGen<Emitter>::visitInitializer(const Expr *Initializer) {
 
   // Otherwise, visit the expression like normal.
   return this->Visit(Initializer);
-}
-
-template <class Emitter>
-llvm::Optional<unsigned>
-ByteCodeExprGen<Emitter>::getGlobalIdx(const VarDecl *VD) {
-  if (VD->isConstexpr()) {
-    // Constexpr decl - it must have already been defined.
-    return P.getGlobal(VD);
-  }
-  if (!VD->hasLocalStorage()) {
-    // Not constexpr, but a global var - can have pointer taken.
-    Program::DeclScope Scope(P, VD);
-    return P.getOrCreateGlobal(VD);
-  }
-  return {};
 }
 
 template <class Emitter>
@@ -1093,41 +1092,33 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   const auto *Decl = E->getDecl();
-  bool FoundDecl = false;
+  // References are implemented via pointers, so when we see a DeclRefExpr
+  // pointing to a reference, we need to get its value directly (i.e. the
+  // pointer to the actual value) instead of a pointer to the pointer to the
+  // value.
+  bool IsReference = Decl->getType()->isReferenceType();
 
   if (auto It = Locals.find(Decl); It != Locals.end()) {
     const unsigned Offset = It->second.Offset;
-    if (!this->emitGetPtrLocal(Offset, E))
-      return false;
 
-    FoundDecl = true;
+    if (IsReference)
+      return this->emitGetLocal(PT_Ptr, Offset, E);
+    return this->emitGetPtrLocal(Offset, E);
   } else if (auto GlobalIndex = P.getGlobal(Decl)) {
-    if (!this->emitGetPtrGlobal(*GlobalIndex, E))
-      return false;
+    if (IsReference)
+      return this->emitGetGlobal(PT_Ptr, *GlobalIndex, E);
 
-    FoundDecl = true;
+    return this->emitGetPtrGlobal(*GlobalIndex, E);
   } else if (const auto *PVD = dyn_cast<ParmVarDecl>(Decl)) {
     if (auto It = this->Params.find(PVD); It != this->Params.end()) {
-      if (!this->emitGetPtrParam(It->second, E))
-        return false;
-
-      FoundDecl = true;
+      if (IsReference)
+        return this->emitGetParam(PT_Ptr, It->second, E);
+      return this->emitGetPtrParam(It->second, E);
     }
   } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(Decl)) {
     PrimType T = *classify(ECD->getType());
 
     return this->emitConst(T, ECD->getInitVal(), E);
-  }
-
-  // References are implemented using pointers, so when we get here,
-  // we have a pointer to a pointer, which we need to de-reference once.
-  if (FoundDecl) {
-    if (Decl->getType()->isReferenceType()) {
-      if (!this->emitLoadPopPtr(E))
-        return false;
-    }
-
-    return true;
   }
 
   return false;

@@ -44,10 +44,10 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
 
   // If the function decl is a member decl, the next parameter is
   // the 'this' pointer. This parameter is pop()ed from the
-  // InterStack when calling the function.
+  // InterpStack when calling the function.
   bool HasThisPointer = false;
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl);
-      MD && !MD->isStatic()) {
+      MD && MD->isInstance()) {
     HasThisPointer = true;
     ParamTypes.push_back(PT_Ptr);
     ParamOffset += align(primSize(PT_Ptr));

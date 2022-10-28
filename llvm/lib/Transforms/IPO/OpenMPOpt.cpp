@@ -3338,8 +3338,10 @@ struct AAKernelInfoFunction : AAKernelInfo {
     // If we can we change the execution mode to SPMD-mode otherwise we build a
     // custom state machine.
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
-    if (!changeToSPMDMode(A, Changed))
-      return buildCustomStateMachine(A);
+    if (!changeToSPMDMode(A, Changed)) {
+      if (!KernelInitCB->getCalledFunction()->isDeclaration())
+        return buildCustomStateMachine(A);
+    }
 
     return Changed;
   }

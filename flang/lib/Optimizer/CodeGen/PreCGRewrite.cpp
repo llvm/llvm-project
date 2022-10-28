@@ -107,7 +107,8 @@ public:
     }
     auto xbox = rewriter.create<fir::cg::XEmboxOp>(
         loc, embox.getType(), embox.getMemref(), shapeOpers, llvm::None,
-        llvm::None, llvm::None, llvm::None, embox.getTypeparams());
+        llvm::None, llvm::None, llvm::None, embox.getTypeparams(),
+        embox.getTdesc());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();
@@ -142,7 +143,8 @@ public:
       }
     auto xbox = rewriter.create<fir::cg::XEmboxOp>(
         loc, embox.getType(), embox.getMemref(), shapeOpers, shiftOpers,
-        sliceOpers, subcompOpers, substrOpers, embox.getTypeparams());
+        sliceOpers, subcompOpers, substrOpers, embox.getTypeparams(),
+        embox.getTdesc());
     LLVM_DEBUG(llvm::dbgs() << "rewriting " << embox << " to " << xbox << '\n');
     rewriter.replaceOp(embox, xbox.getOperation()->getResults());
     return mlir::success();

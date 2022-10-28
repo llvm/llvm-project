@@ -67,6 +67,12 @@ dumpDXContainer(MemoryBufferRef Source) {
         NewPart.Flags = DXContainerYAML::ShaderFlags(*Flags);
       break;
     }
+    case dxbc::PartType::HASH: {
+      Optional<dxbc::ShaderHash> Hash = Container.getShaderHash();
+      if (Hash && Hash->isPopulated())
+        NewPart.Hash = DXContainerYAML::ShaderHash(*Hash);
+      break;
+    }
     case dxbc::PartType::Unknown:
       break;
     }

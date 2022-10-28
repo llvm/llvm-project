@@ -356,9 +356,9 @@ int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
 
   // If this is memset, we just need to see if the offset is valid in the size
   // of the memset..
-  if (MI->getIntrinsicID() == Intrinsic::memset) {
+  if (const auto *memset_inst = dyn_cast<MemSetInst>(MI)) {
     if (DL.isNonIntegralPointerType(LoadTy->getScalarType())) {
-      auto *CI = dyn_cast<ConstantInt>(cast<MemSetInst>(MI)->getValue());
+      auto *CI = dyn_cast<ConstantInt>(memset_inst->getValue());
       if (!CI || !CI->isZero())
         return -1;
     }

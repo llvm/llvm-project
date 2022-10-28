@@ -43,7 +43,9 @@ function test_complex4(c)
 end function
 
 ! ALL-LABEL: @_QPtest_complex4
-! ALL: {{%[A-Za-z0-9._]+}} = fir.call @cabsf({{%[A-Za-z0-9._]+}}) : (!fir.complex<4>) -> f32
+! FAST: {{%[A-Za-z0-9._]+}} = complex.abs {{%[A-Za-z0-9._]+}} : complex<f32>
+! RELAXED: {{%[A-Za-z0-9._]+}} = complex.abs {{%[A-Za-z0-9._]+}} : complex<f32>
+! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @cabsf({{%[A-Za-z0-9._]+}}) : (!fir.complex<4>) -> f32
 
 function test_complex8(c)
   complex(8) :: c, test_complex8
@@ -51,7 +53,9 @@ function test_complex8(c)
 end function
 
 ! ALL-LABEL: @_QPtest_complex8
-! ALL: {{%[A-Za-z0-9._]+}} = fir.call @cabs({{%[A-Za-z0-9._]+}}) : (!fir.complex<8>) -> f64
+! FAST: {{%[A-Za-z0-9._]+}} = complex.abs {{%[A-Za-z0-9._]+}} : complex<f64>
+! RELAXED: {{%[A-Za-z0-9._]+}} = complex.abs {{%[A-Za-z0-9._]+}} : complex<f64>
+! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @cabs({{%[A-Za-z0-9._]+}}) : (!fir.complex<8>) -> f64
 
 //--- aint.f90
 ! RUN: bbc -emit-fir %t/aint.f90 -o - --math-runtime=fast | FileCheck --check-prefixes=ALL %t/aint.f90

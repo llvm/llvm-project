@@ -32,8 +32,8 @@
 ; Check the first five opcodes in the first eviction problem
 ; CHECK-NEXT: value: 19
 ; CHECK-SAME: value: {{([0-9]{4})}}
-; CHECK-SAME: value: 1245
-; CHECK-SAME: value: 1264
+; CHECK-SAME: value: 12{{([0-9]{2})}}
+; CHECK-SAME: value: 12{{([0-9]{2})}}
 ; The first eviction problem is significantly less than 300 instructions. Check
 ; that there is a zero value
 ; CHECK-SAME: value: 0

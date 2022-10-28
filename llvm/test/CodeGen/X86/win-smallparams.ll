@@ -57,14 +57,13 @@ entry:
 ; WIN32: calll _manyargs
 
 ; WIN32-LABEL: _manyargs:
-; WIN32: pushl %ebx
 ; WIN32: pushl %edi
 ; WIN32: pushl %esi
-; WIN32-DAG: movsbl 16(%esp),
-; WIN32-DAG: movswl 20(%esp),
-; WIN32-DAG: movzbl 24(%esp),
-; WIN32-DAG: movzwl 28(%esp),
-; WIN32-DAG: movzbl 32(%esp),
-; WIN32-DAG: movzwl 36(%esp),
+; WIN32-DAG: movzwl 32(%esp),
+; WIN32-DAG: movzbl 28(%esp),
+; WIN32-DAG: movzwl 24(%esp),
+; WIN32-DAG: movzbl 20(%esp),
+; WIN32-DAG: movswl 16(%esp),
+; WIN32-DAG: movsbl 12(%esp),
 ; WIN32: retl
 

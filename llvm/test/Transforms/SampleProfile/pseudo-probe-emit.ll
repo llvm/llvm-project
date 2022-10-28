@@ -18,15 +18,15 @@ bb0:
   %cmp = icmp eq i32 %x, 0
 ; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 1, i32 0, i64 -1), !dbg ![[#FAKELINE:]]
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID:]], 1, 0, 0
-; CHECK-ASM: .pseudoprobe	[[#GUID:]] 1 0 0
+; CHECK-ASM: .pseudoprobe	[[#GUID:]] 1 0 0 foo
   br i1 %cmp, label %bb1, label %bb2
 
 bb1:
 ; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 2, i32 0, i64 -1), !dbg ![[#FAKELINE]]
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID]], 3, 0, 0
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID]], 4, 0, 0
-; CHECK-ASM: .pseudoprobe	[[#GUID]] 3 0 0
-; CHECK-ASM: .pseudoprobe	[[#GUID]] 4 0 0
+; CHECK-ASM: .pseudoprobe	[[#GUID]] 3 0 0 foo
+; CHECK-ASM: .pseudoprobe	[[#GUID]] 4 0 0 foo
   store i32 6, ptr @a, align 4
   br label %bb3
 
@@ -34,8 +34,8 @@ bb2:
 ; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID:]], i64 3, i32 0, i64 -1), !dbg ![[#FAKELINE]]
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID]], 2, 0, 0
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID]], 4, 0, 0
-; CHECK-ASM: .pseudoprobe	[[#GUID]] 2 0 0
-; CHECK-ASM: .pseudoprobe	[[#GUID]] 4 0 0
+; CHECK-ASM: .pseudoprobe	[[#GUID]] 2 0 0 foo
+; CHECK-ASM: .pseudoprobe	[[#GUID]] 4 0 0 foo
   store i32 8, ptr @a, align 4
   br label %bb3
 
@@ -44,22 +44,22 @@ bb3:
   ret void, !dbg !12
 }
 
-declare void @bar(i32 %x) 
+declare void @bar(i32 %x)
 
 define internal void @foo2(ptr %f) !dbg !4 {
 entry:
 ; CHECK-IL: call void @llvm.pseudoprobe(i64 [[#GUID2:]], i64 1, i32 0, i64 -1)
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID2:]], 1, 0, 0
-; CHECK-ASM: .pseudoprobe	[[#GUID2:]] 1 0 0
+; CHECK-ASM: .pseudoprobe	[[#GUID2:]] 1 0 0 foo2
 ; Check pseudo_probe metadata attached to the indirect call instruction.
 ; CHECK-IL: call void %f(i32 1), !dbg ![[#PROBE0:]]
 ; CHECK-MIR: PSEUDO_PROBE [[#GUID2]], 2, 1, 0
-; CHECK-ASM: .pseudoprobe	[[#GUID2]] 2 1 0
+; CHECK-ASM: .pseudoprobe	[[#GUID2]] 2 1 0 foo2
   call void %f(i32 1), !dbg !13
 ; Check pseudo_probe metadata attached to the direct call instruction.
 ; CHECK-IL: call void @bar(i32 1), !dbg ![[#PROBE1:]]
 ; CHECK-MIR: PSEUDO_PROBE	[[#GUID2]], 3, 2, 0
-; CHECK-ASM: .pseudoprobe	[[#GUID2]] 3 2 0
+; CHECK-ASM: .pseudoprobe	[[#GUID2]] 3 2 0 foo2
   call void @bar(i32 1)
   ret void
 }
@@ -92,7 +92,8 @@ entry:
 ; CHECK-ASM-NEXT: .ascii	"foo2"
 
 ; CHECK-OBJ-COUNT-2: .pseudo_probe_desc
-; CHECK-OBJ-COUNT-2: .pseudo_probe
+; CHECK-OBJ: .pseudo_probe
+; CHECK-OBJ-NOT: .rela.pseudo_probe
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!9, !10}

@@ -828,6 +828,10 @@ public:
     return false;
   }
 
+  bool preferEpilogueVectorization() const {
+    return true;
+  }
+
   bool shouldExpandReduction(const IntrinsicInst *II) const { return true; }
 
   unsigned getGISelRematGlobalCost() const { return 1; }

@@ -41,6 +41,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  difftime
+  SUITE
+    libc_time_unittests
+  SRCS
+    difftime_test.cpp
+  DEPENDS
+    libc.src.time.difftime
+)
+
+add_libc_unittest(
   gmtime
   SUITE
     libc_time_unittests
@@ -94,4 +104,28 @@ add_libc_unittest(
     libc.include.errno
     libc.include.time
     libc.src.time.nanosleep
+)
+
+add_libc_unittest(
+  time_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    time_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.time
+    libc.src.time.time
+)
+
+add_libc_unittest(
+  clock_test
+  SUITE
+    libc_time_unittests
+  SRCS
+    clock_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.time
+    libc.src.time.clock
 )

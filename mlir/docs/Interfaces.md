@@ -398,7 +398,7 @@ comprised of the following components:
     -   Additional C++ code that is injected into the declarations of both the
         interface and the trait class. This allows for defining methods and more
         that are exposed on both the interface and the trait class, e.g. to inject
-        utilties on both the interface and the derived entity implementing the
+        utilities on both the interface and the derived entity implementing the
         interface (e.g. attribute, operation, etc.).
     -   In non-static methods, `$_attr`/`$_op`/`$_type`
         (depending on the type of interface) may be used to refer to an

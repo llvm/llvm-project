@@ -13,26 +13,27 @@ include "mlir/IR/OpBase.td"
 
 def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
   let description = [{
-    Ops that are in destination style have designated output operands, which act
-    as initial tensor values for the results of the operation or the output
+    Ops that are in destination style have designated init operands, which act
+    as initial tensor values for the results of the operation or the init
     buffers to which the results of the op will be written.
 
-    Output operands must be tensors or memrefs. Input operands can have any
-    type. All non-output operands are inputs.
+    Init operands must be ranked tensors or ranked memrefs. Input operands can
+    have any type. All non-init operands are DPS inputs.
 
-    It is assumed that the output operands of the op are the operands at
-    position [start, end). The positions are defined by getOutputsPositionRange
-    method. All non-output operands are "inputs" of the DPS op.
+    It is assumed that the init operands of the op are the operands at
+    position [start, end). The positions are defined by getDpsInitsPositionRange
+    method.
 
     If the op has "tensor semantics", then the input operands are either scalars
-    or tensors. The output operands are tensors and every tensor output is tied
-    to a corresponding tensor OpResult in a 1-to-1 fashion. The i-th output
-    tensor is tied to the i-th OpResult. The op may not have any additional
-    OpResults. Output operands and their tied OpResults have the same type.
+    or ranked tensors. The init operands are ranked tensors and every tensor
+    init is tied to a corresponding tensor OpResult in a 1-to-1 fashion.
+    The i-th init tensor is tied to the i-th OpResult. The op may not have any
+    additional OpResults. Init operands and their tied OpResults have the same
+    type.
 
-    If the op has "buffer semantics", then the input operands are either memrefs
-    or other non-tensor types, e.g. scalar types. Furthermore, the output
-    operands are memrefs and the op has no results.
+    If the op has "buffer semantics", then the input operands are either ranked
+    memrefs or other non-tensor types, e.g. scalar types. Furthermore, the
+    init operands are ranked memrefs and the op has no results.
 
     Destination-passing style abstraction makes certain transformations easier.
     For example, tiling implementation can extract/insert slices from/into the
@@ -42,7 +43,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     bufferization) and can directly reuse the existing destination buffer.
 
     Example of a destination style op: `%r = tensor.insert_slice %t into %d`,
-    where `%t` is the single input and `%d` is the single output. `%d` is tied
+    where `%t` is the single input and `%d` is the single init. `%d` is tied
     to `%r`.
 
     Example of an op that is not in destination style: `%r = tensor.pad %t`.
@@ -50,7 +51,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     shape.
 
     Each op that wants to implement DestinationStyleOpInterface needs to define
-    the getOutputsPositionRange() method.
+    the getDpsInitsPositionRange() method.
   }];
 
   let cppNamespace = "::mlir";
@@ -58,9 +59,9 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
   let methods = [
     // This method has to be defined for every DPS op.
     InterfaceMethod<
-      /*desc=*/"Return start and end indices of the output operands range.",
+      /*desc=*/"Return start and end indices of the init operands range.",
       /*retTy=*/"std::pair<int64_t, int64_t>",
-      /*methodName=*/"getOutputsPositionRange",
+      /*methodName=*/"getDpsInitsPositionRange",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/""
@@ -69,27 +70,27 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     // Operands handling.
     //===------------------------------------------------------------------===//
     // The operand list is assumed to start with the input operands and end
-    // with the output operands. Therefore, all methods to access the inputs
-    // and outputs can be expressed if the number of output operands is know.
+    // with the init operands. Therefore, all methods to access the inputs
+    // and inits can be expressed if the number of init operands is know.
     InterfaceMethod<
-      /*desc=*/"Return the number of outputs.",
+      /*desc=*/"Return the number of inits.",
       /*retTy=*/"int64_t",
-      /*methodName=*/"getNumOutputs",
+      /*methodName=*/"getNumDpsInits",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        auto [start, end] = $_op.getOutputsPositionRange();
+        auto [start, end] = $_op.getDpsInitsPositionRange();
         return end - start;
       }]
     >,
     InterfaceMethod<
-      /*desc=*/"Return the output operands.",
+      /*desc=*/"Return the init operands.",
       /*retTy=*/"OpOperandVector",
-      /*methodName=*/"getOutputOperands",
+      /*methodName=*/"getDpsInitOperands",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        auto [start, end] = $_op.getOutputsPositionRange();
+        auto [start, end] = $_op.getDpsInitsPositionRange();
 
         OpOperandVector result;
         result.reserve(end - start);
@@ -99,52 +100,52 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
       }]
     >,
     InterfaceMethod<
-      /*desc=*/"Return the `i`-th output operand.",
+      /*desc=*/"Return the `i`-th init operand.",
       /*retTy=*/"OpOperand *",
-      /*methodName=*/"getOutputOperand",
+      /*methodName=*/"getDpsInitOperand",
       /*args=*/(ins "int64_t":$i),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        assert(i >= 0 && i < $_op.getNumOutputs());
-        auto [start, end] = $_op.getOutputsPositionRange();
+        assert(i >= 0 && i < $_op.getNumDpsInits());
+        auto [start, end] = $_op.getDpsInitsPositionRange();
         return &$_op->getOpOperand(start + i);
       }]
     >,
     InterfaceMethod<
-      /*desc=*/"Set the `i`-th output operand.",
+      /*desc=*/"Set the `i`-th init operand.",
       /*retTy=*/"void",
-      /*methodName=*/"setOutputOperand",
+      /*methodName=*/"setDpsInitOperand",
       /*args=*/(ins "int64_t":$i, "Value":$value),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        assert(i >= 0 && i < $_op.getNumOutputs());
-        auto [start, end] = $_op.getOutputsPositionRange();
+        assert(i >= 0 && i < $_op.getNumDpsInits());
+        auto [start, end] = $_op.getDpsInitsPositionRange();
         $_op->setOperand(start + i, value);
       }]
     >,
     InterfaceMethod<
       /*desc=*/"Return the number of inputs.",
       /*retTy=*/"int64_t",
-      /*methodName=*/"getNumInputs",
+      /*methodName=*/"getNumDpsInputs",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return $_op.getNumOperands() - $_op.getNumOutputs();
+        return $_op.getNumOperands() - $_op.getNumDpsInits();
       }]
     >,
     InterfaceMethod<
       /*desc=*/"Return the input operands.",
       /*retTy=*/"OpOperandVector",
-      /*methodName=*/"getInputOperands",
+      /*methodName=*/"getDpsInputOperands",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        auto [start, end] = $_op.getOutputsPositionRange();
-        int64_t numOutputs = end - start;
+        auto [start, end] = $_op.getDpsInitsPositionRange();
+        int64_t numInits = end - start;
         int64_t numOperands = $_op.getNumOperands();
 
         OpOperandVector result;
-        result.reserve(numOperands - numOutputs);
+        result.reserve(numOperands - numInits);
         for (int i = 0; i < start; ++i)
           result.push_back(&$_op->getOpOperand(i));
         for (int i = end; i < numOperands; ++i)
@@ -156,38 +157,38 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     InterfaceMethod<
       /*desc=*/[{ Return the `i`-th input operand.  }],
       /*retTy=*/"OpOperand *",
-      /*methodName=*/"getInputOperand",
+      /*methodName=*/"getDpsInputOperand",
       /*args=*/(ins "int64_t":$i),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        assert(i >= 0 && i < getNumInputs());
-        auto [start, end] = $_op.getOutputsPositionRange();
+        assert(i >= 0 && i < getNumDpsInputs());
+        auto [start, end] = $_op.getDpsInitsPositionRange();
         return &$_op->getOpOperand(i < start ? i : i + end - start) ;
       }]
     >,
     //===------------------------------------------------------------------===//
-    // Input and Output arguments handling.
+    // Input and DpsInit arguments handling.
     //===------------------------------------------------------------------===//
     InterfaceMethod<
       /*desc=*/"Return true if `opOperand` is an input.",
       /*retTy=*/"bool",
-      /*methodName=*/"isInput",
+      /*methodName=*/"isDpsInput",
       /*args=*/(ins "OpOperand *":$opOperand),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        auto [start, end] = $_op.getOutputsPositionRange();
+        auto [start, end] = $_op.getDpsInitsPositionRange();
         auto operandNumber = opOperand->getOperandNumber();
         return operandNumber < start || operandNumber >= end;
       }]
     >,
     InterfaceMethod<
-      /*desc=*/"Return true if `opOperand` is an output.",
+      /*desc=*/"Return true if `opOperand` is an init.",
       /*retTy=*/"bool",
-      /*methodName=*/"isOutput",
+      /*methodName=*/"isDpsInit",
       /*args=*/(ins "OpOperand *":$opOperand),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        auto [start, end] = $_op.getOutputsPositionRange();
+        auto [start, end] = $_op.getDpsInitsPositionRange();
         auto operandNumber = opOperand->getOperandNumber();
         return operandNumber >= start && operandNumber < end;
       }]
@@ -212,7 +213,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
       /*defaultImplementation=*/[{
         assert(opOperand->getOwner() == $_op.getOperation());
 
-        auto [start, end] = $_op.getOutputsPositionRange();
+        auto [start, end] = $_op.getDpsInitsPositionRange();
         int64_t resultIndex = opOperand->getOperandNumber() - start;
         assert(resultIndex >= 0 &&
                resultIndex < $_op->getNumResults() );
@@ -227,14 +228,14 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         assert(opResult.getDefiningOp() == $_op.getOperation());
-        return $_op.getOutputOperand(opResult.getResultNumber());
+        return $_op.getDpsInitOperand(opResult.getResultNumber());
       }]
     >,
     //===------------------------------------------------------------------===//
     // Other interface methods.
     //===------------------------------------------------------------------===//
     InterfaceMethod<
-      /*desc=*/"Return whether the op has only MemRef input and outputs.",
+      /*desc=*/"Return whether the op has only ranked MemRef input/inits.",
       /*retTy=*/"bool",
       /*methodName=*/"hasBufferSemantics",
       /*args=*/(ins),
@@ -249,7 +250,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
       }]
     >,
     InterfaceMethod<
-      /*desc=*/"Return whether the op has only RankedTensor input and outputs.",
+      /*desc=*/"Return whether the op has only ranked tensor inputs/inits.",
       /*retTy=*/"bool",
       /*methodName=*/"hasTensorSemantics",
       /*args=*/(ins),
@@ -269,7 +270,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
       /*desc=*/[{
         Clone the current operation with the given location and operands. This
         is used to abstract away the optional underlying region creation. This
-        does not change the balance between input, output_buffer and
+        does not change the balance between input, init_buffer and
         init_tensors operands.
       }],
       /*retTy=*/"Operation *",
@@ -291,7 +292,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
         Clone the current operation with the given location, operands
         and BlockAndValueMapping but leave the regions empty. This is
         used to abstract away the optional underlying region creation.
-        This does not change the balance between input, output_buffer
+        This does not change the balance between input, init_buffer
         and init_tensors operands.
       }],
       /*retTy=*/"Operation *",

@@ -874,26 +874,38 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
 /// template parameters.
 ///
 ///       type-parameter:    [C++ temp.param]
-///         'template' '<' template-parameter-list '>' type-parameter-key
-///                  ...[opt] identifier[opt]
-///         'template' '<' template-parameter-list '>' type-parameter-key
-///                  identifier[opt] = id-expression
+///         template-head type-parameter-key ...[opt] identifier[opt]
+///         template-head type-parameter-key identifier[opt] = id-expression
 ///       type-parameter-key:
 ///         'class'
 ///         'typename'       [C++1z]
-NamedDecl *
-Parser::ParseTemplateTemplateParameter(unsigned Depth, unsigned Position) {
+///       template-head:     [C++2a]
+///         'template' '<' template-parameter-list '>'
+///             requires-clause[opt]
+NamedDecl *Parser::ParseTemplateTemplateParameter(unsigned Depth,
+                                                  unsigned Position) {
   assert(Tok.is(tok::kw_template) && "Expected 'template' keyword");
 
   // Handle the template <...> part.
   SourceLocation TemplateLoc = ConsumeToken();
   SmallVector<NamedDecl*,8> TemplateParams;
   SourceLocation LAngleLoc, RAngleLoc;
+  ExprResult OptionalRequiresClauseConstraintER;
   {
     MultiParseScope TemplateParmScope(*this);
     if (ParseTemplateParameters(TemplateParmScope, Depth + 1, TemplateParams,
                                 LAngleLoc, RAngleLoc)) {
       return nullptr;
+    }
+    if (TryConsumeToken(tok::kw_requires)) {
+      OptionalRequiresClauseConstraintER =
+          Actions.ActOnRequiresClause(ParseConstraintLogicalOrExpression(
+              /*IsTrailingRequiresClause=*/false));
+      if (!OptionalRequiresClauseConstraintER.isUsable()) {
+        SkipUntil(tok::comma, tok::greater, tok::greatergreater,
+                  StopAtSemi | StopBeforeMatch);
+        return nullptr;
+      }
     }
   }
 
@@ -956,11 +968,9 @@ Parser::ParseTemplateTemplateParameter(unsigned Depth, unsigned Position) {
   if (TryConsumeToken(tok::ellipsis, EllipsisLoc))
     DiagnoseMisplacedEllipsis(EllipsisLoc, NameLoc, AlreadyHasEllipsis, true);
 
-  TemplateParameterList *ParamList =
-    Actions.ActOnTemplateParameterList(Depth, SourceLocation(),
-                                       TemplateLoc, LAngleLoc,
-                                       TemplateParams,
-                                       RAngleLoc, nullptr);
+  TemplateParameterList *ParamList = Actions.ActOnTemplateParameterList(
+      Depth, SourceLocation(), TemplateLoc, LAngleLoc, TemplateParams,
+      RAngleLoc, OptionalRequiresClauseConstraintER.get());
 
   // Grab a default argument (if available).
   // Per C++0x [basic.scope.pdecl]p9, we parse the default argument before

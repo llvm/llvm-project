@@ -53,6 +53,8 @@ struct MatcherBase {
   virtual void explainError(testutils::StreamWrapper &OS) {
     OS << "unknown error\n";
   }
+  // Override and return true to skip `explainError` step.
+  virtual bool is_silent() const { return false; }
 };
 
 template <typename T> struct Matcher : public MatcherBase { bool match(T &t); };
@@ -106,9 +108,10 @@ protected:
                           (unsigned long long)RHS, LHSStr, RHSStr, File, Line);
   }
 
-  template <typename ValType,
-            cpp::enable_if_t<
-                cpp::is_same_v<ValType, __llvm_libc::cpp::string_view>, int> = 0>
+  template <
+      typename ValType,
+      cpp::enable_if_t<cpp::is_same_v<ValType, __llvm_libc::cpp::string_view>,
+                       int> = 0>
   bool test(TestCondition Cond, ValType LHS, ValType RHS, const char *LHSStr,
             const char *RHSStr, const char *File, unsigned long Line) {
     return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, File, Line);

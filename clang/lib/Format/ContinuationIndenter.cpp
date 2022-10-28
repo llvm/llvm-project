@@ -444,7 +444,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
   }
 
   // If the template declaration spans multiple lines, force wrap before the
-  // function/class declaration
+  // function/class declaration.
   if (Previous.ClosesTemplateDeclaration && CurrentState.BreakBeforeParameter &&
       Current.CanBreakBefore) {
     return true;
@@ -552,7 +552,7 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
 
   // If the return type spans multiple lines, wrap before the function name.
   if (((Current.is(TT_FunctionDeclarationName) &&
-        // Don't break before a C# function when no break after return type
+        // Don't break before a C# function when no break after return type.
         (!Style.isCSharp() ||
          Style.AlwaysBreakAfterReturnType != FormatStyle::RTBS_None) &&
         // Don't always break between a JavaScript `function` and the function
@@ -1308,7 +1308,7 @@ static bool hasNestedBlockInlined(const FormatToken *Previous,
   if (Previous->ParameterCount > 1)
     return true;
 
-  // Also a nested block if contains a lambda inside function with 1 parameter
+  // Also a nested block if contains a lambda inside function with 1 parameter.
   return Style.BraceWrapping.BeforeLambdaBody && Current.is(TT_LambdaLSquare);
 }
 
@@ -1530,7 +1530,7 @@ void ContinuationIndenter::moveStatePastFakeLParens(LineState &State,
           Previous->is(TT_ConditionalExpr))) &&
         !Newline) {
       // If BreakBeforeBinaryOperators is set, un-indent a bit to account for
-      // the operator and keep the operands aligned
+      // the operator and keep the operands aligned.
       if (Style.AlignOperands == FormatStyle::OAS_AlignAfterOperator)
         NewParenState.UnindentOperator = true;
       // Mark indentation as alignment if the expression is aligned.
@@ -1722,7 +1722,7 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
 
   if (Style.BraceWrapping.BeforeLambdaBody && Current.Next != nullptr &&
       Current.is(tok::l_paren)) {
-    // Search for any parameter that is a lambda
+    // Search for any parameter that is a lambda.
     FormatToken const *next = Current.Next;
     while (next != nullptr) {
       if (next->is(TT_LambdaLSquare)) {
@@ -2542,7 +2542,7 @@ ContinuationIndenter::breakProtrudingToken(const FormatToken &Current,
 }
 
 unsigned ContinuationIndenter::getColumnLimit(const LineState &State) const {
-  // In preprocessor directives reserve two chars for trailing " \"
+  // In preprocessor directives reserve two chars for trailing " \".
   return Style.ColumnLimit - (State.Line->InPPDirective ? 2 : 0);
 }
 

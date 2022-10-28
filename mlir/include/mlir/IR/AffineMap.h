@@ -243,19 +243,18 @@ public:
 
   /// Returns a new AffineMap with the same number of dims and symbols and one
   /// less result at `pos`, dropped.
-  AffineMap dropResult(int64_t pos) {
-    auto exprs = llvm::to_vector<4>(getResults());
-    exprs.erase(exprs.begin() + pos);
-    return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
-  }
+  AffineMap dropResult(int64_t pos) { return dropResults({pos}); }
 
   // Returns a new AffineMap with the same number of dims and symbols, but all
   // positions in `positions` dropped from results.
   AffineMap dropResults(ArrayRef<int64_t> positions) {
-    AffineMap resultMap = *this;
-    for (int64_t pos : positions)
-      resultMap = resultMap.dropResult(pos);
-    return resultMap;
+    SmallVector<int64_t> reverse_sorted_positions = llvm::to_vector(positions);
+    llvm::sort(reverse_sorted_positions, std::greater<int64_t>());
+
+    auto exprs = llvm::to_vector<4>(getResults());
+    for (int64_t pos : reverse_sorted_positions)
+      exprs.erase(exprs.begin() + pos);
+    return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
   }
 
   /// Returns a new AffineMap with the same number of dims and symbols and an

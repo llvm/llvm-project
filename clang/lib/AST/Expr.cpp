@@ -214,11 +214,15 @@ bool Expr::isFlexibleArrayMemberLike(
   if (CAT) {
     llvm::APInt Size = CAT->getSize();
 
+    using FAMKind = LangOptions::StrictFlexArraysLevelKind;
+
+    if (StrictFlexArraysLevel == FAMKind::IncompleteOnly)
+      return false;
+
     // GCC extension, only allowed to represent a FAM.
     if (Size == 0)
       return true;
 
-    using FAMKind = LangOptions::StrictFlexArraysLevelKind;
     if (StrictFlexArraysLevel == FAMKind::ZeroOrIncomplete && Size.uge(1))
       return false;
 

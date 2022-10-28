@@ -33,6 +33,7 @@ constexpr Tag DW_TAG_unaligned = Tag(dwarf::DW_TAG_hi_user + 1);
 namespace llvm {
 namespace logicalview {
 
+using LVSectionIndex = uint64_t;
 using LVAddress = uint64_t;
 using LVHalf = uint16_t;
 using LVLevel = uint32_t;

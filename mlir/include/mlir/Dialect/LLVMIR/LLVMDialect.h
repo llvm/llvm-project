@@ -48,7 +48,6 @@ class SmartMutex;
 namespace mlir {
 namespace LLVM {
 class LLVMDialect;
-class LoopOptionsAttrBuilder;
 
 namespace detail {
 struct LLVMTypeStorage;

@@ -2520,11 +2520,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_va_start:
   case Builtin::BI__va_start:
   case Builtin::BI__builtin_va_end:
-    return RValue::get(
-        EmitVAStartEnd(BuiltinID == Builtin::BI__va_start
-                           ? EmitScalarExpr(E->getArg(0))
-                           : EmitVAListRef(E->getArg(0)).getPointer(),
-                       BuiltinID != Builtin::BI__builtin_va_end));
+    EmitVAStartEnd(BuiltinID == Builtin::BI__va_start
+                       ? EmitScalarExpr(E->getArg(0))
+                       : EmitVAListRef(E->getArg(0)).getPointer(),
+                   BuiltinID != Builtin::BI__builtin_va_end);
+    return RValue::get(nullptr);
   case Builtin::BI__builtin_va_copy: {
     Value *DstPtr = EmitVAListRef(E->getArg(0)).getPointer();
     Value *SrcPtr = EmitVAListRef(E->getArg(1)).getPointer();
@@ -2533,8 +2533,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     DstPtr = Builder.CreateBitCast(DstPtr, Type);
     SrcPtr = Builder.CreateBitCast(SrcPtr, Type);
-    return RValue::get(Builder.CreateCall(CGM.getIntrinsic(Intrinsic::vacopy),
-                                          {DstPtr, SrcPtr}));
+    Builder.CreateCall(CGM.getIntrinsic(Intrinsic::vacopy), {DstPtr, SrcPtr});
+    return RValue::get(nullptr);
   }
   case Builtin::BI__builtin_abs:
   case Builtin::BI__builtin_labs:
@@ -2806,7 +2806,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     Value *ArgValue = EmitScalarExpr(E->getArg(0));
     Function *FnAssume = CGM.getIntrinsic(Intrinsic::assume);
-    return RValue::get(Builder.CreateCall(FnAssume, ArgValue));
+    Builder.CreateCall(FnAssume, ArgValue);
+    return RValue::get(nullptr);
   }
   case Builtin::BI__arithmetic_fence: {
     // Create the builtin call if FastMath is selected, and the target
@@ -2927,7 +2928,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       llvm::ConstantInt::get(Int32Ty, 3);
     Value *Data = llvm::ConstantInt::get(Int32Ty, 1);
     Function *F = CGM.getIntrinsic(Intrinsic::prefetch, Address->getType());
-    return RValue::get(Builder.CreateCall(F, {Address, RW, Locality, Data}));
+    Builder.CreateCall(F, {Address, RW, Locality, Data});
+    return RValue::get(nullptr);
   }
   case Builtin::BI__builtin_readcyclecounter: {
     Function *F = CGM.getIntrinsic(Intrinsic::readcyclecounter);
@@ -2940,9 +2942,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Builder.CreateCall(F, {Begin, End}));
   }
   case Builtin::BI__builtin_trap:
-    return RValue::get(EmitTrapCall(Intrinsic::trap));
+    EmitTrapCall(Intrinsic::trap);
+    return RValue::get(nullptr);
   case Builtin::BI__debugbreak:
-    return RValue::get(EmitTrapCall(Intrinsic::debugtrap));
+    EmitTrapCall(Intrinsic::debugtrap);
+    return RValue::get(nullptr);
   case Builtin::BI__builtin_unreachable: {
     EmitUnreachable(E->getExprLoc());
 
@@ -3723,7 +3727,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_unwind_init: {
     Function *F = CGM.getIntrinsic(Intrinsic::eh_unwind_init);
-    return RValue::get(Builder.CreateCall(F));
+    Builder.CreateCall(F);
+    return RValue::get(nullptr);
   }
   case Builtin::BI__builtin_extend_pointer: {
     // Extends a pointer to the size of an _Unwind_Word, which is
@@ -4484,8 +4489,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return EmitBuiltinNewDeleteCall(
         E->getCallee()->getType()->castAs<FunctionProtoType>(), E, false);
   case Builtin::BI__builtin_operator_delete:
-    return EmitBuiltinNewDeleteCall(
+    EmitBuiltinNewDeleteCall(
         E->getCallee()->getType()->castAs<FunctionProtoType>(), E, true);
+    return RValue::get(nullptr);
 
   case Builtin::BI__builtin_is_aligned:
     return EmitBuiltinIsAligned(E);
@@ -4655,7 +4661,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_coro_promise:
     return EmitCoroutineIntrinsic(E, Intrinsic::coro_promise);
   case Builtin::BI__builtin_coro_resume:
-    return EmitCoroutineIntrinsic(E, Intrinsic::coro_resume);
+    EmitCoroutineIntrinsic(E, Intrinsic::coro_resume);
+    return RValue::get(nullptr);
   case Builtin::BI__builtin_coro_frame:
     return EmitCoroutineIntrinsic(E, Intrinsic::coro_frame);
   case Builtin::BI__builtin_coro_noop:
@@ -4663,7 +4670,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_coro_free:
     return EmitCoroutineIntrinsic(E, Intrinsic::coro_free);
   case Builtin::BI__builtin_coro_destroy:
-    return EmitCoroutineIntrinsic(E, Intrinsic::coro_destroy);
+    EmitCoroutineIntrinsic(E, Intrinsic::coro_destroy);
+    return RValue::get(nullptr);
   case Builtin::BI__builtin_coro_done:
     return EmitCoroutineIntrinsic(E, Intrinsic::coro_done);
   case Builtin::BI__builtin_coro_alloc:
@@ -5096,7 +5104,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Val = EmitScalarExpr(E->getArg(0));
     Address Address = EmitPointerWithAlignment(E->getArg(1));
     Value *HalfVal = Builder.CreateFPTrunc(Val, Builder.getHalfTy());
-    return RValue::get(Builder.CreateStore(HalfVal, Address));
+    Builder.CreateStore(HalfVal, Address);
+    return RValue::get(nullptr);
   }
   case Builtin::BI__builtin_load_half: {
     Address Address = EmitPointerWithAlignment(E->getArg(0));
@@ -5360,6 +5369,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
         V = Builder.CreateBitCast(V, RetTy);
     }
 
+    if (RetTy->isVoidTy())
+      return RValue::get(nullptr);
+
     return RValue::get(V);
   }
 
@@ -5377,6 +5389,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   if (Value *V = EmitTargetBuiltinExpr(BuiltinID, E, ReturnValue)) {
     switch (EvalKind) {
     case TEK_Scalar:
+      if (V->getType()->isVoidTy())
+        return RValue::get(nullptr);
       return RValue::get(V);
     case TEK_Aggregate:
       return RValue::getAggregate(ReturnValue.getValue(),
@@ -5654,10 +5668,16 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP1(vbfmmlaq_f32, arm_neon_bfmmla, 0),
   NEONMAP1(vbsl_v, arm_neon_vbsl, AddRetType),
   NEONMAP1(vbslq_v, arm_neon_vbsl, AddRetType),
-  NEONMAP1(vcadd_rot270_v, arm_neon_vcadd_rot270, Add1ArgType),
-  NEONMAP1(vcadd_rot90_v, arm_neon_vcadd_rot90, Add1ArgType),
-  NEONMAP1(vcaddq_rot270_v, arm_neon_vcadd_rot270, Add1ArgType),
-  NEONMAP1(vcaddq_rot90_v, arm_neon_vcadd_rot90, Add1ArgType),
+  NEONMAP1(vcadd_rot270_f16, arm_neon_vcadd_rot270, Add1ArgType),
+  NEONMAP1(vcadd_rot270_f32, arm_neon_vcadd_rot270, Add1ArgType),
+  NEONMAP1(vcadd_rot90_f16, arm_neon_vcadd_rot90, Add1ArgType),
+  NEONMAP1(vcadd_rot90_f32, arm_neon_vcadd_rot90, Add1ArgType),
+  NEONMAP1(vcaddq_rot270_f16, arm_neon_vcadd_rot270, Add1ArgType),
+  NEONMAP1(vcaddq_rot270_f32, arm_neon_vcadd_rot270, Add1ArgType),
+  NEONMAP1(vcaddq_rot270_f64, arm_neon_vcadd_rot270, Add1ArgType),
+  NEONMAP1(vcaddq_rot90_f16, arm_neon_vcadd_rot90, Add1ArgType),
+  NEONMAP1(vcaddq_rot90_f32, arm_neon_vcadd_rot90, Add1ArgType),
+  NEONMAP1(vcaddq_rot90_f64, arm_neon_vcadd_rot90, Add1ArgType),
   NEONMAP1(vcage_v, arm_neon_vacge, 0),
   NEONMAP1(vcageq_v, arm_neon_vacge, 0),
   NEONMAP1(vcagt_v, arm_neon_vacgt, 0),
@@ -5845,10 +5865,14 @@ static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
   NEONMAP1(vqmovun_v, arm_neon_vqmovnsu, Add1ArgType),
   NEONMAP1(vqneg_v, arm_neon_vqneg, Add1ArgType),
   NEONMAP1(vqnegq_v, arm_neon_vqneg, Add1ArgType),
-  NEONMAP1(vqrdmlah_v, arm_neon_vqrdmlah, Add1ArgType),
-  NEONMAP1(vqrdmlahq_v, arm_neon_vqrdmlah, Add1ArgType),
-  NEONMAP1(vqrdmlsh_v, arm_neon_vqrdmlsh, Add1ArgType),
-  NEONMAP1(vqrdmlshq_v, arm_neon_vqrdmlsh, Add1ArgType),
+  NEONMAP1(vqrdmlah_s16, arm_neon_vqrdmlah, Add1ArgType),
+  NEONMAP1(vqrdmlah_s32, arm_neon_vqrdmlah, Add1ArgType),
+  NEONMAP1(vqrdmlahq_s16, arm_neon_vqrdmlah, Add1ArgType),
+  NEONMAP1(vqrdmlahq_s32, arm_neon_vqrdmlah, Add1ArgType),
+  NEONMAP1(vqrdmlsh_s16, arm_neon_vqrdmlsh, Add1ArgType),
+  NEONMAP1(vqrdmlsh_s32, arm_neon_vqrdmlsh, Add1ArgType),
+  NEONMAP1(vqrdmlshq_s16, arm_neon_vqrdmlsh, Add1ArgType),
+  NEONMAP1(vqrdmlshq_s32, arm_neon_vqrdmlsh, Add1ArgType),
   NEONMAP1(vqrdmulh_v, arm_neon_vqrdmulh, Add1ArgType),
   NEONMAP1(vqrdmulhq_v, arm_neon_vqrdmulh, Add1ArgType),
   NEONMAP2(vqrshl_v, arm_neon_vqrshiftu, arm_neon_vqrshifts, Add1ArgType | UnsignedAlts),
@@ -5968,10 +5992,16 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP1(vbfmlalbq_f32, aarch64_neon_bfmlalb, 0),
   NEONMAP1(vbfmlaltq_f32, aarch64_neon_bfmlalt, 0),
   NEONMAP1(vbfmmlaq_f32, aarch64_neon_bfmmla, 0),
-  NEONMAP1(vcadd_rot270_v, aarch64_neon_vcadd_rot270, Add1ArgType),
-  NEONMAP1(vcadd_rot90_v, aarch64_neon_vcadd_rot90, Add1ArgType),
-  NEONMAP1(vcaddq_rot270_v, aarch64_neon_vcadd_rot270, Add1ArgType),
-  NEONMAP1(vcaddq_rot90_v, aarch64_neon_vcadd_rot90, Add1ArgType),
+  NEONMAP1(vcadd_rot270_f16, aarch64_neon_vcadd_rot270, Add1ArgType),
+  NEONMAP1(vcadd_rot270_f32, aarch64_neon_vcadd_rot270, Add1ArgType),
+  NEONMAP1(vcadd_rot90_f16, aarch64_neon_vcadd_rot90, Add1ArgType),
+  NEONMAP1(vcadd_rot90_f32, aarch64_neon_vcadd_rot90, Add1ArgType),
+  NEONMAP1(vcaddq_rot270_f16, aarch64_neon_vcadd_rot270, Add1ArgType),
+  NEONMAP1(vcaddq_rot270_f32, aarch64_neon_vcadd_rot270, Add1ArgType),
+  NEONMAP1(vcaddq_rot270_f64, aarch64_neon_vcadd_rot270, Add1ArgType),
+  NEONMAP1(vcaddq_rot90_f16, aarch64_neon_vcadd_rot90, Add1ArgType),
+  NEONMAP1(vcaddq_rot90_f32, aarch64_neon_vcadd_rot90, Add1ArgType),
+  NEONMAP1(vcaddq_rot90_f64, aarch64_neon_vcadd_rot90, Add1ArgType),
   NEONMAP1(vcage_v, aarch64_neon_facge, 0),
   NEONMAP1(vcageq_v, aarch64_neon_facge, 0),
   NEONMAP1(vcagt_v, aarch64_neon_facgt, 0),
@@ -5994,14 +6024,26 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP0(vcltzq_v),
   NEONMAP1(vclz_v, ctlz, Add1ArgType),
   NEONMAP1(vclzq_v, ctlz, Add1ArgType),
-  NEONMAP1(vcmla_rot180_v, aarch64_neon_vcmla_rot180, Add1ArgType),
-  NEONMAP1(vcmla_rot270_v, aarch64_neon_vcmla_rot270, Add1ArgType),
-  NEONMAP1(vcmla_rot90_v, aarch64_neon_vcmla_rot90, Add1ArgType),
-  NEONMAP1(vcmla_v, aarch64_neon_vcmla_rot0, Add1ArgType),
-  NEONMAP1(vcmlaq_rot180_v, aarch64_neon_vcmla_rot180, Add1ArgType),
-  NEONMAP1(vcmlaq_rot270_v, aarch64_neon_vcmla_rot270, Add1ArgType),
-  NEONMAP1(vcmlaq_rot90_v, aarch64_neon_vcmla_rot90, Add1ArgType),
-  NEONMAP1(vcmlaq_v, aarch64_neon_vcmla_rot0, Add1ArgType),
+  NEONMAP1(vcmla_f16, aarch64_neon_vcmla_rot0, Add1ArgType),
+  NEONMAP1(vcmla_f32, aarch64_neon_vcmla_rot0, Add1ArgType),
+  NEONMAP1(vcmla_rot180_f16, aarch64_neon_vcmla_rot180, Add1ArgType),
+  NEONMAP1(vcmla_rot180_f32, aarch64_neon_vcmla_rot180, Add1ArgType),
+  NEONMAP1(vcmla_rot270_f16, aarch64_neon_vcmla_rot270, Add1ArgType),
+  NEONMAP1(vcmla_rot270_f32, aarch64_neon_vcmla_rot270, Add1ArgType),
+  NEONMAP1(vcmla_rot90_f16, aarch64_neon_vcmla_rot90, Add1ArgType),
+  NEONMAP1(vcmla_rot90_f32, aarch64_neon_vcmla_rot90, Add1ArgType),
+  NEONMAP1(vcmlaq_f16, aarch64_neon_vcmla_rot0, Add1ArgType),
+  NEONMAP1(vcmlaq_f32, aarch64_neon_vcmla_rot0, Add1ArgType),
+  NEONMAP1(vcmlaq_f64, aarch64_neon_vcmla_rot0, Add1ArgType),
+  NEONMAP1(vcmlaq_rot180_f16, aarch64_neon_vcmla_rot180, Add1ArgType),
+  NEONMAP1(vcmlaq_rot180_f32, aarch64_neon_vcmla_rot180, Add1ArgType),
+  NEONMAP1(vcmlaq_rot180_f64, aarch64_neon_vcmla_rot180, Add1ArgType),
+  NEONMAP1(vcmlaq_rot270_f16, aarch64_neon_vcmla_rot270, Add1ArgType),
+  NEONMAP1(vcmlaq_rot270_f32, aarch64_neon_vcmla_rot270, Add1ArgType),
+  NEONMAP1(vcmlaq_rot270_f64, aarch64_neon_vcmla_rot270, Add1ArgType),
+  NEONMAP1(vcmlaq_rot90_f16, aarch64_neon_vcmla_rot90, Add1ArgType),
+  NEONMAP1(vcmlaq_rot90_f32, aarch64_neon_vcmla_rot90, Add1ArgType),
+  NEONMAP1(vcmlaq_rot90_f64, aarch64_neon_vcmla_rot90, Add1ArgType),
   NEONMAP1(vcnt_v, ctpop, Add1ArgType),
   NEONMAP1(vcntq_v, ctpop, Add1ArgType),
   NEONMAP1(vcvt_f16_f32, aarch64_neon_vcvtfp2hf, 0),
@@ -6095,10 +6137,14 @@ static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP1(vqmovun_v, aarch64_neon_sqxtun, Add1ArgType),
   NEONMAP1(vqneg_v, aarch64_neon_sqneg, Add1ArgType),
   NEONMAP1(vqnegq_v, aarch64_neon_sqneg, Add1ArgType),
-  NEONMAP1(vqrdmlah_v, aarch64_neon_sqrdmlah, Add1ArgType),
-  NEONMAP1(vqrdmlahq_v, aarch64_neon_sqrdmlah, Add1ArgType),
-  NEONMAP1(vqrdmlsh_v, aarch64_neon_sqrdmlsh, Add1ArgType),
-  NEONMAP1(vqrdmlshq_v, aarch64_neon_sqrdmlsh, Add1ArgType),
+  NEONMAP1(vqrdmlah_s16, aarch64_neon_sqrdmlah, Add1ArgType),
+  NEONMAP1(vqrdmlah_s32, aarch64_neon_sqrdmlah, Add1ArgType),
+  NEONMAP1(vqrdmlahq_s16, aarch64_neon_sqrdmlah, Add1ArgType),
+  NEONMAP1(vqrdmlahq_s32, aarch64_neon_sqrdmlah, Add1ArgType),
+  NEONMAP1(vqrdmlsh_s16, aarch64_neon_sqrdmlsh, Add1ArgType),
+  NEONMAP1(vqrdmlsh_s32, aarch64_neon_sqrdmlsh, Add1ArgType),
+  NEONMAP1(vqrdmlshq_s16, aarch64_neon_sqrdmlsh, Add1ArgType),
+  NEONMAP1(vqrdmlshq_s32, aarch64_neon_sqrdmlsh, Add1ArgType),
   NEONMAP1(vqrdmulh_lane_v, aarch64_neon_sqrdmulh_lane, 0),
   NEONMAP1(vqrdmulh_laneq_v, aarch64_neon_sqrdmulh_laneq, 0),
   NEONMAP1(vqrdmulh_v, aarch64_neon_sqrdmulh, Add1ArgType),
@@ -6435,10 +6481,6 @@ static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
   { NEON::BI__builtin_neon_vabsq_f16, NEON::BI__builtin_neon_vabsq_v, },
   { NEON::BI__builtin_neon_vbsl_f16, NEON::BI__builtin_neon_vbsl_v, },
   { NEON::BI__builtin_neon_vbslq_f16, NEON::BI__builtin_neon_vbslq_v, },
-  { NEON::BI__builtin_neon_vcadd_rot270_f16, NEON::BI__builtin_neon_vcadd_rot270_v, },
-  { NEON::BI__builtin_neon_vcadd_rot90_f16, NEON::BI__builtin_neon_vcadd_rot90_v, },
-  { NEON::BI__builtin_neon_vcaddq_rot270_f16, NEON::BI__builtin_neon_vcaddq_rot270_v, },
-  { NEON::BI__builtin_neon_vcaddq_rot90_f16, NEON::BI__builtin_neon_vcaddq_rot90_v, },
   { NEON::BI__builtin_neon_vcage_f16, NEON::BI__builtin_neon_vcage_v, },
   { NEON::BI__builtin_neon_vcageq_f16, NEON::BI__builtin_neon_vcageq_v, },
   { NEON::BI__builtin_neon_vcagt_f16, NEON::BI__builtin_neon_vcagt_v, },
@@ -6457,14 +6499,6 @@ static const std::pair<unsigned, unsigned> NEONEquivalentIntrinsicMap[] = {
   { NEON::BI__builtin_neon_vclezq_f16, NEON::BI__builtin_neon_vclezq_v, },
   { NEON::BI__builtin_neon_vcltz_f16, NEON::BI__builtin_neon_vcltz_v, },
   { NEON::BI__builtin_neon_vcltzq_f16, NEON::BI__builtin_neon_vcltzq_v, },
-  { NEON::BI__builtin_neon_vcmla_f16, NEON::BI__builtin_neon_vcmla_v, },
-  { NEON::BI__builtin_neon_vcmla_rot180_f16, NEON::BI__builtin_neon_vcmla_rot180_v, },
-  { NEON::BI__builtin_neon_vcmla_rot270_f16, NEON::BI__builtin_neon_vcmla_rot270_v, },
-  { NEON::BI__builtin_neon_vcmla_rot90_f16, NEON::BI__builtin_neon_vcmla_rot90_v, },
-  { NEON::BI__builtin_neon_vcmlaq_f16, NEON::BI__builtin_neon_vcmlaq_v, },
-  { NEON::BI__builtin_neon_vcmlaq_rot180_f16, NEON::BI__builtin_neon_vcmlaq_rot180_v, },
-  { NEON::BI__builtin_neon_vcmlaq_rot270_f16, NEON::BI__builtin_neon_vcmlaq_rot270_v, },
-  { NEON::BI__builtin_neon_vcmlaq_rot90_f16, NEON::BI__builtin_neon_vcmlaq_rot90_v, },
   { NEON::BI__builtin_neon_vext_f16, NEON::BI__builtin_neon_vext_v, },
   { NEON::BI__builtin_neon_vextq_f16, NEON::BI__builtin_neon_vextq_v, },
   { NEON::BI__builtin_neon_vfma_f16, NEON::BI__builtin_neon_vfma_v, },

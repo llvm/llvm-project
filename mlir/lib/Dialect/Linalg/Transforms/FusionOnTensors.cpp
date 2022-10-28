@@ -69,7 +69,7 @@ getTiledProducerLoops(OpResult producerResult,
   // Get the indexing map of the `producerOp` output operand that matches
   // ´producerResult´.
   AffineMap producerIndexingMap = producerOp.getMatchingIndexingMap(
-      producerOp.getOutputOperand(producerResult.getResultNumber()));
+      producerOp.getDpsInitOperand(producerResult.getResultNumber()));
 
   // Keep only the tiled result slice dimensions of `producerIndexingMap`.
   AffineMap tiledProducerIndexingSubMap =
@@ -173,14 +173,14 @@ static LinalgOp getTiledProducer(OpBuilder &b, OpResult producerResult,
   // output operand.
   if (iterArg) {
     OpOperand *outputOperand =
-        producerOp.getOutputOperand(producerResult.getResultNumber());
+        producerOp.getDpsInitOperand(producerResult.getResultNumber());
     iterArg->set(outputOperand->get());
     tiledOperands[outputOperand->getOperandNumber()] = sliceOp.getResult();
   }
 
   // Clone the producer using the tiled producer operands.
   TypeRange resultTypes = ValueRange(tiledOperands)
-                              .take_back(producerOp.getNumOutputs())
+                              .take_back(producerOp.getNumDpsInits())
                               .getTypes();
   LinalgOp clonedOp = producerOp.clone(b, loc, resultTypes, tiledOperands);
 

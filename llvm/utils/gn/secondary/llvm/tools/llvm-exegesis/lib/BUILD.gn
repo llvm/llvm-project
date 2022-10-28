@@ -11,6 +11,7 @@ static_library("lib") {
     "//llvm/lib/ExecutionEngine/MCJIT",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/MCA",
     "//llvm/lib/Object",
     "//llvm/lib/ObjectYAML",
     "//llvm/lib/Support",

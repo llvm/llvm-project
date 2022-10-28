@@ -300,7 +300,7 @@ entry:
   %broadcast.splat = shufflevector <vscale x 4 x ptr> %broadcast.splatinsert, <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
   %broadcast.value = insertelement <vscale x 4 x i16> poison, i16 %val, i32 0
   %broadcast.splatvalue = shufflevector <vscale x 4 x i16> %broadcast.value, <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
-  call void @llvm.masked.scatter.nxv4i16.nxv4p0i16(<vscale x 4 x i16> %broadcast.splatvalue, <vscale x 4 x ptr> %broadcast.splat, i32 2, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> zeroinitializer , i1 true, i32 0), <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> zeroinitializer))
+  call void @llvm.masked.scatter.nxv4i16.nxv4p0(<vscale x 4 x i16> %broadcast.splatvalue, <vscale x 4 x ptr> %broadcast.splat, i32 2, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> zeroinitializer , i1 true, i32 0), <vscale x 4 x i1> zeroinitializer, <vscale x 4 x i32> zeroinitializer))
   ret void
 }
 
@@ -336,7 +336,7 @@ entry:
   %broadcast.splatinsert = insertelement <vscale x 4 x ptr> poison, ptr %dst, i32 0
   %broadcast.splat = shufflevector <vscale x 4 x ptr> %broadcast.splatinsert, <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
   %wide.load = load <vscale x 4 x i16>, ptr %src, align 2
-  call void @llvm.masked.scatter.nxv4i16.nxv4p0i16(<vscale x 4 x i16> %wide.load, <vscale x 4 x ptr> %broadcast.splat, i32 2, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+  call void @llvm.masked.scatter.nxv4i16.nxv4p0(<vscale x 4 x i16> %wide.load, <vscale x 4 x ptr> %broadcast.splat, i32 2, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i32 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
   ret void
 }
 
@@ -375,7 +375,7 @@ define void @negative_scatter_v4i16_no_uniform_vals_no_uniform_ptrs_all_active_m
 
 ; Function Attrs:
 declare void @llvm.masked.scatter.v4i16.v4p0(<4 x i16>, <4 x ptr>, i32 immarg, <4 x i1>)
-declare void @llvm.masked.scatter.nxv4i16.nxv4p0i16(<vscale x 4 x i16>, <vscale x 4 x ptr>, i32 immarg, <vscale x 4 x i1>)
+declare void @llvm.masked.scatter.nxv4i16.nxv4p0(<vscale x 4 x i16>, <vscale x 4 x ptr>, i32 immarg, <vscale x 4 x i1>)
 
 ; Test gathers that can be simplified to scalar load + splat
 

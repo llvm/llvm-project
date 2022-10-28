@@ -2621,9 +2621,7 @@ void LibCallSimplifier::classifyArgUse(
     SmallVectorImpl<CallInst *> &SinCalls,
     SmallVectorImpl<CallInst *> &CosCalls,
     SmallVectorImpl<CallInst *> &SinCosCalls) {
-  CallInst *CI = dyn_cast<CallInst>(Val);
-  Module *M = CI->getModule();
-
+  auto *CI = dyn_cast<CallInst>(Val);
   if (!CI || CI->use_empty())
     return;
 
@@ -2631,6 +2629,7 @@ void LibCallSimplifier::classifyArgUse(
   if (CI->getFunction() != F)
     return;
 
+  Module *M = CI->getModule();
   Function *Callee = CI->getCalledFunction();
   LibFunc Func;
   if (!Callee || !TLI->getLibFunc(*Callee, Func) ||

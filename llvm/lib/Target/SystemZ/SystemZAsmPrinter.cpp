@@ -785,6 +785,49 @@ void SystemZAsmPrinter::emitMachineConstantPoolValue(
   OutStreamer->emitValue(Expr, Size);
 }
 
+static void printFormattedRegName(const MCAsmInfo *MAI, unsigned RegNo,
+                                  raw_ostream &OS) {
+  const char *RegName = SystemZInstPrinter::getRegisterName(RegNo);
+  if (MAI->getAssemblerDialect() == AD_HLASM) {
+    // Skip register prefix so that only register number is left
+    assert(isalpha(RegName[0]) && isdigit(RegName[1]));
+    OS << (RegName + 1);
+  } else
+    OS << '%' << RegName;
+}
+
+static void printOperand(const MCOperand &MCOp, const MCAsmInfo *MAI,
+                         raw_ostream &OS) {
+  if (MCOp.isReg()) {
+    if (!MCOp.getReg())
+      OS << '0';
+    else
+      printFormattedRegName(MAI, MCOp.getReg(), OS);
+  } else if (MCOp.isImm())
+    OS << MCOp.getImm();
+  else if (MCOp.isExpr())
+    MCOp.getExpr()->print(OS, MAI);
+  else
+    llvm_unreachable("Invalid operand");
+}
+
+static void printAddress(const MCAsmInfo *MAI, unsigned Base,
+                         const MCOperand &DispMO, unsigned Index,
+                         raw_ostream &OS) {
+  printOperand(DispMO, MAI, OS);
+  if (Base || Index) {
+    OS << '(';
+    if (Index) {
+      printFormattedRegName(MAI, Index, OS);
+      if (Base)
+        OS << ',';
+    }
+    if (Base)
+      printFormattedRegName(MAI, Base, OS);
+    OS << ')';
+  }
+}
+
 bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                         const char *ExtraCode,
                                         raw_ostream &OS) {
@@ -802,7 +845,7 @@ bool SystemZAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     SystemZMCInstLower Lower(MF->getContext(), *this);
     MCOp = Lower.lowerOperand(MO);
   }
-  SystemZInstPrinter::printOperand(MCOp, MAI, OS);
+  printOperand(MCOp, MAI, OS);
   return false;
 }
 
@@ -810,10 +853,9 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
                                               unsigned OpNo,
                                               const char *ExtraCode,
                                               raw_ostream &OS) {
-  SystemZInstPrinter::
-    printAddress(MAI, MI->getOperand(OpNo).getReg(),
-                 MCOperand::createImm(MI->getOperand(OpNo + 1).getImm()),
-                 MI->getOperand(OpNo + 2).getReg(), OS);
+  printAddress(MAI, MI->getOperand(OpNo).getReg(),
+               MCOperand::createImm(MI->getOperand(OpNo + 1).getImm()),
+               MI->getOperand(OpNo + 2).getReg(), OS);
   return false;
 }
 

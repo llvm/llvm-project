@@ -303,6 +303,13 @@ struct LineLocation {
   uint32_t Discriminator;
 };
 
+struct LineLocationHash {
+  uint64_t operator()(const LineLocation &Loc) const {
+    return std::hash<std::uint64_t>{}((((uint64_t)Loc.LineOffset) << 32) |
+                                      Loc.Discriminator);
+  }
+};
+
 raw_ostream &operator<<(raw_ostream &OS, const LineLocation &Loc);
 
 /// Representation of a single sample record.

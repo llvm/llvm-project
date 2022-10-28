@@ -508,11 +508,10 @@ define <4 x i16> @bitcast_i64_v4i16(i64 %a) {
 ; RV32-LABEL: bitcast_i64_v4i16:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vslide1up.vx v9, v8, a1
-; RV32-NEXT:    vslide1up.vx v10, v9, a0
+; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vslide1down.vx v9, v8, a1
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:    vslideup.vi v8, v10, 0
+; RV32-NEXT:    vslideup.vi v8, v9, 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bitcast_i64_v4i16:
@@ -547,11 +546,10 @@ define <2 x i32> @bitcast_i64_v2i32(i64 %a) {
 ; RV32-LABEL: bitcast_i64_v2i32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vslide1up.vx v9, v8, a1
-; RV32-NEXT:    vslide1up.vx v10, v9, a0
+; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vslide1down.vx v9, v8, a1
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:    vslideup.vi v8, v10, 0
+; RV32-NEXT:    vslideup.vi v8, v9, 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bitcast_i64_v2i32:
@@ -586,11 +584,10 @@ define <1 x i64> @bitcast_i64_v1i64(i64 %a) {
 ; RV32-LABEL: bitcast_i64_v1i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vslide1up.vx v9, v8, a1
-; RV32-NEXT:    vslide1up.vx v10, v9, a0
+; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vslide1down.vx v9, v8, a1
 ; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:    vslideup.vi v8, v10, 0
+; RV32-NEXT:    vslideup.vi v8, v9, 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: bitcast_i64_v1i64:

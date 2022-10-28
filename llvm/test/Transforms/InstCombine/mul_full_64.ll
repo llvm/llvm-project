@@ -87,7 +87,7 @@ define { i64, i64 } @mul_full_64_variant0(i64 %x, i64 %y) {
 ; #endif
 ; }
 
-define i64 @mul_full_64_variant1(i64 %a, i64 %b, i64* nocapture %rhi) {
+define i64 @mul_full_64_variant1(i64 %a, i64 %b, ptr nocapture %rhi) {
 ; CHECK-LABEL: @mul_full_64_variant1(
 ; CHECK-NEXT:    [[CONV:%.*]] = and i64 [[A:%.*]], 4294967295
 ; CHECK-NEXT:    [[SHR_I43:%.*]] = lshr i64 [[A]], 32
@@ -105,7 +105,7 @@ define i64 @mul_full_64_variant1(i64 %a, i64 %b, i64* nocapture %rhi) {
 ; CHECK-NEXT:    [[ADD15:%.*]] = add i64 [[CONV14]], [[MUL6]]
 ; CHECK-NEXT:    [[SHR_I:%.*]] = lshr i64 [[ADD15]], 32
 ; CHECK-NEXT:    [[ADD17:%.*]] = add i64 [[ADD10]], [[SHR_I]]
-; CHECK-NEXT:    store i64 [[ADD17]], i64* [[RHI:%.*]], align 8
+; CHECK-NEXT:    store i64 [[ADD17]], ptr [[RHI:%.*]], align 8
 ; CHECK-NEXT:    [[MULLO:%.*]] = mul i64 [[B]], [[A]]
 ; CHECK-NEXT:    ret i64 [[MULLO]]
 ;
@@ -125,12 +125,12 @@ define i64 @mul_full_64_variant1(i64 %a, i64 %b, i64* nocapture %rhi) {
   %add15 = add i64 %conv14, %mul6
   %shr.i = lshr i64 %add15, 32
   %add17 = add i64 %add10, %shr.i
-  store i64 %add17, i64* %rhi, align 8
+  store i64 %add17, ptr %rhi, align 8
   %mullo = mul i64 %b, %a
   ret i64 %mullo
 }
 
-define i64 @mul_full_64_variant2(i64 %a, i64 %b, i64* nocapture %rhi) {
+define i64 @mul_full_64_variant2(i64 %a, i64 %b, ptr nocapture %rhi) {
 ; CHECK-LABEL: @mul_full_64_variant2(
 ; CHECK-NEXT:    [[CONV:%.*]] = and i64 [[A:%.*]], 4294967295
 ; CHECK-NEXT:    [[SHR_I58:%.*]] = lshr i64 [[A]], 32
@@ -148,7 +148,7 @@ define i64 @mul_full_64_variant2(i64 %a, i64 %b, i64* nocapture %rhi) {
 ; CHECK-NEXT:    [[ADD15:%.*]] = add i64 [[CONV14]], [[MUL6]]
 ; CHECK-NEXT:    [[SHR_I51:%.*]] = lshr i64 [[ADD15]], 32
 ; CHECK-NEXT:    [[ADD17:%.*]] = add i64 [[ADD10]], [[SHR_I51]]
-; CHECK-NEXT:    store i64 [[ADD17]], i64* [[RHI:%.*]], align 8
+; CHECK-NEXT:    store i64 [[ADD17]], ptr [[RHI:%.*]], align 8
 ; CHECK-NEXT:    [[CONV24:%.*]] = shl i64 [[ADD15]], 32
 ; CHECK-NEXT:    [[CONV26:%.*]] = and i64 [[MUL7]], 4294967295
 ; CHECK-NEXT:    [[ADD27:%.*]] = or i64 [[CONV24]], [[CONV26]]
@@ -170,14 +170,14 @@ define i64 @mul_full_64_variant2(i64 %a, i64 %b, i64* nocapture %rhi) {
   %add15 = add i64 %conv14, %mul6
   %shr.i51 = lshr i64 %add15, 32
   %add17 = add i64 %add10, %shr.i51
-  store i64 %add17, i64* %rhi, align 8
+  store i64 %add17, ptr %rhi, align 8
   %conv24 = shl i64 %add15, 32
   %conv26 = and i64 %mul7, 4294967295
   %add27 = or i64 %conv24, %conv26
   ret i64 %add27
 }
 
-define i64 @mul_full_64_variant3(i64 %a, i64 %b, i64* nocapture %rhi) {
+define i64 @mul_full_64_variant3(i64 %a, i64 %b, ptr nocapture %rhi) {
 ; CHECK-LABEL: @mul_full_64_variant3(
 ; CHECK-NEXT:    [[CONV:%.*]] = and i64 [[A:%.*]], 4294967295
 ; CHECK-NEXT:    [[SHR_I45:%.*]] = lshr i64 [[A]], 32
@@ -195,10 +195,8 @@ define i64 @mul_full_64_variant3(i64 %a, i64 %b, i64* nocapture %rhi) {
 ; CHECK-NEXT:    [[ADD15:%.*]] = add i64 [[CONV14]], [[MUL6]]
 ; CHECK-NEXT:    [[SHR_I:%.*]] = lshr i64 [[ADD15]], 32
 ; CHECK-NEXT:    [[ADD17:%.*]] = add i64 [[ADD10]], [[SHR_I]]
-; CHECK-NEXT:    store i64 [[ADD17]], i64* [[RHI:%.*]], align 8
-; CHECK-NEXT:    [[ADD18:%.*]] = add i64 [[MUL6]], [[MUL5]]
-; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[ADD18]], 32
-; CHECK-NEXT:    [[ADD19:%.*]] = add i64 [[SHL]], [[MUL7]]
+; CHECK-NEXT:    store i64 [[ADD17]], ptr [[RHI:%.*]], align 8
+; CHECK-NEXT:    [[ADD19:%.*]] = mul i64 [[A]], [[B]]
 ; CHECK-NEXT:    ret i64 [[ADD19]]
 ;
   %conv = and i64 %a, 4294967295
@@ -217,7 +215,7 @@ define i64 @mul_full_64_variant3(i64 %a, i64 %b, i64* nocapture %rhi) {
   %add15 = add i64 %conv14, %mul6
   %shr.i = lshr i64 %add15, 32
   %add17 = add i64 %add10, %shr.i
-  store i64 %add17, i64* %rhi, align 8
+  store i64 %add17, ptr %rhi, align 8
   %add18 = add i64 %mul6, %mul5
   %shl = shl i64 %add18, 32
   %add19 = add i64 %shl, %mul7
@@ -450,7 +448,7 @@ define i64 @umulh_64(i64 %x, i64 %y) {
   ret i64 %hi
 }
 
-
+; TODO: https://alive2.llvm.org/ce/z/y26zaW
 define i64 @mullo(i64 %x, i64 %y) {
 ; CHECK-LABEL: @mullo(
 ; CHECK-NEXT:    [[XL:%.*]] = and i64 [[X:%.*]], 4294967295
@@ -493,16 +491,7 @@ define i64 @mullo(i64 %x, i64 %y) {
 
 define i64 @mullo_variant3(i64 %a, i64 %b) {
 ; CHECK-LABEL: @mullo_variant3(
-; CHECK-NEXT:    [[AL:%.*]] = and i64 [[A:%.*]], 4294967295
-; CHECK-NEXT:    [[AH:%.*]] = lshr i64 [[A]], 32
-; CHECK-NEXT:    [[BL:%.*]] = and i64 [[B:%.*]], 4294967295
-; CHECK-NEXT:    [[BH:%.*]] = lshr i64 [[B]], 32
-; CHECK-NEXT:    [[T0:%.*]] = mul nuw i64 [[BL]], [[AL]]
-; CHECK-NEXT:    [[T1:%.*]] = mul i64 [[AH]], [[B]]
-; CHECK-NEXT:    [[T2:%.*]] = mul i64 [[BH]], [[A]]
-; CHECK-NEXT:    [[U1:%.*]] = add i64 [[T2]], [[T1]]
-; CHECK-NEXT:    [[U1LS:%.*]] = shl i64 [[U1]], 32
-; CHECK-NEXT:    [[LO:%.*]] = add i64 [[U1LS]], [[T0]]
+; CHECK-NEXT:    [[LO:%.*]] = mul i64 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i64 [[LO]]
 ;
   %al = and i64 %a, 4294967295

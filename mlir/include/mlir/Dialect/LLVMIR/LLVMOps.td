@@ -1341,7 +1341,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     Region *getCallableRegion() { return &getBody(); }
 
     /// Returns the callable result type, which is the function return type.
-    ArrayRef<Type> getCallableResults() { return getFunctionType().getReturnType(); }
+    ArrayRef<Type> getCallableResults() { return getFunctionType().getReturnTypes(); }
 
   }];
 

@@ -643,6 +643,10 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                                         options::OPT_gno_strict_dwarf, true))
       CmdArgs.push_back(
           Args.MakeArgString(Twine(PluginOptPrefix) + "-strict-dwarf=true"));
+
+    if (Args.getLastArg(options::OPT_mabi_EQ_vec_extabi))
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine(PluginOptPrefix) + "-vec-extabi"));
   }
 
   bool UseSeparateSections =
@@ -1629,7 +1633,7 @@ unsigned tools::ParseFunctionAlignment(const ToolChain &TC,
   return Value ? llvm::Log2_32_Ceil(std::min(Value, 65536u)) : Value;
 }
 
-unsigned tools::ParseDebugDefaultVersion(const ToolChain &TC,
+static unsigned ParseDebugDefaultVersion(const ToolChain &TC,
                                          const ArgList &Args) {
   const Arg *A = Args.getLastArg(options::OPT_fdebug_default_version);
 
@@ -1642,6 +1646,34 @@ unsigned tools::ParseDebugDefaultVersion(const ToolChain &TC,
     TC.getDriver().Diag(diag::err_drv_invalid_int_value)
         << A->getAsString(Args) << A->getValue();
   return Value;
+}
+
+unsigned tools::DwarfVersionNum(StringRef ArgValue) {
+  return llvm::StringSwitch<unsigned>(ArgValue)
+      .Case("-gdwarf-2", 2)
+      .Case("-gdwarf-3", 3)
+      .Case("-gdwarf-4", 4)
+      .Case("-gdwarf-5", 5)
+      .Default(0);
+}
+
+const Arg *tools::getDwarfNArg(const ArgList &Args) {
+  return Args.getLastArg(options::OPT_gdwarf_2, options::OPT_gdwarf_3,
+                         options::OPT_gdwarf_4, options::OPT_gdwarf_5,
+                         options::OPT_gdwarf);
+}
+
+unsigned tools::getDwarfVersion(const ToolChain &TC,
+                                const llvm::opt::ArgList &Args) {
+  unsigned DwarfVersion = ParseDebugDefaultVersion(TC, Args);
+  if (const Arg *GDwarfN = getDwarfNArg(Args))
+    if (int N = DwarfVersionNum(GDwarfN->getSpelling()))
+      DwarfVersion = N;
+  if (DwarfVersion == 0) {
+    DwarfVersion = TC.GetDefaultDwarfVersion();
+    assert(DwarfVersion && "toolchain default DWARF version must be nonzero");
+  }
+  return DwarfVersion;
 }
 
 void tools::AddAssemblerKPIC(const ToolChain &ToolChain, const ArgList &Args,

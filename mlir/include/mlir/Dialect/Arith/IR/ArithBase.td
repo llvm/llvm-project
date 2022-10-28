@@ -23,6 +23,7 @@ def Arith_Dialect : Dialect {
   }];
 
   let hasConstantMaterializer = 1;
+  let useDefaultAttributePrinterParser = 1;
 }
 
 // The predicate indicates the type of the comparison to perform:
@@ -90,6 +91,34 @@ def AtomicRMWKindAttr : I64EnumAttr<
      ATOMIC_RMW_KIND_MULF, ATOMIC_RMW_KIND_MULI, ATOMIC_RMW_KIND_ORI,
      ATOMIC_RMW_KIND_ANDI]> {
   let cppNamespace = "::mlir::arith";
+}
+
+def FASTMATH_NONE            : I32BitEnumAttrCaseNone<"none"      >;
+def FASTMATH_REASSOC         : I32BitEnumAttrCaseBit<"reassoc",  0>;
+def FASTMATH_NO_NANS         : I32BitEnumAttrCaseBit<"nnan",     1>;
+def FASTMATH_NO_INFS         : I32BitEnumAttrCaseBit<"ninf",     2>;
+def FASTMATH_NO_SIGNED_ZEROS : I32BitEnumAttrCaseBit<"nsz",      3>;
+def FASTMATH_ALLOW_RECIP     : I32BitEnumAttrCaseBit<"arcp",     4>;
+def FASTMATH_ALLOW_CONTRACT  : I32BitEnumAttrCaseBit<"contract", 5>;
+def FASTMATH_APPROX_FUNC     : I32BitEnumAttrCaseBit<"afn",      6>;
+def FASTMATH_FAST            : I32BitEnumAttrCaseGroup<
+    "fast",
+    [
+      FASTMATH_REASSOC,         FASTMATH_NO_NANS,     FASTMATH_NO_INFS,
+      FASTMATH_NO_SIGNED_ZEROS, FASTMATH_ALLOW_RECIP, FASTMATH_ALLOW_CONTRACT,
+      FASTMATH_APPROX_FUNC]>;
+
+def FastMathFlags : I32BitEnumAttr<
+    "FastMathFlags",
+    "Floating point fast math flags",
+    [
+      FASTMATH_NONE,           FASTMATH_REASSOC,         FASTMATH_NO_NANS,
+      FASTMATH_NO_INFS,        FASTMATH_NO_SIGNED_ZEROS, FASTMATH_ALLOW_RECIP,
+      FASTMATH_ALLOW_CONTRACT, FASTMATH_APPROX_FUNC,     FASTMATH_FAST]> {
+  let separator = ",";
+  let cppNamespace = "::mlir::arith";
+  let genSpecializedAttr = 0;
+  let printBitEnumPrimaryGroups = 1;
 }
 
 #endif // ARITH_BASE

@@ -2000,11 +2000,11 @@ static bool isSubstitutedType(ASTContext &Ctx, QualType T, QualType Pattern,
     if (!isSubstitutedTemplateArgument(Ctx, Template, PTST->getTemplateName(),
                                        Args, Depth))
       return false;
-    if (TemplateArgs.size() != PTST->getNumArgs())
+    if (TemplateArgs.size() != PTST->template_arguments().size())
       return false;
     for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
-      if (!isSubstitutedTemplateArgument(Ctx, TemplateArgs[I], PTST->getArg(I),
-                                         Args, Depth))
+      if (!isSubstitutedTemplateArgument(
+              Ctx, TemplateArgs[I], PTST->template_arguments()[I], Args, Depth))
         return false;
     return true;
   }

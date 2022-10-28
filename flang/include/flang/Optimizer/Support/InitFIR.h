@@ -17,6 +17,7 @@
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
@@ -30,7 +31,8 @@ namespace fir::support {
       mlir::acc::OpenACCDialect, mlir::omp::OpenMPDialect,                     \
       mlir::scf::SCFDialect, mlir::arith::ArithDialect,                        \
       mlir::cf::ControlFlowDialect, mlir::func::FuncDialect,                   \
-      mlir::vector::VectorDialect, mlir::math::MathDialect
+      mlir::vector::VectorDialect, mlir::math::MathDialect,                    \
+      mlir::complex::ComplexDialect
 
 // The definitive list of dialects used by flang.
 #define FLANG_DIALECT_LIST                                                     \

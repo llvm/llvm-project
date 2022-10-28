@@ -394,7 +394,7 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
   if (auto dstOp =
           dyn_cast<DestinationStyleOpInterface>(tilingResult.tiledOp)) {
     auto innerMostLoop = tilingResult.loops.back();
-    SmallVector<Value> destinationTensors = dstOp.getOutputOperands();
+    SmallVector<Value> destinationTensors = dstOp.getDpsInitOperands();
     assert(destinationTensors.size() ==
                innerMostLoop.getRegionIterArgs().size() &&
            "unexpected number of outputs");
@@ -588,7 +588,7 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
                            .getDefiningOp<DestinationStyleOpInterface>()) {
         scf::ForOp innerMostLoop = tileAndFuseResult.loops.back();
         updateDestinationOperandsForTiledOp(
-            rewriter, dstOp.getOutputOperand(resultNumber)->get(),
+            rewriter, dstOp.getDpsInitOperand(resultNumber)->get(),
             innerMostLoop.getRegionIterArgs()[iterArgNumber.value()]);
       }
     }

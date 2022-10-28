@@ -121,13 +121,6 @@ class BazelProcessor(Processor):
                 )
                 if nline != line:
                     break
-        # Match the BACKEND_PACKAGE_STRING in clang/config.h
-        elif "BACKEND_PACKAGE_STRING" in line:
-            nline = re.sub(
-                r'#define BACKEND_PACKAGE_STRING "LLVM ([0-9\.rcgit-]+)"',
-                f'#define BACKEND_PACKAGE_STRING "LLVM {self.version_str()}"',
-                line,
-            )
 
         return nline
 

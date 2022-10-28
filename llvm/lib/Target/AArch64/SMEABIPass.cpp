@@ -63,12 +63,15 @@ FunctionPass *llvm::createSMEABIPass() { return new SMEABI(); }
 void emitTPIDR2Save(Module *M, IRBuilder<> &Builder) {
   auto *TPIDR2SaveTy =
       FunctionType::get(Builder.getVoidTy(), {}, /*IsVarArgs=*/false);
-
   auto Attrs =
-      AttributeList::get(M->getContext(), 0, {"aarch64_pstate_sm_compatible"});
+      AttributeList()
+          .addFnAttribute(M->getContext(), "aarch64_pstate_sm_compatible")
+          .addFnAttribute(M->getContext(), "aarch64_pstate_za_preserved");
   FunctionCallee Callee =
       M->getOrInsertFunction("__arm_tpidr2_save", TPIDR2SaveTy, Attrs);
-  Builder.CreateCall(Callee);
+  CallInst *Call = Builder.CreateCall(Callee);
+  Call->setCallingConv(
+      CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0);
 
   // A save to TPIDR2 should be followed by clearing TPIDR2_EL0.
   Function *WriteIntr =

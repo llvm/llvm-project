@@ -136,8 +136,11 @@ BigArchiveMemberHeader::BigArchiveMemberHeader(const Archive *Parent,
     return;
   ErrorAsOutParameter ErrAsOutParam(Err);
 
-  if (Size < getSizeOf())
-    *Err = createMemberHeaderParseError(this, RawHeaderPtr, Size);
+  if (Size < getSizeOf()) {
+    Error SubErr = createMemberHeaderParseError(this, RawHeaderPtr, Size);
+    if (Err)
+      *Err = std::move(SubErr);
+  }
 }
 
 // This gets the raw name from the ArMemHdr->Name field and checks that it is

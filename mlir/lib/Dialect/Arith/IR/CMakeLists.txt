@@ -12,6 +12,7 @@ add_mlir_dialect_library(MLIRArithDialect
 
   DEPENDS
   MLIRArithOpsIncGen
+  MLIRArithOpsInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRDialect

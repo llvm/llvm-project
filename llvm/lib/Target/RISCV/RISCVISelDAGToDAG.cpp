@@ -1786,7 +1786,6 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, Extract.getNode());
     return;
   }
-  case ISD::SPLAT_VECTOR:
   case RISCVISD::VMV_S_X_VL:
   case RISCVISD::VFMV_S_F_VL:
   case RISCVISD::VMV_V_X_VL:
@@ -1794,10 +1793,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // Try to match splat of a scalar load to a strided load with stride of x0.
     bool IsScalarMove = Node->getOpcode() == RISCVISD::VMV_S_X_VL ||
                         Node->getOpcode() == RISCVISD::VFMV_S_F_VL;
-    bool HasPassthruOperand = Node->getOpcode() != ISD::SPLAT_VECTOR;
-    if (HasPassthruOperand && !Node->getOperand(0).isUndef())
+    if (!Node->getOperand(0).isUndef())
       break;
-    SDValue Src = HasPassthruOperand ? Node->getOperand(1) : Node->getOperand(0);
+    SDValue Src = Node->getOperand(1);
     auto *Ld = dyn_cast<LoadSDNode>(Src);
     if (!Ld)
       break;
@@ -1810,9 +1808,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       break;
 
     SDValue VL;
-    if (Node->getOpcode() == ISD::SPLAT_VECTOR)
-      VL = CurDAG->getTargetConstant(RISCV::VLMaxSentinel, DL, XLenVT);
-    else if (IsScalarMove) {
+    if (IsScalarMove) {
       // We could deal with more VL if we update the VSETVLI insert pass to
       // avoid introducing more VSETVLI.
       if (!isOneConstant(Node->getOperand(2)))
@@ -2295,6 +2291,18 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
       if (Bits < 32)
         return false;
       break;
+    case RISCV::SLL:
+    case RISCV::SRA:
+    case RISCV::SRL:
+    case RISCV::ROL:
+    case RISCV::ROR:
+    case RISCV::BSET:
+    case RISCV::BCLR:
+    case RISCV::BINV:
+      // Shift amount operands only use log2(Xlen) bits.
+      if (UI.getOperandNo() != 1 || Bits < Log2_32(Subtarget->getXLen()))
+        return false;
+      break;
     case RISCV::SLLI:
       // SLLI only uses the lower (XLen - ShAmt) bits.
       if (Bits < Subtarget->getXLen() - User->getConstantOperandVal(1))
@@ -2304,6 +2312,12 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits) const {
       if (Bits < (64 - countLeadingZeros(User->getConstantOperandVal(1))))
         return false;
       break;
+    case RISCV::ORI: {
+      uint64_t Imm = cast<ConstantSDNode>(User->getOperand(1))->getSExtValue();
+      if (Bits < (64 - countLeadingOnes(Imm)))
+        return false;
+      break;
+    }
     case RISCV::SEXT_B:
       if (Bits < 8)
         return false;

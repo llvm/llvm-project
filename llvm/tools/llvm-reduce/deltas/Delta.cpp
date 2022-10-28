@@ -150,11 +150,10 @@ static bool increaseGranularity(std::vector<Chunk> &Chunks) {
 
 // Check if \p ChunkToCheckForUninterestingness is interesting. Returns the
 // modified module if the chunk resulted in a reduction.
-template <typename FuncType>
 static std::unique_ptr<ReducerWorkItem>
 CheckChunk(Chunk &ChunkToCheckForUninterestingness,
            std::unique_ptr<ReducerWorkItem> Clone, TestRunner &Test,
-           FuncType ExtractChunksFromModule,
+           ReductionFunc ExtractChunksFromModule,
            std::set<Chunk> &UninterestingChunks,
            std::vector<Chunk> &ChunksStillConsideredInteresting) {
   // Take all of ChunksStillConsideredInteresting chunks, except those we've
@@ -206,10 +205,9 @@ CheckChunk(Chunk &ChunkToCheckForUninterestingness,
   return Clone;
 }
 
-template <typename FuncType>
-SmallString<0> ProcessChunkFromSerializedBitcode(
+static SmallString<0> ProcessChunkFromSerializedBitcode(
     Chunk &ChunkToCheckForUninterestingness, TestRunner &Test,
-    FuncType ExtractChunksFromModule, std::set<Chunk> &UninterestingChunks,
+    ReductionFunc ExtractChunksFromModule, std::set<Chunk> &UninterestingChunks,
     std::vector<Chunk> &ChunksStillConsideredInteresting,
     SmallString<0> &OriginalBC, std::atomic<bool> &AnyReduced) {
   LLVMContext Ctx;

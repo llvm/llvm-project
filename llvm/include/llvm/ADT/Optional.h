@@ -388,6 +388,9 @@ public:
   }
 };
 
+template<typename T>
+Optional(const T&) -> Optional<T>;
+
 template <class T> llvm::hash_code hash_value(const Optional<T> &O) {
   return O ? hash_combine(true, *O) : hash_value(false);
 }

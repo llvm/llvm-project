@@ -533,8 +533,7 @@ static void buildCommonPollyPipeline(FunctionPassManager &PM,
     SPM.addPass(DeadCodeElimPass());
 
   if (FullyIndexedStaticExpansion)
-    llvm::report_fatal_error("Option -polly-enable-mse not supported with NPM",
-                             false);
+    SPM.addPass(MaximalStaticExpansionPass());
 
   if (EnablePruneUnprofitable)
     SPM.addPass(PruneUnprofitablePass());
@@ -550,8 +549,7 @@ static void buildCommonPollyPipeline(FunctionPassManager &PM,
   }
 
   if (ExportJScop)
-    llvm::report_fatal_error("Option -polly-export not supported with NPM",
-                             false);
+    SPM.addPass(JSONExportPass());
 
   if (!EnableForOpt)
     return;
