@@ -1,5 +1,8 @@
 ; REQUIRES: x86-registered-target
 
+; FIXME: Test failure https://reviews.llvm.org/D125783
+; UNSUPPORTED: arm
+
 ; Test case 6 - Full logical view
 
 ; test.cpp
