@@ -78,6 +78,27 @@ struct GPUReturnOpLowering : public ConvertOpToLLVMPattern<gpu::ReturnOp> {
   }
 };
 
+namespace impl {
+/// Unrolls op if it's operating on vectors.
+LogicalResult scalarizeVectorOp(Operation *op, ValueRange operands,
+                                ConversionPatternRewriter &rewriter,
+                                LLVMTypeConverter &converter);
+} // namespace impl
+
+/// Rewriting that unrolls SourceOp to scalars if it's operating on vectors.
+template <typename SourceOp>
+struct ScalarizeVectorOpLowering : public ConvertOpToLLVMPattern<SourceOp> {
+public:
+  using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    return impl::scalarizeVectorOp(op, adaptor.getOperands(), rewriter,
+                                   *this->getTypeConverter());
+  }
+};
+
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUCOMMON_GPUOPSLOWERING_H_
