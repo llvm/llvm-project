@@ -929,3 +929,13 @@ void mlir::sparse_tensor::sizesFromSrc(OpBuilder &builder,
   for (unsigned i = 0; i < rank; i++)
     sizes.push_back(linalg::createOrFoldDimOp(builder, loc, src, i));
 }
+
+Operation *mlir::sparse_tensor::getTop(Operation *op) {
+  for (; isa<scf::ForOp>(op->getParentOp()) ||
+         isa<scf::WhileOp>(op->getParentOp()) ||
+         isa<scf::ParallelOp>(op->getParentOp()) ||
+         isa<scf::IfOp>(op->getParentOp());
+       op = op->getParentOp())
+    ;
+  return op;
+}
