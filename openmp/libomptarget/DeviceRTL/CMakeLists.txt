@@ -109,6 +109,7 @@ set(include_files
   ${include_directory}/Synchronization.h
   ${include_directory}/Types.h
   ${include_directory}/Utils.h
+  ${include_directory}/Xteamr.h
 )
 
 set(src_files
@@ -128,7 +129,6 @@ set(src_files
   ${source_directory}/ExtraMapping.cpp
   ${source_directory}/Xteam.cpp
   ${source_directory}/Xteamr.cpp
-  ${source_directory}/Rfuns.cpp
   ${source_directory}/Memory.cpp
 )
 
