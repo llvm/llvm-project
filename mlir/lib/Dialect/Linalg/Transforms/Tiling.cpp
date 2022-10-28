@@ -324,7 +324,7 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
   Operation *clonedOp = b.clone(*op.getOperation());
   auto destinationStyleOp = dyn_cast<DestinationStyleOpInterface>(clonedOp);
   if (destinationStyleOp) {
-    for (OpOperand *outOperand : destinationStyleOp.getOutputOperands()) {
+    for (OpOperand *outOperand : destinationStyleOp.getDpsInitOperands()) {
       auto *it = llvm::find(dest, outOperand->get());
       assert(it != dest.end() && "dest operand not found in dest");
       unsigned destNum = std::distance(dest.begin(), it);

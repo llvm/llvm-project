@@ -311,7 +311,7 @@ static bool isAdmissibleTensorExp(Merger &merger, linalg::GenericOp op,
                                   std::vector<unsigned> &topSort, unsigned exp,
                                   OpOperand **sparseOut,
                                   unsigned &outerParNest) {
-  OpOperand *lhs = op.getOutputOperand(0);
+  OpOperand *lhs = op.getDpsInitOperand(0);
   unsigned tensor = lhs->getOperandNumber();
   auto enc = getSparseTensorEncoding(lhs->get().getType());
   // An non-annotated output tensor is assumed dense, and becomes a random
@@ -410,7 +410,7 @@ static Value getCustomRedId(Operation *op) {
 static void genBuffers(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                        linalg::GenericOp op) {
   Location loc = op.getLoc();
-  assert(op.getNumOperands() == op.getNumInputs() + 1);
+  assert(op.getNumOperands() == op.getNumDpsInputs() + 1);
 
   codegen.loopEmitter.initializeLoopEmit(
       builder, loc,
@@ -425,7 +425,7 @@ static void genBuffers(Merger &merger, CodeGen &codegen, OpBuilder &builder,
             Value tensor) -> Value {
         // Must not be a sparse tensor.
         assert(!getSparseTensorEncoding(tensor.getType()));
-        OpOperand *lhs = op.getOutputOperand(0);
+        OpOperand *lhs = op.getDpsInitOperand(0);
         // Two output tensors references should pointed to the same object.
         assert(lhs->get() == tensor);
         bool isInit = op.isInitTensor(lhs);
@@ -626,7 +626,7 @@ static void genTensorStore(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     return;
   }
   // Store during insertion.
-  OpOperand *t = op.getOutputOperand(0);
+  OpOperand *t = op.getDpsInitOperand(0);
   if (t == codegen.sparseOut) {
     if (!rhs) {
       // Only unary and binary are allowed to return uninitialized rhs
@@ -768,7 +768,7 @@ static void genInvariants(Merger &merger, CodeGen &codegen, OpBuilder &builder,
     // All exhausted at this level (atLevel denotes exactly at this level).
     if (!atLevel)
       return;
-    OpOperand *lhs = op.getOutputOperand(0);
+    OpOperand *lhs = op.getDpsInitOperand(0);
     if (lhs == &t) {
       // Start or end a scalarized reduction
       if (atStart) {
@@ -1248,7 +1248,7 @@ static void genStmt(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
 /// Converts the result computed by the sparse kernel into the required form.
 static void genResult(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
                       linalg::GenericOp op) {
-  OpOperand *lhs = op.getOutputOperand(0);
+  OpOperand *lhs = op.getDpsInitOperand(0);
   Type resType = lhs->get().getType();
   if (getSparseTensorEncoding(resType)) {
     // The sparse tensor rematerializes from the original sparse tensor's
@@ -1279,7 +1279,7 @@ public:
                                 PatternRewriter &rewriter) const override {
     // Detects sparse annotations and translate the per-dimension sparsity
     // information for all tensors to loop indices in the kernel.
-    if (op.getNumOutputs() != 1)
+    if (op.getNumDpsInits() != 1)
       return failure();
     unsigned numTensors = op->getNumOperands();
     unsigned numLoops = op.getNumLoops();
@@ -1349,7 +1349,7 @@ private:
     // sparse input tensor in succession until an acylic
     // iteration graph results.
     std::vector<unsigned> topSort;
-    for (OpOperand *t : op.getInputOperands()) {
+    for (OpOperand *t : op.getDpsInputOperands()) {
       unsigned tensor = t->getOperandNumber();
       Value tval = t->get();
       auto srcEnc = getSparseTensorEncoding(tval.getType());

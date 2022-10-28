@@ -60,12 +60,12 @@ static LogicalResult inlinePayload(OpBuilder &b, LinalgOp linalgOp,
   Location loc = terminator->getLoc();
   for (const auto &operand : llvm::enumerate(terminator->getOperands())) {
     Value toStore = map.lookupOrDefault(operand.value());
-    OpOperand *storeInto = linalgOp.getOutputOperand(operand.index());
+    OpOperand *storeInto = linalgOp.getDpsInitOperand(operand.index());
     auto indices = getIndicesForAccess(
         b, loc, linalgOp.getMatchingIndexingMap(storeInto), ivs);
-    b.create<memref::StoreOp>(loc, toStore,
-                              linalgOp.getOutputOperand(operand.index())->get(),
-                              indices);
+    b.create<memref::StoreOp>(
+        loc, toStore, linalgOp.getDpsInitOperand(operand.index())->get(),
+        indices);
   }
   return success();
 }
@@ -152,7 +152,7 @@ struct LinalgOpTilingInterface
           return makeComposedFoldedAffineApply(b, loc, d0 - 1, ofr);
         }));
 
-    OpOperand *outOperand = linalgOp.getOutputOperand(resultNumber);
+    OpOperand *outOperand = linalgOp.getDpsInitOperand(resultNumber);
     SliceParameters sliceParams = computeSliceParameters(
         b, loc, outOperand->get(), sizes,
         linalgOp.getMatchingIndexingMap(outOperand), offsets,

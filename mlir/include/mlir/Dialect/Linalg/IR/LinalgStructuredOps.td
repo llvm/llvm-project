@@ -216,7 +216,7 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
     getRegionBuilder() {
       return nullptr;
     }
-    std::pair<int64_t, int64_t> getOutputsPositionRange() {
+    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
       int64_t getNumOperands = this->getNumOperands();
       return {getNumOperands - getOutputs().size(), getNumOperands};
     }
@@ -282,16 +282,16 @@ def MapOp : LinalgStructuredBase_Op<"map", [
     }
 
     // Implement functions necessary for DestinationStyleOpInterface.
-    std::pair<int64_t, int64_t> getOutputsPositionRange() {
+    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
       int64_t getNumOperands = this->getNumOperands();
       return {getNumOperands - 1, getNumOperands};
     }
     OpOperandVector getOpOperandsMatchingBBargs() {
-      return getInputOperands();
+      return getDpsInputOperands();
     }
 
     bool payloadUsesValueFromOperand(OpOperand * opOperand) {
-      if (isOutput(opOperand)) return false;
+      if (isDpsInit(opOperand)) return false;
       return !getMatchingBlockArgument(opOperand).use_empty();
     }
 
@@ -368,7 +368,7 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
     getRegionBuilder() {
       return nullptr;
     }
-    std::pair<int64_t, int64_t> getOutputsPositionRange() {
+    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
       return {getInits().size(), getNumOperands()};
     }
   }];
@@ -433,7 +433,7 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
     }
 
     // Implement functions necessary for DestinationStyleOpInterface.
-    std::pair<int64_t, int64_t> getOutputsPositionRange() {
+    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
       int64_t getNumOperands = this->getNumOperands();
       return {getNumOperands - 1, getNumOperands};
     }

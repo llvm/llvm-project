@@ -2836,7 +2836,7 @@ def TestLinalgConvOp :
       return "";
     }
 
-    std::pair<int64_t, int64_t> getOutputsPositionRange() {
+    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
       int64_t getNumOperands = this->getNumOperands();
       return {getNumOperands - 1, getNumOperands};
     }
@@ -2896,7 +2896,7 @@ def TestLinalgFillOp :
       return "";
     }
 
-    std::pair<int64_t, int64_t> getOutputsPositionRange() {
+    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
       int64_t getNumOperands = this->getNumOperands();
       return {getNumOperands - 1, getNumOperands};
     }
