@@ -463,7 +463,7 @@ private:
         }
 
         SpecializationInfo &S = Specializations.back().second;
-        S.Gain += getSpecializationBonus(A, C);
+        S.Gain += getSpecializationBonus(A, C, Solver.getLoopInfo(*F));
         S.Args.push_back({A, C});
       }
       Added = false;
@@ -580,7 +580,7 @@ private:
   }
 
   InstructionCost getUserBonus(User *U, llvm::TargetTransformInfo &TTI,
-                               LoopInfo &LI) {
+                               const LoopInfo &LI) {
     auto *I = dyn_cast_or_null<Instruction>(U);
     // If not an instruction we do not know how to evaluate.
     // Keep minimum possible cost for now so that it doesnt affect
@@ -605,10 +605,9 @@ private:
   }
 
   /// Compute a bonus for replacing argument \p A with constant \p C.
-  InstructionCost getSpecializationBonus(Argument *A, Constant *C) {
+  InstructionCost getSpecializationBonus(Argument *A, Constant *C,
+                                         const LoopInfo &LI) {
     Function *F = A->getParent();
-    DominatorTree DT(*F);
-    LoopInfo LI(DT);
     auto &TTI = (GetTTI)(*F);
     LLVM_DEBUG(dbgs() << "FnSpecialization: Analysing bonus for constant: "
                       << C->getNameOrAsOperand() << "\n");
