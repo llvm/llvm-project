@@ -53,7 +53,7 @@ define float @test_instbased_f32() {
   ret float %res
 }
 
-define float @test_instbased_f32_other_user(float* %ptr) {
+define float @test_instbased_f32_other_user(ptr %ptr) {
 ; CHECK-FLOAT-IN-VEC-LABEL: @test_instbased_f32_other_user(
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[VAL:%.*]] = load float, ptr @var32, align 4
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SINCOSPI:%.*]] = call <2 x float> @__sincospif_stret(float [[VAL]])
@@ -85,7 +85,7 @@ define float @test_instbased_f32_other_user(float* %ptr) {
 ; CHECK-NO-SINCOS-NEXT:    ret float [[RES]]
 ;
   %val = load float, ptr @var32
-  store float %val, float* %ptr
+  store float %val, ptr %ptr
   %sin = call float @__sinpif(float %val) #0
   %cos = call float @__cospif(float %val) #0
   %res = fadd float %sin, %cos
