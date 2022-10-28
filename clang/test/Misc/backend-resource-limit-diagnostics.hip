@@ -1,3 +1,4 @@
+// REQUIRES: amdgpu-registered-target
 // RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx906 -x hip -fcuda-is-device -emit-codegen-only %s 2>&1 | FileCheck %s
 
 #define __global__ __attribute__((global))
