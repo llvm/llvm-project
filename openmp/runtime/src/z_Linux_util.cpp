@@ -1231,7 +1231,8 @@ static void __kmp_atfork_child(void) {
   if (__kmp_nested_proc_bind.bind_types != NULL) {
     __kmp_nested_proc_bind.bind_types[0] = proc_bind_false;
   }
-  __kmp_affinity = KMP_AFFINITY_INIT("KMP_AFFINITY");
+  for (kmp_affinity_t *affinity : __kmp_affinities)
+    *affinity = KMP_AFFINITY_INIT(affinity->env_var);
   __kmp_affin_fullMask = nullptr;
   __kmp_affin_origMask = nullptr;
 #endif // KMP_AFFINITY_SUPPORTED

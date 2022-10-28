@@ -724,6 +724,9 @@ class kmp_topology_t {
   // Flags describing the topology
   flags_t flags;
 
+  // Compact value used during sort_compact()
+  int compact;
+
   // Insert a new topology layer after allocation
   void _insert_layer(kmp_hw_t type, const int *ids);
 
@@ -866,7 +869,9 @@ public:
   }
 
 #if KMP_AFFINITY_SUPPORTED
-  void sort_compact() {
+  friend int kmp_hw_thread_t::compare_compact(const void *a, const void *b);
+  void sort_compact(kmp_affinity_t &affinity) {
+    compact = affinity.compact;
     qsort(hw_threads, num_hw_threads, sizeof(kmp_hw_thread_t),
           kmp_hw_thread_t::compare_compact);
   }
