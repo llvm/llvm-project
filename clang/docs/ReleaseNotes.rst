@@ -645,6 +645,9 @@ X86 Support in Clang
   * Support intrinsic of ``_aand_i32/64``
   * Support intrinsic of ``_aor_i32/64``
   * Support intrinsic of ``_axor_i32/64``
+- Support ISA of ``AVX-IFMA``.
+  * Support intrinsic of ``_mm(256)_madd52hi_avx_epu64``.
+  * Support intrinsic of ``_mm(256)_madd52lo_avx_epu64``.
 
 WebAssembly Support in Clang
 ----------------------------
