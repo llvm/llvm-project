@@ -794,20 +794,20 @@ define void @strided_load_startval_add_with_splat(i8* noalias nocapture %0, i8* 
 ; CHECK-NEXT:  # %bb.4:
 ; CHECK-NEXT:    beq a4, a5, .LBB12_7
 ; CHECK-NEXT:  .LBB12_5:
-; CHECK-NEXT:    slli a2, a3, 2
-; CHECK-NEXT:    add a2, a2, a3
-; CHECK-NEXT:    add a1, a1, a2
-; CHECK-NEXT:    li a2, 1024
+; CHECK-NEXT:    addiw a2, a3, -1024
+; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    slli a4, a3, 2
+; CHECK-NEXT:    add a3, a4, a3
+; CHECK-NEXT:    add a1, a1, a3
 ; CHECK-NEXT:  .LBB12_6: # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lb a4, 0(a1)
-; CHECK-NEXT:    add a5, a0, a3
-; CHECK-NEXT:    lb a6, 0(a5)
-; CHECK-NEXT:    addw a4, a6, a4
-; CHECK-NEXT:    sb a4, 0(a5)
-; CHECK-NEXT:    addiw a4, a3, 1
-; CHECK-NEXT:    addi a3, a3, 1
+; CHECK-NEXT:    lb a3, 0(a1)
+; CHECK-NEXT:    lb a4, 0(a0)
+; CHECK-NEXT:    addw a3, a4, a3
+; CHECK-NEXT:    sb a3, 0(a0)
+; CHECK-NEXT:    addiw a2, a2, 1
+; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    addi a1, a1, 5
-; CHECK-NEXT:    bne a4, a2, .LBB12_6
+; CHECK-NEXT:    bnez a2, .LBB12_6
 ; CHECK-NEXT:  .LBB12_7:
 ; CHECK-NEXT:    ret
   %4 = icmp eq i32 %2, 1024

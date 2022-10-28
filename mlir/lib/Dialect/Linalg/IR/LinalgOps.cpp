@@ -767,8 +767,8 @@ void GenericOp::print(OpAsmPrinter &p) {
   }
 
   // Printing is shared with named ops, except for the region and attributes
-  printCommonStructuredOpParts(p, SmallVector<Value>(getInputOperands()),
-                               SmallVector<Value>(getOutputOperands()));
+  printCommonStructuredOpParts(p, SmallVector<Value>(getDpsInputOperands()),
+                               SmallVector<Value>(getDpsInitOperands()));
 
   genericAttrNames.push_back("operand_segment_sizes");
   genericAttrNamesSet.insert(genericAttrNames.back());
@@ -858,7 +858,7 @@ void GenericOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   getGenericEffectsImpl(effects, getOperation()->getResults(),
-                        getInputOperands(), getOutputOperands());
+                        getDpsInputOperands(), getDpsInitOperands());
 }
 
 static bool isResultValueDead(linalg::GenericOp genericOp, OpResult result) {
@@ -866,7 +866,7 @@ static bool isResultValueDead(linalg::GenericOp genericOp, OpResult result) {
     return false;
   // If out operand not used in payload, we can drop it.
   OpOperand *outputOpOperand =
-      genericOp.getOutputOperand(result.getResultNumber());
+      genericOp.getDpsInitOperand(result.getResultNumber());
   if (!genericOp.payloadUsesValueFromOperand(outputOpOperand))
     return true;
 
@@ -981,7 +981,7 @@ private:
                            SmallVector<AffineMap> &newIndexingMaps) const {
     llvm::SmallDenseMap<unsigned, unsigned> origToNewPos;
     llvm::SmallDenseMap<std::pair<Value, AffineMap>, unsigned> dedupedInputs;
-    for (const auto &en : llvm::enumerate(genericOp.getInputOperands())) {
+    for (const auto &en : llvm::enumerate(genericOp.getDpsInputOperands())) {
       OpOperand *inputOpOperand = en.value();
       // Check if operand is dead and if dropping the indexing map makes the
       // loops to shape computation invalid.
@@ -1029,7 +1029,7 @@ private:
     // If the op doesnt have tensor semantics, keep all the outputs as
     // preserved.
     if (!genericOp.hasTensorSemantics()) {
-      for (const auto &en : llvm::enumerate(genericOp.getOutputOperands())) {
+      for (const auto &en : llvm::enumerate(genericOp.getDpsInitOperands())) {
         origToNewPos[en.index()] = newOutputOperands.size();
         newOutputOperands.push_back(en.value()->get());
         newIndexingMaps.push_back(genericOp.getMatchingIndexingMap(en.value()));
@@ -1043,7 +1043,7 @@ private:
     //   computation.
     auto yieldOp = cast<YieldOp>(genericOp.getBody()->getTerminator());
     for (const auto &outputOpOperand :
-         llvm::enumerate(genericOp.getOutputOperands())) {
+         llvm::enumerate(genericOp.getDpsInitOperands())) {
       OpResult result = genericOp.getTiedOpResult(outputOpOperand.value());
       AffineMap indexingMap =
           genericOp.getMatchingIndexingMap(outputOpOperand.value());
@@ -1111,22 +1111,22 @@ private:
           }
         };
 
-    OpOperandVector origInputOperands = genericOp.getInputOperands();
-    OpOperandVector newInputOperands = newOp.getInputOperands();
+    OpOperandVector origInputOperands = genericOp.getDpsInputOperands();
+    OpOperandVector newInputOperands = newOp.getDpsInputOperands();
     updateReplacements(origInputOperands, newInputOperands, origInsToNewInsPos);
 
-    OpOperandVector origOutputOperands = genericOp.getOutputOperands();
-    OpOperandVector newOutputOperands = newOp.getOutputOperands();
+    OpOperandVector origOutputOperands = genericOp.getDpsInitOperands();
+    OpOperandVector newOutputOperands = newOp.getDpsInitOperands();
     updateReplacements(origOutputOperands, newOutputOperands,
                        origOutsToNewOutsPos);
 
     // Drop the unused yield args.
-    if (newOp.getNumOutputs() != genericOp.getNumOutputs()) {
+    if (newOp.getNumDpsInits() != genericOp.getNumDpsInits()) {
       OpBuilder::InsertionGuard g(rewriter);
       YieldOp origYieldOp = cast<YieldOp>(origOpBlock->getTerminator());
       rewriter.setInsertionPoint(origYieldOp);
 
-      SmallVector<Value> newYieldVals(newOp.getNumOutputs(), nullptr);
+      SmallVector<Value> newYieldVals(newOp.getNumDpsInits(), nullptr);
       for (const auto &yieldOpOperands :
            llvm::enumerate(origYieldOp.getValues())) {
         auto it = origOutsToNewOutsPos.find(yieldOpOperands.index());
@@ -1167,9 +1167,9 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
 
     // In the buffer case, we need to check exact buffer equality.
     if (genericOp.hasBufferSemantics()) {
-      if (genericOp.getNumInputs() == 1 && genericOp.getNumOutputs() == 1 &&
-          genericOp.getInputOperand(0)->get() ==
-              genericOp.getOutputOperand(0)->get()) {
+      if (genericOp.getNumDpsInputs() == 1 && genericOp.getNumDpsInits() == 1 &&
+          genericOp.getDpsInputOperand(0)->get() ==
+              genericOp.getDpsInitOperand(0)->get()) {
         rewriter.eraseOp(genericOp);
         return success();
       }
@@ -1238,7 +1238,7 @@ struct RemoveUnusedCycleInGenericOp : public OpRewritePattern<GenericOp> {
     bool hasRemovedCycles = false;
     // Iterate over output operands and remove any unused cycles.
     for (const auto &outputOpOperand :
-         llvm::enumerate(genericOp.getOutputOperands())) {
+         llvm::enumerate(genericOp.getDpsInitOperands())) {
 
       // Check that result from out operand is dead.
       Value result = genericOp.getResult(outputOpOperand.index());
@@ -1370,8 +1370,8 @@ ParseResult MapOp::parse(OpAsmParser &parser, OperationState &result) {
 void MapOp::print(OpAsmPrinter &p) {
   p.increaseIndent();
   printCommonStructuredOpPartsWithNewLine(
-      p, SmallVector<Value>(getInputOperands()),
-      SmallVector<Value>(getOutputOperands()));
+      p, SmallVector<Value>(getDpsInputOperands()),
+      SmallVector<Value>(getDpsInitOperands()));
   p.printOptionalAttrDict((*this)->getAttrs());
 
   p.printNewline();
@@ -1405,8 +1405,7 @@ LogicalResult MapOp::verify() {
   }
 
   // The shape of each input must match the shape of the output.
-  auto outputShape =
-      getOutputOperand(0)->get().getType().cast<ShapedType>().getShape();
+  auto outputShape = getInit().getType().cast<ShapedType>().getShape();
   for (Type inputArgType : TypeRange{getInputs()}) {
     auto inputElemShape = inputArgType.cast<ShapedType>().getShape();
     if (inputElemShape != outputShape) {
@@ -1436,7 +1435,7 @@ void MapOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   getGenericEffectsImpl(effects, getOperation()->getResults(),
-                        getInputOperands(), getOutputOperands());
+                        getDpsInputOperands(), getDpsInitOperands());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1488,12 +1487,12 @@ SmallVector<StringRef> ReduceOp::getIteratorTypesArray() {
 ArrayAttr ReduceOp::getIndexingMaps() {
   int64_t inputRank = getInputs()[0].getType().cast<ShapedType>().getRank();
   SmallVector<AffineMap> affineMaps(
-      getNumInputs(),
+      getNumDpsInputs(),
       AffineMap::getMultiDimIdentityMap(inputRank, getContext()));
   AffineMap resultMap =
       AffineMap::getMultiDimIdentityMap(inputRank, getContext())
           .dropResults(getDimensions());
-  for (int64_t i = 0, e = getNumOutputs(); i < e; ++i)
+  for (int64_t i = 0, e = getNumDpsInits(); i < e; ++i)
     affineMaps.push_back(resultMap);
   return Builder(getContext()).getAffineMapArrayAttr(affineMaps);
 }
@@ -1502,7 +1501,7 @@ void ReduceOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   getGenericEffectsImpl(effects, getOperation()->getResults(),
-                        getInputOperands(), getOutputOperands());
+                        getDpsInputOperands(), getDpsInitOperands());
 }
 
 static ParseResult parseDenseI64ArrayAttr(OpAsmParser &parser,
@@ -1543,9 +1542,10 @@ static void printDenseI64ArrayAttr(OpAsmPrinter &p, StringRef attributeName,
 void ReduceOp::print(OpAsmPrinter &p) {
   p.increaseIndent();
   printCommonStructuredOpPartsWithNewLine(
-      p, SmallVector<Value>(getInputOperands()),
-      SmallVector<Value>(getOutputOperands()));
+      p, SmallVector<Value>(getDpsInputOperands()),
+      SmallVector<Value>(getDpsInitOperands()));
   p.printNewline();
+
   printDenseI64ArrayAttr(p, getDimensionsAttrName(), getDimensions());
   p.printOptionalAttrDict((*this)->getAttrs(), {getDimensionsAttrName()});
 
@@ -1562,7 +1562,7 @@ void ReduceOp::print(OpAsmPrinter &p) {
 LogicalResult ReduceOp::verify() {
   ArrayRef<int64_t> dimensionsRef = getDimensions();
 
-  for (int64_t i = 1; i < getNumInputs(); ++i) {
+  for (int64_t i = 1; i < getNumDpsInputs(); ++i) {
     if (getInputs()[i].getType().cast<ShapedType>().getShape() !=
         getInputs()[0].getType().cast<ShapedType>().getShape()) {
       return emitOpError() << "expects all inputs to have the same shapes. "
@@ -1571,7 +1571,7 @@ LogicalResult ReduceOp::verify() {
                            << " is not equal to the shape at input-index 0.";
     }
   }
-  for (int64_t i = 1; i < getNumOutputs(); ++i) {
+  for (int64_t i = 1; i < getNumDpsInits(); ++i) {
     if (getInits()[i].getType().cast<ShapedType>().getShape() !=
         getInits()[0].getType().cast<ShapedType>().getShape()) {
       return emitOpError() << "expects all outputs to have the same shapes. "
@@ -1632,8 +1632,8 @@ LogicalResult ReduceOp::verify() {
 
   // Check that the last block arguments match the element type of the outputs.
   for (auto [output, bbArg] :
-       llvm::zip(getOutputOperands(),
-                 block->getArguments().take_back(getNumOutputs()))) {
+       llvm::zip(getDpsInitOperands(),
+                 block->getArguments().take_back(getNumDpsInits()))) {
     auto outputElementType =
         output->get().getType().cast<ShapedType>().getElementType();
     if (outputElementType != bbArg.getType())
@@ -1712,9 +1712,10 @@ void TransposeOp::getAsmResultNames(
 void TransposeOp::print(OpAsmPrinter &p) {
   p.increaseIndent();
   printCommonStructuredOpPartsWithNewLine(
-      p, SmallVector<Value>(getInputOperands()),
-      SmallVector<Value>(getOutputOperands()));
+      p, SmallVector<Value>(getDpsInputOperands()),
+      SmallVector<Value>(getDpsInitOperands()));
   p.printNewline();
+
   printDenseI64ArrayAttr(p, getPermutationAttrName(), getPermutation());
   p.printOptionalAttrDict((*this)->getAttrs(), {getPermutationAttrName()});
   p.decreaseIndent();
@@ -1774,7 +1775,7 @@ void TransposeOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
   getGenericEffectsImpl(effects, getOperation()->getResults(),
-                        getInputOperands(), getOutputOperands());
+                        getDpsInputOperands(), getDpsInitOperands());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1802,15 +1803,15 @@ ParseResult YieldOp::parse(OpAsmParser &parser, OperationState &result) {
 // Check the operand number and types must match the element types of the
 // LinalgOp interface's shaped operands.
 static LogicalResult verifyYield(linalg::YieldOp op, LinalgOp linalgOp) {
-  if (op.getNumOperands() != linalgOp.getNumOutputs())
+  if (op.getNumOperands() != linalgOp.getNumDpsInits())
     return op.emitOpError("expected number of yield values (")
-           << linalgOp.getNumOutputs()
+           << linalgOp.getNumDpsInits()
            << ") to match the number of operands of the enclosing "
            << "LinalgOp (" << op.getNumOperands() << ")";
 
   for (OpOperand &opOperand : op->getOpOperands()) {
     OpOperand *outputOperand =
-        linalgOp.getOutputOperand(opOperand.getOperandNumber());
+        linalgOp.getDpsInitOperand(opOperand.getOperandNumber());
     Type elementType = getElementTypeOrSelf(outputOperand->get().getType());
     if (opOperand.get().getType() != elementType)
       return op.emitOpError("type of yield operand ")
@@ -1981,14 +1982,14 @@ struct FoldTensorCastProducerOp : public OpInterfaceRewritePattern<LinalgOp> {
     SmallVector<Value, 4> newOperands;
     newOperands.reserve(op->getNumOperands());
     // Inputs may fold.
-    for (auto *input : op.getInputOperands()) {
+    for (auto *input : op.getDpsInputOperands()) {
       auto tensorCastOp = input->get().getDefiningOp<tensor::CastOp>();
       newOperands.push_back(canFoldIntoConsumerOp(tensorCastOp)
                                 ? tensorCastOp.getSource()
                                 : input->get());
     }
     // Init tensors may fold, in which case the resultType must also change.
-    for (auto *output : op.getOutputOperands()) {
+    for (auto *output : op.getDpsInitOperands()) {
       auto tensorCastOp = output->get().getDefiningOp<tensor::CastOp>();
       bool fold = canFoldIntoConsumerOp(tensorCastOp);
       newOperands.push_back(fold ? tensorCastOp.getOperand() : output->get());
@@ -2047,11 +2048,11 @@ struct FoldTensorCastConsumerOp : public OpRewritePattern<tensor::CastOp> {
     // for this cast, i.e. producer of the out operand, is also an operation
     // that folds with tensor.cast consumer (like this pattern), the cast will
     // continue to propagate as far up the stack as it can go.
-    OpOperand *outOperand = linalgOp.getOutputOperand(resultNumber);
+    OpOperand *outOperand = linalgOp.getDpsInitOperand(resultNumber);
     Value newOperand =
         rewriter.create<tensor::CastOp>(loc, resultType, outOperand->get());
-    SmallVector<Value> newOperands{linalgOp.getInputOperands()};
-    SmallVector<Value> outputOperands{linalgOp.getOutputOperands()};
+    SmallVector<Value> newOperands{linalgOp.getDpsInputOperands()};
+    SmallVector<Value> outputOperands{linalgOp.getDpsInitOperands()};
     outputOperands[resultNumber] = newOperand;
     newOperands.append(outputOperands.begin(), outputOperands.end());
 
@@ -2124,7 +2125,7 @@ static void createNewOperandWithStaticSizes(
     return;
   auto sourceType = src.getType().cast<RankedTensorType>();
   Type resultType = sourceType;
-  if (sourceType.hasStaticShape() && linalgOp.isOutput(opOperand)) {
+  if (sourceType.hasStaticShape() && linalgOp.isDpsInit(opOperand)) {
     resultTypes.push_back(resultType);
     return;
   }
@@ -2157,7 +2158,7 @@ static void createNewOperandWithStaticSizes(
     unsigned index = opOperand->getOperandNumber();
     newOperands[index] = newOperand;
   }
-  if (linalgOp.isOutput(opOperand))
+  if (linalgOp.isDpsInit(opOperand))
     resultTypes.push_back(resultType);
 }
 
@@ -2193,7 +2194,7 @@ struct InferStaticShapeOfOperands : public OpInterfaceRewritePattern<LinalgOp> {
     // change in their types.
     bool changeNeeded = false;
     newOperands.reserve(linalgOp->getNumOperands());
-    resultTypes.reserve(linalgOp.getNumOutputs());
+    resultTypes.reserve(linalgOp.getNumDpsInits());
 
     // Iterate over all the operands and update the static sizes.
     for (OpOperand &opOperand : linalgOp->getOpOperands()) {

@@ -238,9 +238,6 @@ private:
     return emitConst(*Ctx.classify(Ty), WrappedValue, E);
   }
 
-  /// Returns the index of a global.
-  llvm::Optional<unsigned> getGlobalIdx(const VarDecl *VD);
-
   /// Emits the initialized pointer.
   bool emitInitFn() {
     assert(InitFn && "missing initializer");

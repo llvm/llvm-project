@@ -119,6 +119,9 @@ Changes to the RISC-V Backend
 
 * Support for the unratified Zbe, Zbf, Zbm, Zbp, Zbr, and Zbt extensions have
   been removed.
+* i32 is now a native type in the datalayout string. This enables
+  LoopStrengthReduce for loops with i32 induction variables, among other
+  optimizations.
 
 Changes to the WebAssembly Backend
 ----------------------------------

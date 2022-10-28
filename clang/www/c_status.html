@@ -696,7 +696,15 @@ conformance.</p>
     <tr>
       <td>Preprocessor line numbers unspecified</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2322.htm">N2322</a></td>
-      <td class="full" align="center">Yes</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+        The line number associated with a macro invocation is not the line
+        number of the first character of the macro name in the invocation.
+        Additionally, Clang may not associate the line number of a pp-directive
+        with the first <code>#</code> token. As these are recommended practices
+        and not normative requirements, Clang's behavior is still conforming.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>deprecated attribute</td>

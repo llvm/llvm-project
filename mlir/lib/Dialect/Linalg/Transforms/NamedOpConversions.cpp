@@ -108,9 +108,9 @@ struct SimplifyDepthwiseConvOp
   LogicalResult matchAndRewrite(DepthwiseConv2DNhwcHwcmOp op,
                                 PatternRewriter &rewriter) const override {
     Operation *operation = op.getOperation();
-    Value input = op.getInputOperand(0)->get();
-    Value kernel = op.getInputOperand(1)->get();
-    Value init = op.getOutputOperand(0)->get();
+    Value input = op.getDpsInputOperand(0)->get();
+    Value kernel = op.getDpsInputOperand(1)->get();
+    Value init = op.getDpsInitOperand(0)->get();
 
     auto stride = op.getStrides();
     auto dilation = op.getDilations();
@@ -128,11 +128,11 @@ struct SimplifyDepthwiseConvQOp
   LogicalResult matchAndRewrite(DepthwiseConv2DNhwcHwcmQOp op,
                                 PatternRewriter &rewriter) const override {
     Operation *operation = op.getOperation();
-    Value input = op.getInputOperand(0)->get();
-    Value kernel = op.getInputOperand(1)->get();
-    Value iZp = op.getInputOperand(2)->get();
-    Value kZp = op.getInputOperand(3)->get();
-    Value init = op.getOutputOperand(0)->get();
+    Value input = op.getDpsInputOperand(0)->get();
+    Value kernel = op.getDpsInputOperand(1)->get();
+    Value iZp = op.getDpsInputOperand(2)->get();
+    Value kZp = op.getDpsInputOperand(3)->get();
+    Value init = op.getDpsInitOperand(0)->get();
 
     auto stride = op.getStrides();
     auto dilation = op.getDilations();

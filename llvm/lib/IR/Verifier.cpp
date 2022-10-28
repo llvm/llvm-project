@@ -3468,9 +3468,11 @@ void Verifier::visitCallBase(CallBase &Call) {
   // Verify that each inlinable callsite of a debug-info-bearing function in a
   // debug-info-bearing function has a debug location attached to it. Failure to
   // do so causes assertion failures when the inliner sets up inline scope info
-  // (Interposable functions are not inlinable).
+  // (Interposable functions are not inlinable, neither are functions without
+  //  definitions.)
   if (Call.getFunction()->getSubprogram() && Call.getCalledFunction() &&
       !Call.getCalledFunction()->isInterposable() &&
+      !Call.getCalledFunction()->isDeclaration() &&
       Call.getCalledFunction()->getSubprogram())
     CheckDI(Call.getDebugLoc(),
             "inlinable function call in a function with "
