@@ -48,6 +48,18 @@
  * diagnostic behavior, not runtime behavior. Also, both are a matter of QoI as
  * to what they optimize/diagnose. But if someone thinks of a way to test this,
  * we can add a test case for it then.
+ *
+ * WG14 DR448: yes
+ * What are the semantics of a # non-directive?
+ *
+ * WG14 DR454: yes
+ * ATOMIC_VAR_INIT (issues 3 and 4)
+ *
+ * WG14 DR455: yes
+ * ATOMIC_VAR_INIT issue 5
+ *
+ * WG14 DR459: yes
+ * atomic_load missing const qualifier
  */
 
 /* WG14 DR412: yes
@@ -162,3 +174,40 @@ void dr444(void) {
    */
   _Alignas(int) _Alignas(double) int k;
 }
+
+/* WG14 DR447: yes
+ * Boolean from complex
+ *
+ * Ensure that the imaginary part contributes to the conversion to bool, not
+ * just the real part.
+ */
+_Static_assert((_Bool)0.0 + 3.0 * (__extension__ 1.0iF), "");  /* c89only-warning {{'_Bool' is a C99 extension}}
+                                                                  expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+                                                                */
+_Static_assert(!(_Bool)0.0 + 0.0 * (__extension__ 1.0iF), ""); /* c89only-warning {{'_Bool' is a C99 extension}}
+                                                                  expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+                                                               */
+
+/* WG14 DR463: yes
+ * Left-shifting into the sign bit
+ *
+ * This DR was NAD and leaves shifting a bit into the high bit of a signed
+ * integer type undefined behavior, unlike in C++. Note, the diagnostic is also
+ * issued in C++ for shifting into that bit despite being well-defined because
+ * the code is questionable and should be validated by the programmer.
+ */
+void dr463(void) {
+  (void)(1 << (__CHAR_BIT__ * sizeof(int))); /* expected-warning {{shift count >= width of type}} */
+  (void)(1 << ((__CHAR_BIT__ * sizeof(int)) - 1));
+}
+
+/* WG14 DR464: yes
+ * Clarifying the Behavior of the #line Directive
+ *
+ * Note: the behavior described by this DR allows for two different
+ * interpretations, but WG14 N2322 (adopted for C2x) adds a recommended
+ * practice which is what we're testing our interpretation against.
+ */
+#line 10000
+_Static_assert(__LI\
+NE__ == 10000, "");
