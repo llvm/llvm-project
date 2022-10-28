@@ -20,6 +20,7 @@
 #include "llvm/Support/Host.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <system_error>
 
@@ -199,9 +200,10 @@ RocmInstallationDetector::getInstallationPathCandidates() {
     ROCmSearchDirs.emplace_back(RocmPathArg.str());
     DoPrintROCmSearchDirs();
     return ROCmSearchDirs;
-  } else if (const char *RocmPathEnv = ::getenv("ROCM_PATH")) {
-    if (!StringRef(RocmPathEnv).empty()) {
-      ROCmSearchDirs.emplace_back(RocmPathEnv);
+  } else if (Optional<std::string> RocmPathEnv =
+                 llvm::sys::Process::GetEnv("ROCM_PATH")) {
+    if (!RocmPathEnv->empty()) {
+      ROCmSearchDirs.emplace_back(std::move(*RocmPathEnv));
       DoPrintROCmSearchDirs();
       return ROCmSearchDirs;
     }
@@ -374,8 +376,9 @@ void RocmInstallationDetector::detectDeviceLibrary() {
 
   if (!RocmDeviceLibPathArg.empty())
     LibDevicePath = RocmDeviceLibPathArg[RocmDeviceLibPathArg.size() - 1];
-  else if (const char *LibPathEnv = ::getenv("HIP_DEVICE_LIB_PATH"))
-    LibDevicePath = LibPathEnv;
+  else if (Optional<std::string> LibPathEnv =
+               llvm::sys::Process::GetEnv("HIP_DEVICE_LIB_PATH"))
+    LibDevicePath = std::move(*LibPathEnv);
 
   auto &FS = D.getVFS();
   if (!LibDevicePath.empty()) {
