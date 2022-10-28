@@ -733,6 +733,9 @@ Arm and AArch64 Support in Clang
   them, which it cannot.
 - Add driver and tuning support for Neoverse V2 via the flag ``-mcpu=neoverse-v2``.
   Native detection is also supported via ``-mcpu=native``.
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
+
+  * Arm Cortex-A715 (cortex-a715).
 
 Floating Point Support in Clang
 -------------------------------

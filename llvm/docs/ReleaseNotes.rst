@@ -81,6 +81,8 @@ Changes to TableGen
 Changes to the AArch64 Backend
 ------------------------------
 
+* Added support for the Cortex-A715 CPU.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
