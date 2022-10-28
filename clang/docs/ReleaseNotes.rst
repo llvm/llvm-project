@@ -260,6 +260,10 @@ Bug Fixes
 - Fix template arguments of pointer and reference not taking the type as
   part of their identity.
   `Issue 47136 <https://github.com/llvm/llvm-project/issues/47136>`_
+- Fix a crash when trying to form a recovery expression on a call inside a
+  constraint, which re-evaluated the same constraint.
+  `Issue 53213 <https://github.com/llvm/llvm-project/issues/53213>`_
+  `Issue 45736 <https://github.com/llvm/llvm-project/issues/45736>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
