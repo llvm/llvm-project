@@ -906,6 +906,7 @@ TARGET_BUILTIN(__builtin_ia32_alignq256, "V4OiV4OiV4OiIi", "ncV:256:", "avx512vl
 TARGET_BUILTIN(__builtin_ia32_extractf64x4_mask, "V4dV8dIiV4dUc", "ncV:512:", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_extractf32x4_mask, "V4fV16fIiV4fUc", "ncV:512:", "avx512f")
 
+// AVX-VNNI and AVX512-VNNI
 TARGET_BUILTIN(__builtin_ia32_vpdpbusd128, "V4iV4iV4iV4i", "ncV:128:", "avx512vl,avx512vnni|avxvnni")
 TARGET_BUILTIN(__builtin_ia32_vpdpbusd256, "V8iV8iV8iV8i", "ncV:256:", "avx512vl,avx512vnni|avxvnni")
 TARGET_BUILTIN(__builtin_ia32_vpdpbusd512, "V16iV16iV16iV16i", "ncV:512:", "avx512vnni")
@@ -918,6 +919,20 @@ TARGET_BUILTIN(__builtin_ia32_vpdpwssd512, "V16iV16iV16iV16i", "ncV:512:", "avx5
 TARGET_BUILTIN(__builtin_ia32_vpdpwssds128, "V4iV4iV4iV4i", "ncV:128:", "avx512vl,avx512vnni|avxvnni")
 TARGET_BUILTIN(__builtin_ia32_vpdpwssds256, "V8iV8iV8iV8i", "ncV:256:", "avx512vl,avx512vnni|avxvnni")
 TARGET_BUILTIN(__builtin_ia32_vpdpwssds512, "V16iV16iV16iV16i", "ncV:512:", "avx512vnni")
+
+// AVX-VNNI-INT8
+TARGET_BUILTIN(__builtin_ia32_vpdpbssd128, "V4iV4iV4iV4i", "ncV:128:", "avxvnniint8")
+TARGET_BUILTIN(__builtin_ia32_vpdpbssd256, "V8iV8iV8iV8i", "ncV:256:", "avxvnniint8")
+TARGET_BUILTIN(__builtin_ia32_vpdpbssds128, "V4iV4iV4iV4i", "ncV:128:", "avxvnniint8")
+TARGET_BUILTIN(__builtin_ia32_vpdpbssds256, "V8iV8iV8iV8i", "ncV:256:", "avxvnniint8")
+TARGET_BUILTIN(__builtin_ia32_vpdpbsud128, "V4iV4iV4iV4i", "ncV:128:", "avxvnniint8")
+TARGET_BUILTIN(__builtin_ia32_vpdpbsud256, "V8iV8iV8iV8i", "ncV:256:", "avxvnniint8")
+TARGET_BUILTIN(__builtin_ia32_vpdpbsuds128, "V4iV4iV4iV4i", "ncV:128:", "avxvnniint8")
+TARGET_BUILTIN(__builtin_ia32_vpdpbsuds256, "V8iV8iV8iV8i", "ncV:256:", "avxvnniint8")
+TARGET_BUILTIN(__builtin_ia32_vpdpbuud128, "V4iV4iV4iV4i", "ncV:128:", "avxvnniint8")
+TARGET_BUILTIN(__builtin_ia32_vpdpbuud256, "V8iV8iV8iV8i", "ncV:256:", "avxvnniint8")
+TARGET_BUILTIN(__builtin_ia32_vpdpbuuds128, "V4iV4iV4iV4i", "ncV:128:", "avxvnniint8")
+TARGET_BUILTIN(__builtin_ia32_vpdpbuuds256, "V8iV8iV8iV8i", "ncV:256:", "avxvnniint8")
 
 TARGET_BUILTIN(__builtin_ia32_gather3div2df, "V2dV2dvC*V2OiUcIi", "nV:128:", "avx512vl")
 TARGET_BUILTIN(__builtin_ia32_gather3div2di, "V2OiV2OivC*V2OiUcIi", "nV:128:", "avx512vl")

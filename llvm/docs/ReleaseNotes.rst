@@ -141,6 +141,7 @@ Changes to the X86 Backend
 * Add support for the ``WRMSRNS`` instruction.
 * Support ISA of ``AMX-FP16`` which contains ``tdpfp16ps`` instruction.
 * Support ISA of ``CMPCCXADD``.
+* Support ISA of ``AVX-VNNI-INT8``.
 
 Changes to the OCaml bindings
 -----------------------------

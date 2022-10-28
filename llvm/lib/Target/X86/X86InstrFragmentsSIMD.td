@@ -813,6 +813,13 @@ def SDTX86MaskedStore: SDTypeProfile<0, 3, [       // masked store
   SDTCisVec<0>, SDTCisPtrTy<1>, SDTCisVec<2>, SDTCisSameNumEltsAs<0, 2>
 ]>;
 
+def X86vpdpbssd  : SDNode<"X86ISD::VPDPBSSD",  SDTVnni>;
+def X86vpdpbssds : SDNode<"X86ISD::VPDPBSSDS", SDTVnni>;
+def X86vpdpbsud  : SDNode<"X86ISD::VPDPBSUD",  SDTVnni>;
+def X86vpdpbsuds : SDNode<"X86ISD::VPDPBSUDS", SDTVnni>;
+def X86vpdpbuud  : SDNode<"X86ISD::VPDPBUUD",  SDTVnni>;
+def X86vpdpbuuds : SDNode<"X86ISD::VPDPBUUDS", SDTVnni>;
+
 //===----------------------------------------------------------------------===//
 // SSE pattern fragments
 //===----------------------------------------------------------------------===//
