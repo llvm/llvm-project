@@ -327,6 +327,11 @@
 // RAOINT: "-target-feature" "+raoint"
 // NO-RAOINT: "-target-feature" "-raoint"
 
+// RUN: %clang -target i386-linux-gnu -mavxifma %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVXIFMA %s
+// RUN: %clang -target i386-linux-gnu -mno-avxifma %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AVXIFMA %s
+// AVXIFMA: "-target-feature" "+avxifma"
+// NO-AVXIFMA: "-target-feature" "-avxifma"
+
 // RUN: %clang --target=i386 -march=i386 -mcrc32 %s -### 2>&1 | FileCheck -check-prefix=CRC32 %s
 // RUN: %clang --target=i386 -march=i386 -mno-crc32 %s -### 2>&1 | FileCheck -check-prefix=NO-CRC32 %s
 // CRC32: "-target-feature" "+crc32"
