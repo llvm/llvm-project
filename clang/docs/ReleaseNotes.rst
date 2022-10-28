@@ -618,9 +618,9 @@ ABI Changes in Clang
   You can switch back to the old ABI behavior with the flag:
   ``-fclang-abi-compat=15.0``.
 - GCC allows POD types to have defaulted special members. Clang historically
-  classified such types as non-POD. Clang now matches the gcc behavior (except
-  on Darwin and PS4). You can switch back to the old ABI behavior with the flag:
-  ``-fclang-abi-compat=15.0``.
+  classified such types as non-POD (for the purposes of Itanium ABI). Clang now
+  matches the gcc behavior (except on Darwin and PS4). You can switch back to
+  the old ABI behavior with the flag: ``-fclang-abi-compat=15.0``.
 
 OpenMP Support in Clang
 -----------------------
