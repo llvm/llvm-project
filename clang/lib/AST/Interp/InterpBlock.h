@@ -73,6 +73,12 @@ public:
                    /*isActive=*/true, Desc);
   }
 
+  // Invokes the Destructor.
+  void invokeDtor() {
+    if (Desc->DtorFn)
+      Desc->DtorFn(this, data(), Desc);
+  }
+
 protected:
   friend class Pointer;
   friend class DeadBlock;
