@@ -72,6 +72,10 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
 LLVM_DUMP_METHOD void Program::dump() const { dump(llvm::errs()); }
 
 LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
+  OS << ":: Program\n";
+  OS << "Global Variables: " << Globals.size() << "\n";
+  OS << "Functions: " << Funcs.size() << "\n";
+  OS << "\n";
   for (auto &Func : Funcs) {
     Func.second->dump();
   }
