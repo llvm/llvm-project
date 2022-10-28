@@ -34,6 +34,9 @@ public:
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
 
+  void processFunctionBeforeFrameFinalized(MachineFunction &MF,
+                                           RegScavenger *RS) const override;
+
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
   MachineBasicBlock::iterator
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
@@ -45,7 +48,8 @@ public:
   bool hasFP(const MachineFunction &MF) const override;
   bool hasBP(const MachineFunction &MF) const;
 
-  uint64_t getFirstSPAdjustAmount(const MachineFunction &MF) const;
+  uint64_t getFirstSPAdjustAmount(const MachineFunction &MF,
+                                  bool IsPrologue = false) const;
 
 private:
   void determineFrameLayout(MachineFunction &MF) const;
