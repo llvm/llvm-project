@@ -1556,9 +1556,7 @@ func.func @vectorize_transpose(%arg0: memref<16x32x64xf32>,
   return
 }
 // CHECK-LABEL: func @vectorize_transpose
-// CHECK:         %[[FIRST:.*]] = vector.transpose
-// CHECK-SAME:      [2, 0, 1] : vector<32x64x16xf32> to vector<16x32x64xf32>
-// CHECK-NEXT:    vector.transpose %[[FIRST]]
+// CHECK:         vector.transpose
 // CHECK-SAME:      [1, 2, 0] : vector<16x32x64xf32> to vector<32x64x16xf32>
 
 transform.sequence failures(propagate) {
