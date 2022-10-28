@@ -302,8 +302,8 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
           bool IsSigned, const DataLayout &DL) {
 
   auto MergeResults = [&Preconditions, IsSigned,
-                       DL](Value *A, Value *B,
-                           bool IsSignedB) -> SmallVector<DecompEntry, 4> {
+                       &DL](Value *A, Value *B,
+                            bool IsSignedB) -> SmallVector<DecompEntry, 4> {
     auto ResA = decompose(A, Preconditions, IsSigned, DL);
     auto ResB = decompose(B, Preconditions, IsSignedB, DL);
     if (ResA.empty() || ResB.empty())
