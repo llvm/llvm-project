@@ -1408,6 +1408,18 @@ def sme_elm_idx0_15 : Operand<i32>, TImmLeaf<i32, [{
   let PrintMethod = "printMatrixIndex";
 }
 
+// SME2 vector select offset operands
+
+// uimm3s8 predicate
+// True if the immediate is a multiple of 8 in the range [0,56].
+def UImm3s8Operand : UImmScaledMemoryIndexed<3, 8>;
+
+def uimm3s8 : Operand<i64>, ImmLeaf<i64,
+[{ return Imm >= 0 && Imm <= 56 && ((Imm % 8) == 0); }], UImmS8XForm> {
+  let PrintMethod = "printVectorIndex<8>";
+  let ParserMatchClass = UImm3s8Operand;
+}
+
 class UImmScaledMemoryIndexedRange<int Width, int Scale, int OffsetVal> : AsmOperandClass {
   let Name = "UImm" # Width # "s" # Scale # "Range";
   let DiagnosticType = "InvalidMemoryIndexedRange" # Scale # "UImm" # Width;

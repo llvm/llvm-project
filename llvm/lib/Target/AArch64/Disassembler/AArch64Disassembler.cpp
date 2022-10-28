@@ -329,6 +329,9 @@ DecodeStatus AArch64Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
         case AArch64::MPR8RegClassID:
           MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZAB0));
           break;
+        case AArch64::ZTRRegClassID:
+          MI.insert(MI.begin() + i, MCOperand::createReg(AArch64::ZT0));
+          break;
         }
       } else if (Desc.OpInfo[i].OperandType ==
                  AArch64::OPERAND_IMPLICIT_IMM_0) {

@@ -1390,6 +1390,8 @@ let SubRegIndices = [zasubb] in {
   def ZA : AArch64Reg<0, "za", [ZAB0]>;
 }
 
+def ZT0 : AArch64Reg<0, "zt0">;
+
 // SME Register Classes
 
 let isAllocatable = 0 in {
@@ -1416,6 +1418,10 @@ let isAllocatable = 0 in {
   }
 }
 
+def ZTR : RegisterClass<"AArch64", [untyped], 512, (add ZT0)> {
+  let Size = 512;
+  let DiagnosticType = "InvalidLookupTable";
+}
 // SME Register Operands
 // There are three types of SME matrix register operands:
 // * Tiles:

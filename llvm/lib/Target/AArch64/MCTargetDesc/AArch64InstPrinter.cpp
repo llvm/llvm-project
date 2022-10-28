@@ -1244,7 +1244,7 @@ void AArch64InstPrinter::printAMNoIndex(const MCInst *MI, unsigned OpNum,
   O << ']';
 }
 
-template<int Scale>
+template <int Scale>
 void AArch64InstPrinter::printImmScale(const MCInst *MI, unsigned OpNum,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O) {
@@ -1576,10 +1576,11 @@ void AArch64InstPrinter::printTypedVectorList(const MCInst *MI, unsigned OpNum,
   printVectorList(MI, OpNum, STI, O, Suffix);
 }
 
+template <unsigned Scale>
 void AArch64InstPrinter::printVectorIndex(const MCInst *MI, unsigned OpNum,
                                           const MCSubtargetInfo &STI,
                                           raw_ostream &O) {
-  O << "[" << MI->getOperand(OpNum).getImm() << "]";
+  O << "[" << Scale * MI->getOperand(OpNum).getImm() << "]";
 }
 
 void AArch64InstPrinter::printMatrixIndex(const MCInst *MI, unsigned OpNum,
