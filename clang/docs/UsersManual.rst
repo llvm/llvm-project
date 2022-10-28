@@ -2842,6 +2842,7 @@ below. If multiple flags are present, the last one is used.
   information in the binary. They work based on the assumption that
   the debug type information can be spread out over multiple
   compilation units.  Specifically, the optimizations are:
+
 - will not emit type definitions for types that are not needed by a
   module and could be replaced with a forward declaration.
 - will only emit type info for a dynamic C++ class in the module that
