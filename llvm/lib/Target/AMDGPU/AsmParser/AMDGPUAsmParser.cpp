@@ -169,6 +169,8 @@ public:
     ImmTyWaitEXP,
     ImmTyWaitVAVDST,
     ImmTyWaitVMVSRC,
+    ImmTyGlobalSReg32,
+    ImmTyGlobalSReg64,
   };
 
   // Immediate operand kind.
@@ -411,6 +413,8 @@ public:
   bool isNegLo() const { return isImmTy(ImmTyNegLo); }
   bool isNegHi() const { return isImmTy(ImmTyNegHi); }
   bool isHigh() const { return isImmTy(ImmTyHigh); }
+  bool isGlobalSReg32Imm() const { return isImmTy(ImmTyGlobalSReg32); }
+  bool isGlobalSReg64Imm() const { return isImmTy(ImmTyGlobalSReg64); }
 
   bool isMod() const {
     return isClampSI() || isOModSI();
@@ -1119,6 +1123,8 @@ public:
     case ImmTyWaitVMVSRC:
       OS << "WaitVMVSRC";
       break;
+    case ImmTyGlobalSReg32: OS << "GlobalSReg32"; break;
+    case ImmTyGlobalSReg64: OS << "GlobalSReg64"; break;
     }
   }
 
@@ -1625,6 +1631,11 @@ public:
   OperandMatchResultTy parseRegWithFPInputMods(OperandVector &Operands);
   OperandMatchResultTy parseRegWithIntInputMods(OperandVector &Operands);
   OperandMatchResultTy parseVReg32OrOff(OperandVector &Operands);
+  OperandMatchResultTy parseGlobalRegImm(OperandVector &Operands,
+                                         AMDGPUOperand::ImmTy ImmTy,
+                                         unsigned ExpectedWidth);
+  OperandMatchResultTy parseGlobalSReg32Imm(OperandVector &Operands);
+  OperandMatchResultTy parseGlobalSReg64Imm(OperandVector &Operands);
   OperandMatchResultTy parseDfmtNfmt(int64_t &Format);
   OperandMatchResultTy parseUfmt(int64_t &Format);
   OperandMatchResultTy parseSymbolicSplitFormat(StringRef FormatStr, SMLoc Loc, int64_t &Format);
@@ -3304,6 +3315,58 @@ OperandMatchResultTy AMDGPUAsmParser::parseVReg32OrOff(OperandVector &Operands) 
 
   return MatchOperand_ParseFail;
 
+}
+
+OperandMatchResultTy
+AMDGPUAsmParser::parseGlobalRegImm(OperandVector &Operands,
+                                   AMDGPUOperand::ImmTy ImmTy,
+                                   unsigned ExpectedWidth) {
+  if (!isRegister())
+    return MatchOperand_NoMatch;
+
+  auto Loc = getLoc();
+  RegisterKind RegKind;
+  unsigned Reg;
+  unsigned RegNum;
+  unsigned RegWidth;
+  if (!ParseAMDGPURegister(RegKind, Reg, RegNum, RegWidth))
+    return MatchOperand_ParseFail;
+
+  // Map VCC to its underlying SGPR alias.
+  if (RegKind == IS_SPECIAL) {
+    if (Reg == AMDGPU::VCC) {
+      RegKind = IS_SGPR;
+      RegNum = 106;
+      RegWidth = ExpectedWidth;
+    } else if (Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC_HI) {
+      RegKind = IS_SGPR;
+      RegNum = Reg == AMDGPU::VCC_LO ? 106 : 107;
+      RegWidth = 32;
+    }
+  }
+
+  if (RegKind != IS_SGPR) {
+    Error(Loc, "expected an SGPR or vcc/vcc_lo/vcc_hi");
+    return MatchOperand_ParseFail;
+  }
+
+  if (RegWidth != ExpectedWidth) {
+    Error(Loc, Twine("expected a ") + Twine(ExpectedWidth) + "-bit register");
+    return MatchOperand_ParseFail;
+  }
+
+  Operands.push_back(AMDGPUOperand::CreateImm(this, RegNum, Loc, ImmTy));
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy
+AMDGPUAsmParser::parseGlobalSReg32Imm(OperandVector &Operands) {
+  return parseGlobalRegImm(Operands, AMDGPUOperand::ImmTyGlobalSReg32, 32);
+}
+
+OperandMatchResultTy
+AMDGPUAsmParser::parseGlobalSReg64Imm(OperandVector &Operands) {
+  return parseGlobalRegImm(Operands, AMDGPUOperand::ImmTyGlobalSReg64, 64);
 }
 
 unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {

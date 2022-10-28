@@ -1043,6 +1043,18 @@ def VReg32OrOffClass : AsmOperandClass {
   let ParserMethod = "parseVReg32OrOff";
 }
 
+def GlobalSReg32ImmClass : AsmOperandClass {
+  let Name = "GlobalSReg32Imm";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseGlobalSReg32Imm";
+}
+
+def GlobalSReg64ImmClass : AsmOperandClass {
+  let Name = "GlobalSReg64Imm";
+  let RenderMethod = "addImmOperands";
+  let ParserMethod = "parseGlobalSReg64Imm";
+}
+
 let OperandType = "OPERAND_IMMEDIATE" in {
 def SendMsgImm : Operand<i32> {
   let PrintMethod = "printSendMsg";
@@ -1072,6 +1084,18 @@ def DepCtrImm : Operand <i32> {
 def DELAY_FLAG : Operand <i32> {
   let ParserMatchClass = SDelayMatchClass;
   let PrintMethod = "printDelayFlag";
+}
+
+// Global register references are represented as immediate operands but printed
+// and parsed like registers.
+def globalSReg32imm : Operand<i8> {
+  let ParserMatchClass = GlobalSReg32ImmClass;
+  let PrintMethod = "printGlobalSReg32ImmOperand";
+}
+
+def globalSReg64imm : Operand<i8> {
+  let ParserMatchClass = GlobalSReg64ImmClass;
+  let PrintMethod = "printGlobalSReg64ImmOperand";
 }
 } // End OperandType = "OPERAND_IMMEDIATE"
 
