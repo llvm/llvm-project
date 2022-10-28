@@ -63,7 +63,8 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
       getNumBlocks(GenericDevice, NumTeamsClause, LoopTripCount, NumThreads);
 
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
-       "Launching kernel %s with %d blocks and %d threads in %s mode\n",
+       "Launching kernel %s with %" PRIu64
+       " blocks and %d threads in %s mode\n",
        getName(), NumBlocks, NumThreads, getExecutionModeName());
 
   return launchImpl(GenericDevice, NumThreads, NumBlocks, DynamicMemorySize,
