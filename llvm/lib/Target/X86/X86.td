@@ -187,6 +187,10 @@ def FeatureVP2INTERSECT  : SubtargetFeature<"avx512vp2intersect",
 def FeatureFP16    : SubtargetFeature<"avx512fp16", "HasFP16", "true",
                            "Support 16-bit floating point",
                            [FeatureBWI, FeatureVLX, FeatureDQI]>;
+def FeatureAVXVNNIINT8  : SubtargetFeature<"avxvnniint8",
+                             "HasAVXVNNIINT8", "true",
+                             "Enable AVX-VNNI-INT8",
+                             [FeatureAVX2]>;
 def FeaturePCLMUL  : SubtargetFeature<"pclmul", "HasPCLMUL", "true",
                          "Enable packed carry-less multiplication instructions",
                                [FeatureSSE2]>;

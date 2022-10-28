@@ -648,6 +648,10 @@ X86 Support in Clang
 - Support ISA of ``AVX-IFMA``.
   * Support intrinsic of ``_mm(256)_madd52hi_avx_epu64``.
   * Support intrinsic of ``_mm(256)_madd52lo_avx_epu64``.
+- Support ISA of ``AVX-VNNI-INT8``.
+  * Support intrinsic of ``_mm(256)_dpbssd(s)_epi32``.
+  * Support intrinsic of ``_mm(256)_dpbsud(s)_epi32``.
+  * Support intrinsic of ``_mm(256)_dpbuud(s)_epi32``.
 
 WebAssembly Support in Clang
 ----------------------------

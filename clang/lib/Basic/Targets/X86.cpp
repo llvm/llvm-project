@@ -342,6 +342,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVXIFMA = true;
     } else if (Feature == "+avxvnni") {
       HasAVXVNNI = true;
+    } else if (Feature == "+avxvnniint8") {
+      HasAVXVNNIINT8 = true;
     } else if (Feature == "+serialize") {
       HasSERIALIZE = true;
     } else if (Feature == "+tsxldtrk") {
@@ -796,6 +798,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVXIFMA__");
   if (HasAVXVNNI)
     Builder.defineMacro("__AVXVNNI__");
+  if (HasAVXVNNIINT8)
+    Builder.defineMacro("__AVXVNNIINT8__");
   if (HasSERIALIZE)
     Builder.defineMacro("__SERIALIZE__");
   if (HasTSXLDTRK)
@@ -920,6 +924,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx512vp2intersect", true)
       .Case("avxifma", true)
       .Case("avxvnni", true)
+      .Case("avxvnniint8", true)
       .Case("bmi", true)
       .Case("bmi2", true)
       .Case("cldemote", true)
@@ -1019,6 +1024,8 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx512vp2intersect", HasAVX512VP2INTERSECT)
       .Case("avxifma", HasAVXIFMA)
       .Case("avxvnni", HasAVXVNNI)
+      .Case("avxvnni", HasAVXVNNI)
+      .Case("avxvnniint8", HasAVXVNNIINT8)
       .Case("bmi", HasBMI)
       .Case("bmi2", HasBMI2)
       .Case("cldemote", HasCLDEMOTE)

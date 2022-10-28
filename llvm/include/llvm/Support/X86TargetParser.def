@@ -207,6 +207,7 @@ X86_FEATURE       (AMX_FP16,        "amx-fp16")
 X86_FEATURE       (CMPCCXADD,       "cmpccxadd")
 X86_FEATURE       (AVXVNNI,         "avxvnni")
 X86_FEATURE       (AVXIFMA,         "avxifma")
+X86_FEATURE       (AVXVNNIINT8,     "avxvnniint8")
 // These features aren't really CPU features, but the frontend can set them.
 X86_FEATURE       (RETPOLINE_EXTERNAL_THUNK,    "retpoline-external-thunk")
 X86_FEATURE       (RETPOLINE_INDIRECT_BRANCHES, "retpoline-indirect-branches")
