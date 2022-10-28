@@ -72,19 +72,15 @@ static cl::opt<bool> PollyDetectOnly(
     cl::desc("Only run scop detection, but no other optimizations"),
     cl::cat(PollyCategory));
 
-enum PassPositionChoice {
-  POSITION_EARLY,
-  POSITION_BEFORE_VECTORIZER
-};
+enum PassPositionChoice { POSITION_EARLY, POSITION_BEFORE_VECTORIZER };
 
 enum OptimizerChoice { OPTIMIZER_NONE, OPTIMIZER_ISL };
 
 static cl::opt<PassPositionChoice> PassPosition(
     "polly-position", cl::desc("Where to run polly in the pass pipeline"),
-    cl::values(
-        clEnumValN(POSITION_EARLY, "early", "Before everything"),
-        clEnumValN(POSITION_BEFORE_VECTORIZER, "before-vectorizer",
-                   "Right before the vectorizer")),
+    cl::values(clEnumValN(POSITION_EARLY, "early", "Before everything"),
+               clEnumValN(POSITION_BEFORE_VECTORIZER, "before-vectorizer",
+                          "Right before the vectorizer")),
     cl::Hidden, cl::init(POSITION_BEFORE_VECTORIZER), cl::cat(PollyCategory));
 
 static cl::opt<OptimizerChoice>
