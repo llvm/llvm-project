@@ -377,7 +377,7 @@ public:
     /// Any trailing array member of undefined or 0 size is a FAM.
     ZeroOrIncomplete = 2,
     /// Any trailing array member of undefined size is a FAM.
-    Incomplete = 3,
+    IncompleteOnly = 3,
   };
 
 public:

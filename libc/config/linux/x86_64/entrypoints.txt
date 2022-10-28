@@ -42,6 +42,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strcat
     libc.src.string.strchr
     libc.src.string.strcmp
+    libc.src.string.strcoll
     libc.src.string.strcpy
     libc.src.string.strcspn
     libc.src.string.strdup
@@ -369,6 +370,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.ferror
     libc.src.stdio.ferror_unlocked
     libc.src.stdio.fgetc
+    libc.src.stdio.fgets
     libc.src.stdio.fflush
     libc.src.stdio.fopen
     libc.src.stdio.fputc

@@ -76,14 +76,15 @@ def DeclareMethodsWithDefaultOp : Op<TestDialect, "declare_methods_op",
 // DECL: /// some function comment
 // DECL: int foo(int input);
 
-// DECL: template<typename ConcreteOp>
-// DECL: int detail::TestOpInterfaceInterfaceTraits::Model<ConcreteOp>::foo
-
 // DECL-LABEL: struct TestOpInterfaceVerifyTrait
 // DECL: verifyTrait
 
 // DECL-LABEL: struct TestOpInterfaceVerifyRegionTrait
 // DECL: verifyRegionTrait
+
+// Method implementations come last, after all class definitions.
+// DECL: template<typename ConcreteOp>
+// DECL: int detail::TestOpInterfaceInterfaceTraits::Model<ConcreteOp>::foo
 
 // OP_DECL-LABEL: class DeclareMethodsOp : public
 // OP_DECL: int foo(int input);

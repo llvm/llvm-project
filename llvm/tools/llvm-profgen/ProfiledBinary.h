@@ -11,6 +11,7 @@
 
 #include "CallContext.h"
 #include "ErrorHandling.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -166,8 +167,8 @@ public:
 
   using ProbeFrameStack = SmallVector<std::pair<StringRef, uint32_t>>;
   void trackInlineesOptimizedAway(MCPseudoProbeDecoder &ProbeDecoder,
-                              MCDecodedPseudoProbeInlineTree &ProbeNode,
-                              ProbeFrameStack &Context);
+                                  MCDecodedPseudoProbeInlineTree &ProbeNode,
+                                  ProbeFrameStack &Context);
 
   void dump() { RootContext.dumpTree(); }
 
@@ -218,8 +219,14 @@ class ProfiledBinary {
   // A list of binary functions that have samples.
   std::unordered_set<const BinaryFunction *> ProfiledFunctions;
 
+  // GUID to Elf symbol start address map
+  DenseMap<uint64_t, uint64_t> SymbolStartAddrs;
+
+  // Start address to Elf symbol GUID map
+  std::unordered_multimap<uint64_t, uint64_t> StartAddrToSymMap;
+
   // An ordered map of mapping function's start address to function range
-  // relevant info. Currently to determine if the address of ELF is the start of
+  // relevant info. Currently to determine if the offset of ELF is the start of
   // a real function, we leverage the function range info from DWARF.
   std::map<uint64_t, FuncRange> StartAddrToFuncRangeMap;
 
@@ -278,7 +285,8 @@ class ProfiledBinary {
   void setPreferredTextSegmentAddresses(const ELFObjectFileBase *O);
 
   template <class ELFT>
-  void setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj, StringRef FileName);
+  void setPreferredTextSegmentAddresses(const ELFFile<ELFT> &Obj,
+                                        StringRef FileName);
 
   void checkPseudoProbe(const ELFObjectFileBase *Obj);
 
@@ -297,6 +305,9 @@ class ProfiledBinary {
 
   // Load debug info from DWARF unit.
   void loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit);
+
+  // Create elf symbol to its start address mapping.
+  void populateElfSymbolAddressList(const ELFObjectFileBase *O);
 
   // A function may be spilt into multiple non-continuous address ranges. We use
   // this to set whether start address of a function is the real entry of the
@@ -348,7 +359,9 @@ public:
     return Address - BaseAddress + getPreferredBaseAddress();
   }
   // Return the preferred load address for the first executable segment.
-  uint64_t getPreferredBaseAddress() const { return PreferredTextSegmentAddresses[0]; }
+  uint64_t getPreferredBaseAddress() const {
+    return PreferredTextSegmentAddresses[0];
+  }
   // Return the preferred load address for the first loadable segment.
   uint64_t getFirstLoadableAddress() const { return FirstLoadableAddress; }
   // Return the file offset for the first executable segment.

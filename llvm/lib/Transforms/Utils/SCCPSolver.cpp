@@ -339,6 +339,13 @@ public:
     return A->second.PredInfo->getPredicateInfoFor(I);
   }
 
+  const LoopInfo &getLoopInfo(Function &F) {
+    auto A = AnalysisResults.find(&F);
+    assert(A != AnalysisResults.end() && A->second.LI &&
+           "Need LoopInfo analysis results for function.");
+    return *A->second.LI;
+  }
+
   DomTreeUpdater getDTU(Function &F) {
     auto A = AnalysisResults.find(&F);
     assert(A != AnalysisResults.end() && "Need analysis results for function.");
@@ -1525,6 +1532,10 @@ bool SCCPSolver::markBlockExecutable(BasicBlock *BB) {
 
 const PredicateBase *SCCPSolver::getPredicateInfoFor(Instruction *I) {
   return Visitor->getPredicateInfoFor(I);
+}
+
+const LoopInfo &SCCPSolver::getLoopInfo(Function &F) {
+  return Visitor->getLoopInfo(F);
 }
 
 DomTreeUpdater SCCPSolver::getDTU(Function &F) { return Visitor->getDTU(F); }

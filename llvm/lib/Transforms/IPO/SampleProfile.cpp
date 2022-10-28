@@ -2077,7 +2077,7 @@ void SampleProfileMatcher::detectProfileMismatch(const Function &F,
 
         StringRef CalleeName;
         if (Function *Callee = CB->getCalledFunction())
-          CalleeName = Callee->getName();
+          CalleeName = FunctionSamples::getCanonicalFnName(Callee->getName());
 
         const auto CTM = FS.findCallTargetMapAt(IRCallsite);
         const auto CallsiteFS = FS.findFunctionSamplesMapAt(IRCallsite);

@@ -15,11 +15,16 @@
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace llvm;
-using namespace llvm;
+using namespace llvm::dxbc;
 
 dxbc::PartType dxbc::parsePartType(StringRef S) {
 #define CONTAINER_PART(PartName) .Case(#PartName, PartType::PartName)
   return StringSwitch<dxbc::PartType>(S)
 #include "llvm/BinaryFormat/DXContainerConstants.def"
       .Default(dxbc::PartType::Unknown);
+}
+
+bool ShaderHash::isPopulated() {
+  static uint8_t Zeros[16] = {0};
+  return Flags > 0 || 0 != memcmp(&Digest, &Zeros, 16);
 }

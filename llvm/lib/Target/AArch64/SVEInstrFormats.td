@@ -8695,3 +8695,71 @@ class sve2p1_two_way_dot_vvi<string mnemonic, bit u>
   let Constraints = "$Zda = $_Zda";
   let DestructiveInstType = DestructiveOther;
 }
+
+
+class sve2p1_ptrue_pn<string mnemonic, bits<2> sz, PNRP8to15RegOp pnrty>
+    : I<(outs pnrty:$PNd), (ins ), mnemonic, "\t$PNd",
+        "", []>, Sched<[]> {
+  bits<3> PNd;
+  let Inst{31-24}  = 0b00100101;
+  let Inst{23-22} = sz;
+  let Inst{21-3}  = 0b1000000111100000010;
+  let Inst{2-0}   = PNd;
+}
+
+
+multiclass sve2p1_ptrue_pn<string mnemonic> {
+ def _B : sve2p1_ptrue_pn<mnemonic, 0b00, PNR8_p8to15>;
+ def _H : sve2p1_ptrue_pn<mnemonic, 0b01, PNR16_p8to15>;
+ def _S : sve2p1_ptrue_pn<mnemonic, 0b10, PNR32_p8to15>;
+ def _D : sve2p1_ptrue_pn<mnemonic, 0b11, PNR64_p8to15>;
+}
+
+
+class sve2p1_pred_as_ctr_to_mask<string mnemonic, bits<2> sz, PPRRegOp pprty>
+    : I<(outs pprty:$Pd), (ins PNRAny_p8to15:$PNn, VectorIndexS:$imm2),
+        mnemonic, "\t$Pd, $PNn$imm2",
+        "", []>, Sched<[]> {
+  bits<4> Pd;
+  bits<3> PNn;
+  bits<2> imm2;
+  let Inst{31-24} = 0b00100101;
+  let Inst{23-22} = sz;
+  let Inst{21-10} = 0b100000011100;
+  let Inst{9-8}   = imm2;
+  let Inst{7-5}   = PNn;
+  let Inst{4}     = 0b1;
+  let Inst{3-0}   = Pd;
+}
+
+
+multiclass sve2p1_pred_as_ctr_to_mask<string mnemonic> {
+ def _B : sve2p1_pred_as_ctr_to_mask<mnemonic, 0b00, PPR8>;
+ def _H : sve2p1_pred_as_ctr_to_mask<mnemonic, 0b01, PPR16>;
+ def _S : sve2p1_pred_as_ctr_to_mask<mnemonic, 0b10, PPR32>;
+ def _D : sve2p1_pred_as_ctr_to_mask<mnemonic, 0b11, PPR64>;
+}
+
+
+// SME2 multi-vec extract narrow
+class sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc, bits<3> tsz>
+    : I<(outs ZPR16:$Zd), (ins ZZ_s_mul_r:$Zn),
+        mnemonic, "\t$Zd, $Zn",
+        "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<4> Zn;
+  let Inst{31-23} = 0b010001010;
+  let Inst{22}    = tsz{2};
+  let Inst{21}    = 0b1;
+  let Inst{20-19} = tsz{1-0};
+  let Inst{18-13} = 0b001010;
+  let Inst{12-11} = opc;
+  let Inst{10}    = 0b0;
+  let Inst{9-6}   = Zn;
+  let Inst{5}     = 0b0;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2p1_multi_vec_extract_narrow<string mnemonic, bits<2> opc> {
+  def : sve2p1_multi_vec_extract_narrow<mnemonic, opc, 0b010>;
+}

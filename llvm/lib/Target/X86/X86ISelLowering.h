@@ -584,6 +584,13 @@ namespace llvm {
     VFCMULCSH,
     VFCMULCSH_RND,
 
+    VPDPBSUD,
+    VPDPBSUDS,
+    VPDPBUUD,
+    VPDPBUUDS,
+    VPDPBSSD,
+    VPDPBSSDS,
+
     // Compress and expand.
     COMPRESS,
     EXPAND,

@@ -305,34 +305,34 @@ void foo(void) {
 void foo(int *List, int Length) {
   int i;
 #pragma clang loop vectorize(enable, extra)
-/* expected-warning {{extra tokens at end of '#pragma clang loop loop' - ignored}}*/ while (i-6 < Length) {
+/* expected-warning {{extra tokens at end of '#pragma clang loop vectorize' - ignored}}*/ while (i-6 < Length) {
     List[i] = i;
   }
 
 #pragma clang loop interleave(enable, extra)
-/* expected-warning {{extra tokens at end of '#pragma clang loop loop' - ignored}}*/ while (i-6 < Length) {
+/* expected-warning {{extra tokens at end of '#pragma clang loop interleave' - ignored}}*/ while (i-6 < Length) {
     List[i] = i;
   }
 
 #pragma clang loop unroll(enable, extra)
-/* expected-warning {{extra tokens at end of '#pragma clang loop loop' - ignored}}*/ while (i-6 < Length) {
+/* expected-warning {{extra tokens at end of '#pragma clang loop unroll' - ignored}}*/ while (i-6 < Length) {
     List[i] = i;
   }
 
 #pragma clang loop vectorize_predicate(enable, extra)
-/* expected-warning {{extra tokens at end of '#pragma clang loop loop' - ignored}}*/ while (i-6 < Length) {
+/* expected-warning {{extra tokens at end of '#pragma clang loop vectorize_predicate' - ignored}}*/ while (i-6 < Length) {
     List[i] = i;
   }
 
 #pragma clang loop pipeline(disable, extra)
-/* expected-warning {{extra tokens at end of '#pragma clang loop loop' - ignored}}*/ while (i-6 < Length) {
+/* expected-warning {{extra tokens at end of '#pragma clang loop pipeline' - ignored}}*/ while (i-6 < Length) {
     List[i] = i;
   }
 
-/* expected-warning {{extra tokens at end of '#pragma clang loop loop' - ignored}}*/ #pragma clang loop vectorize_width(2, scalable, extra)
-/* expected-warning {{extra tokens at end of '#pragma clang loop loop' - ignored}}*/ #pragma clang loop interleave_count(2, extra)
-/* expected-warning {{extra tokens at end of '#pragma clang loop loop' - ignored}}*/ #pragma clang loop unroll_count(2, extra)
-/* expected-warning {{extra tokens at end of '#pragma clang loop loop' - ignored}}*/ #pragma clang loop pipeline_initiation_interval(2, extra)
+/* expected-warning {{extra tokens at end of '#pragma clang loop vectorize_width' - ignored}}*/ #pragma clang loop vectorize_width(2, scalable, extra)
+/* expected-warning {{extra tokens at end of '#pragma clang loop interleave_count' - ignored}}*/ #pragma clang loop interleave_count(2, extra)
+/* expected-warning {{extra tokens at end of '#pragma clang loop unroll_count' - ignored}}*/ #pragma clang loop unroll_count(2, extra)
+/* expected-warning {{extra tokens at end of '#pragma clang loop pipeline_initiation_interval' - ignored}}*/ #pragma clang loop pipeline_initiation_interval(2, extra)
   while (i-6 < Length) {
     List[i] = i;
   }

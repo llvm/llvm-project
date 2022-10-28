@@ -131,3 +131,18 @@ namespace DefaultInit {
      constexpr int x = arr.a[0];
   }
 };
+
+namespace IncDec {
+  // FIXME: Pointer arithmethic needs to be supported in inc/dec
+  //   unary operators
+#if 0
+  constexpr int getNextElem(const int *A, int I) {
+    const int *B = (A + I);
+    ++B;
+    return *B;
+  }
+  constexpr int E[] = {1,2,3,4};
+
+  static_assert(getNextElem(E, 1) == 3);
+#endif
+};

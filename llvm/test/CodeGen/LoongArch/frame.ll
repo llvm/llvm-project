@@ -27,6 +27,7 @@ define i32 @test() nounwind {
   ret i32 0
 }
 
+;; Note: will create an emergency spill slot, if (!isInt<11>(StackSize)).
 ;; Should involve only one SP-adjusting addi per adjustment.
 define void @test_large_frame_size_2032() {
 ; CHECK-LABEL: test_large_frame_size_2032:
@@ -35,7 +36,7 @@ define void @test_large_frame_size_2032() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 2032
 ; CHECK-NEXT:    addi.d $sp, $sp, 2032
 ; CHECK-NEXT:    ret
-  %1 = alloca i8, i32 2032
+  %1 = alloca i8, i32 2016 ; + 16(emergency slot) = 2032
   ret void
 }
 
@@ -49,7 +50,7 @@ define void @test_large_frame_size_2048() {
 ; CHECK-NEXT:    addi.d $sp, $sp, 2032
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
-  %1 = alloca i8, i32 2048
+  %1 = alloca i8, i32 2032 ; + 16(emergency slot) = 2048
   ret void
 }
 
@@ -63,21 +64,35 @@ define void @test_large_frame_size_2064() {
 ; CHECK-NEXT:    addi.d $sp, $sp, 2032
 ; CHECK-NEXT:    addi.d $sp, $sp, 32
 ; CHECK-NEXT:    ret
-  %1 = alloca i8, i32 2064
+  %1 = alloca i8, i32 2048 ; + 16(emergency slot) = 2064
   ret void
 }
 
+;; NOTE: Due to the problem with the emegency spill slot, the scratch register
+;; will not be used when the fp is eliminated. To make this test valid, add the
+;; attribute "frame-pointer=all".
+
 ;; SP should be adjusted with help of a scratch register.
-define void @test_large_frame_size_1234576() {
+define void @test_large_frame_size_1234576() "frame-pointer"="all" {
 ; CHECK-LABEL: test_large_frame_size_1234576:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lu12i.w $a0, 301
-; CHECK-NEXT:    ori $a0, $a0, 1680
+; CHECK-NEXT:    addi.d $sp, $sp, -2032
+; CHECK-NEXT:    .cfi_def_cfa_offset 2032
+; CHECK-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
+; CHECK-NEXT:    st.d $fp, $sp, 2016 # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset 1, -8
+; CHECK-NEXT:    .cfi_offset 22, -16
+; CHECK-NEXT:    addi.d $fp, $sp, 2032
+; CHECK-NEXT:    .cfi_def_cfa 22, 0
+; CHECK-NEXT:    lu12i.w $a0, 300
+; CHECK-NEXT:    ori $a0, $a0, 3760
 ; CHECK-NEXT:    sub.d $sp, $sp, $a0
-; CHECK-NEXT:    .cfi_def_cfa_offset 1234576
-; CHECK-NEXT:    lu12i.w $a0, 301
-; CHECK-NEXT:    ori $a0, $a0, 1680
+; CHECK-NEXT:    lu12i.w $a0, 300
+; CHECK-NEXT:    ori $a0, $a0, 3760
 ; CHECK-NEXT:    add.d $sp, $sp, $a0
+; CHECK-NEXT:    ld.d $fp, $sp, 2016 # 8-byte Folded Reload
+; CHECK-NEXT:    ld.d $ra, $sp, 2024 # 8-byte Folded Reload
+; CHECK-NEXT:    addi.d $sp, $sp, 2032
 ; CHECK-NEXT:    ret
   %1 = alloca i8, i32 1234567
   ret void

@@ -4228,16 +4228,10 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
   if (Func->getSubprogram())
     return;
 
-  // Do not emit a declaration subprogram for a builtin, a function with nodebug
-  // attribute, or if call site info isn't required. Also, elide declarations
-  // for functions with reserved names, as call site-related features aren't
-  // interesting in this case (& also, the compiler may emit calls to these
-  // functions without debug locations, which makes the verifier complain).
-  if (CalleeDecl->getBuiltinID() != 0 || CalleeDecl->hasAttr<NoDebugAttr>() ||
+  // Do not emit a declaration subprogram for a function with nodebug
+  // attribute, or if call site info isn't required.
+  if (CalleeDecl->hasAttr<NoDebugAttr>() ||
       getCallSiteRelatedAttrs() == llvm::DINode::FlagZero)
-    return;
-  if (CalleeDecl->isReserved(CGM.getLangOpts()) !=
-      ReservedIdentifierStatus::NotReserved)
     return;
 
   // If there is no DISubprogram attached to the function being called,

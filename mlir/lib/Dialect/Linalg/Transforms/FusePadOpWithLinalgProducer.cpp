@@ -110,7 +110,7 @@ struct FusePadOp : OpRewritePattern<tensor::PadOp> {
     // Clone the generic op.
     auto clonedOp =
         cast<linalg::GenericOp>(rewriter.clone(*linalgOp.getOperation()));
-    clonedOp.setOutputOperand(resultNumber, slice.getResult());
+    clonedOp.setDpsInitOperand(resultNumber, slice.getResult());
 
     // Insert it back into the result of the fill.
     rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(

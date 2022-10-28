@@ -241,7 +241,9 @@ void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
       this);
   Finder->addMatcher(
       cxxConstructorDecl(
-          unless(hasParent(IsUnionLikeClass)), isDefinition(),
+          unless(
+              hasParent(decl(anyOf(IsUnionLikeClass, functionTemplateDecl())))),
+          isDefinition(),
           anyOf(
               // Default constructor.
               allOf(unless(hasAnyConstructorInitializer(isWritten())),
@@ -257,8 +259,9 @@ void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
       this);
   // Copy-assignment operator.
   Finder->addMatcher(
-      cxxMethodDecl(unless(hasParent(IsUnionLikeClass)), isDefinition(),
-                    isCopyAssignmentOperator(),
+      cxxMethodDecl(unless(hasParent(
+                        decl(anyOf(IsUnionLikeClass, functionTemplateDecl())))),
+                    isDefinition(), isCopyAssignmentOperator(),
                     // isCopyAssignmentOperator() allows the parameter to be
                     // passed by value, and in this case it cannot be
                     // defaulted.

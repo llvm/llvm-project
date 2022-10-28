@@ -169,6 +169,9 @@ struct RTLsTy {
   // (i.e. the library attempts to load the RTLs (plugins) only once).
   std::once_flag InitFlag;
   void loadRTLs(); // not thread-safe
+
+private:
+  static bool attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL);
 };
 
 /// Map between the host entry begin and the translation table. Each

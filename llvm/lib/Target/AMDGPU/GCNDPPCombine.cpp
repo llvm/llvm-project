@@ -711,7 +711,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
         continue;
       }
       while (!S.second.empty())
-        S.first->getOperand(S.second.pop_back_val()).setIsUndef(true);
+        S.first->getOperand(S.second.pop_back_val()).setIsUndef();
     }
   }
 

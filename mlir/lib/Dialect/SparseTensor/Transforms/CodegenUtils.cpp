@@ -97,10 +97,11 @@ static Value genIndexAndValueForDense(OpBuilder &builder, Location loc,
 SparseTensorLoopEmitter::SparseTensorLoopEmitter(ValueRange tensors,
                                                  bool hasOutput,
                                                  bool isSparseOut)
-    : hasOutput(hasOutput), tensors(tensors.begin(), tensors.end()),
-      dimTypes(tensors.size()), pidxs(tensors.size()), coord(tensors.size()),
-      highs(tensors.size()), ptrBuffer(tensors.size()),
-      idxBuffer(tensors.size()), valBuffer(tensors.size()), loopStack() {
+    : hasOutput(hasOutput), isSparseOut(isSparseOut),
+      tensors(tensors.begin(), tensors.end()), dimTypes(tensors.size()),
+      pidxs(tensors.size()), coord(tensors.size()), highs(tensors.size()),
+      ptrBuffer(tensors.size()), idxBuffer(tensors.size()),
+      valBuffer(tensors.size()), loopStack() {
   for (size_t tid = 0, e = tensors.size(); tid < e; tid++) {
     auto t = tensors[tid];
     // a scalar or 0-dimension tensors
@@ -246,7 +247,7 @@ Operation *SparseTensorLoopEmitter::enterLoopOverTensorAtDim(
     coord[tid][dim] = iv;
     // generate pidx for dense dim (pidx = i * sz + j)
     auto enc = getSparseTensorEncoding(tensors[tid].getType());
-    if (enc)
+    if (enc && !isSparseOutput(tid))
       pidxs[tid][dim] = genAddress(builder, loc, tid, dim, iv);
   }
 
@@ -353,7 +354,7 @@ Operation *SparseTensorLoopEmitter::enterCoIterationOverTensorsAtDims(
       pidxs[tid][dim] = min;
       // generate pidx for dense dim (pidx = i * sz + j)
       auto enc = getSparseTensorEncoding(tensors[tid].getType());
-      if (enc)
+      if (enc && !isSparseOutput(tid))
         pidxs[tid][dim] = genAddress(builder, loc, tid, dim, min);
     }
     // NOTE: we can also prepares for next dim here in advance
@@ -419,7 +420,7 @@ void SparseTensorLoopEmitter::emitExtraLocalsForTensorsAtDenseDims(
   for (auto [tid, dim] : llvm::zip(tids, dims)) {
     assert(isDenseDLT(dimTypes[tid][dim]));
     auto enc = getSparseTensorEncoding(tensors[tid].getType());
-    if (enc) {
+    if (enc && !isSparseOutput(tid)) {
       bool validPidx = dim == 0 || pidxs[tid][dim - 1];
       if (!validPidx) {
         // We might not find the pidx for the sparse output tensor as it is

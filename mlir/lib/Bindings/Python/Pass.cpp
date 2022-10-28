@@ -82,15 +82,15 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
           py::arg("enable"), "Enable / disable verify-each.")
       .def_static(
           "parse",
-          [](const std::string pipeline, DefaultingPyMlirContext context) {
+          [](const std::string &pipeline, DefaultingPyMlirContext context) {
             MlirPassManager passManager = mlirPassManagerCreate(context->get());
-            MlirLogicalResult status = mlirParsePassPipeline(
+            PyPrintAccumulator errorMsg;
+            MlirLogicalResult status = mlirOpPassManagerAddPipeline(
                 mlirPassManagerGetAsOpPassManager(passManager),
-                mlirStringRefCreate(pipeline.data(), pipeline.size()));
+                mlirStringRefCreate(pipeline.data(), pipeline.size()),
+                errorMsg.getCallback(), errorMsg.getUserData());
             if (mlirLogicalResultIsFailure(status))
-              throw SetPyError(PyExc_ValueError,
-                               llvm::Twine("invalid pass pipeline '") +
-                                   pipeline + "'.");
+              throw SetPyError(PyExc_ValueError, std::string(errorMsg.join()));
             return new PyPassManager(passManager);
           },
           py::arg("pipeline"), py::arg("context") = py::none(),

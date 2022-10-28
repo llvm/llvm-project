@@ -16,7 +16,9 @@
 
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/MLIRContext.h"
@@ -27,6 +29,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;
@@ -672,13 +675,37 @@ void NVVMDialect::initialize() {
 
 LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
                                                     NamedAttribute attr) {
+  StringAttr attrName = attr.getName();
   // Kernel function attribute should be attached to functions.
-  if (attr.getName() == NVVMDialect::getKernelFuncAttrName()) {
+  if (attrName == NVVMDialect::getKernelFuncAttrName()) {
     if (!isa<LLVM::LLVMFuncOp>(op)) {
       return op->emitError() << "'" << NVVMDialect::getKernelFuncAttrName()
                              << "' attribute attached to unexpected op";
     }
   }
+  // If maxntid and reqntid exist, it must be an array with max 3 dim
+  if (attrName == NVVMDialect::getMaxntidAttrName() ||
+      attrName == NVVMDialect::getReqntidAttrName()) {
+    auto values = attr.getValue().dyn_cast<ArrayAttr>();
+    if (!values || values.empty() || values.size() > 3)
+      return op->emitError()
+             << "'" << attrName
+             << "' attribute must be integer array with maximum 3 index";
+    for (auto val : attr.getValue().cast<ArrayAttr>()) {
+      if (!val.dyn_cast<IntegerAttr>())
+        return op->emitError()
+               << "'" << attrName
+               << "' attribute must be integer array with maximum 3 index";
+    }
+  }
+  // If minctasm and maxnreg exist, it must be an array with max 3 dim
+  if (attrName == NVVMDialect::getMinctasmAttrName() ||
+      attrName == NVVMDialect::getMaxnregAttrName()) {
+    if (!attr.getValue().dyn_cast<IntegerAttr>())
+      return op->emitError()
+             << "'" << attrName << "' attribute must be integer constant";
+  }
+
   return success();
 }
 

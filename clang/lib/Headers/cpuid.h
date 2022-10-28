@@ -206,8 +206,10 @@
 #define bit_CMPCCXADD     0x00000080
 #define bit_AMXFP16       0x00200000
 #define bit_HRESET        0x00400000
+#define bit_AVXIFMA       0x00800000
 
 /* Features in %edx for leaf 7 sub-leaf 1 */
+#define bit_AVXVNNIINT8   0x00000010
 #define bit_PREFETCHI     0x00004000
 
 /* Features in %eax for leaf 13 sub-leaf 1 */

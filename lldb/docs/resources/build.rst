@@ -99,7 +99,7 @@ Windows
   or even write new tests at all, PTVS is an indispensable debugging
   extension to VS that enables full editing and debugging support for Python
   (including mixed native/managed debugging).
-* `SWIG for Windows <http://www.swig.org/download.html>_`
+* `SWIG for Windows <http://www.swig.org/download.html>`_
 
 The steps outlined here describes how to set up your system and install the
 required dependencies such that they can be found when needed during the build

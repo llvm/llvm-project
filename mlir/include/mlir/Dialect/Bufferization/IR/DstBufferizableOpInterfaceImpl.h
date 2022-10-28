@@ -33,14 +33,14 @@ struct DstBufferizableOpInterfaceExternalModel
                                const AnalysisState &state) const {
     // Only outputs bufferize to a memory write.
     auto dstOp = cast<DestinationStyleOpInterface>(op);
-    return dstOp.isOutput(&opOperand);
+    return dstOp.isDpsInit(&opOperand);
   }
 
   SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     // Output operands alias with their respective tied OpResults.
     auto dstOp = cast<DestinationStyleOpInterface>(op);
-    if (dstOp.isOutput(&opOperand))
+    if (dstOp.isDpsInit(&opOperand))
       return {dstOp.getTiedOpResult(&opOperand)};
     return {};
   }

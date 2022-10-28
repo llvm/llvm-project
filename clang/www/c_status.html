@@ -696,7 +696,15 @@ conformance.</p>
     <tr>
       <td>Preprocessor line numbers unspecified</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2322.htm">N2322</a></td>
-      <td class="full" align="center">Yes</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+        The line number associated with a macro invocation is not the line
+        number of the first character of the macro name in the invocation.
+        Additionally, Clang may not associate the line number of a pp-directive
+        with the first <code>#</code> token. As these are recommended practices
+        and not normative requirements, Clang's behavior is still conforming.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>deprecated attribute</td>
@@ -842,7 +850,7 @@ conformance.</p>
     <tr>
       <td>Missing +(x) in table</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2641.htm">N2641</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>Add support for preprocessing directives elifdef and elifndef</td>
@@ -858,7 +866,7 @@ conformance.</p>
     <tr>
       <td>Zeros compare equal</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2670.pdf">N2670</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>Negative values</td>
@@ -908,7 +916,7 @@ conformance.</p>
     <tr>
       <td>Numerically equal</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2716.htm">N2716</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>char16_t & char32_t string literals shall be UTF-16 & UTF-32</td>
@@ -1050,7 +1058,7 @@ conformance.</p>
     <tr>
       <td>Revised Suggestions of Change for Numerically Equal/Equivalent</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2847.pdf">N2847</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>5.2.4.2.2 Cleanup, Again Again (N2806 update)</td>
