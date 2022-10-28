@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_SPIRV_TRANSFORMS_PASSES_H_
 #define MLIR_DIALECT_SPIRV_TRANSFORMS_PASSES_H_
 
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -22,7 +23,6 @@ class ModuleOp;
 namespace spirv {
 
 class ModuleOp;
-class TargetEnvAttr;
 
 //===----------------------------------------------------------------------===//
 // Passes
