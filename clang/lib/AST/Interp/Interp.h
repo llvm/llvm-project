@@ -281,6 +281,105 @@ bool Neg(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+enum class PushVal : bool {
+  No,
+  Yes,
+};
+enum class IncDecOp {
+  Inc,
+  Dec,
+};
+
+template <typename T, IncDecOp Op, PushVal DoPush>
+bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  T Value = Ptr.deref<T>();
+  T Result;
+
+  if constexpr (DoPush == PushVal::Yes)
+    S.Stk.push<T>(Result);
+
+  if constexpr (Op == IncDecOp::Inc) {
+    if (!T::increment(Value, &Result)) {
+      Ptr.deref<T>() = Result;
+      return true;
+    }
+  } else {
+    if (!T::decrement(Value, &Result)) {
+      Ptr.deref<T>() = Result;
+      return true;
+    }
+  }
+
+  // Something went wrong with the previous operation. Compute the
+  // result with another bit of precision.
+  unsigned Bits = Value.bitWidth() + 1;
+  APSInt APResult;
+  if constexpr (Op == IncDecOp::Inc)
+    APResult = ++Value.toAPSInt(Bits);
+  else
+    APResult = --Value.toAPSInt(Bits);
+
+  // Report undefined behaviour, stopping if required.
+  const Expr *E = S.Current->getExpr(OpPC);
+  QualType Type = E->getType();
+  if (S.checkingForUndefinedBehavior()) {
+    SmallString<32> Trunc;
+    APResult.trunc(Result.bitWidth()).toString(Trunc, 10);
+    auto Loc = E->getExprLoc();
+    S.report(Loc, diag::warn_integer_constant_overflow) << Trunc << Type;
+    return true;
+  }
+
+  S.CCEDiag(E, diag::note_constexpr_overflow) << APResult << Type;
+  return S.noteUndefinedBehavior();
+}
+
+/// 1) Pops a pointer from the stack
+/// 2) Load the value from the pointer
+/// 3) Writes the value increased by one back to the pointer
+/// 4) Pushes the original (pre-inc) value on the stack.
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool Inc(InterpState &S, CodePtr OpPC) {
+  // FIXME: Check initialization of Ptr
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  return IncDecHelper<T, IncDecOp::Inc, PushVal::Yes>(S, OpPC, Ptr);
+}
+
+/// 1) Pops a pointer from the stack
+/// 2) Load the value from the pointer
+/// 3) Writes the value increased by one back to the pointer
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool IncPop(InterpState &S, CodePtr OpPC) {
+  // FIXME: Check initialization of Ptr
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  return IncDecHelper<T, IncDecOp::Inc, PushVal::No>(S, OpPC, Ptr);
+}
+
+/// 1) Pops a pointer from the stack
+/// 2) Load the value from the pointer
+/// 3) Writes the value decreased by one back to the pointer
+/// 4) Pushes the original (pre-dec) value on the stack.
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool Dec(InterpState &S, CodePtr OpPC) {
+  // FIXME: Check initialization of Ptr
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  return IncDecHelper<T, IncDecOp::Dec, PushVal::Yes>(S, OpPC, Ptr);
+}
+
+/// 1) Pops a pointer from the stack
+/// 2) Load the value from the pointer
+/// 3) Writes the value decreased by one back to the pointer
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool DecPop(InterpState &S, CodePtr OpPC) {
+  // FIXME: Check initialization of Ptr
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  return IncDecHelper<T, IncDecOp::Dec, PushVal::No>(S, OpPC, Ptr);
+}
+
 /// 1) Pops the value from the stack.
 /// 2) Pushes the bitwise complemented value on the stack (~V).
 template <PrimType Name, class T = typename PrimConv<Name>::T>

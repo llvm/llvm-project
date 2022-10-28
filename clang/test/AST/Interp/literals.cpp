@@ -331,3 +331,88 @@ namespace strings {
 
 #pragma clang diagnostic pop
 };
+
+#if __cplusplus > 201402L
+namespace IncDec {
+  constexpr int zero() {
+    int a = 0;
+    a++;
+    ++a;
+    a--;
+    --a;
+    return a;
+  }
+  static_assert(zero() == 0, "");
+
+  constexpr int preInc() {
+    int a = 0;
+    return ++a;
+  }
+  static_assert(preInc() == 1, "");
+
+  constexpr int postInc() {
+    int a = 0;
+    return a++;
+  }
+  static_assert(postInc() == 0, "");
+
+  constexpr int preDec() {
+    int a = 0;
+    return --a;
+  }
+  static_assert(preDec() == -1, "");
+
+  constexpr int postDec() {
+    int a = 0;
+    return a--;
+  }
+  static_assert(postDec() == 0, "");
+
+  constexpr int three() {
+    int a = 0;
+    return ++a + ++a; // expected-warning {{multiple unsequenced modifications to 'a'}} \
+                      // ref-warning {{multiple unsequenced modifications to 'a'}} \
+
+  }
+  static_assert(three() == 3, "");
+
+  constexpr bool incBool() {
+    bool b = false;
+    return ++b; // expected-error {{ISO C++17 does not allow incrementing expression of type bool}} \
+                // ref-error {{ISO C++17 does not allow incrementing expression of type bool}}
+  }
+  static_assert(incBool(), "");
+
+  constexpr int uninit() {
+    int a;
+    ++a; // ref-note {{increment of uninitialized}} \
+         // FIXME: Should also be rejected by new interpreter
+    return 1;
+  }
+  static_assert(uninit(), ""); // ref-error {{not an integral constant expression}} \
+                               // ref-note {{in call to 'uninit()'}}
+
+  constexpr int OverFlow() { // ref-error {{never produces a constant expression}}
+    int a = INT_MAX;
+    ++a; // ref-note 2{{is outside the range}} \
+         // expected-note {{is outside the range}}
+    return -1;
+  }
+  static_assert(OverFlow() == -1, "");  // expected-error {{not an integral constant expression}} \
+                                        // expected-note {{in call to 'OverFlow()'}} \
+                                        // ref-error {{not an integral constant expression}} \
+                                        // ref-note {{in call to 'OverFlow()'}}
+
+
+  constexpr int UnderFlow() { // ref-error {{never produces a constant expression}}
+    int a = INT_MIN;
+    --a; // ref-note 2{{is outside the range}} \
+         // expected-note {{is outside the range}}
+    return -1;
+  }
+  static_assert(UnderFlow() == -1, "");  // expected-error {{not an integral constant expression}} \
+                                         // expected-note {{in call to 'UnderFlow()'}} \
+                                         // ref-error {{not an integral constant expression}} \
+                                         // ref-note {{in call to 'UnderFlow()'}}
+};
+#endif
