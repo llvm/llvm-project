@@ -663,7 +663,6 @@ TEST(LlvmLibcScanfParserTest, IndexModeComplexParsing) {
   EXPECT_SFORMAT_EQ(expected0, format_arr[0]);
 
   expected1.has_conv = true;
-
   // "%3$llu"
   expected1.raw_string = {str + 12, 6};
   expected1.length_modifier = __llvm_libc::scanf_core::LengthModifier::ll;
@@ -673,29 +672,26 @@ TEST(LlvmLibcScanfParserTest, IndexModeComplexParsing) {
   EXPECT_SFORMAT_EQ(expected1, format_arr[1]);
 
   expected2.has_conv = false;
-
   // " "
   expected2.raw_string = {str + 18, 1};
 
   EXPECT_SFORMAT_EQ(expected2, format_arr[2]);
 
   expected3.has_conv = true;
-
+  // "%%"
   expected3.raw_string = {str + 19, 2};
   expected3.conv_name = '%';
 
   EXPECT_SFORMAT_EQ(expected3, format_arr[3]);
 
   expected4.has_conv = false;
-
   // " "
   expected4.raw_string = {str + 21, 1};
 
   EXPECT_SFORMAT_EQ(expected4, format_arr[4]);
 
   expected5.has_conv = true;
-
-  // "%%"
+  // "%2$*f"
   expected5.raw_string = {str + 22, 5};
   expected5.flags = __llvm_libc::scanf_core::FormatFlags::NO_WRITE;
   expected5.conv_name = 'f';
@@ -703,7 +699,6 @@ TEST(LlvmLibcScanfParserTest, IndexModeComplexParsing) {
   EXPECT_SFORMAT_EQ(expected5, format_arr[5]);
 
   expected6.has_conv = false;
-
   // " "
   expected6.raw_string = {str + 27, 1};
 
@@ -711,7 +706,7 @@ TEST(LlvmLibcScanfParserTest, IndexModeComplexParsing) {
 
   expected7.has_conv = true;
 
-  // "%2$*f"
+  // "%4$d"
   expected7.raw_string = {str + 28, 4};
   expected7.output_ptr = &arg4;
   expected7.conv_name = 'd';
@@ -719,14 +714,12 @@ TEST(LlvmLibcScanfParserTest, IndexModeComplexParsing) {
   EXPECT_SFORMAT_EQ(expected7, format_arr[7]);
 
   expected8.has_conv = false;
-
   // " "
   expected8.raw_string = {str + 32, 1};
 
   EXPECT_SFORMAT_EQ(expected8, format_arr[8]);
 
   expected9.has_conv = true;
-
   // "%1$1c"
   expected9.raw_string = {str + 33, 5};
   expected9.max_width = 1;
@@ -735,8 +728,7 @@ TEST(LlvmLibcScanfParserTest, IndexModeComplexParsing) {
 
   EXPECT_SFORMAT_EQ(expected9, format_arr[9]);
 
-  expected9.has_conv = true;
-
+  expected10.has_conv = true;
   // "%5$[123]"
   expected10.raw_string = {str + 38, 8};
   expected10.output_ptr = &arg5;
