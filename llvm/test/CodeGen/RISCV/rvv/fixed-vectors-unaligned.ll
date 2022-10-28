@@ -144,11 +144,9 @@ define <2 x i64> @mgather_v2i64_align4(<2 x i64*> %ptrs, <2 x i1> %m, <2 x i64> 
 ; RV32-NEXT:    vmv.x.s a1, v8
 ; RV32-NEXT:    lw a2, 0(a1)
 ; RV32-NEXT:    lw a1, 4(a1)
-; RV32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; RV32-NEXT:    vslide1down.vx v10, v8, a2
-; RV32-NEXT:    vslide1down.vx v10, v10, a1
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, tu, ma
-; RV32-NEXT:    vslideup.vi v9, v10, 0
+; RV32-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; RV32-NEXT:    vslide1down.vx v9, v9, a2
+; RV32-NEXT:    vslide1down.vx v9, v9, a1
 ; RV32-NEXT:    andi a0, a0, 2
 ; RV32-NEXT:    beqz a0, .LBB5_2
 ; RV32-NEXT:  .LBB5_4: # %cond.load1
