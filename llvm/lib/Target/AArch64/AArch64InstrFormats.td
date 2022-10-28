@@ -941,6 +941,13 @@ def timm0_1 : Operand<i64>, TImmLeaf<i64, [{
   let ParserMatchClass = Imm0_1Operand;
 }
 
+// timm32_0_1 predicate - True if the 32-bit immediate is in the range [0,1]
+def timm32_0_1 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 2;
+}]> {
+  let ParserMatchClass = Imm0_1Operand;
+}
+
 // imm0_15 predicate - True if the immediate is in the range [0,15]
 def imm0_15 : Operand<i64>, ImmLeaf<i64, [{
   return ((uint64_t)Imm) < 16;
@@ -962,6 +969,13 @@ def imm0_3 : Operand<i64>, ImmLeaf<i64, [{
   let ParserMatchClass = Imm0_3Operand;
 }
 
+// timm32_0_3 predicate - True if the 32-bit immediate is in the range [0,3]
+def timm32_0_3 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 4;
+}]> {
+  let ParserMatchClass = Imm0_3Operand;
+}
+
 // timm32_0_7 predicate - True if the 32-bit immediate is in the range [0,7]
 def timm32_0_7 : Operand<i32>, TImmLeaf<i32, [{
   return ((uint32_t)Imm) < 8;
@@ -974,6 +988,27 @@ def imm32_0_15 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint32_t)Imm) < 16;
 }]> {
   let ParserMatchClass = Imm0_15Operand;
+}
+
+// timm32_0_15 predicate - True if the 32-bit immediate is in the range [0,15]
+def timm32_0_15 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 16;
+}]> {
+  let ParserMatchClass = Imm0_15Operand;
+}
+
+// timm32_0_31 predicate - True if the 32-bit immediate is in the range [0,31]
+def timm32_0_31 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 32;
+}]> {
+  let ParserMatchClass = Imm0_31Operand;
+}
+
+// timm32_0_255 predicate - True if the 32-bit immediate is in the range [0,255]
+def timm32_0_255 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) < 256;
+}]> {
+  let ParserMatchClass = Imm0_255Operand;
 }
 
 // An arithmetic shifter operand:
@@ -1340,34 +1375,34 @@ defm sve_elm_idx_extdup_q
   : VectorIndex<i64, SVEVectorIndexExtDupQOperand,
                 [{ return ((uint64_t)Imm) < 4; }]>;
 
-def sme_elm_idx0_0 : Operand<i64>, ImmLeaf<i64, [{
-  return ((uint64_t)Imm) == 0;
+def sme_elm_idx0_0 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) == 0;
 }]> {
   let ParserMatchClass = Imm0_0Operand;
   let PrintMethod = "printMatrixIndex";
   let OperandNamespace = "AArch64";
   let OperandType = "OPERAND_IMPLICIT_IMM_0";
 }
-def sme_elm_idx0_1 : Operand<i64>, ImmLeaf<i64, [{
-  return ((uint64_t)Imm) <= 1;
+def sme_elm_idx0_1 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) <= 1;
 }]> {
   let ParserMatchClass = Imm0_1Operand;
   let PrintMethod = "printMatrixIndex";
 }
-def sme_elm_idx0_3 : Operand<i64>, ImmLeaf<i64, [{
-  return ((uint64_t)Imm) <= 3;
+def sme_elm_idx0_3 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) <= 3;
 }]> {
   let ParserMatchClass = Imm0_3Operand;
   let PrintMethod = "printMatrixIndex";
 }
-def sme_elm_idx0_7 : Operand<i64>, ImmLeaf<i64, [{
-  return ((uint64_t)Imm) <= 7;
+def sme_elm_idx0_7 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) <= 7;
 }]> {
   let ParserMatchClass = Imm0_7Operand;
   let PrintMethod = "printMatrixIndex";
 }
-def sme_elm_idx0_15 : Operand<i64>, ImmLeaf<i64, [{
-  return ((uint64_t)Imm) <= 15;
+def sme_elm_idx0_15 : Operand<i32>, TImmLeaf<i32, [{
+  return ((uint32_t)Imm) <= 15;
 }]> {
   let ParserMatchClass = Imm0_15Operand;
   let PrintMethod = "printMatrixIndex";
