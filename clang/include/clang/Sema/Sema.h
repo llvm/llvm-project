@@ -8241,11 +8241,14 @@ public:
                                         SourceLocation TemplateLoc,
                                         Declarator &D);
 
-  TemplateArgumentLoc SubstDefaultTemplateArgumentIfAvailable(
-      TemplateDecl *Template, SourceLocation TemplateLoc,
-      SourceLocation RAngleLoc, Decl *Param,
-      ArrayRef<TemplateArgument> SugaredConverted,
-      ArrayRef<TemplateArgument> CanonicalConverted, bool &HasDefaultArg);
+  TemplateArgumentLoc
+  SubstDefaultTemplateArgumentIfAvailable(TemplateDecl *Template,
+                                          SourceLocation TemplateLoc,
+                                          SourceLocation RAngleLoc,
+                                          Decl *Param,
+                                          SmallVectorImpl<TemplateArgument>
+                                            &Converted,
+                                          bool &HasDefaultArg);
 
   /// Specifies the context in which a particular template
   /// argument is being checked.
