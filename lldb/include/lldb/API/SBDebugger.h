@@ -94,6 +94,8 @@ public:
 
   static void PrintStackTraceOnError();
 
+  static void PrintDiagnosticsOnError();
+
   static void Terminate();
 
   // Deprecated, use the one that takes a source_init_files bool.
