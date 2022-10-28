@@ -530,48 +530,43 @@ private:
 
 bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
 #if defined(SDK_HAS_NEW_DYLD_INTROSPECTION_SPIS)
-  if (__builtin_available(macOS 12, *)) {
-    if (dyld_process_create_for_current_task) {
-      dyld_process_t dyld_process = dyld_process_create_for_current_task();
-      if (!dyld_process)
-        return false;
+  dyld_process_t dyld_process = dyld_process_create_for_current_task();
+  if (!dyld_process)
+    return false;
 
-      dyld_process_snapshot_t snapshot =
-          dyld_process_snapshot_create_for_process(dyld_process, nullptr);
-      if (!snapshot)
-        return false;
+  dyld_process_snapshot_t snapshot =
+      dyld_process_snapshot_create_for_process(dyld_process, nullptr);
+  if (!snapshot)
+    return false;
 
-      auto on_exit = llvm::make_scope_exit(
-          [&]() { dyld_process_snapshot_dispose(snapshot); });
+  auto on_exit =
+      llvm::make_scope_exit([&]() { dyld_process_snapshot_dispose(snapshot); });
 
-      dyld_shared_cache_t shared_cache =
-          dyld_process_snapshot_get_shared_cache(snapshot);
-      if (!shared_cache)
-        return false;
+  dyld_shared_cache_t shared_cache =
+      dyld_process_snapshot_get_shared_cache(snapshot);
+  if (!shared_cache)
+    return false;
 
-      dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
-        __block uint64_t minVmAddr = UINT64_MAX;
-        __block uint64_t maxVmAddr = 0;
-        uuid_t uuidStore;
-        __block uuid_t *uuid = &uuidStore;
+  dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
+    __block uint64_t minVmAddr = UINT64_MAX;
+    __block uint64_t maxVmAddr = 0;
+    uuid_t uuidStore;
+    __block uuid_t *uuid = &uuidStore;
 
-        dyld_image_for_each_segment_info(image, ^(const char *segmentName,
-                                                  uint64_t vmAddr,
-                                                  uint64_t vmSize, int perm) {
+    dyld_image_for_each_segment_info(
+        image,
+        ^(const char *segmentName, uint64_t vmAddr, uint64_t vmSize, int perm) {
           minVmAddr = std::min(minVmAddr, vmAddr);
           maxVmAddr = std::max(maxVmAddr, vmAddr + vmSize);
           dyld_image_copy_uuid(image, uuid);
         });
-        assert(minVmAddr != UINT_MAX);
-        assert(maxVmAddr != 0);
-        m_images[dyld_image_get_installname(image)] = SharedCacheImageInfo{
-            UUID(uuid, 16),
-            std::make_shared<DataBufferUnowned>((uint8_t *)minVmAddr,
-                                                maxVmAddr - minVmAddr)};
-      });
-      return true;
-    }
-  }
+    assert(minVmAddr != UINT_MAX);
+    assert(maxVmAddr != 0);
+    m_images[dyld_image_get_installname(image)] = SharedCacheImageInfo{
+        UUID(uuid, 16), std::make_shared<DataBufferUnowned>(
+                            (uint8_t *)minVmAddr, maxVmAddr - minVmAddr)};
+  });
+  return true;
 #endif
   return false;
 }
