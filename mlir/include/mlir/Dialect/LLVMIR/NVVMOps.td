@@ -34,6 +34,29 @@ def NVVM_Dialect : Dialect {
     /// Get the name of the attribute used to annotate external kernel
     /// functions.
     static StringRef getKernelFuncAttrName() { return "nvvm.kernel"; }
+    /// Get the name of the attribute used to annotate max threads required
+    /// per CTA for kernel functions.
+    static StringRef getMaxntidAttrName() { return "nvvm.maxntid"; }
+    /// Get the name of the metadata names for each dimension
+    static StringRef getMaxntidXName() { return "maxntidx"; }
+    static StringRef getMaxntidYName() { return "maxntidy"; }
+    static StringRef getMaxntidZName() { return "maxntidz"; }
+
+    /// Get the name of the attribute used to annotate exact threads required
+    /// per CTA for kernel functions.
+    static StringRef getReqntidAttrName() { return "nvvm.reqntid"; }
+    /// Get the name of the metadata names for each dimension
+    static StringRef getReqntidXName() { return "reqntidx"; }
+    static StringRef getReqntidYName() { return "reqntidy"; }
+    static StringRef getReqntidZName() { return "reqntidz"; }
+
+    /// Get the name of the attribute used to annotate min CTA required
+    /// per SM for kernel functions.
+    static StringRef getMinctasmAttrName() { return "nvvm.minctasm"; }
+
+    /// Get the name of the attribute used to annotate max number of 
+    /// registers that can be allocated per thread.
+    static StringRef getMaxnregAttrName() { return "nvvm.maxnreg"; }
   }];
 
   let useDefaultAttributePrinterParser = 1;

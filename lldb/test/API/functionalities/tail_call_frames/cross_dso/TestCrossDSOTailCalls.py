@@ -10,9 +10,6 @@ from lldbsuite.test import lldbutil
 
 class TestCrossDSOTailCalls(TestBase):
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @skipIf(compiler="clang", compiler_version=['<', '10.0'])
     @skipIf(dwarf_version=['<', '4'])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265")

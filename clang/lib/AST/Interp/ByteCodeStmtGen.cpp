@@ -105,7 +105,7 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
       if (const FieldDecl *Member = Init->getMember()) {
         const Record::Field *F = R->getField(Member);
 
-        if (Optional<PrimType> T = this->classify(InitExpr->getType())) {
+        if (Optional<PrimType> T = this->classify(InitExpr)) {
           if (!this->emitThis(InitExpr))
             return false;
 

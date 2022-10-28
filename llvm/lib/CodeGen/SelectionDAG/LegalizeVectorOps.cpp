@@ -856,6 +856,13 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
       return;
     }
     break;
+  case ISD::USHLSAT:
+  case ISD::SSHLSAT:
+    if (SDValue Expanded = TLI.expandShlSat(Node, DAG)) {
+      Results.push_back(Expanded);
+      return;
+    }
+    break;
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_UINT_SAT:
     // Expand the fpsosisat if it is scalable to prevent it from unrolling below.

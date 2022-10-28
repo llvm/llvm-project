@@ -143,7 +143,7 @@ bool Pointer::isInitialized() const {
   Descriptor *Desc = getFieldDesc();
   assert(Desc);
   if (Desc->isPrimitiveArray()) {
-    if (Pointee->IsStatic)
+    if (isStatic() && Base == 0)
       return true;
     // Primitive array field are stored in a bitset.
     InitMap *Map = getInitMap();
@@ -164,7 +164,11 @@ void Pointer::initialize() const {
 
   assert(Desc);
   if (Desc->isArray()) {
-    if (Desc->isPrimitiveArray() && !Pointee->IsStatic) {
+    if (Desc->isPrimitiveArray()) {
+      // Primitive global arrays don't have an initmap.
+      if (isStatic() && Base == 0)
+        return;
+
       // Primitive array initializer.
       InitMap *&Map = getInitMap();
       if (Map == (InitMap *)-1)

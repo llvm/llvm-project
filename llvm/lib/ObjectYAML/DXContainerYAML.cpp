@@ -36,6 +36,13 @@ uint64_t DXContainerYAML::ShaderFlags::getEncodedFlags() {
   return Flag;
 }
 
+DXContainerYAML::ShaderHash::ShaderHash(const dxbc::ShaderHash &Data)
+    : IncludesSource((Data.Flags & static_cast<uint32_t>(
+                                       dxbc::HashFlags::IncludesSource)) != 0),
+      Digest(16, 0) {
+  memcpy(Digest.data(), &Data.Digest[0], 16);
+}
+
 namespace yaml {
 
 void MappingTraits<DXContainerYAML::VersionTuple>::mapping(
@@ -71,12 +78,19 @@ void MappingTraits<DXContainerYAML::ShaderFlags>::mapping(
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
+void MappingTraits<DXContainerYAML::ShaderHash>::mapping(
+    IO &IO, DXContainerYAML::ShaderHash &Hash) {
+  IO.mapRequired("IncludesSource", Hash.IncludesSource);
+  IO.mapRequired("Digest", Hash.Digest);
+}
+
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
                                                    DXContainerYAML::Part &P) {
   IO.mapRequired("Name", P.Name);
   IO.mapRequired("Size", P.Size);
   IO.mapOptional("Program", P.Program);
   IO.mapOptional("Flags", P.Flags);
+  IO.mapOptional("Hash", P.Hash);
 }
 
 void MappingTraits<DXContainerYAML::Object>::mapping(

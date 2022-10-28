@@ -484,26 +484,15 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
   }
   mlir::Type boxTy = fir::BoxType::get(elementType);
   mlir::Value tdesc;
-  if (isPolymorphic) {
+  if (isPolymorphic)
     boxTy = fir::ClassType::get(elementType);
-
-    // Look for the original tdesc for the new box.
-    if (auto *op = itemAddr.getDefiningOp()) {
-      if (auto coordOp = mlir::dyn_cast<fir::CoordinateOp>(op)) {
-        if (fir::isPolymorphicType(coordOp.getBaseType())) {
-          mlir::Type resultType = coordOp.getResult().getType();
-          mlir::Type tdescType =
-              fir::TypeDescType::get(fir::unwrapRefType(resultType));
-          tdesc = create<fir::BoxTypeDescOp>(loc, tdescType, coordOp.getRef());
-        }
-      }
-    }
-  }
-
   return exv.match(
       [&](const fir::ArrayBoxValue &box) -> mlir::Value {
+        mlir::Value empty;
+        mlir::ValueRange emptyRange;
         mlir::Value s = createShape(loc, exv);
-        return create<fir::EmboxOp>(loc, boxTy, itemAddr, s);
+        return create<fir::EmboxOp>(loc, boxTy, itemAddr, s, /*slice=*/empty,
+                                    /*typeparams=*/emptyRange, box.getTdesc());
       },
       [&](const fir::CharArrayBoxValue &box) -> mlir::Value {
         mlir::Value s = createShape(loc, exv);
@@ -526,6 +515,12 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
       [&](const fir::MutableBoxValue &x) -> mlir::Value {
         return create<fir::LoadOp>(
             loc, fir::factory::getMutableIRBox(*this, loc, x));
+      },
+      [&](const fir::PolymorphicValue &p) -> mlir::Value {
+        mlir::Value empty;
+        mlir::ValueRange emptyRange;
+        return create<fir::EmboxOp>(loc, boxTy, itemAddr, empty, empty,
+                                    emptyRange, p.getTdesc());
       },
       [&](const auto &) -> mlir::Value {
         mlir::Value empty;
@@ -991,6 +986,18 @@ fir::ExtendedValue fir::factory::arrayElementToExtendedValue(
         }
         if (box.isDerivedWithLenParameters())
           TODO(loc, "get length parameters from derived type BoxValue");
+        if (box.isPolymorphic()) {
+          mlir::Type tdescType =
+              fir::TypeDescType::get(mlir::NoneType::get(builder.getContext()));
+          mlir::Value tdesc = builder.create<fir::BoxTypeDescOp>(
+              loc, tdescType, fir::getBase(box));
+          return fir::PolymorphicValue(element, tdesc);
+        }
+        return element;
+      },
+      [&](const fir::ArrayBoxValue &box) -> fir::ExtendedValue {
+        if (box.getTdesc())
+          return fir::PolymorphicValue(element, box.getTdesc());
         return element;
       },
       [&](const auto &) -> fir::ExtendedValue { return element; });

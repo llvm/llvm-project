@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 class TemplatePackArgsTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_template_argument_pack(self):
         self.build()
         (_, _, thread, _) = lldbutil.run_to_source_breakpoint(self,

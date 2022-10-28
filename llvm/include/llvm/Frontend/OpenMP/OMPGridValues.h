@@ -56,24 +56,24 @@ namespace omp {
 
 struct GV {
   /// The size reserved for data in a shared memory slot.
-  const unsigned GV_Slot_Size;
+  unsigned GV_Slot_Size;
   /// The default value of maximum number of threads in a worker warp.
-  const unsigned GV_Warp_Size;
+  unsigned GV_Warp_Size;
 
   constexpr unsigned warpSlotSize() const {
     return GV_Warp_Size * GV_Slot_Size;
   }
 
   /// the maximum number of teams.
-  const unsigned GV_Max_Teams;
+  unsigned GV_Max_Teams;
   // An alternative to the heavy data sharing infrastructure that uses global
   // memory is one that uses device __shared__ memory.  The amount of such space
   // (in bytes) reserved by the OpenMP runtime is noted here.
-  const unsigned GV_SimpleBufferSize;
+  unsigned GV_SimpleBufferSize;
   // The absolute maximum team size for a working group
-  const unsigned GV_Max_WG_Size;
+  unsigned GV_Max_WG_Size;
   // The default maximum team size for a working group
-  const unsigned GV_Default_WG_Size;
+  unsigned GV_Default_WG_Size;
 
   constexpr unsigned maxWarpNumber() const {
     return GV_Max_WG_Size / GV_Warp_Size;

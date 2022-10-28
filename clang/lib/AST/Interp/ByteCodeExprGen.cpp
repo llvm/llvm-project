@@ -130,7 +130,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_NoOp:
   case CK_UserDefinedConversion:
   case CK_NullToPointer:
-    return this->Visit(SubExpr);
+    return this->visit(SubExpr);
 
   case CK_IntegralToBoolean:
   case CK_IntegralCast: {
@@ -139,7 +139,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!FromT || !ToT)
       return false;
 
-    if (!this->Visit(SubExpr))
+    if (!this->visit(SubExpr))
       return false;
 
     // TODO: Emit this only if FromT != ToT.
@@ -167,7 +167,7 @@ bool ByteCodeExprGen<Emitter>::VisitIntegerLiteral(const IntegerLiteral *LE) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitParenExpr(const ParenExpr *PE) {
-  return this->Visit(PE->getSubExpr());
+  return this->visit(PE->getSubExpr());
 }
 
 template <class Emitter>
@@ -180,7 +180,7 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   case BO_Comma:
     if (!discard(LHS))
       return false;
-    if (!this->Visit(RHS))
+    if (!this->visit(RHS))
       return false;
     return true;
   default:
@@ -264,10 +264,10 @@ bool ByteCodeExprGen<Emitter>::VisitArraySubscriptExpr(
   // Take pointer of LHS, add offset from RHS, narrow result.
   // What's left on the stack after this is a pointer.
   if (Optional<PrimType> IndexT = classify(Index->getType())) {
-    if (!this->Visit(Base))
+    if (!this->visit(Base))
       return false;
 
-    if (!this->Visit(Index))
+    if (!this->visit(Index))
       return false;
 
     if (!this->emitAddOffset(*IndexT, E))
@@ -329,6 +329,9 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
+  if (DiscardResult)
+    return true;
+
   // 'Base.Member'
   const Expr *Base = E->getBase();
   const ValueDecl *Member = E->getMemberDecl();
@@ -343,6 +346,8 @@ bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
     const Record *R = getRecord(RD);
     const Record::Field *F = R->getField(FD);
     // Leave a pointer to the field on the stack.
+    if (F->Decl->getType()->isReferenceType())
+      return this->emitGetFieldPop(PT_Ptr, F->Offset, E);
     return this->emitGetPtrField(F->Offset, E);
   }
 
@@ -395,6 +400,18 @@ bool ByteCodeExprGen<Emitter>::VisitAbstractConditionalOperator(
   this->emitLabel(LabelEnd);
 
   return true;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
+  unsigned StringIndex = P.createGlobalString(E);
+  return this->emitGetPtrGlobal(StringIndex, E);
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCharacterLiteral(
+    const CharacterLiteral *E) {
+  return this->emitConst(E, E->getValue());
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
@@ -541,7 +558,7 @@ bool ByteCodeExprGen<Emitter>::dereferenceVar(
         return false;
       return DiscardResult ? true : this->emitGetPtrLocal(L.Offset, LV);
     }
-  } else if (auto Idx = getGlobalIdx(VD)) {
+  } else if (auto Idx = P.getGlobal(VD)) {
     switch (AK) {
     case DerefKind::Read:
       if (!this->emitGetGlobal(T, *Idx, LV))
@@ -573,7 +590,7 @@ bool ByteCodeExprGen<Emitter>::dereferenceVar(
     if (VD->hasLocalStorage() && VD->hasInit() && !VD->isConstexpr()) {
       QualType VT = VD->getType();
       if (VT.isConstQualified() && VT->isFundamentalType())
-        return this->Visit(VD->getInit());
+        return this->visit(VD->getInit());
     }
   }
 
@@ -797,7 +814,7 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
       if (!this->emitDupPtr(Initializer))
         return false;
 
-      if (Optional<PrimType> T = classify(Init->getType())) {
+      if (Optional<PrimType> T = classify(Init)) {
         if (!this->visit(Init))
           return false;
 
@@ -852,22 +869,7 @@ bool ByteCodeExprGen<Emitter>::visitInitializer(const Expr *Initializer) {
     return visitRecordInitializer(Initializer);
 
   // Otherwise, visit the expression like normal.
-  return this->Visit(Initializer);
-}
-
-template <class Emitter>
-llvm::Optional<unsigned>
-ByteCodeExprGen<Emitter>::getGlobalIdx(const VarDecl *VD) {
-  if (VD->isConstexpr()) {
-    // Constexpr decl - it must have already been defined.
-    return P.getGlobal(VD);
-  }
-  if (!VD->hasLocalStorage()) {
-    // Not constexpr, but a global var - can have pointer taken.
-    Program::DeclScope Scope(P, VD);
-    return P.getOrCreateGlobal(VD);
-  }
-  return {};
+  return this->visit(Initializer);
 }
 
 template <class Emitter>
@@ -983,7 +985,18 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     // In any case call the function. The return value will end up on the stack and
     // if the function has RVO, we already have the pointer on the stack to write
     // the result into.
-    return this->emitCall(Func, E);
+    if (!this->emitCall(Func, E))
+      return false;
+
+    QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
+    if (DiscardResult && !ReturnType->isVoidType()) {
+      Optional<PrimType> T = classify(ReturnType);
+      if (T)
+        return this->emitPop(*T, E);
+      // TODO: This is a RVO function and we need to ignore the return value.
+    }
+
+    return true;
   } else {
     assert(false && "We don't support non-FunctionDecl callees right now.");
   }
@@ -1033,37 +1046,74 @@ bool ByteCodeExprGen<Emitter>::VisitCXXNullPtrLiteralExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
+  if (DiscardResult)
+    return true;
   return this->emitThis(E);
 }
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   const Expr *SubExpr = E->getSubExpr();
+  Optional<PrimType> T = classify(SubExpr->getType());
 
+  // TODO: Support pointers for inc/dec operators.
   switch (E->getOpcode()) {
-  case UO_PostInc: // x++
-  case UO_PostDec: // x--
-  case UO_PreInc:  // --x
-  case UO_PreDec:  // ++x
-    return false;
+  case UO_PostInc: { // x++
+    if (!this->visit(SubExpr))
+      return false;
 
+    return DiscardResult ? this->emitIncPop(*T, E) : this->emitInc(*T, E);
+  }
+  case UO_PostDec: { // x--
+    if (!this->visit(SubExpr))
+      return false;
+
+    return DiscardResult ? this->emitDecPop(*T, E) : this->emitDec(*T, E);
+  }
+  case UO_PreInc: { // ++x
+    if (!this->visit(SubExpr))
+      return false;
+
+    // Post-inc and pre-inc are the same if the value is to be discarded.
+    if (DiscardResult)
+      return this->emitIncPop(*T, E);
+
+    this->emitLoad(*T, E);
+    this->emitConst(E, 1);
+    this->emitAdd(*T, E);
+    return this->emitStore(*T, E);
+  }
+  case UO_PreDec: { // --x
+    if (!this->visit(SubExpr))
+      return false;
+
+    // Post-dec and pre-dec are the same if the value is to be discarded.
+    if (DiscardResult)
+      return this->emitDecPop(*T, E);
+
+    this->emitLoad(*T, E);
+    this->emitConst(E, 1);
+    this->emitSub(*T, E);
+    return this->emitStore(*T, E);
+  }
   case UO_LNot: // !x
-    if (!this->Visit(SubExpr))
+    if (!this->visit(SubExpr))
       return false;
-    return this->emitInvBool(E);
+    // The Inv doesn't change anything, so skip it if we don't need the result.
+    return DiscardResult ? this->emitPop(*T, E) : this->emitInvBool(E);
   case UO_Minus: // -x
-    if (!this->Visit(SubExpr))
+    if (!this->visit(SubExpr))
       return false;
-    if (Optional<PrimType> T = classify(E->getType()))
-      return this->emitNeg(*T, E);
-    return false;
+    return DiscardResult ? this->emitPop(*T, E) : this->emitNeg(*T, E);
   case UO_Plus:  // +x
-    return this->Visit(SubExpr); // noop
-
+    if (!this->visit(SubExpr)) // noop
+      return false;
+    return DiscardResult ? this->emitPop(*T, E) : true;
   case UO_AddrOf: // &x
     // We should already have a pointer when we get here.
-    return this->Visit(SubExpr);
-
+    if (!this->visit(SubExpr))
+      return false;
+    return DiscardResult ? this->emitPop(*T, E) : true;
   case UO_Deref:  // *x
     return dereference(
         SubExpr, DerefKind::Read,
@@ -1075,11 +1125,9 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
           return DiscardResult ? this->emitPop(T, E) : true;
         });
   case UO_Not:    // ~x
-    if (!this->Visit(SubExpr))
+    if (!this->visit(SubExpr))
       return false;
-    if (Optional<PrimType> T = classify(E->getType()))
-      return this->emitComp(*T, E);
-    return false;
+    return DiscardResult ? this->emitPop(*T, E) : this->emitComp(*T, E);
   case UO_Real:   // __real x
   case UO_Imag:   // __imag x
   case UO_Extension:

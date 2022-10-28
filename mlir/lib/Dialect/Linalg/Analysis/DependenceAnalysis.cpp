@@ -165,7 +165,7 @@ void LinalgDependenceGraph::addDependencesBetween(LinalgOp src, LinalgOp dst) {
   LLVM_DEBUG(dbgs() << "addDependencesBetween " << *src.getOperation()
                     << " and " << *dst.getOperation() << "\n");
   if (src.hasTensorSemantics() && dst.hasTensorSemantics()) {
-    for (OpOperand *dstOpOperand : dst.getInputOperands()) {
+    for (OpOperand *dstOpOperand : dst.getDpsInputOperands()) {
       if (!dstOpOperand->get().getType().isa<RankedTensorType>())
         continue;
       // Check if the operand is defined by the src.
@@ -174,7 +174,7 @@ void LinalgDependenceGraph::addDependencesBetween(LinalgOp src, LinalgOp dst) {
         addDependenceElem(DependenceType::RAW, dstOpOperand->get(),
                           dstOpOperand);
     }
-    for (OpOperand *dstOpOperand : dst.getOutputOperands()) {
+    for (OpOperand *dstOpOperand : dst.getDpsInitOperands()) {
       // Check if the operand is defined by the src.
       auto definingOp = dstOpOperand->get().getDefiningOp<LinalgOp>();
       if (definingOp && definingOp == src) {
@@ -190,31 +190,31 @@ void LinalgDependenceGraph::addDependencesBetween(LinalgOp src, LinalgOp dst) {
   }
   assert(src.hasBufferSemantics() && dst.hasBufferSemantics() &&
          "unhandled dependence tracking for mixed buffer/tensor operations");
-  for (OpOperand *srcOpOperand : src.getOutputOperands()) { // W
+  for (OpOperand *srcOpOperand : src.getDpsInitOperands()) { // W
     // RAW graph
-    for (OpOperand *dstOpOperand : dst.getInputOperands()) { // R
+    for (OpOperand *dstOpOperand : dst.getDpsInputOperands()) { // R
       if (!dstOpOperand->get().getType().isa<MemRefType>())
         continue;
       if (aliases.alias(srcOpOperand->get(), dstOpOperand->get())) // RAW alias
         addDependenceElem(DependenceType::RAW, srcOpOperand, dstOpOperand);
     }
     // WAW graph
-    for (OpOperand *dstOpOperand : dst.getOutputOperands())        // W
+    for (OpOperand *dstOpOperand : dst.getDpsInitOperands())       // W
       if (aliases.alias(srcOpOperand->get(), dstOpOperand->get())) // WAW alias
         addDependenceElem(DependenceType::WAW, srcOpOperand, dstOpOperand);
   }
-  for (OpOperand *srcOpOperand : src.getInputOperands()) { // R
+  for (OpOperand *srcOpOperand : src.getDpsInputOperands()) { // R
     if (!srcOpOperand->get().getType().isa<MemRefType>())
       continue;
     // RAR graph
-    for (OpOperand *dstOpOperand : dst.getInputOperands()) { // R
+    for (OpOperand *dstOpOperand : dst.getDpsInputOperands()) { // R
       if (!dstOpOperand->get().getType().isa<MemRefType>())
         continue;
       if (aliases.alias(srcOpOperand->get(), dstOpOperand->get())) // RAR alias
         addDependenceElem(DependenceType::RAR, srcOpOperand, dstOpOperand);
     }
     // WAR graph
-    for (OpOperand *dstOpOperand : dst.getOutputOperands())        // W
+    for (OpOperand *dstOpOperand : dst.getDpsInitOperands())       // W
       if (aliases.alias(srcOpOperand->get(), dstOpOperand->get())) // WAR alias
         addDependenceElem(DependenceType::WAR, srcOpOperand, dstOpOperand);
   }

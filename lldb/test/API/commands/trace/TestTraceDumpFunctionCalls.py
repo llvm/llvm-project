@@ -44,7 +44,7 @@ a.out`main + 4 at main.cpp:2 to 4:0  [3, 26]'''])
 m.out`foo() + 65 at multi_thread.cpp:12:21 to 12:21  [4, 19524]
 
 [call tree #1]
-<tracing errors>  [19532, 19532]'''])
+<tracing errors>  [19526, 19526]'''])
 
       self.expect("thread trace dump function-calls 2 -J",
         substrs=['''[
@@ -59,8 +59,8 @@ m.out`foo() + 65 at multi_thread.cpp:12:21 to 12:21  [4, 19524]
   {
     "tracedSegments": [
       {
-        "firstInstructionId": "19532",
-        "lastInstructionId": "19532"
+        "firstInstructionId": "19526",
+        "lastInstructionId": "19526"
       }
     ]
   }
@@ -73,7 +73,7 @@ m.out`foo() + 65 at multi_thread.cpp:12:21 to 12:21  [4, 19524]
 m.out`bar() + 30 at multi_thread.cpp:19:3 to 20:6  [5, 61831]
 
 [call tree #1]
-<tracing errors>  [61834, 61834]'''])
+<tracing errors>  [61833, 61833]'''])
 
       self.expect("thread trace dump function-calls 3 -J",
         substrs=['''[
@@ -88,8 +88,8 @@ m.out`bar() + 30 at multi_thread.cpp:19:3 to 20:6  [5, 61831]
   {
     "tracedSegments": [
       {
-        "firstInstructionId": "61834",
-        "lastInstructionId": "61834"
+        "firstInstructionId": "61833",
+        "lastInstructionId": "61833"
       }
     ]
   }

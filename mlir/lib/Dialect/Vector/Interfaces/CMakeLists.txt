@@ -1,5 +1,6 @@
 set(LLVM_OPTIONAL_SOURCES
-  MaskingInterfaces.cpp
+  MaskableOpInterface.cpp
+  MaskingOpInterface.cpp
   )
 
 function(add_mlir_interface_library name)
@@ -17,5 +18,5 @@ function(add_mlir_interface_library name)
     )
 endfunction(add_mlir_interface_library)
 
-add_mlir_interface_library(MaskingInterfaces)
-
+add_mlir_interface_library(MaskableOpInterface)
+add_mlir_interface_library(MaskingOpInterface)
