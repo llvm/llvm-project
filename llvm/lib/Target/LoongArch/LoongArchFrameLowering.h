@@ -45,6 +45,8 @@ public:
   bool hasFP(const MachineFunction &MF) const override;
   bool hasBP(const MachineFunction &MF) const;
 
+  uint64_t getFirstSPAdjustAmount(const MachineFunction &MF) const;
+
 private:
   void determineFrameLayout(MachineFunction &MF) const;
   void adjustReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
