@@ -128,13 +128,15 @@ public:
     if (__kmp_hwloc_topology == NULL) {
       if (hwloc_topology_init(&__kmp_hwloc_topology) < 0) {
         __kmp_hwloc_error = TRUE;
-        if (__kmp_affinity_verbose)
+        if (__kmp_affinity.flags.verbose) {
           KMP_WARNING(AffHwlocErrorOccurred, var, "hwloc_topology_init()");
+        }
       }
       if (hwloc_topology_load(__kmp_hwloc_topology) < 0) {
         __kmp_hwloc_error = TRUE;
-        if (__kmp_affinity_verbose)
+        if (__kmp_affinity.flags.verbose) {
           KMP_WARNING(AffHwlocErrorOccurred, var, "hwloc_topology_load()");
+        }
       }
     }
     topology_support = hwloc_topology_get_support(__kmp_hwloc_topology);
@@ -792,7 +794,12 @@ public:
   void canonicalize();
   void canonicalize(int pkgs, int cores_per_pkg, int thr_per_core, int cores);
 
-  // Functions used after canonicalize() called
+// Functions used after canonicalize() called
+
+#if KMP_AFFINITY_SUPPORTED
+  // Set the granularity for affinity settings
+  void set_granularity(kmp_affinity_t &stgs) const;
+#endif
   bool filter_hw_subset();
   bool is_close(int hwt1, int hwt2, int level) const;
   bool is_uniform() const { return flags.uniform; }
