@@ -7156,11 +7156,8 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
   }
 
   // If either the parameter has a dependent type or the argument is
-  // type-dependent, there's nothing we can check now. The argument only
-  // contains an unexpanded pack during partial ordering, and there's
-  // nothing more we can check in that case.
-  if (ParamType->isDependentType() || Arg->isTypeDependent() ||
-      Arg->containsUnexpandedParameterPack()) {
+  // type-dependent, there's nothing we can check now.
+  if (ParamType->isDependentType() || Arg->isTypeDependent()) {
     // Force the argument to the type of the parameter to maintain invariants.
     auto *PE = dyn_cast<PackExpansionExpr>(Arg);
     if (PE)

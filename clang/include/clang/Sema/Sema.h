@@ -6818,7 +6818,8 @@ public:
         Expr, Expr ? Expr->getExprLoc() : SourceLocation(), DiscardedValue);
   }
   ExprResult ActOnFinishFullExpr(Expr *Expr, SourceLocation CC,
-                                 bool DiscardedValue, bool IsConstexpr = false);
+                                 bool DiscardedValue, bool IsConstexpr = false,
+                                 bool IsTemplateArgument = false);
   StmtResult ActOnFinishFullStmt(Stmt *Stmt);
 
   // Marks SS invalid if it represents an incomplete type.

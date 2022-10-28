@@ -266,6 +266,8 @@ Bug Fixes
   `Issue 45736 <https://github.com/llvm/llvm-project/issues/45736>`_
 - Fix an issue when performing constraints partial ordering on non-template
   functions. `Issue 56154 <https://github.com/llvm/llvm-project/issues/56154>`_
+- Fix handling of unexpanded packs in template argument expressions.
+  `Issue 58679 <https://github.com/llvm/llvm-project/issues/58679>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
