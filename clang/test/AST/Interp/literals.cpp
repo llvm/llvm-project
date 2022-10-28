@@ -390,7 +390,8 @@ namespace IncDec {
     return 1;
   }
   static_assert(uninit(), ""); // ref-error {{not an integral constant expression}} \
-                               // ref-note {{in call to 'uninit()'}}
+                               // ref-note {{in call to 'uninit()'}} \
+                               // expected-error {{not an integral constant expression}}
 
   constexpr int OverFlow() { // ref-error {{never produces a constant expression}}
     int a = INT_MAX;
