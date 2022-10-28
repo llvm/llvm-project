@@ -27,7 +27,7 @@ namespace omp {
 namespace target {
 namespace plugin {
 
-struct DeviceImageTy;
+class DeviceImageTy;
 struct GenericDeviceTy;
 
 using namespace llvm::object;
