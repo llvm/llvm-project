@@ -277,23 +277,23 @@ for.body:                                         ; preds = %entry, %for.body
 define void @test_memset_preheader(i8* %x, i8* %y, i32 %n) {
 ; CHECK-LABEL: test_memset_preheader:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r4, lr}
-; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    cbz r2, .LBB6_5
 ; CHECK-NEXT:  @ %bb.1: @ %prehead
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r12, r0
 ; CHECK-NEXT:    wlstp.8 lr, r2, .LBB6_3
 ; CHECK-NEXT:  .LBB6_2: @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vstrb.8 q0, [r4], #16
+; CHECK-NEXT:    vstrb.8 q0, [r12], #16
 ; CHECK-NEXT:    letp lr, .LBB6_2
 ; CHECK-NEXT:  .LBB6_3: @ %prehead
 ; CHECK-NEXT:    dls lr, r2
-; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r12, r0
 ; CHECK-NEXT:  .LBB6_4: @ %for.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldrb r4, [r3], #1
-; CHECK-NEXT:    strb r4, [r1], #1
+; CHECK-NEXT:    ldrb r3, [r12], #1
+; CHECK-NEXT:    strb r3, [r1], #1
 ; CHECK-NEXT:    le lr, .LBB6_4
 ; CHECK-NEXT:  .LBB6_5: @ %for.cond.cleanup
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
@@ -302,7 +302,7 @@ define void @test_memset_preheader(i8* %x, i8* %y, i32 %n) {
 ; CHECK-NEXT:    vstrb.8 q0, [r0], #16
 ; CHECK-NEXT:    letp lr, .LBB6_6
 ; CHECK-NEXT:  .LBB6_7: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, pc}
+; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp6 = icmp ne i32 %n, 0
   br i1 %cmp6, label %prehead, label %for.cond.cleanup
