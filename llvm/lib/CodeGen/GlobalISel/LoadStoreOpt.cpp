@@ -355,10 +355,10 @@ bool LoadStoreOpt::doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores) {
       LLT::scalar(NumStores * SmallTy.getSizeInBits().getFixedSize());
 
   // For each store, compute pairwise merged debug locs.
-  DebugLoc MergedLoc;
-  for (unsigned AIdx = 0, BIdx = 1; BIdx < NumStores; ++AIdx, ++BIdx)
-    MergedLoc = DILocation::getMergedLocation(Stores[AIdx]->getDebugLoc(),
-                                              Stores[BIdx]->getDebugLoc());
+  DebugLoc MergedLoc = Stores.front()->getDebugLoc();
+  for (auto *Store : drop_begin(Stores))
+    MergedLoc = DILocation::getMergedLocation(MergedLoc, Store->getDebugLoc());
+
   Builder.setInstr(*Stores.back());
   Builder.setDebugLoc(MergedLoc);
 
