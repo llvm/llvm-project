@@ -146,6 +146,8 @@ is incremented for each backwards-compatible change introduced. The major
 version number is incremented, and the minor version is reset to zero, for each
 backwards-incompatible change introduced.
 
+* `2.5`: Introduce `amd_comgr_populate_mangled_names` and
+  `amd_comgr_get_mangled_name` APIS.
 * `2.4`: Introduce `amd_comgr_create_symbolizer_info`, `amd_comgr_symbolize`,
   `amd_comgr_destroy_symbolizer_info` APIS.
 * `2.3`: Introduce `amd_comgr_set_data_from_file_slice` and
