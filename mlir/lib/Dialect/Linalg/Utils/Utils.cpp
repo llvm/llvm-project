@@ -179,7 +179,7 @@ bool isElementwise(LinalgOp op) {
     return false;
 
   // TODO: relax the restrictions on indexing map.
-  for (OpOperand *opOperand : op.getOutputOperands()) {
+  for (OpOperand *opOperand : op.getDpsInitOperands()) {
     if (!op.getMatchingIndexingMap(opOperand).isPermutation())
       return false;
   }
@@ -357,7 +357,7 @@ Value makeComposedPadHighOp(OpBuilder &b, Location loc, RankedTensorType type,
     if (!linalgOp)
       break;
     OpResult opResult = current.cast<OpResult>();
-    current = linalgOp.getOutputOperand(opResult.getResultNumber())->get();
+    current = linalgOp.getDpsInitOperand(opResult.getResultNumber())->get();
   }
   auto padOp = current ? current.getDefiningOp<tensor::PadOp>() : nullptr;
 
@@ -479,7 +479,7 @@ void GenerateLoopNest<scf::ForOp>::doit(
          "they are null entries");
   SmallVector<Value> iterArgInitValues = linalgOp.hasBufferSemantics()
                                              ? SmallVector<Value>{}
-                                             : linalgOp.getOutputOperands();
+                                             : linalgOp.getDpsInitOperands();
 
   SmallVector<Value, 4> lbs, ubs, steps;
   unpackRanges(b, loc, loopRanges, lbs, ubs, steps);
@@ -490,7 +490,7 @@ void GenerateLoopNest<scf::ForOp>::doit(
                "expect the number of output tensors and iter args to match");
         SmallVector<Value> operandValuesToUse = linalgOp->getOperands();
         if (!iterArgs.empty()) {
-          operandValuesToUse = linalgOp.getInputOperands();
+          operandValuesToUse = linalgOp.getDpsInputOperands();
           operandValuesToUse.append(iterArgs.begin(), iterArgs.end());
         }
         return bodyBuilderFn(b, loc, ivs, operandValuesToUse);
@@ -520,7 +520,7 @@ void GenerateLoopNest<AffineForOp>::doit(
     ArrayRef<linalg::ProcInfo> /*procInfo*/) {
   SmallVector<Value> iterArgInitValues = linalgOp.hasBufferSemantics()
                                              ? SmallVector<Value>{}
-                                             : linalgOp.getOutputOperands();
+                                             : linalgOp.getDpsInitOperands();
   assert(iterArgInitValues.empty() && "unexpected AffineForOp init values");
   SmallVector<Value, 4> lbs, ubs, steps;
   unpackRanges(b, loc, loopRanges, lbs, ubs, steps);
@@ -686,7 +686,7 @@ void GenerateLoopNest<scf::ParallelOp>::doit(
     ArrayRef<linalg::ProcInfo> procInfo) {
   SmallVector<Value> iterArgInitValues = linalgOp.hasBufferSemantics()
                                              ? SmallVector<Value>{}
-                                             : linalgOp.getOutputOperands();
+                                             : linalgOp.getDpsInitOperands();
   assert(iterArgInitValues.empty() && "unexpected ParallelOp init values");
   // This function may be passed more iterator types than ranges.
   assert(iteratorTypes.size() >= loopRanges.size() &&
@@ -897,7 +897,7 @@ SmallVector<Type> getTensorOutputTypes(LinalgOp op, ValueRange operands) {
   if (op.hasBufferSemantics())
     return {};
   return llvm::to_vector(
-      llvm::map_range(op.getOutputOperands(), [&](OpOperand *opOperand) {
+      llvm::map_range(op.getDpsInitOperands(), [&](OpOperand *opOperand) {
         return operands[opOperand->getOperandNumber()].getType();
       }));
 }
@@ -911,7 +911,7 @@ SmallVector<Value> insertSlicesBack(OpBuilder &builder, Location loc,
   tensorResults.reserve(results.size());
   // Insert a insert_slice for each output tensor.
   unsigned resultIdx = 0;
-  for (OpOperand *opOperand : op.getOutputOperands()) {
+  for (OpOperand *opOperand : op.getDpsInitOperands()) {
     // TODO: use an interface/adaptor to avoid leaking position in
     // `tiledOperands`.
     Value outputTensor = operands[opOperand->getOperandNumber()];
@@ -965,7 +965,7 @@ computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
 
     Type operandType = opOperand.get().getType();
     if (!isTiled(map, tileSizes) && !(operandType.isa<RankedTensorType>() &&
-                                      linalgOp.isOutput(&opOperand))) {
+                                      linalgOp.isDpsInit(&opOperand))) {
       allSliceParams.push_back(llvm::None);
       LLVM_DEBUG(llvm::dbgs()
                  << ": not tiled: use shape: " << operandType << "\n");

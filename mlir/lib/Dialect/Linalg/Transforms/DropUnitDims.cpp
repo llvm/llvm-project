@@ -435,7 +435,8 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
     SmallVector<Type, 4> resultTypes;
     resultTypes.reserve(genericOp.getNumResults());
     for (unsigned i : llvm::seq<unsigned>(0, genericOp.getNumResults()))
-      resultTypes.push_back(newInputOutputTypes[i + genericOp.getNumInputs()]);
+      resultTypes.push_back(
+          newInputOutputTypes[i + genericOp.getNumDpsInputs()]);
     GenericOp replacementOp = rewriter.create<GenericOp>(
         loc, resultTypes, newInputs, newOutputs, newIndexingMaps,
         genericOp.getIteratorTypesArray());
@@ -447,7 +448,7 @@ struct ReplaceUnitExtents : public OpRewritePattern<GenericOp> {
     // the original shape.
     SmallVector<Value, 4> resultReplacements;
     for (const auto &result : llvm::enumerate(replacementOp.getResults())) {
-      unsigned index = result.index() + replacementOp.getNumInputs();
+      unsigned index = result.index() + replacementOp.getNumDpsInputs();
       auto origResultType = genericOp.getResult(result.index()).getType();
 
       auto newResult = maybeExpand(result.value(), origResultType,

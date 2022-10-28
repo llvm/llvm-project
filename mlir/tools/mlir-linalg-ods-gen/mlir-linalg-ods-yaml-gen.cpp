@@ -563,7 +563,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
         return regionBuilder;
       }
 
-      std::pair<int64_t, int64_t> getOutputsPositionRange() {{
+      std::pair<int64_t, int64_t> getDpsInitsPositionRange() {{
         int64_t getNumOperands = this->getNumOperands();
         return {{getNumOperands - 1, getNumOperands};
       }
@@ -608,7 +608,7 @@ SmallVector<StringRef> {0}::getIteratorTypesArray() {{
 static const char rankPolyStructuredOpIteratorTypesFormat[] =
     R"FMT(
 SmallVector<StringRef> {0}::getIteratorTypesArray() {{
-  int64_t rank = getRank(getOutputOperand(0));
+  int64_t rank = getRank(getDpsInitOperand(0));
   return SmallVector<StringRef>(rank, getParallelIteratorTypeName());
 }
 )FMT";
@@ -661,7 +661,7 @@ void {0}::getEffects(SmallVectorImpl<
     SideEffects::EffectInstance<MemoryEffects::Effect> >&effects) {{
       if (hasTensorSemantics()) return;
       getGenericEffectsImpl(effects,
-        getOperation()->getResults(), getInputOperands(), getOutputOperands());
+        getOperation()->getResults(), getDpsInputOperands(), getDpsInitOperands());
 }
 )FMT";
 

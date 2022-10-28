@@ -26,7 +26,7 @@ static void addOperands(Operation *op, SetVector<Value> &operandSet) {
     return;
   TypeSwitch<Operation *, void>(op)
       .Case<linalg::LinalgOp>([&](linalg::LinalgOp linalgOp) {
-        SmallVector<Value> inputOperands{linalgOp.getInputOperands()};
+        SmallVector<Value> inputOperands{linalgOp.getDpsInputOperands()};
         operandSet.insert(inputOperands.begin(), inputOperands.end());
       })
       .Default([&](Operation *operation) {
@@ -147,7 +147,7 @@ struct TestLinalgElementwiseFusion
               if (expandOp->hasOneUse()) {
                 OpOperand &use = *expandOp->getUses().begin();
                 auto linalgOp = dyn_cast<linalg::LinalgOp>(use.getOwner());
-                if (linalgOp && linalgOp.isOutput(&use))
+                if (linalgOp && linalgOp.isDpsInit(&use))
                   return true;
               }
               return false;
