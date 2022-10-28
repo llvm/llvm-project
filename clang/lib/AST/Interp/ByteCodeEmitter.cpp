@@ -21,10 +21,10 @@ using Error = llvm::Error;
 
 Expected<Function *>
 ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
-  // Do not try to compile undefined functions.
-  if (!FuncDecl->isDefined(FuncDecl) ||
-      (!FuncDecl->hasBody() && FuncDecl->willHaveBody()))
-    return nullptr;
+  // Function is not defined at all or not yet. We will
+  // create a Function instance but not compile the body. That
+  // will (maybe) happen later.
+  bool HasBody = FuncDecl->hasBody(FuncDecl);
 
   // Set up argument indices.
   unsigned ParamOffset = 0;
@@ -65,9 +65,15 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   }
 
   // Create a handle over the emitted code.
-  Function *Func =
-      P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
-                       std::move(ParamDescriptors), HasThisPointer, HasRVO);
+  Function *Func = P.getFunction(FuncDecl);
+  if (!Func)
+    Func =
+        P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
+                         std::move(ParamDescriptors), HasThisPointer, HasRVO);
+  assert(Func);
+  if (!HasBody)
+    return Func;
+
   // Compile the function body.
   if (!FuncDecl->isConstexpr() || !visitFunc(FuncDecl)) {
     // Return a dummy function if compilation failed.
