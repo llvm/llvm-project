@@ -33,18 +33,24 @@ entry:
   ret void, !dbg !22
 }
 
-declare void @i(...) #1
+declare !dbg !23 void @i(...) #1
 
 ; Function Attrs: nounwind ssp uwtable
 define void @g() #0 !dbg !11 {
 entry:
 ; Manually removed !dbg.
 ; CHECK: inlinable function call in a function with debug info must have a !dbg location
+; CHECK: @h()
   call void @h()
 ; CHECK-NOT: inlinable function call in a function with debug info must have a !dbg location
+; CHECK-NOT: @j()
   call void @j()
 ; CHECK: inlinable function call in a function with debug info must have a !dbg location
+; CHECK: @k()
   call void @k()
+; CHECK-NOT: inlinable function call in a function with debug info must have a !dbg location
+; CHECK-NOT: @i()
+  call void (...) @i()
   ret void, !dbg !13
 }
 
@@ -86,3 +92,6 @@ attributes #0 = { nounwind ssp uwtable }
 !20 = distinct !DISubprogram(name: "k", scope: !1, file: !1, line: 6, type: !8, isLocal: false, isDefinition: true, scopeLine: 6, isOptimized: false, unit: !0, retainedNodes: !2)
 !21 = !DILocation(line: 4, column: 12, scope: !20)
 !22 = !DILocation(line: 4, column: 17, scope: !20)
+!23 = !DISubprogram(name: "i", scope: !1, file: !1, line: 1, type: !24, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized, retainedNodes: !2)
+!24 = !DISubroutineType(types: !25)
+!25 = !{null}
