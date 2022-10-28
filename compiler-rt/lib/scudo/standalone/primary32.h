@@ -725,6 +725,9 @@ private:
       Context.markFreeBlocks(BG.Batches, DecompactPtr, Base);
     }
 
+    if (!Context.hasBlockMarked())
+      return 0;
+
     auto SkipRegion = [this, First, ClassId](uptr RegionIndex) {
       return (PossibleRegions[First + RegionIndex] - 1U) != ClassId;
     };
