@@ -78,6 +78,7 @@ stages there is no ABI stability in any form.
    api_test
    mechanics_of_public_api
    source_layout
+   porting
 
 .. toctree::
    :hidden:
