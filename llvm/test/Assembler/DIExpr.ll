@@ -1,53 +1,82 @@
 ; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
 ; RUN: verify-uselistorder %s
 
+; CHECK: %t = type { i32, i32 }
+%t = type { i32, i32 }
+; CHECK: %u = type { %t, i32 }
+%u = type { %t, i32 }
+
 ; CHECK: !named = !{
+!named = !{
 ; CHECK-SAME: !DIExpr(),
+!DIExpr(),
 ; CHECK-SAME: !DIExpr(DIOpReferrer(i32)),
+!DIExpr(DIOpReferrer(i32)),
+; CHECK-SAME: !DIExpr(DIOpReferrer(%t)),
+!DIExpr(DIOpReferrer(%t)),
+; CHECK-SAME: !DIExpr(DIOpReferrer(%u)),
+!DIExpr(DIOpReferrer(%u)),
+; CHECK-SAME: !DIExpr(DIOpReferrer({ i16, float })),
+!DIExpr(DIOpReferrer({ i16, float })),
 ; CHECK-SAME: !DIExpr(DIOpArg(0, i32), DIOpConvert(float)),
+!DIExpr(DIOpArg(0, i32), DIOpConvert(float)),
+; CHECK-SAME: !DIExpr(DIOpArg(0, %t), DIOpConvert(%u)),
+!DIExpr(DIOpArg(0, %t), DIOpConvert(%u)),
 ; CHECK-SAME: !DIExpr(DIOpTypeObject(double)),
+!DIExpr(DIOpTypeObject(double)),
+; CHECK-SAME: !DIExpr(DIOpTypeObject(%t)),
+!DIExpr(DIOpTypeObject(%t)),
 ; CHECK-SAME: !DIExpr(DIOpConstant(i8 1)),
+!DIExpr(DIOpConstant(i8 1)),
+; CHECK-SAME: !DIExpr(DIOpConstant(%u undef)),
+!DIExpr(DIOpConstant(%u undef)),
 ; CHECK-SAME: !DIExpr(DIOpConvert(i16)),
+!DIExpr(DIOpConvert(i16)),
+; CHECK-SAME: !DIExpr(DIOpConvert(%t)),
+!DIExpr(DIOpConvert(%t)),
 ; CHECK-SAME: !DIExpr(DIOpReinterpret(i64)),
+!DIExpr(DIOpReinterpret(i64)),
+; CHECK-SAME: !DIExpr(DIOpReinterpret(%t)),
+!DIExpr(DIOpReinterpret(%t)),
 ; CHECK-SAME: !DIExpr(DIOpBitOffset(i1)),
+!DIExpr(DIOpBitOffset(i1)),
+; CHECK-SAME: !DIExpr(DIOpBitOffset(%u)),
+!DIExpr(DIOpBitOffset(%u)),
 ; CHECK-SAME: !DIExpr(DIOpByteOffset(i16)),
+!DIExpr(DIOpByteOffset(i16)),
+; CHECK-SAME: !DIExpr(DIOpByteOffset(%t)),
+!DIExpr(DIOpByteOffset(%t)),
 ; CHECK-SAME: !DIExpr(DIOpComposite(4, i8)),
+!DIExpr(DIOpComposite(4, i8)),
+; CHECK-SAME: !DIExpr(DIOpComposite(2, %u)),
+!DIExpr(DIOpComposite(2, %u)),
 ; CHECK-SAME: !DIExpr(DIOpExtend(6)),
+!DIExpr(DIOpExtend(6)),
 ; CHECK-SAME: !DIExpr(DIOpSelect()),
+!DIExpr(DIOpSelect()),
 ; CHECK-SAME: !DIExpr(DIOpAddrOf(1)),
+!DIExpr(DIOpAddrOf(1)),
 ; CHECK-SAME: !DIExpr(DIOpDeref(i32)),
+!DIExpr(DIOpDeref(i32)),
+; CHECK-SAME: !DIExpr(DIOpDeref(%t)),
+!DIExpr(DIOpDeref(%t)),
 ; CHECK-SAME: !DIExpr(DIOpRead()),
+!DIExpr(DIOpRead()),
 ; CHECK-SAME: !DIExpr(DIOpAdd()),
+!DIExpr(DIOpAdd()),
 ; CHECK-SAME: !DIExpr(DIOpSub()),
+!DIExpr(DIOpSub()),
 ; CHECK-SAME: !DIExpr(DIOpMul()),
+!DIExpr(DIOpMul()),
 ; CHECK-SAME: !DIExpr(DIOpDiv()),
+!DIExpr(DIOpDiv()),
 ; CHECK-SAME: !DIExpr(DIOpShr()),
+!DIExpr(DIOpShr()),
 ; CHECK-SAME: !DIExpr(DIOpShl()),
+!DIExpr(DIOpShl()),
 ; CHECK-SAME: !DIExpr(DIOpPushLane(i32)),
+!DIExpr(DIOpPushLane(i32)),
+; CHECK-SAME: !DIExpr(DIOpPushLane(%u)),
+!DIExpr(DIOpPushLane(%u)),
 ; CHECK-SAME: !DIExpr()}
-
-!named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20, !21, !22}
-
-!0 = !DIExpr()
-!1 = !DIExpr(DIOpReferrer(i32))
-!2 = !DIExpr(DIOpArg(0, i32), DIOpConvert(float))
-!3 = !DIExpr(DIOpTypeObject(double))
-!4 = !DIExpr(DIOpConstant(i8 1))
-!5 = !DIExpr(DIOpConvert(i16))
-!6 = !DIExpr(DIOpReinterpret(i64))
-!7 = !DIExpr(DIOpBitOffset(i1))
-!8 = !DIExpr(DIOpByteOffset(i16))
-!9 = !DIExpr(DIOpComposite(4, i8))
-!10 = !DIExpr(DIOpExtend(6))
-!11 = !DIExpr(DIOpSelect())
-!12 = !DIExpr(DIOpAddrOf(1))
-!13 = !DIExpr(DIOpDeref(i32))
-!14 = !DIExpr(DIOpRead())
-!15 = !DIExpr(DIOpAdd())
-!16 = !DIExpr(DIOpSub())
-!17 = !DIExpr(DIOpMul())
-!18 = !DIExpr(DIOpDiv())
-!19 = !DIExpr(DIOpShr())
-!20 = !DIExpr(DIOpShl())
-!21 = !DIExpr(DIOpPushLane(i32))
-!22 = !DIExpr()
+!DIExpr()}

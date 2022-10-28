@@ -176,6 +176,30 @@ void TypeFinder::incorporateMDNode(const MDNode *V) {
     return;
   }
 
+  // The operations in a DIExpr are not exposed as operands, so handle such
+  // nodes specifically here.
+  if (const auto *E = dyn_cast<DIExpr>(V)) {
+    for (auto &&Op : E->builder())
+      visit(
+          makeVisitor(
+#define HANDLE_OP0(NAME) [](DIOp::NAME) {},
+#include "llvm/IR/DIExprOps.def"
+              [&](DIOp::Referrer R) { incorporateType(R.getResultType()); },
+              [&](DIOp::Arg A) { incorporateType(A.getResultType()); },
+              [&](DIOp::TypeObject T) { incorporateType(T.getResultType()); },
+              [&](DIOp::Constant C) { incorporateValue(C.getLiteralValue()); },
+              [&](DIOp::Convert C) { incorporateType(C.getResultType()); },
+              [&](DIOp::Reinterpret R) { incorporateType(R.getResultType()); },
+              [&](DIOp::BitOffset B) { incorporateType(B.getResultType()); },
+              [&](DIOp::ByteOffset B) { incorporateType(B.getResultType()); },
+              [&](DIOp::Composite C) { incorporateType(C.getResultType()); },
+              [&](DIOp::Extend) {}, [&](DIOp::AddrOf) {},
+              [&](DIOp::Deref D) { incorporateType(D.getResultType()); },
+              [&](DIOp::PushLane P) { incorporateType(P.getResultType()); }),
+          Op);
+    return;
+  }
+
   // Look in operands for types.
   for (Metadata *Op : V->operands()) {
     if (!Op)
