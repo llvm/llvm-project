@@ -47,6 +47,13 @@ public:
     // here manually so they are properly freeing their resources.
     for (auto RecordPair : Records)
       RecordPair.second->~Record();
+
+    // Manually destroy all the blocks. They are almost all harmless,
+    // but primitive arrays might have an InitMap* heap allocated and
+    // that needs to be freed.
+    for (Global *G : Globals) {
+      G->block()->invokeDtor();
+    }
   }
 
   /// Marshals a native pointer to an ID for embedding in bytecode.

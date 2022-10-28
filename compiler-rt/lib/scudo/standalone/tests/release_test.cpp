@@ -199,7 +199,9 @@ template <class SizeClassMap> void testReleaseFreeMemoryToOS() {
     scudo::PageReleaseContext Context(BlockSize,
                                       /*RegionSize=*/MaxBlocks * BlockSize,
                                       /*NumberOfRegions=*/1U);
+    ASSERT_FALSE(Context.hasBlockMarked());
     Context.markFreeBlocks(FreeList, DecompactPtr, Recorder.getBase());
+    ASSERT_TRUE(Context.hasBlockMarked());
     releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
     scudo::RegionPageMap &PageMap = Context.PageMap;
 

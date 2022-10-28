@@ -635,11 +635,9 @@ define <vscale x 16 x i32> @insertelt_nxv16i32_idx(<vscale x 16 x i32> %v, i32 %
 define <vscale x 1 x i64> @insertelt_nxv1i64_0(<vscale x 1 x i64> %v, i64 %elt) {
 ; CHECK-LABEL: insertelt_nxv1i64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; CHECK-NEXT:    vslide1down.vx v9, v8, a0
-; CHECK-NEXT:    vslide1down.vx v9, v9, a1
-; CHECK-NEXT:    vsetivli zero, 1, e64, m1, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v9, 0
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, tu, ma
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 1 x i64> %v, i64 %elt, i32 0
   ret <vscale x 1 x i64> %r
@@ -675,11 +673,9 @@ define <vscale x 1 x i64> @insertelt_nxv1i64_idx(<vscale x 1 x i64> %v, i64 %elt
 define <vscale x 2 x i64> @insertelt_nxv2i64_0(<vscale x 2 x i64> %v, i64 %elt) {
 ; CHECK-LABEL: insertelt_nxv2i64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, m2, ta, ma
-; CHECK-NEXT:    vslide1down.vx v10, v8, a0
-; CHECK-NEXT:    vslide1down.vx v10, v10, a1
-; CHECK-NEXT:    vsetivli zero, 1, e64, m2, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v10, 0
+; CHECK-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 2 x i64> %v, i64 %elt, i32 0
   ret <vscale x 2 x i64> %r
@@ -715,11 +711,9 @@ define <vscale x 2 x i64> @insertelt_nxv2i64_idx(<vscale x 2 x i64> %v, i64 %elt
 define <vscale x 4 x i64> @insertelt_nxv4i64_0(<vscale x 4 x i64> %v, i64 %elt) {
 ; CHECK-LABEL: insertelt_nxv4i64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, m4, ta, ma
-; CHECK-NEXT:    vslide1down.vx v12, v8, a0
-; CHECK-NEXT:    vslide1down.vx v12, v12, a1
-; CHECK-NEXT:    vsetivli zero, 1, e64, m4, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v12, 0
+; CHECK-NEXT:    vsetivli zero, 2, e32, m4, tu, ma
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 4 x i64> %v, i64 %elt, i32 0
   ret <vscale x 4 x i64> %r
@@ -755,11 +749,9 @@ define <vscale x 4 x i64> @insertelt_nxv4i64_idx(<vscale x 4 x i64> %v, i64 %elt
 define <vscale x 8 x i64> @insertelt_nxv8i64_0(<vscale x 8 x i64> %v, i64 %elt) {
 ; CHECK-LABEL: insertelt_nxv8i64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, m8, ta, ma
-; CHECK-NEXT:    vslide1down.vx v16, v8, a0
-; CHECK-NEXT:    vslide1down.vx v16, v16, a1
-; CHECK-NEXT:    vsetivli zero, 1, e64, m8, tu, ma
-; CHECK-NEXT:    vslideup.vi v8, v16, 0
+; CHECK-NEXT:    vsetivli zero, 2, e32, m8, tu, ma
+; CHECK-NEXT:    vslide1down.vx v8, v8, a0
+; CHECK-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-NEXT:    ret
   %r = insertelement <vscale x 8 x i64> %v, i64 %elt, i32 0
   ret <vscale x 8 x i64> %r

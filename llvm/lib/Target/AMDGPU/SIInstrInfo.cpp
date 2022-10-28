@@ -2148,6 +2148,12 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64));
     break;
   }
+  case AMDGPU::ENTER_PSEUDO_WM:
+  case AMDGPU::EXIT_PSEUDO_WM: {
+    // These do nothing.
+    MI.eraseFromParent();
+    break;
+  }
   case AMDGPU::SI_RETURN: {
     const MachineFunction *MF = MBB.getParent();
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
@@ -5658,7 +5664,7 @@ emitLoadSRsrcFromVGPRLoop(const SIInstrInfo &TII, MachineRegisterInfo &MRI,
 
   // Update Rsrc operand to use the SGPR Rsrc.
   Rsrc.setReg(SRsrc);
-  Rsrc.setIsKill(true);
+  Rsrc.setIsKill();
 
   Register SaveExec = MRI.createVirtualRegister(BoolXExecRC);
   MRI.setSimpleHint(SaveExec, CondReg);
@@ -6431,20 +6437,7 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
     case AMDGPU::S_CMP_LT_U32:
     case AMDGPU::S_CMP_LE_U32:
     case AMDGPU::S_CMP_EQ_U64:
-    case AMDGPU::S_CMP_LG_U64: {
-        const MCInstrDesc &NewDesc = get(NewOpcode);
-        Register CondReg = MRI.createVirtualRegister(RI.getWaveMaskRegClass());
-        MachineInstr *NewInstr =
-            BuildMI(*MBB, Inst, Inst.getDebugLoc(), NewDesc, CondReg)
-                .add(Inst.getOperand(0))
-                .add(Inst.getOperand(1));
-        legalizeOperands(*NewInstr, MDT);
-        int SCCIdx = Inst.findRegisterDefOperandIdx(AMDGPU::SCC);
-        MachineOperand SCCOp = Inst.getOperand(SCCIdx);
-        addSCCDefUsersToVALUWorklist(SCCOp, Inst, Worklist, CondReg);
-        Inst.eraseFromParent();
-      }
-      continue;
+    case AMDGPU::S_CMP_LG_U64:
     case AMDGPU::S_CMP_LT_F32:
     case AMDGPU::S_CMP_EQ_F32:
     case AMDGPU::S_CMP_LE_F32:
@@ -6473,16 +6466,23 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
     case AMDGPU::S_CMP_NLE_F16:
     case AMDGPU::S_CMP_NEQ_F16:
     case AMDGPU::S_CMP_NLT_F16: {
-      const MCInstrDesc &NewDesc = get(NewOpcode);
       Register CondReg = MRI.createVirtualRegister(RI.getWaveMaskRegClass());
-      MachineInstr *NewInstr =
-          BuildMI(*MBB, Inst, Inst.getDebugLoc(), NewDesc, CondReg)
-              .addImm(0)               // src0_modifiers
-              .add(Inst.getOperand(0)) // src0
-              .addImm(0)               // src1_modifiers
-              .add(Inst.getOperand(1)) // src1
-              .addImm(0)               // clamp
+      auto NewInstr =
+          BuildMI(*MBB, Inst, Inst.getDebugLoc(), get(NewOpcode), CondReg)
               .setMIFlags(Inst.getFlags());
+      if (AMDGPU::getNamedOperandIdx(NewOpcode,
+                                     AMDGPU::OpName::src0_modifiers) >= 0) {
+        NewInstr
+            .addImm(0)               // src0_modifiers
+            .add(Inst.getOperand(0)) // src0
+            .addImm(0)               // src1_modifiers
+            .add(Inst.getOperand(1)) // src1
+            .addImm(0);              // clamp
+      } else {
+        NewInstr
+            .add(Inst.getOperand(0))
+            .add(Inst.getOperand(1));
+      }
       legalizeOperands(*NewInstr, MDT);
       int SCCIdx = Inst.findRegisterDefOperandIdx(AMDGPU::SCC);
       MachineOperand SCCOp = Inst.getOperand(SCCIdx);

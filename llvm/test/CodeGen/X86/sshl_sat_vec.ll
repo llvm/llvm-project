@@ -11,73 +11,53 @@ declare <16 x i8> @llvm.sshl.sat.v16i8(<16 x i8>, <16 x i8>)
 define <2 x i64> @vec_v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; X64-LABEL: vec_v2i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %xmm0, %rax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    testq %rax, %rax
-; X64-NEXT:    sets %dl
-; X64-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; X64-NEXT:    addq %rsi, %rdx
-; X64-NEXT:    movq %xmm1, %rcx
-; X64-NEXT:    movq %rax, %rdi
-; X64-NEXT:    shlq %cl, %rdi
-; X64-NEXT:    movq %rdi, %r8
-; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
-; X64-NEXT:    sarq %cl, %r8
-; X64-NEXT:    cmpq %r8, %rax
-; X64-NEXT:    cmovneq %rdx, %rdi
-; X64-NEXT:    movq %rdi, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; X64-NEXT:    movq %xmm0, %rax
-; X64-NEXT:    xorl %edx, %edx
-; X64-NEXT:    testq %rax, %rax
-; X64-NEXT:    sets %dl
-; X64-NEXT:    addq %rsi, %rdx
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; X64-NEXT:    movq %xmm0, %rcx
-; X64-NEXT:    movq %rax, %rsi
-; X64-NEXT:    shlq %cl, %rsi
-; X64-NEXT:    movq %rsi, %rdi
-; X64-NEXT:    # kill: def $cl killed $cl killed $rcx
-; X64-NEXT:    sarq %cl, %rdi
-; X64-NEXT:    cmpq %rdi, %rax
-; X64-NEXT:    cmovneq %rdx, %rsi
-; X64-NEXT:    movq %rsi, %xmm0
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
-; X64-NEXT:    movdqa %xmm2, %xmm0
+; X64-NEXT:    movdqa {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; X64-NEXT:    movdqa %xmm2, %xmm3
+; X64-NEXT:    psrlq %xmm1, %xmm3
+; X64-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
+; X64-NEXT:    movdqa %xmm2, %xmm5
+; X64-NEXT:    psrlq %xmm4, %xmm5
+; X64-NEXT:    movsd {{.*#+}} xmm5 = xmm3[0],xmm5[1]
+; X64-NEXT:    movdqa %xmm0, %xmm6
+; X64-NEXT:    psllq %xmm1, %xmm6
+; X64-NEXT:    movdqa %xmm0, %xmm3
+; X64-NEXT:    psllq %xmm4, %xmm3
+; X64-NEXT:    movdqa %xmm3, %xmm7
+; X64-NEXT:    movsd {{.*#+}} xmm3 = xmm6[0],xmm3[1]
+; X64-NEXT:    psrlq %xmm1, %xmm6
+; X64-NEXT:    psrlq %xmm4, %xmm7
+; X64-NEXT:    movsd {{.*#+}} xmm7 = xmm6[0],xmm7[1]
+; X64-NEXT:    xorpd %xmm5, %xmm7
+; X64-NEXT:    psubq %xmm5, %xmm7
+; X64-NEXT:    pcmpeqd %xmm0, %xmm7
+; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm7[1,0,3,2]
+; X64-NEXT:    pand %xmm7, %xmm1
+; X64-NEXT:    andpd %xmm1, %xmm3
+; X64-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,1,3,3]
+; X64-NEXT:    pand %xmm2, %xmm0
+; X64-NEXT:    pxor %xmm5, %xmm5
+; X64-NEXT:    pcmpgtd %xmm4, %xmm5
+; X64-NEXT:    pcmpeqd %xmm4, %xmm4
+; X64-NEXT:    pxor %xmm5, %xmm4
+; X64-NEXT:    pandn %xmm4, %xmm2
+; X64-NEXT:    por %xmm0, %xmm2
+; X64-NEXT:    pandn %xmm2, %xmm1
+; X64-NEXT:    por %xmm3, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: vec_v2i64:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpextrq $1, %xmm0, %rax
-; X64-AVX2-NEXT:    xorl %edx, %edx
-; X64-AVX2-NEXT:    testq %rax, %rax
-; X64-AVX2-NEXT:    sets %dl
-; X64-AVX2-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; X64-AVX2-NEXT:    addq %rsi, %rdx
-; X64-AVX2-NEXT:    vpextrq $1, %xmm1, %rcx
-; X64-AVX2-NEXT:    movq %rax, %rdi
-; X64-AVX2-NEXT:    shlq %cl, %rdi
-; X64-AVX2-NEXT:    movq %rdi, %r8
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $rcx
-; X64-AVX2-NEXT:    sarq %cl, %r8
-; X64-AVX2-NEXT:    cmpq %r8, %rax
-; X64-AVX2-NEXT:    cmovneq %rdx, %rdi
-; X64-AVX2-NEXT:    vmovq %rdi, %xmm2
-; X64-AVX2-NEXT:    vmovq %xmm0, %rax
-; X64-AVX2-NEXT:    xorl %edx, %edx
-; X64-AVX2-NEXT:    testq %rax, %rax
-; X64-AVX2-NEXT:    sets %dl
-; X64-AVX2-NEXT:    addq %rsi, %rdx
-; X64-AVX2-NEXT:    vmovq %xmm1, %rcx
-; X64-AVX2-NEXT:    movq %rax, %rsi
-; X64-AVX2-NEXT:    shlq %cl, %rsi
-; X64-AVX2-NEXT:    movq %rsi, %rdi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $rcx
-; X64-AVX2-NEXT:    sarq %cl, %rdi
-; X64-AVX2-NEXT:    cmpq %rdi, %rax
-; X64-AVX2-NEXT:    cmovneq %rdx, %rsi
-; X64-AVX2-NEXT:    vmovq %rsi, %xmm0
-; X64-AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; X64-AVX2-NEXT:    vmovapd {{.*#+}} xmm2 = [9223372036854775808,9223372036854775808]
+; X64-AVX2-NEXT:    vmovapd {{.*#+}} xmm3 = [9223372036854775807,9223372036854775807]
+; X64-AVX2-NEXT:    vblendvpd %xmm0, %xmm2, %xmm3, %xmm3
+; X64-AVX2-NEXT:    vpsrlvq %xmm1, %xmm2, %xmm2
+; X64-AVX2-NEXT:    vpsllvq %xmm1, %xmm0, %xmm4
+; X64-AVX2-NEXT:    vpsrlvq %xmm1, %xmm4, %xmm1
+; X64-AVX2-NEXT:    vpxor %xmm2, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vpsubq %xmm2, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vblendvpd %xmm0, %xmm4, %xmm3, %xmm0
 ; X64-AVX2-NEXT:    retq
 ;
 ; X86-LABEL: vec_v2i64:
@@ -175,132 +155,53 @@ define <2 x i64> @vec_v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 define <4 x i32> @vec_v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-LABEL: vec_v4i32:
 ; X64:       # %bb.0:
-; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
-; X64-NEXT:    movd %xmm2, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[3,3,3,3]
-; X64-NEXT:    movd %xmm2, %ecx
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shll %cl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    sarl %cl, %esi
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testl %eax, %eax
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X64-NEXT:    cmpl %esi, %eax
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
-; X64-NEXT:    movd %xmm3, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
-; X64-NEXT:    movd %xmm3, %ecx
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shll %cl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    sarl %cl, %esi
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testl %eax, %eax
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X64-NEXT:    cmpl %esi, %eax
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm3
-; X64-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    movd %xmm1, %ecx
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shll %cl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    sarl %cl, %esi
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testl %eax, %eax
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X64-NEXT:    cmpl %esi, %eax
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm2
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
-; X64-NEXT:    movd %xmm0, %ecx
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shll %cl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    sarl %cl, %esi
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testl %eax, %eax
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X64-NEXT:    cmpl %esi, %eax
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm0
-; X64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; X64-NEXT:    movdqa %xmm2, %xmm0
+; X64-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
+; X64-NEXT:    pshuflw {{.*#+}} xmm3 = xmm1[2,3,3,3,4,5,6,7]
+; X64-NEXT:    pshuflw {{.*#+}} xmm4 = xmm1[0,1,1,1,4,5,6,7]
+; X64-NEXT:    pslld $23, %xmm1
+; X64-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    cvttps2dq %xmm1, %xmm5
+; X64-NEXT:    movdqa %xmm0, %xmm1
+; X64-NEXT:    pmuludq %xmm5, %xmm1
+; X64-NEXT:    pshufd {{.*#+}} xmm6 = xmm1[0,2,2,3]
+; X64-NEXT:    pshufd {{.*#+}} xmm7 = xmm0[1,1,3,3]
+; X64-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
+; X64-NEXT:    pmuludq %xmm7, %xmm5
+; X64-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[0,2,2,3]
+; X64-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm5[0],xmm6[1],xmm5[1]
+; X64-NEXT:    pshuflw {{.*#+}} xmm5 = xmm2[2,3,3,3,4,5,6,7]
+; X64-NEXT:    movdqa %xmm6, %xmm7
+; X64-NEXT:    psrad %xmm5, %xmm7
+; X64-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,1,1,1,4,5,6,7]
+; X64-NEXT:    movdqa %xmm1, %xmm5
+; X64-NEXT:    psrad %xmm2, %xmm5
+; X64-NEXT:    punpckhqdq {{.*#+}} xmm5 = xmm5[1],xmm7[1]
+; X64-NEXT:    movdqa %xmm6, %xmm2
+; X64-NEXT:    psrad %xmm3, %xmm2
+; X64-NEXT:    psrad %xmm4, %xmm1
+; X64-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,3],xmm5[0,3]
+; X64-NEXT:    pcmpeqd %xmm0, %xmm1
+; X64-NEXT:    pand %xmm1, %xmm6
+; X64-NEXT:    pxor %xmm2, %xmm2
+; X64-NEXT:    pcmpgtd %xmm0, %xmm2
+; X64-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    por %xmm2, %xmm0
+; X64-NEXT:    pandn %xmm0, %xmm1
+; X64-NEXT:    por %xmm6, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: vec_v4i32:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpextrd $1, %xmm0, %eax
-; X64-AVX2-NEXT:    vpextrd $1, %xmm1, %ecx
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shll %cl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarl %cl, %esi
-; X64-AVX2-NEXT:    xorl %edi, %edi
-; X64-AVX2-NEXT:    testl %eax, %eax
-; X64-AVX2-NEXT:    sets %dil
-; X64-AVX2-NEXT:    addl $2147483647, %edi # imm = 0x7FFFFFFF
-; X64-AVX2-NEXT:    cmpl %esi, %eax
-; X64-AVX2-NEXT:    cmovel %edx, %edi
-; X64-AVX2-NEXT:    vmovd %xmm0, %eax
-; X64-AVX2-NEXT:    vmovd %xmm1, %ecx
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shll %cl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarl %cl, %esi
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testl %eax, %eax
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X64-AVX2-NEXT:    cmpl %esi, %eax
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vmovd %ecx, %xmm2
-; X64-AVX2-NEXT:    vpinsrd $1, %edi, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrd $2, %xmm0, %eax
-; X64-AVX2-NEXT:    vpextrd $2, %xmm1, %ecx
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shll %cl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarl %cl, %esi
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testl %eax, %eax
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X64-AVX2-NEXT:    cmpl %esi, %eax
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrd $2, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrd $3, %xmm0, %eax
-; X64-AVX2-NEXT:    vpextrd $3, %xmm1, %ecx
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shll %cl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarl %cl, %esi
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testl %eax, %eax
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X64-AVX2-NEXT:    cmpl %esi, %eax
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrd $3, %ecx, %xmm2, %xmm0
+; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm3 = [2147483647,2147483647,2147483647,2147483647]
+; X64-AVX2-NEXT:    vblendvps %xmm0, %xmm2, %xmm3, %xmm2
+; X64-AVX2-NEXT:    vpsllvd %xmm1, %xmm0, %xmm3
+; X64-AVX2-NEXT:    vpsravd %xmm1, %xmm3, %xmm1
+; X64-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vblendvps %xmm0, %xmm3, %xmm2, %xmm0
 ; X64-AVX2-NEXT:    retq
 ;
 ; X86-LABEL: vec_v4i32:
@@ -376,241 +277,84 @@ define <4 x i32> @vec_v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 define <8 x i16> @vec_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; X64-LABEL: vec_v8i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    pextrw $7, %xmm0, %eax
-; X64-NEXT:    pextrw $7, %xmm1, %ecx
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shll %cl, %edx
-; X64-NEXT:    movswl %dx, %esi
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    sarl %cl, %esi
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testw %ax, %ax
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $32767, %ecx # imm = 0x7FFF
-; X64-NEXT:    cmpw %si, %ax
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm2
-; X64-NEXT:    pextrw $6, %xmm0, %eax
-; X64-NEXT:    pextrw $6, %xmm1, %ecx
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shll %cl, %edx
-; X64-NEXT:    movswl %dx, %esi
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    sarl %cl, %esi
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testw %ax, %ax
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $32767, %ecx # imm = 0x7FFF
-; X64-NEXT:    cmpw %si, %ax
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm3
-; X64-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; X64-NEXT:    pextrw $5, %xmm0, %eax
-; X64-NEXT:    pextrw $5, %xmm1, %ecx
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shll %cl, %edx
-; X64-NEXT:    movswl %dx, %esi
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    sarl %cl, %esi
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testw %ax, %ax
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $32767, %ecx # imm = 0x7FFF
-; X64-NEXT:    cmpw %si, %ax
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm4
-; X64-NEXT:    pextrw $4, %xmm0, %eax
-; X64-NEXT:    pextrw $4, %xmm1, %ecx
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shll %cl, %edx
-; X64-NEXT:    movswl %dx, %esi
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    sarl %cl, %esi
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testw %ax, %ax
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $32767, %ecx # imm = 0x7FFF
-; X64-NEXT:    cmpw %si, %ax
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm2
-; X64-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
-; X64-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; X64-NEXT:    pextrw $3, %xmm0, %eax
-; X64-NEXT:    pextrw $3, %xmm1, %ecx
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shll %cl, %edx
-; X64-NEXT:    movswl %dx, %esi
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    sarl %cl, %esi
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testw %ax, %ax
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $32767, %ecx # imm = 0x7FFF
-; X64-NEXT:    cmpw %si, %ax
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm4
-; X64-NEXT:    pextrw $2, %xmm0, %eax
-; X64-NEXT:    pextrw $2, %xmm1, %ecx
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shll %cl, %edx
-; X64-NEXT:    movswl %dx, %esi
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    sarl %cl, %esi
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testw %ax, %ax
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $32767, %ecx # imm = 0x7FFF
-; X64-NEXT:    cmpw %si, %ax
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm3
-; X64-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1],xmm3[2],xmm4[2],xmm3[3],xmm4[3]
-; X64-NEXT:    pextrw $1, %xmm0, %eax
-; X64-NEXT:    pextrw $1, %xmm1, %ecx
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shll %cl, %edx
-; X64-NEXT:    movswl %dx, %esi
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    sarl %cl, %esi
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testw %ax, %ax
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $32767, %ecx # imm = 0x7FFF
-; X64-NEXT:    cmpw %si, %ax
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm4
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    movd %xmm1, %ecx
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shll %cl, %edx
-; X64-NEXT:    movswl %dx, %esi
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    sarl %cl, %esi
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testw %ax, %ax
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $32767, %ecx # imm = 0x7FFF
-; X64-NEXT:    cmpw %si, %ax
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm0
-; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
-; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; X64-NEXT:    movdqa %xmm1, %xmm2
+; X64-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4,4,5,5,6,6,7,7]
+; X64-NEXT:    pslld $23, %xmm2
+; X64-NEXT:    movdqa {{.*#+}} xmm3 = [1065353216,1065353216,1065353216,1065353216]
+; X64-NEXT:    paddd %xmm3, %xmm2
+; X64-NEXT:    cvttps2dq %xmm2, %xmm2
+; X64-NEXT:    pslld $16, %xmm2
+; X64-NEXT:    psrad $16, %xmm2
+; X64-NEXT:    movdqa %xmm1, %xmm4
+; X64-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0,0,1,1,2,2,3,3]
+; X64-NEXT:    pslld $23, %xmm4
+; X64-NEXT:    paddd %xmm3, %xmm4
+; X64-NEXT:    cvttps2dq %xmm4, %xmm3
+; X64-NEXT:    pslld $16, %xmm3
+; X64-NEXT:    psrad $16, %xmm3
+; X64-NEXT:    packssdw %xmm2, %xmm3
+; X64-NEXT:    pmullw %xmm0, %xmm3
+; X64-NEXT:    psllw $12, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm2
+; X64-NEXT:    psraw $15, %xmm2
+; X64-NEXT:    movdqa %xmm3, %xmm4
+; X64-NEXT:    psraw $8, %xmm4
+; X64-NEXT:    pand %xmm2, %xmm4
+; X64-NEXT:    pandn %xmm3, %xmm2
+; X64-NEXT:    por %xmm4, %xmm2
+; X64-NEXT:    paddw %xmm1, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm4
+; X64-NEXT:    psraw $15, %xmm4
+; X64-NEXT:    movdqa %xmm4, %xmm5
+; X64-NEXT:    pandn %xmm2, %xmm5
+; X64-NEXT:    psraw $4, %xmm2
+; X64-NEXT:    pand %xmm4, %xmm2
+; X64-NEXT:    por %xmm5, %xmm2
+; X64-NEXT:    paddw %xmm1, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm4
+; X64-NEXT:    psraw $15, %xmm4
+; X64-NEXT:    movdqa %xmm4, %xmm5
+; X64-NEXT:    pandn %xmm2, %xmm5
+; X64-NEXT:    psraw $2, %xmm2
+; X64-NEXT:    pand %xmm4, %xmm2
+; X64-NEXT:    por %xmm5, %xmm2
+; X64-NEXT:    paddw %xmm1, %xmm1
+; X64-NEXT:    psraw $15, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm4
+; X64-NEXT:    pandn %xmm2, %xmm4
+; X64-NEXT:    psraw $1, %xmm2
+; X64-NEXT:    pand %xmm1, %xmm2
+; X64-NEXT:    por %xmm4, %xmm2
+; X64-NEXT:    pcmpeqw %xmm0, %xmm2
+; X64-NEXT:    pand %xmm2, %xmm3
+; X64-NEXT:    pxor %xmm1, %xmm1
+; X64-NEXT:    pcmpgtw %xmm0, %xmm1
+; X64-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    por %xmm1, %xmm0
+; X64-NEXT:    pandn %xmm0, %xmm2
+; X64-NEXT:    por %xmm3, %xmm2
+; X64-NEXT:    movdqa %xmm2, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: vec_v8i16:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpextrw $1, %xmm0, %edx
-; X64-AVX2-NEXT:    vpextrw $1, %xmm1, %ecx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    shll %cl, %esi
-; X64-AVX2-NEXT:    movswl %si, %edi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarl %cl, %edi
-; X64-AVX2-NEXT:    xorl %eax, %eax
-; X64-AVX2-NEXT:    testw %dx, %dx
-; X64-AVX2-NEXT:    sets %al
-; X64-AVX2-NEXT:    addl $32767, %eax # imm = 0x7FFF
-; X64-AVX2-NEXT:    cmpw %di, %dx
-; X64-AVX2-NEXT:    cmovel %esi, %eax
-; X64-AVX2-NEXT:    vmovd %xmm0, %edx
-; X64-AVX2-NEXT:    vmovd %xmm1, %ecx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    shll %cl, %esi
-; X64-AVX2-NEXT:    movswl %si, %edi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarl %cl, %edi
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testw %dx, %dx
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $32767, %ecx # imm = 0x7FFF
-; X64-AVX2-NEXT:    cmpw %di, %dx
-; X64-AVX2-NEXT:    cmovel %esi, %ecx
-; X64-AVX2-NEXT:    vmovd %ecx, %xmm2
-; X64-AVX2-NEXT:    vpinsrw $1, %eax, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrw $2, %xmm0, %eax
-; X64-AVX2-NEXT:    vpextrw $2, %xmm1, %ecx
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shll %cl, %edx
-; X64-AVX2-NEXT:    movswl %dx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarl %cl, %esi
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testw %ax, %ax
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $32767, %ecx # imm = 0x7FFF
-; X64-AVX2-NEXT:    cmpw %si, %ax
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrw $2, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrw $3, %xmm0, %eax
-; X64-AVX2-NEXT:    vpextrw $3, %xmm1, %ecx
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shll %cl, %edx
-; X64-AVX2-NEXT:    movswl %dx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarl %cl, %esi
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testw %ax, %ax
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $32767, %ecx # imm = 0x7FFF
-; X64-AVX2-NEXT:    cmpw %si, %ax
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrw $3, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrw $4, %xmm0, %eax
-; X64-AVX2-NEXT:    vpextrw $4, %xmm1, %ecx
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shll %cl, %edx
-; X64-AVX2-NEXT:    movswl %dx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarl %cl, %esi
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testw %ax, %ax
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $32767, %ecx # imm = 0x7FFF
-; X64-AVX2-NEXT:    cmpw %si, %ax
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrw $4, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrw $5, %xmm0, %eax
-; X64-AVX2-NEXT:    vpextrw $5, %xmm1, %ecx
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shll %cl, %edx
-; X64-AVX2-NEXT:    movswl %dx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarl %cl, %esi
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testw %ax, %ax
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $32767, %ecx # imm = 0x7FFF
-; X64-AVX2-NEXT:    cmpw %si, %ax
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrw $5, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrw $6, %xmm0, %eax
-; X64-AVX2-NEXT:    vpextrw $6, %xmm1, %ecx
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shll %cl, %edx
-; X64-AVX2-NEXT:    movswl %dx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarl %cl, %esi
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testw %ax, %ax
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $32767, %ecx # imm = 0x7FFF
-; X64-AVX2-NEXT:    cmpw %si, %ax
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrw $6, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrw $7, %xmm0, %eax
-; X64-AVX2-NEXT:    vpextrw $7, %xmm1, %ecx
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shll %cl, %edx
-; X64-AVX2-NEXT:    movswl %dx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarl %cl, %esi
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testw %ax, %ax
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $32767, %ecx # imm = 0x7FFF
-; X64-AVX2-NEXT:    cmpw %si, %ax
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrw $7, %ecx, %xmm2, %xmm0
+; X64-AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; X64-AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; X64-AVX2-NEXT:    vpsllvd %ymm1, %ymm2, %ymm2
+; X64-AVX2-NEXT:    vpshufb {{.*#+}} ymm2 = ymm2[0,1,4,5,8,9,12,13,u,u,u,u,u,u,u,u,16,17,20,21,24,25,28,29,u,u,u,u,u,u,u,u]
+; X64-AVX2-NEXT:    vpermq {{.*#+}} ymm2 = ymm2[0,2,2,3]
+; X64-AVX2-NEXT:    vpmovsxwd %xmm2, %ymm3
+; X64-AVX2-NEXT:    vpsravd %ymm1, %ymm3, %ymm1
+; X64-AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
+; X64-AVX2-NEXT:    vpackssdw %xmm3, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm1
+; X64-AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; X64-AVX2-NEXT:    vpcmpgtw %xmm0, %xmm3, %xmm0
+; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [32767,32767,32767,32767,32767,32767,32767,32767]
+; X64-AVX2-NEXT:    vpblendvb %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm0
+; X64-AVX2-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
+; X64-AVX2-NEXT:    vzeroupper
 ; X64-AVX2-NEXT:    retq
 ;
 ; X86-LABEL: vec_v8i16:
@@ -748,492 +492,137 @@ define <8 x i16> @vec_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X64-LABEL: vec_v16i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shlb %cl, %dl
-; X64-NEXT:    movzbl %dl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    sarb %cl, %sil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testb %al, %al
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $127, %ecx
-; X64-NEXT:    cmpb %sil, %al
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm0
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shlb %cl, %dl
-; X64-NEXT:    movzbl %dl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    sarb %cl, %sil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testb %al, %al
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $127, %ecx
-; X64-NEXT:    cmpb %sil, %al
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm1
-; X64-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shlb %cl, %dl
-; X64-NEXT:    movzbl %dl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    sarb %cl, %sil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testb %al, %al
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $127, %ecx
-; X64-NEXT:    cmpb %sil, %al
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm2
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shlb %cl, %dl
-; X64-NEXT:    movzbl %dl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    sarb %cl, %sil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testb %al, %al
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $127, %ecx
-; X64-NEXT:    cmpb %sil, %al
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm0
-; X64-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shlb %cl, %dl
-; X64-NEXT:    movzbl %dl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    sarb %cl, %sil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testb %al, %al
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $127, %ecx
-; X64-NEXT:    cmpb %sil, %al
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm1
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shlb %cl, %dl
-; X64-NEXT:    movzbl %dl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    sarb %cl, %sil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testb %al, %al
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $127, %ecx
-; X64-NEXT:    cmpb %sil, %al
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm2
-; X64-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shlb %cl, %dl
-; X64-NEXT:    movzbl %dl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    sarb %cl, %sil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testb %al, %al
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $127, %ecx
-; X64-NEXT:    cmpb %sil, %al
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm3
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shlb %cl, %dl
-; X64-NEXT:    movzbl %dl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    sarb %cl, %sil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testb %al, %al
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $127, %ecx
-; X64-NEXT:    cmpb %sil, %al
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm1
-; X64-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3],xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
-; X64-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; X64-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shlb %cl, %dl
-; X64-NEXT:    movzbl %dl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    sarb %cl, %sil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testb %al, %al
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $127, %ecx
-; X64-NEXT:    cmpb %sil, %al
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm2
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shlb %cl, %dl
-; X64-NEXT:    movzbl %dl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    sarb %cl, %sil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testb %al, %al
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $127, %ecx
-; X64-NEXT:    cmpb %sil, %al
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm0
-; X64-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shlb %cl, %dl
-; X64-NEXT:    movzbl %dl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    sarb %cl, %sil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testb %al, %al
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $127, %ecx
-; X64-NEXT:    cmpb %sil, %al
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm3
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shlb %cl, %dl
-; X64-NEXT:    movzbl %dl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    sarb %cl, %sil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testb %al, %al
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $127, %ecx
-; X64-NEXT:    cmpb %sil, %al
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm2
-; X64-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3],xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
-; X64-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shlb %cl, %dl
-; X64-NEXT:    movzbl %dl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    sarb %cl, %sil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testb %al, %al
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $127, %ecx
-; X64-NEXT:    cmpb %sil, %al
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm0
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movl %eax, %edx
-; X64-NEXT:    shlb %cl, %dl
-; X64-NEXT:    movzbl %dl, %edx
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    sarb %cl, %sil
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testb %al, %al
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $127, %ecx
-; X64-NEXT:    cmpb %sil, %al
-; X64-NEXT:    cmovel %edx, %ecx
-; X64-NEXT:    movd %ecx, %xmm3
-; X64-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1],xmm3[2],xmm0[2],xmm3[3],xmm0[3],xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; X64-NEXT:    movl %esi, %edi
-; X64-NEXT:    shlb %cl, %dil
-; X64-NEXT:    movzbl %dil, %edi
-; X64-NEXT:    movl %edi, %r8d
-; X64-NEXT:    sarb %cl, %r8b
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    testb %sil, %sil
-; X64-NEXT:    sets %cl
-; X64-NEXT:    addl $127, %ecx
-; X64-NEXT:    cmpb %r8b, %sil
-; X64-NEXT:    cmovel %edi, %ecx
-; X64-NEXT:    movd %ecx, %xmm4
-; X64-NEXT:    movl %edx, %esi
-; X64-NEXT:    movl %eax, %ecx
-; X64-NEXT:    shlb %cl, %sil
-; X64-NEXT:    movzbl %sil, %esi
-; X64-NEXT:    movl %esi, %edi
-; X64-NEXT:    sarb %cl, %dil
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    testb %dl, %dl
-; X64-NEXT:    sets %al
-; X64-NEXT:    addl $127, %eax
-; X64-NEXT:    cmpb %dil, %dl
-; X64-NEXT:    cmovel %esi, %eax
-; X64-NEXT:    movd %eax, %xmm0
-; X64-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3],xmm0[4],xmm4[4],xmm0[5],xmm4[5],xmm0[6],xmm4[6],xmm0[7],xmm4[7]
-; X64-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
-; X64-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; X64-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-NEXT:    psllw $5, %xmm1
+; X64-NEXT:    pxor %xmm3, %xmm3
+; X64-NEXT:    pxor %xmm4, %xmm4
+; X64-NEXT:    pcmpgtb %xmm1, %xmm4
+; X64-NEXT:    movdqa %xmm0, %xmm2
+; X64-NEXT:    psllw $4, %xmm2
+; X64-NEXT:    pand %xmm4, %xmm2
+; X64-NEXT:    pandn %xmm0, %xmm4
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; X64-NEXT:    por %xmm4, %xmm2
+; X64-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm1[8],xmm4[9],xmm1[9],xmm4[10],xmm1[10],xmm4[11],xmm1[11],xmm4[12],xmm1[12],xmm4[13],xmm1[13],xmm4[14],xmm1[14],xmm4[15],xmm1[15]
+; X64-NEXT:    punpcklbw {{.*#+}} xmm5 = xmm5[0],xmm1[0],xmm5[1],xmm1[1],xmm5[2],xmm1[2],xmm5[3],xmm1[3],xmm5[4],xmm1[4],xmm5[5],xmm1[5],xmm5[6],xmm1[6],xmm5[7],xmm1[7]
+; X64-NEXT:    paddb %xmm1, %xmm1
+; X64-NEXT:    pxor %xmm6, %xmm6
+; X64-NEXT:    pcmpgtb %xmm1, %xmm6
+; X64-NEXT:    movdqa %xmm6, %xmm7
+; X64-NEXT:    pandn %xmm2, %xmm7
+; X64-NEXT:    psllw $2, %xmm2
+; X64-NEXT:    pand %xmm6, %xmm2
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; X64-NEXT:    por %xmm7, %xmm2
+; X64-NEXT:    paddb %xmm1, %xmm1
+; X64-NEXT:    pxor %xmm6, %xmm6
+; X64-NEXT:    pcmpgtb %xmm1, %xmm6
+; X64-NEXT:    movdqa %xmm6, %xmm1
+; X64-NEXT:    pandn %xmm2, %xmm1
+; X64-NEXT:    paddb %xmm2, %xmm2
+; X64-NEXT:    pand %xmm6, %xmm2
+; X64-NEXT:    por %xmm1, %xmm2
+; X64-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm2[8],xmm6[9],xmm2[9],xmm6[10],xmm2[10],xmm6[11],xmm2[11],xmm6[12],xmm2[12],xmm6[13],xmm2[13],xmm6[14],xmm2[14],xmm6[15],xmm2[15]
+; X64-NEXT:    pxor %xmm1, %xmm1
+; X64-NEXT:    pcmpgtw %xmm4, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm7
+; X64-NEXT:    pandn %xmm6, %xmm7
+; X64-NEXT:    psraw $4, %xmm6
+; X64-NEXT:    pand %xmm1, %xmm6
+; X64-NEXT:    por %xmm7, %xmm6
+; X64-NEXT:    paddw %xmm4, %xmm4
+; X64-NEXT:    pxor %xmm1, %xmm1
+; X64-NEXT:    pcmpgtw %xmm4, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm7
+; X64-NEXT:    pandn %xmm6, %xmm7
+; X64-NEXT:    psraw $2, %xmm6
+; X64-NEXT:    pand %xmm1, %xmm6
+; X64-NEXT:    por %xmm7, %xmm6
+; X64-NEXT:    paddw %xmm4, %xmm4
+; X64-NEXT:    pxor %xmm1, %xmm1
+; X64-NEXT:    pcmpgtw %xmm4, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm4
+; X64-NEXT:    pandn %xmm6, %xmm4
+; X64-NEXT:    psraw $1, %xmm6
+; X64-NEXT:    pand %xmm1, %xmm6
+; X64-NEXT:    por %xmm4, %xmm6
+; X64-NEXT:    psrlw $8, %xmm6
+; X64-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3],xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; X64-NEXT:    pxor %xmm4, %xmm4
+; X64-NEXT:    pcmpgtw %xmm5, %xmm4
+; X64-NEXT:    movdqa %xmm4, %xmm7
+; X64-NEXT:    pandn %xmm1, %xmm7
+; X64-NEXT:    psraw $4, %xmm1
+; X64-NEXT:    pand %xmm4, %xmm1
+; X64-NEXT:    por %xmm7, %xmm1
+; X64-NEXT:    paddw %xmm5, %xmm5
+; X64-NEXT:    pxor %xmm4, %xmm4
+; X64-NEXT:    pcmpgtw %xmm5, %xmm4
+; X64-NEXT:    movdqa %xmm4, %xmm7
+; X64-NEXT:    pandn %xmm1, %xmm7
+; X64-NEXT:    psraw $2, %xmm1
+; X64-NEXT:    pand %xmm4, %xmm1
+; X64-NEXT:    por %xmm7, %xmm1
+; X64-NEXT:    paddw %xmm5, %xmm5
+; X64-NEXT:    pxor %xmm4, %xmm4
+; X64-NEXT:    pcmpgtw %xmm5, %xmm4
+; X64-NEXT:    movdqa %xmm4, %xmm5
+; X64-NEXT:    pandn %xmm1, %xmm5
+; X64-NEXT:    psraw $1, %xmm1
+; X64-NEXT:    pand %xmm4, %xmm1
+; X64-NEXT:    por %xmm5, %xmm1
+; X64-NEXT:    psrlw $8, %xmm1
+; X64-NEXT:    packuswb %xmm6, %xmm1
+; X64-NEXT:    pcmpeqb %xmm0, %xmm1
+; X64-NEXT:    pand %xmm1, %xmm2
+; X64-NEXT:    pcmpgtb %xmm0, %xmm3
+; X64-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
+; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    por %xmm3, %xmm0
+; X64-NEXT:    pandn %xmm0, %xmm1
+; X64-NEXT:    por %xmm2, %xmm1
+; X64-NEXT:    movdqa %xmm1, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: vec_v16i8:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpextrb $1, %xmm1, %ecx
-; X64-AVX2-NEXT:    vpextrb $1, %xmm0, %edx
-; X64-AVX2-NEXT:    movl %edx, %eax
-; X64-AVX2-NEXT:    shlb %cl, %al
-; X64-AVX2-NEXT:    movzbl %al, %esi
-; X64-AVX2-NEXT:    movl %esi, %edi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarb %cl, %dil
-; X64-AVX2-NEXT:    xorl %eax, %eax
-; X64-AVX2-NEXT:    testb %dl, %dl
-; X64-AVX2-NEXT:    sets %al
-; X64-AVX2-NEXT:    addl $127, %eax
-; X64-AVX2-NEXT:    cmpb %dil, %dl
-; X64-AVX2-NEXT:    cmovel %esi, %eax
-; X64-AVX2-NEXT:    vmovd %xmm1, %ecx
-; X64-AVX2-NEXT:    vmovd %xmm0, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    shlb %cl, %sil
-; X64-AVX2-NEXT:    movzbl %sil, %esi
-; X64-AVX2-NEXT:    movl %esi, %edi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarb %cl, %dil
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testb %dl, %dl
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $127, %ecx
-; X64-AVX2-NEXT:    cmpb %dil, %dl
-; X64-AVX2-NEXT:    cmovel %esi, %ecx
-; X64-AVX2-NEXT:    vmovd %ecx, %xmm2
-; X64-AVX2-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrb $2, %xmm1, %ecx
-; X64-AVX2-NEXT:    vpextrb $2, %xmm0, %eax
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shlb %cl, %dl
-; X64-AVX2-NEXT:    movzbl %dl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarb %cl, %sil
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testb %al, %al
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $127, %ecx
-; X64-AVX2-NEXT:    cmpb %sil, %al
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrb $2, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrb $3, %xmm1, %ecx
-; X64-AVX2-NEXT:    vpextrb $3, %xmm0, %eax
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shlb %cl, %dl
-; X64-AVX2-NEXT:    movzbl %dl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarb %cl, %sil
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testb %al, %al
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $127, %ecx
-; X64-AVX2-NEXT:    cmpb %sil, %al
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrb $3, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrb $4, %xmm1, %ecx
-; X64-AVX2-NEXT:    vpextrb $4, %xmm0, %eax
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shlb %cl, %dl
-; X64-AVX2-NEXT:    movzbl %dl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarb %cl, %sil
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testb %al, %al
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $127, %ecx
-; X64-AVX2-NEXT:    cmpb %sil, %al
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrb $4, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrb $5, %xmm1, %ecx
-; X64-AVX2-NEXT:    vpextrb $5, %xmm0, %eax
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shlb %cl, %dl
-; X64-AVX2-NEXT:    movzbl %dl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarb %cl, %sil
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testb %al, %al
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $127, %ecx
-; X64-AVX2-NEXT:    cmpb %sil, %al
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrb $5, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrb $6, %xmm1, %ecx
-; X64-AVX2-NEXT:    vpextrb $6, %xmm0, %eax
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shlb %cl, %dl
-; X64-AVX2-NEXT:    movzbl %dl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarb %cl, %sil
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testb %al, %al
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $127, %ecx
-; X64-AVX2-NEXT:    cmpb %sil, %al
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrb $6, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrb $7, %xmm1, %ecx
-; X64-AVX2-NEXT:    vpextrb $7, %xmm0, %eax
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shlb %cl, %dl
-; X64-AVX2-NEXT:    movzbl %dl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarb %cl, %sil
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testb %al, %al
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $127, %ecx
-; X64-AVX2-NEXT:    cmpb %sil, %al
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrb $7, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrb $8, %xmm1, %ecx
-; X64-AVX2-NEXT:    vpextrb $8, %xmm0, %eax
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shlb %cl, %dl
-; X64-AVX2-NEXT:    movzbl %dl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarb %cl, %sil
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testb %al, %al
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $127, %ecx
-; X64-AVX2-NEXT:    cmpb %sil, %al
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrb $8, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrb $9, %xmm1, %ecx
-; X64-AVX2-NEXT:    vpextrb $9, %xmm0, %eax
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shlb %cl, %dl
-; X64-AVX2-NEXT:    movzbl %dl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarb %cl, %sil
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testb %al, %al
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $127, %ecx
-; X64-AVX2-NEXT:    cmpb %sil, %al
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrb $9, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrb $10, %xmm1, %ecx
-; X64-AVX2-NEXT:    vpextrb $10, %xmm0, %eax
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shlb %cl, %dl
-; X64-AVX2-NEXT:    movzbl %dl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarb %cl, %sil
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testb %al, %al
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $127, %ecx
-; X64-AVX2-NEXT:    cmpb %sil, %al
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrb $10, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrb $11, %xmm1, %ecx
-; X64-AVX2-NEXT:    vpextrb $11, %xmm0, %eax
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shlb %cl, %dl
-; X64-AVX2-NEXT:    movzbl %dl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarb %cl, %sil
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testb %al, %al
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $127, %ecx
-; X64-AVX2-NEXT:    cmpb %sil, %al
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrb $11, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrb $12, %xmm1, %ecx
-; X64-AVX2-NEXT:    vpextrb $12, %xmm0, %eax
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shlb %cl, %dl
-; X64-AVX2-NEXT:    movzbl %dl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarb %cl, %sil
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testb %al, %al
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $127, %ecx
-; X64-AVX2-NEXT:    cmpb %sil, %al
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrb $12, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrb $13, %xmm1, %ecx
-; X64-AVX2-NEXT:    vpextrb $13, %xmm0, %eax
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shlb %cl, %dl
-; X64-AVX2-NEXT:    movzbl %dl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarb %cl, %sil
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testb %al, %al
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $127, %ecx
-; X64-AVX2-NEXT:    cmpb %sil, %al
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrb $13, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrb $14, %xmm1, %ecx
-; X64-AVX2-NEXT:    vpextrb $14, %xmm0, %eax
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shlb %cl, %dl
-; X64-AVX2-NEXT:    movzbl %dl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarb %cl, %sil
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testb %al, %al
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $127, %ecx
-; X64-AVX2-NEXT:    cmpb %sil, %al
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrb $14, %ecx, %xmm2, %xmm2
-; X64-AVX2-NEXT:    vpextrb $15, %xmm1, %ecx
-; X64-AVX2-NEXT:    vpextrb $15, %xmm0, %eax
-; X64-AVX2-NEXT:    movl %eax, %edx
-; X64-AVX2-NEXT:    shlb %cl, %dl
-; X64-AVX2-NEXT:    movzbl %dl, %edx
-; X64-AVX2-NEXT:    movl %edx, %esi
-; X64-AVX2-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-AVX2-NEXT:    sarb %cl, %sil
-; X64-AVX2-NEXT:    xorl %ecx, %ecx
-; X64-AVX2-NEXT:    testb %al, %al
-; X64-AVX2-NEXT:    sets %cl
-; X64-AVX2-NEXT:    addl $127, %ecx
-; X64-AVX2-NEXT:    cmpb %sil, %al
-; X64-AVX2-NEXT:    cmovel %edx, %ecx
-; X64-AVX2-NEXT:    vpinsrb $15, %ecx, %xmm2, %xmm0
+; X64-AVX2-NEXT:    vpsllw $5, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vpsllw $4, %xmm0, %xmm2
+; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2
+; X64-AVX2-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm2
+; X64-AVX2-NEXT:    vpsllw $2, %xmm2, %xmm3
+; X64-AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
+; X64-AVX2-NEXT:    vpaddb %xmm1, %xmm1, %xmm4
+; X64-AVX2-NEXT:    vpblendvb %xmm4, %xmm3, %xmm2, %xmm2
+; X64-AVX2-NEXT:    vpaddb %xmm2, %xmm2, %xmm3
+; X64-AVX2-NEXT:    vpaddb %xmm4, %xmm4, %xmm4
+; X64-AVX2-NEXT:    vpblendvb %xmm4, %xmm3, %xmm2, %xmm2
+; X64-AVX2-NEXT:    vpunpckhbw {{.*#+}} xmm3 = xmm2[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; X64-AVX2-NEXT:    vpsraw $4, %xmm3, %xmm4
+; X64-AVX2-NEXT:    vpunpckhbw {{.*#+}} xmm5 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; X64-AVX2-NEXT:    vpblendvb %xmm5, %xmm4, %xmm3, %xmm3
+; X64-AVX2-NEXT:    vpsraw $2, %xmm3, %xmm4
+; X64-AVX2-NEXT:    vpaddw %xmm5, %xmm5, %xmm5
+; X64-AVX2-NEXT:    vpblendvb %xmm5, %xmm4, %xmm3, %xmm3
+; X64-AVX2-NEXT:    vpsraw $1, %xmm3, %xmm4
+; X64-AVX2-NEXT:    vpaddw %xmm5, %xmm5, %xmm5
+; X64-AVX2-NEXT:    vpblendvb %xmm5, %xmm4, %xmm3, %xmm3
+; X64-AVX2-NEXT:    vpsrlw $8, %xmm3, %xmm3
+; X64-AVX2-NEXT:    vpunpcklbw {{.*#+}} xmm4 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; X64-AVX2-NEXT:    vpsraw $4, %xmm4, %xmm5
+; X64-AVX2-NEXT:    vpunpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; X64-AVX2-NEXT:    vpblendvb %xmm1, %xmm5, %xmm4, %xmm4
+; X64-AVX2-NEXT:    vpsraw $2, %xmm4, %xmm5
+; X64-AVX2-NEXT:    vpaddw %xmm1, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vpblendvb %xmm1, %xmm5, %xmm4, %xmm4
+; X64-AVX2-NEXT:    vpsraw $1, %xmm4, %xmm5
+; X64-AVX2-NEXT:    vpaddw %xmm1, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vpblendvb %xmm1, %xmm5, %xmm4, %xmm1
+; X64-AVX2-NEXT:    vpsrlw $8, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vpackuswb %xmm3, %xmm1, %xmm1
+; X64-AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm1
+; X64-AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
+; X64-AVX2-NEXT:    vpblendvb %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm0
+; X64-AVX2-NEXT:    vpblendvb %xmm1, %xmm2, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    retq
 ;
 ; X86-LABEL: vec_v16i8:

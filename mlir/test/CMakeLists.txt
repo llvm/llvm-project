@@ -50,6 +50,7 @@ llvm_canonicalize_cmake_booleans(
   MLIR_RUN_AMX_TESTS
   MLIR_RUN_CUDA_TENSOR_CORE_TESTS
   MLIR_RUN_X86VECTOR_TESTS
+  MLIR_RUN_ARM_SVE_TESTS
   )
 
 configure_lit_site_cfg(

@@ -186,7 +186,7 @@ namespace Diags {
   struct A { int n, m; };
   template<A a> struct X { static_assert(a.n == a.m); }; // expected-error {{static assertion failed due to requirement 'Diags::A{1, 2}.n == Diags::A{1, 2}.m'}} \
                                                          // expected-note {{evaluates to '1 == 2'}}
-  template struct X<A{1, 2}>; // expected-note {{in instantiation of template class 'Diags::X<{1, 2}>' requested here}}
+  template struct X<A{1, 2}>; // expected-note {{in instantiation of template class 'Diags::X<A{1, 2}>' requested here}}
 }
 
 namespace CTADPartialOrder {

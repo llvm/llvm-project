@@ -169,13 +169,13 @@ public:
   LogicalResult matchAndRewrite(GenericOp op,
                                 PatternRewriter &rewriter) const override {
     if (!op.hasTensorSemantics() || op.getNumResults() != 1 ||
-        !isAlloc(op.getOutputOperand(0), /*isZero=*/false) || !isZeroYield(op))
+        !isAlloc(op.getDpsInitOperand(0), /*isZero=*/false) || !isZeroYield(op))
       return failure();
     auto outputType = op.getResult(0).getType().cast<RankedTensorType>();
     // Yielding zero on newly allocated (all-zero) sparse tensors can be
     // optimized out directly (regardless of dynamic or static size).
     if (getSparseTensorEncoding(outputType)) {
-      rewriter.replaceOp(op, op.getOutputOperand(0)->get());
+      rewriter.replaceOp(op, op.getDpsInitOperand(0)->get());
       return success();
     }
     // Incorporate zero value into allocation copy.
@@ -183,9 +183,9 @@ public:
       return failure();
     Value zero = constantZero(rewriter, op.getLoc(), op.getResult(0).getType());
     AllocTensorOp a =
-        op.getOutputOperand(0)->get().getDefiningOp<AllocTensorOp>();
+        op.getDpsInitOperand(0)->get().getDefiningOp<AllocTensorOp>();
     rewriter.updateRootInPlace(a, [&]() { a.getCopyMutable().assign(zero); });
-    rewriter.replaceOp(op, op.getOutputOperand(0)->get());
+    rewriter.replaceOp(op, op.getDpsInitOperand(0)->get());
     return success();
   }
 };
@@ -212,31 +212,31 @@ public:
   LogicalResult matchAndRewrite(GenericOp op,
                                 PatternRewriter &rewriter) const override {
     // Check consumer.
-    if (!op.hasTensorSemantics() || op.getNumInputs() != 2 ||
+    if (!op.hasTensorSemantics() || op.getNumDpsInputs() != 2 ||
         op.getNumResults() != 1 ||
         op.getNumParallelLoops() != op.getNumLoops() ||
-        !op.getMatchingIndexingMap(op.getOutputOperand(0)).isIdentity() ||
-        !op.getMatchingIndexingMap(op.getInputOperand(0)).isIdentity() ||
-        !op.getMatchingIndexingMap(op.getInputOperand(1)).isIdentity())
+        !op.getMatchingIndexingMap(op.getDpsInitOperand(0)).isIdentity() ||
+        !op.getMatchingIndexingMap(op.getDpsInputOperand(0)).isIdentity() ||
+        !op.getMatchingIndexingMap(op.getDpsInputOperand(1)).isIdentity())
       return failure();
     // Find consuming OP2(sparse, other) or OP2(other, sparse). The other
     // operand can be sparse or dense, since the point of this rewriting rule
     // is detecting a situation in which *more* sparsity is introduced into
     // a computation, be it already sparse or still dense.
     unsigned other = 0;
-    if (isSparseTensor(op.getInputOperand(0)))
+    if (isSparseTensor(op.getDpsInputOperand(0)))
       other = 1;
-    else if (!isSparseTensor(op.getInputOperand(1)))
+    else if (!isSparseTensor(op.getDpsInputOperand(1)))
       return failure();
     // Check producer.
     auto prod = dyn_cast_or_null<GenericOp>(
-        op.getInputOperand(other)->get().getDefiningOp());
+        op.getDpsInputOperand(other)->get().getDefiningOp());
     if (!prod || !prod.hasTensorSemantics() || prod.getNumResults() != 1 ||
         !prod.getResult(0).hasOneUse())
       return failure();
     // Sampling consumer and sum of multiplication chain producer.
-    if (!isAlloc(op.getOutputOperand(0), /*isZero=*/false) ||
-        !isAlloc(prod.getOutputOperand(0), /*isZero=*/true) ||
+    if (!isAlloc(op.getDpsInitOperand(0), /*isZero=*/false) ||
+        !isAlloc(prod.getDpsInitOperand(0), /*isZero=*/true) ||
         !isSampling(op) || !isSumOfMul(prod))
       return failure();
     // Modify operand structure of producer and consumer.
@@ -244,7 +244,7 @@ public:
     SmallVector<Value> inputOps = prod.getInputs();
     SmallVector<Value> outputOps = op.getOutputs();
     SmallVector<AffineMap> fusedIndexMaps = prod.getIndexingMapsArray();
-    inputOps.push_back(op.getInputOperand(1 - other)->get());
+    inputOps.push_back(op.getDpsInputOperand(1 - other)->get());
     fusedIndexMaps.push_back(fusedIndexMaps.back()); // mimic other
     // Fuse producer and consumer into a new generic op.
     auto fusedOp = rewriter.create<GenericOp>(
@@ -277,12 +277,12 @@ public:
     rewriter.create<linalg::YieldOp>(loc, last);
     // Force initial value on merged allocation for dense outputs.
     if (!getSparseTensorEncoding(op.getResult(0).getType())) {
-      Value init = prod.getOutputOperand(0)
+      Value init = prod.getDpsInitOperand(0)
                        ->get()
                        .getDefiningOp<AllocTensorOp>()
                        .getCopy();
       AllocTensorOp a =
-          op.getOutputOperand(0)->get().getDefiningOp<AllocTensorOp>();
+          op.getDpsInitOperand(0)->get().getDefiningOp<AllocTensorOp>();
       rewriter.updateRootInPlace(a, [&]() { a.getCopyMutable().assign(init); });
     }
     // Replace consumer with fused operation. Old producer

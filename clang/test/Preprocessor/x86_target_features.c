@@ -602,6 +602,15 @@
 // RUN: %clang -target x86_64-unknown-linux-gnu -march=atom -mno-cmpccxadd -x c -E -dM -o - %s | FileCheck  -check-prefix=NO-CMPCCXADD %s
 
 // NO-CMPCCXADD-NOT: #define __CMPCCXADD__ 1
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavxifma -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVXIFMA %s
+
+// AVXIFMA: #define __AVX2__ 1
+// AVXIFMA: #define __AVXIFMA__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavxifma -mno-avx2 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVXIFMANOAVX2 %s
+
+// AVXIFMANOAVX2-NOT: #define __AVX2__ 1
+// AVXIFMANOAVX2-NOT: #define __AVXIFMA__ 1
 
 // RUN: %clang -target i386-unknown-linux-gnu -march=atom -mraoint -x c -E -dM -o - %s | FileCheck  -check-prefix=RAOINT %s
 
@@ -610,6 +619,20 @@
 // RUN: %clang -target i386-unknown-linux-gnu -march=atom -mno-raoint -x c -E -dM -o - %s | FileCheck  -check-prefix=NO-RAOINT %s
 
 // NO-RAOINT-NOT: #define __RAOINT__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavxvnniint8 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVXVNNIINT8 %s
+
+// AVXVNNIINT8: #define __AVX2__ 1
+// AVXVNNIINT8: #define __AVXVNNIINT8__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mno-avxvnniint8 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=NOAVXVNNIINT8 %s
+
+// NOAVXVNNIINT8-NOT: #define __AVXVNNIINT8__ 1
+
+// RUN: %clang -target i386-unknown-unknown -march=atom -mavxvnniint8 -mno-avx2 -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVXVNNIINT8NOAVX2 %s
+
+// AVXVNNIINT8NOAVX2-NOT: #define __AVX2__ 1
+// AVXVNNIINT8NOAVX2-NOT: #define __AVXVNNIINT8__ 1
 
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mcrc32 -x c -E -dM -o - %s | FileCheck -check-prefix=CRC32 %s
 

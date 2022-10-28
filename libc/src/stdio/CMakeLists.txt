@@ -3,6 +3,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
 
 add_subdirectory(printf_core)
+add_subdirectory(scanf_core)
 
 add_entrypoint_object(
   fopen
@@ -106,6 +107,18 @@ add_entrypoint_object(
     fgetc.cpp
   HDRS
     fgetc.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  fgets
+  SRCS
+    fgets.cpp
+  HDRS
+    fgets.h
   DEPENDS
     libc.include.stdio
     libc.src.__support.File.file

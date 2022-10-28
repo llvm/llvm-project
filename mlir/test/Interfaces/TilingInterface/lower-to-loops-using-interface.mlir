@@ -208,7 +208,7 @@ func.func @transpose(%arg0: memref<16x32x64xf32>,
 // CHECK:     scf.for %[[I:.*]] = %[[C0]] to %[[C16]] step %[[C1]] {
 // CHECK:       scf.for %[[J:.*]] = %[[C0]] to %[[C32]] step %[[C1]] {
 // CHECK:         scf.for %[[K:.*]] = %[[C0]] to %[[C64]] step %[[C1]] {
-// CHECK:           %[[ELEM:.*]] = memref.load %[[OUT]][%[[J]], %[[K]], %[[I]]]
+// CHECK:           %[[ELEM:.*]] = memref.load %[[IN]][%[[I]], %[[J]], %[[K]]]
 // CHECK:           memref.store %[[ELEM]], %[[OUT]][%[[J]], %[[K]], %[[I]]]
 
 // -----

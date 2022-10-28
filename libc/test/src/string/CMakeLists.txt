@@ -93,6 +93,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  strcoll_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strcoll_test.cpp
+  DEPENDS
+    libc.src.string.strcoll
+)
+
+add_libc_unittest(
   strcpy_test
   SUITE
     libc_string_unittests

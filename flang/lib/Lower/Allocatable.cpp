@@ -496,8 +496,11 @@ private:
         loc, fir::ReferenceType::get(typeDescGlobal.getType()),
         typeDescGlobal.getSymbol());
     mlir::func::FuncOp callee =
-        fir::runtime::getRuntimeFunc<mkRTKey(AllocatableInitDerived)>(loc,
-                                                                      builder);
+        box.isPointer()
+            ? fir::runtime::getRuntimeFunc<mkRTKey(PointerNullifyDerived)>(
+                  loc, builder)
+            : fir::runtime::getRuntimeFunc<mkRTKey(AllocatableInitDerived)>(
+                  loc, builder);
 
     llvm::ArrayRef<mlir::Type> inputTypes =
         callee.getFunctionType().getInputs();
@@ -667,7 +670,7 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
   fir::MutableProperties mutableProperties;
   std::string name = converter.mangleName(sym);
   mlir::Type baseAddrTy = converter.genType(sym);
-  if (auto boxType = baseAddrTy.dyn_cast<fir::BoxType>())
+  if (auto boxType = baseAddrTy.dyn_cast<fir::BaseBoxType>())
     baseAddrTy = boxType.getEleTy();
   // Allocate and set a variable to hold the address.
   // It will be set to null in setUnallocatedStatus.

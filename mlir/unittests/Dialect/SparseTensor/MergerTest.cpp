@@ -313,15 +313,15 @@ protected:
 
     // Tensor 0: sparse input vector.
     merger.addExp(Kind::kTensor, t0, -1u);
-    merger.setDimLevelType(t0, l0, DimLevelType::Compressed);
+    merger.setDimAndDimLevelType(t0, l0, 0, DimLevelType::Compressed);
 
     // Tensor 1: sparse input vector.
     merger.addExp(Kind::kTensor, t1, -1u);
-    merger.setDimLevelType(t1, l0, DimLevelType::Compressed);
+    merger.setDimAndDimLevelType(t1, l0, 0, DimLevelType::Compressed);
 
     // Tensor 2: dense output vector.
     merger.addExp(Kind::kTensor, t2, -1u);
-    merger.setDimLevelType(t2, l0, DimLevelType::Dense);
+    merger.setDimAndDimLevelType(t2, l0, 0, DimLevelType::Dense);
   }
 };
 
@@ -338,19 +338,19 @@ protected:
 
     // Tensor 0: sparse input vector.
     merger.addExp(Kind::kTensor, t0, -1u);
-    merger.setDimLevelType(t0, l0, DimLevelType::Compressed);
+    merger.setDimAndDimLevelType(t0, l0, 0, DimLevelType::Compressed);
 
     // Tensor 1: sparse input vector.
     merger.addExp(Kind::kTensor, t1, -1u);
-    merger.setDimLevelType(t1, l0, DimLevelType::Compressed);
+    merger.setDimAndDimLevelType(t1, l0, 0, DimLevelType::Compressed);
 
     // Tensor 2: sparse input vector
     merger.addExp(Kind::kTensor, t2, -1u);
-    merger.setDimLevelType(t2, l0, DimLevelType::Compressed);
+    merger.setDimAndDimLevelType(t2, l0, 0, DimLevelType::Compressed);
 
     // Tensor 3: dense output vector
     merger.addExp(Kind::kTensor, t3, -1u);
-    merger.setDimLevelType(t3, l0, DimLevelType::Dense);
+    merger.setDimAndDimLevelType(t3, l0, 0, DimLevelType::Dense);
   }
 };
 
@@ -371,15 +371,15 @@ protected:
 
     // Tensor 0: sparse input vector.
     merger.addExp(Kind::kTensor, t0, -1u);
-    merger.setDimLevelType(t0, l0, DimLevelType::Compressed);
+    merger.setDimAndDimLevelType(t0, l0, 0, DimLevelType::Compressed);
 
     // Tensor 1: dense input vector.
     merger.addExp(Kind::kTensor, t1, -1u);
-    merger.setDimLevelType(t1, l0, DimLevelType::Dense);
+    merger.setDimAndDimLevelType(t1, l0, 0, DimLevelType::Dense);
 
     // Tensor 2: dense output vector.
     merger.addExp(Kind::kTensor, t2, -1u);
-    merger.setDimLevelType(t2, l0, DimLevelType::Dense);
+    merger.setDimAndDimLevelType(t2, l0, 0, DimLevelType::Dense);
   }
 };
 
@@ -400,19 +400,19 @@ protected:
 
     // Tensor 0: undef input vector.
     merger.addExp(Kind::kTensor, t0, -1u);
-    merger.setDimLevelType(t0, l0, DimLevelType::Undef);
+    merger.setDimAndDimLevelType(t0, l0, 0, DimLevelType::Undef);
 
     // Tensor 1: dense input vector.
     merger.addExp(Kind::kTensor, t1, -1u);
-    merger.setDimLevelType(t1, l0, DimLevelType::Dense);
+    merger.setDimAndDimLevelType(t1, l0, 0, DimLevelType::Dense);
 
     // Tensor 2: undef input vector.
     merger.addExp(Kind::kTensor, t2, -1u);
-    merger.setDimLevelType(t2, l0, DimLevelType::Undef);
+    merger.setDimAndDimLevelType(t2, l0, 0, DimLevelType::Undef);
 
     // Tensor 3: dense output vector.
     merger.addExp(Kind::kTensor, t3, -1u);
-    merger.setDimLevelType(t3, l0, DimLevelType::Dense);
+    merger.setDimAndDimLevelType(t3, l0, 0, DimLevelType::Dense);
   }
 };
 
@@ -436,15 +436,15 @@ protected:
 
     // Tensor 0: undef input vector.
     merger.addExp(Kind::kTensor, t0, -1u);
-    merger.setDimLevelType(t0, l0, DimLevelType::Undef);
+    merger.setDimAndDimLevelType(t0, l0, 0, DimLevelType::Undef);
 
     // Tensor 1: undef input vector.
     merger.addExp(Kind::kTensor, t1, -1u);
-    merger.setDimLevelType(t1, l0, DimLevelType::Undef);
+    merger.setDimAndDimLevelType(t1, l0, 0, DimLevelType::Undef);
 
     // Tensor 2: sparse output vector.
     merger.addExp(Kind::kTensor, t2, -1u);
-    merger.setDimLevelType(t2, l0, DimLevelType::Compressed);
+    merger.setDimAndDimLevelType(t2, l0, 0, DimLevelType::Compressed);
   }
 };
 

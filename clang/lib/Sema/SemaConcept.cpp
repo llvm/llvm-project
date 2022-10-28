@@ -408,6 +408,7 @@ bool Sema::CheckConstraintSatisfaction(
     OutSatisfaction = *Cached;
     return false;
   }
+
   auto Satisfaction =
       std::make_unique<ConstraintSatisfaction>(Template, FlattenedArgs);
   if (::CheckConstraintSatisfaction(*this, Template, ConstraintExprs,
@@ -415,6 +416,21 @@ bool Sema::CheckConstraintSatisfaction(
                                     TemplateIDRange, *Satisfaction)) {
     return true;
   }
+
+  if (auto *Cached = SatisfactionCache.FindNodeOrInsertPos(ID, InsertPos)) {
+    // The evaluation of this constraint resulted in us trying to re-evaluate it
+    // recursively. This isn't really possible, except we try to form a
+    // RecoveryExpr as a part of the evaluation.  If this is the case, just
+    // return the 'cached' version (which will have the same result), and save
+    // ourselves the extra-insert. If it ever becomes possible to legitimately
+    // recursively check a constraint, we should skip checking the 'inner' one
+    // above, and replace the cached version with this one, as it would be more
+    // specific.
+    OutSatisfaction = *Cached;
+    return false;
+  }
+
+  // Else we can simply add this satisfaction to the list.
   OutSatisfaction = *Satisfaction;
   // We cannot use InsertPos here because CheckConstraintSatisfaction might have
   // invalidated it.
@@ -586,12 +602,13 @@ bool Sema::CheckFunctionConstraints(const FunctionDecl *FD,
 // Figure out the to-translation-unit depth for this function declaration for
 // the purpose of seeing if they differ by constraints. This isn't the same as
 // getTemplateDepth, because it includes already instantiated parents.
-static unsigned CalculateTemplateDepthForConstraints(Sema &S,
-                                                     const NamedDecl *ND) {
+static unsigned
+CalculateTemplateDepthForConstraints(Sema &S, const NamedDecl *ND,
+                                     bool SkipForSpecialization = false) {
   MultiLevelTemplateArgumentList MLTAL = S.getTemplateInstantiationArgs(
       ND, /*Final=*/false, /*Innermost=*/nullptr, /*RelativeToPrimary=*/true,
       /*Pattern=*/nullptr,
-      /*ForConstraintInstantiation=*/true);
+      /*ForConstraintInstantiation=*/true, SkipForSpecialization);
   return MLTAL.getNumSubstitutedLevels();
 }
 
@@ -1278,8 +1295,10 @@ static bool subsumes(Sema &S, NamedDecl *DP, ArrayRef<const Expr *> P,
   return false;
 }
 
-bool Sema::IsAtLeastAsConstrained(NamedDecl *D1, ArrayRef<const Expr *> AC1,
-                                  NamedDecl *D2, ArrayRef<const Expr *> AC2,
+bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
+                                  MutableArrayRef<const Expr *> AC1,
+                                  NamedDecl *D2,
+                                  MutableArrayRef<const Expr *> AC2,
                                   bool &Result) {
   if (AC1.empty()) {
     Result = AC2.empty();
@@ -1296,6 +1315,21 @@ bool Sema::IsAtLeastAsConstrained(NamedDecl *D1, ArrayRef<const Expr *> AC1,
   if (CacheEntry != SubsumptionCache.end()) {
     Result = CacheEntry->second;
     return false;
+  }
+
+  unsigned Depth1 = CalculateTemplateDepthForConstraints(*this, D1, true);
+  unsigned Depth2 = CalculateTemplateDepthForConstraints(*this, D2, true);
+
+  for (size_t I = 0; I != AC1.size() && I != AC2.size(); ++I) {
+    if (Depth2 > Depth1) {
+      AC1[I] = AdjustConstraintDepth(*this, Depth2 - Depth1)
+                   .TransformExpr(const_cast<Expr *>(AC1[I]))
+                   .get();
+    } else if (Depth1 > Depth2) {
+      AC2[I] = AdjustConstraintDepth(*this, Depth1 - Depth2)
+                   .TransformExpr(const_cast<Expr *>(AC2[I]))
+                   .get();
+    }
   }
 
   if (subsumes(*this, D1, AC1, D2, AC2, Result,

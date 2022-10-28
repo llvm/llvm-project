@@ -61,7 +61,7 @@ and there is no way to suppress this error.
 
 * GCC >= 7.1
 * Clang >= 5.0
-* Apple Clang >= 9.3
+* Apple Clang >= 10.0
 * Visual Studio 2019 >= 16.7
 
 Changes to the LLVM IR
@@ -119,6 +119,9 @@ Changes to the RISC-V Backend
 
 * Support for the unratified Zbe, Zbf, Zbm, Zbp, Zbr, and Zbt extensions have
   been removed.
+* i32 is now a native type in the datalayout string. This enables
+  LoopStrengthReduce for loops with i32 induction variables, among other
+  optimizations.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -135,11 +138,13 @@ Changes to the Windows Target
 
 Changes to the X86 Backend
 --------------------------
+* Support ISA of ``AVX-IFMA``.
 
 * Add support for the ``RDMSRLIST and WRMSRLIST`` instructions.
 * Add support for the ``WRMSRNS`` instruction.
 * Support ISA of ``AMX-FP16`` which contains ``tdpfp16ps`` instruction.
 * Support ISA of ``CMPCCXADD``.
+* Support ISA of ``AVX-VNNI-INT8``.
 
 Changes to the OCaml bindings
 -----------------------------

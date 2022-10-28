@@ -374,6 +374,24 @@ The ``offset`` specifier indicates the starting position for thread assignment.
     across one socket, and ``granularity=socket`` the runtime will shift the
     granularity down to group since that is the largest granularity allowed by the OS.
 
+KMP_HIDDEN_HELPER_AFFINITY (Windows, Linux)
+"""""""""""""""""""""""""""""
+
+Enables run-time library to bind hidden helper threads to physical processing units.
+This environment variable has the same syntax and semantics as ``KMP_AFFINIY`` but only
+applies to the hidden helper team.
+
+You must set this environment variable before the first parallel region, or
+certain API calls including ``omp_get_max_threads()``, ``omp_get_num_procs()``
+and any affinity API calls.
+
+**Syntax:** Same as ``KMP_AFFINITY``
+
+The following ``modifiers`` are ignored in ``KMP_HIDDEN_HELPER_AFFINITY`` and are only valid
+for ``KMP_AFFINITY``:
+* ``respect`` and ``norespect``
+* ``reset`` and ``noreset``
+
 KMP_ALL_THREADS
 """""""""""""""
 
