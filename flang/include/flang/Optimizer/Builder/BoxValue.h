@@ -149,11 +149,12 @@ protected:
 
 /// Expressions with rank > 0 have extents. They may also have lbounds that are
 /// not 1.
-class ArrayBoxValue : public AbstractBox, public AbstractArrayBox {
+class ArrayBoxValue : public PolymorphicValue, public AbstractArrayBox {
 public:
   ArrayBoxValue(mlir::Value addr, llvm::ArrayRef<mlir::Value> extents,
-                llvm::ArrayRef<mlir::Value> lbounds = {})
-      : AbstractBox{addr}, AbstractArrayBox{extents, lbounds} {}
+                llvm::ArrayRef<mlir::Value> lbounds = {},
+                mlir::Value tdesc = {})
+      : PolymorphicValue{addr, tdesc}, AbstractArrayBox{extents, lbounds} {}
 
   ArrayBoxValue clone(mlir::Value newBase) const {
     return {newBase, extents, lbounds};

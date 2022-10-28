@@ -417,15 +417,17 @@ fir::factory::genMutableBoxRead(fir::FirOpBuilder &builder, mlir::Location loc,
       return fir::CharArrayBoxValue{addr, len, extents, lbounds};
     return fir::CharBoxValue{addr, len};
   }
-  if (rank)
-    return fir::ArrayBoxValue{addr, extents, lbounds};
+  mlir::Value tdesc;
   if (box.isPolymorphic()) {
     auto loadedBox = builder.create<fir::LoadOp>(loc, box.getAddr());
     mlir::Type tdescType =
         fir::TypeDescType::get(mlir::NoneType::get(builder.getContext()));
-    auto tdesc = builder.create<fir::BoxTypeDescOp>(loc, tdescType, loadedBox);
-    return fir::PolymorphicValue(addr, tdesc);
+    tdesc = builder.create<fir::BoxTypeDescOp>(loc, tdescType, loadedBox);
   }
+  if (rank)
+    return fir::ArrayBoxValue{addr, extents, lbounds, tdesc};
+  if (box.isPolymorphic())
+    return fir::PolymorphicValue(addr, tdesc);
   return addr;
 }
 
