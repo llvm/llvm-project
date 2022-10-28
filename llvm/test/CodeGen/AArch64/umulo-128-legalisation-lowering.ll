@@ -68,10 +68,12 @@ define i128 @__muloti4(i128 %0, i128 %1, i32* nocapture nonnull writeonly align 
 ; AARCH-NEXT:    adds x11, x12, x11
 ; AARCH-NEXT:    adc x12, x13, x14
 ; AARCH-NEXT:    adds x10, x11, x10
-; AARCH-NEXT:    asr x11, x1, #63
 ; AARCH-NEXT:    adc x9, x12, x9
-; AARCH-NEXT:    cmp x10, x11
-; AARCH-NEXT:    ccmp x9, x11, #0, eq
+; AARCH-NEXT:    asr x11, x1, #63
+; AARCH-NEXT:    eor x9, x9, x11
+; AARCH-NEXT:    eor x10, x10, x11
+; AARCH-NEXT:    orr x9, x10, x9
+; AARCH-NEXT:    cmp x9, #0
 ; AARCH-NEXT:    cset w9, ne
 ; AARCH-NEXT:    tbz x8, #63, .LBB1_2
 ; AARCH-NEXT:  // %bb.1: // %Entry
