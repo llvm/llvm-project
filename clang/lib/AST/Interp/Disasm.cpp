@@ -40,7 +40,7 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS) const {
     } else {
       OS << F->getDeclName();
     }
-    OS << " " << (void*)this << ":\n";
+    OS << " " << (const void*)this << ":\n";
   } else {
     OS << "<<expr>>\n";
   }
