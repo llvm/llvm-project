@@ -228,7 +228,7 @@ struct SGPRSpillBuilder {
       auto I = BuildMI(*MBB, MI, DL, TII.get(NotOpc), ExecReg).addReg(ExecReg);
       if (!TmpVGPRLive)
         I.addReg(TmpVGPR, RegState::ImplicitDefine);
-      I->getOperand(2).setIsDead(true); // Mark SCC as dead.
+      I->getOperand(2).setIsDead(); // Mark SCC as dead.
       TRI.buildVGPRSpillLoadStore(*this, TmpVGPRIndex, 0, /*IsLoad*/ false);
     }
   }
@@ -263,7 +263,7 @@ struct SGPRSpillBuilder {
       auto I = BuildMI(*MBB, MI, DL, TII.get(NotOpc), ExecReg).addReg(ExecReg);
       if (!TmpVGPRLive)
         I.addReg(TmpVGPR, RegState::ImplicitKill);
-      I->getOperand(2).setIsDead(true); // Mark SCC as dead.
+      I->getOperand(2).setIsDead(); // Mark SCC as dead.
 
       // Restore active lanes
       if (TmpVGPRLive)
@@ -2197,7 +2197,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
         Register TmpReg = RS->scavengeRegister(RC, MI, 0, !UseSGPR);
         FIOp.setReg(TmpReg);
-        FIOp.setIsKill(true);
+        FIOp.setIsKill();
 
         if ((!FrameReg || !Offset) && TmpReg) {
           unsigned Opc = UseSGPR ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
@@ -2270,8 +2270,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                            .addImm(ST.getWavefrontSizeLog2())
                            .addReg(FrameReg);
           if (IsSALU && !LiveSCC)
-            Shift.getInstr()->getOperand(3).setIsDead(
-                true); // Mark SCC as dead.
+            Shift.getInstr()->getOperand(3).setIsDead(); // Mark SCC as dead.
           if (IsSALU && LiveSCC) {
             Register NewDest =
                 RS->scavengeRegister(&AMDGPU::SReg_32RegClass, Shift, 0);

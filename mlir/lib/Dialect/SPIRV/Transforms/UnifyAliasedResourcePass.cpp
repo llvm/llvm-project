@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -223,7 +224,8 @@ bool ResourceAliasAnalysis::shouldUnify(Operation *op) const {
   }
   if (auto addressOp = dyn_cast<spirv::AddressOfOp>(op)) {
     auto moduleOp = addressOp->getParentOfType<spirv::ModuleOp>();
-    auto *varOp = SymbolTable::lookupSymbolIn(moduleOp, addressOp.getVariable());
+    auto *varOp =
+        SymbolTable::lookupSymbolIn(moduleOp, addressOp.getVariable());
     return shouldUnify(varOp);
   }
 
@@ -517,8 +519,8 @@ struct ConvertStore : public ConvertAliasResource<spirv::StoreOp> {
     Value value = adaptor.getValue();
     if (srcElemType != dstElemType)
       value = rewriter.create<spirv::BitcastOp>(loc, dstElemType, value);
-    rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, adaptor.getPtr(), value,
-                                                storeOp->getAttrs());
+    rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, adaptor.getPtr(),
+                                                value, storeOp->getAttrs());
     return success();
   }
 };
@@ -532,13 +534,27 @@ class UnifyAliasedResourcePass final
     : public spirv::impl::SPIRVUnifyAliasedResourcePassBase<
           UnifyAliasedResourcePass> {
 public:
+  explicit UnifyAliasedResourcePass(spirv::GetTargetEnvFn getTargetEnv)
+      : getTargetEnvFn(std::move(getTargetEnv)) {}
+
   void runOnOperation() override;
+
+private:
+  spirv::GetTargetEnvFn getTargetEnvFn;
 };
 } // namespace
 
 void UnifyAliasedResourcePass::runOnOperation() {
   spirv::ModuleOp moduleOp = getOperation();
   MLIRContext *context = &getContext();
+
+  if (getTargetEnvFn) {
+    // This pass is actually only needed for targeting Apple GPUs via MoltenVK,
+    // where we need to translate SPIR-V into MSL. The translation has
+    // limitations.
+    if (getTargetEnvFn(moduleOp).getVendorID() != spirv::Vendor::Apple)
+      return;
+  }
 
   // Analyze aliased resources first.
   ResourceAliasAnalysis &analysis = getAnalysis<ResourceAliasAnalysis>();
@@ -570,6 +586,6 @@ void UnifyAliasedResourcePass::runOnOperation() {
 }
 
 std::unique_ptr<mlir::OperationPass<spirv::ModuleOp>>
-spirv::createUnifyAliasedResourcePass() {
-  return std::make_unique<UnifyAliasedResourcePass>();
+spirv::createUnifyAliasedResourcePass(spirv::GetTargetEnvFn getTargetEnv) {
+  return std::make_unique<UnifyAliasedResourcePass>(std::move(getTargetEnv));
 }

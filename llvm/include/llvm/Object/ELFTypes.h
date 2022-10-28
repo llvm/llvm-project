@@ -125,6 +125,7 @@ using ELF64BE = ELFType<support::big, true>;
   using Elf_Versym = typename ELFT::Versym;                                    \
   using Elf_Hash = typename ELFT::Hash;                                        \
   using Elf_GnuHash = typename ELFT::GnuHash;                                  \
+  using Elf_Chdr = typename ELFT::Chdr;                                        \
   using Elf_Nhdr = typename ELFT::Nhdr;                                        \
   using Elf_Note = typename ELFT::Note;                                        \
   using Elf_Note_Iterator = typename ELFT::NoteIterator;                       \

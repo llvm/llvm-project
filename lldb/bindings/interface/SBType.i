@@ -229,7 +229,7 @@ public:
       function returns ``0``.
     * C++: Same as in C.
     * Objective-C: Same as in C. For Objective-C classes this always returns
-      `0`` as the actual size depends on runtime information.
+      ``0`` as the actual size depends on runtime information.
     ") GetByteSize;
     uint64_t
     GetByteSize();
@@ -506,7 +506,7 @@ public:
 
     Language-specific behaviour:
 
-    * C: Returns a constant-size array `T[size]` for any non-void type.
+    * C: Returns a constant-size array ``T[size]`` for any non-void type.
     * C++: Same as in C.
     * Objective-C: Same as in C.
 

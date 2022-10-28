@@ -16854,32 +16854,6 @@ static SDValue performBuildVectorCombine(SDNode *N,
   return SDValue();
 }
 
-// ((X >> C) - Y) + Z --> (Z - Y) + (X >> C)
-static SDValue performAddCombineSubShift(SDNode *N, SDValue SUB, SDValue Z,
-                                         SelectionDAG &DAG) {
-  // DAGCombiner will revert the combination when Z is constant cause
-  // dead loop. So don't enable the combination when Z is constant.
-  if (isa<ConstantSDNode>(Z))
-    return SDValue();
-
-  if (SUB.getOpcode() != ISD::SUB || !SUB.hasOneUse())
-    return SDValue();
-
-  SDValue SHL = SUB.getOperand(0);
-  if (SHL.getOpcode() != ISD::SHL || !SHL.hasOneUse())
-    return SDValue();
-
-  if (!isa<ConstantSDNode>(SHL.getOperand(1)))
-    return SDValue();
-
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-
-  SDValue Y = SUB.getOperand(1);
-  SDValue NewSub = DAG.getNode(ISD::SUB, DL, VT, Z, Y);
-  return DAG.getNode(ISD::ADD, DL, VT, NewSub, SHL);
-}
-
 static SDValue performAddCombineForShiftedOperands(SDNode *N,
                                                    SelectionDAG &DAG) {
   // NOTE: Swapping LHS and RHS is not done for SUB, since SUB is not
@@ -16896,11 +16870,6 @@ static SDValue performAddCombineForShiftedOperands(SDNode *N,
   SDLoc DL(N);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
-
-  if (SDValue Val = performAddCombineSubShift(N, LHS, RHS, DAG))
-    return Val;
-  if (SDValue Val = performAddCombineSubShift(N, RHS, LHS, DAG))
-    return Val;
 
   uint64_t LHSImm = 0, RHSImm = 0;
   // If both operand are shifted by imm and shift amount is not greater than 4
@@ -19519,6 +19488,35 @@ static SDValue performSETCCCombine(SDNode *N,
       LHS = DAG.getNode(ISD::ZERO_EXTEND, DL, ToVT, LHS);
       return DAG.getSetCC(DL, VT, LHS, RHS, Cond);
     }
+  }
+
+  // Try to express conjunction "cmp 0 (or (xor A0 A1) (xor B0 B1))" as:
+  // cmp A0, A0; ccmp A0, B1, 0, eq; cmp inv(Cond) flag
+  if (!DCI.isBeforeLegalize() && VT.isScalarInteger() &&
+      (Cond == ISD::SETEQ || Cond == ISD::SETNE) && isNullConstant(RHS) &&
+      LHS->getOpcode() == ISD::OR &&
+      (LHS.getOperand(0)->getOpcode() == ISD::XOR &&
+       LHS.getOperand(1)->getOpcode() == ISD::XOR) &&
+      LHS.hasOneUse() && LHS.getOperand(0)->hasOneUse() &&
+      LHS.getOperand(1)->hasOneUse()) {
+    SDValue XOR0 = LHS.getOperand(0);
+    SDValue XOR1 = LHS.getOperand(1);
+    SDValue CCVal = DAG.getConstant(AArch64CC::EQ, DL, MVT_CC);
+    EVT TstVT = LHS->getValueType(0);
+    SDValue Cmp =
+        DAG.getNode(AArch64ISD::SUBS, DL, DAG.getVTList(TstVT, MVT::Glue),
+                    XOR0.getOperand(0), XOR0.getOperand(1));
+    SDValue Overflow = Cmp.getValue(1);
+    SDValue NZCVOp = DAG.getConstant(0, DL, MVT::i32);
+    SDValue CCmp = DAG.getNode(AArch64ISD::CCMP, DL, MVT_CC, XOR1.getOperand(0),
+                               XOR1.getOperand(1), NZCVOp, CCVal, Overflow);
+    // Invert CSEL's operands.
+    SDValue TVal = DAG.getConstant(1, DL, VT);
+    SDValue FVal = DAG.getConstant(0, DL, VT);
+    AArch64CC::CondCode CC = changeIntCCToAArch64CC(Cond);
+    AArch64CC::CondCode InvCC = AArch64CC::getInvertedCondCode(CC);
+    return DAG.getNode(AArch64ISD::CSEL, DL, VT, FVal, TVal,
+                       DAG.getConstant(InvCC, DL, MVT::i32), CCmp);
   }
 
   return SDValue();

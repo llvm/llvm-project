@@ -204,11 +204,6 @@ void ProfiledBinary::load() {
   // Find the preferred load address for text sections.
   setPreferredTextSegmentAddresses(Obj);
 
-  checkPseudoProbe(Obj);
-
-  if (ShowDisassemblyOnly)
-    decodePseudoProbe(Obj);
-
   // Load debug info of subprograms from DWARF section.
   // If path of debug info binary is specified, use the debug info from it,
   // otherwise use the debug info from the executable binary.
@@ -219,6 +214,17 @@ void ProfiledBinary::load() {
   } else {
     loadSymbolsFromDWARF(*cast<ObjectFile>(&ExeBinary));
   }
+
+  DisassembleFunctionSet.insert(DisassembleFunctions.begin(),
+                                DisassembleFunctions.end());
+
+  checkPseudoProbe(Obj);
+
+  if (UsePseudoProbes)
+    populateElfSymbolAddressList(Obj);
+
+  if (ShowDisassemblyOnly)
+    decodePseudoProbe(Obj);
 
   // Disassemble the text sections.
   disassemble(Obj);
@@ -352,10 +358,31 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
   if (!UsePseudoProbes)
     return;
 
-  std::unordered_set<uint64_t> ProfiledGuids;
-  if (!ShowDisassemblyOnly)
-    for (auto *F : ProfiledFunctions)
-      ProfiledGuids.insert(Function::getGUID(F->FuncName));
+  MCPseudoProbeDecoder::Uint64Set GuidFilter;
+  MCPseudoProbeDecoder::Uint64Map FuncStartAddresses;
+  if (ShowDisassemblyOnly) {
+    if (DisassembleFunctionSet.empty()) {
+      FuncStartAddresses = SymbolStartAddrs;
+    } else {
+      for (auto &F : DisassembleFunctionSet) {
+        auto GUID = Function::getGUID(F.first());
+        if (auto StartAddr = SymbolStartAddrs.lookup(GUID)) {
+          FuncStartAddresses[GUID] = StartAddr;
+          FuncRange &Range = StartAddrToFuncRangeMap[StartAddr];
+          GuidFilter.insert(Function::getGUID(Range.getFuncName()));
+        }
+      }
+    }
+  } else {
+    for (auto *F : ProfiledFunctions) {
+      GuidFilter.insert(Function::getGUID(F->FuncName));
+      for (auto &Range : F->Ranges) {
+        auto GUIDs = StartAddrToSymMap.equal_range(Range.first);
+        for (auto I = GUIDs.first; I != GUIDs.second; ++I)
+          FuncStartAddresses[I->second] = I->first;
+      }
+    }
+  }
 
   StringRef FileName = Obj->getFileName();
   for (section_iterator SI = Obj->section_begin(), SE = Obj->section_end();
@@ -374,7 +401,7 @@ void ProfiledBinary::decodePseudoProbe(const ELFObjectFileBase *Obj) {
       StringRef Contents = unwrapOrError(Section.getContents(), FileName);
       if (!ProbeDecoder.buildAddress2ProbeMap(
               reinterpret_cast<const uint8_t *>(Contents.data()),
-              Contents.size(), ProfiledGuids))
+              Contents.size(), GuidFilter, FuncStartAddresses))
         exitWithError("Pseudo Probe decoder fail in .pseudo_probe section");
     }
   }
@@ -578,8 +605,6 @@ void ProfiledBinary::disassemble(const ELFObjectFileBase *Obj) {
   for (std::pair<const SectionRef, SectionSymbolsTy> &SecSyms : AllSymbols)
     stable_sort(SecSyms.second);
 
-  DisassembleFunctionSet.insert(DisassembleFunctions.begin(),
-                                DisassembleFunctions.end());
   assert((DisassembleFunctionSet.empty() || ShowDisassemblyOnly) &&
          "Functions to disassemble should be only specified together with "
          "--show-disassembly-only");
@@ -650,6 +675,20 @@ void ProfiledBinary::checkUseFSDiscriminator(
         return;
       }
     }
+  }
+}
+
+void ProfiledBinary::populateElfSymbolAddressList(
+    const ELFObjectFileBase *Obj) {
+  // Create a mapping from virtual address to symbol GUID and the other way
+  // around.
+  StringRef FileName = Obj->getFileName();
+  for (const SymbolRef &Symbol : Obj->symbols()) {
+    const uint64_t Addr = unwrapOrError(Symbol.getAddress(), FileName);
+    const StringRef Name = unwrapOrError(Symbol.getName(), FileName);
+    uint64_t GUID = Function::getGUID(Name);
+    SymbolStartAddrs[GUID] = Addr;
+    StartAddrToSymMap.emplace(Addr, GUID);
   }
 }
 

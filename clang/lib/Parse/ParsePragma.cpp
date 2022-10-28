@@ -1303,7 +1303,9 @@ struct PragmaLoopHintInfo {
 
 static std::string PragmaLoopHintString(Token PragmaName, Token Option) {
   StringRef Str = PragmaName.getIdentifierInfo()->getName();
-  std::string ClangLoopStr = (llvm::Twine("clang loop ") + Str).str();
+  std::string ClangLoopStr("clang loop ");
+  if (Str == "loop" && Option.getIdentifierInfo())
+    ClangLoopStr += Option.getIdentifierInfo()->getName();
   return std::string(llvm::StringSwitch<StringRef>(Str)
                          .Case("loop", ClangLoopStr)
                          .Case("unroll_and_jam", Str)

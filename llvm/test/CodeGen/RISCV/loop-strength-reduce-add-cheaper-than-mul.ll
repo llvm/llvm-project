@@ -52,36 +52,31 @@ define void @test(i32 signext %i) nounwind {
 ; RV64-LABEL: test:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    slliw a1, a0, 1
-; RV64-NEXT:    lui a4, 2
-; RV64-NEXT:    blt a4, a1, .LBB0_3
+; RV64-NEXT:    lui a3, 2
+; RV64-NEXT:    blt a3, a1, .LBB0_3
 ; RV64-NEXT:  # %bb.1: # %bb.preheader
-; RV64-NEXT:    li a2, 0
-; RV64-NEXT:    lui a3, %hi(flags2)
-; RV64-NEXT:    addi a3, a3, %lo(flags2)
-; RV64-NEXT:    addiw a4, a4, 1
+; RV64-NEXT:    lui a2, %hi(flags2)
+; RV64-NEXT:    addi a2, a2, %lo(flags2)
+; RV64-NEXT:    addiw a3, a3, 1
 ; RV64-NEXT:  .LBB0_2: # %bb
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64-NEXT:    mulw a5, a2, a0
-; RV64-NEXT:    addw a5, a5, a1
-; RV64-NEXT:    slli a6, a5, 32
-; RV64-NEXT:    srli a6, a6, 32
-; RV64-NEXT:    add a6, a3, a6
-; RV64-NEXT:    sb zero, 0(a6)
-; RV64-NEXT:    addw a5, a5, a0
-; RV64-NEXT:    addiw a2, a2, 1
-; RV64-NEXT:    blt a5, a4, .LBB0_2
+; RV64-NEXT:    slli a4, a1, 32
+; RV64-NEXT:    srli a4, a4, 32
+; RV64-NEXT:    add a4, a2, a4
+; RV64-NEXT:    addw a1, a1, a0
+; RV64-NEXT:    sb zero, 0(a4)
+; RV64-NEXT:    blt a1, a3, .LBB0_2
 ; RV64-NEXT:  .LBB0_3: # %return
 ; RV64-NEXT:    ret
 entry:
 	%k_addr.012 = shl i32 %i, 1
 	%tmp14 = icmp sgt i32 %k_addr.012, 8192
-	%tmp. = shl i32 %i, 1
 	br i1 %tmp14, label %return, label %bb
 
 bb:
 	%indvar = phi i32 [ 0, %entry ], [ %indvar.next, %bb ]
 	%tmp.15 = mul i32 %indvar, %i
-	%tmp.16 = add i32 %tmp.15, %tmp.
+	%tmp.16 = add i32 %tmp.15, %k_addr.012
 	%gep.upgrd.1 = zext i32 %tmp.16 to i64
 	%tmp = getelementptr [8193 x i8], [8193 x i8]* @flags2, i32 0, i64 %gep.upgrd.1
 	store i8 0, i8* %tmp

@@ -396,6 +396,12 @@ static fir::ExtendedValue genLoad(fir::FirOpBuilder &builder,
                                   const fir::ExtendedValue &addr) {
   return addr.match(
       [](const fir::CharBoxValue &box) -> fir::ExtendedValue { return box; },
+      [&](const fir::PolymorphicValue &p) -> fir::ExtendedValue {
+        if (fir::unwrapRefType(fir::getBase(p).getType())
+                .isa<fir::RecordType>())
+          return p;
+        return builder.create<fir::LoadOp>(loc, fir::getBase(p));
+      },
       [&](const fir::UnboxedValue &v) -> fir::ExtendedValue {
         if (fir::unwrapRefType(fir::getBase(v).getType())
                 .isa<fir::RecordType>())
@@ -1105,6 +1111,9 @@ public:
           [&](const fir::BoxValue &toBox) {
             fir::emitFatalError(loc, "derived type components must not be "
                                      "represented by fir::BoxValue");
+          },
+          [&](const fir::PolymorphicValue &) {
+            TODO(loc, "polymorphic component in derived type assignment");
           },
           [&](const fir::MutableBoxValue &toBox) {
             if (toBox.isPointer()) {
@@ -1996,7 +2005,6 @@ public:
       mlir::Value lb = getLBound(array, subsc.index(), ty);
       args.push_back(builder.create<mlir::arith::SubIOp>(loc, ty, val, lb));
     }
-
     mlir::Value base = fir::getBase(array);
     mlir::Type eleTy = fir::dyn_cast_ptrOrBoxEleTy(base.getType());
     if (auto classTy = eleTy.dyn_cast<fir::ClassType>())

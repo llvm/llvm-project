@@ -158,6 +158,8 @@ code bases.
       }
     }
 
+  - The ``-fexperimental-new-pass-manager`` and ``-fno-legacy-pass-manager``
+    flags have been removed. These have been no-ops since 15.0.0.
 
 What's New in Clang |release|?
 ==============================
@@ -258,6 +260,10 @@ Bug Fixes
 - Fix template arguments of pointer and reference not taking the type as
   part of their identity.
   `Issue 47136 <https://github.com/llvm/llvm-project/issues/47136>`_
+- Fix a crash when trying to form a recovery expression on a call inside a
+  constraint, which re-evaluated the same constraint.
+  `Issue 53213 <https://github.com/llvm/llvm-project/issues/53213>`_
+  `Issue 45736 <https://github.com/llvm/llvm-project/issues/45736>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -336,6 +342,8 @@ Improvements to Clang's diagnostics
   <https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_ failures. This diagnostic
   is grouped under ``-Wcast-function-type`` as it identifies a more strict set of
   potentially problematic function type casts.
+- Clang will now disambiguate NTTP types when printing diagnostic that contain NTTP types.
+  Fixes `Issue 57562 <https://github.com/llvm/llvm-project/issues/57562>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -391,8 +399,26 @@ New Compiler Flags
   `::operator new(size_­t, std::aligned_val_t, nothrow_­t)` if there is
   `get_­return_­object_­on_­allocation_­failure`. We feel this is more consistent
   with the intention.
+
 - Added ``--no-default-config`` to disable automatically loading configuration
   files using default paths.
+
+- Added the new level, ``3``, to the ``-fstrict-flex-arrays=`` flag. The new
+  level is the strict, standards-conforming mode for flexible array members. It
+  recognizes only incomplete arrays as flexible array members (which is how the
+  feature is defined by the C standard).
+
+  .. code-block:: c
+
+    struct foo {
+      int a;
+      int b[]; // Flexible array member.
+    };
+
+    struct bar {
+      int a;
+      int b[0]; // NOT a flexible array member.
+    };
 
 Deprecated Compiler Flags
 -------------------------
@@ -556,9 +582,10 @@ C++20 Feature Support
 - Implemented `P0634r3 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0634r3.html>`_,
   which removes the requirement for the ``typename`` keyword in certain contexts.
 - Implemented The Equality Operator You Are Looking For (`P2468 <http://wg21.link/p2468r2>`_).
-
 - Implemented `P2113R0: Proposed resolution for 2019 comment CA 112 <https://wg21.link/P2113R0>`_
   ([temp.func.order]p6.2.1 is not implemented, matching GCC).
+- Implemented `P0857R0 <https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/p0857r0.html>`_,
+  which specifies constrained lambdas and constrained template *template-parameter*\s.
 
 - Do not hide templated base members introduced via using-decl in derived class
   (useful specially for constrained members). Fixes `GH50886 <https://github.com/llvm/llvm-project/issues/50886>`_.
@@ -589,6 +616,10 @@ ABI Changes in Clang
   attribute is also specified on the member. Clang historically did perform
   such packing. Clang now matches the gcc behavior (except on Darwin and PS4).
   You can switch back to the old ABI behavior with the flag:
+  ``-fclang-abi-compat=15.0``.
+- GCC allows POD types to have defaulted special members. Clang historically
+  classified such types as non-POD. Clang now matches the gcc behavior (except
+  on Darwin and PS4). You can switch back to the old ABI behavior with the flag:
   ``-fclang-abi-compat=15.0``.
 
 OpenMP Support in Clang
@@ -622,6 +653,13 @@ X86 Support in Clang
   * Support intrinsic of ``_aand_i32/64``
   * Support intrinsic of ``_aor_i32/64``
   * Support intrinsic of ``_axor_i32/64``
+- Support ISA of ``AVX-IFMA``.
+  * Support intrinsic of ``_mm(256)_madd52hi_avx_epu64``.
+  * Support intrinsic of ``_mm(256)_madd52lo_avx_epu64``.
+- Support ISA of ``AVX-VNNI-INT8``.
+  * Support intrinsic of ``_mm(256)_dpbssd(s)_epi32``.
+  * Support intrinsic of ``_mm(256)_dpbsud(s)_epi32``.
+  * Support intrinsic of ``_mm(256)_dpbuud(s)_epi32``.
 
 WebAssembly Support in Clang
 ----------------------------

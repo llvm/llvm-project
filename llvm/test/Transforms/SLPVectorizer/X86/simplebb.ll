@@ -62,11 +62,11 @@ define void @test2(double* %a, double* %b, i8* %e) {
 ; Don't vectorize volatile loads.
 define void @test_volatile_load(double* %a, double* %b, double* %c) {
 ; CHECK-LABEL: @test_volatile_load(
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, double* [[B:%.*]], i64 1
-; CHECK-NEXT:    [[I0:%.*]] = load volatile double, double* [[A]], align 8
-; CHECK-NEXT:    [[I1:%.*]] = load volatile double, double* [[B]], align 8
+; CHECK-NEXT:    [[I0:%.*]] = load volatile double, double* [[A:%.*]], align 8
+; CHECK-NEXT:    [[I1:%.*]] = load volatile double, double* [[B:%.*]], align 8
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds double, double* [[A]], i64 1
 ; CHECK-NEXT:    [[I3:%.*]] = load double, double* [[ARRAYIDX3]], align 8
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds double, double* [[B]], i64 1
 ; CHECK-NEXT:    [[I4:%.*]] = load double, double* [[ARRAYIDX4]], align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[I0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[I3]], i32 1

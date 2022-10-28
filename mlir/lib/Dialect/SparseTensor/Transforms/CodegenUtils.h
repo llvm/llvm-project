@@ -434,6 +434,8 @@ private:
     return hasOutput && tid == tensors.size() - 1;
   }
 
+  bool isSparseOutput(size_t tid) { return isOutputTensor(tid) && isSparseOut; }
+
   /// Setups [lo, hi] for iterating tensor[dim], it assumes that tensor[0
   /// ...dims-1] has already been setup.
   void prepareLoopOverTensorAtDim(OpBuilder &builder, Location loc, size_t tid,
@@ -462,6 +464,7 @@ private:
   // Whether the loop emitter needs to treat the last tensor as the output
   // tensor.
   bool hasOutput;
+  bool isSparseOut;
   /// Input and (optional) output tensors.
   std::vector<Value> tensors;
   /// The dim type array for each tensor.
