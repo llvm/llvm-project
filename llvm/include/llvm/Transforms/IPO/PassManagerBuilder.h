@@ -63,6 +63,68 @@ public:
       ExtensionFn;
   typedef int GlobalExtensionID;
 
+  enum ExtensionPointTy {
+    /// EP_EarlyAsPossible - This extension point allows adding passes before
+    /// any other transformations, allowing them to see the code as it is coming
+    /// out of the frontend.
+    EP_EarlyAsPossible,
+
+    /// EP_ModuleOptimizerEarly - This extension point allows adding passes
+    /// just before the main module-level optimization passes.
+    EP_ModuleOptimizerEarly,
+
+    /// EP_LoopOptimizerEnd - This extension point allows adding loop passes to
+    /// the end of the loop optimizer.
+    EP_LoopOptimizerEnd,
+
+    /// EP_ScalarOptimizerLate - This extension point allows adding optimization
+    /// passes after most of the main optimizations, but before the last
+    /// cleanup-ish optimizations.
+    EP_ScalarOptimizerLate,
+
+    /// EP_OptimizerLast -- This extension point allows adding passes that
+    /// run after everything else.
+    EP_OptimizerLast,
+
+    /// EP_VectorizerStart - This extension point allows adding optimization
+    /// passes before the vectorizer and other highly target specific
+    /// optimization passes are executed.
+    EP_VectorizerStart,
+
+    /// EP_EnabledOnOptLevel0 - This extension point allows adding passes that
+    /// should not be disabled by O0 optimization level. The passes will be
+    /// inserted after the inlining pass.
+    EP_EnabledOnOptLevel0,
+
+    /// EP_Peephole - This extension point allows adding passes that perform
+    /// peephole optimizations similar to the instruction combiner. These passes
+    /// will be inserted after each instance of the instruction combiner pass.
+    EP_Peephole,
+
+    /// EP_LateLoopOptimizations - This extension point allows adding late loop
+    /// canonicalization and simplification passes. This is the last point in
+    /// the loop optimization pipeline before loop deletion. Each pass added
+    /// here must be an instance of LoopPass.
+    /// This is the place to add passes that can remove loops, such as target-
+    /// specific loop idiom recognition.
+    EP_LateLoopOptimizations,
+
+    /// EP_CGSCCOptimizerLate - This extension point allows adding CallGraphSCC
+    /// passes at the end of the main CallGraphSCC passes and before any
+    /// function simplification passes run by CGPassManager.
+    EP_CGSCCOptimizerLate,
+
+    /// EP_FullLinkTimeOptimizationEarly - This extensions point allow adding
+    /// passes that
+    /// run at Link Time, before Full Link Time Optimization.
+    EP_FullLinkTimeOptimizationEarly,
+
+    /// EP_FullLinkTimeOptimizationLast - This extensions point allow adding
+    /// passes that
+    /// run at Link Time, after Full Link Time Optimization.
+    EP_FullLinkTimeOptimizationLast,
+  };
+
   /// The Optimization Level - Specify the basic optimization level.
   ///    0 = -O0, 1 = -O1, 2 = -O2, 3 = -O3
   unsigned OptLevel;
@@ -106,11 +168,32 @@ public:
   unsigned LicmMssaOptCap;
   unsigned LicmMssaNoAccForPromotionCap;
 
+private:
+  /// ExtensionList - This is list of all of the extensions that are registered.
+  std::vector<std::pair<ExtensionPointTy, ExtensionFn>> Extensions;
+
 public:
   PassManagerBuilder();
   ~PassManagerBuilder();
+  /// Adds an extension that will be used by all PassManagerBuilder instances.
+  /// This is intended to be used by plugins, to register a set of
+  /// optimisations to run automatically.
+  ///
+  /// \returns A global extension identifier that can be used to remove the
+  /// extension.
+  static GlobalExtensionID addGlobalExtension(ExtensionPointTy Ty,
+                                              ExtensionFn Fn);
+  /// Removes an extension that was previously added using addGlobalExtension.
+  /// This is also intended to be used by plugins, to remove any extension that
+  /// was previously registered before being unloaded.
+  ///
+  /// \param ExtensionID Identifier of the extension to be removed.
+  static void removeGlobalExtension(GlobalExtensionID ExtensionID);
+  void addExtension(ExtensionPointTy Ty, ExtensionFn Fn);
 
 private:
+  void addExtensionsToPM(ExtensionPointTy ETy,
+                         legacy::PassManagerBase &PM) const;
   void addInitialAliasAnalysisPasses(legacy::PassManagerBase &PM) const;
   void addFunctionSimplificationPasses(legacy::PassManagerBase &MPM);
   void addVectorPasses(legacy::PassManagerBase &PM, bool IsFullLTO);
@@ -123,6 +206,27 @@ public:
 
   /// populateModulePassManager - This sets up the primary pass manager.
   void populateModulePassManager(legacy::PassManagerBase &MPM);
+};
+
+/// Registers a function for adding a standard set of passes.  This should be
+/// used by optimizer plugins to allow all front ends to transparently use
+/// them.  Create a static instance of this class in your plugin, providing a
+/// private function that the PassManagerBuilder can use to add your passes.
+class RegisterStandardPasses {
+  PassManagerBuilder::GlobalExtensionID ExtensionID;
+
+public:
+  RegisterStandardPasses(PassManagerBuilder::ExtensionPointTy Ty,
+                         PassManagerBuilder::ExtensionFn Fn) {
+    ExtensionID = PassManagerBuilder::addGlobalExtension(Ty, std::move(Fn));
+  }
+
+  ~RegisterStandardPasses() {
+    // If the collection holding the global extensions is destroyed after the
+    // plugin is unloaded, the extension has to be removed here. Indeed, the
+    // destructor of the ExtensionFn may reference code in the plugin.
+    PassManagerBuilder::removeGlobalExtension(ExtensionID);
+  }
 };
 
 inline PassManagerBuilder *unwrap(LLVMPassManagerBuilderRef P) {
