@@ -329,6 +329,9 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
+  if (DiscardResult)
+    return true;
+
   // 'Base.Member'
   const Expr *Base = E->getBase();
   const ValueDecl *Member = E->getMemberDecl();
@@ -982,7 +985,18 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
     // In any case call the function. The return value will end up on the stack and
     // if the function has RVO, we already have the pointer on the stack to write
     // the result into.
-    return this->emitCall(Func, E);
+    if (!this->emitCall(Func, E))
+      return false;
+
+    QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
+    if (DiscardResult && !ReturnType->isVoidType()) {
+      Optional<PrimType> T = classify(ReturnType);
+      if (T)
+        return this->emitPop(*T, E);
+      // TODO: This is a RVO function and we need to ignore the return value.
+    }
+
+    return true;
   } else {
     assert(false && "We don't support non-FunctionDecl callees right now.");
   }
@@ -1032,11 +1046,16 @@ bool ByteCodeExprGen<Emitter>::VisitCXXNullPtrLiteralExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXThisExpr(const CXXThisExpr *E) {
+  if (DiscardResult)
+    return true;
   return this->emitThis(E);
 }
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
+  if (DiscardResult)
+    return true;
+
   const Expr *SubExpr = E->getSubExpr();
 
   switch (E->getOpcode()) {
