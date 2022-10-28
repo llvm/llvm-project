@@ -1,4 +1,4 @@
-//===- MaskingInterfaces.cpp - Masking interfaces ----------====-*- C++ -*-===//
+//===- MaskableOpInterfaces.cpp - MaskableOpInterface Defs -====-*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Vector/Interfaces/MaskingInterfaces.h"
+#include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"
+
+using namespace mlir;
+using namespace mlir::vector;
 
 //===----------------------------------------------------------------------===//
-// Masking Interfaces
+// MaskableOpInterface Defs
 //===----------------------------------------------------------------------===//
 
-/// Include the definitions of the masking interfaces.
-#include "mlir/Dialect/Vector/Interfaces/MaskingInterfaces.cpp.inc"
+#include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.cpp.inc"

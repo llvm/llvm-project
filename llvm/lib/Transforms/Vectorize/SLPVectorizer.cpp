@@ -1210,6 +1210,10 @@ public:
     /// MainAltOps.
     int getShallowScore(Value *V1, Value *V2, Instruction *U1, Instruction *U2,
                         ArrayRef<Value *> MainAltOps) const {
+      if (!isValidElementType(V1->getType()) ||
+          !isValidElementType(V2->getType()))
+        return LookAheadHeuristics::ScoreFail;
+
       if (V1 == V2) {
         if (isa<LoadInst>(V1)) {
           // Retruns true if the users of V1 and V2 won't need to be extracted.

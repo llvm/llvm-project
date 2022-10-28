@@ -188,6 +188,21 @@ def EXIT_STRICT_WQM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
   let mayStore = 0;
 }
 
+// PSEUDO_WM is treated like STRICT_WWM/STRICT_WQM without exec changes.
+def ENTER_PSEUDO_WM : SPseudoInstSI <(outs), (ins)> {
+  let Uses = [EXEC];
+  let Defs = [EXEC];
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
+def EXIT_PSEUDO_WM : SPseudoInstSI <(outs), (ins)> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+
 // Pseudo instructions used for @llvm.fptrunc.round upward
 // and @llvm.fptrunc.round downward.
 // These intrinsics will be legalized to G_FPTRUNC_ROUND_UPWARD

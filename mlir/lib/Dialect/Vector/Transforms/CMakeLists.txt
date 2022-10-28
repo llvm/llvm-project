@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRVectorTransforms
   BufferizableOpInterfaceImpl.cpp
   Bufferize.cpp
+  LowerVectorMask.cpp
   VectorDistribute.cpp
   VectorDropLeadUnitDim.cpp
   VectorInsertExtractStridedSliceRewritePatterns.cpp

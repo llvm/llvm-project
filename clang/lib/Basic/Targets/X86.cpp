@@ -338,8 +338,12 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasCMPCCXADD = true;
     } else if (Feature == "+raoint") {
       HasRAOINT = true;
+    } else if (Feature == "+avxifma") {
+      HasAVXIFMA = true;
     } else if (Feature == "+avxvnni") {
       HasAVXVNNI = true;
+    } else if (Feature == "+avxvnniint8") {
+      HasAVXVNNIINT8 = true;
     } else if (Feature == "+serialize") {
       HasSERIALIZE = true;
     } else if (Feature == "+tsxldtrk") {
@@ -790,8 +794,12 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__CMPCCXADD__");
   if (HasRAOINT)
     Builder.defineMacro("__RAOINT__");
+  if (HasAVXIFMA)
+    Builder.defineMacro("__AVXIFMA__");
   if (HasAVXVNNI)
     Builder.defineMacro("__AVXVNNI__");
+  if (HasAVXVNNIINT8)
+    Builder.defineMacro("__AVXVNNIINT8__");
   if (HasSERIALIZE)
     Builder.defineMacro("__SERIALIZE__");
   if (HasTSXLDTRK)
@@ -914,7 +922,9 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avx512vbmi2", true)
       .Case("avx512ifma", true)
       .Case("avx512vp2intersect", true)
+      .Case("avxifma", true)
       .Case("avxvnni", true)
+      .Case("avxvnniint8", true)
       .Case("bmi", true)
       .Case("bmi2", true)
       .Case("cldemote", true)
@@ -994,7 +1004,6 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("amx-fp16", HasAMXFP16)
       .Case("amx-int8", HasAMXINT8)
       .Case("amx-tile", HasAMXTILE)
-      .Case("avxvnni", HasAVXVNNI)
       .Case("avx", SSELevel >= AVX)
       .Case("avx2", SSELevel >= AVX2)
       .Case("avx512f", SSELevel >= AVX512F)
@@ -1013,6 +1022,10 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avx512vbmi2", HasAVX512VBMI2)
       .Case("avx512ifma", HasAVX512IFMA)
       .Case("avx512vp2intersect", HasAVX512VP2INTERSECT)
+      .Case("avxifma", HasAVXIFMA)
+      .Case("avxvnni", HasAVXVNNI)
+      .Case("avxvnni", HasAVXVNNI)
+      .Case("avxvnniint8", HasAVXVNNIINT8)
       .Case("bmi", HasBMI)
       .Case("bmi2", HasBMI2)
       .Case("cldemote", HasCLDEMOTE)
