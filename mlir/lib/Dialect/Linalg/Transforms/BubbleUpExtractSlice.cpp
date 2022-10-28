@@ -63,7 +63,7 @@ struct BubbleUpExtractSliceOpPattern
                                          "expected single use of linalg op");
     }
 
-    if (linalgOp.getNumOutputs() != 1) {
+    if (linalgOp.getNumDpsInits() != 1) {
       return rewriter.notifyMatchFailure(sliceOp,
                                          "expected single output of linalg op");
     }
@@ -80,7 +80,7 @@ struct BubbleUpExtractSliceOpPattern
       return rewriter.notifyMatchFailure(sliceOp, "expected no rank reduction");
     }
 
-    OpOperand *outOperand = linalgOp.getOutputOperand(0);
+    OpOperand *outOperand = linalgOp.getDpsInitOperand(0);
     AffineMap indexingMap = linalgOp.getMatchingIndexingMap(outOperand);
     if (!indexingMap.isProjectedPermutation()) {
       return rewriter.notifyMatchFailure(
@@ -119,7 +119,7 @@ struct BubbleUpExtractSliceOpPattern
                         /*omitPartialTileCheck=*/true);
 
     SmallVector<Type, 4> resultTensorTypes;
-    for (OpOperand *opOperand : linalgOp.getOutputOperands())
+    for (OpOperand *opOperand : linalgOp.getDpsInitOperands())
       resultTensorTypes.push_back(
           tiledOperands[opOperand->getOperandNumber()].getType());
 
