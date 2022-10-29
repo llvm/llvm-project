@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O0 %s -o - | llvm-mc -arch=hexagon -filetype=obj | llvm-objdump -d - | FileCheck %s
+; RUN: llc -march=hexagon -O0 %s -o - | llvm-mc -arch=hexagon -filetype=obj | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 ; CHECK: immext(#16777216)
 ; CHECK-NEXT: r0 = add(r0,##16777279)

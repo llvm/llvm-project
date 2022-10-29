@@ -2,7 +2,7 @@
 // RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %s -o %t.o
 // RUN: ld.lld %t.o -o %t.so -shared
 // RUN: llvm-readelf -S %t.so | FileCheck %s
-// RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.so | FileCheck --check-prefix=DISASM %s
 
 bar:
         movl    bar@GOTOFF(%ebx), %eax

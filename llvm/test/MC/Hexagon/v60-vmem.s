@@ -1,5 +1,5 @@
 #RUN: llvm-mc -triple=hexagon -mcpu=hexagonv60 -filetype=obj -mhvx %s | \
-#RUN: llvm-objdump --triple=hexagon --mcpu=hexagonv60 --mattr=+hvx -d - | \
+#RUN: llvm-objdump --no-print-imm-hex --triple=hexagon --mcpu=hexagonv60 --mattr=+hvx -d - | \
 #RUN: FileCheck %s
 
 #CHECK: 292cc11b { vmem(r12++#1) = v27 }

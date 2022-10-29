@@ -4,7 +4,7 @@
 // RUN: ld.lld -shared %t2.o -soname fixed-length-string.so -o %t2.so
 // RUN: ld.lld --hash-style=sysv %t.o %t2.so -o %t3
 // RUN: llvm-readobj -S -r --expand-relocs --symbols %t3 | FileCheck %s
-// RUN: llvm-objdump -d --triple=armv7a-none-linux-gnueabi --no-show-raw-insn %t3 | FileCheck --check-prefix=CODE %s
+// RUN: llvm-objdump --no-print-imm-hex -d --triple=armv7a-none-linux-gnueabi --no-show-raw-insn %t3 | FileCheck --check-prefix=CODE %s
 // RUN: llvm-objdump -s --triple=armv7a-none-linux-gnueabi --section=.rodata %t3 | FileCheck --check-prefix=RODATA %s
 
 // Copy relocations R_ARM_COPY are required for y and z

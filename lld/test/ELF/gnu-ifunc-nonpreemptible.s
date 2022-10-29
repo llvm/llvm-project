@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 # RUN: ld.lld %t.o -o %t
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=DISASM
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s --check-prefix=DISASM
 # RUN: llvm-readelf -r -s %t | FileCheck %s
 
 # RUN: ld.lld --export-dynamic %t.o -o %t

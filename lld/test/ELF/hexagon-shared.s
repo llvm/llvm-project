@@ -4,9 +4,9 @@
 # RUN: ld.lld -shared %t2.o -soname so -o %t3.so
 # RUN: ld.lld -shared %t.o %t3.so -o %t4.so
 # RUN: ld.lld -Bsymbolic -shared %t.o %t3.so -o %t5.so
-# RUN: llvm-objdump -d -j .plt %t4.so | FileCheck --check-prefix=PLT %s
-# RUN: llvm-objdump -d -j .text %t4.so | FileCheck --check-prefix=TEXT %s
-# RUN: llvm-objdump -D -j .got %t4.so | FileCheck --check-prefix=GOT %s
+# RUN: llvm-objdump --no-print-imm-hex -d -j .plt %t4.so | FileCheck --check-prefix=PLT %s
+# RUN: llvm-objdump --no-print-imm-hex -d -j .text %t4.so | FileCheck --check-prefix=TEXT %s
+# RUN: llvm-objdump --no-print-imm-hex -D -j .got %t4.so | FileCheck --check-prefix=GOT %s
 # RUN: llvm-readelf -r  %t4.so | FileCheck --check-prefix=RELO %s
 # RUN: llvm-readelf -r  %t5.so | FileCheck --check-prefix=SYMBOLIC %s
 

@@ -1,4 +1,4 @@
-# RUN: llvm-objdump -d -r %p/../Inputs/trivial-object-test.coff-i386 \
+# RUN: llvm-objdump --no-print-imm-hex -d -r %p/../Inputs/trivial-object-test.coff-i386 \
 # RUN:              | FileCheck %s -check-prefix COFF-i386
 
 # COFF-i386: file format coff-i386
@@ -15,7 +15,7 @@
 # COFF-i386:       20:       83 c4 0c                                        addl    $12, %esp
 # COFF-i386:       23:       c3                                              ret
 
-# RUN: llvm-objdump -d -r %p/../Inputs/trivial-object-test.coff-x86-64 \
+# RUN: llvm-objdump --no-print-imm-hex -d -r %p/../Inputs/trivial-object-test.coff-x86-64 \
 # RUN:              | FileCheck %s -check-prefix COFF-x86-64
 
 # COFF-x86-64: file format coff-x86-64
@@ -32,7 +32,7 @@
 # COFF-x86-64:       21:       48 83 c4 28                                     addq    $40, %rsp
 # COFF-x86-64:       25:       c3                                              ret
 
-# RUN: llvm-objdump -d -r %p/../Inputs/trivial-object-test.macho-i386 \
+# RUN: llvm-objdump --no-print-imm-hex -d -r %p/../Inputs/trivial-object-test.macho-i386 \
 # RUN:              | FileCheck %s -check-prefix MACHO-i386
 
 # MACHO-i386: file format mach-o 32-bit i386
@@ -50,7 +50,7 @@
 # MACHO-i386:       20:       83 c4 0c                                        addl    $12, %esp
 # MACHO-i386:       23:       c3                                              ret
 
-# RUN: llvm-objdump -d -r %p/../Inputs/trivial-object-test.macho-x86-64 \
+# RUN: llvm-objdump --no-print-imm-hex -d -r %p/../Inputs/trivial-object-test.macho-x86-64 \
 # RUN:              | FileCheck %s -check-prefix MACHO-x86-64
 
 # MACHO-x86-64: file format mach-o 64-bit x86-64
@@ -70,7 +70,7 @@
 # MACHO-x86-64:       27:       c3                                              ret
 
 # RUN: yaml2obj --docnum=1 %s -o %t.elf-i386
-# RUN: llvm-objdump -d -r %t.elf-i386 | FileCheck %s --check-prefix=ELF-i386
+# RUN: llvm-objdump --no-print-imm-hex -d -r %t.elf-i386 | FileCheck %s --check-prefix=ELF-i386
 
 # ELF-i386: file format elf32-i386
 # ELF-i386: Disassembly of section .text:
@@ -127,7 +127,7 @@ Symbols:
     Binding: STB_GLOBAL
 
 # RUN: yaml2obj --docnum=2 %s -o %t.elf-x86-64
-# RUN: llvm-objdump -d -r %t.elf-x86-64 | FileCheck %s --check-prefix=ELF-x86-64
+# RUN: llvm-objdump --no-print-imm-hex -d -r %t.elf-x86-64 | FileCheck %s --check-prefix=ELF-x86-64
 
 --- !ELF
 FileHeader:

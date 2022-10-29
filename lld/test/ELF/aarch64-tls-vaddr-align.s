@@ -3,7 +3,7 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readelf -S -l %t | FileCheck --check-prefix=SEC %s
-# RUN: llvm-objdump -d %t | FileCheck --check-prefix=DIS %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck --check-prefix=DIS %s
 
 # SEC: Name   Type     Address          Off    Size   ES Flg Lk Inf Al
 # SEC: .tdata PROGBITS 0000000000220200 000200 000001 00 WAT 0    0  1

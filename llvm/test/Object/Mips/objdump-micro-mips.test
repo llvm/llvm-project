@@ -1,4 +1,4 @@
-RUN: llvm-objdump -d %p/../Inputs/micro-mips.elf-mipsel | FileCheck %s
+RUN: llvm-objdump --no-print-imm-hex -d %p/../Inputs/micro-mips.elf-mipsel | FileCheck %s
 
 CHECK:      <foo>:
 CHECK-NEXT:      330:   bd 33 f8 ff   addiu   $sp, $sp, -8

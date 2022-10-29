@@ -6,7 +6,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %t.exe.o
 # RUN: ld.lld %t.so.o -shared -soname=t.so -o %t.so
 # RUN: ld.lld %t.exe.o %t.so -o %t.exe
-# RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d -t --no-show-raw-insn %t.exe | FileCheck %s
 # RUN: llvm-readelf -r -s -A %t.exe | FileCheck -check-prefix=GOT %s
 
 # CHECK:      <__start>:

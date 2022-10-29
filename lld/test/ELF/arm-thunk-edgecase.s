@@ -10,8 +10,8 @@
 // RUN:       }" > %tthumb_to_arm.script
 // RUN: ld.lld -shared -Bsymbolic -script %tarm_to_thumb.script %t.o -o %tarm_to_thumb.so
 // RUN: ld.lld -shared -Bsymbolic -script %tthumb_to_arm.script %t.o -o %tthumb_to_arm.so
-// RUN: llvm-objdump --triple=armv7a-none-linux-gnueabi -d %tarm_to_thumb.so | FileCheck --check-prefix=ARM-TO-THUMB %s
-// RUN: llvm-objdump -d %tthumb_to_arm.so | FileCheck --check-prefix=THUMB-TO-ARM %s
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi -d %tarm_to_thumb.so | FileCheck --check-prefix=ARM-TO-THUMB %s
+// RUN: llvm-objdump --no-print-imm-hex -d %tthumb_to_arm.so | FileCheck --check-prefix=THUMB-TO-ARM %s
 
 .syntax unified
 

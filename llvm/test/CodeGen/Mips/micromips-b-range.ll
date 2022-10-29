@@ -1,5 +1,5 @@
 ; RUN: llc -march=mips -relocation-model=pic -mattr=+micromips \
-; RUN:     -filetype=obj -o - %s | llvm-objdump -d - | FileCheck %s
+; RUN:     -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 ; CHECK-LABEL: <foo>:
 ; CHECK-NEXT:     0:	41 a2 00 00 	lui	$2, 0
