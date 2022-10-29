@@ -309,10 +309,7 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
 
   llvm::BumpPtrAllocator A;
   llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine);
-  if (llvm::Error Err = ECtx.expandResponseFiles(ArgV)) {
-    llvm::errs() << toString(std::move(Err)) << '\n';
-    return 1;
-  }
+  ECtx.expandResponseFiles(ArgV);
   StringRef Tool = ArgV[1];
   void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
   if (Tool == "-cc1")
@@ -376,11 +373,7 @@ int clang_main(int Argc, char **Argv) {
   if (MarkEOLs && Args.size() > 1 && StringRef(Args[1]).startswith("-cc1"))
     MarkEOLs = false;
   llvm::cl::ExpansionContext ECtx(A, Tokenizer);
-  ECtx.setMarkEOLs(MarkEOLs);
-  if (llvm::Error Err = ECtx.expandResponseFiles(Args)) {
-    llvm::errs() << Err << '\n';
-    return 1;
-  }
+  ECtx.setMarkEOLs(MarkEOLs).expandResponseFiles(Args);
 
   // Handle -cc1 integrated tools, even if -cc1 was expanded from a response
   // file.
