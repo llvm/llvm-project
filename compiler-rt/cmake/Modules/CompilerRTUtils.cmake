@@ -268,16 +268,6 @@ function(get_compiler_rt_root_source_dir ROOT_DIR_VAR)
 endfunction()
 
 macro(load_llvm_config)
-  if (NOT LLVM_CONFIG_PATH)
-    find_program(LLVM_CONFIG_PATH "llvm-config"
-                 DOC "Path to llvm-config binary")
-    if (NOT LLVM_CONFIG_PATH)
-      message(WARNING "UNSUPPORTED COMPILER-RT CONFIGURATION DETECTED: "
-                      "llvm-config not found.\n"
-                      "Reconfigure with -DLLVM_CONFIG_PATH=path/to/llvm-config.")
-    endif()
-  endif()
-
   # Compute path to LLVM sources assuming the monorepo layout.
   # We don't set `LLVM_MAIN_SRC_DIR` directly to avoid overriding a user provided
   # CMake cache value.
@@ -290,114 +280,33 @@ macro(load_llvm_config)
       "You are not using the monorepo layout. This configuration is DEPRECATED.")
   endif()
 
-  set(FOUND_LLVM_CMAKE_DIR FALSE)
-  if (LLVM_CONFIG_PATH)
-    execute_process(
-      COMMAND ${LLVM_CONFIG_PATH} "--obj-root" "--bindir" "--libdir" "--src-root" "--includedir"
-      RESULT_VARIABLE HAD_ERROR
-      OUTPUT_VARIABLE CONFIG_OUTPUT)
-    if (HAD_ERROR)
-      message(FATAL_ERROR "llvm-config failed with status ${HAD_ERROR}")
-    endif()
-    string(REGEX REPLACE "[ \t]*[\r\n]+[ \t]*" ";" CONFIG_OUTPUT ${CONFIG_OUTPUT})
-    list(GET CONFIG_OUTPUT 0 BINARY_DIR)
-    list(GET CONFIG_OUTPUT 1 TOOLS_BINARY_DIR)
-    list(GET CONFIG_OUTPUT 2 LIBRARY_DIR)
-    list(GET CONFIG_OUTPUT 3 MAIN_SRC_DIR)
-    list(GET CONFIG_OUTPUT 4 INCLUDE_DIR)
+  find_package(LLVM HINTS "${LLVM_CMAKE_DIR}")
+  if (LLVM_FOUND)
+    list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
+    # Turn into CACHE PATHs for overwritting
+    set(LLVM_BINARY_DIR "${LLVM_BINARY_DIR}" CACHE PATH "Path to LLVM build tree")
+    set(LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE PATH "Path to llvm/lib")
+    set(LLVM_TOOLS_BINARY_DIR "${LLVM_TOOLS_BINARY_DIR}" CACHE PATH "Path to llvm/bin")
+    set(LLVM_INCLUDE_DIR ${LLVM_INCLUDE_DIRS} CACHE PATH "Path to llvm/include and any other header dirs needed")
 
-    set(LLVM_BINARY_DIR ${BINARY_DIR} CACHE PATH "Path to LLVM build tree")
-    set(LLVM_LIBRARY_DIR ${LIBRARY_DIR} CACHE PATH "Path to llvm/lib")
-    set(LLVM_TOOLS_BINARY_DIR ${TOOLS_BINARY_DIR} CACHE PATH "Path to llvm/bin")
-    set(LLVM_INCLUDE_DIR ${INCLUDE_DIR} CACHE PATH "Paths to LLVM headers")
-
-    if (NOT EXISTS "${LLVM_MAIN_SRC_DIR_DEFAULT}")
-      # TODO(dliew): Remove this legacy fallback path.
-      message(WARNING
-        "Consulting llvm-config for the LLVM source path "
-        "as a fallback. This behavior will be removed in the future.")
-      # We don't set `LLVM_MAIN_SRC_DIR` directly to avoid overriding a user
-      # provided CMake cache value.
-      set(LLVM_MAIN_SRC_DIR_DEFAULT "${MAIN_SRC_DIR}")
-      message(STATUS "Using LLVM source path (${LLVM_MAIN_SRC_DIR_DEFAULT}) from llvm-config")
-    endif()
-
-    # Detect if we have the LLVMXRay and TestingSupport library installed and
-    # available from llvm-config.
-    execute_process(
-      COMMAND ${LLVM_CONFIG_PATH} "--ldflags" "--libs" "xray"
-      RESULT_VARIABLE HAD_ERROR
-      OUTPUT_VARIABLE CONFIG_OUTPUT
-      ERROR_QUIET)
-    if (HAD_ERROR)
-      message(WARNING "llvm-config finding xray failed with status ${HAD_ERROR}")
+    list(FIND LLVM_AVAILABLE_LIBS LLVMXRay XRAY_INDEX)
+    set(COMPILER_RT_HAS_LLVMXRAY TRUE)
+    if (XRAY_INDEX EQUAL -1)
+      message(WARNING "LLVMXRay not found in LLVM_AVAILABLE_LIBS")
       set(COMPILER_RT_HAS_LLVMXRAY FALSE)
-    else()
-      string(REGEX REPLACE "[ \t]*[\r\n]+[ \t]*" ";" CONFIG_OUTPUT ${CONFIG_OUTPUT})
-      list(GET CONFIG_OUTPUT 0 LDFLAGS)
-      list(GET CONFIG_OUTPUT 1 LIBLIST)
-      file(TO_CMAKE_PATH "${LDFLAGS}" LDFLAGS)
-      file(TO_CMAKE_PATH "${LIBLIST}" LIBLIST)
-      set(LLVM_XRAY_LDFLAGS ${LDFLAGS} CACHE STRING "Linker flags for LLVMXRay library")
-      set(LLVM_XRAY_LIBLIST ${LIBLIST} CACHE STRING "Library list for LLVMXRay")
-      set(COMPILER_RT_HAS_LLVMXRAY TRUE)
     endif()
 
-    set(COMPILER_RT_HAS_LLVMTESTINGSUPPORT FALSE)
-    execute_process(
-      COMMAND ${LLVM_CONFIG_PATH} "--ldflags" "--libs" "testingsupport"
-      RESULT_VARIABLE HAD_ERROR
-      OUTPUT_VARIABLE CONFIG_OUTPUT
-      ERROR_QUIET)
-    if (HAD_ERROR)
-      message(WARNING "llvm-config finding testingsupport failed with status ${HAD_ERROR}")
-    elseif(COMPILER_RT_INCLUDE_TESTS)
-      string(REGEX REPLACE "[ \t]*[\r\n]+[ \t]*" ";" CONFIG_OUTPUT ${CONFIG_OUTPUT})
-      list(GET CONFIG_OUTPUT 0 LDFLAGS)
-      list(GET CONFIG_OUTPUT 1 LIBLIST)
-      if (LIBLIST STREQUAL "")
-        message(WARNING "testingsupport library not installed, some tests will be skipped")
-      else()
-        file(TO_CMAKE_PATH "${LDFLAGS}" LDFLAGS)
-        file(TO_CMAKE_PATH "${LIBLIST}" LIBLIST)
-        set(LLVM_TESTINGSUPPORT_LDFLAGS ${LDFLAGS} CACHE STRING "Linker flags for LLVMTestingSupport library")
-        set(LLVM_TESTINGSUPPORT_LIBLIST ${LIBLIST} CACHE STRING "Library list for LLVMTestingSupport")
-        set(COMPILER_RT_HAS_LLVMTESTINGSUPPORT TRUE)
-      endif()
+    list(FIND LLVM_AVAILABLE_LIBS LLVMTestingSupport TESTINGSUPPORT_INDEX)
+    set(COMPILER_RT_HAS_LLVMTESTINGSUPPORT TRUE)
+    if (TESTINGSUPPORT_INDEX EQUAL -1)
+      message(WARNING "LLVMTestingSupport not found in LLVM_AVAILABLE_LIBS")
+      set(COMPILER_RT_HAS_LLVMTESTINGSUPPORT FALSE)
     endif()
-
-    # Make use of LLVM CMake modules.
-    # --cmakedir is supported since llvm r291218 (4.0 release)
-    execute_process(
-      COMMAND ${LLVM_CONFIG_PATH} --cmakedir
-      RESULT_VARIABLE HAD_ERROR
-      OUTPUT_VARIABLE CONFIG_OUTPUT)
-    if(NOT HAD_ERROR)
-      string(STRIP "${CONFIG_OUTPUT}" LLVM_CMAKE_DIR_FROM_LLVM_CONFIG)
-      file(TO_CMAKE_PATH ${LLVM_CMAKE_DIR_FROM_LLVM_CONFIG} LLVM_CMAKE_DIR)
-    else()
-      file(TO_CMAKE_PATH ${LLVM_BINARY_DIR} LLVM_BINARY_DIR_CMAKE_STYLE)
-      set(LLVM_CMAKE_DIR "${LLVM_BINARY_DIR_CMAKE_STYLE}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
-    endif()
-
-    set(LLVM_CMAKE_INCLUDE_FILE "${LLVM_CMAKE_DIR}/LLVMConfig.cmake")
-    if (EXISTS "${LLVM_CMAKE_INCLUDE_FILE}")
-      list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
-      # Get some LLVM variables from LLVMConfig.
-      include("${LLVM_CMAKE_INCLUDE_FILE}")
-      set(FOUND_LLVM_CMAKE_DIR TRUE)
-    else()
-      set(FOUND_LLVM_CMAKE_DIR FALSE)
-      message(WARNING "LLVM CMake path (${LLVM_CMAKE_INCLUDE_FILE}) reported by llvm-config does not exist")
-    endif()
-    unset(LLVM_CMAKE_INCLUDE_FILE)
-
-    set(LLVM_LIBRARY_OUTPUT_INTDIR
-      ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
   endif()
 
-  # Finally set the cache variable now that `llvm-config` has also had a chance
-  # to set `LLVM_MAIN_SRC_DIR_DEFAULT`.
+  set(LLVM_LIBRARY_OUTPUT_INTDIR
+    ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
+
   set(LLVM_MAIN_SRC_DIR "${LLVM_MAIN_SRC_DIR_DEFAULT}" CACHE PATH "Path to LLVM source tree")
   message(STATUS "LLVM_MAIN_SRC_DIR: \"${LLVM_MAIN_SRC_DIR}\"")
   if (NOT EXISTS "${LLVM_MAIN_SRC_DIR}")
@@ -410,7 +319,7 @@ macro(load_llvm_config)
                     "This will be treated as error in the future.")
   endif()
 
-  if (NOT FOUND_LLVM_CMAKE_DIR)
+  if (NOT LLVM_FOUND)
     # This configuration tries to configure without the prescence of `LLVMConfig.cmake`. It is
     # intended for testing purposes (generating the lit test suites) and will likely not support
     # a build of the runtimes in compiler-rt.
