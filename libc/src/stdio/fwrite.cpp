@@ -16,8 +16,11 @@ namespace __llvm_libc {
 LLVM_LIBC_FUNCTION(size_t, fwrite,
                    (const void *__restrict buffer, size_t size, size_t nmemb,
                     ::FILE *stream)) {
+  if (size == 0 || nmemb == 0)
+    return 0;
   return reinterpret_cast<__llvm_libc::File *>(stream)->write(buffer,
-                                                              size * nmemb);
+                                                              size * nmemb) /
+         size;
 }
 
 } // namespace __llvm_libc
