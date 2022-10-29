@@ -1639,9 +1639,9 @@ auto HexagonVectorCombine::concat(IRBuilderBase &Builder,
   // Since there may have been some undefs appended to make shuffle operands
   // have the same type, perform the last shuffle to only pick the original
   // elements.
-  SMask.resize(Vecs.size() * getSizeOf(Vecs.front()->getType()));
+  SMask.resize(Vecs.size() * length(Vecs.front()->getType()));
   std::iota(SMask.begin(), SMask.end(), 0);
-  Value *Total = Work[OtherW].front();
+  Value *Total = Work[ThisW].front();
   return Builder.CreateShuffleVector(Total, SMask);
 }
 
