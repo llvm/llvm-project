@@ -17,15 +17,18 @@ private:
   Function *FunctionToInstrument;
 
   Function *ACInitFunction;
-//  Function *AFInitFunction;
+  Function *AFInitFunction;
 
   Function *ACComputingFunction;
+  Function *AFComputingFunction;
 
   Function *ACStoreFunction;
-//  Function *AFStoreFunction;
+  Function *AFStoreFunction;
 //  Function *AFPrintTopAmplificationPaths;
 
-//  Function *AFAnalysisFunction;
+  // Instruction to AC/AF Maps
+  ValueMap<Value*, Value*> InstructionACMap;
+  ValueMap<Value*, Value*> InstructionAFMap;
 
   // Additional Utilities
 
@@ -55,7 +58,14 @@ public:
 //                                               BasicBlock::iterator *InstructionIterator,
 //                                               long int *NumInstrumentedInstructions);
 
+  void instrumentCallsToAnalyzeInstruction(Instruction *BaseInstruction,
+                                           BasicBlock::iterator *InstructionIterator,
+                                           long int *NumInstrumentedInstructions);
   void instrumentCallsForACComputation(Instruction *BaseInstruction,
+                                       BasicBlock::iterator *InstructionIterator,
+                                       long int *NumInstrumentedInstructions,
+                                       int FunctionType);
+  void instrumentCallsForAFComputation(Instruction *BaseInstruction,
                                        BasicBlock::iterator *InstructionIterator,
                                        long int *NumInstrumentedInstructions);
 
@@ -64,6 +74,9 @@ public:
   void instrumentMainFunction(Function *F);
 
   //// Helper Functions
+  Value *createArrayInIR(std::vector<Value*> ArrayOfValues,
+                         IRBuilder<> *InstructionBuilder,
+                         BasicBlock::iterator *InstructionIterator);
 
   /// Instruction based functions
   // Instruction finders

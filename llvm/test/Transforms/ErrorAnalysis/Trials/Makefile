@@ -6,6 +6,7 @@ LLI = /home/tanmay/Documents/Tools/llvm-project/build/bin/lli
 # make build_pass [DEBUG_FLAG=-DFAF_DEBUG<=debug level>] [DUMP_SYMBOLIC=-DFAF_DUMP_SYMBOLIC]
 build_pass:
 	$(CXX) --include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AtomicCondition.h \
+	--include /home/tanmay/Documents/Tools/llvm-project/llvm/include/llvm/Transforms/ErrorAnalysis/AtomicCondition/AmplificationFactor.h \
 	$(OP) -S -emit-llvm slide_example2.c \
     	  -o slide_example2.ll
 	$(OPT) -passes=error-analysis -S slide_example2.ll \

@@ -838,6 +838,7 @@ ACItem **fACComputeAC(const char *ResultVar,
 }
 
 void fACStoreACs() {
+  printf("\nWriting Atomic Conditions to file.\n");
   // Generate a file path + file name string to store the AC Records
   char File[5000];
   fAFGenerateFileString(File, "fAC_", ".json");
@@ -911,7 +912,7 @@ void fACStoreACs() {
 
   fclose(FP);
 
-  printf("\nAtomic Conditions written to file: %s\n", File);
+  printf("Atomic Conditions written to file: %s\n", File);
 }
 
 

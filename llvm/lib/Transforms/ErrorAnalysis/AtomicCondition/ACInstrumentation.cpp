@@ -4,7 +4,7 @@
 
 #include <string>
 #include "llvm/Transforms/ErrorAnalysis/AtomicCondition/ACInstrumentation.h"
-#include "llvm/Transforms/ErrorAnalysis/AtomicCondition/AtomicCondition.h"
+#include "llvm/Transforms/ErrorAnalysis/AtomicCondition/AmplificationFactor.h"
 #include "llvm/Transforms/ErrorAnalysis/Utilities/FunctionMatchers.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/IR/InstrTypes.h"
@@ -31,12 +31,13 @@ void confFunction(Function *FunctionToSave, Function **StorageLocation,
 // Searches module for functions to mark and creates pointers for them.
 ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToInstrument(InstrumentFunction),
                                                                      ACInitFunction(nullptr),
+                                                                     AFInitFunction(nullptr),
                                                                      ACComputingFunction(nullptr),
-//                                                                     AFInitFunction(nullptr),
+                                                                     AFComputingFunction(nullptr),
 //                                                                     ACUnaryFunction(nullptr),
 //                                                                     ACBinaryFunction(nullptr),
-                                                                     ACStoreFunction(nullptr)
-//                                                                     AFStoreFunction(nullptr),
+                                                                     ACStoreFunction(nullptr),
+                                                                     AFStoreFunction(nullptr)
 //                                                                     AFPrintTopAmplificationPaths(nullptr),
 //                                                                     AFAnalysisFunction(nullptr)
 {
@@ -55,14 +56,18 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
       confFunction(CurrentFunction, &ACInitFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
+        else if (CurrentFunction->getName().str().find("fAFInitialize") != std::string::npos) {
+          confFunction(CurrentFunction, &AFInitFunction,
+                       GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+        }
     else if (CurrentFunction->getName().str().find("fACComputeAC") != std::string::npos) {
       confFunction(CurrentFunction, &ACComputingFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
-//    else if (CurrentFunction->getName().str().find("fAFInitialize") != std::string::npos) {
-//      confFunction(CurrentFunction, &AFInitFunction,
-//                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
-//    }
+    else if (CurrentFunction->getName().str().find("fAFComputeAF") != std::string::npos) {
+      confFunction(CurrentFunction, &AFComputingFunction,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+    }
 //    else if (CurrentFunction->getName().str().find("fACUnaryDriver") != std::string::npos) {
 //      confFunction(CurrentFunction, &ACUnaryFunction,
 //                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
@@ -75,10 +80,10 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
       confFunction(CurrentFunction, &ACStoreFunction,
                    GlobalValue::LinkageTypes::LinkOnceODRLinkage);
     }
-//    else if (CurrentFunction->getName().str().find("fAFStoreAFs") != std::string::npos) {
-//      confFunction(CurrentFunction, &AFStoreFunction,
-//                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
-//    }
+    else if (CurrentFunction->getName().str().find("fAFStoreAFs") != std::string::npos) {
+      confFunction(CurrentFunction, &AFStoreFunction,
+                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
+    }
 //    else if (CurrentFunction->getName().str().find("fAFPrintTopAmplificationPaths") != std::string::npos) {
 //      confFunction(CurrentFunction, &AFPrintTopAmplificationPaths,
 //                   GlobalValue::LinkageTypes::LinkOnceODRLinkage);
@@ -100,38 +105,47 @@ ACInstrumentation::ACInstrumentation(Function *InstrumentFunction) : FunctionToI
                                          EmptyValue);
 }
 
+// Instruments calls analyzing sensitivity of this instruction
+void ACInstrumentation::instrumentCallsToAnalyzeInstruction(
+    Instruction *BaseInstruction, BasicBlock::iterator *InstructionIterator,
+    long *NumInstrumentedInstructions) {
+  // Return if we cannot analyze this function
+  int F = getFunctionEnum(BaseInstruction);
+  if(F == -1)
+    return ;
+
+  instrumentCallsForACComputation(BaseInstruction,
+                                  InstructionIterator,
+                                  NumInstrumentedInstructions,
+                                  F);
+
+  instrumentCallsForAFComputation(BaseInstruction,
+                                  InstructionIterator,
+                                  NumInstrumentedInstructions);
+}
+
 // Instruments a call to calculate atomic condition
 void ACInstrumentation::instrumentCallsForACComputation(
     Instruction *BaseInstruction,
     BasicBlock::iterator *InstructionIterator,
-    long *NumInstrumentedInstructions) {
+    long *NumInstrumentedInstructions,
+    int FunctionType) {
   // Ensuring ACComputingFunction is linked
   assert((ACComputingFunction!=nullptr) && "Function not initialized!");
+  assert((FunctionType != -1) && "Function cannot be analyzed");
 
   // Positioning the instruction builder
   IRBuilder<> InstructionBuilder((*InstructionIterator)->getNextNode());
   std::vector<Value *> ACArgs;
 
-  // Return if we cannot compute AC for this function
-  int F = getFunctionEnum(BaseInstruction);
-  if(F == -1)
-    return ;
 
   // Creating a Global string for the Register the Result of this instruction is
   // stored in.
   Value *ResultNamePointer = createRegisterNameGlobalString(
       static_cast<Instruction*>(BaseInstruction));
 
-  // Inserting an Alloca Instruction to allocate memory for the string representation
-  // of the operand registers.
-  Value *OperandNames = InstructionBuilder.CreateAlloca(ArrayType::get(InstructionBuilder.getInt8PtrTy(),
-                                                 BaseInstruction->getNumOperands()));
-  (*InstructionIterator)++;
-
-  // Inserting an Alloca Instruction to allocate memory for the operand values.
-  Value *OperandValues = InstructionBuilder.CreateAlloca(ArrayType::get(Type::getDoubleTy(BaseInstruction->getContext()),
-                                                                        BaseInstruction->getNumOperands()));
-  (*InstructionIterator)++;
+  std::vector<Value*> OpRegisterNamesArray;
+  std::vector<Value*> OperandValuesArray;
 
   // Looping through operands of BaseInstruction
   for (int I = 0; I < (int)BaseInstruction->getNumOperands(); ++I) {
@@ -139,26 +153,13 @@ void ACInstrumentation::instrumentCallsForACComputation(
     // if is not a constant.
     Value *OpRegisterNamePointer;
     if(!(isa<Constant>(BaseInstruction->getOperand(I)) ||
-        isa<Argument>(BaseInstruction->getOperand(I))))
+          isa<Argument>(BaseInstruction->getOperand(I))))
       OpRegisterNamePointer=createRegisterNameGlobalString(
           static_cast<Instruction*>(BaseInstruction->getOperand(I)));
     else
       OpRegisterNamePointer = EmptyValuePointer;
 
-    // Setting Value in OperandNameArray
-    Value *GEPForOperandName = InstructionBuilder.CreateGEP(InstructionBuilder.getInt8PtrTy(),
-                                              OperandNames,
-                                              InstructionBuilder.getInt32(I));
-    (*InstructionIterator)++;
-    InstructionBuilder.CreateStore(OpRegisterNamePointer, GEPForOperandName);
-    (*InstructionIterator)++;
-
-
-    // Setting Value in OperandValueArray
-    Value *GEPForOperandValue = InstructionBuilder.CreateGEP(InstructionBuilder.getDoubleTy(),
-                                                            OperandValues,
-                                                            InstructionBuilder.getInt32(I));
-    (*InstructionIterator)++;
+    OpRegisterNamesArray.push_back(OpRegisterNamePointer);
 
     Value *OperandValue = BaseInstruction->getOperand(I);
     // Create a Cast Instruction to double in case operation is float operation.
@@ -166,11 +167,21 @@ void ACInstrumentation::instrumentCallsForACComputation(
       OperandValue = InstructionBuilder.CreateFPCast(
           BaseInstruction->getOperand(I),
           Type::getDoubleTy(BaseInstruction->getModule()->getContext()));
+
       (*InstructionIterator)++;
+      *NumInstrumentedInstructions++;
     }
-    InstructionBuilder.CreateStore(OperandValue, GEPForOperandValue);
-    (*InstructionIterator)++;
+
+    OperandValuesArray.push_back(OperandValue);
   }
+
+  Value *AllocatedOpRegisterNamesArray = createArrayInIR(OpRegisterNamesArray,
+                                                         &InstructionBuilder,
+                                                         InstructionIterator);
+
+  Value *AllocatedOperandValuesArray = createArrayInIR(OperandValuesArray,
+                                                       &InstructionBuilder,
+                                                       InstructionIterator);
 
   Value *FileNameValuePointer;
   int LineNumber;
@@ -186,19 +197,11 @@ void ACInstrumentation::instrumentCallsForACComputation(
     LineNumber = -1;
   }
 
-  // Get pointers to arrays
-  Value *GEPForOperandName = InstructionBuilder.CreateGEP(InstructionBuilder.getInt8PtrTy(),
-                                                          OperandNames,
-                                                          InstructionBuilder.getInt32(0));
-  Value *GEPForOperandValue = InstructionBuilder.CreateGEP(InstructionBuilder.getDoubleTy(),
-                                                           OperandValues,
-                                                           InstructionBuilder.getInt32(0));
-
   // Creating array of parameters
   ACArgs.push_back(ResultNamePointer);
-  ACArgs.push_back(GEPForOperandName);
-  ACArgs.push_back(GEPForOperandValue);
-  ACArgs.push_back(InstructionBuilder.getInt32(F));
+  ACArgs.push_back(AllocatedOpRegisterNamesArray);
+  ACArgs.push_back(AllocatedOperandValuesArray);
+  ACArgs.push_back(InstructionBuilder.getInt32(FunctionType));
   ACArgs.push_back(FileNameValuePointer);
   ACArgs.push_back(InstructionBuilder.getInt32(LineNumber));
 
@@ -207,11 +210,65 @@ void ACInstrumentation::instrumentCallsForACComputation(
   CallInst *ACComputingCallInstruction =
       InstructionBuilder.CreateCall(ACComputingFunction, ACArgsRef,
                                     "AC");
-  *NumInstrumentedInstructions += 4*BaseInstruction->getNumOperands()+3;
+
+  // 2*(Get Location + Store Value at Location) * NumOperands +
+  // 2*(Allocate for Array + GetArrayLocation) + ACComputation Function Call
+  *NumInstrumentedInstructions += 4*BaseInstruction->getNumOperands()+5;
   (*InstructionIterator)++;
+
+  std::pair<Value*, Value*> InstructionACPair = std::make_pair(BaseInstruction,
+                                                                 ACComputingCallInstruction);
+  InstructionACMap.insert(InstructionACPair);
 
   assert(ACComputingCallInstruction && "Invalid call instruction!");
   return ;
+}
+
+void ACInstrumentation::instrumentCallsForAFComputation(
+    Instruction *BaseInstruction, BasicBlock::iterator *InstructionIterator,
+    long *NumInstrumentedInstructions) {
+  // Ensuring AFComputingFunction is linked
+  assert((ACComputingFunction!=nullptr) && "Function not initialized!");
+  assert((getFunctionEnum(BaseInstruction) != -1) && "Function cannot be analyzed");
+
+  // Positioning the instruction builder
+  IRBuilder<> InstructionBuilder((*InstructionIterator)->getNextNode());
+  std::vector<Value *> AFArgs;
+
+  std::vector<Value*> AFArray;
+
+  for (int I = 0; I < (int)BaseInstruction->getNumOperands(); ++I) {
+    if(getFunctionEnum(
+            static_cast<Instruction *>(BaseInstruction->getOperand(I))) != -1)
+      AFArray.push_back(InstructionAFMap[BaseInstruction->getOperand(I)]);
+    else
+      AFArray.push_back(ConstantPointerNull::get(InstructionBuilder.getPtrTy()));
+  }
+
+  Value *AllocatedAFArray = createArrayInIR(AFArray,
+                                            &InstructionBuilder,
+                                            InstructionIterator);
+
+  AFArgs.push_back(InstructionACMap[BaseInstruction]);
+  AFArgs.push_back(AllocatedAFArray);
+  AFArgs.push_back(InstructionBuilder.getInt32(BaseInstruction->getNumOperands()));
+
+  // Creating a call to AFComputingFunction with above parameters
+  ArrayRef<Value *> AFArgsRef(AFArgs);
+  CallInst *AFComputingCallInstruction =
+      InstructionBuilder.CreateCall(AFComputingFunction, AFArgsRef,
+                                    "AF");
+
+  // (Get Location + Store Value at Location) * NumOperands +
+  // (Allocate for Array + GetArrayLocation) + AFComputation Function Call
+  *NumInstrumentedInstructions += 2*BaseInstruction->getNumOperands()+3;
+  (*InstructionIterator)++;
+
+  std::pair<Value*, Value*> InstructionAFPair = std::make_pair(BaseInstruction,
+                                                                 AFComputingCallInstruction);
+  InstructionAFMap.insert(InstructionAFPair);
+
+  assert(AFComputingCallInstruction && "Invalid call instruction!");
 }
 
 // Instruments a call to calculate atomic condition for unary floating point
@@ -812,26 +869,26 @@ void ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
 //      instrumentCallsForOtherOperation(CurrentInstruction,
 //                                       &I,
 //                                       NumInstrumentedInstructions);
-      instrumentCallsForACComputation(CurrentInstruction,
-                                &I,
-                                NumInstrumentedInstructions);
+      instrumentCallsToAnalyzeInstruction(CurrentInstruction,
+                                    &I,
+                                    NumInstrumentedInstructions);
     }
     else if(isUnaryOperation(&*I)) {
 
 //      instrumentCallsForUnaryOperation(CurrentInstruction,
 //                                       &I,
 //                                       NumInstrumentedInstructions);
-    instrumentCallsForACComputation(CurrentInstruction,
-                                &I,
-                                NumInstrumentedInstructions);
+      instrumentCallsToAnalyzeInstruction(CurrentInstruction,
+                                    &I,
+                                    NumInstrumentedInstructions);
     }
     else if(isBinaryOperation(&*I)) {
 //      instrumentCallsForBinaryOperation(CurrentInstruction,
 //                                        &I,
 //                                        NumInstrumentedInstructions);
-      instrumentCallsForACComputation(CurrentInstruction,
-                                &I,
-                                NumInstrumentedInstructions);
+      instrumentCallsToAnalyzeInstruction(CurrentInstruction,
+                                    &I,
+                                    NumInstrumentedInstructions);
     }
 //    else if(isNonACFloatPointInstruction(CurrentInstruction)) {
 //      instrumentCallsForNonACFloatPointInstruction(CurrentInstruction,
@@ -878,11 +935,9 @@ void ACInstrumentation::instrumentBasicBlock(BasicBlock *BB,
 
 void ACInstrumentation::instrumentMainFunction(Function *F) {
   assert((ACInitFunction!=nullptr) && "Function not initialized!");
-//  assert((CGInitFunction!=nullptr) && "Function not initialized!");
-//  assert((AFInitFunction!= nullptr) && "Function not initialized!");
+  assert((AFInitFunction!= nullptr) && "Function not initialized!");
   assert((ACStoreFunction!=nullptr) && "Function not initialized!");
-//  assert((CGStoreFunction!=nullptr) && "Function not initialized!");
-//  assert((AFStoreFunction!= nullptr) && "Function not initialized!");
+  assert((AFStoreFunction!= nullptr) && "Function not initialized!");
 //  assert((AFPrintTopAmplificationPaths != nullptr) && "Function not initialized!");
 //  assert((CGDotGraphFunction!=nullptr) && "Function not initialized!");
 
@@ -893,10 +948,8 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
   std::vector<Value *> ACStoreCallArgs, CGStoreCallArgs, AFStoreCallArgs;
   std::vector<Value *> DotGraphCallArgs;
 
-  CallInst *ACInitCallInstruction, *CGInitCallInstruction, *AFInitCallInstruction, *PrintAFPathsCallInstruction;
-  CallInst *StoreACTableCallInstruction, *StoreCGTableCallInstruction,
-      *StoreAFTableCallInstruction;
-  CallInst *DotGraphCallInstruction;
+  CallInst *ACInitCallInstruction, *AFInitCallInstruction, *PrintAFPathsCallInstruction;
+  CallInst *StoreACTableCallInstruction, *StoreAFTableCallInstruction;
 
   // Instrumenting Initialization call instruction
 //  Args.push_back(InstructionBuilder.getInt64(1000));
@@ -914,8 +967,7 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
 //  } else
 //  {
   ACInitCallInstruction = InstructionBuilder.CreateCall(ACInitFunction, ACInitCallArgs);
-//  CGInitCallInstruction = InstructionBuilder.CreateCall(CGInitFunction, CGInitCallArgs);
-//  AFInitCallInstruction = InstructionBuilder.CreateCall(AFInitFunction, AFInitCallArgs);
+  AFInitCallInstruction = InstructionBuilder.CreateCall(AFInitFunction, AFInitCallArgs);
 //  }
 
   // Instrument call to print table
@@ -924,27 +976,20 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
       Instruction *CurrentInstruction = &(*InstIter);
       if (isa<ReturnInst>(CurrentInstruction) || isa<ResumeInst>(CurrentInstruction)) {
         ArrayRef<Value *> ACStoreCallArgsRef(ACStoreCallArgs);
-        ArrayRef<Value *> CGStoreCallArgsRef(CGStoreCallArgs);
         ArrayRef<Value *> AFStoreCallArgsRef(AFStoreCallArgs);
         ArrayRef<Value *> PrintAFPathsCallArgsRef(PrintAFPathsCallArgs);
 
         InstructionBuilder.SetInsertPoint(CurrentInstruction);
         StoreACTableCallInstruction = InstructionBuilder.CreateCall(ACStoreFunction, ACStoreCallArgsRef);
-//        StoreCGTableCallInstruction = InstructionBuilder.CreateCall(CGStoreFunction, CGStoreCallArgsRef);
-//        StoreAFTableCallInstruction = InstructionBuilder.CreateCall(AFStoreFunction, AFStoreCallArgsRef);
+        StoreAFTableCallInstruction = InstructionBuilder.CreateCall(AFStoreFunction, AFStoreCallArgsRef);
 //        PrintAFPathsCallInstruction = InstructionBuilder.CreateCall(AFPrintTopAmplificationPaths, PrintAFPathsCallArgsRef);
-
-//        ArrayRef<Value *> DotGraphCallArgsRef(DotGraphCallArgs);
-//        DotGraphCallInstruction = InstructionBuilder.CreateCall(CGDotGraphFunction, DotGraphCallArgsRef);
       }
     }
   }
 
-  assert(ACInitCallInstruction && CGInitCallInstruction &&
-         AFInitCallInstruction && "Invalid call instruction!");
-  assert(StoreACTableCallInstruction && StoreCGTableCallInstruction &&
-         StoreAFTableCallInstruction && PrintAFPathsCallInstruction && "Invalid call instruction!");
-  assert(DotGraphCallInstruction && "Invalid call instruction!");
+  assert(ACInitCallInstruction && AFInitCallInstruction && "Invalid call instruction!");
+  assert(StoreACTableCallInstruction && StoreAFTableCallInstruction &&
+         PrintAFPathsCallInstruction && "Invalid call instruction!");
   return;
 }
 
@@ -983,6 +1028,35 @@ void ACInstrumentation::instrumentMainFunction(Function *F) {
 //
 //  return ResolvedInstruction;
 //}
+
+Value *ACInstrumentation::createArrayInIR(vector<Value*> ArrayOfValues,
+                                          IRBuilder<> *InstructionBuilder,
+                                          BasicBlock::iterator *InstructionIterator) {
+  // Inserting an Alloca Instruction to allocate memory for the array.
+  Value *AllocatedArray =
+      InstructionBuilder->CreateAlloca(ArrayType::get(ArrayOfValues[0]->getType(),
+                                                     ArrayOfValues.size()));
+  (*InstructionIterator)++;
+
+  // Looping through operands of BaseInstruction
+  for (long unsigned int I = 0; I < ArrayOfValues.size(); ++I) {
+    // Setting Value in OperandNameArray
+    Value *LocationInArray = InstructionBuilder->CreateGEP(ArrayOfValues[0]->getType(),
+                                                            AllocatedArray,
+                                                            InstructionBuilder->getInt32(I));
+    (*InstructionIterator)++;
+    InstructionBuilder->CreateStore(ArrayOfValues[I], LocationInArray);
+    (*InstructionIterator)++;
+  }
+
+  // Get pointers to arrays
+  Value *Array = InstructionBuilder->CreateGEP(ArrayOfValues[0]->getType(),
+                                               AllocatedArray,
+                                               InstructionBuilder->getInt32(0));
+  (*InstructionIterator)++;
+
+  return Array;
+}
 
 // Get Instruction after any Phi/Dbg instructions AND Atomic Condition and
 // Computation Graph Initialization Calls.
