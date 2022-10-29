@@ -127,17 +127,8 @@ class DecoderEmitter {
   std::vector<EncodingAndInst> NumberedEncodings;
 
 public:
-  // Defaults preserved here for documentation, even though they aren't
-  // strictly necessary given the way that this is currently being called.
-  DecoderEmitter(RecordKeeper &R, std::string PredicateNamespace,
-                 std::string GPrefix = "if (",
-                 std::string GPostfix = " == MCDisassembler::Fail)",
-                 std::string ROK = "MCDisassembler::Success",
-                 std::string RFail = "MCDisassembler::Fail", std::string L = "")
-      : RK(R), Target(R), PredicateNamespace(std::move(PredicateNamespace)),
-        GuardPrefix(std::move(GPrefix)), GuardPostfix(std::move(GPostfix)),
-        ReturnOK(std::move(ROK)), ReturnFail(std::move(RFail)),
-        Locals(std::move(L)) {}
+  DecoderEmitter(RecordKeeper &R, std::string PredicateNamespace)
+      : RK(R), Target(R), PredicateNamespace(std::move(PredicateNamespace)) {}
 
   // Emit the decoder state machine table.
   void emitTable(formatted_raw_ostream &o, DecoderTable &Table,
@@ -160,9 +151,6 @@ private:
 
 public:
   std::string PredicateNamespace;
-  std::string GuardPrefix, GuardPostfix;
-  std::string ReturnOK, ReturnFail;
-  std::string Locals;
 };
 
 } // end anonymous namespace
@@ -1170,11 +1158,11 @@ void FilterChooser::emitBinaryParser(raw_ostream &o, unsigned &Indentation,
 
   if (Decoder != "") {
     OpHasCompleteDecoder = OpInfo.HasCompleteDecoder;
-    o.indent(Indentation) << Emitter->GuardPrefix << Decoder
-      << "(MI, tmp, Address, Decoder)"
-      << Emitter->GuardPostfix
-      << " { " << (OpHasCompleteDecoder ? "" : "DecodeComplete = false; ")
-      << "return MCDisassembler::Fail; }\n";
+    o.indent(Indentation) << "if (!Check(S, " << Decoder
+                          << "(MI, tmp, Address, Decoder))) { "
+                          << (OpHasCompleteDecoder ? ""
+                                                   : "DecodeComplete = false; ")
+                          << "return MCDisassembler::Fail; }\n";
   } else {
     OpHasCompleteDecoder = true;
     o.indent(Indentation) << "MI.addOperand(MCOperand::createImm(tmp));\n";
@@ -1189,11 +1177,11 @@ void FilterChooser::emitDecoder(raw_ostream &OS, unsigned Indentation,
     // If a custom instruction decoder was specified, use that.
     if (Op.numFields() == 0 && !Op.Decoder.empty()) {
       HasCompleteDecoder = Op.HasCompleteDecoder;
-      OS.indent(Indentation) << Emitter->GuardPrefix << Op.Decoder
-        << "(MI, insn, Address, Decoder)"
-        << Emitter->GuardPostfix
-        << " { " << (HasCompleteDecoder ? "" : "DecodeComplete = false; ")
-        << "return MCDisassembler::Fail; }\n";
+      OS.indent(Indentation)
+          << "if (!Check(S, " << Op.Decoder
+          << "(MI, insn, Address, Decoder))) { "
+          << (HasCompleteDecoder ? "" : "DecodeComplete = false; ")
+          << "return MCDisassembler::Fail; }\n";
       break;
     }
 
@@ -2529,6 +2517,17 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS,
      << "}\n\n";
 }
 
+// Helper to propagate SoftFail status. Returns false if the status is Fail;
+// callers are expected to early-exit in that condition. (Note, the '&' operator
+// is correct to propagate the values of this enum; see comment on 'enum
+// DecodeStatus'.)
+static void emitCheck(formatted_raw_ostream &OS) {
+  OS << "static bool Check(DecodeStatus &Out, DecodeStatus In) {\n"
+     << "  Out = static_cast<DecodeStatus>(Out & In);"
+     << "  return Out != MCDisassembler::Fail;\n"
+     << "}\n\n";
+}
+
 // Emits disassembler code for instruction decoding.
 void DecoderEmitter::run(raw_ostream &o) {
   formatted_raw_ostream OS(o);
@@ -2545,6 +2544,7 @@ void DecoderEmitter::run(raw_ostream &o) {
 
   emitFieldFromInstruction(OS);
   emitInsertBits(OS);
+  emitCheck(OS);
 
   Target.reverseBitsForLittleEndianEncoding();
 
@@ -2703,12 +2703,8 @@ void DecoderEmitter::run(raw_ostream &o) {
 namespace llvm {
 
 void EmitDecoder(RecordKeeper &RK, raw_ostream &OS,
-                 const std::string &PredicateNamespace,
-                 const std::string &GPrefix, const std::string &GPostfix,
-                 const std::string &ROK, const std::string &RFail,
-                 const std::string &L) {
-  DecoderEmitter(RK, PredicateNamespace, GPrefix, GPostfix, ROK, RFail, L)
-      .run(OS);
+                 const std::string &PredicateNamespace) {
+  DecoderEmitter(RK, PredicateNamespace).run(OS);
 }
 
 } // end namespace llvm
