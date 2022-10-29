@@ -35,6 +35,7 @@ expand_template(
         "@MLIR_ENABLE_VULKAN_RUNNER@": "0",
         "@MLIR_ENABLE_BINDINGS_PYTHON@": "0",
         "@MLIR_RUN_AMX_TESTS@": "0",
+        "@MLIR_RUN_ARM_SVE_TESTS@": "0",
         "@MLIR_RUN_X86VECTOR_TESTS@": "0",
         "@MLIR_RUN_CUDA_TENSOR_CORE_TESTS@": "0",
         "@MLIR_INCLUDE_INTEGRATION_TESTS@": "0",
