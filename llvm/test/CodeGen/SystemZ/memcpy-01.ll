@@ -1,6 +1,7 @@
 ; Test memcpy using MVC.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
+; RUN: llc -mtriple=s390x-linux-gnu -filetype=null %s
 
 declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
