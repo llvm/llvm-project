@@ -372,6 +372,8 @@ defm : ZnWriteResFpuPair<WriteFSqrt64X,  [ZnFPU3], 20, [8]>;
 defm : ZnWriteResFpuPair<WriteFSqrt64Y,  [ZnFPU3], 20, [16], 1>;
 defm : X86WriteResPairUnsupported<WriteFSqrt64Z>;
 defm : ZnWriteResFpuPair<WriteFSqrt80,   [ZnFPU3], 20, [20]>;
+defm : ZnWriteResFpuPair<WriteFShuffle256, [ZnFPU], 2>;
+defm : ZnWriteResFpuPair<WriteFVarShuffle256, [ZnFPU], 2>;
 
 // Vector integer operations which uses FPU units
 defm : X86WriteRes<WriteVecLoad,         [ZnAGU], 8, [1], 1>;
@@ -478,11 +480,6 @@ defm : ZnWriteResFpuPair<WriteAESKeyGen, [ZnFPU01], 4>;
 
 def : WriteRes<WriteFence,  [ZnAGU]>;
 def : WriteRes<WriteNop, []>;
-
-// Following instructions with latency=100 are microcoded.
-// We set long latency so as to block the entire pipeline.
-defm : ZnWriteResFpuPair<WriteFShuffle256, [ZnFPU], 100>;
-defm : ZnWriteResFpuPair<WriteFVarShuffle256, [ZnFPU], 100>;
 
 // Microcoded Instructions
 def ZnWriteMicrocoded : SchedWriteRes<[]> {
