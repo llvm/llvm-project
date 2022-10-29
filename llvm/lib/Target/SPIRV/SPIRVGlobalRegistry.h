@@ -245,6 +245,8 @@ public:
                                     SPIRVType *SpvType, bool EmitIR = true);
   Register getOrCreateConsIntArray(uint64_t Val, MachineIRBuilder &MIRBuilder,
                                    SPIRVType *SpvType, bool EmitIR = true);
+  Register getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
+                                   SPIRVType *SpvType);
   Register buildConstantSampler(Register Res, unsigned AddrMode, unsigned Param,
                                 unsigned FilerMode,
                                 MachineIRBuilder &MIRBuilder,
@@ -300,6 +302,7 @@ public:
   SPIRVType *
   getOrCreateOpTypePipe(MachineIRBuilder &MIRBuilder,
                         SPIRV::AccessQualifier::AccessQualifier AccQual);
+  SPIRVType *getOrCreateOpTypeDeviceEvent(MachineIRBuilder &MIRBuilder);
   SPIRVType *getOrCreateOpTypeFunctionWithArgs(
       const Type *Ty, SPIRVType *RetType,
       const SmallVectorImpl<SPIRVType *> &ArgTypes,
