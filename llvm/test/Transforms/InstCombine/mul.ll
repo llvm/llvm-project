@@ -85,13 +85,189 @@ define i32 @test12(i32 %a, i32 %b) {
 }
 
 ; rdar://7293527
-define i32 @test15(i32 %A, i32 %B) {
-; CHECK-LABEL: @test15(
+define i32 @shl1(i32 %a, i32 %b) {
+; CHECK-LABEL: @shl1(
 ; CHECK-NEXT:    [[M:%.*]] = shl i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret i32 [[M]]
 ;
+  %shl = shl i32 1, %b
+  %m = mul i32 %shl, %a
+  ret i32 %m
+}
+
+define i32 @shl1_nsw_nsw(i32 %A, i32 %B) {
+; CHECK-LABEL: @shl1_nsw_nsw(
+; CHECK-NEXT:    [[D:%.*]] = shl nsw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %shl = shl nsw i32 1, %B
+  %D = mul nsw i32 %A, %shl
+  ret i32 %D
+}
+
+define <2 x i32> @shl1_nsw_nsw_commute(<2 x i32> %A, <2 x i32> %B) {
+; CHECK-LABEL: @shl1_nsw_nsw_commute(
+; CHECK-NEXT:    [[D:%.*]] = shl nsw <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[D]]
+;
+  %shl = shl nsw <2 x i32> <i32 1, i32 poison>, %B
+  %D = mul nsw <2 x i32> %shl, %A
+  ret <2 x i32> %D
+}
+
+define i32 @shl1_nuw(i32 %A, i32 %B) {
+; CHECK-LABEL: @shl1_nuw(
+; CHECK-NEXT:    [[D:%.*]] = shl nuw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
   %shl = shl i32 1, %B
-  %m = mul i32 %shl, %A
+  %D = mul nuw i32 %A, %shl
+  ret i32 %D
+}
+
+define i32 @shl1_nuw_commute(i32 %A, i32 %B) {
+; CHECK-LABEL: @shl1_nuw_commute(
+; CHECK-NEXT:    [[D:%.*]] = shl i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %shl = shl nuw i32 1, %B
+  %D = mul i32 %shl, %A
+  ret i32 %D
+}
+
+define i32 @shl1_nsw(i32 %A) {
+; CHECK-LABEL: @shl1_nsw(
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[A:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = shl i32 [[SHL]], [[A]]
+; CHECK-NEXT:    ret i32 [[C]]
+;
+  %shl = shl i32 1, %A
+  %C = mul nsw i32 %shl, %shl
+  ret i32 %C
+}
+
+define i5 @shl1_increment(i5 %x, i5 %y) {
+; CHECK-LABEL: @shl1_increment(
+; CHECK-NEXT:    [[POW2X:%.*]] = shl i5 1, [[X:%.*]]
+; CHECK-NEXT:    [[X1:%.*]] = add i5 [[POW2X]], 1
+; CHECK-NEXT:    [[M:%.*]] = mul i5 [[X1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i5 [[M]]
+;
+  %pow2x = shl i5 1, %x
+  %x1 = add i5 %pow2x, 1
+  %m = mul i5 %x1, %y
+  ret i5 %m
+}
+
+define <3 x i5> @shl1_nuw_increment_commute(<3 x i5> %x, <3 x i5> noundef %p) {
+; CHECK-LABEL: @shl1_nuw_increment_commute(
+; CHECK-NEXT:    [[Y:%.*]] = ashr <3 x i5> [[P:%.*]], <i5 1, i5 1, i5 1>
+; CHECK-NEXT:    [[POW2X:%.*]] = shl <3 x i5> <i5 1, i5 poison, i5 1>, [[X:%.*]]
+; CHECK-NEXT:    [[X1:%.*]] = add <3 x i5> [[POW2X]], <i5 1, i5 poison, i5 1>
+; CHECK-NEXT:    [[M:%.*]] = mul nuw <3 x i5> [[Y]], [[X1]]
+; CHECK-NEXT:    ret <3 x i5> [[M]]
+;
+  %y = ashr <3 x i5> %p, <i5 1, i5 1, i5 1> ; thwart complexity-based canonicalization
+  %pow2x = shl <3 x i5> <i5 1, i5 poison, i5 1>, %x
+  %x1 = add <3 x i5> %pow2x, <i5 1, i5 poison, i5 1>
+  %m = mul nuw <3 x i5> %y, %x1
+  ret <3 x i5> %m
+}
+
+define i5 @shl1_nsw_increment(i5 %x, i5 %y) {
+; CHECK-LABEL: @shl1_nsw_increment(
+; CHECK-NEXT:    [[POW2X:%.*]] = shl i5 1, [[X:%.*]]
+; CHECK-NEXT:    [[X1:%.*]] = add i5 [[POW2X]], 1
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i5 [[X1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i5 [[M]]
+;
+  %pow2x = shl i5 1, %x
+  %x1 = add i5 %pow2x, 1
+  %m = mul nsw i5 %x1, %y
+  ret i5 %m
+}
+
+define i5 @shl1_nsw_nsw_increment(i5 %x, i5 %y) {
+; CHECK-LABEL: @shl1_nsw_nsw_increment(
+; CHECK-NEXT:    [[POW2X:%.*]] = shl nsw i5 1, [[X:%.*]]
+; CHECK-NEXT:    [[X1:%.*]] = add nuw nsw i5 [[POW2X]], 1
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i5 [[X1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i5 [[M]]
+;
+  %pow2x = shl nsw i5 1, %x
+  %x1 = add i5 %pow2x, 1
+  %m = mul nsw i5 %y, %x1
+  ret i5 %m
+}
+
+define i5 @shl1_nsw_nsw_increment_commute(i5 %x, i5 %y) {
+; CHECK-LABEL: @shl1_nsw_nsw_increment_commute(
+; CHECK-NEXT:    [[POW2X:%.*]] = shl nsw i5 1, [[X:%.*]]
+; CHECK-NEXT:    [[X1:%.*]] = add nuw nsw i5 [[POW2X]], 1
+; CHECK-NEXT:    [[M:%.*]] = mul i5 [[X1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i5 [[M]]
+;
+  %pow2x = shl nsw i5 1, %x
+  %x1 = add nsw i5 %pow2x, 1
+  %m = mul i5 %x1, %y
+  ret i5 %m
+}
+
+define i32 @shl1_increment_use(i32 %x, i32 %y) {
+; CHECK-LABEL: @shl1_increment_use(
+; CHECK-NEXT:    [[POW2X:%.*]] = shl i32 1, [[X:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[POW2X]])
+; CHECK-NEXT:    [[X1:%.*]] = add i32 [[POW2X]], 1
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[M]]
+;
+  %pow2x = shl i32 1, %x
+  call void @use32(i32 %pow2x)
+  %x1 = add i32 %pow2x, 1
+  %m = mul i32 %x1, %y
+  ret i32 %m
+}
+
+define i8 @shl1_decrement(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl1_decrement(
+; CHECK-NEXT:    [[POW2X:%.*]] = shl i8 -1, [[X:%.*]]
+; CHECK-NEXT:    [[X1:%.*]] = xor i8 [[POW2X]], -1
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %pow2x = shl i8 -1, %x
+  %x1 = xor i8 %pow2x, -1
+  %m = mul i8 %x1, %y
+  ret i8 %m
+}
+
+define i8 @shl1_decrement_commute(i8 %x, i8 %p) {
+; CHECK-LABEL: @shl1_decrement_commute(
+; CHECK-NEXT:    [[Y:%.*]] = ashr i8 [[P:%.*]], 1
+; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[X:%.*]]
+; CHECK-NEXT:    [[X1:%.*]] = xor i8 [[NOTMASK]], -1
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[Y]], [[X1]]
+; CHECK-NEXT:    ret i8 [[M]]
+;
+  %y = ashr i8 %p, 1 ; thwart complexity-based canonicalization
+  %pow2x = shl i8 1, %x
+  %x1 = add i8 %pow2x, -1
+  %m = mul i8 %y, %x1
+  ret i8 %m
+}
+
+define i32 @shl1_decrement_use(i32 %x, i32 %y) {
+; CHECK-LABEL: @shl1_decrement_use(
+; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i32 -1, [[X:%.*]]
+; CHECK-NEXT:    [[X1:%.*]] = xor i32 [[NOTMASK]], -1
+; CHECK-NEXT:    call void @use32(i32 [[X1]])
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[M]]
+;
+  %pow2x = shl i32 1, %x
+  %x1 = add i32 %pow2x, -1
+  call void @use32(i32 %x1)
+  %m = mul i32 %x1, %y
   ret i32 %m
 }
 
@@ -882,37 +1058,6 @@ define <3 x i4> @neg_mul_constant_vec_weird(<3 x i4> %a) {
   %A = sub <3 x i4> zeroinitializer, %a
   %B = mul <3 x i4> %A, <i4 5, i4 5, i4 5>
   ret <3 x i4> %B
-}
-
-define i32 @test26(i32 %A, i32 %B) {
-; CHECK-LABEL: @test26(
-; CHECK-NEXT:    [[D:%.*]] = shl nsw i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[D]]
-;
-  %C = shl nsw i32 1, %B
-  %D = mul nsw i32 %A, %C
-  ret i32 %D
-}
-
-define i32 @test27(i32 %A, i32 %B) {
-; CHECK-LABEL: @test27(
-; CHECK-NEXT:    [[D:%.*]] = shl nuw i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[D]]
-;
-  %C = shl i32 1, %B
-  %D = mul nuw i32 %A, %C
-  ret i32 %D
-}
-
-define i32 @test28(i32 %A) {
-; CHECK-LABEL: @test28(
-; CHECK-NEXT:    [[B:%.*]] = shl i32 1, [[A:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = shl i32 [[B]], [[A]]
-; CHECK-NEXT:    ret i32 [[C]]
-;
-  %B = shl i32 1, %A
-  %C = mul nsw i32 %B, %B
-  ret i32 %C
 }
 
 define i64 @test29(i31 %A, i31 %B) {
