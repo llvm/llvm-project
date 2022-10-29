@@ -85,21 +85,36 @@ static void replaceBranchTerminator(BasicBlock &BB,
 static void
 removeUninterestingBBsFromSwitch(SwitchInst &SwInst,
                                  const DenseSet<BasicBlock *> &BBsToKeep) {
-  if (!BBsToKeep.count(SwInst.getDefaultDest())) {
-    auto *FnRetTy = SwInst.getParent()->getParent()->getReturnType();
-    ReturnInst::Create(SwInst.getContext(),
-                       FnRetTy->isVoidTy() ? nullptr : getDefaultValue(FnRetTy),
-                       SwInst.getParent());
-    SwInst.eraseFromParent();
-  } else
-    for (int I = 0, E = SwInst.getNumCases(); I != E; ++I) {
-      auto Case = SwInst.case_begin() + I;
-      if (!BBsToKeep.count(Case->getCaseSuccessor())) {
-        SwInst.removeCase(Case);
-        --I;
-        --E;
-      }
+  for (int I = 0, E = SwInst.getNumCases(); I != E; ++I) {
+    auto Case = SwInst.case_begin() + I;
+    if (!BBsToKeep.count(Case->getCaseSuccessor())) {
+      SwInst.removeCase(Case);
+      --I;
+      --E;
     }
+  }
+
+  if (!BBsToKeep.count(SwInst.getDefaultDest())) {
+    if (SwInst.getNumCases() == 0) {
+      auto *FnRetTy = SwInst.getParent()->getParent()->getReturnType();
+      Value *RetValue =
+          FnRetTy->isVoidTy() ? nullptr : getDefaultValue(FnRetTy);
+      ReturnInst::Create(SwInst.getContext(), RetValue, SwInst.getParent());
+      SwInst.eraseFromParent();
+      return;
+    }
+
+    // Replace the default dest with one of the other cases
+    auto Case = SwInst.case_begin();
+
+    BasicBlock *NewDefault = Case->getCaseSuccessor();
+    SwInst.setDefaultDest(NewDefault);
+
+    for (PHINode &SuccPHI : NewDefault->phis()) {
+      SuccPHI.addIncoming(SuccPHI.getIncomingValueForBlock(SwInst.getParent()),
+                          SwInst.getParent());
+    }
+  }
 }
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
@@ -120,12 +135,6 @@ static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
     }
   }
 
-  // Remove out-of-chunk BB from successor phi nodes
-  for (auto &BB : BBsToDelete) {
-    for (auto *Succ : successors(BB))
-      Succ->removePredecessor(BB, /*KeepOneInputPHIs=*/true);
-  }
-
   // Replace terminators that reference out-of-chunk BBs
   for (auto &F : Program)
     for (auto &BB : F) {
@@ -134,6 +143,12 @@ static void extractBasicBlocksFromModule(Oracle &O, Module &Program) {
       else
         replaceBranchTerminator(BB, BBsToKeep);
     }
+
+  // Remove out-of-chunk BB from successor phi nodes
+  for (auto &BB : BBsToDelete) {
+    for (auto *Succ : successors(BB))
+      Succ->removePredecessor(BB, /*KeepOneInputPHIs=*/true);
+  }
 
   // Replace out-of-chunk switch uses
   for (auto &BB : BBsToDelete) {
