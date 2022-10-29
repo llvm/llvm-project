@@ -8,7 +8,7 @@
 # RUN: llvm-readelf -S -s %t | FileCheck --check-prefixes=SEC,NM %s
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
 # RUN: llvm-readelf -x .got.plt %t | FileCheck --check-prefix=GOTPLT %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefixes=DIS %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefixes=DIS %s
 
 # SEC: .plt PROGBITS {{0*}}00020040
 

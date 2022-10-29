@@ -3,12 +3,12 @@
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=NORELOC %s
 # RUN: llvm-readelf -x .data -x nonalloc %t | FileCheck --check-prefix=DATA %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=DISASM %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefix=DISASM %s
 
 # RUN: ld.lld -shared %t.o -o %t.so
 # RUN: llvm-readobj -r %t.so | FileCheck --check-prefix=RELOC2 %s
 # RUN: llvm-readelf -x .data %t.so | FileCheck --check-prefix=DATA2 %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck --check-prefix=DISASM2 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.so | FileCheck --check-prefix=DISASM2 %s
 
 # NORELOC:      Relocations [
 # NORELOC-NEXT: ]

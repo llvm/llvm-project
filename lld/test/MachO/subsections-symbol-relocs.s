@@ -3,9 +3,9 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/test.s -o %t/test.o
 
 # RUN: %lld -o %t/test-1 %t/test.o -order_file %t/order-file-1
-# RUN: llvm-objdump -d --no-show-raw-insn %t/test-1 | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/test-1 | FileCheck %s
 # RUN: %lld -o %t/test-2 %t/test.o -order_file %t/order-file-2
-# RUN: llvm-objdump -d --no-show-raw-insn %t/test-2 | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/test-2 | FileCheck %s
 # CHECK-LABEL: Disassembly of section __TEXT,__text:
 # CHECK:       <_ba{{r|z}}>:
 # CHECK-NEXT:    callq {{.*}} <_foo>

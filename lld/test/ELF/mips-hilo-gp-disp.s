@@ -9,9 +9,9 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         %S/Inputs/mips-dynamic.s -o %t2.o
 # RUN: ld.lld %t1.o %t2.o --script %t.script -o %t.exe
-# RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d -t --no-show-raw-insn %t.exe | FileCheck %s
 # RUN: ld.lld %t1.o %t2.o -shared --script %t.script -o %t.so
-# RUN: llvm-objdump -d -t --no-show-raw-insn %t.so | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d -t --no-show-raw-insn %t.so | FileCheck %s
 
   .text
   .globl  __start

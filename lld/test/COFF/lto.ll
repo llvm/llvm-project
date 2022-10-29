@@ -11,24 +11,24 @@
 
 ; RUN: lld-link /out:%T/main.exe /entry:main /include:f2 /subsystem:console %T/main.lto.obj %T/foo.lto.obj
 ; RUN: llvm-readobj --file-headers %T/main.exe | FileCheck -check-prefix=HEADERS-11 %s
-; RUN: llvm-objdump -d %T/main.exe | FileCheck --check-prefix=TEXT-11 %s
+; RUN: llvm-objdump --no-print-imm-hex -d %T/main.exe | FileCheck --check-prefix=TEXT-11 %s
 ; RUN: lld-link /out:%T/main.exe /entry:main /include:f2 /subsystem:console %T/main.lto.obj %T/foo.lto.lib /verbose 2>&1 | FileCheck -check-prefix=VERBOSE %s
 ; RUN: llvm-readobj --file-headers %T/main.exe | FileCheck -check-prefix=HEADERS-11 %s
-; RUN: llvm-objdump -d %T/main.exe | FileCheck --check-prefix=TEXT-11 %s
+; RUN: llvm-objdump --no-print-imm-hex -d %T/main.exe | FileCheck --check-prefix=TEXT-11 %s
 
 ; RUN: lld-link /out:%T/main.exe /entry:main /subsystem:console %T/main.obj %T/foo.lto.obj
 ; RUN: llvm-readobj --file-headers %T/main.exe | FileCheck -check-prefix=HEADERS-01 %s
-; RUN: llvm-objdump -d %T/main.exe | FileCheck --check-prefix=TEXT-01 %s
+; RUN: llvm-objdump --no-print-imm-hex -d %T/main.exe | FileCheck --check-prefix=TEXT-01 %s
 ; RUN: lld-link /out:%T/main.exe /entry:main /subsystem:console %T/main.obj %T/foo.lto.lib
 ; RUN: llvm-readobj --file-headers %T/main.exe | FileCheck -check-prefix=HEADERS-01 %s
-; RUN: llvm-objdump -d %T/main.exe | FileCheck --check-prefix=TEXT-01 %s
+; RUN: llvm-objdump --no-print-imm-hex -d %T/main.exe | FileCheck --check-prefix=TEXT-01 %s
 
 ; RUN: lld-link /out:%T/main.exe /entry:main /subsystem:console %T/main.lto.obj %T/foo.obj
 ; RUN: llvm-readobj --file-headers %T/main.exe | FileCheck -check-prefix=HEADERS-10 %s
-; RUN: llvm-objdump -d %T/main.exe | FileCheck --check-prefix=TEXT-10 %s
+; RUN: llvm-objdump --no-print-imm-hex -d %T/main.exe | FileCheck --check-prefix=TEXT-10 %s
 ; RUN: lld-link /out:%T/main.exe /entry:main /subsystem:console %T/main.lto.obj %T/foo.lib
 ; RUN: llvm-readobj --file-headers %T/main.exe | FileCheck -check-prefix=HEADERS-10 %s
-; RUN: llvm-objdump -d %T/main.exe | FileCheck --check-prefix=TEXT-10 %s
+; RUN: llvm-objdump --no-print-imm-hex -d %T/main.exe | FileCheck --check-prefix=TEXT-10 %s
 
 ; VERBOSE: foo.lto.lib({{.*}}foo.lto.obj)
 

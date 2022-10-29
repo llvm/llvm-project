@@ -6,7 +6,7 @@
 
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readobj -d -r %t | FileCheck %s --check-prefix=LE-REL
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=LE
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s --check-prefix=LE
 
 # IE-REL:      FLAGS STATIC_TLS
 # IE-REL:      .rela.dyn {

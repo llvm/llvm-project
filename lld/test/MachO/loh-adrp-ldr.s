@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t.o
 # RUN: %lld -arch arm64 %t.o -o %t
-# RUN: llvm-objdump -d --macho %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --macho %t | FileCheck %s
 
 .text
 .align 2

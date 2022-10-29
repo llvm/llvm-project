@@ -1,6 +1,6 @@
 ## Show that references in disassembly are labelled with the correct symbol.
 # RUN: yaml2obj %s --docnum=1 -o %t
-# RUN: llvm-objdump %t -d | FileCheck %s --check-prefix=EXEC
+# RUN: llvm-objdump --no-print-imm-hex %t -d | FileCheck %s --check-prefix=EXEC
 
 # EXEC-LABEL: <first>:
 # EXEC-NEXT:   4000: e8 00 00 00 00                callq   0x4005 <third>
@@ -53,7 +53,7 @@ Symbols:
     Value:   0x5000
 
 # RUN: yaml2obj %s --docnum=2 -o %t.o
-# RUN: llvm-objdump %t.o -d | FileCheck %s --check-prefix=REL
+# RUN: llvm-objdump --no-print-imm-hex %t.o -d | FileCheck %s --check-prefix=REL
 
 # REL:      Disassembly of section .text1:
 # REL-EMPTY:

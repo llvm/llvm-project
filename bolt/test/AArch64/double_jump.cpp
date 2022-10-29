@@ -3,7 +3,7 @@
 // RUN: %clang %cflags -O0 %s -o %t.exe
 // RUN: llvm-bolt %t.exe -o %t.bolt --peepholes=double-jumps | \
 // RUN:   FileCheck %s -check-prefix=CHECKBOLT
-// RUN: llvm-objdump -d %t.bolt | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t.bolt | FileCheck %s
 
 // CHECKBOLT: BOLT-INFO: Peephole: 1 double jumps patched.
 
