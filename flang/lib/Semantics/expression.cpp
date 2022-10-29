@@ -356,8 +356,10 @@ bool ExpressionAnalyzer::CheckPolymorphic(const DataRef &dataRef) {
 }
 
 bool ExpressionAnalyzer::CheckDataRef(const DataRef &dataRef) {
-  // '&' here prevents short-circuiting
-  return CheckRanks(dataRef) & CheckPolymorphic(dataRef);
+  // Always check both, don't short-circuit
+  bool ranksOk{CheckRanks(dataRef)};
+  bool polyOk{CheckPolymorphic(dataRef)};
+  return ranksOk && polyOk;
 }
 
 // Parse tree correction after a substring S(j:k) was misparsed as an
