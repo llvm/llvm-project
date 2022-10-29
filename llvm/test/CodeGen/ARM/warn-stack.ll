@@ -23,7 +23,7 @@ entry:
   ret i32 %val
 }
 
-; CHECK: warning: stack frame size ([[STCK:[0-9]+]]) exceeds limit (80) in function 'warn_safestack'
+; CHECK: warning: <unknown>:0:0: stack frame size ([[STCK:[0-9]+]]) exceeds limit (80) in function 'warn_safestack'
 ; CHECK: {{[0-9]+}}/[[STCK]] ({{.*}}%) spills, {{[0-9]+}}/[[STCK]] ({{.*}}%) variables, {{[0-9]+}}/[[STCK]] ({{.*}}%) unsafe stack
 define i32 @warn_safestack() nounwind ssp safestack "warn-stack-size"="80" {
 entry:
