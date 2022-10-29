@@ -67,8 +67,8 @@ void writeBitcode(ReducerWorkItem &M, raw_ostream &OutStream);
 void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx,
                  const char *ToolName);
 
-bool isReduced(ReducerWorkItem &M, TestRunner &Test,
-               SmallString<128> &CurrentFilepath) {
+bool isReduced(ReducerWorkItem &M, TestRunner &Test) {
+  SmallString<128> CurrentFilepath;
   // Write ReducerWorkItem to tmp file
   int FD;
   std::error_code EC = sys::fs::createTemporaryFile(
@@ -102,18 +102,6 @@ bool isReduced(ReducerWorkItem &M, TestRunner &Test,
 
   // Current Chunks aren't interesting
   return Test.run(CurrentFilepath);
-}
-
-/// Counts the amount of lines for a given file
-static int getLines(StringRef Filepath) {
-  int Lines = 0;
-  std::string CurrLine;
-  std::ifstream FileStream{std::string(Filepath)};
-
-  while (std::getline(FileStream, CurrLine))
-    ++Lines;
-
-  return Lines;
 }
 
 /// Splits Chunks in half and prints them.
@@ -195,8 +183,7 @@ CheckChunk(Chunk &ChunkToCheckForUninterestingness,
     errs() << "\n";
   }
 
-  SmallString<128> CurrentFilepath;
-  if (!isReduced(*Clone, Test, CurrentFilepath)) {
+  if (!isReduced(*Clone, Test)) {
     // Program became non-reduced, so this chunk appears to be interesting.
     if (Verbose)
       errs() << "\n";
@@ -239,12 +226,6 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
          "input module is broken before making changes");
   errs() << "*** " << Message << "...\n";
 
-  SmallString<128> CurrentFilepath;
-  if (!isReduced(Test.getProgram(), Test, CurrentFilepath)) {
-    errs() << "\nInput isn't interesting! Verify interesting-ness test\n";
-    exit(1);
-  }
-
   int Targets;
   {
     // Count the number of chunks by counting the number of calls to
@@ -257,7 +238,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
 
     assert(!verifyReducerWorkItem(Test.getProgram(), &errs()) &&
            "input module is broken after counting chunks");
-    assert(isReduced(Test.getProgram(), Test, CurrentFilepath) &&
+    assert(isReduced(Test.getProgram(), Test) &&
            "input module no longer interesting after counting chunks");
 
 #ifndef NDEBUG
@@ -393,10 +374,9 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
       FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity = true;
       UninterestingChunks.insert(ChunkToCheckForUninterestingness);
       ReducedProgram = std::move(Result);
-      if (Verbose)
-        errs() << " **** SUCCESS | lines: " << getLines(CurrentFilepath)
-               << "\n";
-      writeOutput(*ReducedProgram, "Saved new best reduction to ");
+
+      // FIXME: Report meaningful progress info
+      writeOutput(*ReducedProgram, " **** SUCCESS | Saved new best reduction to ");
     }
     // Delete uninteresting chunks
     erase_if(ChunksStillConsideredInteresting,
