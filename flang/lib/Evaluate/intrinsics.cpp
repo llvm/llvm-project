@@ -234,7 +234,7 @@ struct IntrinsicDummyArgument {
   Rank rank{Rank::elemental};
   Optionality optionality{Optionality::required};
   common::Intent intent{common::Intent::In};
-  common::EnumSet<ArgFlag, 32> flags;
+  common::EnumSet<ArgFlag, 32> flags{};
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 };
 
