@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64-windows %s -o %t.obj
 // RUN: lld-link -entry:main -subsystem:console %t.obj -out:%t.exe -map -verbose 2>&1 | FileCheck -check-prefix=VERBOSE %s
-// RUN: llvm-objdump -d %t.exe | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t.exe | FileCheck --check-prefix=DISASM %s
 
 // VERBOSE: Added 2 thunks with margin {{.*}} in 1 passes
 

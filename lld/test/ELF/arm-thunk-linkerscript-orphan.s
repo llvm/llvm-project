@@ -6,7 +6,7 @@
 // RUN:       .data : { *(.data) } \
 // RUN:       }" > %t.script
 // RUN: ld.lld --script %t.script %t -o %t2
-// RUN: llvm-objdump -d %t2 | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t2 | FileCheck %s
  .syntax unified
  .section .text_low, "ax", %progbits
  .thumb

@@ -1,6 +1,6 @@
-# RUN: yaml2obj --docnum=1 -DCONTENT=FA000002E59F100CE0800001E12FFF1E4802EB00308047703141592627182818 %s | llvm-objdump -d --triple=armv7r - | FileCheck %s
-# RUN: yaml2obj --docnum=1 -DCONTENT=020000FA0C109FE5010080E01EFF2FE1024800EB803070473141592627182818 -DFLAG=,EF_ARM_BE8 %s | llvm-objdump -d --triple=armv7r - | FileCheck %s
-# RUN: yaml2obj --docnum=2 -DCONTENT=FA000002E59F100CE0800001E12FFF1E4802EB00308047703141592627182818 %s | llvm-objdump -d --triple=armv7r - | FileCheck %s
+# RUN: yaml2obj --docnum=1 -DCONTENT=FA000002E59F100CE0800001E12FFF1E4802EB00308047703141592627182818 %s | llvm-objdump --no-print-imm-hex -d --triple=armv7r - | FileCheck %s
+# RUN: yaml2obj --docnum=1 -DCONTENT=020000FA0C109FE5010080E01EFF2FE1024800EB803070473141592627182818 -DFLAG=,EF_ARM_BE8 %s | llvm-objdump --no-print-imm-hex -d --triple=armv7r - | FileCheck %s
+# RUN: yaml2obj --docnum=2 -DCONTENT=FA000002E59F100CE0800001E12FFF1E4802EB00308047703141592627182818 %s | llvm-objdump --no-print-imm-hex -d --triple=armv7r - | FileCheck %s
 
 ## Test llvm-objdump disassembly of all three kinds of
 ## AAELF32-compliant big-endian ELF file.

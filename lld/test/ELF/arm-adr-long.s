@@ -2,7 +2,7 @@
 // RUN: split-file %s %t
 // RUN: llvm-mc --triple=armv7a-none-eabi --arm-add-build-attributes -filetype=obj -o %t.o %t/asm
 // RUN: ld.lld --script %t/lds %t.o -o %t2
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=armv7a-none-eabi %t2 | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv7a-none-eabi %t2 | FileCheck %s
 
 /// Test the long range encoding of R_ARM_ALU_PC_Gx sequences. We can encode an 8-bit
 /// immediate rotated right by an even 4-bit field.

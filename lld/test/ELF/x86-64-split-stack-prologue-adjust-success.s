@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/x86-64-split-stack-main.s -o %t3.o
 
 # RUN: ld.lld --defsym __morestack=0x100 --defsym __morestack_non_split=0x200 %t1.o %t2.o %t3.o -o %t -z notext
-# RUN: llvm-objdump -d %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s
 
 # Avoid duplicating the prologue for every test via macros.
 

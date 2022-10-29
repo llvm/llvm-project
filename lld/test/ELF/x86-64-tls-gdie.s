@@ -5,7 +5,7 @@
 // RUN: ld.lld %t.o %t.so -o %t1
 // RUN: llvm-readelf -S %t1 | FileCheck --check-prefix=SEC --implicit-check-not=.plt %s
 // RUN: llvm-readobj -r %t1 | FileCheck --check-prefix=RELOC %s
-// RUN: llvm-objdump -d --no-show-raw-insn %t1 | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t1 | FileCheck --check-prefix=DISASM %s
 
 // SEC: .got PROGBITS 00000000002023a8 0003a8 000010 00 WA 0 0 8
 
