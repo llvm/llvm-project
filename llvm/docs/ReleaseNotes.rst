@@ -200,6 +200,9 @@ Changes to the LLVM tools
   that consume ``llvm-readobj``'s JSON output should update their parsers
   accordingly.
 
+* ``llvm-objdump`` now uses ``--print-imm-hex`` by default, which brings its
+  default behavior closer in line with ``objdump``.
+
 Changes to LLDB
 ---------------------------------
 
