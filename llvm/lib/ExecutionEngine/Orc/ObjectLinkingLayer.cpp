@@ -449,9 +449,15 @@ private:
     // claim, at which point we'll externalize that symbol.
     cantFail(MR->defineMaterializing(std::move(NewSymbolsToClaim)));
 
-    for (auto &KV : NameToSym)
-      if (!MR->getSymbols().count(KV.first))
+    // Walk the list of symbols that we just tried to claim. Symbols that we're
+    // responsible for are marked live. Symbols that we're not responsible for
+    // are turned into external references.
+    for (auto &KV : NameToSym) {
+      if (MR->getSymbols().count(KV.first))
+        KV.second->setLive(true);
+      else
         G.makeExternal(*KV.second);
+    }
 
     return Error::success();
   }
