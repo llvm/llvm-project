@@ -871,7 +871,7 @@ TEST(CommandLineTest, ResponseFiles) {
   llvm::BumpPtrAllocator A;
   llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine);
   ECtx.setVFS(&FS).setCurrentDir(TestRoot).setRelativeNames(true);
-  ASSERT_FALSE((bool)ECtx.expandResponseFiles(Argv));
+  ASSERT_TRUE(ECtx.expandResponseFiles(Argv));
   EXPECT_THAT(Argv, testing::Pointwise(
                         StringEquality(),
                         {"test/test", "-flag_1", "-option_1", "-option_2",
@@ -933,14 +933,7 @@ TEST(CommandLineTest, RecursiveResponseFiles) {
 #endif
   llvm::cl::ExpansionContext ECtx(A, Tokenizer);
   ECtx.setVFS(&FS).setCurrentDir(TestRoot);
-  llvm::Error Err = ECtx.expandResponseFiles(Argv);
-  ASSERT_TRUE((bool)Err);
-  SmallString<128> FilePath = SelfFilePath;
-  std::error_code EC = FS.makeAbsolute(FilePath);
-  ASSERT_FALSE((bool)EC);
-  std::string ExpectedMessage =
-      std::string("recursive expansion of: '") + std::string(FilePath) + "'";
-  ASSERT_TRUE(toString(std::move(Err)) == ExpectedMessage);
+  ASSERT_FALSE(ECtx.expandResponseFiles(Argv));
 
   EXPECT_THAT(Argv,
               testing::Pointwise(StringEquality(),
@@ -978,7 +971,7 @@ TEST(CommandLineTest, ResponseFilesAtArguments) {
   BumpPtrAllocator A;
   llvm::cl::ExpansionContext ECtx(A, cl::TokenizeGNUCommandLine);
   ECtx.setVFS(&FS).setCurrentDir(TestRoot);
-  ASSERT_FALSE((bool)ECtx.expandResponseFiles(Argv));
+  ASSERT_FALSE(ECtx.expandResponseFiles(Argv));
 
   // ASSERT instead of EXPECT to prevent potential out-of-bounds access.
   ASSERT_EQ(Argv.size(), 1 + NON_RSP_AT_ARGS + 2);
@@ -1012,7 +1005,7 @@ TEST(CommandLineTest, ResponseFileRelativePath) {
   BumpPtrAllocator A;
   llvm::cl::ExpansionContext ECtx(A, cl::TokenizeGNUCommandLine);
   ECtx.setVFS(&FS).setCurrentDir(TestRoot).setRelativeNames(true);
-  ASSERT_FALSE((bool)ECtx.expandResponseFiles(Argv));
+  ASSERT_TRUE(ECtx.expandResponseFiles(Argv));
   EXPECT_THAT(Argv,
               testing::Pointwise(StringEquality(), {"test/test", "-flag"}));
 }
@@ -1032,7 +1025,7 @@ TEST(CommandLineTest, ResponseFileEOLs) {
   llvm::cl::ExpansionContext ECtx(A, cl::TokenizeWindowsCommandLine);
   ECtx.setVFS(&FS).setCurrentDir(TestRoot).setMarkEOLs(true).setRelativeNames(
       true);
-  ASSERT_FALSE((bool)ECtx.expandResponseFiles(Argv));
+  ASSERT_TRUE(ECtx.expandResponseFiles(Argv));
   const char *Expected[] = {"clang", "-Xclang", "-Wno-whatever", nullptr,
                             "input.cpp"};
   ASSERT_EQ(std::size(Expected), Argv.size());
@@ -1043,30 +1036,6 @@ TEST(CommandLineTest, ResponseFileEOLs) {
       ASSERT_STREQ(Expected[I], Argv[I]);
     }
   }
-}
-
-TEST(CommandLineTest, BadResponseFile) {
-  BumpPtrAllocator A;
-  StringSaver Saver(A);
-  TempDir ADir("dir", /*Unique*/ true);
-  SmallString<128> AFilePath = ADir.path();
-  llvm::sys::path::append(AFilePath, "file.rsp");
-  std::string AFileExp = std::string("@") + std::string(AFilePath.str());
-  SmallVector<const char *, 2> Argv = {"clang", AFileExp.c_str()};
-
-  bool Res = cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv);
-  ASSERT_TRUE(Res);
-  ASSERT_EQ(2U, Argv.size());
-  ASSERT_STREQ(Argv[0], "clang");
-  ASSERT_STREQ(Argv[1], AFileExp.c_str());
-
-  std::string ADirExp = std::string("@") + std::string(ADir.path());
-  Argv = {"clang", ADirExp.c_str()};
-  Res = cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv);
-  ASSERT_FALSE(Res);
-  ASSERT_EQ(2U, Argv.size());
-  ASSERT_STREQ(Argv[0], "clang");
-  ASSERT_STREQ(Argv[1], ADirExp.c_str());
 }
 
 TEST(CommandLineTest, SetDefaultValue) {
@@ -1176,9 +1145,9 @@ TEST(CommandLineTest, ReadConfigFile) {
 
   llvm::BumpPtrAllocator A;
   llvm::cl::ExpansionContext ECtx(A, cl::tokenizeConfigFile);
-  llvm::Error Result = ECtx.readConfigFile(ConfigFile.path(), Argv);
+  bool Result = ECtx.readConfigFile(ConfigFile.path(), Argv);
 
-  EXPECT_FALSE((bool)Result);
+  EXPECT_TRUE(Result);
   EXPECT_EQ(Argv.size(), 13U);
   EXPECT_STREQ(Argv[0], "-option_1");
   EXPECT_STREQ(Argv[1],

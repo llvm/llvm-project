@@ -61,11 +61,9 @@ private:
         continue;
       llvm::BumpPtrAllocator Alloc;
       llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer);
-      llvm::Error Err = ECtx.setVFS(FS.get())
-                            .setCurrentDir(Cmd.Directory)
-                            .expandResponseFiles(Argv);
-      if (Err)
-        llvm::errs() << Err;
+      ECtx.setVFS(FS.get())
+          .setCurrentDir(Cmd.Directory)
+          .expandResponseFiles(Argv);
       // Don't assign directly, Argv aliases CommandLine.
       std::vector<std::string> ExpandedArgv(Argv.begin(), Argv.end());
       Cmd.CommandLine = std::move(ExpandedArgv);
