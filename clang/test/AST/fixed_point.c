@@ -402,5 +402,5 @@ unsigned long _Fract   u_long_fract_one  = 1.0ulr;
 
 _Accum literallast = 1.0k;    // One
 
-//CHECK-NEXT: `-VarDecl {{.*}} literallast '_Accum' cinit
+//CHECK-NEXT:  -VarDecl {{.*}} literallast '_Accum' cinit
 //CHECK-NEXT:   `-FixedPointLiteral {{.*}} '_Accum' 1.0
