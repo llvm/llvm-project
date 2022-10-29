@@ -6,17 +6,13 @@
 /// Verify that phony targets are only created for the extra dependency files,
 /// and not the input file.
 //       CHECK:dependency-gen-phony.o: 1.extra 2.extra dependency-gen-phony.c \
-//  CHECK-NEXT:  Inputs{{/|\\\\}}empty.h
-// CHECK-EMPTY:
+//  CHECK-NEXT:  Inputs{{/|\\}}empty.h
 //  CHECK-NEXT:1.extra:
-// CHECK-EMPTY:
 //  CHECK-NEXT:2.extra:
-// CHECK-EMPTY:
 //  CHECK-NEXT:{{.*}}empty.h:
 //   CHECK-NOT:{{.}}
 
-// STDIO:      -.o: Inputs{{/|\\\\}}empty.h
-// STDIO-EMPTY:
+// STDIO:      -.o: Inputs{{/|\\}}empty.h
 // STDIO-NEXT: {{.*}}empty.h:
 // STDIO-NOT:  {{.}}
 

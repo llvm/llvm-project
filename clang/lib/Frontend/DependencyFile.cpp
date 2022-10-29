@@ -326,7 +326,7 @@ void DependencyFileGenerator::outputDependencyFile(DiagnosticsEngine &Diags) {
 void DependencyFileGenerator::outputDependencyFile(llvm::raw_ostream &OS) {
   // Write out the dependency targets, trying to avoid overly long
   // lines when possible. We try our best to emit exactly the same
-  // dependency file as GCC (4.2), assuming the included files are the
+  // dependency file as GCC>=10, assuming the included files are the
   // same.
   const unsigned MaxColumns = 75;
   unsigned Columns = 0;
@@ -375,7 +375,6 @@ void DependencyFileGenerator::outputDependencyFile(llvm::raw_ostream &OS) {
     for (auto I = Files.begin(), E = Files.end(); I != E; ++I) {
       if (Index++ == InputFileIndex)
         continue;
-      OS << '\n';
       PrintFilename(OS, *I, OutputFormat);
       OS << ":\n";
     }
