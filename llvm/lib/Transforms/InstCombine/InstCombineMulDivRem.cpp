@@ -142,14 +142,33 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
 
 /// Reduce integer multiplication patterns that contain a (1 << Z) factor.
 /// Callers are expected to call this twice to handle commuted patterns.
-static Instruction *foldMulShl1(Value *X, Value *Y, bool HasNSW, bool HasNUW) {
+static Value *foldMulShl1(BinaryOperator &Mul, bool CommuteOperands,
+                          InstCombiner::BuilderTy &Builder) {
+  Value *X = Mul.getOperand(0), *Y = Mul.getOperand(1);
+  if (CommuteOperands)
+    std::swap(X, Y);
+
+  const bool HasNSW = Mul.hasNoSignedWrap();
+  const bool HasNUW = Mul.hasNoUnsignedWrap();
+
   // X * (1 << Z) --> X << Z
   Value *Z;
   if (match(Y, m_Shl(m_One(), m_Value(Z)))) {
-    BinaryOperator *Shl = BinaryOperator::CreateShl(X, Z);
-    Shl->setHasNoUnsignedWrap(HasNUW);
-    Shl->setHasNoSignedWrap(HasNSW && cast<ShlOperator>(Y)->hasNoSignedWrap());
-    return Shl;
+    bool PropagateNSW = HasNSW && cast<ShlOperator>(Y)->hasNoSignedWrap();
+    return Builder.CreateShl(X, Z, Mul.getName(), HasNUW, PropagateNSW);
+  }
+
+  // Similar to above, but an increment of the shifted value becomes an add:
+  // X * ((1 << Z) + 1) --> (X * (1 << Z)) + X --> (X << Z) + X
+  // This increases uses of X, so it may require a freeze, but that is still
+  // expected to be an improvement because it removes the multiply.
+  BinaryOperator *Shift;
+  if (match(Y, m_OneUse(m_Add(m_BinOp(Shift), m_One()))) &&
+      match(Shift, m_OneUse(m_Shl(m_One(), m_Value(Z))))) {
+    bool PropagateNSW = HasNSW && Shift->hasNoSignedWrap();
+    Value *FrX = Builder.CreateFreeze(X, X->getName() + ".fr");
+    Value *Shl = Builder.CreateShl(FrX, Z, "mulshl", HasNUW, PropagateNSW);
+    return Builder.CreateAdd(Shl, FrX, Mul.getName(), HasNUW, PropagateNSW);
   }
 
   return nullptr;
@@ -357,10 +376,10 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
        match(Op1, m_And(m_Value(), m_One()))))
     return BinaryOperator::CreateAnd(Op0, Op1);
 
-  if (Instruction *R = foldMulShl1(Op0, Op1, HasNSW, HasNUW))
-    return R;
-  if (Instruction *R = foldMulShl1(Op1, Op0, HasNSW, HasNUW))
-    return R;
+  if (Value *R = foldMulShl1(I, /* CommuteOperands */ false, Builder))
+    return replaceInstUsesWith(I, R);
+  if (Value *R = foldMulShl1(I, /* CommuteOperands */ true, Builder))
+    return replaceInstUsesWith(I, R);
 
   // (zext bool X) * (zext bool Y) --> zext (and X, Y)
   // (sext bool X) * (sext bool Y) --> zext (and X, Y)
