@@ -1405,6 +1405,8 @@ auto HvxIdioms::run() -> bool {
     for (auto It = B.rbegin(); It != B.rend(); ++It) {
       if (auto Fxm = matchFxpMul(*It)) {
         Value *New = processFxpMul(*It, *Fxm);
+        // Always report "changed" for now.
+        Changed = true;
         if (!New)
           continue;
         bool StartOver = !isa<Instruction>(New);
