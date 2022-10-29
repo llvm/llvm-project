@@ -8,7 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 declare <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float>, i8*, <8 x i32>, <8 x float>, i8) #0
 
 ; Function Attrs: nounwind
-define <8 x float> @foo1(i8* noalias readonly %arr.ptr, <8 x i32>* noalias readonly %vix.ptr, i8* noalias %t2.ptr) #1 {
+define <8 x float> @foo1(i8* noalias %arr.ptr, <8 x i32>* noalias readonly %vix.ptr, i8* noalias %t2.ptr) #1 {
 allocas:
   %vix = load <8 x i32>, <8 x i32>* %vix.ptr, align 4
   %t1.ptr = getelementptr i8, i8* %arr.ptr, i8 4
