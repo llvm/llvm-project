@@ -261,7 +261,6 @@ defm : SLMWriteResPair<WriteFSqrt80,  [SLM_FPC_RSV0,SLMFPDivider], 40, [1,40]>;
 defm : SLMWriteResPair<WriteDPPD,   [SLM_FPC_RSV1], 12,  [8], 5, 1>;
 defm : SLMWriteResPair<WriteDPPS,   [SLM_FPC_RSV1], 15, [12], 9, 1>;
 defm : X86WriteResPairUnsupported<WriteDPPSY>;
-defm : X86WriteResPairUnsupported<WriteDPPSZ>;
 defm : SLMWriteResPair<WriteFSign,  [SLM_FPC_RSV01], 1>;
 defm : SLMWriteResPair<WriteFRnd,   [SLM_FPC_RSV1], 3>;
 defm : X86WriteResPairUnsupported<WriteFRndY>;
