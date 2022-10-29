@@ -87,8 +87,8 @@ define i32 @test12(i32 %a, i32 %b) {
 ; rdar://7293527
 define i32 @shl1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @shl1(
-; CHECK-NEXT:    [[M:%.*]] = shl i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[M]]
+; CHECK-NEXT:    [[M1:%.*]] = shl i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[M1]]
 ;
   %shl = shl i32 1, %b
   %m = mul i32 %shl, %a
@@ -97,8 +97,8 @@ define i32 @shl1(i32 %a, i32 %b) {
 
 define i32 @shl1_nsw_nsw(i32 %A, i32 %B) {
 ; CHECK-LABEL: @shl1_nsw_nsw(
-; CHECK-NEXT:    [[D:%.*]] = shl nsw i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[D]]
+; CHECK-NEXT:    [[D1:%.*]] = shl nsw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[D1]]
 ;
   %shl = shl nsw i32 1, %B
   %D = mul nsw i32 %A, %shl
@@ -107,8 +107,8 @@ define i32 @shl1_nsw_nsw(i32 %A, i32 %B) {
 
 define <2 x i32> @shl1_nsw_nsw_commute(<2 x i32> %A, <2 x i32> %B) {
 ; CHECK-LABEL: @shl1_nsw_nsw_commute(
-; CHECK-NEXT:    [[D:%.*]] = shl nsw <2 x i32> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret <2 x i32> [[D]]
+; CHECK-NEXT:    [[D1:%.*]] = shl nsw <2 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <2 x i32> [[D1]]
 ;
   %shl = shl nsw <2 x i32> <i32 1, i32 poison>, %B
   %D = mul nsw <2 x i32> %shl, %A
@@ -117,8 +117,8 @@ define <2 x i32> @shl1_nsw_nsw_commute(<2 x i32> %A, <2 x i32> %B) {
 
 define i32 @shl1_nuw(i32 %A, i32 %B) {
 ; CHECK-LABEL: @shl1_nuw(
-; CHECK-NEXT:    [[D:%.*]] = shl nuw i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[D]]
+; CHECK-NEXT:    [[D1:%.*]] = shl nuw i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[D1]]
 ;
   %shl = shl i32 1, %B
   %D = mul nuw i32 %A, %shl
@@ -127,8 +127,8 @@ define i32 @shl1_nuw(i32 %A, i32 %B) {
 
 define i32 @shl1_nuw_commute(i32 %A, i32 %B) {
 ; CHECK-LABEL: @shl1_nuw_commute(
-; CHECK-NEXT:    [[D:%.*]] = shl i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    ret i32 [[D]]
+; CHECK-NEXT:    [[D1:%.*]] = shl i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i32 [[D1]]
 ;
   %shl = shl nuw i32 1, %B
   %D = mul i32 %shl, %A
@@ -138,8 +138,8 @@ define i32 @shl1_nuw_commute(i32 %A, i32 %B) {
 define i32 @shl1_nsw(i32 %A) {
 ; CHECK-LABEL: @shl1_nsw(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[A:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = shl i32 [[SHL]], [[A]]
-; CHECK-NEXT:    ret i32 [[C]]
+; CHECK-NEXT:    [[C1:%.*]] = shl i32 [[SHL]], [[A]]
+; CHECK-NEXT:    ret i32 [[C1]]
 ;
   %shl = shl i32 1, %A
   %C = mul nsw i32 %shl, %shl
@@ -148,10 +148,10 @@ define i32 @shl1_nsw(i32 %A) {
 
 define i5 @shl1_increment(i5 %x, i5 %y) {
 ; CHECK-LABEL: @shl1_increment(
-; CHECK-NEXT:    [[POW2X:%.*]] = shl i5 1, [[X:%.*]]
-; CHECK-NEXT:    [[X1:%.*]] = add i5 [[POW2X]], 1
-; CHECK-NEXT:    [[M:%.*]] = mul i5 [[X1]], [[Y:%.*]]
-; CHECK-NEXT:    ret i5 [[M]]
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i5 [[Y:%.*]]
+; CHECK-NEXT:    [[MULSHL:%.*]] = shl i5 [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    [[M1:%.*]] = add i5 [[MULSHL]], [[Y_FR]]
+; CHECK-NEXT:    ret i5 [[M1]]
 ;
   %pow2x = shl i5 1, %x
   %x1 = add i5 %pow2x, 1
@@ -162,10 +162,9 @@ define i5 @shl1_increment(i5 %x, i5 %y) {
 define <3 x i5> @shl1_nuw_increment_commute(<3 x i5> %x, <3 x i5> noundef %p) {
 ; CHECK-LABEL: @shl1_nuw_increment_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = ashr <3 x i5> [[P:%.*]], <i5 1, i5 1, i5 1>
-; CHECK-NEXT:    [[POW2X:%.*]] = shl <3 x i5> <i5 1, i5 poison, i5 1>, [[X:%.*]]
-; CHECK-NEXT:    [[X1:%.*]] = add <3 x i5> [[POW2X]], <i5 1, i5 poison, i5 1>
-; CHECK-NEXT:    [[M:%.*]] = mul nuw <3 x i5> [[Y]], [[X1]]
-; CHECK-NEXT:    ret <3 x i5> [[M]]
+; CHECK-NEXT:    [[MULSHL:%.*]] = shl nuw <3 x i5> [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[M1:%.*]] = add nuw <3 x i5> [[MULSHL]], [[Y]]
+; CHECK-NEXT:    ret <3 x i5> [[M1]]
 ;
   %y = ashr <3 x i5> %p, <i5 1, i5 1, i5 1> ; thwart complexity-based canonicalization
   %pow2x = shl <3 x i5> <i5 1, i5 poison, i5 1>, %x
@@ -176,10 +175,10 @@ define <3 x i5> @shl1_nuw_increment_commute(<3 x i5> %x, <3 x i5> noundef %p) {
 
 define i5 @shl1_nsw_increment(i5 %x, i5 %y) {
 ; CHECK-LABEL: @shl1_nsw_increment(
-; CHECK-NEXT:    [[POW2X:%.*]] = shl i5 1, [[X:%.*]]
-; CHECK-NEXT:    [[X1:%.*]] = add i5 [[POW2X]], 1
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i5 [[X1]], [[Y:%.*]]
-; CHECK-NEXT:    ret i5 [[M]]
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i5 [[Y:%.*]]
+; CHECK-NEXT:    [[MULSHL:%.*]] = shl i5 [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    [[M1:%.*]] = add i5 [[MULSHL]], [[Y_FR]]
+; CHECK-NEXT:    ret i5 [[M1]]
 ;
   %pow2x = shl i5 1, %x
   %x1 = add i5 %pow2x, 1
@@ -189,10 +188,10 @@ define i5 @shl1_nsw_increment(i5 %x, i5 %y) {
 
 define i5 @shl1_nsw_nsw_increment(i5 %x, i5 %y) {
 ; CHECK-LABEL: @shl1_nsw_nsw_increment(
-; CHECK-NEXT:    [[POW2X:%.*]] = shl nsw i5 1, [[X:%.*]]
-; CHECK-NEXT:    [[X1:%.*]] = add nuw nsw i5 [[POW2X]], 1
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i5 [[X1]], [[Y:%.*]]
-; CHECK-NEXT:    ret i5 [[M]]
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i5 [[Y:%.*]]
+; CHECK-NEXT:    [[MULSHL:%.*]] = shl nsw i5 [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    [[M1:%.*]] = add nsw i5 [[MULSHL]], [[Y_FR]]
+; CHECK-NEXT:    ret i5 [[M1]]
 ;
   %pow2x = shl nsw i5 1, %x
   %x1 = add i5 %pow2x, 1
@@ -202,10 +201,10 @@ define i5 @shl1_nsw_nsw_increment(i5 %x, i5 %y) {
 
 define i5 @shl1_nsw_nsw_increment_commute(i5 %x, i5 %y) {
 ; CHECK-LABEL: @shl1_nsw_nsw_increment_commute(
-; CHECK-NEXT:    [[POW2X:%.*]] = shl nsw i5 1, [[X:%.*]]
-; CHECK-NEXT:    [[X1:%.*]] = add nuw nsw i5 [[POW2X]], 1
-; CHECK-NEXT:    [[M:%.*]] = mul i5 [[X1]], [[Y:%.*]]
-; CHECK-NEXT:    ret i5 [[M]]
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i5 [[Y:%.*]]
+; CHECK-NEXT:    [[MULSHL:%.*]] = shl i5 [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    [[M1:%.*]] = add i5 [[MULSHL]], [[Y_FR]]
+; CHECK-NEXT:    ret i5 [[M1]]
 ;
   %pow2x = shl nsw i5 1, %x
   %x1 = add nsw i5 %pow2x, 1
@@ -1089,8 +1088,8 @@ define i64 @test30(i32 %A, i32 %B) {
 @PR22087 = external global i32
 define i32 @test31(i32 %V) {
 ; CHECK-LABEL: @test31(
-; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[V:%.*]], zext (i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32)
-; CHECK-NEXT:    ret i32 [[MUL]]
+; CHECK-NEXT:    [[MUL1:%.*]] = shl i32 [[V:%.*]], zext (i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32)
+; CHECK-NEXT:    ret i32 [[MUL1]]
 ;
   %mul = mul i32 %V, shl (i32 1, i32 zext (i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32))
   ret i32 %mul
