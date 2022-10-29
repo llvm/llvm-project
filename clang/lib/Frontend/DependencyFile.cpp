@@ -160,10 +160,7 @@ bool DependencyCollector::addDependency(StringRef Filename) {
 }
 
 static bool isSpecialFilename(StringRef Filename) {
-  return llvm::StringSwitch<bool>(Filename)
-      .Case("<built-in>", true)
-      .Case("<stdin>", true)
-      .Default(false);
+  return Filename == "<built-in>";
 }
 
 bool DependencyCollector::sawDependency(StringRef Filename, bool FromModule,
@@ -356,6 +353,8 @@ void DependencyFileGenerator::outputDependencyFile(llvm::raw_ostream &OS) {
   // duplicates.
   ArrayRef<std::string> Files = getDependencies();
   for (StringRef File : Files) {
+    if (File == "<stdin>")
+      continue;
     // Start a new line if this would exceed the column limit. Make
     // sure to leave space for a trailing " \" in case we need to
     // break the line on the next iteration.
