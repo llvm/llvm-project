@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements a function which calls the Generic Delta pass in order
-// to reduce uninteresting Arguments from defined functions.
+// to reduce uninteresting BasicBlocks from defined functions.
 //
 //===----------------------------------------------------------------------===//
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEBASICBLOCKS_H
@@ -19,6 +19,7 @@
 
 namespace llvm {
 void reduceBasicBlocksDeltaPass(TestRunner &Test);
+void reduceUnreachableBasicBlocksDeltaPass(TestRunner &Test);
 } // namespace llvm
 
 #endif
