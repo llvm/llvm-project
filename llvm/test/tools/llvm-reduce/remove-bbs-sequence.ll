@@ -1,4 +1,4 @@
-; RUN: llvm-reduce -abort-on-invalid-reduction --delta-passes=basic-blocks --test %python --test-arg %p/remove-bbs-sequence.py %s -o %t
+; RUN: llvm-reduce -abort-on-invalid-reduction --delta-passes=basic-blocks,simplify-cfg --test %python --test-arg %p/remove-bbs-sequence.py %s -o %t
 ; RUN: FileCheck %s < %t
 
 ; The interestingness test is that the CFG contains a loop. Verify that the
@@ -20,11 +20,9 @@ define void @main() {
 
 ; CHECK:define void @main() {
 ; CHECK-NEXT: bb0:
-; CHECK-NEXT:   br label %bb1
-; CHECK-EMPTY:
-; CHECK-NEXT: bb1:
 ; CHECK-NEXT:   br label %bb4
 ; CHECK-EMPTY:
 ; CHECK-NEXT: bb4:
-; CHECK-NEXT:   br label %bb1
+; CHECK-NEXT: %phi = phi i32 [ undef, %bb0 ], [ undef, %bb4 ]
+; CHECK-NEXT: br label %bb4
 ; CHECK-NEXT:}
