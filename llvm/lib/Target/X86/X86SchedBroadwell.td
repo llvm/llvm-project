@@ -326,7 +326,6 @@ defm : X86WriteResPairUnsupported<WriteFMAZ>;
 defm : BWWriteResPair<WriteDPPD,   [BWPort0,BWPort1,BWPort5],  9, [1,1,1], 3, 5>; // Floating point double dot product.
 defm : BWWriteResPair<WriteDPPS,   [BWPort0,BWPort1,BWPort5], 14, [2,1,1], 4, 5>; // Floating point single dot product.
 defm : BWWriteResPair<WriteDPPSY,  [BWPort0,BWPort1,BWPort5], 14, [2,1,1], 4, 6>; // Floating point single dot product (YMM).
-defm : X86WriteResPairUnsupported<WriteDPPSZ>;
 defm : BWWriteResPair<WriteFSign,     [BWPort5], 1>; // Floating point fabs/fchs.
 defm : X86WriteRes<WriteFRnd,            [BWPort23],  6, [1],   1>; // Floating point rounding.
 defm : X86WriteRes<WriteFRndY,           [BWPort23],  6, [1],   1>; // Floating point rounding (YMM/ZMM).
