@@ -42,6 +42,10 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "R_RISCV_CALL";
   case R_RISCV_32_PCREL:
     return "R_RISCV_32_PCREL";
+  case R_RISCV_GOT_HI20:
+    return "R_RISCV_GOT_HI20";
+  case R_RISCV_CALL_PLT:
+    return "R_RISCV_CALL_PLT";
   case R_RISCV_ADD64:
     return "R_RISCV_ADD64";
   case R_RISCV_ADD32:
