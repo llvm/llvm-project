@@ -35,6 +35,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     BufferPSV(static_cast<const AMDGPUTargetMachine &>(MF.getTarget())),
     ImagePSV(static_cast<const AMDGPUTargetMachine &>(MF.getTarget())),
     GWSResourcePSV(static_cast<const AMDGPUTargetMachine &>(MF.getTarget())),
+    GlobalRegisterPSV(static_cast<const AMDGPUTargetMachine &>(MF.getTarget())),
     PrivateSegmentBuffer(false),
     DispatchPtr(false),
     QueuePtr(false),

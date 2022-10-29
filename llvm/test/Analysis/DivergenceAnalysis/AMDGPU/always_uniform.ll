@@ -52,11 +52,22 @@ define void @asm_mixed_sgpr_vgpr(i32 %divergent) {
   ret void
 }
 
+; CHECK-LABEL: Divergence Analysis' for function 'global_sreg':
+; CHECK: DIVERGENT: i32 %divergent
+; CHECK-NOT: DIVERGENT
+define void @global_sreg(i32 %divergent) {
+  %a = call i32 @llvm.amdgcn.s.mov.from.global.i32(i8 95, i32 %divergent)
+  %b = call i32 @llvm.amdgcn.s.swap.to.global.i32(i8 95, i32 %divergent, i32 %divergent)
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare i32 @llvm.amdgcn.readfirstlane(i32) #0
 declare i64 @llvm.amdgcn.icmp.i32(i32, i32, i32) #1
 declare i64 @llvm.amdgcn.fcmp.i32(float, float, i32) #1
 declare i64 @llvm.amdgcn.ballot.i32(i1) #1
+declare i32 @llvm.amdgcn.s.mov.from.global.i32(i8, i32)
+declare i32 @llvm.amdgcn.s.swap.to.global.i32(i8, i32, i32)
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind readnone convergent }
