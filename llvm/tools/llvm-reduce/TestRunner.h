@@ -29,7 +29,7 @@ public:
   TestRunner(StringRef TestName, const std::vector<std::string> &TestArgs,
              std::unique_ptr<ReducerWorkItem> Program,
              std::unique_ptr<TargetMachine> TM, const char *ToolName,
-             StringRef OutputFilename, bool OutputBitcode);
+             StringRef OutputFilename, bool InputIsBitcode, bool OutputBitcode);
 
   /// Runs the interesting-ness test for the specified file
   /// @returns 0 if test was successful, 1 if otherwise
@@ -46,6 +46,10 @@ public:
 
   void writeOutput(StringRef Message);
 
+  bool inputIsBitcode() const {
+    return InputIsBitcode;
+  }
+
 private:
   StringRef TestName;
   const char *ToolName;
@@ -53,6 +57,7 @@ private:
   std::unique_ptr<ReducerWorkItem> Program;
   std::unique_ptr<TargetMachine> TM;
   StringRef OutputFilename;
+  const bool InputIsBitcode;
   bool EmitBitcode;
 };
 
