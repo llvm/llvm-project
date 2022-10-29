@@ -95,20 +95,17 @@ bool isReduced(ReducerWorkItem &M, TestRunner &Test);
 
 static std::pair<StringRef, bool> determineOutputType(bool IsMIR,
                                                       bool InputIsBitcode) {
-  bool OutputBitcode = ForceOutputBitcode;
+  bool OutputBitcode = ForceOutputBitcode || InputIsBitcode;
 
   if (ReplaceInput) { // In-place
     OutputFilename = InputFilename.c_str();
-    OutputBitcode |= StringRef(OutputFilename).endswith(".bc");
-  } else if (OutputFilename.empty() || OutputFilename == "-") {
+  } else if (OutputFilename.empty()) {
     // Default to producing bitcode if the input was bitcode, if not explicitly
     // requested.
 
-    OutputBitcode |= InputIsBitcode;
     OutputFilename =
         IsMIR ? "reduced.mir" : (OutputBitcode ? "reduced.bc" : "reduced.ll");
-  } else
-    OutputBitcode |= StringRef(OutputFilename).endswith(".bc");
+  }
 
   return {OutputFilename, OutputBitcode};
 }
