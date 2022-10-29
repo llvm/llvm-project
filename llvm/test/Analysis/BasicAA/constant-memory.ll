@@ -4,6 +4,8 @@
 
 declare void @dummy()
 
+declare void @foo(ptr)
+
 ; FIXME: This could be NoModRef
 ; CHECK-LABEL: Function: basic
 ; CHECK: Just Ref: Ptr: i32* @c	<->  call void @dummy()
@@ -30,4 +32,66 @@ loop:
 
 exit:
   ret void
+}
+
+; Tests that readonly noalias doesn't imply !Mod yet.
+;
+; CHECK-LABEL: Function: readonly_noalias
+; CHECK: Both ModRef: Ptr: i32* %p <->  call void @foo(ptr %p)
+define void @readonly_noalias(ptr readonly noalias %p) {
+    call void @foo(ptr %p)
+    load i32, ptr %p
+    ret void
+}
+
+; Tests that readnone noalias doesn't imply !Mod yet.
+;
+; CHECK-LABEL: Function: readnone_noalias
+; CHECK: Both ModRef: Ptr: i32* %p <->  call void @foo(ptr %p)
+define void @readnone_noalias(ptr readnone noalias %p) {
+    call void @foo(ptr %p)
+    load i32, ptr %p
+    ret void
+}
+
+; Tests that writeonly noalias doesn't imply !Ref (since it's still possible
+; to read from the object through other pointers if the pointer wasn't
+; written).
+;
+; CHECK-LABEL: Function: writeonly_noalias
+; CHECK: Both ModRef: Ptr: i32* %p <->  call void @foo(ptr %p)
+define void @writeonly_noalias(ptr writeonly noalias %p) {
+    call void @foo(ptr %p)
+    load i32, ptr %p
+    ret void
+}
+
+; Tests that readonly doesn't imply !Mod without noalias.
+;
+; CHECK-LABEL: Function: just_readonly
+; CHECK: Both ModRef: Ptr: i32* %p <->  call void @foo(ptr %p)
+define void @just_readonly(ptr readonly %p) {
+    call void @foo(ptr %p)
+    load i32, ptr %p
+    ret void
+}
+
+; Tests that readnone doesn't imply !Mod without noalias.
+;
+; CHECK-LABEL: Function: just_readnone
+; CHECK: Both ModRef: Ptr: i32* %p <->  call void @foo(ptr %p)
+define void @just_readnone(ptr readnone %p) {
+    call void @foo(ptr %p)
+    load i32, ptr %p
+    ret void
+}
+
+; Tests that writeonly doesn't imply !Ref.
+;
+; CHECK-LABEL: Function: just_writeonly
+; CHECK: Both ModRef: Ptr: i32* %p <->  call void @foo(ptr %p)
+define void @just_writeonly(ptr writeonly %p) {
+    call void @foo(ptr %p)
+    load i32, ptr %p
+    ret void
 }
