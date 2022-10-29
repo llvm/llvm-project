@@ -140,6 +140,21 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
   return nullptr;
 }
 
+/// Reduce integer multiplication patterns that contain a (1 << Z) factor.
+/// Callers are expected to call this twice to handle commuted patterns.
+static Instruction *foldMulShl1(Value *X, Value *Y, bool HasNSW, bool HasNUW) {
+  // X * (1 << Z) --> X << Z
+  Value *Z;
+  if (match(Y, m_Shl(m_One(), m_Value(Z)))) {
+    BinaryOperator *Shl = BinaryOperator::CreateShl(X, Z);
+    Shl->setHasNoUnsignedWrap(HasNUW);
+    Shl->setHasNoSignedWrap(HasNSW && cast<ShlOperator>(Y)->hasNoSignedWrap());
+    return Shl;
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   if (Value *V = simplifyMulInst(Op0, Op1, SQ.getWithInstruction(&I)))
@@ -342,25 +357,10 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
        match(Op1, m_And(m_Value(), m_One()))))
     return BinaryOperator::CreateAnd(Op0, Op1);
 
-  // X*(1 << Y) --> X << Y
-  // (1 << Y)*X --> X << Y
-  {
-    Value *Y;
-    BinaryOperator *BO = nullptr;
-    bool ShlNSW = false;
-    if (match(Op0, m_Shl(m_One(), m_Value(Y)))) {
-      BO = BinaryOperator::CreateShl(Op1, Y);
-      ShlNSW = cast<ShlOperator>(Op0)->hasNoSignedWrap();
-    } else if (match(Op1, m_Shl(m_One(), m_Value(Y)))) {
-      BO = BinaryOperator::CreateShl(Op0, Y);
-      ShlNSW = cast<ShlOperator>(Op1)->hasNoSignedWrap();
-    }
-    if (BO) {
-      BO->setHasNoUnsignedWrap(HasNUW);
-      BO->setHasNoSignedWrap(HasNSW && ShlNSW);
-      return BO;
-    }
-  }
+  if (Instruction *R = foldMulShl1(Op0, Op1, HasNSW, HasNUW))
+    return R;
+  if (Instruction *R = foldMulShl1(Op1, Op0, HasNSW, HasNUW))
+    return R;
 
   // (zext bool X) * (zext bool Y) --> zext (and X, Y)
   // (sext bool X) * (sext bool Y) --> zext (and X, Y)
