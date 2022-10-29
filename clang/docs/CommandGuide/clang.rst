@@ -201,7 +201,7 @@ Language Selection and Mode Options
 
    Working draft for ISO C++ 2023 with GNU extensions
 
- The default C++ language standard is ``gnu++14``.
+ The default C++ language standard is ``gnu++17``.
 
  Supported values for the OpenCL language are:
 
