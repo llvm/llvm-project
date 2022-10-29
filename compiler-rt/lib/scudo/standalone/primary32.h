@@ -708,8 +708,10 @@ private:
       if (AllocatedGroupSize == 0)
         continue;
 
+      // TransferBatches are pushed in front of BG.Batches. The first one may
+      // not have all caches used.
       const uptr NumBlocks = (BG.Batches.size() - 1) * BG.MaxCachedPerBatch +
-                             BG.Batches.back()->getCount();
+                             BG.Batches.front()->getCount();
       const uptr BytesInBG = NumBlocks * BlockSize;
       // Given the randomness property, we try to release the pages only if the
       // bytes used by free blocks exceed certain proportion of allocated
