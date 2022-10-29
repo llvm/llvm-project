@@ -10,10 +10,10 @@ __global__ void use_huge_lds() {
   huge[0] = 2;
 }
 
-// CHECK: error: <stdin>:[[#@LINE-5]]:0: local memory (480000) exceeds limit (65536) in function '_Z12use_huge_ldsIiEvv'
+// CHECK: <stdin>:[[@LINE-5]]:17: error: local memory (480000) exceeds limit (65536) in 'void use_huge_lds<int>()'
 template
 __global__ void use_huge_lds<int>();
 
-// CHECK: error: <stdin>:[[#@LINE-9]]:0: local memory (960000) exceeds limit (65536) in function '_Z12use_huge_ldsIdEvv'
+// CHECK: <stdin>:[[@LINE-9]]:17: error: local memory (960000) exceeds limit (65536) in 'void use_huge_lds<double>()'
 template
 __global__ void use_huge_lds<double>();
