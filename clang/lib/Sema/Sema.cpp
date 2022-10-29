@@ -449,6 +449,26 @@ void Sema::Initialize() {
       PushOnScopeChains(Context.getBuiltinMSVaListDecl(), TUScope);
   }
 
+  if (auto *ND = dyn_cast_if_present<NamedDecl>(Context.getVaListTagDecl())) {
+    if (auto *DC = ND->getLexicalDeclContext(); DC->isStdNamespace()) {
+      auto *NS = cast<NamespaceDecl>(DC);
+      if (!StdNamespace)
+        StdNamespace = NS;
+      if (!Context.getTranslationUnitDecl()->containsDecl(NS))
+        PushOnScopeChains(NS, TUScope);
+      if (!DC->containsDecl(ND)) {
+        Scope S(TUScope, Scope::DeclScope, getDiagnostics());
+        PushDeclContext(&S, DC);
+        PushOnScopeChains(ND, &S);
+        PopDeclContext();
+      }
+    } else {
+      assert(DC == Context.getTranslationUnitDecl());
+      if (!DC->containsDecl(ND))
+        PushOnScopeChains(ND, TUScope);
+    }
+  }
+
   DeclarationName BuiltinVaList = &Context.Idents.get("__builtin_va_list");
   if (IdResolver.begin(BuiltinVaList) == IdResolver.end())
     PushOnScopeChains(Context.getBuiltinVaListDecl(), TUScope);

@@ -52,7 +52,7 @@ void test_unary_expr_or_type_trait() {
 // CHECK-NEXT: | `-CompoundStmt {{.*}} <col:30, line:28:1>
 // CHECK-NEXT: |   `-CStyleCastExpr {{.*}} <line:27:3, col:28> 'void' <ToVoid>
 // CHECK-NEXT: |     `-ExpressionTraitExpr {{.*}} <col:10, col:28> 'bool' __is_lvalue_expr
-// CHECK-NEXT: `-FunctionDecl {{.*}} <line:30:1, line:35:1> line:30:6{{( imported)?}} test_unary_expr_or_type_trait 'void ()'
+// CHECK-NEXT:  -FunctionDecl {{.*}} <line:30:1, line:35:1> line:30:6{{( imported)?}} test_unary_expr_or_type_trait 'void ()'
 // CHECK-NEXT:   `-CompoundStmt {{.*}} <col:38, line:35:1>
 // CHECK-NEXT:     |-CStyleCastExpr {{.*}} <line:32:3, col:20> 'void' <ToVoid>
 // CHECK-NEXT:     | `-UnaryExprOrTypeTraitExpr {{.*}} <col:10, col:20> 'unsigned long' sizeof 'int'
