@@ -461,8 +461,8 @@ vpxor           (%rax), %ymm1, %ymm2
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      8     0.33    *                   vbroadcasti128	(%rax), %ymm0
-# CHECK-NEXT:  1      100   0.25                        vbroadcastsd	%xmm0, %ymm0
-# CHECK-NEXT:  1      100   0.25                        vbroadcastss	%xmm0, %ymm0
+# CHECK-NEXT:  1      2     0.25                        vbroadcastsd	%xmm0, %ymm0
+# CHECK-NEXT:  1      2     0.25                        vbroadcastss	%xmm0, %ymm0
 # CHECK-NEXT:  1      2     0.25                        vextracti128	$1, %ymm0, %xmm2
 # CHECK-NEXT:  1      1     0.33           *            vextracti128	$1, %ymm0, (%rax)
 # CHECK-NEXT:  1      100   0.25    *                   vgatherdpd	%xmm0, (%rax,%xmm1,2), %xmm2
@@ -562,10 +562,10 @@ vpxor           (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      9     0.33    *                   vperm2i128	$1, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      2     0.25                        vpermd	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  1      9     0.33    *                   vpermd	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      100   0.25                        vpermpd	$1, %ymm0, %ymm2
-# CHECK-NEXT:  1      107   0.33    *                   vpermpd	$1, (%rax), %ymm2
-# CHECK-NEXT:  1      100   0.25                        vpermps	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  1      107   0.33    *                   vpermps	(%rax), %ymm1, %ymm2
+# CHECK-NEXT:  1      2     0.25                        vpermpd	$1, %ymm0, %ymm2
+# CHECK-NEXT:  1      9     0.33    *                   vpermpd	$1, (%rax), %ymm2
+# CHECK-NEXT:  1      2     0.25                        vpermps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  1      9     0.33    *                   vpermps	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      2     0.25                        vpermq	$1, %ymm0, %ymm2
 # CHECK-NEXT:  1      9     0.33    *                   vpermq	$1, (%rax), %ymm2
 # CHECK-NEXT:  1      100   0.25    *                   vpgatherdd	%xmm0, (%rax,%xmm1,2), %xmm2
