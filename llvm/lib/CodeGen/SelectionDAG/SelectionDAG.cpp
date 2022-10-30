@@ -27,6 +27,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -2978,30 +2979,15 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::VECTOR_SHUFFLE: {
     // Collect the known bits that are shared by every vector element referenced
     // by the shuffle.
-    APInt DemandedLHS(NumElts, 0), DemandedRHS(NumElts, 0);
-    Known.Zero.setAllBits(); Known.One.setAllBits();
+    APInt DemandedLHS, DemandedRHS;
     const ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op);
     assert(NumElts == SVN->getMask().size() && "Unexpected vector size");
-    for (unsigned i = 0; i != NumElts; ++i) {
-      if (!DemandedElts[i])
-        continue;
+    if (!getShuffleDemandedElts(NumElts, SVN->getMask(), DemandedElts,
+                                DemandedLHS, DemandedRHS))
+      break;
 
-      int M = SVN->getMaskElt(i);
-      if (M < 0) {
-        // For UNDEF elements, we don't know anything about the common state of
-        // the shuffle result.
-        Known.resetAll();
-        DemandedLHS.clearAllBits();
-        DemandedRHS.clearAllBits();
-        break;
-      }
-
-      if ((unsigned)M < NumElts)
-        DemandedLHS.setBit((unsigned)M % NumElts);
-      else
-        DemandedRHS.setBit((unsigned)M % NumElts);
-    }
     // Known bits are the values that are shared by every demanded element.
+    Known.Zero.setAllBits(); Known.One.setAllBits();
     if (!!DemandedLHS) {
       SDValue LHS = Op.getOperand(0);
       Known2 = computeKnownBits(LHS, DemandedLHS, Depth + 1);
@@ -3984,22 +3970,13 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::VECTOR_SHUFFLE: {
     // Collect the minimum number of sign bits that are shared by every vector
     // element referenced by the shuffle.
-    APInt DemandedLHS(NumElts, 0), DemandedRHS(NumElts, 0);
+    APInt DemandedLHS, DemandedRHS;
     const ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op);
     assert(NumElts == SVN->getMask().size() && "Unexpected vector size");
-    for (unsigned i = 0; i != NumElts; ++i) {
-      int M = SVN->getMaskElt(i);
-      if (!DemandedElts[i])
-        continue;
-      // For UNDEF elements, we don't know anything about the common state of
-      // the shuffle result.
-      if (M < 0)
-        return 1;
-      if ((unsigned)M < NumElts)
-        DemandedLHS.setBit((unsigned)M % NumElts);
-      else
-        DemandedRHS.setBit((unsigned)M % NumElts);
-    }
+    if (!getShuffleDemandedElts(NumElts, SVN->getMask(), DemandedElts,
+                                DemandedLHS, DemandedRHS))
+      return 1;
+
     Tmp = std::numeric_limits<unsigned>::max();
     if (!!DemandedLHS)
       Tmp = ComputeNumSignBits(Op.getOperand(0), DemandedLHS, Depth + 1);
