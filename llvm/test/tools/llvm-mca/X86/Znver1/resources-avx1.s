@@ -1660,12 +1660,12 @@ vzeroupper
 # CHECK-NEXT:  2      8     1.00    *                   vshufps	$1, (%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      20    8.00                        vsqrtpd	%xmm0, %xmm2
 # CHECK-NEXT:  1      27    8.00    *                   vsqrtpd	(%rax), %xmm2
-# CHECK-NEXT:  1      20    16.00                       vsqrtpd	%ymm0, %ymm2
-# CHECK-NEXT:  1      27    16.00   *                   vsqrtpd	(%rax), %ymm2
+# CHECK-NEXT:  2      20    16.00                       vsqrtpd	%ymm0, %ymm2
+# CHECK-NEXT:  2      27    16.00   *                   vsqrtpd	(%rax), %ymm2
 # CHECK-NEXT:  1      14    5.00                        vsqrtps	%xmm0, %xmm2
 # CHECK-NEXT:  1      21    5.00    *                   vsqrtps	(%rax), %xmm2
-# CHECK-NEXT:  1      14    10.00                       vsqrtps	%ymm0, %ymm2
-# CHECK-NEXT:  1      21    10.00   *                   vsqrtps	(%rax), %ymm2
+# CHECK-NEXT:  2      14    10.00                       vsqrtps	%ymm0, %ymm2
+# CHECK-NEXT:  2      21    10.00   *                   vsqrtps	(%rax), %ymm2
 # CHECK-NEXT:  1      20    8.00                        vsqrtsd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  1      27    8.00    *                   vsqrtsd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      14    5.00                        vsqrtss	%xmm0, %xmm1, %xmm2
