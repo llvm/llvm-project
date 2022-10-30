@@ -380,4 +380,52 @@ define void @volatile_memcpy() {
   ret void
 }
 
+; Test that we don't yet elide a memcpy when copying a constant value onto the
+; stack and then forwarding it by readonly nocapture reference.
+define void @memcpy_to_nocapture_readonly() {
+; CHECK-LABEL: @memcpy_to_nocapture_readonly(
+; CHECK-NEXT:    [[A:%.*]] = alloca [[U:%.*]], align 16
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[A]], ptr noundef nonnull align 16 dereferenceable(20) @H, i64 20, i1 false)
+; CHECK-NEXT:    call void @bar(ptr nocapture nonnull readonly [[A]])
+; CHECK-NEXT:    ret void
+;
+  %A = alloca %U, align 16
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr align 4 @H, i64 20, i1 false)
+  call void @bar(ptr nocapture readonly %A)
+  ret void
+}
+
+; Test that we don't elide the memcpy when copying a constant value onto the
+; stack and then forwarding it by readonly, but capturing, reference.
+define void @memcpy_to_capturing_readonly() {
+; CHECK-LABEL: @memcpy_to_capturing_readonly(
+; CHECK-NEXT:    [[A:%.*]] = alloca [[U:%.*]], align 16
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[A]], ptr noundef nonnull align 16 dereferenceable(20) @H, i64 20, i1 false)
+; CHECK-NEXT:    call void @bar(ptr nonnull readonly [[A]])
+; CHECK-NEXT:    ret void
+;
+  %A = alloca %U, align 16
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr align 4 @H, i64 20, i1 false)
+  call void @bar(ptr readonly %A)
+  ret void
+}
+
+; Test that we don't elide the memcpy when copying a constant value onto the
+; stack and then forwarding it by read-write, nocapture reference, even if it's
+; also forwarded by readonly nocapture reference to the same function.
+define void @memcpy_to_aliased_nocapture_readonly() {
+; CHECK-LABEL: @memcpy_to_aliased_nocapture_readonly(
+; CHECK-NEXT:    [[A:%.*]] = alloca [[U:%.*]], align 16
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[A]], ptr noundef nonnull align 16 dereferenceable(20) @H, i64 20, i1 false)
+; CHECK-NEXT:    call void @two_params(ptr nocapture nonnull readonly [[A]], ptr nocapture nonnull [[A]])
+; CHECK-NEXT:    ret void
+;
+  %A = alloca %U, align 16
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %A, ptr align 4 @H, i64 20, i1 false)
+  call void @two_params(ptr nocapture readonly %A, ptr nocapture %A)
+  ret void
+}
+
+declare void @two_params(ptr nocapture readonly, ptr nocapture)
+
 attributes #0 = { null_pointer_is_valid }
