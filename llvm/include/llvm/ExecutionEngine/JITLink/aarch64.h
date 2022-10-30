@@ -35,7 +35,6 @@ enum EdgeKind_aarch64 : Edge::Kind {
   TLSDescPage21,
   TLSDescPageOffset12,
   Delta32ToGOT,
-  PairedAddend,
   LDRLiteral19,
   Delta32,
   Delta64,
