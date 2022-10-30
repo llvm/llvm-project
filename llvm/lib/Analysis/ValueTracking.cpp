@@ -2453,6 +2453,20 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
   if (isa<ScalableVectorType>(V->getType()))
     return false;
 
+#ifndef NDEBUG
+  Type *Ty = V->getType();
+  assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
+
+  if (auto *FVTy = dyn_cast<FixedVectorType>(Ty)) {
+    assert(
+        FVTy->getNumElements() == DemandedElts.getBitWidth() &&
+        "DemandedElt width should equal the fixed vector number of elements");
+  } else {
+    assert(DemandedElts == APInt(1, 1) &&
+           "DemandedElt width should be 1 for scalars");
+  }
+#endif
+
   if (auto *C = dyn_cast<Constant>(V)) {
     if (C->isNullValue())
       return false;
