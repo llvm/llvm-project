@@ -633,10 +633,10 @@ getBinOpsForFactorization(Instruction::BinaryOps TopOpcode, BinaryOperator *Op,
 
 /// This tries to simplify binary operations by factorizing out common terms
 /// (e. g. "(A*B)+(A*C)" -> "A*(B+C)").
-Value *InstCombinerImpl::tryFactorization(BinaryOperator &I,
-                                          Instruction::BinaryOps InnerOpcode,
-                                          Value *A, Value *B, Value *C,
-                                          Value *D) {
+static Value *tryFactorization(BinaryOperator &I, const SimplifyQuery &SQ,
+                               InstCombiner::BuilderTy &Builder,
+                               Instruction::BinaryOps InnerOpcode, Value *A,
+                               Value *B, Value *C, Value *D) {
   assert(A && B && C && D && "All values must be provided");
 
   Value *V = nullptr;
@@ -730,46 +730,58 @@ Value *InstCombinerImpl::tryFactorization(BinaryOperator &I,
   return RetVal;
 }
 
+Value *InstCombinerImpl::tryFactorizationFolds(BinaryOperator &I) {
+  Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
+  BinaryOperator *Op0 = dyn_cast<BinaryOperator>(LHS);
+  BinaryOperator *Op1 = dyn_cast<BinaryOperator>(RHS);
+  Instruction::BinaryOps TopLevelOpcode = I.getOpcode();
+  Value *A, *B, *C, *D;
+  Instruction::BinaryOps LHSOpcode, RHSOpcode;
+
+  if (Op0)
+    LHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op0, A, B);
+  if (Op1)
+    RHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op1, C, D);
+
+  // The instruction has the form "(A op' B) op (C op' D)".  Try to factorize
+  // a common term.
+  if (Op0 && Op1 && LHSOpcode == RHSOpcode)
+    if (Value *V = tryFactorization(I, SQ, Builder, LHSOpcode, A, B, C, D))
+      return V;
+
+  // The instruction has the form "(A op' B) op (C)".  Try to factorize common
+  // term.
+  if (Op0)
+    if (Value *Ident = getIdentityValue(LHSOpcode, RHS))
+      if (Value *V =
+              tryFactorization(I, SQ, Builder, LHSOpcode, A, B, RHS, Ident))
+        return V;
+
+  // The instruction has the form "(B) op (C op' D)".  Try to factorize common
+  // term.
+  if (Op1)
+    if (Value *Ident = getIdentityValue(RHSOpcode, LHS))
+      if (Value *V =
+              tryFactorization(I, SQ, Builder, RHSOpcode, LHS, Ident, C, D))
+        return V;
+
+  return nullptr;
+}
+
 /// This tries to simplify binary operations which some other binary operation
 /// distributes over either by factorizing out common terms
 /// (eg "(A*B)+(A*C)" -> "A*(B+C)") or expanding out if this results in
 /// simplifications (eg: "A & (B | C) -> (A&B) | (A&C)" if this is a win).
 /// Returns the simplified value, or null if it didn't simplify.
-Value *InstCombinerImpl::SimplifyUsingDistributiveLaws(BinaryOperator &I) {
+Value *InstCombinerImpl::foldUsingDistributiveLaws(BinaryOperator &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   BinaryOperator *Op0 = dyn_cast<BinaryOperator>(LHS);
   BinaryOperator *Op1 = dyn_cast<BinaryOperator>(RHS);
   Instruction::BinaryOps TopLevelOpcode = I.getOpcode();
 
-  {
-    // Factorization.
-    Value *A, *B, *C, *D;
-    Instruction::BinaryOps LHSOpcode, RHSOpcode;
-    if (Op0)
-      LHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op0, A, B);
-    if (Op1)
-      RHSOpcode = getBinOpsForFactorization(TopLevelOpcode, Op1, C, D);
-
-    // The instruction has the form "(A op' B) op (C op' D)".  Try to factorize
-    // a common term.
-    if (Op0 && Op1 && LHSOpcode == RHSOpcode)
-      if (Value *V = tryFactorization(I, LHSOpcode, A, B, C, D))
-        return V;
-
-    // The instruction has the form "(A op' B) op (C)".  Try to factorize common
-    // term.
-    if (Op0)
-      if (Value *Ident = getIdentityValue(LHSOpcode, RHS))
-        if (Value *V = tryFactorization(I, LHSOpcode, A, B, RHS, Ident))
-          return V;
-
-    // The instruction has the form "(B) op (C op' D)".  Try to factorize common
-    // term.
-    if (Op1)
-      if (Value *Ident = getIdentityValue(RHSOpcode, LHS))
-        if (Value *V = tryFactorization(I, RHSOpcode, LHS, Ident, C, D))
-          return V;
-  }
+  // Factorization.
+  if (Value *R = tryFactorizationFolds(I))
+    return R;
 
   // Expansion.
   if (Op0 && rightDistributesOverLeft(Op0->getOpcode(), TopLevelOpcode)) {
