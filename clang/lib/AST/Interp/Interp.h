@@ -213,6 +213,23 @@ bool BitOr(InterpState &S, CodePtr OpPC) {
 
 /// 1) Pops the RHS from the stack.
 /// 2) Pops the LHS from the stack.
+/// 3) Pushes 'LHS ^ RHS' on the stack
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool BitXor(InterpState &S, CodePtr OpPC) {
+  const T &RHS = S.Stk.pop<T>();
+  const T &LHS = S.Stk.pop<T>();
+
+  unsigned Bits = RHS.bitWidth();
+  T Result;
+  if (!T::bitXor(LHS, RHS, Bits, &Result)) {
+    S.Stk.push<T>(Result);
+    return true;
+  }
+  return false;
+}
+
+/// 1) Pops the RHS from the stack.
+/// 2) Pops the LHS from the stack.
 /// 3) Pushes 'LHS % RHS' on the stack (the remainder of dividing LHS by RHS).
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Rem(InterpState &S, CodePtr OpPC) {
