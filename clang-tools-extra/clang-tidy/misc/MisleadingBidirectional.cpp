@@ -75,7 +75,7 @@ static bool containsMisleadingBidi(StringRef Buffer,
       BidiContexts.push_back(PDI);
     // Close a PDI Context.
     else if (CodePoint == PDI) {
-      auto R = std::find(BidiContexts.rbegin(), BidiContexts.rend(), PDI);
+      auto R = llvm::find(llvm::reverse(BidiContexts), PDI);
       if (R != BidiContexts.rend())
         BidiContexts.resize(BidiContexts.rend() - R - 1);
     }
