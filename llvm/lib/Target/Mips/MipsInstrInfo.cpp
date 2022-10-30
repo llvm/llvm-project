@@ -68,7 +68,8 @@ MachineInstrBuilder MipsInstrInfo::insertNop(MachineBasicBlock &MBB,
          "insertNop does not support MIPS16e mode at this time");
   const unsigned MMOpc =
       Subtarget.hasMips32r6() ? Mips::SLL_MMR6 : Mips::SLL_MM;
-  const unsigned Opc = Subtarget.inMicroMipsMode() ? MMOpc : Mips::SLL;
+  const unsigned Opc =
+      Subtarget.inMicroMipsMode() ? MMOpc : (unsigned)Mips::SLL;
   return BuildMI(MBB, MI, DL, get(Opc), Mips::ZERO)
       .addReg(Mips::ZERO)
       .addImm(0);
