@@ -34,6 +34,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -174,32 +175,8 @@ static bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
 
   int NumElts =
       cast<FixedVectorType>(Shuf->getOperand(0)->getType())->getNumElements();
-  int NumMaskElts = cast<FixedVectorType>(Shuf->getType())->getNumElements();
-  DemandedLHS = DemandedRHS = APInt::getZero(NumElts);
-  if (DemandedElts.isZero())
-    return true;
-  // Simple case of a shuffle with zeroinitializer.
-  if (all_of(Shuf->getShuffleMask(), [](int Elt) { return Elt == 0; })) {
-    DemandedLHS.setBit(0);
-    return true;
-  }
-  for (int i = 0; i != NumMaskElts; ++i) {
-    if (!DemandedElts[i])
-      continue;
-    int M = Shuf->getMaskValue(i);
-    assert(M < (NumElts * 2) && "Invalid shuffle mask constant");
-
-    // For undef elements, we don't know anything about the common state of
-    // the shuffle result.
-    if (M == -1)
-      return false;
-    if (M < NumElts)
-      DemandedLHS.setBit(M % NumElts);
-    else
-      DemandedRHS.setBit(M % NumElts);
-  }
-
-  return true;
+  return llvm::getShuffleDemandedElts(NumElts, Shuf->getShuffleMask(),
+                                      DemandedElts, DemandedLHS, DemandedRHS);
 }
 
 static void computeKnownBits(const Value *V, const APInt &DemandedElts,
