@@ -47,7 +47,7 @@ static uint32_t maxProt(StringRef name) {
 static uint32_t flags(StringRef name) {
   // If we ever implement shared cache output support, SG_READ_ONLY should not
   // be used for dylibs that can be placed in it.
-  return name == segment_names::dataConst ? SG_READ_ONLY : 0;
+  return name == segment_names::dataConst ? (uint32_t)SG_READ_ONLY : 0;
 }
 
 size_t OutputSegment::numNonHiddenSections() const {
