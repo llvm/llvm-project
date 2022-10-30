@@ -171,31 +171,31 @@ TEST_F(BasicTest, getShuffleDemandedElts) {
 
   // broadcast zero
   EXPECT_TRUE(getShuffleDemandedElts(4, {0, 0, 0, 0}, APInt(4,0xf), LHS, RHS));
-  EXPECT_EQ(LHS.getZExtValue(), 0x1);
-  EXPECT_EQ(RHS.getZExtValue(), 0x0);
+  EXPECT_EQ(LHS.getZExtValue(), 0x1U);
+  EXPECT_EQ(RHS.getZExtValue(), 0x0U);
 
   // broadcast zero (with non-permitted undefs)
   EXPECT_FALSE(getShuffleDemandedElts(2, {0, -1}, APInt(2, 0x3), LHS, RHS));
 
   // broadcast zero (with permitted undefs)
   EXPECT_TRUE(getShuffleDemandedElts(3, {0, 0, -1}, APInt(3, 0x7), LHS, RHS, true));
-  EXPECT_EQ(LHS.getZExtValue(), 0x1);
-  EXPECT_EQ(RHS.getZExtValue(), 0x0);
+  EXPECT_EQ(LHS.getZExtValue(), 0x1U);
+  EXPECT_EQ(RHS.getZExtValue(), 0x0U);
 
   // broadcast one in demanded
   EXPECT_TRUE(getShuffleDemandedElts(4, {1, 1, 1, -1}, APInt(4, 0x7), LHS, RHS));
-  EXPECT_EQ(LHS.getZExtValue(), 0x2);
-  EXPECT_EQ(RHS.getZExtValue(), 0x0);
+  EXPECT_EQ(LHS.getZExtValue(), 0x2U);
+  EXPECT_EQ(RHS.getZExtValue(), 0x0U);
 
   // broadcast 7 in demanded
   EXPECT_TRUE(getShuffleDemandedElts(4, {7, 0, 7, 7}, APInt(4, 0xd), LHS, RHS));
-  EXPECT_EQ(LHS.getZExtValue(), 0x0);
-  EXPECT_EQ(RHS.getZExtValue(), 0x8);
+  EXPECT_EQ(LHS.getZExtValue(), 0x0U);
+  EXPECT_EQ(RHS.getZExtValue(), 0x8U);
 
   // general test
   EXPECT_TRUE(getShuffleDemandedElts(4, {4, 2, 7, 3}, APInt(4, 0xf), LHS, RHS));
-  EXPECT_EQ(LHS.getZExtValue(), 0xc);
-  EXPECT_EQ(RHS.getZExtValue(), 0x9);
+  EXPECT_EQ(LHS.getZExtValue(), 0xcU);
+  EXPECT_EQ(RHS.getZExtValue(), 0x9U);
 }
 
 TEST_F(BasicTest, getSplatIndex) {
