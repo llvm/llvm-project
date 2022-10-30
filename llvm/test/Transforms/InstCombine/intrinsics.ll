@@ -127,9 +127,7 @@ define <2 x i1> @cttz_knownbits_vec(<2 x i32> %arg) {
 
 define <vscale x 1 x i1> @cttz_knownbits_scalable_vec(<vscale x 1 x i32> %arg) {
 ; CHECK-LABEL: @cttz_knownbits_scalable_vec(
-; CHECK-NEXT:    [[OR:%.*]] = and <vscale x 1 x i32> [[ARG:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 27, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq <vscale x 1 x i32> [[OR]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 20, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
-; CHECK-NEXT:    ret <vscale x 1 x i1> [[RES]]
+; CHECK-NEXT:    ret <vscale x 1 x i1> zeroinitializer
 ;
   %or = or <vscale x 1 x i32> %arg, shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 4, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
   %cnt = call <vscale x 1 x i32> @llvm.cttz.nxv1i32(<vscale x 1 x i32> %or, i1 true) nounwind readnone
