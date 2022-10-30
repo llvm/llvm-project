@@ -946,6 +946,37 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
     }
 
     return true;
+  } else if (const auto *Ctor = dyn_cast<CXXConstructExpr>(Initializer)) {
+    const ConstantArrayType *CAT =
+        Ctx.getASTContext().getAsConstantArrayType(Ctor->getType());
+    assert(CAT);
+    size_t NumElems = CAT->getSize().getZExtValue();
+    const Function *Func = getFunction(Ctor->getConstructor());
+    if (!Func || !Func->isConstexpr())
+      return false;
+
+    // FIXME(perf): We're calling the constructor once per array element here,
+    //   in the old intepreter we had a special-case for trivial constructors.
+    for (size_t I = 0; I != NumElems; ++I) {
+      if (!this->emitDupPtr(Initializer))
+        return false;
+      if (!this->emitConstUint64(I, Initializer))
+        return false;
+      if (!this->emitAddOffsetUint64(Initializer))
+        return false;
+      if (!this->emitNarrowPtr(Initializer))
+        return false;
+
+      // Constructor arguments.
+      for (const auto *Arg : Ctor->arguments()) {
+        if (!this->visit(Arg))
+          return false;
+      }
+
+      if (!this->emitCall(Func, Initializer))
+        return false;
+    }
+    return true;
   }
 
   assert(false && "Unknown expression for array initialization");
