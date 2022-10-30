@@ -32,8 +32,6 @@ const char *getEdgeKindName(Edge::Kind R) {
     return "Branch26";
   case Pointer64:
     return "Pointer64";
-  case Pointer64Anon:
-    return "Pointer64Anon";
   case Page21:
     return "Page21";
   case PageOffset12:
