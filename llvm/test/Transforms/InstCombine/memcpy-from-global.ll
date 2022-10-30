@@ -380,13 +380,11 @@ define void @volatile_memcpy() {
   ret void
 }
 
-; Test that we don't yet elide a memcpy when copying a constant value onto the
-; stack and then forwarding it by readonly nocapture reference.
+; Test that we can elide a memcpy when copying a constant value onto the stack
+; and then forwarding it by readonly nocapture reference.
 define void @memcpy_to_nocapture_readonly() {
 ; CHECK-LABEL: @memcpy_to_nocapture_readonly(
-; CHECK-NEXT:    [[A:%.*]] = alloca [[U:%.*]], align 16
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(20) [[A]], ptr noundef nonnull align 16 dereferenceable(20) @H, i64 20, i1 false)
-; CHECK-NEXT:    call void @bar(ptr nocapture nonnull readonly [[A]])
+; CHECK-NEXT:    call void @bar(ptr nocapture nonnull readonly @H)
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 16
