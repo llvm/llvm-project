@@ -94,6 +94,10 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD);
 /// Checks that all fields are initialized after a constructor call.
 bool CheckCtorCall(InterpState &S, CodePtr OpPC, const Pointer &This);
 
+/// Checks if the shift operation is legal.
+template <typename RT>
+bool CheckShift(InterpState &S, CodePtr OpPC, const RT &RHS, unsigned Bits);
+
 /// Checks if Div/Rem operation on LHS and RHS is valid.
 template <typename T>
 bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
@@ -1180,21 +1184,8 @@ inline bool Shr(InterpState &S, CodePtr OpPC) {
   const auto &LHS = S.Stk.pop<LT>();
   const unsigned Bits = LHS.bitWidth();
 
-  if (RHS.isNegative()) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
+  if (!CheckShift<RT>(S, OpPC, RHS, Bits))
     return false;
-  }
-
-  // C++11 [expr.shift]p1: Shift width must be less than the bit width of
-  // the shifted type.
-  if (Bits > 1 && RHS >= RT::from(Bits, RHS.bitWidth())) {
-    const Expr *E = S.Current->getExpr(OpPC);
-    const APSInt Val = RHS.toAPSInt();
-    QualType Ty = E->getType();
-    S.CCEDiag(E, diag::note_constexpr_large_shift) << Val << Ty << Bits;
-    return false;
-  }
 
   unsigned URHS = static_cast<unsigned>(RHS);
   S.Stk.push<LT>(LT::from(static_cast<unsigned>(LHS) >> URHS, LHS.bitWidth()));
@@ -1209,21 +1200,8 @@ inline bool Shl(InterpState &S, CodePtr OpPC) {
   const auto &LHS = S.Stk.pop<LT>();
   const unsigned Bits = LHS.bitWidth();
 
-  if (RHS.isNegative()) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
+  if (!CheckShift<RT>(S, OpPC, RHS, Bits))
     return false;
-  }
-
-  // C++11 [expr.shift]p1: Shift width must be less than the bit width of
-  // the shifted type.
-  if (Bits > 1 && RHS >= RT::from(Bits, RHS.bitWidth())) {
-    const Expr *E = S.Current->getExpr(OpPC);
-    const APSInt Val = RHS.toAPSInt();
-    QualType Ty = E->getType();
-    S.CCEDiag(E, diag::note_constexpr_large_shift) << Val << Ty << Bits;
-    return false;
-  }
 
   unsigned URHS = static_cast<unsigned>(RHS);
   S.Stk.push<LT>(LT::from(static_cast<unsigned>(LHS) << URHS, LHS.bitWidth()));
