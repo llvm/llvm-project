@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Floating.h"
 #include "Function.h"
 #include "Opcode.h"
 #include "PrimType.h"

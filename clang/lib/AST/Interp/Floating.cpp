@@ -1,4 +1,4 @@
-//===--- PrimType.cpp - Types for the constexpr VM --------------*- C++ -*-===//
+//===---- Floating.cpp - Support for floating point values ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,21 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PrimType.h"
-#include "Boolean.h"
 #include "Floating.h"
-#include "Pointer.h"
-
-using namespace clang;
-using namespace clang::interp;
 
 namespace clang {
 namespace interp {
 
-size_t primSize(PrimType Type) {
-  TYPE_SWITCH(Type, return sizeof(T));
-  llvm_unreachable("not a primitive type");
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, Floating F) {
+  F.print(OS);
+  return OS;
 }
+
+Floating getSwappedBytes(Floating F) { return F; }
 
 } // namespace interp
 } // namespace clang

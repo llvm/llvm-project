@@ -21,32 +21,13 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "Primitives.h"
+
 namespace clang {
 namespace interp {
 
 using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
-
-/// Helper to compare two comparable types.
-template <typename T>
-ComparisonCategoryResult Compare(const T &X, const T &Y) {
-  if (X < Y)
-    return ComparisonCategoryResult::Less;
-  if (X > Y)
-    return ComparisonCategoryResult::Greater;
-  return ComparisonCategoryResult::Equal;
-}
-
-// Helper structure to select the representation.
-template <unsigned Bits, bool Signed> struct Repr;
-template <> struct Repr<8, false> { using Type = uint8_t; };
-template <> struct Repr<16, false> { using Type = uint16_t; };
-template <> struct Repr<32, false> { using Type = uint32_t; };
-template <> struct Repr<64, false> { using Type = uint64_t; };
-template <> struct Repr<8, true> { using Type = int8_t; };
-template <> struct Repr<16, true> { using Type = int16_t; };
-template <> struct Repr<32, true> { using Type = int32_t; };
-template <> struct Repr<64, true> { using Type = int64_t; };
 
 /// Wrapper around numeric types.
 ///
@@ -56,6 +37,16 @@ template <> struct Repr<64, true> { using Type = int64_t; };
 template <unsigned Bits, bool Signed> class Integral final {
 private:
   template <unsigned OtherBits, bool OtherSigned> friend class Integral;
+  // Helper structure to select the representation.
+  template <unsigned ReprBits, bool ReprSigned> struct Repr;
+  template <> struct Repr<8, false> { using Type = uint8_t; };
+  template <> struct Repr<16, false> { using Type = uint16_t; };
+  template <> struct Repr<32, false> { using Type = uint32_t; };
+  template <> struct Repr<64, false> { using Type = uint64_t; };
+  template <> struct Repr<8, true> { using Type = int8_t; };
+  template <> struct Repr<16, true> { using Type = int16_t; };
+  template <> struct Repr<32, true> { using Type = int32_t; };
+  template <> struct Repr<64, true> { using Type = int64_t; };
 
   // The primitive representing the integral.
   using ReprT = typename Repr<Bits, Signed>::Type;
