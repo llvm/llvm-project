@@ -5193,6 +5193,34 @@ TEST_F(FormatTest, MacroDefinitionsWithIncompleteCode) {
   verifyNoCrash("a={0,1\n#if a\n#else\n;\n#endif\n}");
   verifyNoCrash("#if a\na(\n#else\n#endif\n) a {a,b,c,d,f,g};");
   verifyNoCrash("#ifdef A\n a(\n #else\n #endif\n) = []() {      \n)}");
+  verifyNoCrash("#else\n"
+                "#else\n"
+                "#endif\n"
+                "#endif");
+  verifyNoCrash("#else\n"
+                "#if X\n"
+                "#endif\n"
+                "#endif");
+  verifyNoCrash("#else\n"
+                "#endif\n"
+                "#if X\n"
+                "#endif");
+  verifyNoCrash("#if X\n"
+                "#else\n"
+                "#else\n"
+                "#endif\n"
+                "#endif");
+  verifyNoCrash("#if X\n"
+                "#elif Y\n"
+                "#elif Y\n"
+                "#endif\n"
+                "#endif");
+  verifyNoCrash("#endif\n"
+                "#endif");
+  verifyNoCrash("#endif\n"
+                "#else");
+  verifyNoCrash("#endif\n"
+                "#elif Y");
 }
 
 TEST_F(FormatTest, MacrosWithoutTrailingSemicolon) {
