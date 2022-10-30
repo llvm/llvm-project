@@ -119,6 +119,7 @@ def ForOp : SCF_Op<"for",
       [AutomaticAllocationScope, DeclareOpInterfaceMethods<LoopLikeOpInterface,
        ["getSingleInductionVar", "getSingleLowerBound", "getSingleStep",
         "getSingleUpperBound"]>,
+       ConditionallySpeculatable,
        DeclareOpInterfaceMethods<RegionBranchOpInterface>,
        SingleBlockImplicitTerminator<"scf::YieldOp">,
        RecursiveMemoryEffects]> {
@@ -330,6 +331,12 @@ def ForOp : SCF_Op<"for",
     /// induction variable. LoopOp only has one region, so 0 is the only valid
     /// value for `index`.
     OperandRange getSuccessorEntryOperands(Optional<unsigned> index);
+
+    /// Returns the step as an `APInt` if it is constant.
+    Optional<APInt> getConstantStep();
+
+    /// Interface method for ConditionallySpeculatable.
+    Speculation::Speculatability getSpeculatability();
   }];
 
   let hasCanonicalizer = 1;
