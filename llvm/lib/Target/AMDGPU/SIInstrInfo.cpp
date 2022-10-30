@@ -7380,9 +7380,9 @@ MachineOperand *SIInstrInfo::getNamedOperand(MachineInstr &MI,
 
 uint64_t SIInstrInfo::getDefaultRsrcDataFormat() const {
   if (ST.getGeneration() >= AMDGPUSubtarget::GFX10) {
-    int64_t Format = ST.getGeneration() >= AMDGPUSubtarget::GFX11 ?
-                         AMDGPU::UfmtGFX11::UFMT_32_FLOAT :
-                         AMDGPU::UfmtGFX10::UFMT_32_FLOAT;
+    int64_t Format = ST.getGeneration() >= AMDGPUSubtarget::GFX11
+                         ? (int64_t)AMDGPU::UfmtGFX11::UFMT_32_FLOAT
+                         : (int64_t)AMDGPU::UfmtGFX10::UFMT_32_FLOAT;
     return (Format << 44) |
            (1ULL << 56) | // RESOURCE_LEVEL = 1
            (3ULL << 60); // OOB_SELECT = 3
