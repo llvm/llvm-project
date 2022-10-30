@@ -611,12 +611,15 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       } else {
         return common::visit(
             [&funcRef, &context, &FromInt64](const auto &str) -> Expr<T> {
-              using Char = typename std::decay_t<decltype(str)>::Result;
-              return FoldElementalIntrinsic<T, Char>(context,
+              using CharTy = typename std::decay_t<decltype(str)>::Result;
+              constexpr int charKind{CharTy::kind};
+              using MSVCWorkaround = Type<TypeCategory::Character, charKind>;
+              return FoldElementalIntrinsic<T, MSVCWorkaround>(context,
                   std::move(funcRef),
-                  ScalarFunc<T, Char>([&FromInt64](const Scalar<Char> &c) {
-                    return FromInt64(CharacterUtils<Char::kind>::ICHAR(c));
-                  }));
+                  ScalarFunc<T, MSVCWorkaround>(
+                      [&FromInt64](const Scalar<MSVCWorkaround> &c) {
+                        return FromInt64(CharacterUtils<charKind>::ICHAR(c));
+                      }));
             },
             someChar->u);
       }
