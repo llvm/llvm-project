@@ -972,25 +972,6 @@ def : InstRW<[WriteMicrocoded], (instrs FNINIT)>;
 
 //=== Integer MMX and XMM Instructions ===//
 
-// PACKSSWB/DW.
-// mm <- mm.
-def ZnWriteFPU12 : SchedWriteRes<[ZnFPU12]> ;
-def ZnWriteFPU12Y : SchedWriteRes<[ZnFPU12]> {
-  let NumMicroOps = 2;
-}
-def ZnWriteFPU12m : SchedWriteRes<[ZnAGU, ZnFPU12]> ;
-def ZnWriteFPU12Ym : SchedWriteRes<[ZnAGU, ZnFPU12]> {
-  let Latency = 8;
-  let NumMicroOps = 2;
-}
-
-def : InstRW<[ZnWriteFPU12], (instrs MMX_PACKSSDWrr,
-                                     MMX_PACKSSWBrr,
-                                     MMX_PACKUSWBrr)>;
-def : InstRW<[ZnWriteFPU12m], (instrs MMX_PACKSSDWrm,
-                                      MMX_PACKSSWBrm,
-                                      MMX_PACKUSWBrm)>;
-
 def ZnWriteFPU013 : SchedWriteRes<[ZnFPU013]> ;
 def ZnWriteFPU013Y : SchedWriteRes<[ZnFPU013]> {
   let Latency = 2;
