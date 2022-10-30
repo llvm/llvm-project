@@ -366,10 +366,12 @@ define void @memcpy_from_just_readonly(ptr readonly align 8 dereferenceable(124)
   ret void
 }
 
-; FIXME: Test that we incorrectly elide a volatile memcpy.
+; Test that we don't elide a volatile memcpy.
 define void @volatile_memcpy() {
 ; CHECK-LABEL: @volatile_memcpy(
-; CHECK-NEXT:    call void @bar(ptr nonnull @H) #[[ATTR3]]
+; CHECK-NEXT:    [[A:%.*]] = alloca [[U:%.*]], align 16
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[A]], ptr align 4 @H, i64 20, i1 true)
+; CHECK-NEXT:    call void @bar(ptr nonnull [[A]]) #[[ATTR3]]
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %U, align 16
