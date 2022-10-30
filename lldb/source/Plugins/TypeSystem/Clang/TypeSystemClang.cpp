@@ -3226,20 +3226,6 @@ bool TypeSystemClang::IsIntegerType(lldb::opaque_compiler_type_t type,
   return false;
 }
 
-bool TypeSystemClang::IsBooleanType(lldb::opaque_compiler_type_t type) {
-  if (!type)
-    return false;
-
-  clang::QualType qual_type(GetCanonicalQualType(type));
-  const clang::BuiltinType *builtin_type =
-      llvm::dyn_cast<clang::BuiltinType>(qual_type->getCanonicalTypeInternal());
-
-  if (!builtin_type)
-    return false;
-
-  return builtin_type->isBooleanType();
-}
-
 bool TypeSystemClang::IsEnumerationType(lldb::opaque_compiler_type_t type,
                                         bool &is_signed) {
   if (type) {
@@ -7593,18 +7579,6 @@ clang::VarDecl *TypeSystemClang::AddVariableToRecordType(
   return var_decl;
 }
 
-void TypeSystemClang::SetBoolInitializerForVariable(VarDecl *var, bool value) {
-  assert(!var->hasInit() && "variable already initialized");
-
-  QualType qt = var->getType();
-  assert(qt->isSpecificBuiltinType(BuiltinType::Bool) &&
-         "only boolean supported");
-
-  clang::ASTContext &ast = var->getASTContext();
-  var->setInit(CXXBoolLiteralExpr::Create(ast, value, qt.getUnqualifiedType(),
-                                          SourceLocation()));
-}
-
 void TypeSystemClang::SetIntegerInitializerForVariable(
     VarDecl *var, const llvm::APInt &init_value) {
   assert(!var->hasInit() && "variable already initialized");
@@ -7619,8 +7593,15 @@ void TypeSystemClang::SetIntegerInitializerForVariable(
     const EnumDecl *enum_decl = enum_type->getDecl();
     qt = enum_decl->getIntegerType();
   }
-  var->setInit(IntegerLiteral::Create(ast, init_value, qt.getUnqualifiedType(),
-                                      SourceLocation()));
+  // Bools are handled separately because the clang AST printer handles bools
+  // separately from other integral types.
+  if (qt->isSpecificBuiltinType(BuiltinType::Bool)) {
+    var->setInit(CXXBoolLiteralExpr::Create(
+        ast, !init_value.isZero(), qt.getUnqualifiedType(), SourceLocation()));
+  } else {
+    var->setInit(IntegerLiteral::Create(
+        ast, init_value, qt.getUnqualifiedType(), SourceLocation()));
+  }
 }
 
 void TypeSystemClang::SetFloatingInitializerForVariable(
