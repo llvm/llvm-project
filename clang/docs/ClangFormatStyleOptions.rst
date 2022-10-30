@@ -914,6 +914,7 @@ the configuration (without a prefix: ``Auto``).
 
 
       int abcdef; // aligned
+
     And with ``MaxEmptyLinesToKeep`` is 2 and ``OverEmptyLines`` is 1,
 
     .. code-block:: c++
