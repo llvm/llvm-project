@@ -362,7 +362,7 @@ private:
           else
             return TargetSymbolOrErr.takeError();
           Addend = TargetAddress - TargetSymbol->getAddress();
-          Kind = aarch64::Pointer64Anon;
+          Kind = aarch64::Pointer64;
           break;
         }
         case MachOPage21:
