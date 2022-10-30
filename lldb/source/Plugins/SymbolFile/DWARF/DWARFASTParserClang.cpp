@@ -2820,12 +2820,7 @@ void DWARFASTParserClang::ParseSingleMember(
         return;
       }
 
-      if (ct.IsBooleanType())
-        TypeSystemClang::SetBoolInitializerForVariable(
-            v, !const_value_or_err->isZero());
-      else
-        TypeSystemClang::SetIntegerInitializerForVariable(v,
-                                                          *const_value_or_err);
+      TypeSystemClang::SetIntegerInitializerForVariable(v, *const_value_or_err);
     }
     return;
   }
