@@ -611,15 +611,25 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
       } else {
         return common::visit(
             [&funcRef, &context, &FromInt64](const auto &str) -> Expr<T> {
-              using CharTy = typename std::decay_t<decltype(str)>::Result;
-              constexpr int charKind{CharTy::kind};
-              using MSVCWorkaround = Type<TypeCategory::Character, charKind>;
-              return FoldElementalIntrinsic<T, MSVCWorkaround>(context,
+              using Char = typename std::decay_t<decltype(str)>::Result;
+              return FoldElementalIntrinsic<T, Char>(context,
                   std::move(funcRef),
-                  ScalarFunc<T, MSVCWorkaround>(
-                      [&FromInt64](const Scalar<MSVCWorkaround> &c) {
-                        return FromInt64(CharacterUtils<charKind>::ICHAR(c));
+                  ScalarFunc<T, Char>(
+#ifndef _MSC_VER
+                      [&FromInt64](const Scalar<Char> &c) {
+                        return FromInt64(CharacterUtils<Char::kind>::ICHAR(c));
                       }));
+#else // _MSC_VER
+      // MSVC 14 get confused by the original code above and
+      // ends up emitting an error about passing a std::string
+      // to the std::u16string instantiation of
+      // CharacterUtils<2>::ICHAR(). Can't find a work-around,
+      // so remove the FromInt64 error checking lambda that
+      // seems to have caused the proble.
+                      [](const Scalar<Char> &c) {
+                        return CharacterUtils<Char::kind>::ICHAR(c);
+                      }));
+#endif // _MSC_VER
             },
             someChar->u);
       }
