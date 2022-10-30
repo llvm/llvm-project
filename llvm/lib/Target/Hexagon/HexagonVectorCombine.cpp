@@ -103,8 +103,6 @@ public:
   Constant *getFullValue(Type *Ty) const;
   Constant *getConstSplat(Type *Ty, int Val) const;
 
-  Value *simplify(Value *Val) const;
-
   Value *insertb(IRBuilderBase &Builder, Value *Dest, Value *Src, int Start,
                  int Length, int Where) const;
   Value *vlalignb(IRBuilderBase &Builder, Value *Lo, Value *Hi,
@@ -1549,14 +1547,6 @@ auto HexagonVectorCombine::getConstSplat(Type *Ty, int Val) const
   auto *Splat = ConstantVector::getSplat(VecTy->getElementCount(),
                                          ConstantInt::get(ElemTy, Val));
   return Splat;
-}
-
-auto HexagonVectorCombine::simplify(Value *V) const -> Value * {
-  if (auto *In = dyn_cast<Instruction>(V)) {
-    SimplifyQuery Q(DL, &TLI, &DT, &AC, In);
-    return simplifyInstruction(In, Q);
-  }
-  return nullptr;
 }
 
 // Insert bytes [Start..Start+Length) of Src into Dst at byte Where.
