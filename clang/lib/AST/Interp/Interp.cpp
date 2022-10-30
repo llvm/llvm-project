@@ -401,6 +401,27 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
   return false;
 }
 
+template <typename RT>
+bool CheckShift(InterpState &S, CodePtr OpPC, const RT &RHS, unsigned Bits) {
+  if (RHS.isNegative()) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
+    return false;
+  }
+
+  // C++11 [expr.shift]p1: Shift width must be less than the bit width of
+  // the shifted type.
+  if (Bits > 1 && RHS >= RT::from(Bits, RHS.bitWidth())) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    const APSInt Val = RHS.toAPSInt();
+    QualType Ty = E->getType();
+    S.CCEDiag(E, diag::note_constexpr_large_shift) << Val << Ty << Bits;
+    return false;
+  }
+
+  return true;
+}
+
 static void DiagnoseUninitializedSubobject(InterpState &S, const SourceInfo &SI,
                                            QualType SubObjType,
                                            SourceLocation SubObjLoc) {
