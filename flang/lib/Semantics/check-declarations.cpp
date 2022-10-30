@@ -493,6 +493,15 @@ void CheckHelper::CheckAssumedTypeEntity( // C709
 
 void CheckHelper::CheckObjectEntity(
     const Symbol &symbol, const ObjectEntityDetails &details) {
+  if (!IsAllocatableOrPointer(symbol)) { // C702
+    if (auto dyType{evaluate::DynamicType::From(symbol)}) {
+      if (dyType->HasDeferredTypeParameter()) {
+        messages_.Say(
+            "'%s' has a type %s with a deferred type parameter but is neither an allocatable or a pointer"_err_en_US,
+            symbol.name(), dyType->AsFortran());
+      }
+    }
+  }
   CheckArraySpec(symbol, details.shape());
   Check(details.shape());
   Check(details.coshape());

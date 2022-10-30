@@ -3975,25 +3975,6 @@ void DeclarationVisitor::CheckAccessibility(
 }
 
 void DeclarationVisitor::Post(const parser::TypeDeclarationStmt &) {
-  if (!GetAttrs().HasAny({Attr::POINTER, Attr::ALLOCATABLE})) { // C702
-    if (const auto *typeSpec{GetDeclTypeSpec()}) {
-      if (typeSpec->category() == DeclTypeSpec::Character) {
-        if (typeSpec->characterTypeSpec().length().isDeferred()) {
-          Say("The type parameter LEN cannot be deferred without"
-              " the POINTER or ALLOCATABLE attribute"_err_en_US);
-        }
-      } else if (const DerivedTypeSpec * derivedSpec{typeSpec->AsDerived()}) {
-        for (const auto &pair : derivedSpec->parameters()) {
-          if (pair.second.isDeferred()) {
-            Say(currStmtSource().value(),
-                "The value of type parameter '%s' cannot be deferred"
-                " without the POINTER or ALLOCATABLE attribute"_err_en_US,
-                pair.first);
-          }
-        }
-      }
-    }
-  }
   EndDecl();
 }
 
