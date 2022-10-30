@@ -27,12 +27,10 @@ class Boolean final {
   /// Underlying boolean.
   bool V;
 
-  /// Construct a wrapper from a boolean.
-  explicit Boolean(bool V) : V(V) {}
-
  public:
   /// Zero-initializes a boolean.
   Boolean() : V(false) {}
+  explicit Boolean(bool V) : V(V) {}
 
   bool operator<(Boolean RHS) const { return V < RHS.V; }
   bool operator>(Boolean RHS) const { return V > RHS.V; }
