@@ -945,12 +945,30 @@ void WhitespaceManager::alignTrailingComments() {
   unsigned StartOfSequence = 0;
   bool BreakBeforeNext = false;
   unsigned Newlines = 0;
+  unsigned int NewLineThreshold = 1;
+  if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Always)
+    NewLineThreshold = Style.AlignTrailingComments.OverEmptyLines + 1;
+
   for (unsigned i = 0, e = Changes.size(); i != e; ++i) {
     if (Changes[i].StartOfBlockComment)
       continue;
     Newlines += Changes[i].NewlinesBefore;
     if (!Changes[i].IsTrailingComment)
       continue;
+
+    if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Leave) {
+      auto OriginalSpaces =
+          Changes[i].OriginalWhitespaceRange.getEnd().getRawEncoding() -
+          Changes[i].OriginalWhitespaceRange.getBegin().getRawEncoding();
+      unsigned RestoredLineLength = Changes[i].StartOfTokenColumn +
+                                    Changes[i].TokenLength + OriginalSpaces;
+      // If leaving comments makes the line exceed the column limit, give up to
+      // leave the comments.
+      if (RestoredLineLength >= Style.ColumnLimit && Style.ColumnLimit != 0)
+        break;
+      Changes[i].Spaces = OriginalSpaces;
+      continue;
+    }
 
     unsigned ChangeMinColumn = Changes[i].StartOfTokenColumn;
     unsigned ChangeMaxColumn;
@@ -975,7 +993,7 @@ void WhitespaceManager::alignTrailingComments() {
                                   Changes[i - 1].Tok->is(tok::r_brace) &&
                                   Changes[i - 1].StartOfTokenColumn == 0;
     bool WasAlignedWithStartOfNextLine = false;
-    if (Changes[i].NewlinesBefore == 1) { // A comment on its own line.
+    if (Changes[i].NewlinesBefore >= 1) { // A comment on its own line.
       unsigned CommentColumn = SourceMgr.getSpellingColumnNumber(
           Changes[i].OriginalWhitespaceRange.getEnd());
       for (unsigned j = i + 1; j != e; ++j) {
@@ -992,12 +1010,13 @@ void WhitespaceManager::alignTrailingComments() {
         break;
       }
     }
-    if (!Style.AlignTrailingComments || FollowsRBraceInColumn0) {
+    if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Never ||
+        FollowsRBraceInColumn0) {
       alignTrailingComments(StartOfSequence, i, MinColumn);
       MinColumn = ChangeMinColumn;
       MaxColumn = ChangeMinColumn;
       StartOfSequence = i;
-    } else if (BreakBeforeNext || Newlines > 1 ||
+    } else if (BreakBeforeNext || Newlines > NewLineThreshold ||
                (ChangeMinColumn > MaxColumn || ChangeMaxColumn < MinColumn) ||
                // Break the comment sequence if the previous line did not end
                // in a trailing comment.
