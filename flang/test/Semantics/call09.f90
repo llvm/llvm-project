@@ -1,7 +1,7 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Test 15.5.2.9(2,3,5) dummy procedure requirements
 ! C843
-!   An entity with the INTENT attribute shall be a dummy data object or a 
+!   An entity with the INTENT attribute shall be a dummy data object or a
 !   dummy procedure pointer.
 
 module m
@@ -21,6 +21,9 @@ module m
   end subroutine
   subroutine s02(p)
     procedure(realfunc), pointer :: p
+  end subroutine
+  subroutine s02b(p)
+    procedure(real), pointer :: p
   end subroutine
   subroutine s03(p)
     procedure(realfunc) :: p
@@ -90,6 +93,16 @@ module m
     call s05(null())
     !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
     call s02(sin)
+    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
+    call s02b(realfunc)
+    call s02b(p) ! ok
+    !ERROR: Actual argument function associated with procedure dummy argument 'p=' has incompatible result type
+    call s02b(ip)
+    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
+    call s02b(procptr())
+    call s02b(null())
+    !ERROR: Actual argument associated with procedure pointer dummy argument 'p=' must be a POINTER unless INTENT(IN)
+    call s02b(sin)
   end subroutine
 
   subroutine callsub(s)
