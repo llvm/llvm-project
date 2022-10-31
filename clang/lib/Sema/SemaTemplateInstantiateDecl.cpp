@@ -1179,6 +1179,9 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
   if (Var->isStaticLocal())
     SemaRef.CheckStaticLocalForDllExport(Var);
 
+  if (Var->getTLSKind())
+    SemaRef.CheckThreadLocalForLargeAlignment(Var);
+
   return Var;
 }
 
