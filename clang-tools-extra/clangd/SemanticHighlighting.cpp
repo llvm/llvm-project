@@ -661,7 +661,9 @@ public:
   }
 
   bool VisitCXXMemberCallExpr(CXXMemberCallExpr *CE) {
-    if (isa<CXXDestructorDecl>(CE->getMethodDecl())) {
+    // getMethodDecl can return nullptr with member pointers, e.g.
+    // `(foo.*pointer_to_member_fun)(arg);`
+    if (isa_and_present<CXXDestructorDecl>(CE->getMethodDecl())) {
       if (auto *ME = dyn_cast<MemberExpr>(CE->getCallee())) {
         if (auto *TI = ME->getMemberNameInfo().getNamedTypeInfo()) {
           H.addExtraModifier(TI->getTypeLoc().getBeginLoc(),
