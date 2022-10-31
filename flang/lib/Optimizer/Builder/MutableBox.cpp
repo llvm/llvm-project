@@ -646,7 +646,18 @@ void fir::factory::associateMutableBoxWithRemap(
 
 void fir::factory::disassociateMutableBox(fir::FirOpBuilder &builder,
                                           mlir::Location loc,
-                                          const fir::MutableBoxValue &box) {
+                                          const fir::MutableBoxValue &box,
+                                          bool polymorphicSetType) {
+  if (box.isPolymorphic() && polymorphicSetType) {
+    // 7.3.2.3 point 7. The dynamic type of a disassociated pointer is the
+    // same as its declared type.
+    auto boxTy = box.getBoxTy().dyn_cast<fir::BaseBoxType>();
+    auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(boxTy.getEleTy());
+    if (auto recTy = eleTy.dyn_cast<fir::RecordType>())
+      fir::runtime::genNullifyDerivedType(builder, loc, box.getAddr(), recTy,
+                                          box.rank());
+    return;
+  }
   MutablePropertyWriter{builder, loc, box}.setUnallocatedStatus();
 }
 
