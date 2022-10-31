@@ -1349,6 +1349,18 @@ func.func @omp_single_allocate_nowait(%data_var: memref<i32>) {
   return
 }
 
+// CHECK-LABEL: func @omp_single_multiple_blocks
+func.func @omp_single_multiple_blocks() {
+  // CHECK: omp.single {
+  omp.single {
+    cf.br ^bb2
+    ^bb2:
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+  return
+}
+
 // CHECK-LABEL: @omp_task
 // CHECK-SAME: (%[[bool_var:.*]]: i1, %[[i64_var:.*]]: i64, %[[i32_var:.*]]: i32, %[[data_var:.*]]: memref<i32>)
 func.func @omp_task(%bool_var: i1, %i64_var: i64, %i32_var: i32, %data_var: memref<i32>) {
