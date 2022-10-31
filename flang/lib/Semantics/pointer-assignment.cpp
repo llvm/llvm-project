@@ -429,7 +429,9 @@ bool CheckPointerAssignment(evaluate::FoldingContext &context,
   }
   PointerAssignmentChecker checker{context, scope, *pointer};
   checker.set_isBoundsRemapping(isBoundsRemapping);
-  return checker.CheckLeftHandSide(lhs) & checker.Check(rhs);
+  bool lhsOk{checker.CheckLeftHandSide(lhs)};
+  bool rhsOk{checker.Check(rhs)};
+  return lhsOk && rhsOk; // don't short-circuit
 }
 
 bool CheckStructConstructorPointerComponent(evaluate::FoldingContext &context,
