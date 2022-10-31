@@ -100,8 +100,6 @@ lli_args = []
 # difficult to obtain on Windows.
 if re.search(r'cygwin|windows-gnu|windows-msvc', config.host_triple):
     lli_args = ['-mtriple=' + config.host_triple + '-elf']
-if re.search(r'^i.86', config.host_triple):
-    config.available_features.add('mcjit-ia32')
 
 llc_args = []
 
