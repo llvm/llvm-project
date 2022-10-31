@@ -430,10 +430,10 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
           "the PassManager): this can indicate a "
           "missing `dependentDialects` in a pass for example.");
 #endif // NDEBUG
-    // nullptr indicates that the dialect is currently being loaded.
-    impl.loadedDialects[dialectNamespace] = nullptr;
-    std::unique_ptr<Dialect> &dialect = impl.loadedDialects[dialectNamespace] =
-        ctor();
+    // loadedDialects entry is initialized to nullptr, indicating that the
+    // dialect is currently being loaded.
+    std::unique_ptr<Dialect> &dialect = impl.loadedDialects[dialectNamespace];
+    dialect = ctor();
     assert(dialect && "dialect ctor failed");
 
     // Refresh all the identifiers dialect field, this catches cases where a
