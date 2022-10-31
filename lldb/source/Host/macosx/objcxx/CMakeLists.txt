@@ -17,6 +17,7 @@ add_lldb_library(lldbHostMacOSXObjCXX
 
   LINK_LIBS
     lldbUtility
+    lldbPluginPlatformMacOSX
     ${EXTRA_LIBS}
 
   LINK_COMPONENTS
