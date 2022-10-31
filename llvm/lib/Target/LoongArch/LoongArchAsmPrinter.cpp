@@ -47,22 +47,36 @@ bool LoongArchAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   if (!AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS))
     return false;
 
-  // TODO: handle other extra codes if we have.
-  if (!ExtraCode) {
-    const MachineOperand &MO = MI->getOperand(OpNo);
-    switch (MO.getType()) {
-    case MachineOperand::MO_Immediate:
-      OS << MO.getImm();
-      return false;
-    case MachineOperand::MO_Register:
-      OS << '$' << LoongArchInstPrinter::getRegisterName(MO.getReg());
-      return false;
-    case MachineOperand::MO_GlobalAddress:
-      PrintSymbolOperand(MO, OS);
-      return false;
+  const MachineOperand &MO = MI->getOperand(OpNo);
+  if (ExtraCode && ExtraCode[0]) {
+    if (ExtraCode[1] != 0)
+      return true; // Unknown modifier.
+
+    switch (ExtraCode[0]) {
     default:
-      llvm_unreachable("not implemented");
+      return true; // Unknown modifier.
+    case 'z':      // Print $zero register if zero, regular printing otherwise.
+      if (MO.isImm() && MO.getImm() == 0) {
+        OS << '$' << LoongArchInstPrinter::getRegisterName(LoongArch::R0);
+        return false;
+      }
+      break;
+      // TODO: handle other extra codes if any.
     }
+  }
+
+  switch (MO.getType()) {
+  case MachineOperand::MO_Immediate:
+    OS << MO.getImm();
+    return false;
+  case MachineOperand::MO_Register:
+    OS << '$' << LoongArchInstPrinter::getRegisterName(MO.getReg());
+    return false;
+  case MachineOperand::MO_GlobalAddress:
+    PrintSymbolOperand(MO, OS);
+    return false;
+  default:
+    llvm_unreachable("not implemented");
   }
 
   return true;
