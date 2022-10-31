@@ -1307,6 +1307,8 @@ bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
              Kind == FunctionDecl::TK_FunctionTemplate;
     };
     const auto *FD2 = dyn_cast<FunctionDecl>(D2);
+    (void)IsExpectedEntity;
+    (void)FD2;
     assert(IsExpectedEntity(FD1) && FD2 && IsExpectedEntity(FD2) &&
            "use non-instantiated function declaration for constraints partial "
            "ordering");
