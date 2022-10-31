@@ -522,7 +522,7 @@ func.func @semiaffine_simplification_floordiv_and_ceildiv(%arg0: index, %arg1: i
 
 // Test simplification of product expressions.
 // CHECK-DAG:   #[[$PRODUCT:.*]] = affine_map<()[s0, s1, s2, s3, s4] -> (s3 + s4 + (s0 - s1) * s2)>
-// CHECK-DAG:   #[[$SUM_OF_PRODUCTS:.*]] = affine_map<()[s0, s1, s2, s3, s4] -> (s2 * s0 + s2 + s3 * s0 + s3 * s1 + s3 + s4 * s1 + s4)>
+// CHECK-DAG:   #[[$SUM_OF_PRODUCTS:.*]] = affine_map<()[s0, s1, s2, s3, s4] -> (s2 + s2 * s0 + s3 + s3 * s0 + s3 * s1 + s4 + s4 * s1)>
 // CHECK-LABEL: func @semiaffine_simplification_product
 // CHECK-SAME:  (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[ARG2:.*]]: index, %[[ARG3:.*]]: index, %[[ARG4:.*]]: index, %[[ARG5:.*]]: index)
 func.func @semiaffine_simplification_product(%arg0: index, %arg1: index, %arg2: index, %arg3: index, %arg4: index, %arg5: index) -> (index, index) {
@@ -547,3 +547,13 @@ func.func @semi_affine_simplification_euclidean_lemma(%arg0: index, %arg1: index
 // CHECK-NEXT: %[[ZERO:.*]] = arith.constant 0 : index
 // CHECK-NEXT: %[[RESULT:.*]] = affine.apply #[[$SIMPLIFIED_MAP]]()[%[[ARG2]], %[[ARG3]], %[[ARG0]], %[[ARG1]]]
 // CHECK-NEXT: return %[[ZERO]], %[[RESULT]]
+
+// -----
+
+// CHECK-DAG: #[[$MAP:.*]] = affine_map<()[s0] -> (s0 mod 2 + (s0 floordiv 2) * s0)>
+// CHECK-LABEL: func @semiaffine_modulo
+func.func @semiaffine_modulo(%arg0: index) -> index {
+  %a = affine.apply affine_map<()[s0] -> (s0 mod 2 + (s0 floordiv 2) * s0)> ()[%arg0]
+  // CHECK: affine.apply #[[$MAP]]()[%{{.*}}]
+  return %a : index
+}
