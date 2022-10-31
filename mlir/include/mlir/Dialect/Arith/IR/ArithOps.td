@@ -71,7 +71,7 @@ class Arith_FloatUnaryOp<string mnemonic, list<Trait> traits = []> :
     Arguments<(ins FloatLike:$operand,
       DefaultValuedAttr<Arith_FastMathAttr, "FastMathFlags::none">:$fastmath)>,
     Results<(outs FloatLike:$result)> {
-  let assemblyFormat = [{ $operand custom<ArithFastMathAttr>($fastmath)
+  let assemblyFormat = [{ $operand (`fastmath` `` $fastmath^)?
                           attr-dict `:` type($result) }];
 }
 
@@ -83,7 +83,7 @@ class Arith_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
     Arguments<(ins FloatLike:$lhs, FloatLike:$rhs,
       DefaultValuedAttr<Arith_FastMathAttr, "FastMathFlags::none">:$fastmath)>,
     Results<(outs FloatLike:$result)> {
-  let assemblyFormat = [{ $lhs `,` $rhs `` custom<ArithFastMathAttr>($fastmath)
+  let assemblyFormat = [{ $lhs `,` $rhs (`fastmath` `` $fastmath^)?
                           attr-dict `:` type($result) }];
 }
 
