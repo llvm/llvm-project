@@ -1591,7 +1591,7 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
     auto Phi = cast<PHINode>(I);
     auto NewPhi =
         PHINode::Create(Phi->getType(), Incoming.size(),
-                        Phi->getName() + ".moved", &FirstGuardBlock->back());
+                        Phi->getName() + ".moved", &FirstGuardBlock->front());
     for (auto *In : Incoming) {
       Value *V = UndefValue::get(Phi->getType());
       if (In == Out) {
@@ -1612,7 +1612,7 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
   }
 }
 
-using BBPredicates = DenseMap<BasicBlock *, PHINode *>;
+using BBPredicates = DenseMap<BasicBlock *, Instruction *>;
 using BBSetVector = SetVector<BasicBlock *>;
 
 // Redirects the terminator of the incoming block to the first guard
@@ -1683,30 +1683,60 @@ static void setupBranchForGuard(SmallVectorImpl<BasicBlock *> &GuardBlocks,
   GuardBlocks.pop_back();
 }
 
-// Capture the existing control flow as guard predicates, and redirect
-// control flow from \p Incoming block through the \p GuardBlocks to the
-// \p Outgoing blocks.
-//
-// There is one guard predicate for each outgoing block OutBB. The
-// predicate represents whether the hub should transfer control flow
-// to OutBB. These predicates are NOT ORTHOGONAL. The Hub evaluates
-// them in the same order as the Outgoing set-vector, and control
-// branches to the first outgoing block whose predicate evaluates to true.
-static void
-convertToGuardPredicates(SmallVectorImpl<BasicBlock *> &GuardBlocks,
-                         SmallVectorImpl<WeakVH> &DeletionCandidates,
-                         const BBSetVector &Incoming,
-                         const BBSetVector &Outgoing, const StringRef Prefix) {
-  BBPredicates GuardPredicates;
-  auto F = Incoming.front()->getParent();
+/// We are using one integer to represent the block we are branching to. Then at
+/// each guard block, the predicate was calcuated using a simple `icmp eq`.
+static void calcPredicateUsingInteger(
+    const BBSetVector &Incoming, const BBSetVector &Outgoing,
+    SmallVectorImpl<BasicBlock *> &GuardBlocks, BBPredicates &GuardPredicates) {
+  auto &Context = Incoming.front()->getContext();
+  auto FirstGuardBlock = GuardBlocks.front();
+
+  auto Phi = PHINode::Create(Type::getInt32Ty(Context), Incoming.size(),
+                             "merged.bb.idx", FirstGuardBlock);
+
+  for (auto In : Incoming) {
+    Value *Condition;
+    BasicBlock *Succ0;
+    BasicBlock *Succ1;
+    std::tie(Condition, Succ0, Succ1) =
+        redirectToHub(In, FirstGuardBlock, Outgoing);
+    Value *IncomingId = nullptr;
+    if (Succ0 && Succ1) {
+      // target_bb_index = Condition ? index_of_succ0 : index_of_succ1.
+      auto Succ0Iter = find(Outgoing, Succ0);
+      auto Succ1Iter = find(Outgoing, Succ1);
+      Value *Id0 = ConstantInt::get(Type::getInt32Ty(Context),
+                                    std::distance(Outgoing.begin(), Succ0Iter));
+      Value *Id1 = ConstantInt::get(Type::getInt32Ty(Context),
+                                    std::distance(Outgoing.begin(), Succ1Iter));
+      IncomingId = SelectInst::Create(Condition, Id0, Id1, "target.bb.idx",
+                                      In->getTerminator());
+    } else {
+      // Get the index of the non-null successor.
+      auto SuccIter = Succ0 ? find(Outgoing, Succ0) : find(Outgoing, Succ1);
+      IncomingId = ConstantInt::get(Type::getInt32Ty(Context),
+                                    std::distance(Outgoing.begin(), SuccIter));
+    }
+    Phi->addIncoming(IncomingId, In);
+  }
+
+  for (int i = 0, e = Outgoing.size() - 1; i != e; ++i) {
+    auto Out = Outgoing[i];
+    auto Cmp = ICmpInst::Create(Instruction::ICmp, ICmpInst::ICMP_EQ, Phi,
+                                ConstantInt::get(Type::getInt32Ty(Context), i),
+                                Out->getName() + ".predicate", GuardBlocks[i]);
+    GuardPredicates[Out] = Cmp;
+  }
+}
+
+/// We record the predicate of each outgoing block using a phi of boolean.
+static void calcPredicateUsingBooleans(
+    const BBSetVector &Incoming, const BBSetVector &Outgoing,
+    SmallVectorImpl<BasicBlock *> &GuardBlocks, BBPredicates &GuardPredicates,
+    SmallVectorImpl<WeakVH> &DeletionCandidates) {
   auto &Context = Incoming.front()->getContext();
   auto BoolTrue = ConstantInt::getTrue(Context);
   auto BoolFalse = ConstantInt::getFalse(Context);
-
-  for (int i = 0, e = Outgoing.size() - 1; i != e; ++i)
-    GuardBlocks.push_back(
-        BasicBlock::Create(F->getContext(), Prefix + ".guard", F));
-
   auto FirstGuardBlock = GuardBlocks.front();
 
   // The predicate for the last outgoing is trivially true, and so we
@@ -1738,7 +1768,7 @@ convertToGuardPredicates(SmallVectorImpl<BasicBlock *> &GuardBlocks,
     bool OneSuccessorDone = false;
     for (int i = 0, e = Outgoing.size() - 1; i != e; ++i) {
       auto Out = Outgoing[i];
-      auto Phi = GuardPredicates[Out];
+      PHINode *Phi = cast<PHINode>(GuardPredicates[Out]);
       if (Out != Succ0 && Out != Succ1) {
         Phi->addIncoming(BoolFalse, In);
       } else if (!Succ0 || !Succ1 || OneSuccessorDone) {
@@ -1758,13 +1788,48 @@ convertToGuardPredicates(SmallVectorImpl<BasicBlock *> &GuardBlocks,
       }
     }
   }
+}
+
+// Capture the existing control flow as guard predicates, and redirect
+// control flow from \p Incoming block through the \p GuardBlocks to the
+// \p Outgoing blocks.
+//
+// There is one guard predicate for each outgoing block OutBB. The
+// predicate represents whether the hub should transfer control flow
+// to OutBB. These predicates are NOT ORTHOGONAL. The Hub evaluates
+// them in the same order as the Outgoing set-vector, and control
+// branches to the first outgoing block whose predicate evaluates to true.
+static void
+convertToGuardPredicates(SmallVectorImpl<BasicBlock *> &GuardBlocks,
+                         SmallVectorImpl<WeakVH> &DeletionCandidates,
+                         const BBSetVector &Incoming,
+                         const BBSetVector &Outgoing, const StringRef Prefix,
+                         Optional<unsigned> MaxControlFlowBooleans) {
+  BBPredicates GuardPredicates;
+  auto F = Incoming.front()->getParent();
+
+  for (int i = 0, e = Outgoing.size() - 1; i != e; ++i)
+    GuardBlocks.push_back(
+        BasicBlock::Create(F->getContext(), Prefix + ".guard", F));
+
+  // When we are using an integer to record which target block to jump to, we
+  // are creating less live values, actually we are using one single integer to
+  // store the index of the target block. When we are using booleans to store
+  // the branching information, we need (N-1) boolean values, where N is the
+  // number of outgoing block.
+  if (!MaxControlFlowBooleans || Outgoing.size() <= *MaxControlFlowBooleans)
+    calcPredicateUsingBooleans(Incoming, Outgoing, GuardBlocks, GuardPredicates,
+                               DeletionCandidates);
+  else
+    calcPredicateUsingInteger(Incoming, Outgoing, GuardBlocks, GuardPredicates);
+
   setupBranchForGuard(GuardBlocks, Outgoing, GuardPredicates);
 }
 
 BasicBlock *llvm::CreateControlFlowHub(
     DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
     const BBSetVector &Incoming, const BBSetVector &Outgoing,
-    const StringRef Prefix) {
+    const StringRef Prefix, Optional<unsigned> MaxControlFlowBooleans) {
   if (Outgoing.size() < 2)
     return Outgoing.front();
 
@@ -1779,7 +1844,7 @@ BasicBlock *llvm::CreateControlFlowHub(
 
   SmallVector<WeakVH, 8> DeletionCandidates;
   convertToGuardPredicates(GuardBlocks, DeletionCandidates, Incoming, Outgoing,
-                           Prefix);
+                           Prefix, MaxControlFlowBooleans);
   auto FirstGuardBlock = GuardBlocks.front();
   
   // Update the PHINodes in each outgoing block to match the new control flow.
