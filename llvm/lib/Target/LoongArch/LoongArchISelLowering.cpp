@@ -239,11 +239,11 @@ SDValue LoongArchTargetLowering::lowerFRAMEADDR(SDValue Op,
   }
 
   // Currently only support lowering frame address for current frame.
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
-  assert((Depth == 0) &&
-         "Frame address can only be determined for current frame.");
-  if (Depth != 0)
+  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() != 0) {
+    DAG.getContext()->emitError(
+        "frame address can only be determined for the current frame");
     return SDValue();
+  }
 
   MachineFunction &MF = DAG.getMachineFunction();
   MF.getFrameInfo().setFrameAddressIsTaken(true);
@@ -259,11 +259,11 @@ SDValue LoongArchTargetLowering::lowerRETURNADDR(SDValue Op,
     return SDValue();
 
   // Currently only support lowering return address for current frame.
-  unsigned Depth = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
-  assert((Depth == 0) &&
-         "Return address can only be determined for current frame.");
-  if (Depth != 0)
+  if (cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() != 0) {
+    DAG.getContext()->emitError(
+        "return address can only be determined for the current frame");
     return SDValue();
+  }
 
   MachineFunction &MF = DAG.getMachineFunction();
   MF.getFrameInfo().setReturnAddressIsTaken(true);
