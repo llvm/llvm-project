@@ -17,6 +17,8 @@ using namespace lldb_private;
 using namespace lldb;
 using namespace llvm;
 
+static constexpr size_t g_num_log_messages = 100;
+
 void Diagnostics::Initialize() {
   lldbassert(!InstanceImpl() && "Already initialized.");
   InstanceImpl().emplace();
@@ -27,6 +29,8 @@ void Diagnostics::Terminate() {
   InstanceImpl().reset();
 }
 
+bool Diagnostics::Enabled() { return InstanceImpl().operator bool(); }
+
 Optional<Diagnostics> &Diagnostics::InstanceImpl() {
   static Optional<Diagnostics> g_diagnostics;
   return g_diagnostics;
@@ -34,7 +38,7 @@ Optional<Diagnostics> &Diagnostics::InstanceImpl() {
 
 Diagnostics &Diagnostics::Instance() { return *InstanceImpl(); }
 
-Diagnostics::Diagnostics() {}
+Diagnostics::Diagnostics() : m_log_handler(g_num_log_messages) {}
 
 Diagnostics::~Diagnostics() {}
 
@@ -58,8 +62,7 @@ bool Diagnostics::Dump(raw_ostream &stream, const FileSpec &dir) {
   stream << "LLDB diagnostics will be written to " << dir.GetPath() << "\n";
   stream << "Please include the directory content when filing a bug report\n";
 
-  Error error = Create(dir);
-  if (error) {
+  if (Error error = Create(dir)) {
     stream << toString(std::move(error)) << '\n';
     return false;
   }
@@ -77,9 +80,27 @@ llvm::Expected<FileSpec> Diagnostics::CreateUniqueDirectory() {
 }
 
 Error Diagnostics::Create(const FileSpec &dir) {
+  if (Error err = DumpDiangosticsLog(dir))
+    return err;
+
   for (Callback c : m_callbacks) {
     if (Error err = c(dir))
       return err;
   }
+
   return Error::success();
+}
+
+llvm::Error Diagnostics::DumpDiangosticsLog(const FileSpec &dir) const {
+  FileSpec log_file = dir.CopyByAppendingPathComponent("diagnostics.log");
+  std::error_code ec;
+  llvm::raw_fd_ostream stream(log_file.GetPath(), ec, llvm::sys::fs::OF_None);
+  if (ec)
+    return errorCodeToError(ec);
+  m_log_handler.Dump(stream);
+  return Error::success();
+}
+
+void Diagnostics::Report(llvm::StringRef message) {
+  m_log_handler.Emit(message);
 }
