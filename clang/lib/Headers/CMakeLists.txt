@@ -144,6 +144,7 @@ set(x86_files
   avx512vpopcntdqvlintrin.h
   avxifmaintrin.h
   avxintrin.h
+  avxneconvertintrin.h
   avxvnniint8intrin.h
   avxvnniintrin.h
   bmi2intrin.h

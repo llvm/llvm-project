@@ -5234,6 +5234,34 @@ let TargetPrefix = "x86" in {
                           Intrinsic<[], [llvm_i8_ty, llvm_i8_ty, llvm_i8_ty],
                                     [ImmArg<ArgIndex<0>>,
                                     ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>]>;
+def int_x86_vbcstnebf162ps128 : ClangBuiltin<"__builtin_ia32_vbcstnebf162ps128">,
+        Intrinsic<[llvm_v4f32_ty], [llvm_ptr_ty], [IntrReadMem]>;
+def int_x86_vbcstnebf162ps256 : ClangBuiltin<"__builtin_ia32_vbcstnebf162ps256">,
+        Intrinsic<[llvm_v8f32_ty], [llvm_ptr_ty], [IntrReadMem]>;
+def int_x86_vbcstnesh2ps128 : ClangBuiltin<"__builtin_ia32_vbcstnesh2ps128">,
+        Intrinsic<[llvm_v4f32_ty], [llvm_ptr_ty], [IntrReadMem]>;
+def int_x86_vbcstnesh2ps256 : ClangBuiltin<"__builtin_ia32_vbcstnesh2ps256">,
+        Intrinsic<[llvm_v8f32_ty], [llvm_ptr_ty], [IntrReadMem]>;
+def int_x86_vcvtneebf162ps128 : ClangBuiltin<"__builtin_ia32_vcvtneebf162ps128">,
+        Intrinsic<[llvm_v4f32_ty], [llvm_ptr_ty], [IntrReadMem]>;
+def int_x86_vcvtneebf162ps256 : ClangBuiltin<"__builtin_ia32_vcvtneebf162ps256">,
+        Intrinsic<[llvm_v8f32_ty], [llvm_ptr_ty], [IntrReadMem]>;
+def int_x86_vcvtneeph2ps128 : ClangBuiltin<"__builtin_ia32_vcvtneeph2ps128">,
+        Intrinsic<[llvm_v4f32_ty], [llvm_ptr_ty], [IntrReadMem]>;
+def int_x86_vcvtneeph2ps256 : ClangBuiltin<"__builtin_ia32_vcvtneeph2ps256">,
+        Intrinsic<[llvm_v8f32_ty], [llvm_ptr_ty], [IntrReadMem]>;
+def int_x86_vcvtneobf162ps128 : ClangBuiltin<"__builtin_ia32_vcvtneobf162ps128">,
+        Intrinsic<[llvm_v4f32_ty], [llvm_ptr_ty], [IntrReadMem]>;
+def int_x86_vcvtneobf162ps256 : ClangBuiltin<"__builtin_ia32_vcvtneobf162ps256">,
+        Intrinsic<[llvm_v8f32_ty], [llvm_ptr_ty], [IntrReadMem]>;
+def int_x86_vcvtneoph2ps128 : ClangBuiltin<"__builtin_ia32_vcvtneoph2ps128">,
+        Intrinsic<[llvm_v4f32_ty], [llvm_ptr_ty], [IntrReadMem]>;
+def int_x86_vcvtneoph2ps256 : ClangBuiltin<"__builtin_ia32_vcvtneoph2ps256">,
+        Intrinsic<[llvm_v8f32_ty], [llvm_ptr_ty], [IntrReadMem]>;
+def int_x86_vcvtneps2bf16128 : ClangBuiltin<"__builtin_ia32_vcvtneps2bf16128">,
+        Intrinsic<[llvm_v8bf16_ty], [llvm_v4f32_ty], [ IntrNoMem ]>;
+def int_x86_vcvtneps2bf16256 : ClangBuiltin<"__builtin_ia32_vcvtneps2bf16256">,
+        Intrinsic<[llvm_v8bf16_ty], [llvm_v8f32_ty], [ IntrNoMem ]>;
 }
 //===----------------------------------------------------------------------===//
 // RAO-INT intrinsics

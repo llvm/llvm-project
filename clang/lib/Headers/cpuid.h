@@ -210,6 +210,7 @@
 
 /* Features in %edx for leaf 7 sub-leaf 1 */
 #define bit_AVXVNNIINT8   0x00000010
+#define bit_AVXNECONVERT  0x00000020
 #define bit_PREFETCHI     0x00004000
 
 /* Features in %eax for leaf 13 sub-leaf 1 */

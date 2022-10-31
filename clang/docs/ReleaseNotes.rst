@@ -662,6 +662,14 @@ X86 Support in Clang
   * Support intrinsic of ``_mm(256)_dpbssd(s)_epi32``.
   * Support intrinsic of ``_mm(256)_dpbsud(s)_epi32``.
   * Support intrinsic of ``_mm(256)_dpbuud(s)_epi32``.
+- Support ISA of ``AVX-NE-CONVERT``.
+  * Support intrinsic of ``_mm(256)_bcstnebf16_ps``.
+  * Support intrinsic of ``_mm(256)_bcstnesh_ps``.
+  * Support intrinsic of ``_mm(256)_cvtneebf16_ps``.
+  * Support intrinsic of ``_mm(256)_cvtneeph_ps``.
+  * Support intrinsic of ``_mm(256)_cvtneobf16_ps``.
+  * Support intrinsic of ``_mm(256)_cvtneoph_ps``.
+  * Support intrinsic of ``_mm(256)_cvtneps_avx_pbh``.
 
 WebAssembly Support in Clang
 ----------------------------
