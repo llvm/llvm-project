@@ -1521,6 +1521,19 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
+add_fp_unittest(
+  pow_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    pow_test.cpp
+  DEPENDS
+  libc.include.errno
+  libc.src.errno.errno
+  libc.src.math.pow
+)
+
 add_subdirectory(generic)
 add_subdirectory(exhaustive)
 add_subdirectory(differential_testing)
