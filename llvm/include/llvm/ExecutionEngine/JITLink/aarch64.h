@@ -481,8 +481,14 @@ constexpr uint64_t PointerSize = 8;
 /// AArch64 null pointer content.
 extern const char NullPointerContent[PointerSize];
 
-/// AArch64 PLT stub content.
-extern const uint8_t StubContent[8];
+/// AArch64 pointer jump stub content.
+///
+/// Contains the instruction sequence for an indirect jump via an in-memory
+/// pointer:
+///   ADRP x16, ptr@page21
+///   LDR  x16, [x16, ptr@pageoff12]
+///   BR   x16
+extern const char PointerJumpStubContent[12];
 
 /// Creates a new pointer block in the given section and returns an
 /// Anonymous symobl pointing to it.
@@ -502,6 +508,33 @@ inline Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
   if (InitialTarget)
     B.addEdge(Pointer64, 0, *InitialTarget, InitialAddend);
   return G.addAnonymousSymbol(B, 0, 8, false, false);
+}
+
+/// Create a jump stub block that jumps via the pointer at the given symbol.
+///
+/// The stub block will have the following default values:
+///   alignment: 32-bit
+///   alignment-offset: 0
+///   address: highest allowable: (~11U)
+inline Block &createPointerJumpStubBlock(LinkGraph &G, Section &StubSection,
+                                         Symbol &PointerSymbol) {
+  auto &B = G.createContentBlock(StubSection, PointerJumpStubContent,
+                                 orc::ExecutorAddr(~uint64_t(11)), 1, 0);
+  B.addEdge(Page21, 0, PointerSymbol, 0);
+  B.addEdge(PageOffset12, 4, PointerSymbol, 0);
+  return B;
+}
+
+/// Create a jump stub that jumps via the pointer at the given symbol and
+/// an anonymous symbol pointing to it. Return the anonymous symbol.
+///
+/// The stub block will be created by createPointerJumpStubBlock.
+inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
+                                              Section &StubSection,
+                                              Symbol &PointerSymbol) {
+  return G.addAnonymousSymbol(
+      createPointerJumpStubBlock(G, StubSection, PointerSymbol), 0,
+      sizeof(PointerJumpStubContent), true, false);
 }
 
 /// Global Offset Table Builder.
@@ -586,12 +619,8 @@ public:
   }
 
   Symbol &createEntry(LinkGraph &G, Symbol &Target) {
-    auto &StubContentBlock = G.createContentBlock(
-        getStubsSection(G), getStubBlockContent(), orc::ExecutorAddr(), 1, 0);
-    // Re-use GOT entries for stub targets.
-    auto &GOTEntrySymbol = GOT.getEntryForTarget(G, Target);
-    StubContentBlock.addEdge(aarch64::LDRLiteral19, 0, GOTEntrySymbol, 0);
-    return G.addAnonymousSymbol(StubContentBlock, 0, 8, true, false);
+    return createAnonymousPointerJumpStub(G, getStubsSection(G),
+                                          GOT.getEntryForTarget(G, Target));
   }
 
 public:
@@ -600,10 +629,6 @@ public:
       StubsSection = &G.createSection(getSectionName(),
                                       orc::MemProt::Read | orc::MemProt::Exec);
     return *StubsSection;
-  }
-
-  ArrayRef<char> getStubBlockContent() {
-    return {reinterpret_cast<const char *>(StubContent), sizeof(StubContent)};
   }
 
   GOTTableManager &GOT;

@@ -21,9 +21,10 @@ namespace aarch64 {
 const char NullPointerContent[8] = {0x00, 0x00, 0x00, 0x00,
                                     0x00, 0x00, 0x00, 0x00};
 
-const uint8_t StubContent[8] = {
-    0x10, 0x00, 0x00, 0x58, // LDR x16, <literal>
-    0x00, 0x02, 0x1f, 0xd6  // BR  x16
+const char PointerJumpStubContent[12] = {
+    0x10, 0x00, 0x00, (char)0x90u, // ADRP x16, <imm>@page21
+    0x10, 0x02, 0x40, (char)0xf9u, // LDR x16, [x16, <imm>@pageoff12]
+    0x00, 0x02, 0x1f, (char)0xd6u  // BR  x16
 };
 
 const char *getEdgeKindName(Edge::Kind R) {
