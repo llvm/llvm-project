@@ -15,6 +15,7 @@
 
 #include "flang/Frontend/CodeGenOptions.h"
 #include "flang/Frontend/FrontendOptions.h"
+#include "flang/Frontend/LangOptions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
 #include "flang/Lower/LoweringOptions.h"
@@ -78,6 +79,9 @@ class CompilerInvocation : public CompilerInvocationBase {
   /// Options controlling IRgen and the backend.
   Fortran::frontend::CodeGenOptions codeGenOpts;
 
+  /// Options controlling language dialect.
+  Fortran::frontend::LangOptions langOpts;
+
   // Semantics context
   std::unique_ptr<Fortran::semantics::SemanticsContext> semanticsContext;
 
@@ -139,6 +143,9 @@ public:
 
   CodeGenOptions &getCodeGenOpts() { return codeGenOpts; }
   const CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
+
+  LangOptions &getLangOpts() { return langOpts; }
+  const LangOptions &getLangOpts() const { return langOpts; }
 
   Fortran::lower::LoweringOptions &getLoweringOpts() { return loweringOpts; }
   const Fortran::lower::LoweringOptions &getLoweringOpts() const {

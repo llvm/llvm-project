@@ -80,6 +80,31 @@ void Flang::AddPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
   }
 }
 
+static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
+                                    ArgStringList &CmdArgs) {
+  StringRef FPContract;
+
+  if (const Arg *A = Args.getLastArg(options::OPT_ffp_contract)) {
+    const StringRef Val = A->getValue();
+    if (Val == "fast" || Val == "off") {
+      FPContract = Val;
+    } else if (Val == "on") {
+      // Warn instead of error because users might have makefiles written for
+      // gfortran (which accepts -ffp-contract=on)
+      D.Diag(diag::warn_drv_unsupported_option_for_flang)
+          << Val << A->getOption().getName() << "off";
+      FPContract = "off";
+    } else
+      // Clang's "fast-honor-pragmas" option is not supported because it is
+      // non-standard
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getOption().getName() << Val;
+  }
+
+  if (!FPContract.empty())
+    CmdArgs.push_back(Args.MakeArgString("-ffp-contract=" + FPContract));
+}
+
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
@@ -141,6 +166,9 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -fPIC and related options.
   AddPicOptions(Args, CmdArgs);
+
+  // Floating point related options
+  addFloatingPointOptions(D, Args, CmdArgs);
 
   // Handle options which are simply forwarded to -fc1.
   forwardOptions(Args, CmdArgs);
