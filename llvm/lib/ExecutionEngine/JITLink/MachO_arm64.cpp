@@ -332,7 +332,7 @@ private:
           if ((Instr & 0x7fffffff) != 0x14000000)
             return make_error<JITLinkError>("BRANCH26 target is not a B or BL "
                                             "instruction with a zero addend");
-          Kind = aarch64::Branch26;
+          Kind = aarch64::Branch26PCRel;
           break;
         }
         case MachOPointer32:
@@ -366,8 +366,8 @@ private:
           break;
         }
         case MachOPage21:
-        case MachOTLVPage21:
-        case MachOGOTPage21: {
+        case MachOGOTPage21:
+        case MachOTLVPage21: {
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
             TargetSymbol = TargetSymbolOrErr->GraphSymbol;
           else
@@ -380,10 +380,10 @@ private:
 
           if (*MachORelocKind == MachOPage21) {
             Kind = aarch64::Page21;
-          } else if (*MachORelocKind == MachOTLVPage21) {
-            Kind = aarch64::TLVPage21;
           } else if (*MachORelocKind == MachOGOTPage21) {
-            Kind = aarch64::GOTPage21;
+            Kind = aarch64::RequestGOTAndTransformToPage21;
+          } else if (*MachORelocKind == MachOTLVPage21) {
+            Kind = aarch64::RequestTLVPAndTransformToPage21;
           }
           break;
         }
@@ -400,8 +400,8 @@ private:
           Kind = aarch64::PageOffset12;
           break;
         }
-        case MachOTLVPageOffset12:
-        case MachOGOTPageOffset12: {
+        case MachOGOTPageOffset12:
+        case MachOTLVPageOffset12: {
           if (auto TargetSymbolOrErr = findSymbolByIndex(RI.r_symbolnum))
             TargetSymbol = TargetSymbolOrErr->GraphSymbol;
           else
@@ -412,10 +412,10 @@ private:
                                             "immediate instruction with a zero "
                                             "addend");
 
-          if (*MachORelocKind == MachOTLVPageOffset12) {
-            Kind = aarch64::TLVPageOffset12;
-          } else if (*MachORelocKind == MachOGOTPageOffset12) {
-            Kind = aarch64::GOTPageOffset12;
+          if (*MachORelocKind == MachOGOTPageOffset12) {
+            Kind = aarch64::RequestGOTAndTransformToPageOffset12;
+          } else if (*MachORelocKind == MachOTLVPageOffset12) {
+            Kind = aarch64::RequestTLVPAndTransformToPageOffset12;
           }
           break;
         }
@@ -425,7 +425,7 @@ private:
           else
             return TargetSymbolOrErr.takeError();
 
-          Kind = aarch64::Delta32ToGOT;
+          Kind = aarch64::RequestGOTAndTransformToDelta32;
           break;
         case MachODelta32:
         case MachODelta64: {

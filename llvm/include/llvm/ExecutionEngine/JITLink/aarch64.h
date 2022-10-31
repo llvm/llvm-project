@@ -21,25 +21,272 @@ namespace llvm {
 namespace jitlink {
 namespace aarch64 {
 
+/// Represents aarch64 fixups and other aarch64-specific edge kinds.
 enum EdgeKind_aarch64 : Edge::Kind {
-  Branch26 = Edge::FirstRelocation,
+
+  /// A plain 64-bit pointer value relocation.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target + Addend : uint64
+  ///
+  Pointer64 = Edge::FirstRelocation,
+
+  /// A plain 32-bit pointer value relocation.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target + Addend : uint32
+  ///
+  /// Errors:
+  ///   - The target must reside in the low 32-bits of the address space,
+  ///     otherwise an out-of-range error will be returned.
+  ///
   Pointer32,
-  Pointer64,
-  Page21,
-  PageOffset12,
-  MoveWide16,
-  GOTPage21,
-  GOTPageOffset12,
-  TLVPage21,
-  TLVPageOffset12,
-  TLSDescPage21,
-  TLSDescPageOffset12,
-  Delta32ToGOT,
-  LDRLiteral19,
-  Delta32,
+
+  /// A 64-bit delta.
+  ///
+  /// Delta from the fixup to the target.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target - Fixup + Addend : int64
+  ///
   Delta64,
-  NegDelta32,
+
+  /// A 32-bit delta.
+  ///
+  /// Delta from the fixup to the target.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Target - Fixup + Addend : int64
+  ///
+  /// Errors:
+  ///   - The result of the fixup expression must fit into an int32, otherwise
+  ///     an out-of-range error will be returned.
+  ///
+  Delta32,
+
+  /// A 64-bit negative delta.
+  ///
+  /// Delta from target back to the fixup.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Fixup - Target + Addend : int64
+  ///
   NegDelta64,
+
+  /// A 32-bit negative delta.
+  ///
+  /// Delta from the target back to the fixup.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- Fixup - Target + Addend : int32
+  ///
+  /// Errors:
+  ///   - The result of the fixup expression must fit into an int32, otherwise
+  ///     an out-of-range error will be returned.
+  NegDelta32,
+
+  /// A 26-bit PC-relative branch.
+  ///
+  /// Represents a PC-relative call or branch to a target within +/-128Mb. The
+  /// target must be 32-bit aligned.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target - Fixup + Addend) >> 2 : int26
+  ///
+  /// Notes:
+  ///   The '26' in the name refers to the number operand bits and follows the
+  /// naming convention used by the corresponding ELF and MachO relocations.
+  /// Since the low two bits must be zero (because of the 32-bit alignment of
+  /// the target) the operand is effectively a signed 28-bit number.
+  ///
+  ///
+  /// Errors:
+  ///   - The result of the unshifted part of the fixup expression must be
+  ///     32-bit aligned otherwise an alignment error will be returned.
+  ///   - The result of the fixup expression must fit into an int26 otherwise an
+  ///     out-of-range error will be returned.
+  Branch26PCRel,
+
+  /// A 16-bit slice of the target address (which slice depends on the
+  /// instruction at the fixup location).
+  ///
+  /// Used to fix up MOVK/MOVN/MOVZ instructions.
+  ///
+  /// Fixup expression:
+  ///
+  ///   Fixup <- (Target + Addend) >> Shift : uint16
+  ///
+  ///   where Shift is encoded in the instruction at the fixup location.
+  ///
+  MoveWide16,
+
+  /// The signed 21-bit delta from the fixup to the target.
+  ///
+  /// Typically used to load a pointers at a PC-relative offset of +/- 1Mb. The
+  /// target must be 32-bit aligned.
+  ///
+  /// Fixup expression:
+  ///
+  ///   Fixup <- (Target - Fixup) >> 2 : int19
+  ///
+  /// Errors:
+  ///   - The result of the unshifted part of the fixup expression must be
+  ///     32-bit aligned otherwise an alignment error will be returned.
+  ///   - The result of the fixup expression must fit into an an int19 or an
+  ///     out-of-range error will be returned.
+  LDRLiteral19,
+
+  /// The signed 21-bit delta from the fixup page to the page containing the
+  /// target.
+  ///
+  /// Fixup expression:
+  ///
+  ///   Fixup <- (((Target + Addend) & ~0xfff) - (Fixup & ~0xfff)) >> 12 : int21
+  ///
+  /// Notes:
+  ///   For ADRP fixups.
+  ///
+  /// Errors:
+  ///   - The result of the fixup expression must fit into an int21 otherwise an
+  ///     out-of-range error will be returned.
+  Page21,
+
+  /// The 12-bit (potentially shifted) offset of the target within its page.
+  ///
+  /// Typically used to fix up LDR immediates.
+  ///
+  /// Fixup expression:
+  ///
+  ///   Fixup <- ((Target + Addend) >> Shift) & 0xfff : uint12
+  ///
+  ///   where Shift is encoded in the size field of the instruction.
+  ///
+  /// Errors:
+  ///   - The result of the unshifted part of the fixup expression must be
+  ///     aligned otherwise an alignment error will be returned.
+  ///   - The result of the fixup expression must fit into a uint12 otherwise an
+  ///     out-of-range error will be returned.
+  PageOffset12,
+
+  /// A GOT entry getter/constructor, transformed to Page21 pointing at the GOT
+  /// entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a Page21 targeting
+  /// the GOT entry for the edge's current target, maintaining the same addend.
+  /// A GOT entry for the target should be created if one does not already
+  /// exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestGOTAndTransformToPage21,
+
+  /// A GOT entry getter/constructor, transformed to Pageoffset12 pointing at
+  /// the GOT entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a PageOffset12
+  /// targeting the GOT entry for the edge's current target, maintaining the
+  /// same addend. A GOT entry for the target should be created if one does not
+  /// already exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestGOTAndTransformToPageOffset12,
+
+  /// A GOT entry getter/constructor, transformed to Delta32 pointing at the GOT
+  /// entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a Delta32/ targeting
+  /// the GOT entry for the edge's current target, maintaining the same addend.
+  /// A GOT entry for the target should be created if one does not already
+  /// exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT builder pass inserted by
+  /// default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestGOTAndTransformToDelta32,
+
+  /// A TLVP entry getter/constructor, transformed to Page21.
+  ///
+  /// Indicates that this edge should be transformed into a Page21 targeting the
+  /// TLVP entry for the edge's current target. A TLVP entry for the target
+  /// should be created if one does not already exist.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestTLVPAndTransformToPage21,
+
+  /// A TLVP entry getter/constructor, transformed to PageOffset12.
+  ///
+  /// Indicates that this edge should be transformed into a PageOffset12
+  /// targeting the TLVP entry for the edge's current target. A TLVP entry for
+  /// the target should be created if one does not already exist.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestTLVPAndTransformToPageOffset12,
+
+  /// A TLSDesc entry getter/constructor, transformed to Page21.
+  ///
+  /// Indicates that this edge should be transformed into a Page21 targeting the
+  /// TLSDesc entry for the edge's current target. A TLSDesc entry for the
+  /// target should be created if one does not already exist.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestTLSDescEntryAndTransformToPage21,
+
+  /// A TLSDesc entry getter/constructor, transformed to PageOffset12.
+  ///
+  /// Indicates that this edge should be transformed into a PageOffset12
+  /// targeting the TLSDesc entry for the edge's current target. A TLSDesc entry
+  /// for the target should be created if one does not already exist.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestTLSDescEntryAndTransformToPageOffset12,
 };
 
 /// Returns a string name for the given aarch64 edge. For debugging purposes
@@ -101,14 +348,45 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
   orc::ExecutorAddr FixupAddress = B.getAddress() + E.getOffset();
 
   switch (E.getKind()) {
-  case Branch26: {
+  case Pointer64: {
+    uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
+    *(ulittle64_t *)FixupPtr = Value;
+    break;
+  }
+  case Pointer32: {
+    uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
+    if (Value > std::numeric_limits<uint32_t>::max())
+      return makeTargetOutOfRangeError(G, B, E);
+    *(ulittle32_t *)FixupPtr = Value;
+    break;
+  }
+  case Delta32:
+  case Delta64:
+  case NegDelta32:
+  case NegDelta64: {
+    int64_t Value;
+    if (E.getKind() == Delta32 || E.getKind() == Delta64)
+      Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
+    else
+      Value = FixupAddress - E.getTarget().getAddress() + E.getAddend();
+
+    if (E.getKind() == Delta32 || E.getKind() == NegDelta32) {
+      if (Value < std::numeric_limits<int32_t>::min() ||
+          Value > std::numeric_limits<int32_t>::max())
+        return makeTargetOutOfRangeError(G, B, E);
+      *(little32_t *)FixupPtr = Value;
+    } else
+      *(little64_t *)FixupPtr = Value;
+    break;
+  }
+  case Branch26PCRel: {
     assert((FixupAddress.getValue() & 0x3) == 0 &&
            "Branch-inst is not 32-bit aligned");
 
     int64_t Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
 
     if (static_cast<uint64_t>(Value) & 0x3)
-      return make_error<JITLinkError>("Branch26 target is not 32-bit "
+      return make_error<JITLinkError>("BranchPCRel26 target is not 32-bit "
                                       "aligned");
 
     if (Value < -(1 << 27) || Value > ((1 << 27) - 1))
@@ -120,55 +398,6 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
     uint32_t Imm = (static_cast<uint32_t>(Value) & ((1 << 28) - 1)) >> 2;
     uint32_t FixedInstr = RawInstr | Imm;
     *(little32_t *)FixupPtr = FixedInstr;
-    break;
-  }
-  case Pointer32: {
-    uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
-    if (Value > std::numeric_limits<uint32_t>::max())
-      return makeTargetOutOfRangeError(G, B, E);
-    *(ulittle32_t *)FixupPtr = Value;
-    break;
-  }
-  case Pointer64: {
-    uint64_t Value = E.getTarget().getAddress().getValue() + E.getAddend();
-    *(ulittle64_t *)FixupPtr = Value;
-    break;
-  }
-  case Page21: {
-    assert((E.getKind() != GOTPage21 || E.getAddend() == 0) &&
-           "GOTPAGE21 with non-zero addend");
-    uint64_t TargetPage =
-        (E.getTarget().getAddress().getValue() + E.getAddend()) &
-        ~static_cast<uint64_t>(4096 - 1);
-    uint64_t PCPage =
-        FixupAddress.getValue() & ~static_cast<uint64_t>(4096 - 1);
-
-    int64_t PageDelta = TargetPage - PCPage;
-    if (!isInt<33>(PageDelta))
-      return makeTargetOutOfRangeError(G, B, E);
-
-    uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
-    assert((RawInstr & 0xffffffe0) == 0x90000000 &&
-           "RawInstr isn't an ADRP instruction");
-    uint32_t ImmLo = (static_cast<uint64_t>(PageDelta) >> 12) & 0x3;
-    uint32_t ImmHi = (static_cast<uint64_t>(PageDelta) >> 14) & 0x7ffff;
-    uint32_t FixedInstr = RawInstr | (ImmLo << 29) | (ImmHi << 5);
-    *(ulittle32_t *)FixupPtr = FixedInstr;
-    break;
-  }
-  case PageOffset12: {
-    uint64_t TargetOffset =
-        (E.getTarget().getAddress() + E.getAddend()).getValue() & 0xfff;
-
-    uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
-    unsigned ImmShift = getPageOffset12Shift(RawInstr);
-
-    if (TargetOffset & ((1 << ImmShift) - 1))
-      return make_error<JITLinkError>("PAGEOFF12 target is not aligned");
-
-    uint32_t EncodedImm = (TargetOffset >> ImmShift) << 10;
-    uint32_t FixedInstr = RawInstr | EncodedImm;
-    *(ulittle32_t *)FixupPtr = FixedInstr;
     break;
   }
   case MoveWide16: {
@@ -202,35 +431,40 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
     *(ulittle32_t *)FixupPtr = FixedInstr;
     break;
   }
-  case Delta32:
-  case Delta64:
-  case NegDelta32:
-  case NegDelta64: {
-    int64_t Value;
-    if (E.getKind() == Delta32 || E.getKind() == Delta64)
-      Value = E.getTarget().getAddress() - FixupAddress + E.getAddend();
-    else
-      Value = FixupAddress - E.getTarget().getAddress() + E.getAddend();
+  case Page21: {
+    uint64_t TargetPage =
+        (E.getTarget().getAddress().getValue() + E.getAddend()) &
+        ~static_cast<uint64_t>(4096 - 1);
+    uint64_t PCPage =
+        FixupAddress.getValue() & ~static_cast<uint64_t>(4096 - 1);
 
-    if (E.getKind() == Delta32 || E.getKind() == NegDelta32) {
-      if (Value < std::numeric_limits<int32_t>::min() ||
-          Value > std::numeric_limits<int32_t>::max())
-        return makeTargetOutOfRangeError(G, B, E);
-      *(little32_t *)FixupPtr = Value;
-    } else
-      *(little64_t *)FixupPtr = Value;
+    int64_t PageDelta = TargetPage - PCPage;
+    if (!isInt<33>(PageDelta))
+      return makeTargetOutOfRangeError(G, B, E);
+
+    uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
+    assert((RawInstr & 0xffffffe0) == 0x90000000 &&
+           "RawInstr isn't an ADRP instruction");
+    uint32_t ImmLo = (static_cast<uint64_t>(PageDelta) >> 12) & 0x3;
+    uint32_t ImmHi = (static_cast<uint64_t>(PageDelta) >> 14) & 0x7ffff;
+    uint32_t FixedInstr = RawInstr | (ImmLo << 29) | (ImmHi << 5);
+    *(ulittle32_t *)FixupPtr = FixedInstr;
     break;
   }
-  case TLVPage21:
-  case TLVPageOffset12:
-  case TLSDescPage21:
-  case TLSDescPageOffset12:
-  case GOTPage21:
-  case GOTPageOffset12:
-  case Delta32ToGOT: {
-    return make_error<JITLinkError>(
-        "In graph " + G.getName() + ", section " + B.getSection().getName() +
-        "GOT/TLV edge kinds not lowered: " + getEdgeKindName(E.getKind()));
+  case PageOffset12: {
+    uint64_t TargetOffset =
+        (E.getTarget().getAddress() + E.getAddend()).getValue() & 0xfff;
+
+    uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
+    unsigned ImmShift = getPageOffset12Shift(RawInstr);
+
+    if (TargetOffset & ((1 << ImmShift) - 1))
+      return make_error<JITLinkError>("PAGEOFF12 target is not aligned");
+
+    uint32_t EncodedImm = (TargetOffset >> ImmShift) << 10;
+    uint32_t FixedInstr = RawInstr | EncodedImm;
+    *(ulittle32_t *)FixupPtr = FixedInstr;
+    break;
   }
   default:
     return make_error<JITLinkError>(
@@ -281,13 +515,13 @@ public:
     const char *FixupPtr = BlockWorkingMem + E.getOffset();
 
     switch (E.getKind()) {
-    case aarch64::GOTPage21:
-    case aarch64::TLVPage21: {
+    case aarch64::RequestGOTAndTransformToPage21:
+    case aarch64::RequestTLVPAndTransformToPage21: {
       KindToSet = aarch64::Page21;
       break;
     }
-    case aarch64::GOTPageOffset12:
-    case aarch64::TLVPageOffset12: {
+    case aarch64::RequestGOTAndTransformToPageOffset12:
+    case aarch64::RequestTLVPAndTransformToPageOffset12: {
       KindToSet = aarch64::PageOffset12;
       uint32_t RawInstr = *(const support::ulittle32_t *)FixupPtr;
       (void)RawInstr;
@@ -297,7 +531,7 @@ public:
              "RawInstr isn't a 64-bit LDR immediate");
       break;
     }
-    case aarch64::Delta32ToGOT: {
+    case aarch64::RequestGOTAndTransformToDelta32: {
       KindToSet = aarch64::Delta32;
       break;
     }
@@ -339,7 +573,7 @@ public:
   static StringRef getSectionName() { return "$__STUBS"; }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
-    if (E.getKind() == aarch64::Branch26 && !E.getTarget().isDefined()) {
+    if (E.getKind() == aarch64::Branch26PCRel && !E.getTarget().isDefined()) {
       DEBUG_WITH_TYPE("jitlink", {
         dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "
                << B->getFixupAddress(E) << " (" << B->getAddress() << " + "
