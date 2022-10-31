@@ -113,14 +113,14 @@ merge.2:
   ret i1 %merge.cond.2
 }
 
-; if (x && !y) ret 42; ret 3
+; if (x && !y) ret 42; ret 3 --> if (!x || y) ret 3; ret 42
 
 define i32 @logical_and_not(i1 %x, i1 %y) {
 ; CHECK-LABEL: @logical_and_not(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[NOTY:%.*]] = xor i1 [[Y:%.*]], true
-; CHECK-NEXT:    [[AND:%.*]] = select i1 [[X:%.*]], i1 [[NOTY]], i1 false
-; CHECK-NEXT:    br i1 [[AND]], label [[T:%.*]], label [[F:%.*]]
+; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[NOT_X]], i1 true, i1 [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[TMP0]], label [[F:%.*]], label [[T:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i32 42
 ; CHECK:       f:
@@ -138,7 +138,7 @@ f:
   ret i32 3
 }
 
-; if (x && y || !x) ret 3; ret 42
+; if (x && y || !x) ret 3; ret 42 --> if (!x || y) ret 3; ret 42
 
 define i32 @logical_and_or(i1 %x, i1 %y) {
 ; CHECK-LABEL: @logical_and_or(

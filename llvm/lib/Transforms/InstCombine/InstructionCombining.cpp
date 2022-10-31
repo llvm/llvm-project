@@ -3180,11 +3180,20 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
 
   // Change br (not X), label True, label False to: br X, label False, True
   Value *Cond = BI.getCondition();
-  Value *X = nullptr;
+  Value *X;
   if (match(Cond, m_Not(m_Value(X))) && !isa<Constant>(X)) {
     // Swap Destinations and condition...
     BI.swapSuccessors();
     return replaceOperand(BI, 0, X);
+  }
+
+  // br (X && !Y), T, F --> br ((X && Y) || !X), F, T
+  Value *Y;
+  if (isa<SelectInst>(Cond) &&
+      match(Cond, m_OneUse(m_LogicalAnd(m_Value(X), m_Not(m_Value(Y)))))) {
+    Value *AndOr = Builder.CreateSelect(X, Y, Builder.getTrue());
+    BI.swapSuccessors();
+    return replaceOperand(BI, 0, AndOr);
   }
 
   // If the condition is irrelevant, remove the use so that other
