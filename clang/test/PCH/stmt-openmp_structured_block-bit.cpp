@@ -13,7 +13,7 @@ void test() {
 // expected-no-diagnostics
 
 // CHECK: TranslationUnitDecl 0x{{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK:  -FunctionDecl 0x{{.*}} <{{.*}}stmt-openmp_structured_block-bit.cpp:8:1, line:11:1> line:8:6 {{(test|imported test)}} 'void ()'
+// CHECK: `-FunctionDecl 0x{{.*}} <{{.*}}stmt-openmp_structured_block-bit.cpp:8:1, line:11:1> line:8:6 {{(test|imported test)}} 'void ()'
 // CHECK-NEXT:   `-CompoundStmt 0x{{.*}} <col:13, line:11:1>
 // CHECK-NEXT:     `-OMPParallelDirective 0x{{.*}} <line:9:1, col:21>
 // CHECK-NEXT:       `-CapturedStmt 0x{{.*}} <line:10:3>

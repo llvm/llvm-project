@@ -29,7 +29,7 @@ namespace {
   }
 }
 
-//CHECK:      |-NamespaceDecl {{.*}} <{{.*}}:22:1,
+//CHECK:      |-NamespaceDecl
 //CHECK-NEXT: | |-VarDecl {{.*}} f1n '_Float16'
 //CHECK-NEXT: | |-VarDecl {{.*}} f2n '_Float16' cinit
 //CHECK-NEXT: | | `-FloatingLiteral {{.*}} '_Float16' 3.300000e+01
