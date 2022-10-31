@@ -147,19 +147,25 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
   return Result;
 }
 
-bool AAResults::pointsToConstantMemory(const MemoryLocation &Loc,
-                                       bool OrLocal) {
+ModRefInfo AAResults::getModRefInfoMask(const MemoryLocation &Loc,
+                                        bool IgnoreLocals) {
   SimpleAAQueryInfo AAQIP(*this);
-  return pointsToConstantMemory(Loc, AAQIP, OrLocal);
+  return getModRefInfoMask(Loc, AAQIP, IgnoreLocals);
 }
 
-bool AAResults::pointsToConstantMemory(const MemoryLocation &Loc,
-                                       AAQueryInfo &AAQI, bool OrLocal) {
-  for (const auto &AA : AAs)
-    if (AA->pointsToConstantMemory(Loc, AAQI, OrLocal))
-      return true;
+ModRefInfo AAResults::getModRefInfoMask(const MemoryLocation &Loc,
+                                        AAQueryInfo &AAQI, bool IgnoreLocals) {
+  ModRefInfo Result = ModRefInfo::ModRef;
 
-  return false;
+  for (const auto &AA : AAs) {
+    Result &= AA->getModRefInfoMask(Loc, AAQI, IgnoreLocals);
+
+    // Early-exit the moment we reach the bottom of the lattice.
+    if (isNoModRef(Result))
+      return ModRefInfo::NoModRef;
+  }
+
+  return Result;
 }
 
 ModRefInfo AAResults::getArgModRefInfo(const CallBase *Call, unsigned ArgIdx) {
@@ -253,10 +259,11 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
 
   Result &= ArgMR | OtherMR;
 
-  // If Loc is a constant memory location, the call definitely could not
+  // Apply the ModRef mask. This ensures that if Loc is a constant memory
+  // location, we take into account the fact that the call definitely could not
   // modify the memory location.
-  if (isModSet(Result) && pointsToConstantMemory(Loc, AAQI, /*OrLocal*/ false))
-    Result &= ModRefInfo::Ref;
+  if (!isNoModRef(Result))
+    Result &= getModRefInfoMask(Loc);
 
   return Result;
 }
@@ -510,9 +517,11 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
     if (AR == AliasResult::NoAlias)
       return ModRefInfo::NoModRef;
 
-    // If the pointer is a pointer to constant memory, then it could not have
-    // been modified by this store.
-    if (pointsToConstantMemory(Loc, AAQI))
+    // Examine the ModRef mask. If Mod isn't present, then return NoModRef.
+    // This ensures that if Loc is a constant memory location, we take into
+    // account the fact that the store definitely could not modify the memory
+    // location.
+    if (!isModSet(getModRefInfoMask(Loc)))
       return ModRefInfo::NoModRef;
   }
 
@@ -529,10 +538,11 @@ ModRefInfo AAResults::getModRefInfo(const FenceInst *S,
 ModRefInfo AAResults::getModRefInfo(const FenceInst *S,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
-  // If we know that the location is a constant memory location, the fence
-  // cannot modify this location.
-  if (Loc.Ptr && pointsToConstantMemory(Loc, AAQI))
-    return ModRefInfo::Ref;
+  // All we know about a fence instruction is what we get from the ModRef
+  // mask: if Loc is a constant memory location, the fence definitely could
+  // not modify it.
+  if (Loc.Ptr)
+    return getModRefInfoMask(Loc);
   return ModRefInfo::ModRef;
 }
 
@@ -552,10 +562,9 @@ ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
     if (AR == AliasResult::NoAlias)
       return ModRefInfo::NoModRef;
 
-    // If the pointer is a pointer to constant memory, then it could not have
+    // If the pointer is a pointer to invariant memory, then it could not have
     // been modified by this va_arg.
-    if (pointsToConstantMemory(Loc, AAQI))
-      return ModRefInfo::NoModRef;
+    return getModRefInfoMask(Loc, AAQI);
   }
 
   // Otherwise, a va_arg reads and writes.
@@ -572,10 +581,9 @@ ModRefInfo AAResults::getModRefInfo(const CatchPadInst *CatchPad,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   if (Loc.Ptr) {
-    // If the pointer is a pointer to constant memory,
+    // If the pointer is a pointer to invariant memory,
     // then it could not have been modified by this catchpad.
-    if (pointsToConstantMemory(Loc, AAQI))
-      return ModRefInfo::NoModRef;
+    return getModRefInfoMask(Loc, AAQI);
   }
 
   // Otherwise, a catchpad reads and writes.
@@ -592,10 +600,9 @@ ModRefInfo AAResults::getModRefInfo(const CatchReturnInst *CatchRet,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   if (Loc.Ptr) {
-    // If the pointer is a pointer to constant memory,
+    // If the pointer is a pointer to invariant memory,
     // then it could not have been modified by this catchpad.
-    if (pointsToConstantMemory(Loc, AAQI))
-      return ModRefInfo::NoModRef;
+    return getModRefInfoMask(Loc, AAQI);
   }
 
   // Otherwise, a catchret reads and writes.
