@@ -7,19 +7,19 @@ break set -n returns_func_ptr
 run
 # CHECK: frame int ns::foo<int ()>(t={{.*}})
 c
-# CHECK: frame int ns::foo<std::__1::function<int ()>>(t= Function = bar() )
+# CHECK: frame int ns::foo<std::{{.*}}function<int ()>>(t= Function = bar() )
 c
 # CHECK: frame int ns::foo<(anonymous namespace)::$_0>(t={{.*}})
 c
-# CHECK: frame int ns::foo<std::__1::function<int ()>>(t= Function = (anonymous namespace)::anon_bar() )
+# CHECK: frame int ns::foo<std::{{.*}}function<int ()>>(t= Function = (anonymous namespace)::anon_bar() )
 c
-# CHECK: frame int ns::foo<void (Foo::*)(std::__1::function<int (int)> const&) const noexcept>(t={{.*}})
+# CHECK: frame int ns::foo<void (Foo::*)(std::{{.*}}function<int (int)> const&) const noexcept>(t={{.*}})
 c
 # CHECK: frame ns::returns_func_ptr<int>((null)={{.*}})
 c
-# CHECK: frame void Foo::foo<std::__1::function<int ()>>(this={{.*}}, t= Function = bar() ) const
+# CHECK: frame void Foo::foo<std::{{.*}}function<int ()>>(this={{.*}}, t= Function = bar() ) const
 c
-# CHECK: frame void Foo::foo<std::__1::function<int ()>>(this={{.*}}, t= Function = (anonymous namespace)::anon_bar() ) const
+# CHECK: frame void Foo::foo<std::{{.*}}function<int ()>>(this={{.*}}, t= Function = (anonymous namespace)::anon_bar() ) const
 c
 # CHECK: frame void Foo::operator<<<1ul>(this={{.*}}, (null)=0)
 c
