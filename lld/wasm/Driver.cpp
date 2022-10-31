@@ -393,7 +393,27 @@ static void readConfigs(opt::InputArgList &args) {
   config->exportAll = args.hasArg(OPT_export_all);
   config->exportTable = args.hasArg(OPT_export_table);
   config->growableTable = args.hasArg(OPT_growable_table);
-  config->importMemory = args.hasArg(OPT_import_memory);
+
+  if (args.hasArg(OPT_import_memory_with_name)) {
+    config->memoryImport =
+        args.getLastArgValue(OPT_import_memory_with_name).split(",");
+  } else if (args.hasArg(OPT_import_memory)) {
+    config->memoryImport =
+        std::pair<llvm::StringRef, llvm::StringRef>(defaultModule, memoryName);
+  } else {
+    config->memoryImport =
+        llvm::Optional<std::pair<llvm::StringRef, llvm::StringRef>>();
+  }
+
+  if (args.hasArg(OPT_export_memory_with_name)) {
+    config->memoryExport =
+        args.getLastArgValue(OPT_export_memory_with_name);
+  } else if (args.hasArg(OPT_export_memory)) {
+    config->memoryExport = memoryName;
+  } else {
+    config->memoryExport = llvm::Optional<llvm::StringRef>();
+  }
+
   config->sharedMemory = args.hasArg(OPT_shared_memory);
   config->importTable = args.hasArg(OPT_import_table);
   config->importUndefined = args.hasArg(OPT_import_undefined);
@@ -510,8 +530,20 @@ static void setConfigs() {
   }
 
   if (config->shared) {
-    config->importMemory = true;
+    if (config->memoryExport.hasValue()) {
+      error("--export-memory is incompatible with --shared");
+    }
+    if (!config->memoryImport.hasValue()) {
+      config->memoryImport =
+          std::pair<llvm::StringRef, llvm::StringRef>(defaultModule, memoryName);
+    }
     config->importUndefined = true;
+  }
+
+  // If neither export-memory nor import-memory is specified, default to
+  // exporting memory under its default name.
+  if (!config->memoryExport.hasValue() && !config->memoryImport.hasValue()) {
+    config->memoryExport = memoryName;
   }
 }
 

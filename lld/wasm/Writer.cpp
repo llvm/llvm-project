@@ -577,7 +577,7 @@ done:
   // memory is not being imported then we can assume its zero initialized.
   // In the case the memory is imported, and we can use the memory.fill
   // instruction, then we can also avoid including the segments.
-  if (config->importMemory && !allowed.count("bulk-memory"))
+  if (config->memoryImport.hasValue() && !allowed.count("bulk-memory"))
     config->emitBssSegments = true;
 
   if (allowed.count("extended-const"))
@@ -671,9 +671,10 @@ void Writer::calculateExports() {
   if (config->relocatable)
     return;
 
-  if (!config->relocatable && !config->importMemory)
+  if (!config->relocatable && config->memoryExport.hasValue()) {
     out.exportSec->exports.push_back(
-        WasmExport{"memory", WASM_EXTERNAL_MEMORY, 0});
+        WasmExport{*config->memoryExport, WASM_EXTERNAL_MEMORY, 0});
+  }
 
   unsigned globalIndex =
       out.importSec->getNumImportedGlobals() + out.globalSec->numGlobals();
@@ -1007,7 +1008,7 @@ static void createFunction(DefinedFunction *func, StringRef bodyContent) {
 bool Writer::needsPassiveInitialization(const OutputSegment *segment) {
   // If bulk memory features is supported then we can perform bss initialization
   // (via memory.fill) during `__wasm_init_memory`.
-  if (config->importMemory && !segment->requiredInBinary())
+  if (config->memoryImport.hasValue() && !segment->requiredInBinary())
     return true;
   return segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE;
 }

@@ -26,6 +26,9 @@ extern const char *defaultModule;
 // The name under which to import or export the wasm table.
 extern const char *functionTableName;
 
+// The name under which to import or export the wasm memory.
+extern const char *memoryName;
+
 using llvm::wasm::WasmSymbolType;
 
 class InputFile;
