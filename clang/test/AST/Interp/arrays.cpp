@@ -42,6 +42,21 @@ constexpr int getElement(const int *Arr, int index) {
   return *(Arr + index);
 }
 
+constexpr int derefPtr(const int *d) {
+  return *d;
+}
+static_assert(derefPtr(data) == 5, "");
+
+constexpr int storePtr() {
+  int b[] = {1,2,3,4};
+  int *c = b;
+
+  *c = 4;
+  return *c;
+}
+static_assert(storePtr() == 4, "");
+
+
 static_assert(getElement(data, 1) == 4, "");
 static_assert(getElement(data, 4) == 1, "");
 
