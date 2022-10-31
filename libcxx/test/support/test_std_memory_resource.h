@@ -105,7 +105,13 @@ int TestResourceImp<Provider, N>::resource_destructed = 0;
 
 struct NullProvider {
   NullProvider() {}
-  void* allocate(size_t, size_t) { return nullptr; }
+  void* allocate(size_t, size_t) {
+#ifndef TEST_HAS_NO_EXCEPTIONS
+    throw std::runtime_error("");
+#else
+    std::abort();
+#endif
+  }
   void deallocate(void*, size_t, size_t) {}
   void reset() {}
 
@@ -132,7 +138,7 @@ struct BufferProvider {
   BufferProvider() {}
 
   void* allocate(size_t s, size_t a) {
-    void* ret = std::align(s, a, next, space);
+    void* ret = std::align(a, s, next, space);
     if (ret == nullptr) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
       throw std::bad_alloc();
