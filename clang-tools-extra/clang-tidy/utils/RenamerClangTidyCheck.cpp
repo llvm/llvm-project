@@ -111,10 +111,7 @@ void RenamerClangTidyCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void RenamerClangTidyCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      namedDecl(unless(anyOf(isImplicit(), hasDeclContext(isImplicit()))))
-          .bind("decl"),
-      this);
+  Finder->addMatcher(namedDecl().bind("decl"), this);
   Finder->addMatcher(usingDecl().bind("using"), this);
   Finder->addMatcher(declRefExpr().bind("declRef"), this);
   Finder->addMatcher(cxxConstructorDecl(unless(isImplicit())).bind("classRef"),

@@ -19,11 +19,10 @@ namespace tidy {
 namespace altera {
 
 void StructPackAlignCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      recordDecl(isStruct(), isDefinition(),
-                 unless(anyOf(isExpansionInSystemHeader(), isImplicit())))
-          .bind("struct"),
-      this);
+  Finder->addMatcher(recordDecl(isStruct(), isDefinition(),
+                                unless(isExpansionInSystemHeader()))
+                         .bind("struct"),
+                     this);
 }
 
 CharUnits
