@@ -38,10 +38,6 @@ if (HAVE_LIBPTHREAD)
   list(APPEND LIBS pthread)
 endif()
 
-# Do not build unittest libraries automatically, they will be pulled in
-# by unittests if these are built.
-set(EXCLUDE_FROM_ALL ON)
-
 add_llvm_library(llvm_gtest
   googletest/src/gtest-all.cc
   googlemock/src/gmock-all.cc
