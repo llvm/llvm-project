@@ -28,7 +28,7 @@ static mlir::Value createNewFirBox(fir::FirOpBuilder &builder,
                                    mlir::Value addr, mlir::ValueRange lbounds,
                                    mlir::ValueRange extents,
                                    mlir::ValueRange lengths) {
-  if (addr.getType().isa<fir::BoxType>())
+  if (addr.getType().isa<fir::BaseBoxType>())
     // The entity is already boxed.
     return builder.createConvert(loc, box.getBoxTy(), addr);
 
