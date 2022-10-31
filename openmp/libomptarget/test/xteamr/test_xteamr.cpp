@@ -162,10 +162,10 @@ int main(int argc, char *argv[]) {
             << "TEST UNSIGNED LONG " << _XTEAM_NUM_THREADS << " THREADS"
             << std::endl;
   run_tests<unsigned long, true>(ARRAY_SIZE);
-//  std::cout << std::endl
-//            << "TEST DOUBLE COMPLEX " << _XTEAM_NUM_THREADS << " THREADS"
-//            << std::endl;
-//  run_tests_complex<double _Complex, double>(ARRAY_SIZE);
+  std::cout << std::endl
+            << "TEST DOUBLE COMPLEX " << _XTEAM_NUM_THREADS << " THREADS"
+            << std::endl;
+  run_tests_complex<double _Complex, double>(ARRAY_SIZE);
   std::cout << std::endl
             << "TEST FLOAT COMPLEX " << _XTEAM_NUM_THREADS << " THREADS"
             << std::endl;
