@@ -264,6 +264,8 @@ Bug Fixes
   constraint, which re-evaluated the same constraint.
   `Issue 53213 <https://github.com/llvm/llvm-project/issues/53213>`_
   `Issue 45736 <https://github.com/llvm/llvm-project/issues/45736>`_
+- Fix an issue when performing constraints partial ordering on non-template
+  functions. `Issue 56154 <https://github.com/llvm/llvm-project/issues/56154>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

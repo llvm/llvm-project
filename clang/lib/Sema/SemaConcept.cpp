@@ -1300,6 +1300,18 @@ bool Sema::IsAtLeastAsConstrained(NamedDecl *D1,
                                   NamedDecl *D2,
                                   MutableArrayRef<const Expr *> AC2,
                                   bool &Result) {
+  if (const auto *FD1 = dyn_cast<FunctionDecl>(D1)) {
+    auto IsExpectedEntity = [](const FunctionDecl *FD) {
+      FunctionDecl::TemplatedKind Kind = FD->getTemplatedKind();
+      return Kind == FunctionDecl::TK_NonTemplate ||
+             Kind == FunctionDecl::TK_FunctionTemplate;
+    };
+    const auto *FD2 = dyn_cast<FunctionDecl>(D2);
+    assert(IsExpectedEntity(FD1) && FD2 && IsExpectedEntity(FD2) &&
+           "use non-instantiated function declaration for constraints partial "
+           "ordering");
+  }
+
   if (AC1.empty()) {
     Result = AC2.empty();
     return false;
