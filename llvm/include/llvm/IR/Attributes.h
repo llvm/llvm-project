@@ -146,6 +146,7 @@ public:
   static Attribute getWithPreallocatedType(LLVMContext &Context, Type *Ty);
   static Attribute getWithInAllocaType(LLVMContext &Context, Type *Ty);
   static Attribute getWithUWTableKind(LLVMContext &Context, UWTableKind Kind);
+  static Attribute getWithMemoryEffects(LLVMContext &Context, MemoryEffects ME);
 
   /// For a typed attribute, return the equivalent attribute with the type
   /// changed to \p ReplacementTy.
@@ -379,6 +380,7 @@ public:
   Optional<unsigned> getVScaleRangeMax() const;
   UWTableKind getUWTableKind() const;
   AllocFnKind getAllocKind() const;
+  MemoryEffects getMemoryEffects() const;
   std::string getAsString(bool InAttrGrp = false) const;
 
   /// Return true if this attribute set belongs to the LLVMContext.
@@ -877,6 +879,9 @@ public:
   UWTableKind getUWTableKind() const;
 
   AllocFnKind getAllocKind() const;
+
+  /// Returns memory effects of the function.
+  MemoryEffects getMemoryEffects() const;
 
   /// Return the attributes at the index as a string.
   std::string getAsString(unsigned Index, bool InAttrGrp = false) const;
