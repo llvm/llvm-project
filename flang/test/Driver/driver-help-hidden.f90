@@ -31,6 +31,7 @@
 ! CHECK-NEXT: -ffixed-form           Process source files in fixed form
 ! CHECK-NEXT: -ffixed-line-length=<value>
 ! CHECK-NEXT: Use <value> as character line width in fixed mode
+! CHECK-NEXT: -ffp-contract=<value> Form fused FP ops (e.g. FMAs)
 ! CHECK-NEXT: -ffree-form            Process source files in free form
 ! CHECK-NEXT: -fimplicit-none        No implicit typing allowed unless overridden by IMPLICIT statements
 ! CHECK-NEXT: -finput-charset=<value> Specify the default character set for source files
