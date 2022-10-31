@@ -1467,6 +1467,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asin_test
+  NEED_MPFR
+  SUITE
+    libc_math_unittests
+  SRCS
+    asin_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.src.errno.errno
+    libc.src.math.asin
+)
+
+add_fp_unittest(
   acosf_test
   NEED_MPFR
   SUITE
