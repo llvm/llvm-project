@@ -32,6 +32,8 @@
 #include <memory_resource>
 #include <type_traits>
 
+#include "test_macros.h"
+
 template <class Iter, class PmrTypedef>
 void test_match_result_typedef() {
   using StdMR = std::match_results<Iter, std::pmr::polymorphic_allocator<std::sub_match<Iter>>>;
@@ -43,9 +45,11 @@ void test_match_result_typedef() {
 int main(int, char**) {
   {
     test_match_result_typedef<const char*, std::pmr::cmatch>();
-    test_match_result_typedef<const wchar_t*, std::pmr::wcmatch>();
     test_match_result_typedef<std::pmr::string::const_iterator, std::pmr::smatch>();
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+    test_match_result_typedef<const wchar_t*, std::pmr::wcmatch>();
     test_match_result_typedef<std::pmr::wstring::const_iterator, std::pmr::wsmatch>();
+#endif
   }
   {
     // Check that std::match_results has been included and is complete.
