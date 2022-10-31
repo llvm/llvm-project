@@ -1326,6 +1326,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  asin
+  SRCS
+    asin.cpp
+  HDRS
+    ../asin.h
+  DEPENDS
+    .asinf
+  COMPILE_OPTIONS
+    -O3
+)
+
+add_entrypoint_object(
   acosf
   SRCS
     acosf.cpp
