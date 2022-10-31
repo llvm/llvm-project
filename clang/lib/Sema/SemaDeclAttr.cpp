@@ -4350,7 +4350,7 @@ void Sema::AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
   }
 
   const auto *VD = dyn_cast<VarDecl>(D);
-  if (VD && Context.getTargetInfo().isTLSSupported()) {
+  if (VD) {
     unsigned MaxTLSAlign =
         Context.toCharUnitsFromBits(Context.getTargetInfo().getMaxTLSAlign())
             .getQuantity();
