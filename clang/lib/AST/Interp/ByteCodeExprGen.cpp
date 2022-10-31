@@ -534,11 +534,18 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
     if (!this->emitSub(*LHSComputationT, E))
       return false;
     break;
-
   case BO_MulAssign:
+    if (!this->emitMul(*LHSComputationT, E))
+      return false;
+    break;
   case BO_DivAssign:
+    if (!this->emitDiv(*LHSComputationT, E))
+      return false;
+    break;
   case BO_RemAssign:
-
+    if (!this->emitRem(*LHSComputationT, E))
+      return false;
+    break;
   case BO_ShlAssign:
     if (!this->emitShl(*LHSComputationT, *RT, E))
       return false;
@@ -548,8 +555,17 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
       return false;
     break;
   case BO_AndAssign:
+    if (!this->emitBitAnd(*LHSComputationT, E))
+      return false;
+    break;
   case BO_XorAssign:
+    if (!this->emitBitXor(*LHSComputationT, E))
+      return false;
+    break;
   case BO_OrAssign:
+    if (!this->emitBitOr(*LHSComputationT, E))
+      return false;
+    break;
   default:
     llvm_unreachable("Unimplemented compound assign operator");
   }
