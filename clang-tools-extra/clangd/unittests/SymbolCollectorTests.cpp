@@ -1329,7 +1329,7 @@ TEST_F(SymbolCollectorTest, IncludeEnums) {
                   AllOf(qName("Color"), forCodeCompletion(true)),
                   AllOf(qName("Green"), forCodeCompletion(true)),
                   AllOf(qName("Color2"), forCodeCompletion(true)),
-                  AllOf(qName("Color2::Yellow"), forCodeCompletion(false)),
+                  AllOf(qName("Color2::Yellow"), forCodeCompletion(true)),
                   AllOf(qName("ns"), forCodeCompletion(true)),
                   AllOf(qName("ns::Black"), forCodeCompletion(true)),
                   AllOf(qName("Color3"), forCodeCompletion(true)),

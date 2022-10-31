@@ -3382,11 +3382,13 @@ TEST(CompletionTest, Enums) {
   Opts.Index = Index.get();
   Opts.AllScopes = true;
   auto R = completions(Source, {}, Opts);
-  EXPECT_THAT(R.Completions,
-              ElementsAre(AllOf(scope("ns::"), named("Clangd1"),
-                                kind(CompletionItemKind::EnumMember)),
-                          AllOf(scope("ns::C::"), named("Clangd2"),
-                                kind(CompletionItemKind::EnumMember))));
+  EXPECT_THAT(R.Completions, UnorderedElementsAre(
+                                 AllOf(scope("ns::"), named("Clangd1"),
+                                       kind(CompletionItemKind::EnumMember)),
+                                 AllOf(scope("ns::C::"), named("Clangd2"),
+                                       kind(CompletionItemKind::EnumMember)),
+                                 AllOf(scope("ns::Scoped::"), named("Clangd3"),
+                                       kind(CompletionItemKind::EnumMember))));
 }
 
 TEST(CompletionTest, ScopeIsUnresolved) {
