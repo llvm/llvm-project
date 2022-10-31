@@ -16,7 +16,6 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <mach-o/loader.h>
 #include <mach/mach.h>
-#include <optional>
 #include <pthread.h>
 #include <sys/signal.h>
 #include <uuid/uuid.h>
@@ -253,7 +252,7 @@ public:
   DeploymentInfo GetDeploymentInfo(const struct load_command &,
                                    uint64_t load_command_address,
                                    bool is_executable);
-  static std::optional<std::string> GetPlatformString(unsigned char platform);
+  static const char *GetPlatformString(unsigned char platform);
   bool GetMachOInformationFromMemory(uint32_t platform,
                                      nub_addr_t mach_o_header_addr,
                                      int wordsize,
