@@ -39,11 +39,15 @@ public:
   bool Dump(llvm::raw_ostream &stream, const FileSpec &dir);
   /// @}
 
+  void Report(llvm::StringRef message);
+
   using Callback = std::function<llvm::Error(const FileSpec &)>;
 
   void AddCallback(Callback callback);
 
   static Diagnostics &Instance();
+
+  static bool Enabled();
   static void Initialize();
   static void Terminate();
 
@@ -52,6 +56,10 @@ public:
 
 private:
   static llvm::Optional<Diagnostics> &InstanceImpl();
+
+  llvm::Error DumpDiangosticsLog(const FileSpec &dir) const;
+
+  RotatingLogHandler m_log_handler;
 
   llvm::SmallVector<Callback, 4> m_callbacks;
   std::mutex m_callbacks_mutex;
