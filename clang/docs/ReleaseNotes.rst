@@ -346,6 +346,8 @@ Improvements to Clang's diagnostics
   potentially problematic function type casts.
 - Clang will now disambiguate NTTP types when printing diagnostic that contain NTTP types.
   Fixes `Issue 57562 <https://github.com/llvm/llvm-project/issues/57562>`_.
+- Better error recovery for pack expansion of expressions.
+  `Issue 58673 <https://github.com/llvm/llvm-project/issues/58673>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
