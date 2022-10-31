@@ -7499,14 +7499,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportOfCapturedVLAType) {
       }
       )",
       Lang_CXX14);
-
-  auto *FromF = FirstDeclMatcher<FunctionDecl>().match(
-      FromTU, functionDecl(hasName("declToImport")));
-  CXXRecordDecl *FromLambda =
-      cast<LambdaExpr>((cast<CompoundStmt>(FromF->getBody())->body_back()))
-          ->getLambdaClass();
-
-  auto *FromFD = *FromLambda->field_begin();
+  auto *FromFD = FirstDeclMatcher<FieldDecl>().match(FromTU, fieldDecl());
   ASSERT_TRUE(FromFD);
   ASSERT_TRUE(FromFD->hasCapturedVLAType());
 
@@ -8080,24 +8073,6 @@ TEST_P(ASTImporterOptionSpecificTestBase, isNewDecl) {
 
   EXPECT_TRUE(SharedStatePtr->isNewDecl(ToOther));
   EXPECT_FALSE(SharedStatePtr->isNewDecl(ToBar));
-}
-
-TEST_P(ASTImporterOptionSpecificTestBase, VaList) {
-  Decl *FromTU = getTuDecl(R"(typedef __builtin_va_list va_list;)", Lang_C99);
-
-  auto *FromVaList = FirstDeclMatcher<TypedefDecl>().match(
-      FromTU, typedefDecl(hasName("va_list")));
-  ASSERT_TRUE(FromVaList);
-
-  auto *ToVaList = Import(FromVaList, Lang_C99);
-  ASSERT_TRUE(ToVaList);
-
-  auto *ToBuiltinVaList = FirstDeclMatcher<TypedefDecl>().match(
-      ToAST->getASTContext().getTranslationUnitDecl(),
-      typedefDecl(hasName("__builtin_va_list")));
-
-  ASSERT_TRUE(ToAST->getASTContext().hasSameType(
-      ToVaList->getUnderlyingType(), ToBuiltinVaList->getUnderlyingType()));
 }
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ASTImporterLookupTableTest,
