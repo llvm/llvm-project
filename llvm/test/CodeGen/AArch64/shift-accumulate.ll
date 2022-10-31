@@ -129,8 +129,7 @@ define <8 x i16> @usra_with_movi_v8i16(<16 x i8> %0, <16 x i8> %1) {
 ; CHECK-NEXT:    movi v2.16b, #1
 ; CHECK-NEXT:    cmeq v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    ushr v1.8h, v0.8h, #7
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    usra v0.8h, v0.8h, #7
 ; CHECK-NEXT:    ret
   %3 = icmp eq <16 x i8> %0, %1
   %4 = zext <16 x i1> %3 to <16 x i8>
@@ -148,8 +147,7 @@ define <4 x i32> @usra_with_movi_v4i32(<16 x i8> %0, <16 x i8> %1) {
 ; CHECK-NEXT:    movi v2.16b, #1
 ; CHECK-NEXT:    cmeq v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    ushr v1.4s, v0.4s, #15
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    usra v0.4s, v0.4s, #15
 ; CHECK-NEXT:    ret
   %3 = icmp eq <16 x i8> %0, %1
   %4 = zext <16 x i1> %3 to <16 x i8>
@@ -167,8 +165,7 @@ define <2 x i64> @usra_with_movi_v2i64(<16 x i8> %0, <16 x i8> %1) {
 ; CHECK-NEXT:    movi v2.16b, #1
 ; CHECK-NEXT:    cmeq v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-NEXT:    ushr v1.2d, v0.2d, #31
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    usra v0.2d, v0.2d, #31
 ; CHECK-NEXT:    ret
   %3 = icmp eq <16 x i8> %0, %1
   %4 = zext <16 x i1> %3 to <16 x i8>
