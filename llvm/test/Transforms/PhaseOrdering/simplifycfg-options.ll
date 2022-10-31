@@ -105,16 +105,8 @@ end:
 define i1 @PR58313(i1 %lhs, i1 %rhs) {
 ; CHECK-LABEL: @PR58313(
 ; CHECK-NEXT:  andandend:
-; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[RHS:%.*]], true
-; CHECK-NEXT:    [[ANDANDVAL:%.*]] = select i1 [[LHS:%.*]], i1 [[TMP0]], i1 false
-; CHECK-NEXT:    br i1 [[ANDANDVAL]], label [[OROREND:%.*]], label [[OROR:%.*]]
-; CHECK:       oror:
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[LHS]], true
-; CHECK-NEXT:    [[ANDANDVAL3:%.*]] = select i1 [[TMP1]], i1 [[RHS]], i1 false
-; CHECK-NEXT:    br label [[OROREND]]
-; CHECK:       ororend:
-; CHECK-NEXT:    [[ORORVAL:%.*]] = phi i1 [ true, [[ANDANDEND:%.*]] ], [ [[ANDANDVAL3]], [[OROR]] ]
-; CHECK-NEXT:    ret i1 [[ORORVAL]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = xor i1 [[LHS:%.*]], [[RHS:%.*]]
+; CHECK-NEXT:    ret i1 [[SPEC_SELECT]]
 ;
 andandend:
   %0 = xor i1 %rhs, true
