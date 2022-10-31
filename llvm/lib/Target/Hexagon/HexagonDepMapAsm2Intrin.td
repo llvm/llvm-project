@@ -3343,6 +3343,10 @@ def: Pat<(int_hexagon_V6_vscattermwq_128B HvxQR:$src1, IntRegs:$src2, ModRegs:$s
 
 // V66 HVX Instructions.
 
+def: Pat<(int_hexagon_V6_vaddcarryo HvxVR:$src1, HvxVR:$src2),
+         (V6_vaddcarryo HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV66, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vaddcarryo_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vaddcarryo HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV66, UseHVX128B]>;
 def: Pat<(int_hexagon_V6_vaddcarrysat HvxVR:$src1, HvxVR:$src2, HvxQR:$src3),
          (V6_vaddcarrysat HvxVR:$src1, HvxVR:$src2, HvxQR:$src3)>, Requires<[HasV66, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vaddcarrysat_128B HvxVR:$src1, HvxVR:$src2, HvxQR:$src3),
@@ -3359,6 +3363,10 @@ def: Pat<(int_hexagon_V6_vsatdw HvxVR:$src1, HvxVR:$src2),
          (V6_vsatdw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV66, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vsatdw_128B HvxVR:$src1, HvxVR:$src2),
          (V6_vsatdw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV66, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vsubcarryo HvxVR:$src1, HvxVR:$src2),
+         (V6_vsubcarryo HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV66, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vsubcarryo_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vsubcarryo HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV66, UseHVX128B]>;
 
 // V68 HVX Instructions.
 
