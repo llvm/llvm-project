@@ -11,66 +11,11 @@
 #include "mlir/Pass/PassManager.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/SHA1.h"
 
 using namespace mlir;
 using namespace mlir::detail;
 
 namespace {
-//===----------------------------------------------------------------------===//
-// OperationFingerPrint
-//===----------------------------------------------------------------------===//
-
-/// A unique fingerprint for a specific operation, and all of it's internal
-/// operations.
-class OperationFingerPrint {
-public:
-  OperationFingerPrint(Operation *topOp) {
-    llvm::SHA1 hasher;
-
-    // Hash each of the operations based upon their mutable bits:
-    topOp->walk([&](Operation *op) {
-      //   - Operation pointer
-      addDataToHash(hasher, op);
-      //   - Attributes
-      addDataToHash(hasher, op->getAttrDictionary());
-      //   - Blocks in Regions
-      for (Region &region : op->getRegions()) {
-        for (Block &block : region) {
-          addDataToHash(hasher, &block);
-          for (BlockArgument arg : block.getArguments())
-            addDataToHash(hasher, arg);
-        }
-      }
-      //   - Location
-      addDataToHash(hasher, op->getLoc().getAsOpaquePointer());
-      //   - Operands
-      for (Value operand : op->getOperands())
-        addDataToHash(hasher, operand);
-      //   - Successors
-      for (unsigned i = 0, e = op->getNumSuccessors(); i != e; ++i)
-        addDataToHash(hasher, op->getSuccessor(i));
-    });
-    hash = hasher.result();
-  }
-
-  bool operator==(const OperationFingerPrint &other) const {
-    return hash == other.hash;
-  }
-  bool operator!=(const OperationFingerPrint &other) const {
-    return !(*this == other);
-  }
-
-private:
-  template <typename T>
-  void addDataToHash(llvm::SHA1 &hasher, const T &data) {
-    hasher.update(
-        ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&data), sizeof(T)));
-  }
-
-  std::array<uint8_t, 20> hash;
-};
-
 //===----------------------------------------------------------------------===//
 // IRPrinter
 //===----------------------------------------------------------------------===//
