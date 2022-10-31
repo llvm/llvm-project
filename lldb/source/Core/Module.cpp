@@ -369,6 +369,11 @@ Module::GetTypeSystemForLanguage(LanguageType language) {
   return m_type_system_map.GetTypeSystemForLanguage(language, this, true);
 }
 
+void Module::ForEachTypeSystem(
+    llvm::function_ref<bool(TypeSystem *)> callback) {
+  m_type_system_map.ForEach(callback);
+}
+
 void Module::ParseAllDebugSymbols() {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   size_t num_comp_units = GetNumCompileUnits();

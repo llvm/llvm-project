@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/JSON.h"
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Expression/Expression.h"
@@ -507,6 +508,8 @@ public:
   // formatters that are discovered on such a type as attributable to the
   // meaningless type itself, instead preferring to use the dynamic type
   virtual bool IsMeaninglessWithoutDynamicResolution(void *type);
+
+  virtual llvm::Optional<llvm::json::Value> ReportStatistics();
 
 protected:
   SymbolFile *m_sym_file = nullptr;
