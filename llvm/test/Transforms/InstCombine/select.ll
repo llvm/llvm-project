@@ -165,8 +165,8 @@ define <2 x i1> @test24vec(<2 x i1> %a, <2 x i1> %b) {
 
 define i1 @test62(i1 %A, i1 %B) {
 ; CHECK-LABEL: @test62(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[NOT]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[NOT_A]], i1 [[B:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %not = xor i1 %A, true
@@ -176,8 +176,8 @@ define i1 @test62(i1 %A, i1 %B) {
 
 define <2 x i1> @test62vec(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test62vec(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT_A]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %not = xor <2 x i1> %A, <i1 true, i1 true>
@@ -187,8 +187,8 @@ define <2 x i1> @test62vec(<2 x i1> %A, <2 x i1> %B) {
 
 define i1 @test63(i1 %A, i1 %B) {
 ; CHECK-LABEL: @test63(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[NOT]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[NOT_A]], i1 true, i1 [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %not = xor i1 %A, true
@@ -198,8 +198,8 @@ define i1 @test63(i1 %A, i1 %B) {
 
 define <2 x i1> @test63vec(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test63vec(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[B:%.*]]
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT_A]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %not = xor <2 x i1> %A, <i1 true, i1 true>
