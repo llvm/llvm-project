@@ -356,6 +356,14 @@ contains
 
 ! CHECK: %[[C4_CAST:.*]] = fir.convert %[[C4]] : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableDeallocate(%[[C4_CAST]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+
+  ! Test code generation of deallocate
+  subroutine test_deallocate()
+    class(p1), allocatable :: p
+
+    allocate(p)
+    deallocate(p)
+  end subroutine
 end module
 
 program test_alloc
@@ -420,3 +428,40 @@ end
 ! LLVM: %[[BOX1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX0]], ptr %{{.*}}, 0
 ! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX1]], ptr %{{.*}}
 ! LLVM: call void %{{.*}}(ptr %{{.*}})
+
+
+! Check code generation of a allocate/deallocate sequence on polymorphic
+! allocatable.
+
+! LLVM-LABEL: define void @_QMpolyPtest_deallocate()
+! LLVM: %[[ALLOCA1:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
+! LLVM: %[[ALLOCA2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
+! LLVM: %[[ALLOCA3:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
+! LLVM: %[[ALLOCA4:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }
+! LLVM: %[[DESC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1
+! LLVM: %[[BASE_ADDR:.*]] = alloca ptr, i64 1
+! LLVM: store ptr null, ptr %[[BASE_ADDR]]
+! LLVM: %[[LOAD_BASE_ADDR:.*]] = load ptr, ptr %[[BASE_ADDR]]
+! LLVM: %[[BOX0:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr undef, i64 ptrtoint (ptr getelementptr (%_QMpolyTp1, ptr null, i32 1) to i64), i32 20180515, i8 0, i8 42, i8 2, i8 1, ptr @_QMpolyE.dt.p1, [1 x i64] undef }, ptr %[[LOAD_BASE_ADDR]], 0
+! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX0]], ptr %[[ALLOCA4]]
+! LLVM: %[[LOAD:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[ALLOCA4]]
+! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD]], ptr %[[DESC]]
+! LLVM: %{{.*}} = call {} @_FortranAAllocatableInitDerived(ptr %[[DESC]], ptr @_QMpolyE.dt.p1, i32 0, i32 0)
+! LLVM: %{{.*}} = call i32 @_FortranAAllocatableAllocate(ptr %[[DESC]], i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
+! LLVM: %[[LOAD_DESC:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[DESC]]
+! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD_DESC]], ptr %[[ALLOCA3]]
+! LLVM: %[[BASE_ADDR_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[ALLOCA3]], i32 0, i32 0
+! LLVM: %[[LOAD_BASE_ADDR:.*]] = load ptr, ptr %[[BASE_ADDR_GEP]]
+! LLVM: store ptr %[[LOAD_BASE_ADDR]], ptr %[[BASE_ADDR]]
+! LLVM: %[[LOAD_BASE_ADDR:.*]] = load ptr, ptr %[[BASE_ADDR]]
+! LLVM: %[[BOX0:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } { ptr undef, i64 ptrtoint (ptr getelementptr (%_QMpolyTp1, ptr null, i32 1) to i64), i32 20180515, i8 0, i8 42, i8 2, i8 1, ptr @_QMpolyE.dt.p1, [1 x i64] undef }, ptr %[[LOAD_BASE_ADDR]], 0
+! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[BOX0]], ptr %[[ALLOCA2]]
+! LLVM: %[[LOAD:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[ALLOCA2]]
+! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD]], ptr %[[DESC]]
+! LLVM: %{{.*}} = call i32 @_FortranAAllocatableDeallocate(ptr %[[DESC]], i1 false, ptr null, ptr @_QQcl.{{.*}}, i32 {{.*}})
+! LLVM: %[[LOAD_DESC:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[DESC]]
+! LLVM: store { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] } %[[LOAD_DESC]], ptr %[[ALLOCA1]]
+! LLVM: %[[BASE_ADDR_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %1, i32 0, i32 0
+! LLVM: %[[LOAD_BASE_ADDR:.*]] = load ptr, ptr %[[BASE_ADDR_GEP]]
+! LLVM: store ptr %[[LOAD_BASE_ADDR]], ptr %[[BASE_ADDR]]
+! LLVM: ret void
