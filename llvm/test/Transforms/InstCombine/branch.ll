@@ -189,14 +189,15 @@ f:
   ret i32 3
 }
 
+; negative test
+
 define i32 @logical_and_not_use1(i1 %x, i1 %y) {
 ; CHECK-LABEL: @logical_and_not_use1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[NOTY:%.*]] = xor i1 [[Y:%.*]], true
 ; CHECK-NEXT:    call void @use(i1 [[NOTY]])
-; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X:%.*]], true
-; CHECK-NEXT:    [[TMP0:%.*]] = select i1 [[NOT_X]], i1 true, i1 [[Y]]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[F:%.*]], label [[T:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[X:%.*]], i1 [[NOTY]], i1 false
+; CHECK-NEXT:    br i1 [[AND]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i32 42
 ; CHECK:       f:
