@@ -5722,11 +5722,6 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
   SmallSet<const BasicBlock *, 4> Visited;
 
   YieldsPoison.insert(V);
-  auto Propagate = [&](const User *User) {
-    if (propagatesPoison(cast<Operator>(User)))
-      YieldsPoison.insert(User);
-  };
-  for_each(V->users(), Propagate);
   Visited.insert(BB);
 
   while (true) {
@@ -5740,9 +5735,16 @@ static bool programUndefinedIfUndefOrPoison(const Value *V,
       if (!isGuaranteedToTransferExecutionToSuccessor(&I))
         return false;
 
-      // Mark poison that propagates from I through uses of I.
-      if (YieldsPoison.count(&I))
-        for_each(I.users(), Propagate);
+      // If this instruction propagates poison, mark it as poison if any of
+      // its operands are poison
+      if (propagatesPoison(cast<Operator>(&I))) {
+        for (const Value *Op : I.operands()) {
+          if (YieldsPoison.count(Op)) {
+            YieldsPoison.insert(&I);
+            break;
+          }
+        }
+      }
     }
 
     BB = BB->getSingleSuccessor();
