@@ -1046,6 +1046,9 @@ struct ConvertArithToSPIRVPass
     typeConverter.addTargetMaterialization(addUnrealizedCast);
     target->addLegalOp<UnrealizedConversionCastOp>();
 
+    // Fail hard when there are any remaining 'arith' ops.
+    target->addIllegalDialect<arith::ArithDialect>();
+
     RewritePatternSet patterns(&getContext());
     arith::populateArithToSPIRVPatterns(typeConverter, patterns);
 
