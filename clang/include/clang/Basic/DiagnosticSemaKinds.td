@@ -5205,6 +5205,8 @@ def err_function_template_partial_spec : Error<
 def err_template_recursion_depth_exceeded : Error<
   "recursive template instantiation exceeded maximum depth of %0">,
   DefaultFatal, NoSFINAE;
+def err_constraint_depends_on_self : Error<
+  "satisfaction of constraint '%0' depends on itself">, NoSFINAE;
 def note_template_recursion_depth : Note<
   "use -ftemplate-depth=N to increase recursive template instantiation depth">;
 
