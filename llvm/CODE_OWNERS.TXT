@@ -254,5 +254,5 @@ E: zixuan.wu@linux.alibaba.com
 D: C-SKY backend (lib/Target/CSKY/*)
 
 N: Ilia Diachkov
-E: iliya.diyachkov@intel.com
+E: ilia.diachkov@gmail.com
 D: SPIR-V backend (lib/Target/SPIRV/*)
