@@ -1269,11 +1269,10 @@ def int_experimental_gc_get_pointer_offset : Intrinsic<[llvm_i64_ty],
 
 // Coroutine Structure Intrinsics.
 
-def int_coro_id : Intrinsic<[llvm_token_ty], [llvm_i32_ty, llvm_ptr_ty,
-                             llvm_ptr_ty, llvm_ptr_ty],
-                            [IntrArgMemOnly, IntrReadMem,
-                             ReadNone<ArgIndex<1>>, ReadOnly<ArgIndex<2>>,
-                             NoCapture<ArgIndex<2>>]>;
+def int_coro_id : DefaultAttrsIntrinsic<[llvm_token_ty],
+    [llvm_i32_ty, llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
+    [IntrArgMemOnly, IntrReadMem, ReadNone<ArgIndex<1>>, ReadOnly<ArgIndex<2>>,
+     NoCapture<ArgIndex<2>>]>;
 def int_coro_id_retcon : Intrinsic<[llvm_token_ty],
     [llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty,
      llvm_ptr_ty, llvm_ptr_ty, llvm_ptr_ty],
@@ -1341,10 +1340,10 @@ def int_coro_promise : Intrinsic<[llvm_ptr_ty],
 
 // Coroutine Lowering Intrinsics. Used internally by coroutine passes.
 
-def int_coro_subfn_addr : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_i8_ty],
-                                    [IntrReadMem, IntrArgMemOnly,
-                                     ReadOnly<ArgIndex<0>>,
-                                     NoCapture<ArgIndex<0>>]>;
+def int_coro_subfn_addr : DefaultAttrsIntrinsic<
+    [llvm_ptr_ty], [llvm_ptr_ty, llvm_i8_ty],
+    [IntrReadMem, IntrArgMemOnly, ReadOnly<ArgIndex<0>>,
+     NoCapture<ArgIndex<0>>]>;
 
 ///===-------------------------- Other Intrinsics --------------------------===//
 //
