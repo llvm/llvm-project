@@ -174,8 +174,6 @@ void PassManagerBuilder::addFunctionSimplificationPasses(
       createCFGSimplificationPass(SimplifyCFGOptions().convertSwitchRangeToICmp(
           true))); // Merge & remove BBs
   // Combine silly seq's
-  if (OptLevel > 2)
-    MPM.add(createAggressiveInstCombinerPass());
   MPM.add(createInstructionCombiningPass());
   if (SizeLevel == 0)
     MPM.add(createLibCallsShrinkWrapPass());
