@@ -1368,3 +1368,15 @@ add_entrypoint_object(
     -O3
 )
 
+add_entrypoint_object(
+  pow
+  SRCS
+    pow.cpp
+  HDRS
+    ../pow.h
+  DEPENDS
+    .expf
+    .logf
+  COMPILE_OPTIONS
+    -O3
+)
