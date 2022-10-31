@@ -5862,9 +5862,9 @@ static ExprResult CheckConvertedConstantExpression(Sema &S, Expr *From,
 
   // C++2a [intro.execution]p5:
   //   A full-expression is [...] a constant-expression [...]
-  Result =
-      S.ActOnFinishFullExpr(Result.get(), From->getExprLoc(),
-                            /*DiscardedValue=*/false, /*IsConstexpr=*/true);
+  Result = S.ActOnFinishFullExpr(Result.get(), From->getExprLoc(),
+                                 /*DiscardedValue=*/false, /*IsConstexpr=*/true,
+                                 CCE == Sema::CCEKind::CCEK_TemplateArg);
   if (Result.isInvalid())
     return Result;
 

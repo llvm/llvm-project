@@ -502,3 +502,22 @@ template <class> using B = char;
 template <class ...Cs> int C{ A<B<Cs>>{}... }; // expected-error {{implicit instantiation of undefined template}}
 #endif
 } // namespace GH56094
+
+namespace GH58679 {
+#if __cplusplus >= 201402L
+template <class> constexpr int A = 1;
+
+template <int> struct B;
+template <> struct B<1> { using b1 = void; };
+
+template <class> using C = char;
+
+template <class... Ds> int D{ B<A<C<Ds>>>{}... };
+
+struct E {
+  template <class E1, class = typename B<A<E1>>::b1> E(E1);
+};
+
+template <typename... Es> int F{ E(C<Es>{})... };
+#endif
+} // namespace GH58679
