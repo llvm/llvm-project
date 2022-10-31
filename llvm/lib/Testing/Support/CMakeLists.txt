@@ -1,7 +1,3 @@
-# Do not build unittest libraries automatically, they will be pulled in
-# by unittests if these are built.
-set(EXCLUDE_FROM_ALL ON)
-
 add_llvm_library(LLVMTestingSupport
   Annotations.cpp
   Error.cpp
