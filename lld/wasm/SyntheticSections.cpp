@@ -162,7 +162,7 @@ void TypeSection::writeBody() {
 uint32_t ImportSection::getNumImports() const {
   assert(isSealed);
   uint32_t numImports = importedSymbols.size() + gotSymbols.size();
-  if (config->memoryImport.hasValue())
+  if (config->memoryImport.has_value())
     ++numImports;
   return numImports;
 }
@@ -236,8 +236,8 @@ void ImportSection::writeBody() {
 
   if (config->memoryImport) {
     WasmImport import;
-    import.Module = config->memoryImport.getValue().first;
-    import.Field = config->memoryImport.getValue().second;
+    import.Module = config->memoryImport.value().first;
+    import.Field = config->memoryImport.value().second;
     import.Kind = WASM_EXTERNAL_MEMORY;
     import.Memory.Flags = 0;
     import.Memory.Minimum = out.memorySec->numMemoryPages;
