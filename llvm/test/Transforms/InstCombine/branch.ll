@@ -112,3 +112,77 @@ merge.2:
   %merge.cond.2 = phi i1 [false, %if.true.2], [true, %if.false.2]
   ret i1 %merge.cond.2
 }
+
+; if (x && !y) ret 42; ret 3
+
+define i32 @logical_and_not(i1 %x, i1 %y) {
+; CHECK-LABEL: @logical_and_not(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NOTY:%.*]] = xor i1 [[Y:%.*]], true
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[X:%.*]], i1 [[NOTY]], i1 false
+; CHECK-NEXT:    br i1 [[AND]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    ret i32 42
+; CHECK:       f:
+; CHECK-NEXT:    ret i32 3
+;
+entry:
+  %noty = xor i1 %y, true
+  %and = select i1 %x, i1 %noty, i1 false
+  br i1 %and, label %t, label %f
+
+t:
+  ret i32 42
+
+f:
+  ret i32 3
+}
+
+; if (x && y || !x) ret 3; ret 42
+
+define i32 @logical_and_or(i1 %x, i1 %y) {
+; CHECK-LABEL: @logical_and_or(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NOT_X:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[NOT_X]], i1 true, i1 [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[AND]], label [[F:%.*]], label [[T:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    ret i32 42
+; CHECK:       f:
+; CHECK-NEXT:    ret i32 3
+;
+entry:
+  %and = select i1 %x, i1 %y, i1 true
+  br i1 %and, label %f, label %t
+
+t:
+  ret i32 42
+
+f:
+  ret i32 3
+}
+
+; if (!x || y) ret 3; ret 42
+
+define i32 @logical_or_not(i1 %x, i1 %y) {
+; CHECK-LABEL: @logical_or_not(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NOTX:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[NOTX]], i1 true, i1 [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[AND]], label [[F:%.*]], label [[T:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    ret i32 42
+; CHECK:       f:
+; CHECK-NEXT:    ret i32 3
+;
+entry:
+  %notx = xor i1 %x, true
+  %and = select i1 %notx, i1 true, i1 %y
+  br i1 %and, label %f, label %t
+
+t:
+  ret i32 42
+
+f:
+  ret i32 3
+}
