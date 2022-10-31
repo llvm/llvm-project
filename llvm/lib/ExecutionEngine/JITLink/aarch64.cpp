@@ -28,40 +28,42 @@ const uint8_t StubContent[8] = {
 
 const char *getEdgeKindName(Edge::Kind R) {
   switch (R) {
-  case Branch26:
-    return "Branch26";
   case Pointer64:
     return "Pointer64";
+  case Pointer32:
+    return "Pointer32";
+  case Delta64:
+    return "Delta64";
+  case Delta32:
+    return "Delta32";
+  case NegDelta64:
+    return "NegDelta64";
+  case NegDelta32:
+    return "NegDelta32";
+  case Branch26PCRel:
+    return "Branch26PCRel";
+  case MoveWide16:
+    return "MoveWide16";
+  case LDRLiteral19:
+    return "LDRLiteral19";
   case Page21:
     return "Page21";
   case PageOffset12:
     return "PageOffset12";
-  case MoveWide16:
-    return "MoveWide16";
-  case GOTPage21:
-    return "GOTPage21";
-  case GOTPageOffset12:
-    return "GOTPageOffset12";
-  case TLVPage21:
-    return "TLVPage21";
-  case TLVPageOffset12:
-    return "TLVPageOffset12";
-  case TLSDescPage21:
-    return "TLSDescPage21";
-  case TLSDescPageOffset12:
-    return "TLSDescPageOffset12";
-  case Delta32ToGOT:
-    return "Delta32ToGOT";
-  case LDRLiteral19:
-    return "LDRLiteral19";
-  case Delta32:
-    return "Delta32";
-  case Delta64:
-    return "Delta64";
-  case NegDelta32:
-    return "NegDelta32";
-  case NegDelta64:
-    return "NegDelta64";
+  case RequestGOTAndTransformToPage21:
+    return "RequestGOTAndTransformToPage21";
+  case RequestGOTAndTransformToPageOffset12:
+    return "RequestGOTAndTransformToPageOffset12";
+  case RequestGOTAndTransformToDelta32:
+    return "RequestGOTAndTransformToDelta32";
+  case RequestTLVPAndTransformToPage21:
+    return "RequestTLVPAndTransformToPage21";
+  case RequestTLVPAndTransformToPageOffset12:
+    return "RequestTLVPAndTransformToPageOffset12";
+  case RequestTLSDescEntryAndTransformToPage21:
+    return "RequestTLSDescEntryAndTransformToPage21";
+  case RequestTLSDescEntryAndTransformToPageOffset12:
+    return "RequestTLSDescEntryAndTransformToPageOffset12";
   default:
     return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
   }
