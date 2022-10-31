@@ -34,7 +34,10 @@ public:
   llvm::Error Create(const FileSpec &dir);
 
   /// Gather diagnostics and print a message to the given output stream.
+  /// @{
   bool Dump(llvm::raw_ostream &stream);
+  bool Dump(llvm::raw_ostream &stream, const FileSpec &dir);
+  /// @}
 
   using Callback = std::function<llvm::Error(const FileSpec &)>;
 
@@ -43,6 +46,9 @@ public:
   static Diagnostics &Instance();
   static void Initialize();
   static void Terminate();
+
+  /// Create a unique diagnostic directory.
+  static llvm::Expected<FileSpec> CreateUniqueDirectory();
 
 private:
   static llvm::Optional<Diagnostics> &InstanceImpl();

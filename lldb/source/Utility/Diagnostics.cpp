@@ -44,25 +44,36 @@ void Diagnostics::AddCallback(Callback callback) {
 }
 
 bool Diagnostics::Dump(raw_ostream &stream) {
-  SmallString<128> diagnostics_dir;
-  std::error_code ec =
-      sys::fs::createUniqueDirectory("diagnostics", diagnostics_dir);
-  if (ec) {
+  Expected<FileSpec> diagnostics_dir = CreateUniqueDirectory();
+  if (!diagnostics_dir) {
     stream << "unable to create diagnostic dir: "
-           << toString(errorCodeToError(ec)) << '\n';
+           << toString(diagnostics_dir.takeError()) << '\n';
     return false;
   }
 
-  stream << "LLDB diagnostics written to " << diagnostics_dir << "\n";
+  return Dump(stream, *diagnostics_dir);
+}
+
+bool Diagnostics::Dump(raw_ostream &stream, const FileSpec &dir) {
+  stream << "LLDB diagnostics will be written to " << dir.GetPath() << "\n";
   stream << "Please include the directory content when filing a bug report\n";
 
-  Error error = Create(FileSpec(diagnostics_dir.str()));
+  Error error = Create(dir);
   if (error) {
     stream << toString(std::move(error)) << '\n';
     return false;
   }
 
   return true;
+}
+
+llvm::Expected<FileSpec> Diagnostics::CreateUniqueDirectory() {
+  SmallString<128> diagnostics_dir;
+  std::error_code ec =
+      sys::fs::createUniqueDirectory("diagnostics", diagnostics_dir);
+  if (ec)
+    return errorCodeToError(ec);
+  return FileSpec(diagnostics_dir.str());
 }
 
 Error Diagnostics::Create(const FileSpec &dir) {
