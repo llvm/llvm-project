@@ -21,6 +21,7 @@
 #include <Availability.h>
 #include <mach/machine.h>
 #include <mach/thread_info.h>
+#include <optional>
 #include <string>
 
 #define DNB_EXPORT __attribute__((visibility("default")))
@@ -134,12 +135,11 @@ nub_bool_t DNBProcessSharedLibrariesUpdated(nub_process_t pid) DNB_EXPORT;
 nub_size_t
 DNBProcessGetSharedLibraryInfo(nub_process_t pid, nub_bool_t only_changed,
                                DNBExecutableImageInfo **image_infos) DNB_EXPORT;
-const char *DNBGetDeploymentInfo(nub_process_t pid, bool is_executable,
-                                 const struct load_command &lc,
-                                 uint64_t load_command_address,
-                                 uint32_t &major_version,
-                                 uint32_t &minor_version,
-                                 uint32_t &patch_version);
+std::optional<std::string>
+DNBGetDeploymentInfo(nub_process_t pid, bool is_executable,
+                     const struct load_command &lc,
+                     uint64_t load_command_address, uint32_t &major_version,
+                     uint32_t &minor_version, uint32_t &patch_version);
 nub_bool_t DNBProcessSetNameToAddressCallback(nub_process_t pid,
                                               DNBCallbackNameToAddress callback,
                                               void *baton) DNB_EXPORT;

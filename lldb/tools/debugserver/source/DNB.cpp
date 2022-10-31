@@ -1433,12 +1433,11 @@ nub_bool_t DNBProcessSharedLibrariesUpdated(nub_process_t pid) {
   return false;
 }
 
-const char *DNBGetDeploymentInfo(nub_process_t pid, bool is_executable,
-                                 const struct load_command &lc,
-                                 uint64_t load_command_address,
-                                 uint32_t &major_version,
-                                 uint32_t &minor_version,
-                                 uint32_t &patch_version) {
+std::optional<std::string>
+DNBGetDeploymentInfo(nub_process_t pid, bool is_executable,
+                     const struct load_command &lc,
+                     uint64_t load_command_address, uint32_t &major_version,
+                     uint32_t &minor_version, uint32_t &patch_version) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP)) {
     // FIXME: This doesn't return the correct result when xctest (a
