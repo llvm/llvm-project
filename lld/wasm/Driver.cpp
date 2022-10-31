@@ -530,10 +530,10 @@ static void setConfigs() {
   }
 
   if (config->shared) {
-    if (config->memoryExport.hasValue()) {
+    if (config->memoryExport.has_value()) {
       error("--export-memory is incompatible with --shared");
     }
-    if (!config->memoryImport.hasValue()) {
+    if (!config->memoryImport.has_value()) {
       config->memoryImport =
           std::pair<llvm::StringRef, llvm::StringRef>(defaultModule, memoryName);
     }
@@ -542,7 +542,7 @@ static void setConfigs() {
 
   // If neither export-memory nor import-memory is specified, default to
   // exporting memory under its default name.
-  if (!config->memoryExport.hasValue() && !config->memoryImport.hasValue()) {
+  if (!config->memoryExport.has_value() && !config->memoryImport.has_value()) {
     config->memoryExport = memoryName;
   }
 }
