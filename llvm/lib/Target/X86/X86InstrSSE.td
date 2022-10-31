@@ -8096,7 +8096,7 @@ multiclass GF2P8AFFINE_common<bits<8> Op, string OpStr, SDNode OpNode> {
       Predicates  = [HasGFNI, UseSSE2] in
   defm NAME         : GF2P8AFFINE_rmi<Op, OpStr, v16i8, OpNode,
                                       VR128, load, i128mem, 1>;
-  let Predicates  = [HasGFNI, HasAVX, NoVLX_Or_NoBWI] in {
+  let Predicates  = [HasGFNI, HasAVX, NoVLX] in {
     defm V#NAME    : GF2P8AFFINE_rmi<Op, "v"#OpStr, v16i8, OpNode, VR128,
                                       load, i128mem>, VEX_4V, VEX_W;
     defm V#NAME#Y : GF2P8AFFINE_rmi<Op, "v"#OpStr, v32i8, OpNode, VR256,
@@ -8109,7 +8109,7 @@ let Constraints = "$src1 = $dst",
     Predicates  = [HasGFNI, UseSSE2] in
 defm GF2P8MULB      : GF2P8MULB_rm<"gf2p8mulb", v16i8, VR128, memop,
                                     i128mem, 1>;
-let Predicates  = [HasGFNI, HasAVX, NoVLX_Or_NoBWI] in {
+let Predicates  = [HasGFNI, HasAVX, NoVLX] in {
   defm VGF2P8MULB   : GF2P8MULB_rm<"vgf2p8mulb", v16i8, VR128, load,
                                    i128mem>, VEX_4V;
   defm VGF2P8MULBY  : GF2P8MULB_rm<"vgf2p8mulb", v32i8, VR256, load,

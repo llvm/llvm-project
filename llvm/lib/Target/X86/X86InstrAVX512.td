@@ -12694,10 +12694,10 @@ defm VPSHUFBITQMB : VPSHUFBITQMB_common<SchedWriteVecIMul, avx512vl_i8_info>;
 
 multiclass GF2P8MULB_avx512_common<bits<8> Op, string OpStr, SDNode OpNode,
                                    X86SchedWriteWidths sched> {
-  let Predicates = [HasGFNI, HasAVX512, HasBWI] in
+  let Predicates = [HasGFNI, HasAVX512] in
   defm Z      : avx512_binop_rm<Op, OpStr, OpNode, v64i8_info, sched.ZMM, 1>,
                                 EVEX_V512;
-  let Predicates = [HasGFNI, HasVLX, HasBWI] in {
+  let Predicates = [HasGFNI, HasVLX] in {
     defm Z256 : avx512_binop_rm<Op, OpStr, OpNode, v32i8x_info, sched.YMM, 1>,
                                 EVEX_V256;
     defm Z128 : avx512_binop_rm<Op, OpStr, OpNode, v16i8x_info, sched.XMM, 1>,
@@ -12726,10 +12726,10 @@ multiclass GF2P8AFFINE_avx512_rmb_imm<bits<8> Op, string OpStr, SDNode OpNode,
 
 multiclass GF2P8AFFINE_avx512_common<bits<8> Op, string OpStr, SDNode OpNode,
                                      X86SchedWriteWidths sched> {
-  let Predicates = [HasGFNI, HasAVX512, HasBWI] in
+  let Predicates = [HasGFNI, HasAVX512] in
   defm Z      : GF2P8AFFINE_avx512_rmb_imm<Op, OpStr, OpNode, sched.ZMM,
                                            v64i8_info, v8i64_info>, EVEX_V512;
-  let Predicates = [HasGFNI, HasVLX, HasBWI] in {
+  let Predicates = [HasGFNI, HasVLX] in {
     defm Z256 : GF2P8AFFINE_avx512_rmb_imm<Op, OpStr, OpNode, sched.YMM,
                                            v32i8x_info, v4i64x_info>, EVEX_V256;
     defm Z128 : GF2P8AFFINE_avx512_rmb_imm<Op, OpStr, OpNode, sched.XMM,
