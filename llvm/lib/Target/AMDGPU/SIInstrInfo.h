@@ -130,7 +130,7 @@ private:
                                     MachineInstr &SCCDefInst,
                                     SetVectorType &Worklist,
                                     Register NewCond = Register()) const;
-  void addSCCDefsToVALUWorklist(MachineOperand &Op,
+  void addSCCDefsToVALUWorklist(MachineInstr *SCCUseInst,
                                 SetVectorType &Worklist) const;
 
   const TargetRegisterClass *

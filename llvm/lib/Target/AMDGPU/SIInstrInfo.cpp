@@ -6362,7 +6362,6 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
       continue;
     }
 
-
     if (NewOpcode == AMDGPU::INSTRUCTION_LIST_END) {
       // We cannot move this instruction to the VALU, so we should try to
       // legalize its operands instead.
@@ -6372,67 +6371,11 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
       continue;
     }
 
-    // Use the new VALU Opcode.
-    const MCInstrDesc &NewDesc = get(NewOpcode);
-    Inst.setDesc(NewDesc);
-
-    // Remove any references to SCC. Vector instructions can't read from it, and
-    // We're just about to add the implicit use / defs of VCC, and we don't want
-    // both.
-    for (unsigned i = Inst.getNumOperands() - 1; i > 0; --i) {
-      MachineOperand &Op = Inst.getOperand(i);
-      if (Op.isReg() && Op.getReg() == AMDGPU::SCC) {
-        // Only propagate through live-def of SCC.
-        if (Op.isDef() && !Op.isDead())
-          addSCCDefUsersToVALUWorklist(Op, Inst, Worklist);
-        if (Op.isUse())
-          addSCCDefsToVALUWorklist(Op, Worklist);
-        Inst.removeOperand(i);
-      }
-    }
-
-    if (Opcode == AMDGPU::S_SEXT_I32_I8 || Opcode == AMDGPU::S_SEXT_I32_I16) {
-      // We are converting these to a BFE, so we need to add the missing
-      // operands for the size and offset.
-      unsigned Size = (Opcode == AMDGPU::S_SEXT_I32_I8) ? 8 : 16;
-      Inst.addOperand(MachineOperand::CreateImm(0));
-      Inst.addOperand(MachineOperand::CreateImm(Size));
-
-    } else if (Opcode == AMDGPU::S_BCNT1_I32_B32) {
-      // The VALU version adds the second operand to the result, so insert an
-      // extra 0 operand.
-      Inst.addOperand(MachineOperand::CreateImm(0));
-    }
-
-    Inst.addImplicitDefUseOperands(*Inst.getParent()->getParent());
-    fixImplicitOperands(Inst);
-
-    if (Opcode == AMDGPU::S_BFE_I32 || Opcode == AMDGPU::S_BFE_U32) {
-      const MachineOperand &OffsetWidthOp = Inst.getOperand(2);
-      // If we need to move this to VGPRs, we need to unpack the second operand
-      // back into the 2 separate ones for bit offset and width.
-      assert(OffsetWidthOp.isImm() &&
-             "Scalar BFE is only implemented for constant width and offset");
-      uint32_t Imm = OffsetWidthOp.getImm();
-
-      uint32_t Offset = Imm & 0x3f; // Extract bits [5:0].
-      uint32_t BitWidth = (Imm & 0x7f0000) >> 16; // Extract bits [22:16].
-      Inst.removeOperand(2);                     // Remove old immediate.
-      Inst.addOperand(MachineOperand::CreateImm(Offset));
-      Inst.addOperand(MachineOperand::CreateImm(BitWidth));
-    }
-
-    bool HasDst = Inst.getOperand(0).isReg() && Inst.getOperand(0).isDef();
-    Register NewDstReg;
-    if (HasDst) {
+    // Handle converting generic instructions like COPY-to-SGPR into
+    // COPY-to-VGPR.
+    if (NewOpcode == Opcode) {
       Register DstReg = Inst.getOperand(0).getReg();
-      if (DstReg.isPhysical())
-        continue;
-
-      // Update the destination register class.
       const TargetRegisterClass *NewDstRC = getDestEquivalentVGPRClass(Inst);
-      if (!NewDstRC)
-        continue;
 
       if (Inst.isCopy() && Inst.getOperand(1).getReg().isVirtual() &&
           NewDstRC == RI.getRegClassForReg(MRI, Inst.getOperand(1).getReg())) {
@@ -6456,17 +6399,84 @@ MachineBasicBlock *SIInstrInfo::moveToVALU(MachineInstr &TopInst,
         continue;
       }
 
+      Register NewDstReg = MRI.createVirtualRegister(NewDstRC);
+      MRI.replaceRegWith(DstReg, NewDstReg);
+      legalizeOperands(Inst, MDT);
+      addUsersToMoveToVALUWorklist(NewDstReg, MRI, Worklist);
+      continue;
+    }
+
+    // Use the new VALU Opcode.
+    auto NewInstr = BuildMI(*MBB, Inst, Inst.getDebugLoc(), get(NewOpcode))
+                        .setMIFlags(Inst.getFlags());
+    for (const MachineOperand &Op : Inst.explicit_operands())
+      NewInstr->addOperand(Op);
+
+    // Remove any references to SCC. Vector instructions can't read from it, and
+    // We're just about to add the implicit use / defs of VCC, and we don't want
+    // both.
+    for (MachineOperand &Op : Inst.implicit_operands()) {
+      if (Op.getReg() == AMDGPU::SCC) {
+        // Only propagate through live-def of SCC.
+        if (Op.isDef() && !Op.isDead())
+          addSCCDefUsersToVALUWorklist(Op, Inst, Worklist);
+        if (Op.isUse())
+          addSCCDefsToVALUWorklist(NewInstr, Worklist);
+      }
+    }
+
+    Inst.eraseFromParent();
+
+    Register NewDstReg;
+    if (NewInstr->getOperand(0).isReg() && NewInstr->getOperand(0).isDef()) {
+      Register DstReg = NewInstr->getOperand(0).getReg();
+      assert(DstReg.isVirtual());
+
+      // Update the destination register class.
+      const TargetRegisterClass *NewDstRC =
+          getDestEquivalentVGPRClass(*NewInstr);
+      assert(NewDstRC);
+
       NewDstReg = MRI.createVirtualRegister(NewDstRC);
       MRI.replaceRegWith(DstReg, NewDstReg);
     }
 
+    if (Opcode == AMDGPU::S_SEXT_I32_I8 || Opcode == AMDGPU::S_SEXT_I32_I16) {
+      // We are converting these to a BFE, so we need to add the missing
+      // operands for the size and offset.
+      unsigned Size = (Opcode == AMDGPU::S_SEXT_I32_I8) ? 8 : 16;
+      NewInstr.addImm(0);
+      NewInstr.addImm(Size);
+    } else if (Opcode == AMDGPU::S_BCNT1_I32_B32) {
+      // The VALU version adds the second operand to the result, so insert an
+      // extra 0 operand.
+      NewInstr.addImm(0);
+    }
+
+    if (Opcode == AMDGPU::S_BFE_I32 || Opcode == AMDGPU::S_BFE_U32) {
+      const MachineOperand &OffsetWidthOp = NewInstr->getOperand(2);
+      // If we need to move this to VGPRs, we need to unpack the second operand
+      // back into the 2 separate ones for bit offset and width.
+      assert(OffsetWidthOp.isImm() &&
+             "Scalar BFE is only implemented for constant width and offset");
+      uint32_t Imm = OffsetWidthOp.getImm();
+
+      uint32_t Offset = Imm & 0x3f; // Extract bits [5:0].
+      uint32_t BitWidth = (Imm & 0x7f0000) >> 16; // Extract bits [22:16].
+      NewInstr->removeOperand(2);
+      NewInstr.addImm(Offset);
+      NewInstr.addImm(BitWidth);
+    }
+
+    fixImplicitOperands(*NewInstr);
+
     // Legalize the operands
-    CreatedBBTmp = legalizeOperands(Inst, MDT);
+    CreatedBBTmp = legalizeOperands(*NewInstr, MDT);
     if (CreatedBBTmp && TopInst.getParent() == CreatedBBTmp)
       CreatedBB = CreatedBBTmp;
 
-    if (HasDst)
-     addUsersToMoveToVALUWorklist(NewDstReg, MRI, Worklist);
+    if (NewDstReg)
+      addUsersToMoveToVALUWorklist(NewDstReg, MRI, Worklist);
   }
   return CreatedBB;
 }
@@ -7229,11 +7239,8 @@ void SIInstrInfo::addSCCDefUsersToVALUWorklist(MachineOperand &Op,
 // SCC must be changed to an instruction that defines VCC. This function makes
 // sure that the instruction that defines SCC is added to the moveToVALU
 // worklist.
-void SIInstrInfo::addSCCDefsToVALUWorklist(MachineOperand &Op,
+void SIInstrInfo::addSCCDefsToVALUWorklist(MachineInstr *SCCUseInst,
                                            SetVectorType &Worklist) const {
-  assert(Op.isReg() && Op.getReg() == AMDGPU::SCC && Op.isUse());
-
-  MachineInstr *SCCUseInst = Op.getParent();
   // Look for a preceding instruction that either defines VCC or SCC. If VCC
   // then there is nothing to do because the defining instruction has been
   // converted to a VALU already. If SCC then that instruction needs to be
