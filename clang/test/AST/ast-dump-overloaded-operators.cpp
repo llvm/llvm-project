@@ -24,7 +24,7 @@ void test() {
 // CHECK-NEXT: |-FunctionDecl {{.*}} <line:12:1, col:19> col:6{{( imported)?}} used operator, 'void (E, E)'
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} <col:16> col:17{{( imported)?}} 'E'
 // CHECK-NEXT: | `-ParmVarDecl {{.*}} <col:18> col:19{{( imported)?}} 'E'
-// CHECK-NEXT: `-FunctionDecl {{.*}} <line:14:1, line:18:1> line:14:6{{( imported)?}} test 'void ()'
+// CHECK-NEXT:  -FunctionDecl {{.*}} <line:14:1, line:18:1> line:14:6{{( imported)?}} test 'void ()'
 // CHECK-NEXT:   `-CompoundStmt {{.*}} <col:13, line:18:1>
 // CHECK-NEXT:     |-DeclStmt {{.*}} <line:15:3, col:6>
 // CHECK-NEXT:     | `-VarDecl {{.*}} <col:3, col:5> col:5{{( imported)?}} used e 'E'
