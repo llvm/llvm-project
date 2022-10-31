@@ -5014,8 +5014,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
     std::string NoBuiltinFD = ("no-builtin-" + FD->getName()).str();
     std::string NoBuiltins = "no-builtins";
 
-    auto *A = FD->getAttr<AsmLabelAttr>();
-    StringRef Ident = A ? A->getLabel() : FD->getName();
+    StringRef Ident = CGF.CGM.getMangledName(GD);
     std::string FDInlineName = (Ident + ".inline").str();
 
     bool IsPredefinedLibFunction =
