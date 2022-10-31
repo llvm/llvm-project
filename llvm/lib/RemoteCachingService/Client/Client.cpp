@@ -482,12 +482,23 @@ public:
 
 } // namespace
 
-Expected<ClientServices>
-cas::remote::createCompilationCachingRemoteClient(StringRef SocketPath) {
+static std::shared_ptr<grpc::Channel> createGRPCChannel(StringRef SocketPath) {
   std::string Address("unix:");
   Address += SocketPath;
-  const auto Channel = grpc::CreateChannel(std::move(Address),
-                                           grpc::InsecureChannelCredentials());
+  grpc::ChannelArguments Args{};
+  // Remove the initial connection timeout. If the execution environment gets
+  // into a state where the processes don't make progress, for a period longer
+  // than the timeout, it can cause unnecessary compilation errors if the
+  // connection fails due to the timeout. Note that the connection still fails
+  // if the socket path does not exist or there is no process listening on it.
+  Args.SetInt(GRPC_ARG_MIN_RECONNECT_BACKOFF_MS, INT_MAX);
+  return grpc::CreateCustomChannel(std::move(Address),
+                                   grpc::InsecureChannelCredentials(), Args);
+}
+
+Expected<ClientServices>
+cas::remote::createCompilationCachingRemoteClient(StringRef SocketPath) {
+  const auto Channel = createGRPCChannel(SocketPath);
   auto KVClient = std::make_unique<KeyValueDBClientImpl>(Channel);
   auto CASClient = std::make_unique<CASDBClientImpl>(std::move(Channel));
   return ClientServices{std::move(KVClient), std::move(CASClient)};
@@ -495,18 +506,10 @@ cas::remote::createCompilationCachingRemoteClient(StringRef SocketPath) {
 
 Expected<std::unique_ptr<CASDBClient>>
 cas::remote::createRemoteCASDBClient(StringRef SocketPath) {
-  std::string Address("unix:");
-  Address += SocketPath;
-  const auto Channel = grpc::CreateChannel(std::move(Address),
-                                           grpc::InsecureChannelCredentials());
-  return std::make_unique<CASDBClientImpl>(std::move(Channel));
+  return std::make_unique<CASDBClientImpl>(createGRPCChannel(SocketPath));
 }
 
 Expected<std::unique_ptr<KeyValueDBClient>>
 cas::remote::createRemoteKeyValueClient(StringRef SocketPath) {
-  std::string Address("unix:");
-  Address += SocketPath;
-  const auto Channel = grpc::CreateChannel(std::move(Address),
-                                           grpc::InsecureChannelCredentials());
-  return std::make_unique<KeyValueDBClientImpl>(Channel);
+  return std::make_unique<KeyValueDBClientImpl>(createGRPCChannel(SocketPath));
 }
