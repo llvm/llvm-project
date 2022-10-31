@@ -80,9 +80,6 @@ static int initLibrary(DeviceTy &Device) {
   int Rc = OFFLOAD_SUCCESS;
   bool SupportsEmptyImages = Device.RTL->supports_empty_images &&
                              Device.RTL->supports_empty_images() > 0;
-
-  std::lock_guard<decltype(Device.PendingGlobalsMtx)> LG(
-      Device.PendingGlobalsMtx);
   {
     std::lock_guard<decltype(PM->TrlTblMtx)> LG(PM->TrlTblMtx);
     for (auto *HostEntriesBegin : PM->HostEntriesBeginRegistrationOrder) {
@@ -320,16 +317,14 @@ bool checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc) {
   DeviceTy &Device = *PM->Devices[DeviceID];
 
   // Check whether global data has been mapped for this device
-  bool HasPendingGlobals;
   {
     std::lock_guard<decltype(Device.PendingGlobalsMtx)> LG(
         Device.PendingGlobalsMtx);
-    HasPendingGlobals = Device.HasPendingGlobals;
-  }
-  if (HasPendingGlobals && initLibrary(Device) != OFFLOAD_SUCCESS) {
-    REPORT("Failed to init globals on device %" PRId64 "\n", DeviceID);
-    handleTargetOutcome(false, Loc);
-    return true;
+    if (Device.HasPendingGlobals && initLibrary(Device) != OFFLOAD_SUCCESS) {
+      REPORT("Failed to init globals on device %" PRId64 "\n", DeviceID);
+      handleTargetOutcome(false, Loc);
+      return true;
+    }
   }
 
   return false;
