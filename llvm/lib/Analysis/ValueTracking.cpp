@@ -1206,13 +1206,14 @@ static void computeKnownBitsFromOperator(const Operator *I,
     // Handle cast from vector integer type to scalar or vector integer.
     auto *SrcVecTy = dyn_cast<FixedVectorType>(SrcTy);
     if (!SrcVecTy || !SrcVecTy->getElementType()->isIntegerTy() ||
-        !I->getType()->isIntOrIntVectorTy())
+        !I->getType()->isIntOrIntVectorTy() ||
+        isa<ScalableVectorType>(I->getType()))
       break;
 
     // Look through a cast from narrow vector elements to wider type.
     // Examples: v4i32 -> v2i64, v3i8 -> v24
     unsigned SubBitWidth = SrcVecTy->getScalarSizeInBits();
-    if (BitWidth % SubBitWidth == 0 && !isa<ScalableVectorType>(I->getType())) {
+    if (BitWidth % SubBitWidth == 0) {
       // Known bits are automatically intersected across demanded elements of a
       // vector. So for example, if a bit is computed as known zero, it must be
       // zero across all demanded elements of the vector.
