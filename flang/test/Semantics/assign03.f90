@@ -17,7 +17,8 @@ contains
     type(t), allocatable :: a(:)
     type(t), allocatable :: b[:]
     a(1)%p => s
-    !ERROR: Procedure pointer may not be a coindexed object
+    !ERROR: The left-hand side of a pointer assignment is not definable
+    !BECAUSE: Procedure pointer 'p' may not be a coindexed object
     b[1]%p => s
   end
   ! C1028

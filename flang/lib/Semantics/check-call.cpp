@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-call.h"
+#include "definable.h"
 #include "pointer-assignment.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/check-expression.h"
@@ -397,13 +398,15 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     reason = "INTENT(IN OUT)";
   }
   if (reason && scope) {
-    bool vectorSubscriptIsOk{isElemental || dummyIsValue}; // 15.5.2.4(21)
-    if (auto why{WhyNotModifiable(
-            messages.at(), actual, *scope, vectorSubscriptIsOk)}) {
+    DefinabilityFlags flags;
+    if (isElemental || dummyIsValue) { // 15.5.2.4(21)
+      flags.set(DefinabilityFlag::VectorSubscriptIsOk);
+    }
+    if (auto whyNot{WhyNotDefinable(messages.at(), *scope, flags, actual)}) {
       if (auto *msg{messages.Say(
-              "Actual argument associated with %s %s must be definable"_err_en_US,
+              "Actual argument associated with %s %s is not definable"_err_en_US,
               reason, dummyName)}) {
-        msg->Attach(*why);
+        msg->Attach(std::move(*whyNot));
       }
     }
   }
@@ -467,8 +470,10 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     }
     if (!actualIsPointer) {
       if (dummy.intent == common::Intent::In) {
-        semantics::CheckPointerAssignment(
-            context, parser::CharBlock{}, dummyName, dummy, actual);
+        if (scope) {
+          semantics::CheckPointerAssignment(
+              context, messages.at(), dummyName, dummy, actual, *scope);
+        }
       } else {
         messages.Say(
             "Actual argument associated with POINTER %s must also be POINTER unless INTENT(IN)"_err_en_US,

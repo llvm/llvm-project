@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-omp-structure.h"
+#include "definable.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
 #include <algorithm>
@@ -1963,9 +1964,9 @@ void OmpStructureChecker::CheckIntentInPointerAndDefinable(
               "in a %s clause"_err_en_US,
               symbol->name(),
               parser::ToUpperCaseLetters(getClauseName(clause).str()));
-        }
-        if (auto msg{
-                WhyNotModifiable(*symbol, context_.FindScope(name->source))}) {
+        } else if (auto msg{WhyNotDefinable(name->source,
+                       context_.FindScope(name->source), DefinabilityFlags{},
+                       *symbol)}) {
           context_
               .Say(GetContext().clauseSource,
                   "Variable '%s' on the %s clause is not definable"_err_en_US,
@@ -2572,7 +2573,8 @@ void OmpStructureChecker::CheckDefinableObjects(
   for (auto it{symbols.begin()}; it != symbols.end(); ++it) {
     const auto *symbol{it->first};
     const auto source{it->second};
-    if (auto msg{WhyNotModifiable(*symbol, context_.FindScope(source))}) {
+    if (auto msg{WhyNotDefinable(source, context_.FindScope(source),
+            DefinabilityFlags{}, *symbol)}) {
       context_
           .Say(source,
               "Variable '%s' on the %s clause is not definable"_err_en_US,

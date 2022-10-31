@@ -103,7 +103,8 @@ program test_atomic_ref
   !ERROR: 'stat' argument to 'atomic_ref' may not be a coindexed object
   call atomic_ref(val, scalar_coarray, coindexed_status[1])
 
-  !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'stat=' must be definable
+  !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'stat=' is not definable
+  !BECAUSE: '1_4' is not a variable or pointer
   call atomic_ref(val, scalar_coarray, 1)
 
   !ERROR: missing mandatory 'value=' argument
