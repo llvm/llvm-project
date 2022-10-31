@@ -8450,24 +8450,29 @@ struct NodeExtensionHelper {
     return OrigOperand.getOpcode() == RISCVISD::VMV_V_X_VL;
   }
 
-  /// Get or create a value that can feed \p Root with the given \p ExtOpc.
-  /// If \p ExtOpc is None, this returns the source of this operand.
+  /// Get or create a value that can feed \p Root with the given extension \p
+  /// SExt. If \p SExt is None, this returns the source of this operand.
   /// \see ::getSource().
   SDValue getOrCreateExtendedOp(const SDNode *Root, SelectionDAG &DAG,
-                                Optional<unsigned> ExtOpc) const {
-    SDValue Source = getSource();
-    if (!ExtOpc)
-      return Source;
+                                Optional<bool> SExt) const {
+    if (!SExt.has_value())
+      return OrigOperand;
 
     MVT NarrowVT = getNarrowType(Root);
+
+    SDValue Source = getSource();
+    if (Source.getValueType() == NarrowVT)
+      return Source;
+
+    unsigned ExtOpc = *SExt ? RISCVISD::VSEXT_VL : RISCVISD::VZEXT_VL;
+
     // If we need an extension, we should be changing the type.
-    assert(Source.getValueType() != NarrowVT && "Needless extension");
     SDLoc DL(Root);
     auto [Mask, VL] = getMaskAndVL(Root);
     switch (OrigOperand.getOpcode()) {
     case RISCVISD::VSEXT_VL:
     case RISCVISD::VZEXT_VL:
-      return DAG.getNode(*ExtOpc, DL, NarrowVT, Source, Mask, VL);
+      return DAG.getNode(ExtOpc, DL, NarrowVT, Source, Mask, VL);
     case RISCVISD::VMV_V_X_VL:
       return DAG.getNode(RISCVISD::VMV_V_X_VL, DL, NarrowVT,
                          DAG.getUNDEF(NarrowVT), Source.getOperand(1), VL);
@@ -8712,13 +8717,10 @@ struct NodeExtensionHelper {
 struct CombineResult {
   /// Opcode to be generated when materializing the combine.
   unsigned TargetOpcode;
-  /// Extension opcode to be applied to the source of LHS when materializing
-  /// TargetOpcode.
-  /// \see NodeExtensionHelper::getSource().
-  Optional<unsigned> LHSExtOpc;
-  /// Extension opcode to be applied to the source of RHS when materializing
-  /// TargetOpcode.
-  Optional<unsigned> RHSExtOpc;
+  // No value means no extension is needed. If extension is needed, the value
+  // indicates if it needs to be sign extended.
+  Optional<bool> SExtLHS;
+  Optional<bool> SExtRHS;
   /// Root of the combine.
   SDNode *Root;
   /// LHS of the TargetOpcode.
@@ -8729,13 +8731,8 @@ struct CombineResult {
   CombineResult(unsigned TargetOpcode, SDNode *Root,
                 const NodeExtensionHelper &LHS, Optional<bool> SExtLHS,
                 const NodeExtensionHelper &RHS, Optional<bool> SExtRHS)
-      : TargetOpcode(TargetOpcode), Root(Root), LHS(LHS), RHS(RHS) {
-    MVT NarrowVT = NodeExtensionHelper::getNarrowType(Root);
-    if (SExtLHS && LHS.getSource().getValueType() != NarrowVT)
-      LHSExtOpc = *SExtLHS ? RISCVISD::VSEXT_VL : RISCVISD::VZEXT_VL;
-    if (SExtRHS && RHS.getSource().getValueType() != NarrowVT)
-      RHSExtOpc = *SExtRHS ? RISCVISD::VSEXT_VL : RISCVISD::VZEXT_VL;
-  }
+      : TargetOpcode(TargetOpcode), SExtLHS(SExtLHS), SExtRHS(SExtRHS),
+        Root(Root), LHS(LHS), RHS(RHS) {}
 
   /// Return a value that uses TargetOpcode and that can be used to replace
   /// Root.
@@ -8745,8 +8742,8 @@ struct CombineResult {
     std::tie(Mask, VL) = NodeExtensionHelper::getMaskAndVL(Root);
     Merge = Root->getOperand(2);
     return DAG.getNode(TargetOpcode, SDLoc(Root), Root->getValueType(0),
-                       LHS.getOrCreateExtendedOp(Root, DAG, LHSExtOpc),
-                       RHS.getOrCreateExtendedOp(Root, DAG, RHSExtOpc), Merge,
+                       LHS.getOrCreateExtendedOp(Root, DAG, SExtLHS),
+                       RHS.getOrCreateExtendedOp(Root, DAG, SExtRHS), Merge,
                        Mask, VL);
   }
 };
