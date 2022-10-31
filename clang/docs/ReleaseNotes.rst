@@ -270,6 +270,10 @@ Bug Fixes
   `Issue 58679 <https://github.com/llvm/llvm-project/issues/58679>`_
 - Fix a crash when a ``btf_type_tag`` attribute is applied to the pointee of
   a function pointer.
+- Fix a number of recursively-instantiated constraint issues, which would possibly
+  result in a stack overflow.
+  `Issue 44304 <https://github.com/llvm/llvm-project/issues/44304>`_
+  `Issue 50891 <https://github.com/llvm/llvm-project/issues/50891>`_
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
