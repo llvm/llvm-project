@@ -1216,6 +1216,14 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"stat", AnyInt, Rank::scalar, Optionality::optional,
                 common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
+    {"atomic_or",
+        {{"atom", AtomicInt, Rank::atom, Optionality::required,
+             common::Intent::InOut},
+            {"value", AnyInt, Rank::scalar, Optionality::required,
+                common::Intent::In},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::atomicSubroutine},
     {"atomic_ref",
         {{"value", AnyIntOrLogical, Rank::scalar, Optionality::required,
              common::Intent::Out},
@@ -2753,7 +2761,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     }
   } else if (name == "associated") {
     return CheckAssociated(call, context);
-  } else if (name == "atomic_and") {
+  } else if (name == "atomic_and" || name == "atomic_or") {
     return CheckForCoindexedObject(context, call.arguments[2], name, "stat");
   } else if (name == "atomic_cas") {
     return CheckForCoindexedObject(context, call.arguments[4], name, "stat");
