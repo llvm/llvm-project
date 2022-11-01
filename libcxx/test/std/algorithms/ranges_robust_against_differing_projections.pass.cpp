@@ -24,8 +24,8 @@
 // (in1, in2, ...)
 template <class Func, std::ranges::range Input1, std::ranges::range Input2, class ...Args>
 constexpr void test(Func&& func, Input1& in1, Input2& in2, Args&& ...args) {
-  func(in1.begin(), in1.end(), in2.begin(), in2.end(), std::forward<Args>(args)...);
-  func(in1, in2, std::forward<Args>(args)...);
+  (void)func(in1.begin(), in1.end(), in2.begin(), in2.end(), std::forward<Args>(args)...);
+  (void)func(in1, in2, std::forward<Args>(args)...);
 }
 
 constexpr bool test_all() {
