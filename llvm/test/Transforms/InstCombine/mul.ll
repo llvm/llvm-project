@@ -296,6 +296,19 @@ define i32 @shl1_decrement_use(i32 %x, i32 %y) {
   ret i32 %m
 }
 
+define <2 x i8> @shl1_decrement_vec(<2 x i8> %x) {
+; CHECK-LABEL: @shl1_decrement_vec(
+; CHECK-NEXT:    [[POW2X:%.*]] = shl <2 x i8> <i8 -1, i8 -1>, [[X:%.*]]
+; CHECK-NEXT:    [[X1:%.*]] = xor <2 x i8> [[POW2X]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[M:%.*]] = mul <2 x i8> [[X1]], <i8 42, i8 -3>
+; CHECK-NEXT:    ret <2 x i8> [[M]]
+;
+  %pow2x = shl <2 x i8> <i8 -1, i8 -1>, %x
+  %x1 = xor <2 x i8> %pow2x, <i8 -1, i8 -1>
+  %m = mul <2 x i8> %x1, <i8 42, i8 -3>
+  ret <2 x i8> %m
+}
+
 ; X * Y (when Y is a boolean) --> Y ? X : 0
 
 define i32 @mul_bool(i32 %x, i1 %y) {
