@@ -694,7 +694,7 @@ llvm.func @simdloop_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr<f
       %4 = llvm.getelementptr %arg0[%iv] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
       llvm.store %3, %4 : !llvm.ptr<f32>
       omp.yield
-  }) {operand_segment_sizes = array<i32: 1,1,1,0>} :
+  }) {operand_segment_sizes = array<i32: 1,1,1,0,0>} :
     (i64, i64, i64) -> ()
 
   llvm.return
