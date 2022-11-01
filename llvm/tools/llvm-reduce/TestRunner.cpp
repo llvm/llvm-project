@@ -22,10 +22,12 @@ TestRunner::TestRunner(StringRef TestName,
                        const std::vector<std::string> &TestArgs,
                        std::unique_ptr<ReducerWorkItem> Program,
                        std::unique_ptr<TargetMachine> TM, const char *ToolName,
-                       StringRef OutputName, bool OutputBitcode)
+                       StringRef OutputName, bool InputIsBitcode,
+                       bool OutputBitcode)
     : TestName(TestName), ToolName(ToolName), TestArgs(TestArgs),
       Program(std::move(Program)), TM(std::move(TM)),
-      OutputFilename(OutputName), EmitBitcode(OutputBitcode) {
+      OutputFilename(OutputName), InputIsBitcode(InputIsBitcode),
+      EmitBitcode(OutputBitcode) {
   assert(this->Program && "Initialized with null program?");
 }
 

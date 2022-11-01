@@ -162,7 +162,8 @@ int main(int Argc, char **Argv) {
 
   // Initialize test environment
   TestRunner Tester(TestFilename, TestArguments, std::move(OriginalProgram),
-                    std::move(TM), Argv[0], OutputFilename, OutputBitcode);
+                    std::move(TM), Argv[0], OutputFilename, InputIsBitcode,
+                    OutputBitcode);
 
   // This parses and writes out the testcase into a temporary file copy for the
   // test, rather than evaluating the source IR directly. This is for the

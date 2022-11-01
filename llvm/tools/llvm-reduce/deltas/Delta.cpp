@@ -47,7 +47,7 @@ static cl::opt<unsigned int> StartingGranularityLevel(
 
 static cl::opt<bool> TmpFilesAsBitcode(
     "write-tmp-files-as-bitcode",
-    cl::desc("Write temporary files as bitcode, instead of textual IR"),
+    cl::desc("Always write temporary files as bitcode instead of textual IR"),
     cl::init(false), cl::cat(LLVMReduceOptions));
 
 #ifdef LLVM_ENABLE_THREADS
@@ -66,11 +66,14 @@ void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx,
                  const char *ToolName);
 
 bool isReduced(ReducerWorkItem &M, TestRunner &Test) {
+  const bool UseBitcode = Test.inputIsBitcode() || TmpFilesAsBitcode;
+
   SmallString<128> CurrentFilepath;
+
   // Write ReducerWorkItem to tmp file
   int FD;
   std::error_code EC = sys::fs::createTemporaryFile(
-      "llvm-reduce", M.isMIR() ? "mir" : (TmpFilesAsBitcode ? "bc" : "ll"), FD,
+      "llvm-reduce", M.isMIR() ? "mir" : (UseBitcode ? "bc" : "ll"), FD,
       CurrentFilepath);
   if (EC) {
     errs() << "Error making unique filename: " << EC.message() << "!\n";
