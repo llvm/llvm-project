@@ -338,6 +338,7 @@ def StdC : StandardSpec<"stdc"> {
           Macro<"MATH_ERREXCEPT">,
           Macro<"math_errhandling">,
 
+          Macro<"HUGE_VAL">,
           Macro<"INFINITY">,
           Macro<"NAN">,
 
@@ -740,6 +741,7 @@ def StdC : StandardSpec<"stdc"> {
       ]
   >;
 
+  NamedType SigAtomicT = NamedType<"sig_atomic_t">;
   HeaderSpec Signal = HeaderSpec<
       "signal.h",
       [
@@ -756,6 +758,7 @@ def StdC : StandardSpec<"stdc"> {
       ],
       [
         SizeTType,
+        SigAtomicT,
         SigHandlerT,
       ],
       [], // Enumerations
