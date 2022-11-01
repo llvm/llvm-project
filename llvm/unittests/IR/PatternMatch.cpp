@@ -1730,10 +1730,12 @@ TEST_F(PatternMatchTest, VectorLogicalSelects) {
   // select i1 Scalar, <3 x i1> <i1 1, i1 1, i1 1>, <3 x i1> Vector
   Value *MixedTypeOr = IRB.CreateSelect(Scalar, T, Vector);
 
+  // We allow matching a real vector logical select,
+  // but not a scalar select of vector bools.
   EXPECT_TRUE(match(VecAnd, m_LogicalAnd(m_Value(), m_Value())));
-  EXPECT_TRUE(match(MixedTypeAnd, m_LogicalAnd(m_Value(), m_Value())));
+  EXPECT_FALSE(match(MixedTypeAnd, m_LogicalAnd(m_Value(), m_Value())));
   EXPECT_TRUE(match(VecOr, m_LogicalOr(m_Value(), m_Value())));
-  EXPECT_TRUE(match(MixedTypeOr, m_LogicalOr(m_Value(), m_Value())));
+  EXPECT_FALSE(match(MixedTypeOr, m_LogicalOr(m_Value(), m_Value())));
 }
 
 TEST_F(PatternMatchTest, VScale) {

@@ -2513,6 +2513,12 @@ struct LogicalOp_match {
       auto *Cond = Select->getCondition();
       auto *TVal = Select->getTrueValue();
       auto *FVal = Select->getFalseValue();
+
+      // Don't match a scalar select of bool vectors.
+      // Transforms expect a single type for operands if this matches.
+      if (Cond->getType() != Select->getType())
+        return false;
+
       if (Opcode == Instruction::And) {
         auto *C = dyn_cast<Constant>(FVal);
         if (C && C->isNullValue())
