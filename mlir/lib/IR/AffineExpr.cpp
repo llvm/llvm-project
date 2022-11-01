@@ -996,6 +996,8 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
     std::pair<unsigned, signed> indexEntry(j, -1);
     addEntry(indexEntry, flatExprs[j], getAffineDimExpr(j, context));
   }
+  // Ensure we do not have duplicate keys in `indexToExpr` map.
+  unsigned offset = 0;
   for (unsigned j = numDims; j < numDims + numSymbols; ++j) {
     if (flatExprs[j] == 0)
       continue;
@@ -1003,8 +1005,8 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
     // of the symbol, max(dimCount, symCount)> number,
     // as we want symbolic expressions with the same positional number to
     // appear after dimensional expressions having the same positional number.
-    std::pair<unsigned, signed> indexEntry(j - numDims,
-                                           std::max(numDims, numSymbols));
+    std::pair<unsigned, signed> indexEntry(
+        j - numDims, std::max(numDims, numSymbols) + offset++);
     addEntry(indexEntry, flatExprs[j],
              getAffineSymbolExpr(j - numDims, context));
   }
@@ -1041,8 +1043,8 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
                  expr);
       } else {
         lhsPos = lhs.cast<AffineSymbolExpr>().getPosition();
-        std::pair<unsigned, signed> indexEntry(lhsPos,
-                                               std::max(numDims, numSymbols));
+        std::pair<unsigned, signed> indexEntry(
+            lhsPos, std::max(numDims, numSymbols) + offset++);
         addEntry(indexEntry, flatExprs[numDims + numSymbols + it.index()],
                  expr);
       }
@@ -1063,7 +1065,8 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
       // the dimension and keyB is the position number of the symbol.
       lhsPos = lhs.cast<AffineSymbolExpr>().getPosition();
       rhsPos = rhs.cast<AffineSymbolExpr>().getPosition();
-      std::pair<unsigned, signed> indexEntry(lhsPos, rhsPos);
+      std::pair<unsigned, signed> indexEntry(
+          lhsPos, std::max(numDims, numSymbols) + offset++);
       addEntry(indexEntry, flatExprs[numDims + numSymbols + it.index()], expr);
     }
     addedToMap[it.index()] = true;
