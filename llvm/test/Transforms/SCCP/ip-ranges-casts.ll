@@ -246,8 +246,8 @@ define i1 @caller.fpext() {
 ; There's nothing we can do besides going to the full range or overdefined.
 define internal i1 @f.inttoptr.ptrtoint(i64 %x) {
 ; CHECK-LABEL: @f.inttoptr.ptrtoint(
-; CHECK-NEXT:    [[TO_PTR:%.*]] = inttoptr i64 [[X:%.*]] to i8*
-; CHECK-NEXT:    [[TO_I64:%.*]] = ptrtoint i8* [[TO_PTR]] to i64
+; CHECK-NEXT:    [[TO_PTR:%.*]] = inttoptr i64 [[X:%.*]] to ptr
+; CHECK-NEXT:    [[TO_I64:%.*]] = ptrtoint ptr [[TO_PTR]] to i64
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i64 [[TO_I64]], 300
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i64 [[TO_I64]], 299
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp slt i64 [[TO_I64]], 100
@@ -257,8 +257,8 @@ define internal i1 @f.inttoptr.ptrtoint(i64 %x) {
 ; CHECK-NEXT:    [[RES_3:%.*]] = add i1 [[RES_2]], [[C_4]]
 ; CHECK-NEXT:    ret i1 [[RES_3]]
 ;
-  %to.ptr = inttoptr i64 %x to i8*
-  %to.i64 = ptrtoint i8* %to.ptr to i64
+  %to.ptr = inttoptr i64 %x to ptr
+  %to.i64 = ptrtoint ptr %to.ptr to i64
   %c.1 = icmp sgt i64 %to.i64, 300
   %c.2 = icmp sgt i64 %to.i64, 299
   %c.3 = icmp slt i64 %to.i64, 100

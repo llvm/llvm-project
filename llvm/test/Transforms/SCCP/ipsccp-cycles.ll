@@ -40,9 +40,9 @@ define i32 @test2(i32 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* @Getopt.optind, align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr @Getopt.optind, align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LV]], 1
-; CHECK-NEXT:    store i32 [[ADD]], i32* @Getopt.optind, align 4
+; CHECK-NEXT:    store i32 [[ADD]], ptr @Getopt.optind, align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[ADD]], [[A:%.*]]
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
@@ -52,9 +52,9 @@ entry:
   br label %loop
 
 loop:
-  %lv = load i32, i32* @Getopt.optind, align 4
+  %lv = load i32, ptr @Getopt.optind, align 4
   %add = add i32 %lv, 1
-  store i32 %add, i32* @Getopt.optind
+  store i32 %add, ptr @Getopt.optind
   %c = icmp eq i32 %add, %a
   br i1 %c, label %exit, label %loop
 
@@ -162,24 +162,24 @@ define i32 @test4b(i32 %b) {
 
 ; Check for a range extension cycle through a returned value.
 
-define internal i32 @test5a(i8* %arg, i32 %arg1, i32 %arg2) {
+define internal i32 @test5a(ptr %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: @test5a(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = icmp eq i8* [[ARG:%.*]], null
+; CHECK-NEXT:    [[TMP:%.*]] = icmp eq ptr [[ARG:%.*]], null
 ; CHECK-NEXT:    br i1 [[TMP]], label [[BB6:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @test5a(i8* [[ARG]], i32 0, i32 -1)
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @test5a(ptr [[ARG]], i32 0, i32 -1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 [[TMP4]], -1
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    ret i32 0
 ;
 bb:
-  %tmp = icmp eq i8* %arg, null
+  %tmp = icmp eq ptr %arg, null
   br i1 %tmp, label %bb6, label %bb3
 
 bb3:                                              ; preds = %bb
-  %tmp4 = tail call i32 @test5a(i8* %arg, i32 %arg1, i32 %arg2)
+  %tmp4 = tail call i32 @test5a(ptr %arg, i32 %arg1, i32 %arg2)
   %tmp5 = add nsw i32 %tmp4, %arg2
   ret i32 %tmp5
 
@@ -187,26 +187,26 @@ bb6:                                              ; preds = %bb
   ret i32 %arg1
 }
 
-define void @test5b(i8* %ptr) {
+define void @test5b(ptr %ptr) {
 ; CHECK-LABEL: @test5b(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = tail call i32 @test5a(i8* [[PTR:%.*]], i32 0, i32 -1)
+; CHECK-NEXT:    [[TMP:%.*]] = tail call i32 @test5a(ptr [[PTR:%.*]], i32 0, i32 -1)
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %tmp = tail call i32 @test5a(i8* %ptr, i32 0, i32 -1)
+  %tmp = tail call i32 @test5a(ptr %ptr, i32 0, i32 -1)
   ret void
 }
 
 %struct = type { i32, i32 }
 
-define internal %struct @test6a(i8* %arg, i32 %arg1, i32 %arg2) {
+define internal %struct @test6a(ptr %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-LABEL: @test6a(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = icmp eq i8* [[ARG:%.*]], null
+; CHECK-NEXT:    [[TMP:%.*]] = icmp eq ptr [[ARG:%.*]], null
 ; CHECK-NEXT:    br i1 [[TMP]], label [[BB6:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[S1:%.*]] = tail call [[STRUCT:%.*]] @test6a(i8* [[ARG]], i32 0, i32 -1)
+; CHECK-NEXT:    [[S1:%.*]] = tail call [[STRUCT:%.*]] @test6a(ptr [[ARG]], i32 0, i32 -1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractvalue [[STRUCT]] %s1, 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i32 [[TMP4]], -1
 ; CHECK-NEXT:    [[S2:%.*]] = insertvalue [[STRUCT]] %s1, i32 [[TMP5]], 0
@@ -215,11 +215,11 @@ define internal %struct @test6a(i8* %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    ret [[STRUCT]] { i32 0, i32 undef }
 ;
 bb:
-  %tmp = icmp eq i8* %arg, null
+  %tmp = icmp eq ptr %arg, null
   br i1 %tmp, label %bb6, label %bb3
 
 bb3:                                              ; preds = %bb
-  %s1 = tail call %struct @test6a(i8* %arg, i32 %arg1, i32 %arg2)
+  %s1 = tail call %struct @test6a(ptr %arg, i32 %arg1, i32 %arg2)
   %tmp4 = extractvalue %struct %s1, 0
   %tmp5 = add nsw i32 %tmp4, %arg2
   %s2 = insertvalue %struct %s1, i32 %tmp5, 0
@@ -230,13 +230,13 @@ bb6:                                              ; preds = %bb
   ret %struct %s3
 }
 
-define void @test6b(i8* %ptr) {
+define void @test6b(ptr %ptr) {
 ; CHECK-LABEL: @test6b(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = tail call [[STRUCT:%.*]] @test6a(i8* [[PTR:%.*]], i32 0, i32 -1)
+; CHECK-NEXT:    [[TMP:%.*]] = tail call [[STRUCT:%.*]] @test6a(ptr [[PTR:%.*]], i32 0, i32 -1)
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %tmp = tail call %struct @test6a(i8* %ptr, i32 0, i32 -1)
+  %tmp = tail call %struct @test6a(ptr %ptr, i32 0, i32 -1)
   ret void
 }
