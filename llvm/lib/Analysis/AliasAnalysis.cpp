@@ -210,12 +210,6 @@ ModRefInfo AAResults::getModRefInfo(const Instruction *I, const CallBase *Call2,
 }
 
 ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
-                                    const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP(*this);
-  return getModRefInfo(Call, Loc, AAQIP);
-}
-
-ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   ModRefInfo Result = ModRefInfo::ModRef;
@@ -267,12 +261,6 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
     Result &= getModRefInfoMask(Loc);
 
   return Result;
-}
-
-ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
-                                    const CallBase *Call2) {
-  SimpleAAQueryInfo AAQIP(*this);
-  return getModRefInfo(Call1, Call2, AAQIP);
 }
 
 ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
@@ -477,11 +465,6 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, MemoryEffects ME) {
 //===----------------------------------------------------------------------===//
 
 ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
-                                    const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP(*this);
-  return getModRefInfo(L, Loc, AAQIP);
-}
-ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   // Be conservative in the face of atomic.
@@ -499,11 +482,6 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
   return ModRefInfo::Ref;
 }
 
-ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
-                                    const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP(*this);
-  return getModRefInfo(S, Loc, AAQIP);
-}
 ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
@@ -531,12 +509,6 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
 }
 
 ModRefInfo AAResults::getModRefInfo(const FenceInst *S,
-                                    const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP(*this);
-  return getModRefInfo(S, Loc, AAQIP);
-}
-
-ModRefInfo AAResults::getModRefInfo(const FenceInst *S,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   // All we know about a fence instruction is what we get from the ModRef
@@ -545,12 +517,6 @@ ModRefInfo AAResults::getModRefInfo(const FenceInst *S,
   if (Loc.Ptr)
     return getModRefInfoMask(Loc);
   return ModRefInfo::ModRef;
-}
-
-ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
-                                    const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP(*this);
-  return getModRefInfo(V, Loc, AAQIP);
 }
 
 ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
@@ -573,12 +539,6 @@ ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
 }
 
 ModRefInfo AAResults::getModRefInfo(const CatchPadInst *CatchPad,
-                                    const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP(*this);
-  return getModRefInfo(CatchPad, Loc, AAQIP);
-}
-
-ModRefInfo AAResults::getModRefInfo(const CatchPadInst *CatchPad,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   if (Loc.Ptr) {
@@ -592,12 +552,6 @@ ModRefInfo AAResults::getModRefInfo(const CatchPadInst *CatchPad,
 }
 
 ModRefInfo AAResults::getModRefInfo(const CatchReturnInst *CatchRet,
-                                    const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP(*this);
-  return getModRefInfo(CatchRet, Loc, AAQIP);
-}
-
-ModRefInfo AAResults::getModRefInfo(const CatchReturnInst *CatchRet,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI) {
   if (Loc.Ptr) {
@@ -608,12 +562,6 @@ ModRefInfo AAResults::getModRefInfo(const CatchReturnInst *CatchRet,
 
   // Otherwise, a catchret reads and writes.
   return ModRefInfo::ModRef;
-}
-
-ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
-                                    const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP(*this);
-  return getModRefInfo(CX, Loc, AAQIP);
 }
 
 ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
@@ -632,12 +580,6 @@ ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
   }
 
   return ModRefInfo::ModRef;
-}
-
-ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
-                                    const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP(*this);
-  return getModRefInfo(RMW, Loc, AAQIP);
 }
 
 ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
