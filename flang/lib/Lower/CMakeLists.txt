@@ -17,6 +17,7 @@ add_flang_library(FortranLower
   IntrinsicCall.cpp
   IO.cpp
   IterationSpace.cpp
+  LoweringOptions.cpp
   Mangler.cpp
   OpenACC.cpp
   OpenMP.cpp
