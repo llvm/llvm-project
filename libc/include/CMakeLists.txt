@@ -77,6 +77,15 @@ add_gen_header(
 )
 
 add_gen_header(
+  setjmp
+  DEF_FILE setjmp.h.def
+  GEN_HDR setjmp.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.jmp_buf
+)
+
+add_gen_header(
   string
   DEF_FILE string.h.def
   GEN_HDR string.h

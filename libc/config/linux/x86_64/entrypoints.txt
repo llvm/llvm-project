@@ -362,6 +362,10 @@ if(LLVM_LIBC_FULL_BUILD)
     # sched.h entrypoints
     libc.src.sched.__sched_getcpucount
 
+    # setjmp.h entrypoints
+    libc.src.setjmp.longjmp
+    libc.src.setjmp.setjmp
+
     # stdio.h entrypoints
     libc.src.stdio.clearerr
     libc.src.stdio.clearerr_unlocked
