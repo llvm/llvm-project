@@ -489,11 +489,10 @@ LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
   return Addr;
 }
 
-SDValue LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
-                                                         SelectionDAG &DAG) const {
-  unsigned IntNo = Op.getConstantOperandVal(0);
-
-  switch (IntNo) {
+SDValue
+LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  switch (Op.getConstantOperandVal(0)) {
   default:
     return SDValue(); // Don't custom lower most intrinsics.
   case Intrinsic::thread_pointer: {
