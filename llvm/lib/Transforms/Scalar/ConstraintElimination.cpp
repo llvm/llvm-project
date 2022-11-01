@@ -209,9 +209,7 @@ decomposeGEP(GetElementPtrInst &GEP,
              const DataLayout &DL) {
   // Do not reason about pointers where the index size is larger than 64 bits,
   // as the coefficients used to encode constraints are 64 bit integers.
-  unsigned AS =
-      cast<PointerType>(GEP.getPointerOperand()->getType())->getAddressSpace();
-  if (DL.getIndexSizeInBits(AS) > 64)
+  if (DL.getIndexTypeSizeInBits(GEP.getPointerOperand()->getType()) > 64)
     return {};
 
   if (!GEP.isInBounds())
