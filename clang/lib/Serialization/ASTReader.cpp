@@ -6262,9 +6262,8 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
 
     DiagStates.clear();
 
-    auto ReadDiagState =
-        [&](const DiagState &BasedOn, SourceLocation Loc,
-            bool IncludeNonPragmaStates) -> DiagnosticsEngine::DiagState * {
+    auto ReadDiagState = [&](const DiagState &BasedOn,
+                             bool IncludeNonPragmaStates) {
       unsigned BackrefID = Record[Idx++];
       if (BackrefID != 0)
         return DiagStates[BackrefID - 1];
@@ -6325,7 +6324,7 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
       Initial.EnableAllWarnings = Flags & 1; Flags >>= 1;
       Initial.IgnoreAllWarnings = Flags & 1; Flags >>= 1;
       Initial.ExtBehavior = (diag::Severity)Flags;
-      FirstState = ReadDiagState(Initial, SourceLocation(), true);
+      FirstState = ReadDiagState(Initial, true);
 
       assert(F.OriginalSourceFileID.isValid());
 
@@ -6338,8 +6337,7 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
       // For prefix ASTs, start with whatever the user configured on the
       // command line.
       Idx++; // Skip flags.
-      FirstState = ReadDiagState(*Diag.DiagStatesByLoc.CurDiagState,
-                                 SourceLocation(), false);
+      FirstState = ReadDiagState(*Diag.DiagStatesByLoc.CurDiagState, false);
     }
 
     // Read the state transitions.
@@ -6361,8 +6359,7 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
       F.StateTransitions.reserve(F.StateTransitions.size() + Transitions);
       for (unsigned I = 0; I != Transitions; ++I) {
         unsigned Offset = Record[Idx++];
-        auto *State =
-            ReadDiagState(*FirstState, Loc.getLocWithOffset(Offset), false);
+        auto *State = ReadDiagState(*FirstState, false);
         F.StateTransitions.push_back({State, Offset});
       }
     }
@@ -6372,7 +6369,7 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
            "Invalid data, missing final pragma diagnostic state");
     SourceLocation CurStateLoc =
         ReadSourceLocation(F, F.PragmaDiagMappings[Idx++]);
-    auto *CurState = ReadDiagState(*FirstState, CurStateLoc, false);
+    auto *CurState = ReadDiagState(*FirstState, false);
 
     if (!F.isModule()) {
       Diag.DiagStatesByLoc.CurDiagState = CurState;
