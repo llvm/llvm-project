@@ -288,6 +288,22 @@ func.func @roundvec(%arg0 : vector<3xf16>) -> () {
   return
 }
 
+//===----------------------------------------------------------------------===//
+// spirv.GL.RoundEven
+//===----------------------------------------------------------------------===//
+
+func.func @round_even(%arg0 : f32) -> () {
+  // CHECK: spirv.GL.RoundEven {{%.*}} : f32
+  %2 = spirv.GL.RoundEven %arg0 : f32
+  return
+}
+
+func.func @round_even_vec(%arg0 : vector<3xf16>) -> () {
+  // CHECK: spirv.GL.RoundEven {{%.*}} : vector<3xf16>
+  %2 = spirv.GL.RoundEven %arg0 : vector<3xf16>
+  return
+}
+
 // -----
 
 //===----------------------------------------------------------------------===//
