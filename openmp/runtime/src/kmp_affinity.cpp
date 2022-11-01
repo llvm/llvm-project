@@ -675,7 +675,11 @@ void kmp_topology_t::print(const char *env_var) const {
   kmp_hw_t print_types[KMP_HW_LAST + 2];
 
   // Num Available Threads
-  KMP_INFORM(AvailableOSProc, env_var, num_hw_threads);
+  if (num_hw_threads) {
+    KMP_INFORM(AvailableOSProc, env_var, num_hw_threads);
+  } else {
+    KMP_INFORM(AvailableOSProc, env_var, __kmp_xproc);
+  }
 
   // Uniform or not
   if (is_uniform()) {
@@ -3062,7 +3066,8 @@ static bool __kmp_affinity_create_cpuinfo_map(int *line,
       }
 
       // Skip this proc if it is not included in the machine model.
-      if (!KMP_CPU_ISSET(threadInfo[num_avail][osIdIndex],
+      if (KMP_AFFINITY_CAPABLE() &&
+          !KMP_CPU_ISSET(threadInfo[num_avail][osIdIndex],
                          __kmp_affin_fullMask)) {
         INIT_PROC_INFO(threadInfo[num_avail]);
         continue;
@@ -4525,6 +4530,9 @@ void __kmp_affinity_uninitialize(void) {
     *affinity = KMP_AFFINITY_INIT(affinity->env_var);
   }
   if (__kmp_affin_origMask != NULL) {
+    if (KMP_AFFINITY_CAPABLE()) {
+      __kmp_set_system_affinity(__kmp_affin_origMask, FALSE);
+    }
     KMP_CPU_FREE(__kmp_affin_origMask);
     __kmp_affin_origMask = NULL;
   }

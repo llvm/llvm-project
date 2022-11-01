@@ -3655,6 +3655,8 @@ static inline void __kmp_assign_root_init_mask() {
   }
 }
 static inline void __kmp_reset_root_init_mask(int gtid) {
+  if (!KMP_AFFINITY_CAPABLE())
+    return;
   kmp_info_t *th = __kmp_threads[gtid];
   kmp_root_t *r = th->th.th_root;
   if (r->r.r_uber_thread == th && r->r.r_affinity_assigned) {
