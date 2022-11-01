@@ -720,25 +720,25 @@ struct DenseMapInfo<AAPointerInfo::Access> : DenseMapInfo<Instruction *> {
   static bool isEqual(const Access &LHS, const Access &RHS);
 };
 
-/// Helper that allows OffsetAndSize as a key in a DenseMap.
-template <> struct DenseMapInfo<AA::OffsetAndSize> {
-  static inline AA::OffsetAndSize getEmptyKey() {
+/// Helper that allows RangeTy as a key in a DenseMap.
+template <> struct DenseMapInfo<AA::RangeTy> {
+  static inline AA::RangeTy getEmptyKey() {
     auto EmptyKey = DenseMapInfo<int64_t>::getEmptyKey();
-    return AA::OffsetAndSize{EmptyKey, EmptyKey};
+    return AA::RangeTy{EmptyKey, EmptyKey};
   }
 
-  static inline AA::OffsetAndSize getTombstoneKey() {
+  static inline AA::RangeTy getTombstoneKey() {
     auto TombstoneKey = DenseMapInfo<int64_t>::getTombstoneKey();
-    return AA::OffsetAndSize{TombstoneKey, TombstoneKey};
+    return AA::RangeTy{TombstoneKey, TombstoneKey};
   }
 
-  static unsigned getHashValue(const AA::OffsetAndSize &OAS) {
+  static unsigned getHashValue(const AA::RangeTy &Range) {
     return detail::combineHashValue(
-        DenseMapInfo<int64_t>::getHashValue(OAS.Offset),
-        DenseMapInfo<int64_t>::getHashValue(OAS.Size));
+        DenseMapInfo<int64_t>::getHashValue(Range.Offset),
+        DenseMapInfo<int64_t>::getHashValue(Range.Size));
   }
 
-  static bool isEqual(const AA::OffsetAndSize &A, const AA::OffsetAndSize B) {
+  static bool isEqual(const AA::RangeTy &A, const AA::RangeTy B) {
     return A == B;
   }
 };
@@ -824,7 +824,7 @@ struct AA::PointerInfo::State : public AbstractState {
                          AAPointerInfo::AccessKind Kind, Type *Ty,
                          Instruction *RemoteI = nullptr);
 
-  using OffsetBinsTy = DenseMap<OffsetAndSize, SmallSet<unsigned, 4>>;
+  using OffsetBinsTy = DenseMap<RangeTy, SmallSet<unsigned, 4>>;
 
   using const_bin_iterator = OffsetBinsTy::const_iterator;
   const_bin_iterator begin() const { return OffsetBins.begin(); }
@@ -838,7 +838,7 @@ protected:
   // Every memory instruction results in an Access object. We maintain a list of
   // all Access objects that we own, along with the following maps:
   //
-  // - OffsetBins: OffsetAndSize -> { Access }
+  // - OffsetBins: RangeTy -> { Access }
   // - RemoteIMap: RemoteI x LocalI -> Access
   //
   // A RemoteI is any instruction that accesses memory. RemoteI is different
@@ -846,23 +846,23 @@ protected:
   // instruction in the callgraph starting from LocalI. Multiple paths in the
   // callgraph from LocalI to RemoteI may produce multiple accesses, but these
   // are all combined into a single Access object. This may result in loss of
-  // information in OffsetAndSize in the Access object.
+  // information in RangeTy in the Access object.
   SmallVector<AAPointerInfo::Access> AccessList;
   OffsetBinsTy OffsetBins;
   DenseMap<const Instruction *, SmallVector<unsigned>> RemoteIMap;
 
   /// See AAPointerInfo::forallInterferingAccesses.
   bool forallInterferingAccesses(
-      AA::OffsetAndSize OAS,
+      AA::RangeTy Range,
       function_ref<bool(const AAPointerInfo::Access &, bool)> CB) const {
     if (!isValidState())
       return false;
 
     for (const auto &It : OffsetBins) {
-      AA::OffsetAndSize ItOAS = It.getFirst();
-      if (!OAS.mayOverlap(ItOAS))
+      AA::RangeTy ItRange = It.getFirst();
+      if (!Range.mayOverlap(ItRange))
         continue;
-      bool IsExact = OAS == ItOAS && !OAS.offsetOrSizeAreUnknown();
+      bool IsExact = Range == ItRange && !Range.offsetOrSizeAreUnknown();
       for (auto Index : It.getSecond()) {
         auto &Access = AccessList[Index];
         if (!CB(Access, IsExact))
@@ -876,7 +876,7 @@ protected:
   bool forallInterferingAccesses(
       Instruction &I,
       function_ref<bool(const AAPointerInfo::Access &, bool)> CB,
-      AA::OffsetAndSize &OAS) const {
+      AA::RangeTy &Range) const {
     if (!isValidState())
       return false;
 
@@ -887,9 +887,9 @@ protected:
 
     for (auto LI : LocalList->getSecond()) {
       auto &Access = AccessList[LI];
-      OAS &= {Access.getOffset(), Access.getSize()};
+      Range &= {Access.getOffset(), Access.getSize()};
     }
-    return forallInterferingAccesses(OAS, CB);
+    return forallInterferingAccesses(Range, CB);
   }
 
 private:
@@ -929,7 +929,7 @@ ChangeStatus AA::PointerInfo::State::addAccess(Attributor &A, int64_t Offset,
       return ChangeStatus::UNCHANGED;
 
     Acc = Current;
-    AA::OffsetAndSize Key{Before.getOffset(), Before.getSize()};
+    AA::RangeTy Key{Before.getOffset(), Before.getSize()};
     assert(OffsetBins.count(Key) && "Existing Access must be in some bin.");
     auto &Bin = OffsetBins[Key];
     assert(Bin.count(AccIndex) &&
@@ -940,7 +940,7 @@ ChangeStatus AA::PointerInfo::State::addAccess(Attributor &A, int64_t Offset,
     Bin.erase(AccIndex);
   }
 
-  AA::OffsetAndSize Key{Acc.getOffset(), Acc.getSize()};
+  AA::RangeTy Key{Acc.getOffset(), Acc.getSize()};
   LLVM_DEBUG(dbgs() << "[AAPointerInfo] Inserting Access " << Acc
                     << " with key {" << Key.Offset << ',' << Key.Size << "}\n");
   OffsetBins[Key].insert(AccIndex);
@@ -967,16 +967,16 @@ struct AAPointerInfoImpl
   }
 
   bool forallInterferingAccesses(
-      AA::OffsetAndSize OAS,
+      AA::RangeTy Range,
       function_ref<bool(const AAPointerInfo::Access &, bool)> CB)
       const override {
-    return State::forallInterferingAccesses(OAS, CB);
+    return State::forallInterferingAccesses(Range, CB);
   }
 
   bool forallInterferingAccesses(
       Attributor &A, const AbstractAttribute &QueryingAA, Instruction &I,
       function_ref<bool(const Access &, bool)> UserCB, bool &HasBeenWrittenTo,
-      AA::OffsetAndSize &OAS) const override {
+      AA::RangeTy &Range) const override {
     HasBeenWrittenTo = false;
 
     SmallPtrSet<const Access *, 8> DominatingWrites;
@@ -1091,7 +1091,7 @@ struct AAPointerInfoImpl
       InterferingAccesses.push_back({&Acc, Exact});
       return true;
     };
-    if (!State::forallInterferingAccesses(I, AccessCB, OAS))
+    if (!State::forallInterferingAccesses(I, AccessCB, Range))
       return false;
 
     if (HasBeenWrittenTo) {
@@ -1160,10 +1160,10 @@ struct AAPointerInfoImpl
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     const auto &State = OtherAAImpl.getState();
     for (const auto &It : State) {
-      AA::OffsetAndSize OAS = AA::OffsetAndSize::getUnknown();
-      if (Offset != AA::OffsetAndSize::Unknown &&
+      AA::RangeTy Range = AA::RangeTy::getUnknown();
+      if (Offset != AA::RangeTy::Unknown &&
           !It.first.offsetOrSizeAreUnknown()) {
-        OAS = AA::OffsetAndSize(It.first.Offset + Offset, It.first.Size);
+        Range = AA::RangeTy(It.first.Offset + Offset, It.first.Size);
       }
       for (auto Index : It.getSecond()) {
         const auto &RAcc = State.getAccess(Index);
@@ -1179,8 +1179,8 @@ struct AAPointerInfoImpl
               AccessKind(AK & (IsByval ? AccessKind::AK_R : AccessKind::AK_RW));
           AK = AccessKind(AK | (RAcc.isMayAccess() ? AK_MAY : AK_MUST));
         }
-        Changed = Changed | addAccess(A, OAS.Offset, OAS.Size, CB, Content, AK,
-                                      RAcc.getType(), RAcc.getRemoteInst());
+        Changed = Changed | addAccess(A, Range.Offset, Range.Size, CB, Content,
+                                      AK, RAcc.getType(), RAcc.getRemoteInst());
       }
     }
     return Changed;
@@ -1221,10 +1221,10 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
   bool handleAccess(Attributor &A, Instruction &I, Value &Ptr,
                     std::optional<Value *> Content, AccessKind Kind,
                     int64_t Offset, ChangeStatus &Changed, Type *Ty,
-                    int64_t Size = AA::OffsetAndSize::Unknown) {
+                    int64_t Size = AA::RangeTy::Unknown) {
     using namespace AA::PointerInfo;
     // No need to find a size if one is given.
-    if (Size == AA::OffsetAndSize::Unknown && Ty) {
+    if (Size == AA::RangeTy::Unknown && Ty) {
       const DataLayout &DL = A.getDataLayout();
       TypeSize AccessSize = DL.getTypeStoreSize(Ty);
       if (!AccessSize.isScalable())
@@ -1235,8 +1235,11 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
   };
 
   /// Helper struct, will support ranges eventually.
+  ///
+  /// FIXME: Tracks a single Offset until we have proper support for a list of
+  /// RangeTy objects.
   struct OffsetInfo {
-    int64_t Offset = AA::OffsetAndSize::Unassigned;
+    int64_t Offset = AA::RangeTy::Unassigned;
 
     bool operator==(const OffsetInfo &OI) const { return Offset == OI.Offset; }
   };
@@ -1253,7 +1256,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
     auto HandlePassthroughUser = [&](Value *Usr, OffsetInfo PtrOI,
                                      bool &Follow) {
-      assert(PtrOI.Offset != AA::OffsetAndSize::Unassigned &&
+      assert(PtrOI.Offset != AA::RangeTy::Unassigned &&
              "Cannot pass through if the input Ptr was not visited!");
       OffsetInfo &UsrOI = OffsetInfoMap[Usr];
       UsrOI = PtrOI;
@@ -1293,11 +1296,11 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
         // TODO: Use range information.
         APInt GEPOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
-        if (PtrOI.Offset == AA::OffsetAndSize::Unknown ||
+        if (PtrOI.Offset == AA::RangeTy::Unknown ||
             !GEP->accumulateConstantOffset(DL, GEPOffset)) {
           LLVM_DEBUG(dbgs() << "[AAPointerInfo] GEP offset not constant "
                             << *GEP << "\n");
-          UsrOI.Offset = AA::OffsetAndSize::Unknown;
+          UsrOI.Offset = AA::RangeTy::Unknown;
           Follow = true;
           return true;
         }
@@ -1325,17 +1328,17 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
         // Check if the PHI operand has already an unknown offset as we can't
         // improve on that anymore.
-        if (PtrOI.Offset == AA::OffsetAndSize::Unknown) {
+        if (PtrOI.Offset == AA::RangeTy::Unknown) {
           LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand offset unknown "
                             << *CurPtr << " in " << *Usr << "\n");
-          Follow = UsrOI.Offset != AA::OffsetAndSize::Unknown;
+          Follow = UsrOI.Offset != AA::RangeTy::Unknown;
           UsrOI = PtrOI;
           return true;
         }
 
         // Check if the PHI is invariant (so far).
         if (UsrOI == PtrOI) {
-          assert(PtrOI.Offset != AA::OffsetAndSize::Unassigned &&
+          assert(PtrOI.Offset != AA::RangeTy::Unassigned &&
                  "Cannot assign if the current Ptr was not visited!");
           LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI is invariant (so far)");
           return true;
@@ -1362,7 +1365,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
         // TODO: Approximate in case we know the direction of the recurrence.
         UsrOI = PtrOI;
-        UsrOI.Offset = AA::OffsetAndSize::Unknown;
+        UsrOI.Offset = AA::RangeTy::Unknown;
         Follow = true;
         return true;
       }
@@ -1606,7 +1609,7 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
     // accessed.
     if (auto *MI = dyn_cast_or_null<MemIntrinsic>(getCtxI())) {
       ConstantInt *Length = dyn_cast<ConstantInt>(MI->getLength());
-      int64_t LengthVal = AA::OffsetAndSize::Unknown;
+      int64_t LengthVal = AA::RangeTy::Unknown;
       if (Length)
         LengthVal = Length->getSExtValue();
       Value &Ptr = getAssociatedValue();
@@ -1663,8 +1666,7 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
     handleAccess(A, *getCtxI(), getAssociatedValue(), nullptr,
                  ReadOnly ? AccessKind::AK_MAY_READ
                           : AccessKind::AK_MAY_READ_WRITE,
-                 AA::OffsetAndSize::Unknown, Changed, nullptr,
-                 AA::OffsetAndSize::Unknown);
+                 AA::RangeTy::Unknown, Changed, nullptr, AA::RangeTy::Unknown);
     return Changed;
   }
 
