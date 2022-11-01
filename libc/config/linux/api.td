@@ -314,3 +314,7 @@ def SpawnAPI : PublicAPI<"spawn.h"> {
 def TermiosAPI : PublicAPI<"termios.h"> {
   let Types = ["cc_t", "pid_t", "speed_t", "struct termios", "tcflag_t"];
 }
+
+def SetJmpAPI : PublicAPI<"setjmp.h"> {
+  let Types = ["jmp_buf"];
+}
