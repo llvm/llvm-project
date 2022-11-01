@@ -330,9 +330,7 @@ TEST(LogicalViewTest, ELFReader) {
 
   llvm::sys::InitializeCOMRAII COM(llvm::sys::COMThreadingMode::MultiThreaded);
 
-  SmallString<128> InputsDir = unittest::getInputFileDirectory(TestMainArgv0);
-
-  // This test requires a x86-registered-target
+  // This test requires a x86-registered-target.
   Triple TT;
   TT.setArch(Triple::x86_64);
   TT.setVendor(Triple::UnknownVendor);
@@ -341,6 +339,8 @@ TEST(LogicalViewTest, ELFReader) {
   std::string TargetLookupError;
   if (!TargetRegistry::lookupTarget(std::string(TT.str()), TargetLookupError))
     return;
+
+  SmallString<128> InputsDir = unittest::getInputFileDirectory(TestMainArgv0);
 
   // Logical elements general properties and selection.
   elementProperties(InputsDir);
