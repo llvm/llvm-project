@@ -59,26 +59,19 @@ if (NOT APPLE)
     LLVM_ENABLE_TERMINFO
     -l${COMPILER_RT_TERMINFO_LIB} XRAY_UNITTEST_LINK_FLAGS)
 
-  # We add the library directories one at a time in our CFLAGS.
-  foreach (DIR ${LLVM_LIBRARY_DIR})
-    list(APPEND XRAY_UNITTEST_LINK_FLAGS -L${DIR})
-  endforeach()
-
   if (COMPILER_RT_STANDALONE_BUILD)
-    if (COMPILER_RT_HAS_LLVMXRAY OR COMPILER_RT_HAS_LLVMTESTINGSUPPORT)
-      if (LLVM_LINK_LLVM_DYLIB)
-        list(APPEND XRAY_UNITTEST_LINK_FLAGS -lLLVM)
-      endif()
-    else()
-      if (COMPILER_RT_HAS_LLVMXRAY)
-        list(APPEND XRAY_UNITTEST_LINK_FLAGS -lLLVMXRay)
-      endif()
-      if (COMPILER_RT_HAS_TESTINGSUPPORT)
-        list(APPEND XRAY_UNITTEST_LINK_FLAGS -lLLVMTestingSupport)
-      endif()
-      list(APPEND XRAY_UNITTEST_LINK_FLAGS -lLLVMSupport -lLLVMDemangle)
-    endif()
+    append_list_if(COMPILER_RT_HAS_LLVMXRAY ${LLVM_XRAY_LDFLAGS} XRAY_UNITTEST_LINK_FLAGS)
+    append_list_if(COMPILER_RT_HAS_LLVMXRAY ${LLVM_XRAY_LIBLIST} XRAY_UNITTEST_LINK_FLAGS)
+    append_list_if(COMPILER_RT_HAS_LLVMTESTINGSUPPORT
+      ${LLVM_TESTINGSUPPORT_LDFLAGS} XRAY_UNITTEST_LINK_FLAGS)
+    append_list_if(COMPILER_RT_HAS_LLVMTESTINGSUPPORT
+      ${LLVM_TESTINGSUPPORT_LIBLIST} XRAY_UNITTEST_LINK_FLAGS)
   else()
+    # We add the library directories one at a time in our CFLAGS.
+    foreach (DIR ${LLVM_LIBRARY_DIR})
+      list(APPEND XRAY_UNITTEST_LINK_FLAGS -L${DIR})
+    endforeach()
+
     # We also add the actual libraries to link as dependencies.
     list(APPEND XRAY_UNITTEST_LINK_FLAGS -lLLVMXRay -lLLVMSupport -lLLVMDemangle -lLLVMTestingSupport)
   endif()
