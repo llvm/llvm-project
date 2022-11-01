@@ -8,9 +8,9 @@ declare i8 @llvm.umax.i8(i8, i8)
 declare void @use(i1)
 declare void @use_vec(<2 x i1>)
 
-define void @abs1(i8* %p) {
+define void @abs1(ptr %p) {
 ; CHECK-LABEL: @abs1(
-; CHECK-NEXT:    [[X:%.*]] = load i8, i8* [[P:%.*]], align 1, [[RNG0:!range !.*]]
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[P:%.*]], align 1, [[RNG0:!range !.*]]
 ; CHECK-NEXT:    [[ABS:%.*]] = call i8 @llvm.abs.i8(i8 [[X]], i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
@@ -20,7 +20,7 @@ define void @abs1(i8* %p) {
 ; CHECK-NEXT:    call void @use(i1 [[CMP4]])
 ; CHECK-NEXT:    ret void
 ;
-  %x = load i8, i8* %p, !range !{i8 -9, i8 10}
+  %x = load i8, ptr %p, !range !{i8 -9, i8 10}
   %abs = call i8 @llvm.abs.i8(i8 %x, i1 false)
   %cmp1 = icmp sge i8 %abs, 0
   call void @use(i1 %cmp1)
@@ -60,10 +60,10 @@ define void @abs2_vec(<2 x i8> %x) {
   ret void
 }
 
-define void @umax1(i8* %p1, i8* %p2) {
+define void @umax1(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: @umax1(
-; CHECK-NEXT:    [[X1:%.*]] = load i8, i8* [[P1:%.*]], align 1, [[RNG1:!range !.*]]
-; CHECK-NEXT:    [[X2:%.*]] = load i8, i8* [[P2:%.*]], align 1, [[RNG2:!range !.*]]
+; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1:%.*]], align 1, [[RNG1:!range !.*]]
+; CHECK-NEXT:    [[X2:%.*]] = load i8, ptr [[P2:%.*]], align 1, [[RNG2:!range !.*]]
 ; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umax.i8(i8 [[X1]], i8 [[X2]])
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 true)
@@ -73,8 +73,8 @@ define void @umax1(i8* %p1, i8* %p2) {
 ; CHECK-NEXT:    call void @use(i1 [[CMP4]])
 ; CHECK-NEXT:    ret void
 ;
-  %x1 = load i8, i8* %p1, !range !{i8 0, i8 10}
-  %x2 = load i8, i8* %p2, !range !{i8 5, i8 15}
+  %x1 = load i8, ptr %p1, !range !{i8 0, i8 10}
+  %x2 = load i8, ptr %p2, !range !{i8 5, i8 15}
   %m = call i8 @llvm.umax.i8(i8 %x1, i8 %x2)
   %cmp1 = icmp uge i8 %m, 5
   call void @use(i1 %cmp1)

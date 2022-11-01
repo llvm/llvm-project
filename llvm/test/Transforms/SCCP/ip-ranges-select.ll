@@ -1,7 +1,7 @@
 ; RUN: opt -passes=ipsccp -S %s -o -| FileCheck %s
 
-define void @caller.1(i8* %arg) {
-; CHECK-LABEL: define void @caller.1(i8* %arg) {
+define void @caller.1(ptr %arg) {
+; CHECK-LABEL: define void @caller.1(ptr %arg) {
 ; CHECK-NEXT:    %r.1 = tail call i32 @callee.1(i32 4)
 ; CHECK-NEXT:    %r.2 = tail call i32 @callee.1(i32 2)
 ; CHECK-NEXT:    call void @use(i32 20)
@@ -111,10 +111,10 @@ define i1 @caller2(i32 %y, i1 %cmp) {
 
 define i32 @f3_constantexpr_cond(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @f3_constantexpr_cond(i32 %x, i32 %y)
-; CHECK-NEXT:   %sel.1 = select i1 icmp eq (i32* bitcast (i32 (i32, i32)* @f3_constantexpr_cond to i32*), i32* @GV), i32 %x, i32 %y
+; CHECK-NEXT:   %sel.1 = select i1 icmp eq (ptr @f3_constantexpr_cond, ptr @GV), i32 %x, i32 %y
 ; CHECK-NEXT:   ret i32 %sel.1
 ;
-  %sel.1 = select i1 icmp eq (i32* bitcast (i32 (i32, i32)* @f3_constantexpr_cond to i32*), i32* @GV), i32 %x, i32 %y
+  %sel.1 = select i1 icmp eq (ptr @f3_constantexpr_cond, ptr @GV), i32 %x, i32 %y
   ret i32 %sel.1
 }
 
