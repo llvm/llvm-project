@@ -33,10 +33,10 @@
 define dso_local void @foo(i16 %a) {
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: (i16 [[A:%.*]]) {
-; CHECK-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar to i16 (i16)*)(i16 [[A]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i16 @bar(i16 [[A]])
 ; CHECK-NEXT:    ret void
 ;
-  %call = call i16 bitcast (i16 (i16, i16) * @bar to i16 (i16) *)(i16 %a)
+  %call = call i16 @bar(i16 %a)
   ret void
 }
 
@@ -65,12 +65,12 @@ define dso_local i16 @vararg_tests(i16 %a) {
 ; CHECK-LABEL: define {{[^@]+}}@vararg_tests
 ; CHECK-SAME: (i16 [[A:%.*]]) {
 ; CHECK-NEXT:    [[CALL1:%.*]] = call i16 (i16, ...) @vararg_prop(i16 7, i16 8, i16 [[A]])
-; CHECK-NEXT:    [[CALL2:%.*]] = call i16 bitcast (i16 (i16, i16, ...)* @vararg_no_prop to i16 (i16)*)(i16 7)
+; CHECK-NEXT:    [[CALL2:%.*]] = call i16 @vararg_no_prop(i16 7)
 ; CHECK-NEXT:    [[ADD:%.*]] = add i16 7, [[CALL2]]
 ; CHECK-NEXT:    ret i16 [[ADD]]
 ;
   %call1 = call i16 (i16, ...) @vararg_prop(i16 7, i16 8, i16 %a)
-  %call2 = call i16 bitcast (i16 (i16, i16, ...) * @vararg_no_prop to i16 (i16) *) (i16 7)
+  %call2 = call i16 @vararg_no_prop (i16 7)
   %add = add i16 %call1, %call2
   ret i16 %add
 }

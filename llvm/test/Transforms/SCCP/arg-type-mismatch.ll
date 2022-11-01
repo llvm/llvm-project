@@ -7,10 +7,10 @@
 define dso_local void @foo(i16 %a) {
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: (i16 [[A:%.*]]) {
-; CHECK-NEXT:    [[CALL:%.*]] = call i16 bitcast (i16 (i16, i16)* @bar to i16 (i16, i32)*)(i16 [[A]], i32 7)
+; CHECK-NEXT:    [[CALL:%.*]] = call i16 @bar(i16 [[A]], i32 7)
 ; CHECK-NEXT:    ret void
 ;
-  %call = call i16 bitcast (i16 (i16, i16) * @bar to i16 (i16, i32) *)(i16 %a, i32 7)
+  %call = call i16 @bar(i16 %a, i32 7)
   ret void
 }
 
