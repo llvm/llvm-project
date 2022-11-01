@@ -120,3 +120,60 @@ define <2 x i64> @ssra_v2i64(<4 x i32> %0) {
   %6 = or <2 x i64> %4, %5
   ret <2 x i64> %6
 }
+
+; Expected to be able to deduce movi is generate a vector of integer
+; and turn USHR+ORR into USRA.
+define <8 x i16> @usra_with_movi_v8i16(<16 x i8> %0, <16 x i8> %1) {
+; CHECK-LABEL: usra_with_movi_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.16b, #1
+; CHECK-NEXT:    cmeq v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    ushr v1.8h, v0.8h, #7
+; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ret
+  %3 = icmp eq <16 x i8> %0, %1
+  %4 = zext <16 x i1> %3 to <16 x i8>
+  %5 = bitcast <16 x i8> %4 to <8 x i16>
+  %6 = lshr <8 x i16> %5, <i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7, i16 7>
+  %7 = or <8 x i16> %6, %5
+  ret <8 x i16> %7
+}
+
+; Expected to be able to deduce movi is generate a vector of integer
+; and turn USHR+ORR into USRA.
+define <4 x i32> @usra_with_movi_v4i32(<16 x i8> %0, <16 x i8> %1) {
+; CHECK-LABEL: usra_with_movi_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.16b, #1
+; CHECK-NEXT:    cmeq v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    ushr v1.4s, v0.4s, #15
+; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ret
+  %3 = icmp eq <16 x i8> %0, %1
+  %4 = zext <16 x i1> %3 to <16 x i8>
+  %5 = bitcast <16 x i8> %4 to <4 x i32>
+  %6 = lshr <4 x i32> %5, <i32 15, i32 15, i32 15, i32 15>
+  %7 = or <4 x i32> %6, %5
+  ret <4 x i32> %7
+}
+
+; Expected to be able to deduce movi is generate a vector of integer
+; and turn USHR+ORR into USRA.
+define <2 x i64> @usra_with_movi_v2i64(<16 x i8> %0, <16 x i8> %1) {
+; CHECK-LABEL: usra_with_movi_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.16b, #1
+; CHECK-NEXT:    cmeq v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-NEXT:    ushr v1.2d, v0.2d, #31
+; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
+; CHECK-NEXT:    ret
+  %3 = icmp eq <16 x i8> %0, %1
+  %4 = zext <16 x i1> %3 to <16 x i8>
+  %5 = bitcast <16 x i8> %4 to <2 x i64>
+  %6 = lshr <2 x i64> %5, <i64 31, i64 31>
+  %7 = or <2 x i64> %6, %5
+  ret <2 x i64> %7
+}
