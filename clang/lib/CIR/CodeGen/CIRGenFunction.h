@@ -48,6 +48,7 @@ namespace cir {
 // FIXME: for now we are reusing this from lib/Clang/CodeGenFunction.h, which
 // isn't available in the include dir. Same for getEvaluationKind below.
 enum TypeEvaluationKind { TEK_Scalar, TEK_Complex, TEK_Aggregate };
+struct CGCoroData;
 
 class CIRGenFunction {
 public:
@@ -315,6 +316,18 @@ public:
     /// Checking the 'this' pointer for a constructor call.
     TCK_ConstructorCall,
   };
+
+  // Holds coroutine data if the current function is a coroutine. We use a
+  // wrapper to manage its lifetime, so that we don't have to define CGCoroData
+  // in this header.
+  struct CGCoroInfo {
+    std::unique_ptr<CGCoroData> Data;
+    CGCoroInfo();
+    ~CGCoroInfo();
+  };
+  CGCoroInfo CurCoro;
+
+  bool isCoroutine() const { return CurCoro.Data != nullptr; }
 
   /// CurGD - The GlobalDecl for the current function being compiled.
   clang::GlobalDecl CurGD;
