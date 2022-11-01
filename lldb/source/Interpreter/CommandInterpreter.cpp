@@ -170,6 +170,17 @@ void CommandInterpreter::SetSaveSessionOnQuit(bool enable) {
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
 }
 
+bool CommandInterpreter::GetOpenTranscriptInEditor() const {
+  const uint32_t idx = ePropertyOpenTranscriptInEditor;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+}
+
+void CommandInterpreter::SetOpenTranscriptInEditor(bool enable) {
+  const uint32_t idx = ePropertyOpenTranscriptInEditor;
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
+}
+
 FileSpec CommandInterpreter::GetSaveSessionDirectory() const {
   const uint32_t idx = ePropertySaveSessionDirectory;
   return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
@@ -3225,6 +3236,13 @@ bool CommandInterpreter::SaveTranscript(
   result.SetStatus(eReturnStatusSuccessFinishNoResult);
   result.AppendMessageWithFormat("Session's transcripts saved to %s\n",
                                  output_file->c_str());
+
+  if (GetOpenTranscriptInEditor() && Host::IsInteractiveGraphicSession()) {
+    const FileSpec file_spec;
+    error = file->GetFileSpec(const_cast<FileSpec &>(file_spec));
+    if (error.Success())
+      Host::OpenFileInExternalEditor(file_spec, 1);
+  }
 
   return true;
 }
