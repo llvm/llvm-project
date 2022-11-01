@@ -110,9 +110,6 @@ static void *ompt_tool_module = NULL;
 #define OMPT_DLCLOSE(Lib) dlclose(Lib)
 #endif
 
-/// Used to track the initializer and the finalizer provided by libomptarget
-static ompt_start_tool_result_t *libomptarget_ompt_result = NULL;
-
 /*****************************************************************************
  * forward declarations
  ****************************************************************************/
@@ -459,7 +456,7 @@ void ompt_pre_init() {
   if (verbose_init && verbose_file != stderr && verbose_file != stdout)
     fclose(verbose_file);
 #if OMPT_DEBUG
-  printf("ompt_pre_init(): ompt_enabled = %d\n", ompt_enabled.enabled);
+  printf("ompt_pre_init(): ompt_enabled = %d\n", ompt_enabled);
 #endif
 }
 
@@ -512,13 +509,12 @@ void ompt_post_init() {
 }
 
 void ompt_fini() {
-  if (ompt_enabled.enabled) {
-    if (ompt_start_tool_result && ompt_start_tool_result->finalize) {
-      ompt_start_tool_result->finalize(&(ompt_start_tool_result->tool_data));
-    }
-    if (libomptarget_ompt_result && libomptarget_ompt_result->finalize) {
-      libomptarget_ompt_result->finalize(NULL);
-    }
+  if (ompt_enabled.enabled
+#if OMPD_SUPPORT
+      && ompt_start_tool_result && ompt_start_tool_result->finalize
+#endif
+  ) {
+    ompt_start_tool_result->finalize(&(ompt_start_tool_result->tool_data));
   }
 
   if (ompt_tool_module)
@@ -873,50 +869,5 @@ static ompt_interface_fn_t ompt_fn_lookup(const char *s) {
 
   FOREACH_OMPT_INQUIRY_FN(ompt_interface_fn)
 
-#undef ompt_interface_fn
-
   return NULL;
-}
-
-/// Lookup function to query libomp callbacks registered by the tool
-static ompt_interface_fn_t ompt_libomp_target_fn_lookup(const char *s) {
-#define ompt_interface_fn(fn, type, code)                                      \
-  if (strcmp(s, #fn) == 0)                                                     \
-    return (ompt_interface_fn_t)ompt_callbacks.ompt_callback(fn);
-
-  FOREACH_OMPT_DEVICE_EVENT(ompt_interface_fn)
-  FOREACH_OMPT_EMI_EVENT(ompt_interface_fn)
-  FOREACH_OMPT_NOEMI_EVENT(ompt_interface_fn)
-
-#undef ompt_interface_fn
-
-  return (ompt_interface_fn_t)0;
-}
-
-/// This function is called by the libomptarget connector to assign
-/// callbacks already registered with libomp.
-_OMP_EXTERN void ompt_libomp_connect(ompt_start_tool_result_t *result) {
-  OMPT_VERBOSE_INIT_PRINT("libomp --> OMPT: Enter libomp_ompt_connect\n");
-
-  // Ensure libomp callbacks have been added if not already
-  __ompt_force_initialization();
-
-  if (ompt_enabled.enabled &&
-      // Callbacks are initiated only if the device initialize callback
-      // has been registered by the tool
-      ompt_callbacks.ompt_callback(ompt_callback_device_initialize)) {
-    if (result) {
-      OMPT_VERBOSE_INIT_PRINT(
-          "libomp --> OMPT: Connecting with libomptarget\n");
-      // Pass in the libomp lookup function so that the already registered
-      // functions can be extracted and assigned to the callbacks in
-      // libomptarget
-      result->initialize(ompt_libomp_target_fn_lookup,
-                         0 /* initial_device_num */, nullptr /* tool_data */);
-      // Track the object provided by libomptarget so that the finalizer can be
-      // called during OMPT finalization
-      libomptarget_ompt_result = result;
-    }
-  }
-  OMPT_VERBOSE_INIT_PRINT("libomp --> OMPT: Exit libomp_ompt_connect\n");
 }
