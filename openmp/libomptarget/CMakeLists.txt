@@ -69,24 +69,7 @@ if(LIBOMPTARGET_ENABLE_DEBUG)
   add_definitions(-DOMPTARGET_DEBUG)
 endif()
 
-# OMPT support for libomptarget
-set(OMPT_TARGET_DEFAULT FALSE)
-if ((LIBOMP_HAVE_OMPT_SUPPORT) AND (NOT WIN32))
-  set (OMPT_TARGET_DEFAULT TRUE)
-endif()
-set(LIBOMPTARGET_OMPT_SUPPORT ${OMPT_TARGET_DEFAULT} CACHE BOOL "OMPT-target-support?")
-if (LIBOMPTARGET_OMPT_SUPPORT)
-  add_definitions(-DOMPT_SUPPORT=1)
-  message(STATUS "OMPT target enabled")
-else()
-  message(STATUS "OMPT target disabled")
-endif()
-
-pythonize_bool(LIBOMPTARGET_OMPT_SUPPORT)
-
 set(LIBOMPTARGET_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-message(STATUS "OpenMP tools dir in libomptarget: ${LIBOMP_OMP_TOOLS_INCLUDE_DIR}")
-include_directories(${LIBOMP_OMP_TOOLS_INCLUDE_DIR})
 
 # Build target agnostic offloading library.
 set(LIBOMPTARGET_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
