@@ -268,6 +268,8 @@ Bug Fixes
   functions. `Issue 56154 <https://github.com/llvm/llvm-project/issues/56154>`_
 - Fix handling of unexpanded packs in template argument expressions.
   `Issue 58679 <https://github.com/llvm/llvm-project/issues/58679>`_
+- Fix a crash when a ``btf_type_tag`` attribute is applied to the pointee of
+  a function pointer.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
