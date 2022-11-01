@@ -587,6 +587,8 @@ public:
   }
   void buildImplicitAssignmentOperatorBody(FunctionArgList &Args);
 
+  void buildAggregateStore(mlir::Value Val, Address Dest, bool DestIsVolatile);
+
   void buildCallArgs(
       CallArgList &Args, PrototypeWrapper Prototype,
       llvm::iterator_range<clang::CallExpr::const_arg_iterator> ArgRange,
