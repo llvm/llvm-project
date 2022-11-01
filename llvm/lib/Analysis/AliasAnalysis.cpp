@@ -182,12 +182,13 @@ ModRefInfo AAResults::getArgModRefInfo(const CallBase *Call, unsigned ArgIdx) {
   return Result;
 }
 
-ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2) {
+ModRefInfo AAResults::getModRefInfo(const Instruction *I,
+                                    const CallBase *Call2) {
   SimpleAAQueryInfo AAQIP(*this);
   return getModRefInfo(I, Call2, AAQIP);
 }
 
-ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2,
+ModRefInfo AAResults::getModRefInfo(const Instruction *I, const CallBase *Call2,
                                     AAQueryInfo &AAQI) {
   // We may have two calls.
   if (const auto *Call1 = dyn_cast<CallBase>(I)) {

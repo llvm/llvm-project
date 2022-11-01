@@ -574,7 +574,7 @@ public:
 
   /// Return information about whether a call and an instruction may refer to
   /// the same memory locations.
-  ModRefInfo getModRefInfo(Instruction *I, const CallBase *Call);
+  ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call);
 
   /// Return information about whether two call sites may refer to the same set
   /// of memory locations. See the AA documentation for details:
@@ -634,7 +634,7 @@ public:
                               bool OrLocal = false);
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
                                bool IgnoreLocals = false);
-  ModRefInfo getModRefInfo(Instruction *I, const CallBase *Call2,
+  ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call2,
                            AAQueryInfo &AAQIP);
   ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
                            AAQueryInfo &AAQI);
@@ -715,7 +715,7 @@ public:
                            const Optional<MemoryLocation> &OptLoc) {
     return AA.getModRefInfo(I, OptLoc, AAQI);
   }
-  ModRefInfo getModRefInfo(Instruction *I, const CallBase *Call2) {
+  ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call2) {
     return AA.getModRefInfo(I, Call2, AAQI);
   }
   ModRefInfo getArgModRefInfo(const CallBase *Call, unsigned ArgIdx) {
