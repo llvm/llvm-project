@@ -28,10 +28,564 @@ using namespace clang;
 using namespace cir;
 
 //===----------------------------------------------------------------------===//
-//                             ConstExprEmitter
+//                            ConstantAggregateBuilder
 //===----------------------------------------------------------------------===//
 
 namespace {
+class ConstExprEmitter;
+
+struct ConstantAggregateBuilderUtils {
+  CIRGenModule &CGM;
+
+  ConstantAggregateBuilderUtils(CIRGenModule &CGM) : CGM(CGM) {}
+
+  CharUnits getAlignment(const mlir::Attribute C) const {
+    llvm_unreachable("NYI");
+    // return CharUnits::fromQuantity(
+    //     CGM.getDataLayout().getABITypeAlignment(C->getType()));
+  }
+
+  CharUnits getSize(mlir::Type Ty) const {
+    llvm_unreachable("NYI");
+    // return CharUnits::fromQuantity(CGM.getDataLayout().getTypeAllocSize(Ty));
+  }
+
+  CharUnits getSize(const mlir::Attribute C) const {
+    llvm_unreachable("NYI");
+    // return getSize(C.getType());
+  }
+
+  mlir::Attribute getPadding(CharUnits PadSize) const {
+    llvm_unreachable("NYI");
+  }
+
+  mlir::Attribute getZeroes(CharUnits ZeroSize) const {
+    llvm_unreachable("NYI");
+  }
+};
+
+/// Incremental builder for an llvm::Constant* holding a struct or array
+/// constant.
+class ConstantAggregateBuilder : private ConstantAggregateBuilderUtils {
+  /// The elements of the constant. These two arrays must have the same size;
+  /// Offsets[i] describes the offset of Elems[i] within the constant. The
+  /// elements are kept in increasing offset order, and we ensure that there
+  /// is no overlap: Offsets[i+1] >= Offsets[i] + getSize(Elemes[i]).
+  ///
+  /// This may contain explicit padding elements (in order to create a
+  /// natural layout), but need not. Gaps between elements are implicitly
+  /// considered to be filled with undef.
+  llvm::SmallVector<mlir::Attribute, 32> Elems;
+  llvm::SmallVector<CharUnits, 32> Offsets;
+
+  /// The size of the constant (the maximum end offset of any added element).
+  /// May be larger than the end of Elems.back() if we split the last element
+  /// and removed some trailing undefs.
+  CharUnits Size = CharUnits::Zero();
+
+  /// This is true only if laying out Elems in order as the elements of a
+  /// non-packed LLVM struct will give the correct layout.
+  bool NaturalLayout = true;
+
+  bool split(size_t Index, CharUnits Hint);
+  std::optional<size_t> splitAt(CharUnits Pos);
+
+  static mlir::Attribute
+  buildFrom(CIRGenModule &CGM, ArrayRef<mlir::Attribute> Elems,
+            ArrayRef<CharUnits> Offsets, CharUnits StartOffset, CharUnits Size,
+            bool NaturalLayout, mlir::Type DesiredTy, bool AllowOversized);
+
+public:
+  ConstantAggregateBuilder(CIRGenModule &CGM)
+      : ConstantAggregateBuilderUtils(CGM) {}
+
+  /// Update or overwrite the value starting at \p Offset with \c C.
+  ///
+  /// \param AllowOverwrite If \c true, this constant might overwrite (part of)
+  ///        a constant that has already been added. This flag is only used to
+  ///        detect bugs.
+  bool add(mlir::Attribute C, CharUnits Offset, bool AllowOverwrite);
+
+  /// Update or overwrite the bits starting at \p OffsetInBits with \p Bits.
+  bool addBits(llvm::APInt Bits, uint64_t OffsetInBits, bool AllowOverwrite);
+
+  /// Attempt to condense the value starting at \p Offset to a constant of type
+  /// \p DesiredTy.
+  void condense(CharUnits Offset, mlir::Type DesiredTy);
+
+  /// Produce a constant representing the entire accumulated value, ideally of
+  /// the specified type. If \p AllowOversized, the constant might be larger
+  /// than implied by \p DesiredTy (eg, if there is a flexible array member).
+  /// Otherwise, the constant will be of exactly the same size as \p DesiredTy
+  /// even if we can't represent it as that type.
+  mlir::Attribute build(mlir::Type DesiredTy, bool AllowOversized) const {
+    return buildFrom(CGM, Elems, Offsets, CharUnits::Zero(), Size,
+                     NaturalLayout, DesiredTy, AllowOversized);
+  }
+};
+
+template <typename Container, typename Range = std::initializer_list<
+                                  typename Container::value_type>>
+static void replace(Container &C, size_t BeginOff, size_t EndOff, Range Vals) {
+  assert(BeginOff <= EndOff && "invalid replacement range");
+  llvm::replace(C, C.begin() + BeginOff, C.begin() + EndOff, Vals);
+}
+
+bool ConstantAggregateBuilder::add(mlir::Attribute C, CharUnits Offset,
+                                   bool AllowOverwrite) {
+  // Common case: appending to a layout.
+  if (Offset >= Size) {
+    CharUnits Align = getAlignment(C);
+    CharUnits AlignedSize = Size.alignTo(Align);
+    if (AlignedSize > Offset || Offset.alignTo(Align) != Offset)
+      NaturalLayout = false;
+    else if (AlignedSize < Offset) {
+      Elems.push_back(getPadding(Offset - Size));
+      Offsets.push_back(Size);
+    }
+    Elems.push_back(C);
+    Offsets.push_back(Offset);
+    Size = Offset + getSize(C);
+    return true;
+  }
+
+  // Uncommon case: constant overlaps what we've already created.
+  std::optional<size_t> FirstElemToReplace = splitAt(Offset);
+  if (!FirstElemToReplace)
+    return false;
+
+  CharUnits CSize = getSize(C);
+  std::optional<size_t> LastElemToReplace = splitAt(Offset + CSize);
+  if (!LastElemToReplace)
+    return false;
+
+  assert((FirstElemToReplace == LastElemToReplace || AllowOverwrite) &&
+         "unexpectedly overwriting field");
+
+  replace(Elems, *FirstElemToReplace, *LastElemToReplace, {C});
+  replace(Offsets, *FirstElemToReplace, *LastElemToReplace, {Offset});
+  Size = std::max(Size, Offset + CSize);
+  NaturalLayout = false;
+  return true;
+}
+
+bool ConstantAggregateBuilder::addBits(llvm::APInt Bits, uint64_t OffsetInBits,
+                                       bool AllowOverwrite) {
+  llvm_unreachable("NYI");
+}
+
+/// Returns a position within Elems and Offsets such that all elements
+/// before the returned index end before Pos and all elements at or after
+/// the returned index begin at or after Pos. Splits elements as necessary
+/// to ensure this. Returns None if we find something we can't split.
+std::optional<size_t> ConstantAggregateBuilder::splitAt(CharUnits Pos) {
+  if (Pos >= Size)
+    return Offsets.size();
+
+  while (true) {
+    auto FirstAfterPos = llvm::upper_bound(Offsets, Pos);
+    if (FirstAfterPos == Offsets.begin())
+      return 0;
+
+    // If we already have an element starting at Pos, we're done.
+    size_t LastAtOrBeforePosIndex = FirstAfterPos - Offsets.begin() - 1;
+    if (Offsets[LastAtOrBeforePosIndex] == Pos)
+      return LastAtOrBeforePosIndex;
+
+    // We found an element starting before Pos. Check for overlap.
+    if (Offsets[LastAtOrBeforePosIndex] +
+            getSize(Elems[LastAtOrBeforePosIndex]) <=
+        Pos)
+      return LastAtOrBeforePosIndex + 1;
+
+    // Try to decompose it into smaller constants.
+    if (!split(LastAtOrBeforePosIndex, Pos))
+      return std::nullopt;
+  }
+}
+
+/// Split the constant at index Index, if possible. Return true if we did.
+/// Hint indicates the location at which we'd like to split, but may be
+/// ignored.
+bool ConstantAggregateBuilder::split(size_t Index, CharUnits Hint) {
+  llvm_unreachable("NYI");
+}
+
+mlir::Attribute ConstantAggregateBuilder::buildFrom(
+    CIRGenModule &CGM, ArrayRef<mlir::Attribute> Elems,
+    ArrayRef<CharUnits> Offsets, CharUnits StartOffset, CharUnits Size,
+    bool NaturalLayout, mlir::Type DesiredTy, bool AllowOversized) {
+  ConstantAggregateBuilderUtils Utils(CGM);
+
+  if (Elems.empty())
+    return {};
+
+  llvm_unreachable("NYI");
+}
+
+void ConstantAggregateBuilder::condense(CharUnits Offset,
+                                        mlir::Type DesiredTy) {
+  CharUnits Size = getSize(DesiredTy);
+
+  std::optional<size_t> FirstElemToReplace = splitAt(Offset);
+  if (!FirstElemToReplace)
+    return;
+  size_t First = *FirstElemToReplace;
+
+  std::optional<size_t> LastElemToReplace = splitAt(Offset + Size);
+  if (!LastElemToReplace)
+    return;
+  size_t Last = *LastElemToReplace;
+
+  size_t Length = Last - First;
+  if (Length == 0)
+    return;
+
+  if (Length == 1 && Offsets[First] == Offset &&
+      getSize(Elems[First]) == Size) {
+    // Re-wrap single element structs if necessary. Otherwise, leave any single
+    // element constant of the right size alone even if it has the wrong type.
+    llvm_unreachable("NYI");
+  }
+
+  mlir::Attribute Replacement = buildFrom(
+      CGM, ArrayRef(Elems).slice(First, Length),
+      ArrayRef(Offsets).slice(First, Length), Offset, getSize(DesiredTy),
+      /*known to have natural layout=*/false, DesiredTy, false);
+  replace(Elems, First, Last, {Replacement});
+  replace(Offsets, First, Last, {Offset});
+}
+
+//===----------------------------------------------------------------------===//
+//                            ConstStructBuilder
+//===----------------------------------------------------------------------===//
+
+class ConstStructBuilder {
+  CIRGenModule &CGM;
+  ConstantEmitter &Emitter;
+  ConstantAggregateBuilder &Builder;
+  CharUnits StartOffset;
+
+public:
+  static mlir::Attribute BuildStruct(ConstantEmitter &Emitter,
+                                     InitListExpr *ILE, QualType StructTy);
+  static mlir::Attribute BuildStruct(ConstantEmitter &Emitter,
+                                     const APValue &Value, QualType ValTy);
+  static bool UpdateStruct(ConstantEmitter &Emitter,
+                           ConstantAggregateBuilder &Const, CharUnits Offset,
+                           InitListExpr *Updater);
+
+private:
+  ConstStructBuilder(ConstantEmitter &Emitter,
+                     ConstantAggregateBuilder &Builder, CharUnits StartOffset)
+      : CGM(Emitter.CGM), Emitter(Emitter), Builder(Builder),
+        StartOffset(StartOffset) {}
+
+  bool AppendField(const FieldDecl *Field, uint64_t FieldOffset,
+                   mlir::Attribute InitExpr, bool AllowOverwrite = false);
+
+  bool AppendBytes(CharUnits FieldOffsetInChars, mlir::Attribute InitCst,
+                   bool AllowOverwrite = false);
+
+  bool AppendBitField(const FieldDecl *Field, uint64_t FieldOffset,
+                      mlir::IntegerAttr InitExpr, bool AllowOverwrite = false);
+
+  bool Build(InitListExpr *ILE, bool AllowOverwrite);
+  bool Build(const APValue &Val, const RecordDecl *RD, bool IsPrimaryBase,
+             const CXXRecordDecl *VTableClass, CharUnits BaseOffset);
+  mlir::Attribute Finalize(QualType Ty);
+};
+
+bool ConstStructBuilder::AppendField(const FieldDecl *Field,
+                                     uint64_t FieldOffset,
+                                     mlir::Attribute InitCst,
+                                     bool AllowOverwrite) {
+  const ASTContext &Context = CGM.getASTContext();
+
+  CharUnits FieldOffsetInChars = Context.toCharUnitsFromBits(FieldOffset);
+
+  return AppendBytes(FieldOffsetInChars, InitCst, AllowOverwrite);
+}
+
+bool ConstStructBuilder::AppendBytes(CharUnits FieldOffsetInChars,
+                                     mlir::Attribute InitCst,
+                                     bool AllowOverwrite) {
+  return Builder.add(InitCst, StartOffset + FieldOffsetInChars, AllowOverwrite);
+}
+
+bool ConstStructBuilder::AppendBitField(const FieldDecl *Field,
+                                        uint64_t FieldOffset,
+                                        mlir::IntegerAttr CI,
+                                        bool AllowOverwrite) {
+  llvm_unreachable("NYI");
+}
+
+static bool EmitDesignatedInitUpdater(ConstantEmitter &Emitter,
+                                      ConstantAggregateBuilder &Const,
+                                      CharUnits Offset, QualType Type,
+                                      InitListExpr *Updater) {
+  if (Type->isRecordType())
+    return ConstStructBuilder::UpdateStruct(Emitter, Const, Offset, Updater);
+
+  auto CAT = Emitter.CGM.getASTContext().getAsConstantArrayType(Type);
+  if (!CAT)
+    return false;
+  QualType ElemType = CAT->getElementType();
+  CharUnits ElemSize = Emitter.CGM.getASTContext().getTypeSizeInChars(ElemType);
+  mlir::Type ElemTy = Emitter.CGM.getTypes().convertTypeForMem(ElemType);
+
+  mlir::Attribute FillC = nullptr;
+  if (Expr *Filler = Updater->getArrayFiller()) {
+    if (!isa<NoInitExpr>(Filler)) {
+      llvm_unreachable("NYI");
+    }
+  }
+
+  unsigned NumElementsToUpdate =
+      FillC ? CAT->getSize().getZExtValue() : Updater->getNumInits();
+  for (unsigned I = 0; I != NumElementsToUpdate; ++I, Offset += ElemSize) {
+    Expr *Init = nullptr;
+    if (I < Updater->getNumInits())
+      Init = Updater->getInit(I);
+
+    if (!Init && FillC) {
+      if (!Const.add(FillC, Offset, true))
+        return false;
+    } else if (!Init || isa<NoInitExpr>(Init)) {
+      continue;
+    } else if (InitListExpr *ChildILE = dyn_cast<InitListExpr>(Init)) {
+      if (!EmitDesignatedInitUpdater(Emitter, Const, Offset, ElemType,
+                                     ChildILE))
+        return false;
+      // Attempt to reduce the array element to a single constant if necessary.
+      Const.condense(Offset, ElemTy);
+    } else {
+      mlir::Attribute Val = Emitter.tryEmitPrivateForMemory(Init, ElemType);
+      if (!Const.add(Val, Offset, true))
+        return false;
+    }
+  }
+
+  return true;
+}
+
+bool ConstStructBuilder::Build(InitListExpr *ILE, bool AllowOverwrite) {
+  RecordDecl *RD = ILE->getType()->castAs<RecordType>()->getDecl();
+  const ASTRecordLayout &Layout = CGM.getASTContext().getASTRecordLayout(RD);
+
+  unsigned FieldNo = -1;
+  unsigned ElementNo = 0;
+
+  // Bail out if we have base classes. We could support these, but they only
+  // arise in C++1z where we will have already constant folded most interesting
+  // cases. FIXME: There are still a few more cases we can handle this way.
+  if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    if (CXXRD->getNumBases())
+      return false;
+
+  for (FieldDecl *Field : RD->fields()) {
+    ++FieldNo;
+
+    // If this is a union, skip all the fields that aren't being initialized.
+    if (RD->isUnion() &&
+        !declaresSameEntity(ILE->getInitializedFieldInUnion(), Field))
+      continue;
+
+    // Don't emit anonymous bitfields.
+    if (Field->isUnnamedBitField())
+      continue;
+
+    // Get the initializer.  A struct can include fields without initializers,
+    // we just use explicit null values for them.
+    Expr *Init = nullptr;
+    if (ElementNo < ILE->getNumInits())
+      Init = ILE->getInit(ElementNo++);
+    if (Init && isa<NoInitExpr>(Init))
+      continue;
+
+    // Zero-sized fields are not emitted, but their initializers may still
+    // prevent emission of this struct as a constant.
+    if (Field->isZeroSize(CGM.getASTContext())) {
+      if (Init->HasSideEffects(CGM.getASTContext()))
+        return false;
+      continue;
+    }
+
+    // When emitting a DesignatedInitUpdateExpr, a nested InitListExpr
+    // represents additional overwriting of our current constant value, and not
+    // a new constant to emit independently.
+    if (AllowOverwrite &&
+        (Field->getType()->isArrayType() || Field->getType()->isRecordType())) {
+      if (auto *SubILE = dyn_cast<InitListExpr>(Init)) {
+        CharUnits Offset = CGM.getASTContext().toCharUnitsFromBits(
+            Layout.getFieldOffset(FieldNo));
+        if (!EmitDesignatedInitUpdater(Emitter, Builder, StartOffset + Offset,
+                                       Field->getType(), SubILE))
+          return false;
+        // If we split apart the field's value, try to collapse it down to a
+        // single value now.
+        llvm_unreachable("NYI");
+        continue;
+      }
+    }
+
+    mlir::Attribute EltInit;
+    if (Init)
+      Emitter.tryEmitPrivateForMemory(Init, Field->getType());
+    else
+      llvm_unreachable("NYI");
+
+    if (!EltInit)
+      return false;
+
+    if (!Field->isBitField()) {
+      // Handle non-bitfield members.
+      if (!AppendField(Field, Layout.getFieldOffset(FieldNo), EltInit,
+                       AllowOverwrite))
+        return false;
+      // After emitting a non-empty field with [[no_unique_address]], we may
+      // need to overwrite its tail padding.
+      if (Field->hasAttr<NoUniqueAddressAttr>())
+        AllowOverwrite = true;
+    } else {
+      llvm_unreachable("NYI");
+    }
+  }
+
+  return true;
+}
+
+namespace {
+struct BaseInfo {
+  BaseInfo(const CXXRecordDecl *Decl, CharUnits Offset, unsigned Index)
+      : Decl(Decl), Offset(Offset), Index(Index) {}
+
+  const CXXRecordDecl *Decl;
+  CharUnits Offset;
+  unsigned Index;
+
+  bool operator<(const BaseInfo &O) const { return Offset < O.Offset; }
+};
+} // namespace
+
+bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
+                               bool IsPrimaryBase,
+                               const CXXRecordDecl *VTableClass,
+                               CharUnits Offset) {
+  const ASTRecordLayout &Layout = CGM.getASTContext().getASTRecordLayout(RD);
+
+  if (const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD)) {
+    // Add a vtable pointer, if we need one and it hasn't already been added.
+    if (Layout.hasOwnVFPtr())
+      llvm_unreachable("NYI");
+
+    // Accumulate and sort bases, in order to visit them in address order, which
+    // may not be the same as declaration order.
+    SmallVector<BaseInfo, 8> Bases;
+    Bases.reserve(CD->getNumBases());
+    unsigned BaseNo = 0;
+    for (CXXRecordDecl::base_class_const_iterator Base = CD->bases_begin(),
+                                                  BaseEnd = CD->bases_end();
+         Base != BaseEnd; ++Base, ++BaseNo) {
+      assert(!Base->isVirtual() && "should not have virtual bases here");
+      const CXXRecordDecl *BD = Base->getType()->getAsCXXRecordDecl();
+      CharUnits BaseOffset = Layout.getBaseClassOffset(BD);
+      Bases.push_back(BaseInfo(BD, BaseOffset, BaseNo));
+    }
+    llvm::stable_sort(Bases);
+
+    for (unsigned I = 0, N = Bases.size(); I != N; ++I) {
+      BaseInfo &Base = Bases[I];
+
+      bool IsPrimaryBase = Layout.getPrimaryBase() == Base.Decl;
+      Build(Val.getStructBase(Base.Index), Base.Decl, IsPrimaryBase,
+            VTableClass, Offset + Base.Offset);
+    }
+  }
+
+  unsigned FieldNo = 0;
+  uint64_t OffsetBits = CGM.getASTContext().toBits(Offset);
+
+  bool AllowOverwrite = false;
+  for (RecordDecl::field_iterator Field = RD->field_begin(),
+                                  FieldEnd = RD->field_end();
+       Field != FieldEnd; ++Field, ++FieldNo) {
+    // If this is a union, skip all the fields that aren't being initialized.
+    if (RD->isUnion() && !declaresSameEntity(Val.getUnionField(), *Field))
+      continue;
+
+    // Don't emit anonymous bitfields or zero-sized fields.
+    if (Field->isUnnamedBitField() || Field->isZeroSize(CGM.getASTContext()))
+      continue;
+
+    // Emit the value of the initializer.
+    const APValue &FieldValue =
+        RD->isUnion() ? Val.getUnionValue() : Val.getStructField(FieldNo);
+    mlir::Attribute EltInit =
+        Emitter.tryEmitPrivateForMemory(FieldValue, Field->getType());
+    if (!EltInit)
+      return false;
+
+    if (!Field->isBitField()) {
+      // Handle non-bitfield members.
+      if (!AppendField(*Field, Layout.getFieldOffset(FieldNo) + OffsetBits,
+                       EltInit, AllowOverwrite))
+        return false;
+      // After emitting a non-empty field with [[no_unique_address]], we may
+      // need to overwrite its tail padding.
+      if (Field->hasAttr<NoUniqueAddressAttr>())
+        AllowOverwrite = true;
+    } else {
+      llvm_unreachable("NYI");
+    }
+  }
+
+  return true;
+}
+
+mlir::Attribute ConstStructBuilder::Finalize(QualType Type) {
+  Type = Type.getNonReferenceType();
+  RecordDecl *RD = Type->castAs<RecordType>()->getDecl();
+  mlir::Type ValTy = CGM.getTypes().ConvertType(Type);
+  return Builder.build(ValTy, RD->hasFlexibleArrayMember());
+}
+
+mlir::Attribute ConstStructBuilder::BuildStruct(ConstantEmitter &Emitter,
+                                                InitListExpr *ILE,
+                                                QualType ValTy) {
+  ConstantAggregateBuilder Const(Emitter.CGM);
+  ConstStructBuilder Builder(Emitter, Const, CharUnits::Zero());
+
+  if (!Builder.Build(ILE, /*AllowOverwrite*/ false))
+    return nullptr;
+
+  return Builder.Finalize(ValTy);
+}
+
+mlir::Attribute ConstStructBuilder::BuildStruct(ConstantEmitter &Emitter,
+                                                const APValue &Val,
+                                                QualType ValTy) {
+  ConstantAggregateBuilder Const(Emitter.CGM);
+  ConstStructBuilder Builder(Emitter, Const, CharUnits::Zero());
+
+  const RecordDecl *RD = ValTy->castAs<RecordType>()->getDecl();
+  const CXXRecordDecl *CD = dyn_cast<CXXRecordDecl>(RD);
+  if (!Builder.Build(Val, RD, false, CD, CharUnits::Zero()))
+    return nullptr;
+
+  return Builder.Finalize(ValTy);
+}
+
+bool ConstStructBuilder::UpdateStruct(ConstantEmitter &Emitter,
+                                      ConstantAggregateBuilder &Const,
+                                      CharUnits Offset, InitListExpr *Updater) {
+  return ConstStructBuilder(Emitter, Const, Offset)
+      .Build(Updater, /*AllowOverwrite*/ true);
+}
+
+//===----------------------------------------------------------------------===//
+//                             ConstExprEmitter
+//===----------------------------------------------------------------------===//
 
 // This class only needs to handle arrays, structs and unions.
 //
@@ -770,7 +1324,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
     return ConstantLValueEmitter(*this, Value, DestType).tryEmit();
   case APValue::Struct:
   case APValue::Union:
-    assert(0 && "not implemented");
+    return ConstStructBuilder::BuildStruct(*this, Value, DestType);
   case APValue::FixedPoint:
   case APValue::ComplexInt:
   case APValue::ComplexFloat:

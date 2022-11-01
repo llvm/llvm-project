@@ -125,6 +125,10 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
   }
 
   const Address Loc = emission.Addr;
+  // Check whether this is a byref variable that's potentially
+  // captured and moved by its own initializer.  If so, we'll need to
+  // emit the initializer first, then copy into the variable.
+  assert(!UnimplementedFeature::capturedByInit() && "NYI");
 
   // Note: constexpr already initializes everything correctly.
   LangOptions::TrivialAutoVarInitKind trivialAutoVarInit =
@@ -145,14 +149,29 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
   if (isTrivialInitializer(Init))
     return initializeWhatIsTechnicallyUninitialized(Loc);
 
+  mlir::Attribute constant;
   if (emission.IsConstantAggregate ||
       D.mightBeUsableInConstantExpressions(getContext())) {
-    assert(0 && "not implemented");
+    constant = ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
+    llvm_unreachable("NYI");
+    if (constant && !constant.isa<mlir::cir::ZeroAttr>() &&
+        (trivialAutoVarInit !=
+         LangOptions::TrivialAutoVarInitKind::Uninitialized)) {
+      llvm_unreachable("NYI");
+    }
   }
 
-  initializeWhatIsTechnicallyUninitialized(Loc);
-  LValue lv = LValue::makeAddr(Loc, type, AlignmentSource::Decl);
-  return buildExprAsInit(Init, &D, lv);
+  if (!constant) {
+    initializeWhatIsTechnicallyUninitialized(Loc);
+    LValue lv = LValue::makeAddr(Loc, type, AlignmentSource::Decl);
+    return buildExprAsInit(Init, &D, lv);
+  }
+
+  if (!emission.IsConstantAggregate) {
+    llvm_unreachable("NYI");
+  }
+
+  llvm_unreachable("NYI");
 }
 
 void CIRGenFunction::buildAutoVarCleanups(const AutoVarEmission &emission) {
