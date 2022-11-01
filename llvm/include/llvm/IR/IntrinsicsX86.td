@@ -3253,7 +3253,7 @@ def int_x86_avx512_mask_range_ps_512 : ClangBuiltin<"__builtin_ia32_rangeps512_m
                   [IntrNoMem, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<5>>]>;
 }
 
-// Vector load with broadcast
+// Vector broadcast from mask
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
    def int_x86_avx512_broadcastmw_512 :
           ClangBuiltin<"__builtin_ia32_broadcastmw512">,
