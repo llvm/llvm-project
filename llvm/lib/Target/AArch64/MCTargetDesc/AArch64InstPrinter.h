@@ -201,6 +201,8 @@ protected:
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printSVEPattern(const MCInst *MI, unsigned OpNum,
                        const MCSubtargetInfo &STI, raw_ostream &O);
+  void printSVEVecLenSpecifier(const MCInst *MI, unsigned OpNum,
+                               const MCSubtargetInfo &STI, raw_ostream &O);
 
   template <bool IsVertical>
   void printMatrixTileVector(const MCInst *MI, unsigned OpNum,
