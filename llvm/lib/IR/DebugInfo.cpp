@@ -1498,7 +1498,7 @@ void LLVMDisposeTemporaryMDNode(LLVMMetadataRef TempNode) {
 void LLVMMetadataReplaceAllUsesWith(LLVMMetadataRef TargetMetadata,
                                     LLVMMetadataRef Replacement) {
   auto *Node = unwrapDI<MDNode>(TargetMetadata);
-  Node->replaceAllUsesWith(unwrap<Metadata>(Replacement));
+  Node->replaceAllUsesWith(unwrap(Replacement));
   MDNode::deleteTemporary(Node);
 }
 
