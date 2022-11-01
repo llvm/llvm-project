@@ -152,8 +152,12 @@ void CIRGenFunction::buildAutoVarInit(const AutoVarEmission &emission) {
   mlir::Attribute constant;
   if (emission.IsConstantAggregate ||
       D.mightBeUsableInConstantExpressions(getContext())) {
+    // FIXME: Differently from LLVM we try not to emit / lower too much
+    // here for CIR since we are interesting in seeing the ctor in some
+    // analysis later on. So CIR's implementation of ConstantEmitter will
+    // frequently return an empty Attribute, to signal we want to codegen
+    // some trivial ctor calls and whatnots.
     constant = ConstantEmitter(*this).tryEmitAbstractForInitializer(D);
-    llvm_unreachable("NYI");
     if (constant && !constant.isa<mlir::cir::ZeroAttr>() &&
         (trivialAutoVarInit !=
          LangOptions::TrivialAutoVarInitKind::Uninitialized)) {
