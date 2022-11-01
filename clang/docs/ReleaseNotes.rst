@@ -71,6 +71,7 @@ C++2c Feature Support
 - Implemented `P2738R1: constexpr cast from void* <https://wg21.link/P2738R1>`_.
 - Partially implemented `P2361R6: constexpr cast from void* <https://wg21.link/P2361R6>`_.
   The changes to attributes declarations are not part of this release.
+- Implemented `P2741R3: user-generated static_assert messages  <https://wg21.link/P2741R3>`_.
 
 - Implemented `P2169R4: A nice placeholder with no name <https://wg21.link/P2169R4>`_. This allows using ``_``
   as a variable name multiple times in the same scope and is supported in all C++ language modes as an extension.

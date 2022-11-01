@@ -3238,8 +3238,7 @@ void StaticAssertDecl::anchor() {}
 
 StaticAssertDecl *StaticAssertDecl::Create(ASTContext &C, DeclContext *DC,
                                            SourceLocation StaticAssertLoc,
-                                           Expr *AssertExpr,
-                                           StringLiteral *Message,
+                                           Expr *AssertExpr, Expr *Message,
                                            SourceLocation RParenLoc,
                                            bool Failed) {
   return new (C, DC) StaticAssertDecl(DC, StaticAssertLoc, AssertExpr, Message,
