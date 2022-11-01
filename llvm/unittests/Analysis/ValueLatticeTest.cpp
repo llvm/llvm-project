@@ -173,24 +173,25 @@ TEST_F(ValueLatticeTest, getCompareUndef) {
   auto *I32Ty = IntegerType::get(Context, 32);
   auto *I1Ty = IntegerType::get(Context, 1);
 
+  // TODO: These results can be improved.
   auto LV1 = ValueLatticeElement::get(UndefValue::get(I32Ty));
   auto LV2 =
       ValueLatticeElement::getRange({APInt(32, 10, true), APInt(32, 20, true)});
-  EXPECT_TRUE(isa<UndefValue>(LV1.getCompare(CmpInst::ICMP_SLT, I1Ty, LV2)));
-  EXPECT_TRUE(isa<UndefValue>(LV1.getCompare(CmpInst::ICMP_SLE, I1Ty, LV2)));
-  EXPECT_TRUE(isa<UndefValue>(LV1.getCompare(CmpInst::ICMP_NE, I1Ty, LV2)));
-  EXPECT_TRUE(isa<UndefValue>(LV1.getCompare(CmpInst::ICMP_EQ, I1Ty, LV2)));
-  EXPECT_TRUE(isa<UndefValue>(LV1.getCompare(CmpInst::ICMP_SGE, I1Ty, LV2)));
-  EXPECT_TRUE(isa<UndefValue>(LV1.getCompare(CmpInst::ICMP_SGT, I1Ty, LV2)));
+  EXPECT_EQ(LV1.getCompare(CmpInst::ICMP_SLT, I1Ty, LV2), nullptr);
+  EXPECT_EQ(LV1.getCompare(CmpInst::ICMP_SLE, I1Ty, LV2), nullptr);
+  EXPECT_EQ(LV1.getCompare(CmpInst::ICMP_NE, I1Ty, LV2), nullptr);
+  EXPECT_EQ(LV1.getCompare(CmpInst::ICMP_EQ, I1Ty, LV2), nullptr);
+  EXPECT_EQ(LV1.getCompare(CmpInst::ICMP_SGE, I1Ty, LV2), nullptr);
+  EXPECT_EQ(LV1.getCompare(CmpInst::ICMP_SGT, I1Ty, LV2), nullptr);
 
   auto *FloatTy = IntegerType::getFloatTy(Context);
   auto LV3 = ValueLatticeElement::get(ConstantFP::get(FloatTy, 1.0));
-  EXPECT_TRUE(isa<UndefValue>(LV1.getCompare(CmpInst::FCMP_OEQ, I1Ty, LV3)));
-  EXPECT_TRUE(isa<UndefValue>(LV1.getCompare(CmpInst::FCMP_OGE, I1Ty, LV3)));
-  EXPECT_TRUE(isa<UndefValue>(LV1.getCompare(CmpInst::FCMP_OLE, I1Ty, LV3)));
-  EXPECT_TRUE(isa<UndefValue>(LV1.getCompare(CmpInst::FCMP_ONE, I1Ty, LV3)));
-  EXPECT_TRUE(isa<UndefValue>(LV1.getCompare(CmpInst::FCMP_OLT, I1Ty, LV3)));
-  EXPECT_TRUE(isa<UndefValue>(LV1.getCompare(CmpInst::FCMP_OGT, I1Ty, LV3)));
+  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OEQ, I1Ty, LV3), nullptr);
+  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OGE, I1Ty, LV3), nullptr);
+  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OLE, I1Ty, LV3), nullptr);
+  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_ONE, I1Ty, LV3), nullptr);
+  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OLT, I1Ty, LV3), nullptr);
+  EXPECT_EQ(LV1.getCompare(CmpInst::FCMP_OGT, I1Ty, LV3), nullptr);
 }
 
 } // end anonymous namespace
