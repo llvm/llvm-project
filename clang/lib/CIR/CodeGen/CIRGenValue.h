@@ -28,7 +28,7 @@
 namespace cir {
 
 /// This trivial value class is used to represent the result of an
-/// expression that is evaluated.  It can be one of three things: either a
+/// expression that is evaluated. It can be one of three things: either a
 /// simple MLIR SSA value, a pair of SSA values for complex numbers, or the
 /// address of an aggregate value in memory.
 class RValue {
@@ -41,7 +41,9 @@ class RValue {
   // Stores first value and flavor.
   llvm::PointerIntPair<mlir::Value, 2, Flavor> V1;
   // Stores second value and volatility.
-  llvm::PointerIntPair<mlir::Value, 1, bool> V2;
+  llvm::PointerIntPair<llvm::PointerUnion<mlir::Value, int *>, 1, bool> V2;
+  // Stores element type for aggregate values.
+  mlir::Type ElementType;
 
 public:
   bool isScalar() const { return V1.getInt() == Scalar; }
@@ -50,24 +52,30 @@ public:
 
   bool isVolatileQualified() const { return V2.getInt(); }
 
-  /// getScalarVal() - Return the Value* of this scalar value.
+  /// Return the mlir::Value of this scalar value.
   mlir::Value getScalarVal() const {
     assert(isScalar() && "Not a scalar!");
     return V1.getPointer();
   }
 
-  /// getComplexVal - Return the real/imag components of this complex value.
-  ///
+  /// Return the real/imag components of this complex value.
   std::pair<mlir::Value, mlir::Value> getComplexVal() const {
     assert(0 && "not implemented");
     return {};
   }
 
-  /// getAggregateAddr() - Return the Value* of the address of the
-  /// aggregate.
+  /// Return the mlir::Value of the address of the aggregate.
   Address getAggregateAddress() const {
-    assert(0 && "not implemented");
-    return Address::invalid();
+    assert(isAggregate() && "Not an aggregate!");
+    auto align = reinterpret_cast<uintptr_t>(V2.getPointer().get<int *>()) >>
+                 AggAlignShift;
+    return Address(V1.getPointer(), ElementType,
+                   clang::CharUnits::fromQuantity(align));
+  }
+
+  mlir::Value getAggregatePointer() const {
+    assert(isAggregate() && "Not an aggregate!");
+    return V1.getPointer();
   }
 
   static RValue getIgnored() {
@@ -90,12 +98,19 @@ public:
     assert(0 && "not implemented");
     return RValue{};
   }
-  // FIXME: Aggregate rvalues need to retain information about whether they
-  // are volatile or not.  Remove default to find all places that probably
-  // get this wrong.
+  // FIXME: Aggregate rvalues need to retain information about whether they are
+  // volatile or not. Remove default to find all places that probably get this
+  // wrong.
   static RValue getAggregate(Address addr, bool isVolatile = false) {
-    assert(0 && "not implemented");
-    return RValue{};
+    RValue ER;
+    ER.V1.setPointer(addr.getPointer());
+    ER.V1.setInt(Aggregate);
+    ER.ElementType = addr.getElementType();
+
+    auto align = static_cast<uintptr_t>(addr.getAlignment().getQuantity());
+    ER.V2.setPointer(reinterpret_cast<int *>(align << AggAlignShift));
+    ER.V2.setInt(isVolatile);
+    return ER;
   }
 };
 
@@ -271,21 +286,39 @@ class AggValueSlot {
   // Qualifiers
   clang::Qualifiers Quals;
 
-  /// ZeroedFlag - This is set to true if the memory in the slot is known to be
-  /// zero before the assignment into it. This means that zero field don't need
-  /// to be set.
+  /// This is set to true if some external code is responsible for setting up a
+  /// destructor for the slot.  Otherwise the code which constructs it should
+  /// push the appropriate cleanup.
+  bool DestructedFlag : 1;
+
+  /// This is set to true if writing to the memory in the slot might require
+  /// calling an appropriate Objective-C GC barrier.  The exact interaction here
+  /// is unnecessarily mysterious.
+  bool ObjCGCFlag : 1;
+
+  /// This is set to true if the memory in the slot is known to be zero before
+  /// the assignment into it.  This means that zero fields don't need to be set.
   bool ZeroedFlag : 1;
 
-  /// This is set to true if the tail padding of this slot might overlap another
-  /// object that may have already been initialized (and whose value must be
-  /// preserved by this initialization). If so, we may only store up to the
-  /// dsize of the type. Otherwise we can widen stores to the size of the type.
-  bool OverlapFlag : 1;
+  /// This is set to true if the slot might be aliased and it's not undefined
+  /// behavior to access it through such an alias.  Note that it's always
+  /// undefined behavior to access a C++ object that's under construction
+  /// through an alias derived from outside the construction process.
+  ///
+  /// This flag controls whether calls that produce the aggregate
+  /// value may be evaluated directly into the slot, or whether they
+  /// must be evaluated into an unaliased temporary and then memcpy'ed
+  /// over.  Since it's invalid in general to memcpy a non-POD C++
+  /// object, it's important that this flag never be set when
+  /// evaluating an expression which constructs such an object.
+  bool AliasedFlag : 1;
 
-  /// DestructedFlags - This is set to true if some external code is responsible
-  /// for setting up a destructor for the slot. Otherwise the code which
-  /// constructs it shoudl push the appropriate cleanup.
-  // bool DestructedFlag : 1;
+  /// This is set to true if the tail padding of this slot might overlap
+  /// another object that may have already been initialized (and whose
+  /// value must be preserved by this initialization). If so, we may only
+  /// store up to the dsize of the type. Otherwise we can widen stores to
+  /// the size of the type.
+  bool OverlapFlag : 1;
 
   /// If is set to true, sanitizer checks are already generated for this address
   /// or not required. For instance, if this address represents an object
@@ -294,19 +327,13 @@ class AggValueSlot {
   /// them.
   bool SanitizerCheckedFlag : 1;
 
-  // TODO: Add the rest of these things
-
   AggValueSlot(Address Addr, clang::Qualifiers Quals, bool DestructedFlag,
                bool ObjCGCFlag, bool ZeroedFlag, bool AliasedFlag,
                bool OverlapFlag, bool SanitizerCheckedFlag)
-      : Addr(Addr), Quals(Quals)
-  // ,DestructedFlag(DestructedFlag)
-  // ,ObjCGCFlag(ObjCGCFlag)
-  // ,ZeroedFlag(ZeroedFlag)
-  // ,AliasedFlag(AliasedFlag)
-  // ,OverlapFlag(OverlapFlag)
-  // ,SanitizerCheckedFlag(SanitizerCheckedFlag)
-  {}
+      : Addr(Addr), Quals(Quals), DestructedFlag(DestructedFlag),
+        ObjCGCFlag(ObjCGCFlag), ZeroedFlag(ZeroedFlag),
+        AliasedFlag(AliasedFlag), OverlapFlag(OverlapFlag),
+        SanitizerCheckedFlag(SanitizerCheckedFlag) {}
 
 public:
   enum IsAliased_t { IsNotAliased, IsAliased };
@@ -351,6 +378,13 @@ public:
                    isAliased, mayOverlap, isZeroed, isChecked);
   }
 
+  IsDestructed_t isExternallyDestructed() const {
+    return IsDestructed_t(DestructedFlag);
+  }
+  void setExternallyDestructed(bool destructed = true) {
+    DestructedFlag = destructed;
+  }
+
   clang::Qualifiers getQualifiers() const { return Quals; }
 
   bool isVolatile() const { return Quals.hasVolatile(); }
@@ -359,11 +393,19 @@ public:
 
   bool isIgnored() const { return !Addr.isValid(); }
 
+  mlir::Value getPointer() const { return Addr.getPointer(); }
+
   Overlap_t mayOverlap() const { return Overlap_t(OverlapFlag); }
 
   bool isSanitizerChecked() const { return SanitizerCheckedFlag; }
 
   IsZeroed_t isZeroed() const { return IsZeroed_t(ZeroedFlag); }
+
+  NeedsGCBarriers_t requiresGCollection() const {
+    return NeedsGCBarriers_t(ObjCGCFlag);
+  }
+
+  IsAliased_t isPotentiallyAliased() const { return IsAliased_t(AliasedFlag); }
 
   /// Get the preferred size to use when storing a value to this slot. This
   /// is the type size unless that might overlap another object, in which
