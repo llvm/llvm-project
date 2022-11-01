@@ -418,9 +418,7 @@ public:
     return t->getOpResult(0);
   }
 
-  mlir::Value VisitExprWithCleanups(ExprWithCleanups *E) {
-    llvm_unreachable("NYI");
-  }
+  mlir::Value VisitExprWithCleanups(ExprWithCleanups *E);
   mlir::Value VisitCXXNewExpr(const CXXNewExpr *E) {
     return CGF.buildCXXNewExpr(E);
   }
@@ -1314,4 +1312,14 @@ mlir::Value ScalarExprEmitter::buildCompoundAssign(
 
   // Otherwise, reload the value.
   return buildLoadOfLValue(LHS, E->getExprLoc());
+}
+
+mlir::Value ScalarExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
+  // TODO(cir): CodeGenFunction::RunCleanupsScope Scope(CGF);
+  mlir::Value V = Visit(E->getSubExpr());
+
+  // Defend against dominance problems caused by jumps out of expression
+  // evaluation through the shared cleanup block.
+  // TODO(cir): Scope.ForceCleanup({&V});
+  return V;
 }
