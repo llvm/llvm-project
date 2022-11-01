@@ -26,7 +26,16 @@ namespace {
 class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
   CIRGenFunction &CGF;
   AggValueSlot Dest;
-  // bool IsResultUnused;
+  bool IsResultUnused;
+
+  // Calls `Fn` with a valid return value slot, potentially creating a temporary
+  // to do so. If a temporary is created, an appropriate copy into `Dest` will
+  // be emitted, as will lifetime markers.
+  //
+  // The given function should take a ReturnValueSlot, and return an RValue that
+  // points to said slot.
+  void withReturnValueSlot(const Expr *E,
+                           llvm::function_ref<RValue(ReturnValueSlot)> Fn);
 
   AggValueSlot EnsureSlot(QualType T) {
     assert(!Dest.isIgnored() && "ignored slots NYI");
@@ -35,9 +44,7 @@ class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
 
 public:
   AggExprEmitter(CIRGenFunction &cgf, AggValueSlot Dest, bool IsResultUnused)
-      : CGF{cgf}, Dest(Dest)
-  // ,IsResultUnused(IsResultUnused)
-  {}
+      : CGF{cgf}, Dest(Dest), IsResultUnused(IsResultUnused) {}
 
   //===--------------------------------------------------------------------===//
   //                             Visitor Methods
@@ -79,7 +86,7 @@ public:
 
   // Operators.
   void VisitCastExpr(CastExpr *E);
-  void VisitCallExpr(const CallExpr *E) { llvm_unreachable("NYI"); }
+  void VisitCallExpr(const CallExpr *E);
   void VisitStmtExpr(const StmtExpr *E) { llvm_unreachable("NYI"); }
   void VisitBinaryOperator(const BinaryOperator *E) { llvm_unreachable("NYI"); }
   void VisitPointerToDataMemberBinaryOperator(const BinaryOperator *E) {
@@ -274,6 +281,58 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     assert(0 && "not implemented");
     break;
   }
+  }
+}
+
+void AggExprEmitter::VisitCallExpr(const CallExpr *E) {
+  if (E->getCallReturnType(CGF.getContext())->isReferenceType()) {
+    llvm_unreachable("NYI");
+  }
+
+  withReturnValueSlot(
+      E, [&](ReturnValueSlot Slot) { return CGF.buildCallExpr(E, Slot); });
+}
+
+void AggExprEmitter::withReturnValueSlot(
+    const Expr *E, llvm::function_ref<RValue(ReturnValueSlot)> EmitCall) {
+  QualType RetTy = E->getType();
+  bool RequiresDestruction =
+      !Dest.isExternallyDestructed() &&
+      RetTy.isDestructedType() == QualType::DK_nontrivial_c_struct;
+
+  // If it makes no observable difference, save a memcpy + temporary.
+  //
+  // We need to always provide our own temporary if destruction is required.
+  // Otherwise, EmitCall will emit its own, notice that it's "unused", and end
+  // its lifetime before we have the chance to emit a proper destructor call.
+  bool UseTemp = Dest.isPotentiallyAliased() || Dest.requiresGCollection() ||
+                 (RequiresDestruction && !Dest.getAddress().isValid());
+
+  Address RetAddr = Address::invalid();
+  assert(!UnimplementedFeature::shouldEmitLifetimeMarkers() && "NYI");
+
+  if (!UseTemp) {
+    RetAddr = Dest.getAddress();
+  } else {
+    llvm_unreachable("NYI");
+  }
+
+  RValue Src =
+      EmitCall(ReturnValueSlot(RetAddr, Dest.isVolatile(), IsResultUnused,
+                               Dest.isExternallyDestructed()));
+
+  if (!UseTemp)
+    return;
+
+  assert(Dest.isIgnored() || Dest.getPointer() != Src.getAggregatePointer());
+  llvm_unreachable("NYI");
+  // TODO(cir): EmitFinalDestCopy(E->getType(), Src);
+
+  if (!RequiresDestruction) {
+    // If there's no dtor to run, the copy was the last use of our temporary.
+    // Since we're not guaranteed to be in an ExprWithCleanups, clean up
+    // eagerly.
+    llvm_unreachable("NYI");
   }
 }
 

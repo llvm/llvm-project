@@ -256,6 +256,20 @@ CIRGenCallee CIRGenCallee::prepareConcreteCallee(CIRGenFunction &CGF) const {
   return *this;
 }
 
+void CIRGenFunction::buildAggregateStore(mlir::Value Val, Address Dest,
+                                         bool DestIsVolatile) {
+  // In LLVM codegen:
+  // Function to store a first-class aggregate into memory. We prefer to
+  // store the elements rather than the aggregate to be more friendly to
+  // fast-isel.
+  // In CIR codegen:
+  // Emit the most simple cir.store possible (e.g. a store for a whole
+  // struct), which can later be broken down in other CIR levels (or prior
+  // to dialect codegen).
+  (void)DestIsVolatile;
+  builder.create<mlir::cir::StoreOp>(*currSrcLoc, Val, Dest.getPointer());
+}
+
 RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
                                  const CIRGenCallee &Callee,
                                  ReturnValueSlot ReturnValue,
@@ -440,6 +454,22 @@ RValue CIRGenFunction::buildCall(const CIRGenFunctionInfo &CallInfo,
       mlir::Type RetCIRTy = convertType(RetTy);
       if (RetAI.getCoerceToType() == RetCIRTy && RetAI.getDirectOffset() == 0) {
         switch (getEvaluationKind(RetTy)) {
+        case TEK_Aggregate: {
+          Address DestPtr = ReturnValue.getValue();
+          bool DestIsVolatile = ReturnValue.isVolatile();
+
+          if (!DestPtr.isValid()) {
+            DestPtr = CreateMemTemp(RetTy, callLoc, "agg.tmp");
+            DestIsVolatile = false;
+          }
+
+          auto Results = theCall.getResults();
+          assert(Results.size() <= 1 && "multiple returns NYI");
+
+          SourceLocRAIIObject Loc{*this, callLoc};
+          buildAggregateStore(Results[0], DestPtr, DestIsVolatile);
+          return RValue::getAggregate(DestPtr);
+        }
         case TEK_Scalar: {
           // If the argument doesn't match, perform a bitcast to coerce it. This
           // can happen due to trivial type mismatches.
