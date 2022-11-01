@@ -1707,6 +1707,35 @@ TEST_F(PatternMatchTest, LogicalSelects) {
   EXPECT_FALSE(match(Or, m_c_LogicalOr(m_Specific(Y), m_Specific(Y))));
 }
 
+TEST_F(PatternMatchTest, VectorLogicalSelects) {
+  Type *i1 = IRB.getInt1Ty();
+  Type *v3i1 = FixedVectorType::get(i1, 3);
+
+  Value *Alloca = IRB.CreateAlloca(i1);
+  Value *AllocaVec = IRB.CreateAlloca(v3i1);
+  Value *Scalar = IRB.CreateLoad(i1, Alloca);
+  Value *Vector = IRB.CreateLoad(v3i1, AllocaVec);
+  Constant *F = Constant::getNullValue(v3i1);
+  Constant *T = Constant::getAllOnesValue(v3i1);
+
+  // select <3 x i1> Vector, <3 x i1> Vector, <3 x i1> <i1 0, i1 0, i1 0>
+  Value *VecAnd = IRB.CreateSelect(Vector, Vector, F);
+
+  // select i1 Scalar, <3 x i1> Vector, <3 x i1> <i1 0, i1 0, i1 0>
+  Value *MixedTypeAnd = IRB.CreateSelect(Scalar, Vector, F);
+
+  // select <3 x i1> Vector, <3 x i1> <i1 1, i1 1, i1 1>, <3 x i1> Vector
+  Value *VecOr = IRB.CreateSelect(Vector, T, Vector);
+
+  // select i1 Scalar, <3 x i1> <i1 1, i1 1, i1 1>, <3 x i1> Vector
+  Value *MixedTypeOr = IRB.CreateSelect(Scalar, T, Vector);
+
+  EXPECT_TRUE(match(VecAnd, m_LogicalAnd(m_Value(), m_Value())));
+  EXPECT_TRUE(match(MixedTypeAnd, m_LogicalAnd(m_Value(), m_Value())));
+  EXPECT_TRUE(match(VecOr, m_LogicalOr(m_Value(), m_Value())));
+  EXPECT_TRUE(match(MixedTypeOr, m_LogicalOr(m_Value(), m_Value())));
+}
+
 TEST_F(PatternMatchTest, VScale) {
   DataLayout DL = M->getDataLayout();
 
