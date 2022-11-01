@@ -1,18 +1,19 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! XFAIL: *
 ! This test checks for semantic errors in atomic_fetch_add subroutine calls based on
 ! the interface defined in section 16.9.24 of the Fortran 2018 standard.
 
 program test_atomic_fetch_add
-  use iso_fortran_env, only: atomic_int_kind
+  use iso_fortran_env, only: atomic_int_kind, atomic_logical_kind
   implicit none
 
   integer(kind=atomic_int_kind) :: scalar_coarray[*], non_scalar_coarray(10)[*], val, old_val, non_coarray
   integer(kind=atomic_int_kind) :: repeated_atom[*], repeated_old, repeated_val, array(10)
-  integer :: status, default_kind_coarray[*], not_same_kind_as_atom, coindexed_status[*], extra_arg, repeated_status, status_array(10)
+  integer :: status, default_kind_coarray[*], not_same_kind_as_atom, coindexed_status[*]
+  integer :: extra_arg, repeated_status, status_array(10)
   integer(kind=1) :: kind1_coarray[*]
   real :: non_integer_coarray[*], not_same_type_as_atom
   logical :: non_integer
+  logical(kind=atomic_logical_kind) :: atomic_logical[*], old_logical
 
   !___ standard-conforming calls ___
   call atomic_fetch_add(scalar_coarray, val, old_val)
@@ -24,14 +25,23 @@ program test_atomic_fetch_add
 
   !___ non-standard-conforming calls ___
 
-  !ERROR: 'atom=' argument must be a scalar coarray for intrinsic 'atomic_fetch_add'
+  !ERROR: Actual argument for 'atom=' has bad type 'LOGICAL(8)'
+  call atomic_fetch_add(atomic_logical, val, old_logical)
+
+  !ERROR: Actual argument for 'old=' has bad type 'LOGICAL(8)'
+  call atomic_fetch_add(scalar_coarray, val, old_logical)
+
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_fetch_add'
   call atomic_fetch_add(non_scalar_coarray, val, old_val)
 
-  !ERROR: 'atom=' argument must be a coarray or a coindexed object for intrinsic 'atomic_fetch_add'
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_fetch_add'
   call atomic_fetch_add(non_coarray, val, old_val)
 
-  !ERROR: 'atom=' argument must be a coarray or a coindexed object for intrinsic 'atomic_fetch_add'
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_fetch_add'
   call atomic_fetch_add(array, val, old_val)
+
+  !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_fetch_add'
+  call atomic_fetch_add(non_scalar_coarray[1], val, old_val)
 
   !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind, but is 'INTEGER(4)'
   call atomic_fetch_add(default_kind_coarray, val, old_val)
@@ -66,6 +76,7 @@ program test_atomic_fetch_add
   !ERROR: 'stat=' argument has unacceptable rank 1
   call atomic_fetch_add(scalar_coarray, val, old_val, status_array)
 
+  !ERROR: 'stat' argument to 'atomic_fetch_add' may not be a coindexed object
   call atomic_fetch_add(scalar_coarray, val, old_val, coindexed_status[1])
 
   !ERROR: Actual argument associated with INTENT(OUT) dummy argument 'stat=' must be definable

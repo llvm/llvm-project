@@ -383,17 +383,17 @@ public:
 
   /// Report warning events.
   ///
-  /// Progress events will be delivered to any debuggers that have listeners
-  /// for the eBroadcastBitError.
+  /// Warning events will be delivered to any debuggers that have listeners
+  /// for the eBroadcastBitWarning.
   ///
   /// \param[in] message
   ///   The warning message to be reported.
   ///
   /// \param [in] debugger_id
   ///   If this optional parameter has a value, it indicates the unique
-  ///   debugger identifier that this progress should be delivered to. If this
-  ///   optional parameter does not have a value, the progress will be
-  ///   delivered to all debuggers.
+  ///   debugger identifier that this diagnostic should be delivered to. If
+  ///   this optional parameter does not have a value, the diagnostic event
+  ///   will be delivered to all debuggers.
   ///
   /// \param [in] once
   ///   If a pointer is passed to a std::once_flag, then it will be used to
@@ -405,7 +405,7 @@ public:
 
   /// Report error events.
   ///
-  /// Progress events will be delivered to any debuggers that have listeners
+  /// Error events will be delivered to any debuggers that have listeners
   /// for the eBroadcastBitError.
   ///
   /// \param[in] message
@@ -413,9 +413,9 @@ public:
   ///
   /// \param [in] debugger_id
   ///   If this optional parameter has a value, it indicates the unique
-  ///   debugger identifier that this progress should be delivered to. If this
-  ///   optional parameter does not have a value, the progress will be
-  ///   delivered to all debuggers.
+  ///   debugger identifier that this diagnostic should be delivered to. If
+  ///   this optional parameter does not have a value, the diagnostic event
+  ///   will be delivered to all debuggers.
   ///
   /// \param [in] once
   ///   If a pointer is passed to a std::once_flag, then it will be used to

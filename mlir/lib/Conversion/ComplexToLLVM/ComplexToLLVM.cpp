@@ -90,7 +90,7 @@ struct ConstantOpLowering : public ConvertOpToLLVMPattern<complex::ConstantOp> {
                   ConversionPatternRewriter &rewriter) const override {
     return LLVM::detail::oneToOneRewrite(
         op, LLVM::ConstantOp::getOperationName(), adaptor.getOperands(),
-        *getTypeConverter(), rewriter);
+        op->getAttrs(), *getTypeConverter(), rewriter);
   }
 };
 

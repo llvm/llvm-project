@@ -798,7 +798,7 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
         const FAMKind StrictFlexArraysLevel =
           Ctx.getLangOpts().getStrictFlexArraysLevel();
         if (StrictFlexArraysLevel == FAMKind::ZeroOrIncomplete ||
-            StrictFlexArraysLevel == FAMKind::Incomplete)
+            StrictFlexArraysLevel == FAMKind::IncompleteOnly)
           return false;
 
         const AnalyzerOptions &Opts = SVB.getAnalyzerOptions();

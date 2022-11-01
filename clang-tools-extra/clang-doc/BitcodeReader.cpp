@@ -368,28 +368,27 @@ template <typename T> llvm::Expected<CommentInfo *> getCommentInfo(T I) {
 }
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(FunctionInfo *I) {
-  I->Description.emplace_back();
-  return &I->Description.back();
+  return &I->Description.emplace_back();
 }
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(NamespaceInfo *I) {
-  I->Description.emplace_back();
-  return &I->Description.back();
+  return &I->Description.emplace_back();
 }
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(RecordInfo *I) {
-  I->Description.emplace_back();
-  return &I->Description.back();
+  return &I->Description.emplace_back();
 }
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(MemberTypeInfo *I) {
-  I->Description.emplace_back();
-  return &I->Description.back();
+  return &I->Description.emplace_back();
 }
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(EnumInfo *I) {
-  I->Description.emplace_back();
-  return &I->Description.back();
+  return &I->Description.emplace_back();
+}
+
+template <> llvm::Expected<CommentInfo *> getCommentInfo(TypedefInfo *I) {
+  return &I->Description.emplace_back();
 }
 
 template <> llvm::Expected<CommentInfo *> getCommentInfo(CommentInfo *I) {

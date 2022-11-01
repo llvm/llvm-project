@@ -1262,8 +1262,13 @@ LinkageInfo LinkageComputer::getLVForClosure(const DeclContext *DC,
   else if (isa<ParmVarDecl>(ContextDecl))
     Owner =
         dyn_cast<NamedDecl>(ContextDecl->getDeclContext()->getRedeclContext());
-  else
+  else if (isa<ImplicitConceptSpecializationDecl>(ContextDecl)) {
+    // Replace with the concept's owning decl, which is either a namespace or a
+    // TU, so this needs a dyn_cast.
+    Owner = dyn_cast<NamedDecl>(ContextDecl->getDeclContext());
+  } else {
     Owner = cast<NamedDecl>(ContextDecl);
+  }
 
   if (!Owner)
     return LinkageInfo::none();

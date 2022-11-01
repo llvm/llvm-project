@@ -16,6 +16,7 @@
 
 #include "llvm/DebugInfo/LogicalView/Core/LVOptions.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVRange.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -23,6 +24,8 @@
 
 namespace llvm {
 namespace logicalview {
+
+constexpr LVSectionIndex UndefinedSectionIndex = 0;
 
 class LVScopeCompileUnit;
 class LVObject;
@@ -79,6 +82,9 @@ protected:
   raw_ostream &OS;
   LVScopeCompileUnit *CompileUnit = nullptr;
 
+  // Only for ELF format. The CodeView is handled in a different way.
+  LVSectionIndex DotTextSectionIndex = UndefinedSectionIndex;
+
   // Record Compilation Unit entry.
   void addCompileUnitOffset(LVOffset Offset, LVScopeCompileUnit *CompileUnit) {
     CompileUnits.emplace(Offset, CompileUnit);
@@ -91,6 +97,23 @@ protected:
     if (options().getAttributeFormat())
       Root->setFileFormatName(FileFormatName);
     return Error::success();
+  }
+
+  // Return a pathname composed by: parent_path(InputFilename)/filename(From).
+  // This is useful when a type server (PDB file associated with an object
+  // file or a precompiled header file) or a DWARF split object have been
+  // moved from their original location. That is the case when running
+  // regression tests, where object files are created in one location and
+  // executed in a different location.
+  std::string createAlternativePath(StringRef From) {
+    // During the reader initialization, any backslashes in 'InputFilename'
+    // are converted to forward slashes.
+    SmallString<128> Path;
+    sys::path::append(Path, sys::path::Style::posix,
+                      sys::path::parent_path(InputFilename),
+                      sys::path::filename(sys::path::convert_to_slash(
+                          From, sys::path::Style::windows)));
+    return std::string(Path);
   }
 
   virtual Error printScopes();
@@ -139,7 +162,12 @@ public:
     return {};
   }
 
-  virtual bool isSystemEntry(LVElement *Element, StringRef Name = {}) {
+  LVSectionIndex getDotTextSectionIndex() const { return DotTextSectionIndex; }
+  virtual LVSectionIndex getSectionIndex(LVScope *Scope) {
+    return getDotTextSectionIndex();
+  }
+
+  virtual bool isSystemEntry(LVElement *Element, StringRef Name = {}) const {
     return false;
   };
 

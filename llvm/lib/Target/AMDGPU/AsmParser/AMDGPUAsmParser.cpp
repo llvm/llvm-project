@@ -8550,7 +8550,7 @@ void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
     llvm_unreachable("Unhandled operand type in cvtVOPD");
   };
 
-  auto InstInfo = getVOPDInstInfo(Inst.getOpcode(), &MII);
+  const auto &InstInfo = getVOPDInstInfo(Inst.getOpcode(), &MII);
 
   // MCInst operands are ordered as follows:
   //   dstX, dstY, src0X [, other OpX operands], src0Y [, other OpY operands]
@@ -8560,9 +8560,11 @@ void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
   }
 
   for (auto CompIdx : VOPD::COMPONENTS) {
+    const auto &CInfo = InstInfo[CompIdx];
+    bool CompHasSrc2Acc = CInfo.hasSrc2Acc();
     auto SrcOperandsNum = InstInfo[CompIdx].getSrcOperandsNum();
     for (unsigned SrcIdx = 0; SrcIdx < SrcOperandsNum; ++SrcIdx) {
-      addOp(InstInfo[CompIdx].getParsedSrcIndex(SrcIdx));
+      addOp(CInfo.getParsedSrcIndex(SrcIdx, CompHasSrc2Acc));
     }
   }
 }

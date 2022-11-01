@@ -39,8 +39,8 @@ decoder library [LibIPT library](https://github.com/intel/libipt).
   $ cd libipt-build
   $ make
 
-This will generate a few files in the `<libipt-build>/lib`
-and `<libipt-build>/libipt/include` directories.
+This will generate a few files in the ``<libipt-build>/lib``
+and ``<libipt-build>/libipt/include`` directories.
 
 Configure and build LLDB with Intel PT support
 

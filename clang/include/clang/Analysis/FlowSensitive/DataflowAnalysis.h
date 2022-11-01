@@ -32,6 +32,16 @@
 namespace clang {
 namespace dataflow {
 
+template <typename AnalysisT, typename LatticeT, typename = std::void_t<>>
+struct HasTransferBranchFor : std::false_type {};
+
+template <typename AnalysisT, typename LatticeT>
+struct HasTransferBranchFor<
+    AnalysisT, LatticeT,
+    std::void_t<decltype(std::declval<AnalysisT>().transferBranch(
+        std::declval<bool>(), std::declval<const Stmt *>(),
+        std::declval<LatticeT &>(), std::declval<Environment &>()))>>
+    : std::true_type {};
 /// Base class template for dataflow analyses built on a single lattice type.
 ///
 /// Requirements:
@@ -99,6 +109,17 @@ public:
                           Environment &Env) final {
     Lattice &L = llvm::any_cast<Lattice &>(E.Value);
     static_cast<Derived *>(this)->transfer(Element, L, Env);
+  }
+
+  void transferBranchTypeErased(bool Branch, const Stmt *Stmt,
+                                TypeErasedLattice &E, Environment &Env) final {
+    if constexpr (HasTransferBranchFor<Derived, LatticeT>::value) {
+      Lattice &L = llvm::any_cast<Lattice &>(E.Value);
+      static_cast<Derived *>(this)->transferBranch(Branch, Stmt, L, Env);
+    }
+    // Silence unused parameter warnings.
+    (void)Branch;
+    (void)Stmt;
   }
 
 private:

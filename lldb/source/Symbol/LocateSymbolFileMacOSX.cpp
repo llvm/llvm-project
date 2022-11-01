@@ -630,8 +630,8 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                                   command_output.size(), kCFAllocatorNull));
 
   CFCReleaser<CFDictionaryRef> plist(
-      (CFDictionaryRef)::CFPropertyListCreateFromXMLData(
-          NULL, data.get(), kCFPropertyListImmutable, NULL));
+      (CFDictionaryRef)::CFPropertyListCreateWithData(
+          NULL, data.get(), kCFPropertyListImmutable, NULL, NULL));
 
   if (!plist.get()) {
     LLDB_LOGF(log, "'%s' failed: output is not a valid plist",

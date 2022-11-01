@@ -114,34 +114,64 @@ const DILocation *DILocation::getMergedLocation(const DILocation *LocA,
   if (LocA == LocB)
     return LocA;
 
-  SmallSet<std::pair<DIScope *, DILocation *>, 5> Locations;
+  LLVMContext &C = LocA->getContext();
+  SmallDenseMap<std::pair<DILocalScope *, DILocation *>,
+                std::pair<unsigned, unsigned>, 4>
+      Locations;
+
   DIScope *S = LocA->getScope();
   DILocation *L = LocA->getInlinedAt();
-  while (S) {
-    Locations.insert(std::make_pair(S, L));
+  unsigned Line = LocA->getLine();
+  unsigned Col = LocA->getColumn();
+
+  // Walk from the current source locaiton until the file scope;
+  // then, do the same for the inlined-at locations.
+  auto AdvanceToParentLoc = [&S, &L, &Line, &Col]() {
     S = S->getScope();
     if (!S && L) {
+      Line = L->getLine();
+      Col = L->getColumn();
       S = L->getScope();
       L = L->getInlinedAt();
     }
-  }
-  S = LocB->getScope();
-  L = LocB->getInlinedAt();
+  };
+
   while (S) {
-    if (Locations.count(std::make_pair(S, L)))
-      break;
-    S = S->getScope();
-    if (!S && L) {
-      S = L->getScope();
-      L = L->getInlinedAt();
-    }
+    if (auto *LS = dyn_cast<DILocalScope>(S))
+      Locations.try_emplace(std::make_pair(LS, L), std::make_pair(Line, Col));
+    AdvanceToParentLoc();
   }
 
-  // If the two locations are irreconsilable, just pick one. This is misleading,
-  // but on the other hand, it's a "line 0" location.
-  if (!S || !isa<DILocalScope>(S))
+  // Walk the source locations of LocB until a match with LocA is found.
+  S = LocB->getScope();
+  L = LocB->getInlinedAt();
+  Line = LocB->getLine();
+  Col = LocB->getColumn();
+  while (S) {
+    if (auto *LS = dyn_cast<DILocalScope>(S)) {
+      auto MatchLoc = Locations.find(std::make_pair(LS, L));
+      if (MatchLoc != Locations.end()) {
+        // If the lines match, keep the line, but set the column to '0'
+        // If the lines don't match, pick a "line 0" location but keep
+        // the current scope and inlined-at.
+        bool SameLine = Line == MatchLoc->second.first;
+        bool SameCol = Col == MatchLoc->second.second;
+        Line = SameLine ? Line : 0;
+        Col = SameLine && SameCol ? Col : 0;
+        break;
+      }
+    }
+    AdvanceToParentLoc();
+  }
+
+  if (!S) {
+    // If the two locations are irreconsilable, pick any scope,
+    // and return a "line 0" location.
+    Line = Col = 0;
     S = LocA->getScope();
-  return DILocation::get(LocA->getContext(), 0, 0, S, L);
+  }
+
+  return DILocation::get(C, Line, Col, S, L);
 }
 
 Optional<unsigned> DILocation::encodeDiscriminator(unsigned BD, unsigned DF,
@@ -1621,6 +1651,9 @@ DIExpression *DIExpression::appendToStack(const DIExpression *Expr,
 Optional<DIExpression *> DIExpression::createFragmentExpression(
     const DIExpression *Expr, unsigned OffsetInBits, unsigned SizeInBits) {
   SmallVector<uint64_t, 8> Ops;
+  // Track whether it's safe to split the value at the top of the DWARF stack,
+  // assuming that it'll be used as an implicit location value.
+  bool CanSplitValue = true;
   // Copy over the expression, but leave off any trailing DW_OP_LLVM_fragment.
   if (Expr) {
     for (auto Op : Expr->expr_ops()) {
@@ -1638,7 +1671,23 @@ Optional<DIExpression *> DIExpression::createFragmentExpression(
         //
         // FIXME: We *could* preserve the lowest fragment of a constant offset
         // operation if the offset fits into SizeInBits.
-        return None;
+        CanSplitValue = false;
+        break;
+      case dwarf::DW_OP_deref:
+      case dwarf::DW_OP_deref_size:
+      case dwarf::DW_OP_deref_type:
+      case dwarf::DW_OP_xderef:
+      case dwarf::DW_OP_xderef_size:
+      case dwarf::DW_OP_xderef_type:
+        // Preceeding arithmetic operations have been applied to compute an
+        // address. It's okay to split the value loaded from that address.
+        CanSplitValue = true;
+        break;
+      case dwarf::DW_OP_stack_value:
+        // Bail if this expression computes a value that cannot be split.
+        if (!CanSplitValue)
+          return None;
+        break;
       case dwarf::DW_OP_LLVM_fragment: {
         // Make the new offset point into the existing fragment.
         uint64_t FragmentOffsetInBits = Op.getArg(0);
@@ -1653,6 +1702,7 @@ Optional<DIExpression *> DIExpression::createFragmentExpression(
       Op.appendToVector(Ops);
     }
   }
+  assert((!Expr->isImplicit() || CanSplitValue) && "Expr can't be split");
   assert(Expr && "Unknown DIExpression");
   Ops.push_back(dwarf::DW_OP_LLVM_fragment);
   Ops.push_back(OffsetInBits);

@@ -1105,7 +1105,8 @@ public:
   /// Emit the a pseudo probe into the current section.
   virtual void emitPseudoProbe(uint64_t Guid, uint64_t Index, uint64_t Type,
                                uint64_t Attr,
-                               const MCPseudoProbeInlineStack &InlineStack);
+                               const MCPseudoProbeInlineStack &InlineStack,
+                               MCSymbol *FnSym);
 
   /// Set the bundle alignment mode from now on in the section.
   /// The argument is the power of 2 to which the alignment is set. The

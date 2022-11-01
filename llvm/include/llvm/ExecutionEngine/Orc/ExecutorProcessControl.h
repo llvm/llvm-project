@@ -483,7 +483,6 @@ private:
 
   std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
   char GlobalManglingPrefix = 0;
-  std::vector<std::unique_ptr<sys::DynamicLibrary>> DynamicLibraries;
 };
 
 } // end namespace orc

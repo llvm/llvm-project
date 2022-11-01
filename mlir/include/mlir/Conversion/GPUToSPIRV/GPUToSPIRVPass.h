@@ -29,7 +29,7 @@ class OperationPass;
 /// If `mapMemorySpace` is true, performs MemRef memory space to SPIR-V mapping
 /// according to default Vulkan rules first.
 std::unique_ptr<OperationPass<ModuleOp>>
-createConvertGPUToSPIRVPass(bool mapMemorySpace = false);
+createConvertGPUToSPIRVPass(bool mapMemorySpace = true);
 
 } // namespace mlir
 #endif // MLIR_CONVERSION_GPUTOSPIRV_GPUTOSPIRVPASS_H

@@ -13,7 +13,8 @@
 #ifndef MLIR_DIALECT_VECTOR_IR_VECTOROPS_H
 #define MLIR_DIALECT_VECTOR_IR_VECTOROPS_H
 
-#include "mlir/Dialect/Vector/Interfaces/MaskingInterfaces.h"
+#include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"
+#include "mlir/Dialect/Vector/Interfaces/MaskingOpInterface.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -21,6 +22,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"

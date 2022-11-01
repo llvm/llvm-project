@@ -6861,8 +6861,8 @@ def err_array_init_plain_string_into_char8_t : Error<
 def note_array_init_plain_string_into_char8_t : Note<
   "add 'u8' prefix to form a 'char8_t' string literal">;
 def err_array_init_utf8_string_into_char : Error<
-  "%select{|ISO C++20 does not permit }0initialization of char array with "
-  "UTF-8 string literal%select{ is not permitted by '-fchar8_t'|}0">;
+  "initialization of %select{|signed }0char array with "
+  "UTF-8 string literal is not permitted by %select{'-fchar8_t'|C++20}1">;
 def warn_cxx20_compat_utf8_string : Warning<
   "type of UTF-8 string literal will change from array of const char to "
   "array of const char8_t in C++20">, InGroup<CXX20Compat>, DefaultIgnore;
@@ -8687,6 +8687,8 @@ def warn_bad_function_cast : Warning<
 def warn_cast_function_type : Warning<
   "cast %diff{from $ to $ |}0,1converts to incompatible function type">,
   InGroup<CastFunctionType>, DefaultIgnore;
+def warn_cast_function_type_strict : Warning<warn_cast_function_type.Text>,
+  InGroup<CastFunctionTypeStrict>, DefaultIgnore;
 def err_cast_pointer_to_non_pointer_int : Error<
   "pointer cannot be cast to type %0">;
 def err_nullptr_cast : Error<

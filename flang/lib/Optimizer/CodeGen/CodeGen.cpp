@@ -20,6 +20,8 @@
 #include "flang/Optimizer/Support/TypeCode.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
+#include "mlir/Conversion/ComplexToLLVM/ComplexToLLVM.h"
+#include "mlir/Conversion/ComplexToStandard/ComplexToStandard.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
@@ -89,6 +91,11 @@ static int64_t getConstantIntValue(mlir::Value val) {
     if (auto attr = llConstOp.getValue().dyn_cast<mlir::IntegerAttr>())
       return attr.getValue().getSExtValue();
   fir::emitFatalError(val.getLoc(), "must be a constant");
+}
+
+static unsigned getTypeDescFieldId(mlir::Type ty) {
+  auto isArray = fir::dyn_cast_ptrOrBoxEleTy(ty).isa<fir::SequenceType>();
+  return isArray ? kOptTypePtrPosInBox : kDimsPosInBox;
 }
 
 namespace {
@@ -242,6 +249,18 @@ protected:
   // of the related descriptor (lowered fir.box type).
   static mlir::Type getBaseAddrTypeFromBox(mlir::Type type) {
     return getBoxEleTy(type, {kAddrPosInBox});
+  }
+
+  /// Read the address of the type descriptor from a box.
+  mlir::Value
+  loadTypeDescAddress(mlir::Location loc, mlir::Type ty, mlir::Value box,
+                      mlir::ConversionPatternRewriter &rewriter) const {
+    unsigned typeDescFieldId = getTypeDescFieldId(ty);
+    mlir::Type tdescType = lowerTy().convertTypeDescType(rewriter.getContext());
+    auto pty = mlir::LLVM::LLVMPointerType::get(tdescType);
+    mlir::LLVM::GEPOp p = genGEP(loc, pty, rewriter, box, 0,
+                                 static_cast<std::int32_t>(typeDescFieldId));
+    return rewriter.create<mlir::LLVM::LoadOp>(loc, tdescType, p);
   }
 
   // Load the attribute from the \p box and perform a check against \p maskValue
@@ -461,7 +480,7 @@ struct BoxAddrOpConversion : public FIROpConversion<fir::BoxAddrOp> {
     mlir::Value a = adaptor.getOperands()[0];
     auto loc = boxaddr.getLoc();
     mlir::Type ty = convertType(boxaddr.getType());
-    if (auto argty = boxaddr.getVal().getType().dyn_cast<fir::BoxType>()) {
+    if (auto argty = boxaddr.getVal().getType().dyn_cast<fir::BaseBoxType>()) {
       rewriter.replaceOp(boxaddr, loadBaseAddrFromBox(loc, ty, a, rewriter));
     } else {
       rewriter.replaceOpWithNewOp<mlir::LLVM::ExtractValueOp>(boxaddr, a, 0);
@@ -623,13 +642,9 @@ struct BoxTypeDescOpConversion : public FIROpConversion<fir::BoxTypeDescOp> {
   matchAndRewrite(fir::BoxTypeDescOp boxtypedesc, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Value box = adaptor.getOperands()[0];
-    auto loc = boxtypedesc.getLoc();
-    mlir::Type typeTy =
-        fir::getDescFieldTypeModel<kTypePosInBox>()(boxtypedesc.getContext());
-    auto result = getValueFromBox(loc, box, typeTy, rewriter, kTypePosInBox);
-    auto typePtrTy = mlir::LLVM::LLVMPointerType::get(typeTy);
-    rewriter.replaceOpWithNewOp<mlir::LLVM::IntToPtrOp>(boxtypedesc, typePtrTy,
-                                                        result);
+    auto typeDescAddr = loadTypeDescAddress(
+        boxtypedesc.getLoc(), boxtypedesc.getBox().getType(), box, rewriter);
+    rewriter.replaceOp(boxtypedesc, typeDescAddr);
     return mlir::success();
   }
 };
@@ -940,9 +955,7 @@ struct DispatchOpConversion : public FIROpConversion<fir::DispatchOp> {
       typeDescTy = global.getType();
     }
 
-    auto isArray = fir::dyn_cast_ptrOrBoxEleTy(passedObject.getType())
-                       .template isa<fir::SequenceType>();
-    unsigned typeDescFieldId = isArray ? kOptTypePtrPosInBox : kDimsPosInBox;
+    unsigned typeDescFieldId = getTypeDescFieldId(passedObject.getType());
 
     auto descPtr = adaptor.getOperands()[0]
                        .getType()
@@ -1458,7 +1471,8 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
   template <typename BOX>
   std::tuple<fir::BaseBoxType, mlir::Value, mlir::Value>
   consDescriptorPrefix(BOX box, mlir::ConversionPatternRewriter &rewriter,
-                       unsigned rank, mlir::ValueRange lenParams) const {
+                       unsigned rank, mlir::ValueRange lenParams,
+                       mlir::Value typeDesc = {}) const {
     auto loc = box.getLoc();
     auto boxTy = box.getType().template dyn_cast<fir::BaseBoxType>();
     auto convTy = this->lowerTy().convertBoxType(boxTy, rank);
@@ -1492,11 +1506,10 @@ struct EmboxCommonConversion : public FIROpConversion<OP> {
                     this->genI32Constant(loc, rewriter, hasAddendum ? 1 : 0));
 
     if (hasAddendum) {
-      auto isArray =
-          fir::dyn_cast_ptrOrBoxEleTy(boxTy).template isa<fir::SequenceType>();
-      unsigned typeDescFieldId = isArray ? kOptTypePtrPosInBox : kDimsPosInBox;
-      auto typeDesc =
-          getTypeDescriptor(box, rewriter, loc, unwrapIfDerived(boxTy));
+      unsigned typeDescFieldId = getTypeDescFieldId(boxTy);
+      if (!typeDesc)
+        typeDesc =
+            getTypeDescriptor(box, rewriter, loc, unwrapIfDerived(boxTy));
       descriptor =
           insertField(rewriter, loc, descriptor, {typeDescFieldId}, typeDesc,
                       /*bitCast=*/true);
@@ -1625,9 +1638,13 @@ struct EmboxOpConversion : public EmboxCommonConversion<fir::EmboxOp> {
   matchAndRewrite(fir::EmboxOp embox, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::ValueRange operands = adaptor.getOperands();
+    mlir::Value tdesc;
+    if (embox.getTdesc())
+      tdesc = operands[embox.getTdescOffset()];
     assert(!embox.getShape() && "There should be no dims on this embox op");
     auto [boxTy, dest, eleSize] = consDescriptorPrefix(
-        embox, rewriter, /*rank=*/0, /*lenParams=*/operands.drop_front(1));
+        embox, rewriter,
+        /*rank=*/0, /*lenParams=*/operands.drop_front(1), tdesc);
     dest = insertBaseAddress(rewriter, embox.getLoc(), dest, operands[0]);
     if (isDerivedTypeWithLenParams(boxTy)) {
       TODO(embox.getLoc(),
@@ -1648,9 +1665,12 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
   matchAndRewrite(fir::cg::XEmboxOp xbox, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::ValueRange operands = adaptor.getOperands();
+    mlir::Value tdesc;
+    if (xbox.getTdesc())
+      tdesc = operands[xbox.getTdescOffset()];
     auto [boxTy, dest, eleSize] =
         consDescriptorPrefix(xbox, rewriter, xbox.getOutRank(),
-                             operands.drop_front(xbox.lenParamOffset()));
+                             operands.drop_front(xbox.lenParamOffset()), tdesc);
     // Generate the triples in the dims field of the descriptor
     auto i64Ty = mlir::IntegerType::get(xbox.getContext(), 64);
     mlir::Value base = operands[0];
@@ -1849,8 +1869,16 @@ struct XReboxOpConversion : public EmboxCommonConversion<fir::cg::XReboxOp> {
       if (recTy.getNumLenParams() != 0)
         TODO(loc, "reboxing descriptor of derived type with length parameters");
     }
-    auto [boxTy, dest, eleSize] =
-        consDescriptorPrefix(rebox, rewriter, rebox.getOutRank(), lenParams);
+
+    // Rebox on polymorphic entities needs to carry over the dynamic type.
+    mlir::Value typeDescAddr;
+    if (rebox.getBox().getType().isa<fir::ClassType>() &&
+        rebox.getType().isa<fir::ClassType>())
+      typeDescAddr = loadTypeDescAddress(loc, rebox.getBox().getType(),
+                                         loweredBox, rewriter);
+
+    auto [boxTy, dest, eleSize] = consDescriptorPrefix(
+        rebox, rewriter, rebox.getOutRank(), lenParams, typeDescAddr);
 
     // Read input extents, strides, and base address
     llvm::SmallVector<mlir::Value> inputExtents;
@@ -2391,7 +2419,7 @@ struct CoordinateOpConversion
     }
 
     // Boxed type - get the base pointer from the box
-    if (baseObjectTy.dyn_cast<fir::BoxType>())
+    if (baseObjectTy.dyn_cast<fir::BaseBoxType>())
       return doRewriteBox(coor, ty, operands, loc, rewriter);
 
     // Reference, pointer or a heap type
@@ -2473,7 +2501,7 @@ private:
                mlir::Location loc,
                mlir::ConversionPatternRewriter &rewriter) const {
     mlir::Type boxObjTy = coor.getBaseType();
-    assert(boxObjTy.dyn_cast<fir::BoxType>() && "This is not a `fir.box`");
+    assert(boxObjTy.dyn_cast<fir::BaseBoxType>() && "This is not a `fir.box`");
 
     mlir::Value boxBaseAddr = operands[0];
 
@@ -2835,7 +2863,7 @@ struct LoadOpConversion : public FIROpConversion<fir::LoadOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::LoadOp load, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    if (auto boxTy = load.getType().dyn_cast<fir::BoxType>()) {
+    if (auto boxTy = load.getType().dyn_cast<fir::BaseBoxType>()) {
       // fir.box is a special case because it is considered as an ssa values in
       // fir, but it is lowered as a pointer to a descriptor. So
       // fir.ref<fir.box> and fir.box end up being the same llvm types and
@@ -3509,6 +3537,7 @@ public:
     // as passes here.
     mlir::OpPassManager mathConvertionPM("builtin.module");
     mathConvertionPM.addPass(mlir::createConvertMathToFuncsPass());
+    mathConvertionPM.addPass(mlir::createConvertComplexToStandardPass());
     if (mlir::failed(runPipeline(mathConvertionPM, mod)))
       return signalPassFailure();
 
@@ -3573,6 +3602,7 @@ public:
     // when late math lowering mode is used, into llvm dialect.
     mlir::populateMathToLLVMConversionPatterns(typeConverter, pattern);
     mlir::populateMathToLibmConversionPatterns(pattern, /*benefit=*/0);
+    mlir::populateComplexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::ConversionTarget target{*context};
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
     // The OpenMP dialect is legal for Operations without regions, for those

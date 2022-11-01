@@ -48,7 +48,7 @@ TEST(TypePrinter, TemplateId) {
   std::string Code = R"cpp(
     namespace N {
       template <typename> struct Type {};
-      
+
       template <typename T>
       void Foo(const Type<T> &Param);
     }
@@ -115,14 +115,14 @@ TEST(TypePrinter, TemplateIdWithNTTP) {
 
   ASSERT_TRUE(PrintedTypeMatches(
       Code, {"-std=c++20"}, Matcher,
-      R"(ASCII<{"this nontype template argument is [...]"}> &&)",
+      R"(ASCII<Str<52>{"this nontype template argument is [...]"}> &&)",
       [](PrintingPolicy &Policy) {
         Policy.EntireContentsOfLargeArray = false;
       }));
 
   ASSERT_TRUE(PrintedTypeMatches(
       Code, {"-std=c++20"}, Matcher,
-      R"(ASCII<{"this nontype template argument is too long to print"}> &&)",
+      R"(ASCII<Str<52>{"this nontype template argument is too long to print"}> &&)",
       [](PrintingPolicy &Policy) {
         Policy.EntireContentsOfLargeArray = true;
       }));

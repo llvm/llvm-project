@@ -22,7 +22,7 @@
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Tools/ParseUtilties.h"
+#include "mlir/Tools/ParseUtilities.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"

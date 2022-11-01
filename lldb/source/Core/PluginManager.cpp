@@ -1051,9 +1051,10 @@ struct TraceInstance
       llvm::StringRef name, llvm::StringRef description,
       CallbackType create_callback_from_bundle,
       TraceCreateInstanceForLiveProcess create_callback_for_live_process,
-      llvm::StringRef schema)
+      llvm::StringRef schema, DebuggerInitializeCallback debugger_init_callback)
       : PluginInstance<TraceCreateInstanceFromBundle>(
-            name, description, create_callback_from_bundle),
+            name, description, create_callback_from_bundle,
+            debugger_init_callback),
         schema(schema),
         create_callback_for_live_process(create_callback_for_live_process) {}
 
@@ -1072,10 +1073,10 @@ bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     TraceCreateInstanceFromBundle create_callback_from_bundle,
     TraceCreateInstanceForLiveProcess create_callback_for_live_process,
-    llvm::StringRef schema) {
+    llvm::StringRef schema, DebuggerInitializeCallback debugger_init_callback) {
   return GetTracePluginInstances().RegisterPlugin(
       name, description, create_callback_from_bundle,
-      create_callback_for_live_process, schema);
+      create_callback_for_live_process, schema, debugger_init_callback);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -1506,6 +1507,7 @@ CreateSettingForPlugin(Debugger &debugger, ConstString plugin_type_name,
 static const char *kDynamicLoaderPluginName("dynamic-loader");
 static const char *kPlatformPluginName("platform");
 static const char *kProcessPluginName("process");
+static const char *kTracePluginName("trace");
 static const char *kObjectFilePluginName("object-file");
 static const char *kSymbolFilePluginName("symbol-file");
 static const char *kJITLoaderPluginName("jit-loader");
@@ -1556,6 +1558,14 @@ bool PluginManager::CreateSettingForProcessPlugin(
     ConstString description, bool is_global_property) {
   return CreateSettingForPlugin(debugger, ConstString(kProcessPluginName),
                                 ConstString("Settings for process plug-ins"),
+                                properties_sp, description, is_global_property);
+}
+
+bool PluginManager::CreateSettingForTracePlugin(
+    Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+    ConstString description, bool is_global_property) {
+  return CreateSettingForPlugin(debugger, ConstString(kTracePluginName),
+                                ConstString("Settings for trace plug-ins"),
                                 properties_sp, description, is_global_property);
 }
 

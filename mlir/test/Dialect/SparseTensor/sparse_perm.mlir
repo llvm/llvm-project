@@ -60,17 +60,17 @@ func.func @sparse_static_dims(%arga: tensor<10x20x30xf32, #X>,
 // CHECK-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_4:.*]] = arith.constant 1 : index
 // CHECK-DAG:       %[[VAL_5:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-DAG:       %[[VAL_6:.*]] = tensor.dim %[[VAL_1]], %[[VAL_3]] : tensor<?x?x?xf32>
-// CHECK-DAG:       %[[VAL_7:.*]] = tensor.dim %[[VAL_1]], %[[VAL_4]] : tensor<?x?x?xf32>
-// CHECK-DAG:       %[[VAL_8:.*]] = tensor.dim %[[VAL_1]], %[[VAL_2]] : tensor<?x?x?xf32>
+// CHECK-DAG:       %[[VAL_6:.*]] = tensor.dim %[[VAL_0]], %[[VAL_2]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-DAG:       %[[VAL_7:.*]] = tensor.dim %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-DAG:       %[[VAL_8:.*]] = tensor.dim %[[VAL_0]], %[[VAL_4]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : memref<?x?x?xf32>
 // CHECK:           linalg.fill ins(%[[ZERO]] : f32) outs(%[[VAL_10]] : memref<?x?x?xf32>)
-// CHECK:           scf.for %[[VAL_11:.*]] = %[[VAL_3]] to %[[VAL_7]] step %[[VAL_4]] {
-// CHECK:             scf.for %[[VAL_12:.*]] = %[[VAL_3]] to %[[VAL_8]] step %[[VAL_4]] {
-// CHECK:               %[[VAL_13:.*]] = arith.muli %[[VAL_8]], %[[VAL_11]] : index
+// CHECK:           scf.for %[[VAL_11:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_4]] {
+// CHECK:             scf.for %[[VAL_12:.*]] = %[[VAL_3]] to %[[VAL_7]] step %[[VAL_4]] {
+// CHECK:               %[[VAL_13:.*]] = arith.muli %[[VAL_7]], %[[VAL_11]] : index
 // CHECK:               %[[VAL_14:.*]] = arith.addi %[[VAL_13]], %[[VAL_12]] : index
-// CHECK:               scf.for %[[VAL_15:.*]] = %[[VAL_3]] to %[[VAL_6]] step %[[VAL_4]] {
-// CHECK:                 %[[VAL_16:.*]] = arith.muli %[[VAL_6]], %[[VAL_14]] : index
+// CHECK:               scf.for %[[VAL_15:.*]] = %[[VAL_3]] to %[[VAL_8]] step %[[VAL_4]] {
+// CHECK:                 %[[VAL_16:.*]] = arith.muli %[[VAL_8]], %[[VAL_14]] : index
 // CHECK:                 %[[VAL_17:.*]] = arith.addi %[[VAL_16]], %[[VAL_15]] : index
 // CHECK:                 %[[VAL_18:.*]] = memref.load %[[VAL_5]]{{\[}}%[[VAL_17]]] : memref<?xf32>
 // CHECK:                 memref.store %[[VAL_18]], %[[VAL_10]]{{\[}}%[[VAL_15]], %[[VAL_11]], %[[VAL_12]]] : memref<?x?x?xf32>

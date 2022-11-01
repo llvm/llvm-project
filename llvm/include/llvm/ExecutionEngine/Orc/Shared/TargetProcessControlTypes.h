@@ -85,9 +85,9 @@ struct BufferWrite {
 };
 
 /// A handle used to represent a loaded dylib in the target process.
-using DylibHandle = JITTargetAddress;
+using DylibHandle = ExecutorAddr;
 
-using LookupResult = std::vector<JITTargetAddress>;
+using LookupResult = std::vector<ExecutorAddr>;
 
 } // end namespace tpctypes
 

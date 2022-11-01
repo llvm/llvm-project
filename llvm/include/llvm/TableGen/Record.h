@@ -784,7 +784,7 @@ public:
 ///
 class UnOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum UnaryOp : uint8_t { CAST, NOT, HEAD, TAIL, SIZE, EMPTY, GETDAGOP };
+  enum UnaryOp : uint8_t { CAST, NOT, HEAD, TAIL, SIZE, EMPTY, GETDAGOP, LOG2 };
 
 private:
   Init *LHS;

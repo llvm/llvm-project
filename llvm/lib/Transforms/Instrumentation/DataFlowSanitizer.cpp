@@ -3329,46 +3329,6 @@ void DFSanVisitor::visitPHINode(PHINode &PN) {
   DFSF.PHIFixups.push_back({&PN, ShadowPN, OriginPN});
 }
 
-namespace {
-class DataFlowSanitizerLegacyPass : public ModulePass {
-private:
-  std::vector<std::string> ABIListFiles;
-
-public:
-  static char ID;
-
-  DataFlowSanitizerLegacyPass(
-      const std::vector<std::string> &ABIListFiles = std::vector<std::string>())
-      : ModulePass(ID), ABIListFiles(ABIListFiles) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-  }
-
-  bool runOnModule(Module &M) override {
-    return DataFlowSanitizer(ABIListFiles)
-        .runImpl(M, [&](Function &F) -> TargetLibraryInfo & {
-          return getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-        });
-  }
-};
-} // namespace
-
-char DataFlowSanitizerLegacyPass::ID;
-
-INITIALIZE_PASS_BEGIN(DataFlowSanitizerLegacyPass, "dfsan",
-                      "DataFlowSanitizer: dynamic data flow analysis.", false,
-                      false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(DataFlowSanitizerLegacyPass, "dfsan",
-                    "DataFlowSanitizer: dynamic data flow analysis.", false,
-                    false)
-
-ModulePass *llvm::createDataFlowSanitizerLegacyPassPass(
-    const std::vector<std::string> &ABIListFiles) {
-  return new DataFlowSanitizerLegacyPass(ABIListFiles);
-}
-
 PreservedAnalyses DataFlowSanitizerPass::run(Module &M,
                                              ModuleAnalysisManager &AM) {
   auto GetTLI = [&](Function &F) -> TargetLibraryInfo & {

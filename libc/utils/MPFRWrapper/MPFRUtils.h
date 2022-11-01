@@ -176,7 +176,7 @@ void explain_ternary_operation_one_output_error(
     Operation op, const TernaryInput<T> &input, T match_value,
     double ulp_tolerance, RoundingMode rounding, testutils::StreamWrapper &OS);
 
-template <Operation op, typename InputType, typename OutputType>
+template <Operation op, bool silent, typename InputType, typename OutputType>
 class MPFRMatcher : public testing::Matcher<OutputType> {
   InputType input;
   OutputType match_value;
@@ -197,6 +197,9 @@ public:
   void explainError(testutils::StreamWrapper &OS) override { // NOLINT
     explain_error(input, match_value, OS);
   }
+
+  // Whether the `explainError` step is skipped or not.
+  bool is_silent() const override { return silent; }
 
 private:
   template <typename T> bool match(T in, T out) {
@@ -289,13 +292,23 @@ constexpr bool is_valid_operation() {
 }
 
 template <Operation op, typename InputType, typename OutputType>
-__attribute__((no_sanitize("address")))
-cpp::enable_if_t<is_valid_operation<op, InputType, OutputType>(),
-                 internal::MPFRMatcher<op, InputType, OutputType>>
+__attribute__((no_sanitize("address"))) cpp::enable_if_t<
+    is_valid_operation<op, InputType, OutputType>(),
+    internal::MPFRMatcher<op, /*is_silent*/ false, InputType, OutputType>>
 get_mpfr_matcher(InputType input, OutputType output_unused,
                  double ulp_tolerance, RoundingMode rounding) {
-  return internal::MPFRMatcher<op, InputType, OutputType>(input, ulp_tolerance,
-                                                          rounding);
+  return internal::MPFRMatcher<op, /*is_silent*/ false, InputType, OutputType>(
+      input, ulp_tolerance, rounding);
+}
+
+template <Operation op, typename InputType, typename OutputType>
+__attribute__((no_sanitize("address"))) cpp::enable_if_t<
+    is_valid_operation<op, InputType, OutputType>(),
+    internal::MPFRMatcher<op, /*is_silent*/ true, InputType, OutputType>>
+get_silent_mpfr_matcher(InputType input, OutputType output_unused,
+                        double ulp_tolerance, RoundingMode rounding) {
+  return internal::MPFRMatcher<op, /*is_silent*/ true, InputType, OutputType>(
+      input, ulp_tolerance, rounding);
 }
 
 template <typename T> T round(T x, RoundingMode mode);
@@ -345,6 +358,12 @@ template <typename T> bool round_to_long(T x, RoundingMode mode, long &result);
     EXPECT_MPFR_MATCH(op, input, match_value, ulp_tolerance,                   \
                       mpfr::RoundingMode::TowardZero);                         \
   }
+
+#define EXPECT_MPFR_MATCH_ROUNDING_SILENTLY(op, input, match_value,            \
+                                            ulp_tolerance, rounding)           \
+  EXPECT_THAT(match_value,                                                     \
+              __llvm_libc::testing::mpfr::get_silent_mpfr_matcher<op>(         \
+                  input, match_value, ulp_tolerance, rounding))
 
 #define ASSERT_MPFR_MATCH_DEFAULT(op, input, match_value, ulp_tolerance)       \
   ASSERT_THAT(match_value,                                                     \

@@ -365,7 +365,7 @@ struct TypedefInfo : public SymbolInfo {
   //   using MyVector = std::vector<int>
   // False means it's a C-style typedef:
   //   typedef std::vector<int> MyVector;
-  bool IsUsing;
+  bool IsUsing = false;
 };
 
 struct BaseRecordInfo : public RecordInfo {

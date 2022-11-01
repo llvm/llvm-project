@@ -58,6 +58,18 @@ struct VA {
   VA(...) {}
 };
 
+// Skip template constructors.
+struct TC {
+  template <unsigned U>
+  TC() {}
+
+  template <unsigned U>
+  TC(const TC &) {}
+
+  template <unsigned U>
+  TC& operator = (const TC &) { return *this; }
+};
+
 // Initializer or arguments.
 class IA {
 public:

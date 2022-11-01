@@ -763,9 +763,13 @@ canonicalizeImmediatelyDeclaredConstraint(const ASTContext &C, Expr *IDC,
     NewConverted.push_back(ConstrainedType);
     llvm::append_range(NewConverted, OldConverted.drop_front(1));
   }
+  auto *CSD = ImplicitConceptSpecializationDecl::Create(
+      C, CSE->getNamedConcept()->getDeclContext(),
+      CSE->getNamedConcept()->getLocation(), NewConverted);
+
   Expr *NewIDC = ConceptSpecializationExpr::Create(
-      C, CSE->getNamedConcept(), NewConverted, nullptr,
-      CSE->isInstantiationDependent(), CSE->containsUnexpandedParameterPack());
+      C, CSE->getNamedConcept(), CSD, nullptr, CSE->isInstantiationDependent(),
+      CSE->containsUnexpandedParameterPack());
 
   if (auto *OrigFold = dyn_cast<CXXFoldExpr>(IDC))
     NewIDC = new (C) CXXFoldExpr(
@@ -3043,6 +3047,18 @@ ASTContext::getASTObjCImplementationLayout(
   return getObjCLayout(D->getClassInterface(), D);
 }
 
+static auto getCanonicalTemplateArguments(const ASTContext &C,
+                                          ArrayRef<TemplateArgument> Args,
+                                          bool &AnyNonCanonArgs) {
+  SmallVector<TemplateArgument, 16> CanonArgs(Args);
+  for (auto &Arg : CanonArgs) {
+    TemplateArgument OrigArg = Arg;
+    Arg = C.getCanonicalTemplateArgument(Arg);
+    AnyNonCanonArgs |= !Arg.structurallyEquals(OrigArg);
+  }
+  return CanonArgs;
+}
+
 //===----------------------------------------------------------------------===//
 //                   Type creation/memoization methods
 //===----------------------------------------------------------------------===//
@@ -4851,31 +4867,38 @@ ASTContext::getSubstTemplateTypeParmType(QualType Replacement,
 }
 
 /// Retrieve a
-QualType ASTContext::getSubstTemplateTypeParmPackType(
-    Decl *AssociatedDecl, unsigned Index, const TemplateArgument &ArgPack) {
+QualType
+ASTContext::getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
+                                             unsigned Index, bool Final,
+                                             const TemplateArgument &ArgPack) {
 #ifndef NDEBUG
-  for (const auto &P : ArgPack.pack_elements()) {
+  for (const auto &P : ArgPack.pack_elements())
     assert(P.getKind() == TemplateArgument::Type && "Pack contains a non-type");
-    assert(P.getAsType().isCanonical() && "Pack contains non-canonical type");
-  }
 #endif
 
   llvm::FoldingSetNodeID ID;
-  SubstTemplateTypeParmPackType::Profile(ID, AssociatedDecl, Index, ArgPack);
+  SubstTemplateTypeParmPackType::Profile(ID, AssociatedDecl, Index, Final,
+                                         ArgPack);
   void *InsertPos = nullptr;
   if (SubstTemplateTypeParmPackType *SubstParm =
           SubstTemplateTypeParmPackTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(SubstParm, 0);
 
   QualType Canon;
-  if (!AssociatedDecl->isCanonicalDecl()) {
-    Canon = getSubstTemplateTypeParmPackType(AssociatedDecl->getCanonicalDecl(),
-                                             Index, ArgPack);
-    SubstTemplateTypeParmPackTypes.FindNodeOrInsertPos(ID, InsertPos);
+  {
+    TemplateArgument CanonArgPack = getCanonicalTemplateArgument(ArgPack);
+    if (!AssociatedDecl->isCanonicalDecl() ||
+        !CanonArgPack.structurallyEquals(ArgPack)) {
+      Canon = getSubstTemplateTypeParmPackType(
+          AssociatedDecl->getCanonicalDecl(), Index, Final, CanonArgPack);
+      [[maybe_unused]] const auto *Nothing =
+          SubstTemplateTypeParmPackTypes.FindNodeOrInsertPos(ID, InsertPos);
+      assert(!Nothing);
+    }
   }
 
-  auto *SubstParm = new (*this, TypeAlignment)
-      SubstTemplateTypeParmPackType(Canon, AssociatedDecl, Index, ArgPack);
+  auto *SubstParm = new (*this, TypeAlignment) SubstTemplateTypeParmPackType(
+      Canon, AssociatedDecl, Index, Final, ArgPack);
   Types.push_back(SubstParm);
   SubstTemplateTypeParmPackTypes.InsertNode(SubstParm, InsertPos);
   return QualType(SubstParm, 0);
@@ -5000,23 +5023,6 @@ ASTContext::getTemplateSpecializationType(TemplateName Template,
   return QualType(Spec, 0);
 }
 
-static bool
-getCanonicalTemplateArguments(const ASTContext &C,
-                              ArrayRef<TemplateArgument> OrigArgs,
-                              SmallVectorImpl<TemplateArgument> &CanonArgs) {
-  bool AnyNonCanonArgs = false;
-  unsigned NumArgs = OrigArgs.size();
-  CanonArgs.resize(NumArgs);
-  for (unsigned I = 0; I != NumArgs; ++I) {
-    const TemplateArgument &OrigArg = OrigArgs[I];
-    TemplateArgument &CanonArg = CanonArgs[I];
-    CanonArg = C.getCanonicalTemplateArgument(OrigArg);
-    if (!CanonArg.structurallyEquals(OrigArg))
-      AnyNonCanonArgs = true;
-  }
-  return AnyNonCanonArgs;
-}
-
 QualType ASTContext::getCanonicalTemplateSpecializationType(
     TemplateName Template, ArrayRef<TemplateArgument> Args) const {
   assert(!Template.getAsDependentTemplateName() &&
@@ -5028,8 +5034,9 @@ QualType ASTContext::getCanonicalTemplateSpecializationType(
 
   // Build the canonical template specialization type.
   TemplateName CanonTemplate = getCanonicalTemplateName(Template);
-  SmallVector<TemplateArgument, 4> CanonArgs;
-  ::getCanonicalTemplateArguments(*this, Args, CanonArgs);
+  bool AnyNonCanonArgs = false;
+  auto CanonArgs =
+      ::getCanonicalTemplateArguments(*this, Args, AnyNonCanonArgs);
 
   // Determine whether this canonical template specialization type already
   // exists.
@@ -5149,12 +5156,9 @@ QualType ASTContext::getDependentNameType(ElaboratedTypeKeyword Keyword,
   return QualType(T, 0);
 }
 
-QualType
-ASTContext::getDependentTemplateSpecializationType(
-                                 ElaboratedTypeKeyword Keyword,
-                                 NestedNameSpecifier *NNS,
-                                 const IdentifierInfo *Name,
-                                 const TemplateArgumentListInfo &Args) const {
+QualType ASTContext::getDependentTemplateSpecializationType(
+    ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
+    const IdentifierInfo *Name, ArrayRef<TemplateArgumentLoc> Args) const {
   // TODO: avoid this copy
   SmallVector<TemplateArgument, 16> ArgCopy;
   for (unsigned I = 0, E = Args.size(); I != E; ++I)
@@ -5186,9 +5190,9 @@ ASTContext::getDependentTemplateSpecializationType(
   ElaboratedTypeKeyword CanonKeyword = Keyword;
   if (Keyword == ETK_None) CanonKeyword = ETK_Typename;
 
-  SmallVector<TemplateArgument, 16> CanonArgs;
-  bool AnyNonCanonArgs =
-      ::getCanonicalTemplateArguments(*this, Args, CanonArgs);
+  bool AnyNonCanonArgs = false;
+  auto CanonArgs =
+      ::getCanonicalTemplateArguments(*this, Args, AnyNonCanonArgs);
 
   QualType Canon;
   if (AnyNonCanonArgs || CanonNNS != NNS || CanonKeyword != Keyword) {
@@ -6287,7 +6291,7 @@ ASTContext::getCanonicalTemplateName(const TemplateName &Name) const {
         getCanonicalTemplateArgument(subst->getArgumentPack());
     return getSubstTemplateTemplateParmPack(
         canonArgPack, subst->getAssociatedDecl()->getCanonicalDecl(),
-        subst->getIndex());
+        subst->getFinal(), subst->getIndex());
   }
   }
 
@@ -6773,7 +6777,7 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
 
     case TemplateArgument::Declaration: {
       auto *D = cast<ValueDecl>(Arg.getAsDecl()->getCanonicalDecl());
-      return TemplateArgument(D, Arg.getParamTypeForDecl());
+      return TemplateArgument(D, getCanonicalType(Arg.getParamTypeForDecl()));
     }
 
     case TemplateArgument::NullPtr:
@@ -6795,17 +6799,13 @@ ASTContext::getCanonicalTemplateArgument(const TemplateArgument &Arg) const {
       return TemplateArgument(getCanonicalType(Arg.getAsType()));
 
     case TemplateArgument::Pack: {
-      if (Arg.pack_size() == 0)
+      bool AnyNonCanonArgs = false;
+      auto CanonArgs = ::getCanonicalTemplateArguments(
+          *this, Arg.pack_elements(), AnyNonCanonArgs);
+      if (!AnyNonCanonArgs)
         return Arg;
-
-      auto *CanonArgs = new (*this) TemplateArgument[Arg.pack_size()];
-      unsigned Idx = 0;
-      for (TemplateArgument::pack_iterator A = Arg.pack_begin(),
-                                        AEnd = Arg.pack_end();
-           A != AEnd; (void)++A, ++Idx)
-        CanonArgs[Idx] = getCanonicalTemplateArgument(*A);
-
-      return TemplateArgument(llvm::makeArrayRef(CanonArgs, Arg.pack_size()));
+      return TemplateArgument::CreatePackCopy(const_cast<ASTContext &>(*this),
+                                              CanonArgs);
     }
   }
 
@@ -9313,11 +9313,11 @@ ASTContext::getSubstTemplateTemplateParm(TemplateName Replacement,
 TemplateName
 ASTContext::getSubstTemplateTemplateParmPack(const TemplateArgument &ArgPack,
                                              Decl *AssociatedDecl,
-                                             unsigned Index) const {
+                                             unsigned Index, bool Final) const {
   auto &Self = const_cast<ASTContext &>(*this);
   llvm::FoldingSetNodeID ID;
   SubstTemplateTemplateParmPackStorage::Profile(ID, Self, ArgPack,
-                                                AssociatedDecl, Index);
+                                                AssociatedDecl, Index, Final);
 
   void *InsertPos = nullptr;
   SubstTemplateTemplateParmPackStorage *Subst
@@ -9325,7 +9325,7 @@ ASTContext::getSubstTemplateTemplateParmPack(const TemplateArgument &ArgPack,
 
   if (!Subst) {
     Subst = new (*this) SubstTemplateTemplateParmPackStorage(
-        ArgPack.pack_elements(), AssociatedDecl, Index);
+        ArgPack.pack_elements(), AssociatedDecl, Index, Final);
     SubstTemplateTemplateParmPacks.InsertNode(Subst, InsertPos);
   }
 

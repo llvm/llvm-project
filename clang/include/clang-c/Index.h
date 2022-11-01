@@ -4284,6 +4284,31 @@ CINDEX_LINKAGE unsigned clang_CXXMethod_isStatic(CXCursor C);
 CINDEX_LINKAGE unsigned clang_CXXMethod_isVirtual(CXCursor C);
 
 /**
+ * Determine if a C++ member function is a copy-assignment operator,
+ * returning 1 if such is the case and 0 otherwise.
+ *
+ * > A copy-assignment operator `X::operator=` is a non-static,
+ * > non-template member function of _class_ `X` with exactly one
+ * > parameter of type `X`, `X&`, `const X&`, `volatile X&` or `const
+ * > volatile X&`.
+ *
+ * That is, for example, the `operator=` in:
+ *
+ *    class Foo {
+ *        bool operator=(const volatile Foo&);
+ *    };
+ *
+ * Is a copy-assignment operator, while the `operator=` in:
+ *
+ *    class Bar {
+ *        bool operator=(const int&);
+ *    };
+ *
+ * Is not.
+ */
+CINDEX_LINKAGE unsigned clang_CXXMethod_isCopyAssignmentOperator(CXCursor C);
+
+/**
  * Determine if a C++ record is abstract, i.e. whether a class or struct
  * has a pure virtual member function.
  */

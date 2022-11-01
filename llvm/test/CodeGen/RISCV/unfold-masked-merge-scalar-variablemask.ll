@@ -759,18 +759,10 @@ define i32 @out_constant_mone_vary(i32 %x, i32 %y, i32 %mask) {
 }
 
 define i32 @in_constant_mone_vary(i32 %x, i32 %y, i32 %mask) {
-; CHECK-I-LABEL: in_constant_mone_vary:
-; CHECK-I:       # %bb.0:
-; CHECK-I-NEXT:    not a0, a1
-; CHECK-I-NEXT:    and a0, a0, a2
-; CHECK-I-NEXT:    xor a0, a0, a1
-; CHECK-I-NEXT:    ret
-;
-; CHECK-ZBB-LABEL: in_constant_mone_vary:
-; CHECK-ZBB:       # %bb.0:
-; CHECK-ZBB-NEXT:    andn a0, a2, a1
-; CHECK-ZBB-NEXT:    xor a0, a0, a1
-; CHECK-ZBB-NEXT:    ret
+; CHECK-LABEL: in_constant_mone_vary:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    or a0, a2, a1
+; CHECK-NEXT:    ret
   %n0 = xor i32 -1, %y ; %x
   %n1 = and i32 %n0, %mask
   %r = xor i32 %n1, %y
@@ -803,16 +795,12 @@ define i32 @in_constant_mone_vary_invmask(i32 %x, i32 %y, i32 %mask) {
 ; CHECK-I-LABEL: in_constant_mone_vary_invmask:
 ; CHECK-I:       # %bb.0:
 ; CHECK-I-NEXT:    not a0, a2
-; CHECK-I-NEXT:    not a2, a1
-; CHECK-I-NEXT:    and a0, a2, a0
-; CHECK-I-NEXT:    xor a0, a0, a1
+; CHECK-I-NEXT:    or a0, a0, a1
 ; CHECK-I-NEXT:    ret
 ;
 ; CHECK-ZBB-LABEL: in_constant_mone_vary_invmask:
 ; CHECK-ZBB:       # %bb.0:
-; CHECK-ZBB-NEXT:    not a0, a1
-; CHECK-ZBB-NEXT:    andn a0, a0, a2
-; CHECK-ZBB-NEXT:    xor a0, a0, a1
+; CHECK-ZBB-NEXT:    orn a0, a1, a2
 ; CHECK-ZBB-NEXT:    ret
   %notmask = xor i32 %mask, -1
   %n0 = xor i32 -1, %y ; %x

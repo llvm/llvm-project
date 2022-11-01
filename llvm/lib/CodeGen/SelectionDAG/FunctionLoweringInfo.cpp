@@ -451,7 +451,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
 
   Register DestReg = It->second;
   if (DestReg == 0)
-    return
+    return;
   assert(Register::isVirtualRegister(DestReg) && "Expected a virtual reg");
   LiveOutRegInfo.grow(DestReg);
   LiveOutInfo &DestLOI = LiveOutRegInfo[DestReg];

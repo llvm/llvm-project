@@ -5003,6 +5003,14 @@ LogicalResult MaskOp::verify() {
   return success();
 }
 
+// MaskingOpInterface definitions.
+
+/// Returns the operation masked by this 'vector.mask'.
+Operation *MaskOp::getMaskableOp() { return &getMaskRegion().front().front(); }
+
+/// Returns true if 'vector.mask' has a passthru value.
+bool MaskOp::hasPassthru() { return getPassthru() != Value(); }
+
 //===----------------------------------------------------------------------===//
 // ScanOp
 //===----------------------------------------------------------------------===//

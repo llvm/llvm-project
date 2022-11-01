@@ -137,8 +137,11 @@ public:
     void
     Clear();
 
-    %feature("docstring", "Check if the module is file backed.
+    %feature("docstring", "
+    Check if the module is file backed.
+
     @return
+
         True, if the module is backed by an object file on disk.
         False, if the module is backed by an object file in memory.") IsFileBacked;
     bool

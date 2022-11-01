@@ -118,6 +118,26 @@ void LoongArchFrameLowering::determineFrameLayout(MachineFunction &MF) const {
   MFI.setStackSize(FrameSize);
 }
 
+void LoongArchFrameLowering::processFunctionBeforeFrameFinalized(
+    MachineFunction &MF, RegScavenger *RS) const {
+  const LoongArchRegisterInfo *RI = STI.getRegisterInfo();
+  const TargetRegisterClass &RC = LoongArch::GPRRegClass;
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  // estimateStackSize has been observed to under-estimate the final stack
+  // size, so give ourselves wiggle-room by checking for stack size
+  // representable an 11-bit signed field rather than 12-bits.
+  if (isInt<11>(MFI.estimateStackSize(MF)))
+    return;
+
+  // Create an emergency spill slot.
+  int FI =
+      MFI.CreateStackObject(RI->getSpillSize(RC), RI->getSpillAlign(RC), false);
+  RS->addScavengingFrameIndex(FI);
+  LLVM_DEBUG(dbgs() << "Allocated FI(" << FI
+                    << ") as the emergency spill slot.\n");
+}
+
 void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
                                           MachineBasicBlock &MBB) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -125,6 +145,7 @@ void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
   const LoongArchRegisterInfo *RI = STI.getRegisterInfo();
   const LoongArchInstrInfo *TII = STI.getInstrInfo();
   MachineBasicBlock::iterator MBBI = MBB.begin();
+  bool IsLA64 = STI.is64Bit();
 
   Register SPReg = LoongArch::R3;
   Register FPReg = LoongArch::R22;
@@ -138,19 +159,28 @@ void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
 
   // First, compute final stack size.
   uint64_t StackSize = MFI.getStackSize();
+  uint64_t RealStackSize = StackSize;
 
   // Early exit if there is no need to allocate space in the stack.
   if (StackSize == 0 && !MFI.adjustsStack())
     return;
 
+  uint64_t FirstSPAdjustAmount = getFirstSPAdjustAmount(MF, true);
+  uint64_t SecondSPAdjustAmount = RealStackSize - FirstSPAdjustAmount;
+  // Split the SP adjustment to reduce the offsets of callee saved spill.
+  if (FirstSPAdjustAmount)
+    StackSize = FirstSPAdjustAmount;
+
   // Adjust stack.
   adjustReg(MBB, MBBI, DL, SPReg, SPReg, -StackSize, MachineInstr::FrameSetup);
-  // Emit ".cfi_def_cfa_offset StackSize".
-  unsigned CFIIndex =
-      MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, StackSize));
-  BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex)
-      .setMIFlag(MachineInstr::FrameSetup);
+  if (FirstSPAdjustAmount != 2048 || SecondSPAdjustAmount == 0) {
+    // Emit ".cfi_def_cfa_offset StackSize".
+    unsigned CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, StackSize));
+    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlag(MachineInstr::FrameSetup);
+  }
 
   const auto &CSI = MFI.getCalleeSavedInfo();
 
@@ -184,21 +214,52 @@ void LoongArchFrameLowering::emitPrologue(MachineFunction &MF,
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
         .setMIFlag(MachineInstr::FrameSetup);
+  }
 
+  // Emit the second SP adjustment after saving callee saved registers.
+  if (FirstSPAdjustAmount && SecondSPAdjustAmount) {
+    if (hasFP(MF)) {
+      assert(SecondSPAdjustAmount > 0 &&
+             "SecondSPAdjustAmount should be greater than zero");
+      adjustReg(MBB, MBBI, DL, SPReg, SPReg, -SecondSPAdjustAmount,
+                MachineInstr::FrameSetup);
+    } else {
+      // FIXME: RegScavenger will place the spill instruction before the
+      // prologue if a VReg is created in the prologue. This will pollute the
+      // caller's stack data. Therefore, until there is better way, we just use
+      // the `addi.w/d` instruction for stack adjustment to ensure that VReg
+      // will not be created.
+      for (int Val = SecondSPAdjustAmount; Val > 0; Val -= 2048)
+        BuildMI(MBB, MBBI, DL,
+                TII->get(IsLA64 ? LoongArch::ADDI_D : LoongArch::ADDI_W), SPReg)
+            .addReg(SPReg)
+            .addImm(Val < 2048 ? -Val : -2048)
+            .setMIFlag(MachineInstr::FrameSetup);
+
+      // If we are using a frame-pointer, and thus emitted ".cfi_def_cfa fp, 0",
+      // don't emit an sp-based .cfi_def_cfa_offset
+      // Emit ".cfi_def_cfa_offset RealStackSize"
+      unsigned CFIIndex = MF.addFrameInst(
+          MCCFIInstruction::cfiDefCfaOffset(nullptr, RealStackSize));
+      BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex)
+          .setMIFlag(MachineInstr::FrameSetup);
+    }
+  }
+
+  if (hasFP(MF)) {
     // Realign stack.
     if (RI->hasStackRealignment(MF)) {
       unsigned ShiftAmount = Log2(MFI.getMaxAlign());
       Register VR =
           MF.getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
       BuildMI(MBB, MBBI, DL,
-              TII->get(STI.is64Bit() ? LoongArch::SRLI_D : LoongArch::SRLI_W),
-              VR)
+              TII->get(IsLA64 ? LoongArch::SRLI_D : LoongArch::SRLI_W), VR)
           .addReg(SPReg)
           .addImm(ShiftAmount)
           .setMIFlag(MachineInstr::FrameSetup);
       BuildMI(MBB, MBBI, DL,
-              TII->get(STI.is64Bit() ? LoongArch::SLLI_D : LoongArch::SLLI_W),
-              SPReg)
+              TII->get(IsLA64 ? LoongArch::SLLI_D : LoongArch::SLLI_W), SPReg)
           .addReg(VR)
           .addImm(ShiftAmount)
           .setMIFlag(MachineInstr::FrameSetup);
@@ -244,8 +305,52 @@ void LoongArchFrameLowering::emitEpilogue(MachineFunction &MF,
               MachineInstr::FrameDestroy);
   }
 
+  uint64_t FirstSPAdjustAmount = getFirstSPAdjustAmount(MF);
+  if (FirstSPAdjustAmount) {
+    uint64_t SecondSPAdjustAmount = StackSize - FirstSPAdjustAmount;
+    assert(SecondSPAdjustAmount > 0 &&
+           "SecondSPAdjustAmount should be greater than zero");
+
+    adjustReg(MBB, LastFrameDestroy, DL, SPReg, SPReg, SecondSPAdjustAmount,
+              MachineInstr::FrameDestroy);
+    StackSize = FirstSPAdjustAmount;
+  }
+
   // Deallocate stack
   adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackSize, MachineInstr::FrameDestroy);
+}
+
+// We would like to split the SP adjustment to reduce prologue/epilogue
+// as following instructions. In this way, the offset of the callee saved
+// register could fit in a single store.
+// e.g.
+//   addi.d  $sp, $sp, -2032
+//   st.d    $ra, $sp,  2024
+//   st.d    $fp, $sp,  2016
+//   addi.d  $sp, $sp,   -16
+uint64_t
+LoongArchFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF,
+                                               bool IsPrologue) const {
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+
+  // Return the FirstSPAdjustAmount if the StackSize can not fit in a signed
+  // 12-bit and there exists a callee-saved register needing to be pushed.
+  if (!isInt<12>(MFI.getStackSize())) {
+    // FirstSPAdjustAmount is chosen as (2048 - StackAlign) because 2048 will
+    // cause sp = sp + 2048 in the epilogue to be split into multiple
+    // instructions. Offsets smaller than 2048 can fit in a single load/store
+    // instruction, and we have to stick with the stack alignment.
+    // So (2048 - StackAlign) will satisfy the stack alignment.
+    //
+    // FIXME: This place may seem odd. When using multiple ADDI instructions to
+    // adjust the stack in Prologue, and there are no callee-saved registers, we
+    // can take advantage of the logic of split sp ajustment to reduce code
+    // changes.
+    return CSI.size() > 0 ? 2048 - getStackAlign().value()
+                          : (IsPrologue ? 2048 : 0);
+  }
+  return 0;
 }
 
 void LoongArchFrameLowering::determineCalleeSaves(MachineFunction &MF,
@@ -307,6 +412,7 @@ StackOffset LoongArchFrameLowering::getFrameIndexReference(
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
   auto *LoongArchFI = MF.getInfo<LoongArchMachineFunctionInfo>();
   uint64_t StackSize = MFI.getStackSize();
+  uint64_t FirstSPAdjustAmount = getFirstSPAdjustAmount(MF);
 
   // Callee-saved registers should be referenced relative to the stack
   // pointer (positive offset), otherwise use the frame pointer (negative
@@ -325,7 +431,10 @@ StackOffset LoongArchFrameLowering::getFrameIndexReference(
 
   if (FI >= MinCSFI && FI <= MaxCSFI) {
     FrameReg = LoongArch::R3;
-    Offset += StackOffset::getFixed(StackSize);
+    if (FirstSPAdjustAmount)
+      Offset += StackOffset::getFixed(FirstSPAdjustAmount);
+    else
+      Offset += StackOffset::getFixed(StackSize);
   } else if (RI->hasStackRealignment(MF) && !MFI.isFixedObjectIndex(FI)) {
     // If the stack was realigned, the frame pointer is set in order to allow
     // SP to be restored, so we need another base register to record the stack

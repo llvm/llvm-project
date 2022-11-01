@@ -776,21 +776,15 @@ fp16_fml_fallthrough:
   // This only makes sense for the compiler, not for the assembler.
   if (!ForAS) {
     // Supported only on ARMv6T2 and ARMv7 and above.
-    // Cannot be combined with -mno-movt or -mlong-calls
+    // Cannot be combined with -mno-movt.
     if (Arg *A = Args.getLastArg(options::OPT_mexecute_only, options::OPT_mno_execute_only)) {
       if (A->getOption().matches(options::OPT_mexecute_only)) {
         if (getARMSubArchVersionNumber(Triple) < 7 &&
             llvm::ARM::parseArch(Triple.getArchName()) != llvm::ARM::ArchKind::ARMV6T2)
               D.Diag(diag::err_target_unsupported_execute_only) << Triple.getArchName();
         else if (Arg *B = Args.getLastArg(options::OPT_mno_movt))
-          D.Diag(diag::err_opt_not_valid_with_opt) << A->getAsString(Args) << B->getAsString(Args);
-        // Long calls create constant pool entries and have not yet been fixed up
-        // to play nicely with execute-only. Hence, they cannot be used in
-        // execute-only code for now
-        else if (Arg *B = Args.getLastArg(options::OPT_mlong_calls, options::OPT_mno_long_calls)) {
-          if (B->getOption().matches(options::OPT_mlong_calls))
-            D.Diag(diag::err_opt_not_valid_with_opt) << A->getAsString(Args) << B->getAsString(Args);
-        }
+          D.Diag(diag::err_opt_not_valid_with_opt)
+              << A->getAsString(Args) << B->getAsString(Args);
         Features.push_back("+execute-only");
       }
     }

@@ -30,11 +30,11 @@ define i64 @foo(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h) 
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %r8d
 ; CHECK-NEXT:    addq %rdi, %rsi
 ; CHECK-NEXT:    addq %rbp, %rdx
-; CHECK-NEXT:    addq %rsi, %rdx
 ; CHECK-NEXT:    addq %rbx, %rcx
 ; CHECK-NEXT:    addq %r8, %rax
 ; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    addq %rdx, %rax
+; CHECK-NEXT:    addq %rsi, %rax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %rbp
@@ -63,11 +63,11 @@ define i64 @foo(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h) 
 ; GNUX32-NEXT:    movzbl {{[0-9]+}}(%esp), %r8d
 ; GNUX32-NEXT:    addq %rdi, %rsi
 ; GNUX32-NEXT:    addq %rbp, %rdx
-; GNUX32-NEXT:    addq %rsi, %rdx
 ; GNUX32-NEXT:    addq %rbx, %rcx
 ; GNUX32-NEXT:    addq %r8, %rax
 ; GNUX32-NEXT:    addq %rcx, %rax
 ; GNUX32-NEXT:    addq %rdx, %rax
+; GNUX32-NEXT:    addq %rsi, %rax
 ; GNUX32-NEXT:    popq %rbx
 ; GNUX32-NEXT:    .cfi_def_cfa_offset 16
 ; GNUX32-NEXT:    popq %rbp

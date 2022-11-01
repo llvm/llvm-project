@@ -198,7 +198,6 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(
   initializeTransformUtils(Registry);
   initializeInstCombine(Registry);
   initializeAggressiveInstCombine(Registry);
-  initializeInstrumentation(Registry);
   initializeTarget(Registry);
 
   // Parse input options

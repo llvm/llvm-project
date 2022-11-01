@@ -8,8 +8,8 @@ set(GCC_MIN 7.1)
 set(GCC_SOFT_ERROR 7.1)
 set(CLANG_MIN 5.0)
 set(CLANG_SOFT_ERROR 5.0)
-set(APPLECLANG_MIN 9.3)
-set(APPLECLANG_SOFT_ERROR 9.3)
+set(APPLECLANG_MIN 10.0)
+set(APPLECLANG_SOFT_ERROR 10.0)
 
 # https://en.wikipedia.org/wiki/Microsoft_Visual_C#Internal_version_numbering
 # _MSC_VER == 1927 MSVC++ 14.27 Visual Studio 2019 Version 16.7

@@ -12,6 +12,7 @@
 include "mlir/Dialect/Tensor/IR/TensorBase.td"
 include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/ParallelCombiningOpInterface.td"
 include "mlir/Interfaces/ShapedOpInterfaces.td"
@@ -216,23 +217,20 @@ def Tensor_ExtractOp : Tensor_Op<"extract", [
                    "$_self.cast<ShapedType>().getElementType()">]> {
   let summary = "element extraction operation";
   let description = [{
-    The `tensor.extract` op reads a tensor and returns one
-    element from it specified by an index list. The output of the op is a
-    new value with the same type as the elements of the tensor. The
-    arity of indices must match the rank of the accessed value (i.e., if a
-    tensor is of rank 3, then 3 indices are required for the extract. The
-    indices should all be of `index` type.
+    The `tensor.extract` op reads a ranked tensor and returns one element as
+    specified by the given indices. The result of the op is a value with the
+    same type as the elements of the tensor. The arity of indices must match
+    the rank of the accessed value. All indices should all be of `index` type.
 
     Example:
 
     ```mlir
     %4 = tensor.extract %t[%1, %2] : tensor<4x4xi32>
     %5 = tensor.extract %rt[%1, %2] : tensor<?x?xi32>
-    %6 = tensor.extract %ut[%1, %2] : tensor<*xi32>
     ```
   }];
 
-  let arguments = (ins AnyTensor:$tensor, Variadic<Index>:$indices);
+  let arguments = (ins AnyRankedTensor:$tensor, Variadic<Index>:$indices);
   let results = (outs AnyType:$result);
   let assemblyFormat = "$tensor `[` $indices `]` attr-dict `:` type($tensor)";
 
@@ -242,6 +240,7 @@ def Tensor_ExtractOp : Tensor_Op<"extract", [
       build($_builder, $_state, resType, tensor, indices);
     }]>];
 
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 }
@@ -681,38 +680,37 @@ def Tensor_GenerateOp : Tensor_Op<"generate", [
 
 def Tensor_InsertOp : Tensor_Op<"insert", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DestinationStyleOpInterface,
     Pure,
     TypesMatchWith<"result type matches type of dest",
                    "dest", "result",
-                   "$_self.cast<ShapedType>()">,
+                   "$_self">,
     TypesMatchWith<"scalar type matches element type of dest",
                    "dest", "scalar",
                    "$_self.cast<ShapedType>().getElementType()">]> {
   let summary = "element insertion operation";
   let description = [{
-    The `tensor.insert` op writes a tensor into a tensor `dest`as specified by
-    the operation's indices.
+    The `tensor.insert` op inserts a scalar into a ranked tensor `dest` as
+    specified by the operation's indices.
 
-    It returns a copy of `dest` with the proper slice updated with the value
+    It returns a copy of `dest` with the indexed position updated to the value
     of `scalar`.
 
-    The arity of indices must match the rank of the tensor `dest` (i.e., if a
-    tensor is of rank 3, then 3 indices are required for the extract. The
-    indices should all be of `index` type.
+    The arity of `indices `must match the rank of the tensor `dest`. All
+    indices should be of `index` type.
 
     Example:
 
     ```mlir
     %4 = tensor.insert %t into %dest[%1, %2] : tensor<4x4xi32>
     %5 = tensor.insert %rt into %dest[%1, %2] : tensor<?x?xi32>
-    %6 = tensor.insert %ut into %dest[%1, %2] : tensor<*xi32>
     ```
   }];
 
   let arguments = (ins AnyType:$scalar,
-                       AnyTensor:$dest,
+                       AnyRankedTensor:$dest,
                        Variadic<Index>:$indices);
-  let results = (outs AnyTensor:$result);
+  let results = (outs AnyRankedTensor:$result);
   let assemblyFormat = [{
     $scalar `into` $dest `[` $indices `]` attr-dict `:` type($dest)
   }];
@@ -723,6 +721,12 @@ def Tensor_InsertOp : Tensor_Op<"insert", [
       auto resType = dest.getType();
       build($_builder, $_state, resType, scalar, dest, indices);
     }]>];
+
+  let extraClassDeclaration = [{
+    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
+      return {1, 2};  // `dest` operand
+    }
+  }];
 
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -736,6 +740,7 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>,
     AttrSizedOperandSegments, 
+    DestinationStyleOpInterface,
     Pure, 
     OffsetSizeAndStrideOpInterface,
     TypesMatchWith<"expected result type to match dest type",
@@ -862,6 +867,10 @@ def Tensor_InsertSliceOp : Tensor_OpWithOffsetSizesAndStrides<"insert_slice", [
     /// Return the number of leading operands before the `offsets`, `sizes` and
     /// and `strides` operands.
     static unsigned getOffsetSizeAndStrideStartOperandIndex() { return 2; }
+
+    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
+      return {1, 2};  // `dest` operand
+    }
   }];
 
   let hasCanonicalizer = 1;
@@ -1298,6 +1307,12 @@ def Tensor_PadOp : Tensor_Op<"pad", [
       "ArrayRef<OpFoldResult>":$low, "ArrayRef<OpFoldResult>":$high,
       CArg<"bool", "false">:$nofold,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a PadOp with constant padding,  mixed static and dynamic entries
+    // and custom result type. If the type passed is nullptr, it is inferred.
+    OpBuilder<(ins "Type":$resultType, "Value":$source,
+      "ArrayRef<OpFoldResult>":$low, "ArrayRef<OpFoldResult>":$high,
+      "Value":$constantPadValue, CArg<"bool", "false">:$nofold,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
   ];
 
   let hasCanonicalizer = 1;

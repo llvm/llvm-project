@@ -3259,7 +3259,7 @@ public:
   static bool classofKind(Kind K) { return K == VarTemplate; }
 };
 
-/// Declaration of a C++2a concept.
+/// Declaration of a C++20 concept.
 class ConceptDecl : public TemplateDecl, public Mergeable<ConceptDecl> {
 protected:
   Expr *ConstraintExpr;
@@ -3302,6 +3302,40 @@ public:
   friend class ASTReader;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+};
+
+// An implementation detail of ConceptSpecialicationExpr that holds the template
+// arguments, so we can later use this to reconstitute the template arguments
+// during constraint checking.
+class ImplicitConceptSpecializationDecl final
+    : public Decl,
+      private llvm::TrailingObjects<ImplicitConceptSpecializationDecl,
+                                    TemplateArgument> {
+  unsigned NumTemplateArgs;
+
+  ImplicitConceptSpecializationDecl(DeclContext *DC, SourceLocation SL,
+                                    ArrayRef<TemplateArgument> ConvertedArgs);
+  ImplicitConceptSpecializationDecl(EmptyShell Empty, unsigned NumTemplateArgs);
+
+public:
+  static ImplicitConceptSpecializationDecl *
+  Create(const ASTContext &C, DeclContext *DC, SourceLocation SL,
+         ArrayRef<TemplateArgument> ConvertedArgs);
+  static ImplicitConceptSpecializationDecl *
+  CreateDeserialized(const ASTContext &C, unsigned ID,
+                     unsigned NumTemplateArgs);
+
+  ArrayRef<TemplateArgument> getTemplateArguments() const {
+    return ArrayRef<TemplateArgument>(getTrailingObjects<TemplateArgument>(),
+                                      NumTemplateArgs);
+  }
+  void setTemplateArguments(ArrayRef<TemplateArgument> Converted);
+
+  static bool classofKind(Kind K) { return K == ImplicitConceptSpecialization; }
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+
+  friend TrailingObjects;
+  friend class ASTDeclReader;
 };
 
 /// A template parameter object.

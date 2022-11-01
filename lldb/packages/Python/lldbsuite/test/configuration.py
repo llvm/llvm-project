@@ -124,6 +124,7 @@ all_tests = set()
 lldb_libs_dir = None
 
 libcxx_include_dir = None
+libcxx_include_target_dir = None
 libcxx_library_dir = None
 
 # A plugin whose tests will be enabled, like intel-pt.

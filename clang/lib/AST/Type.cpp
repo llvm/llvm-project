@@ -2896,7 +2896,7 @@ DependentTemplateSpecializationType::DependentTemplateSpecializationType(
   DependentTemplateSpecializationTypeBits.NumArgs = Args.size();
   assert((!NNS || NNS->isDependent()) &&
          "DependentTemplateSpecializatonType requires dependent qualifier");
-  TemplateArgument *ArgBuffer = getArgBuffer();
+  auto *ArgBuffer = const_cast<TemplateArgument *>(template_arguments().data());
   for (const TemplateArgument &Arg : Args) {
     addDependence(toTypeDependence(Arg.getDependence() &
                                    TemplateArgumentDependence::UnexpandedPack));
@@ -3666,15 +3666,24 @@ SubstTemplateTypeParmType::getReplacedParameter() const {
 }
 
 SubstTemplateTypeParmPackType::SubstTemplateTypeParmPackType(
-    QualType Canon, Decl *AssociatedDecl, unsigned Index,
+    QualType Canon, Decl *AssociatedDecl, unsigned Index, bool Final,
     const TemplateArgument &ArgPack)
     : Type(SubstTemplateTypeParmPack, Canon,
            TypeDependence::DependentInstantiation |
                TypeDependence::UnexpandedPack),
-      Arguments(ArgPack.pack_begin()), AssociatedDecl(AssociatedDecl) {
+      Arguments(ArgPack.pack_begin()),
+      AssociatedDeclAndFinal(AssociatedDecl, Final) {
   SubstTemplateTypeParmPackTypeBits.Index = Index;
   SubstTemplateTypeParmPackTypeBits.NumArgs = ArgPack.pack_size();
   assert(AssociatedDecl != nullptr);
+}
+
+Decl *SubstTemplateTypeParmPackType::getAssociatedDecl() const {
+  return AssociatedDeclAndFinal.getPointer();
+}
+
+bool SubstTemplateTypeParmPackType::getFinal() const {
+  return AssociatedDeclAndFinal.getInt();
 }
 
 const TemplateTypeParmDecl *
@@ -3691,15 +3700,16 @@ TemplateArgument SubstTemplateTypeParmPackType::getArgumentPack() const {
 }
 
 void SubstTemplateTypeParmPackType::Profile(llvm::FoldingSetNodeID &ID) {
-  Profile(ID, getAssociatedDecl(), getIndex(), getArgumentPack());
+  Profile(ID, getAssociatedDecl(), getIndex(), getFinal(), getArgumentPack());
 }
 
 void SubstTemplateTypeParmPackType::Profile(llvm::FoldingSetNodeID &ID,
                                             const Decl *AssociatedDecl,
-                                            unsigned Index,
+                                            unsigned Index, bool Final,
                                             const TemplateArgument &ArgPack) {
   ID.AddPointer(AssociatedDecl);
   ID.AddInteger(Index);
+  ID.AddBoolean(Final);
   ID.AddInteger(ArgPack.pack_size());
   for (const auto &P : ArgPack.pack_elements())
     ID.AddPointer(P.getAsType().getAsOpaquePtr());
@@ -3769,8 +3779,20 @@ TemplateSpecializationType::TemplateSpecializationType(
   // Store the aliased type if this is a type alias template specialization.
   if (isTypeAlias()) {
     auto *Begin = reinterpret_cast<TemplateArgument *>(this + 1);
-    *reinterpret_cast<QualType*>(Begin + getNumArgs()) = AliasedType;
+    *reinterpret_cast<QualType *>(Begin + Args.size()) = AliasedType;
   }
+}
+
+QualType TemplateSpecializationType::getAliasedType() const {
+  assert(isTypeAlias() && "not a type alias template specialization");
+  return *reinterpret_cast<const QualType *>(template_arguments().end());
+}
+
+void TemplateSpecializationType::Profile(llvm::FoldingSetNodeID &ID,
+                                         const ASTContext &Ctx) {
+  Profile(ID, Template, template_arguments(), Ctx);
+  if (isTypeAlias())
+    getAliasedType().Profile(ID);
 }
 
 void
@@ -4487,7 +4509,8 @@ AutoType::AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
   AutoTypeBits.NumArgs = TypeConstraintArgs.size();
   this->TypeConstraintConcept = TypeConstraintConcept;
   if (TypeConstraintConcept) {
-    TemplateArgument *ArgBuffer = getArgBuffer();
+    auto *ArgBuffer =
+        const_cast<TemplateArgument *>(getTypeConstraintArguments().data());
     for (const TemplateArgument &Arg : TypeConstraintArgs) {
       addDependence(
           toSyntacticDependence(toTypeDependence(Arg.getDependence())));
@@ -4507,4 +4530,9 @@ void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
   ID.AddPointer(CD);
   for (const TemplateArgument &Arg : Arguments)
     Arg.Profile(ID, Context);
+}
+
+void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
+  Profile(ID, Context, getDeducedType(), getKeyword(), isDependentType(),
+          getTypeConstraintConcept(), getTypeConstraintArguments());
 }

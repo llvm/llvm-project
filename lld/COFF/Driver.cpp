@@ -2415,7 +2415,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       // For now, just manually try to retain the known possible personality
       // functions. This doesn't bring in more object files, but only marks
       // functions that already have been included to be retained.
-      for (const char *n : {"__gxx_personality_v0", "__gcc_personality_v0"}) {
+      for (const char *n : {"__gxx_personality_v0", "__gcc_personality_v0",
+                            "rust_eh_personality"}) {
         Defined *d = dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore(n));
         if (d && !d->isGCRoot) {
           d->isGCRoot = true;

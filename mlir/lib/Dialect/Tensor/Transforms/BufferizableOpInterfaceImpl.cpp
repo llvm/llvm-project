@@ -11,6 +11,8 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/IR/DstBufferizableOpInterfaceImpl.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -486,6 +488,57 @@ struct FromElementsOpInterface
   }
 };
 
+/// Lower the body of a tensor.generate like op (one index-typed bbArg per dim).
+/// Such ops are lowered to linalg.map with the given tensor as a destination.
+///
+/// Example:
+/// ```
+/// %r = tensor.generate %x, %y {
+///   ^bb0(%arg0: index, %arg1: index):
+///   %0 = "some_op"(%arg0, %arg1) : (index, index) -> (index)
+///   tensor.yield %0 : index
+/// } : tensor<?x?xindex>
+/// ```
+///
+/// Is lowered to:
+/// ```
+/// linalg.map ins() outs(%dest) {
+///   %d0 = linalg.index 0 : index
+///   %d1 = linalg.index 1 : index
+///   %0 = "some_op"(%d0, %d1) : (index, index) -> (index)
+///   linalg.yield %0 : index
+/// }
+/// ```
+static Value lowerGenerateLikeOpBody(RewriterBase &rewriter, Location loc,
+                                     Value tensorDestination,
+                                     ValueRange dynamicSizes,
+                                     Region &generateBody) {
+  assert(generateBody.hasOneBlock() && "expected body with single block");
+  auto tensorType = tensorDestination.getType().cast<RankedTensorType>();
+  assert(generateBody.getNumArguments() == tensorType.getRank() &&
+         "rank mismatch");
+
+  // Create linalg::MapOp.
+  OpBuilder::InsertionGuard g(rewriter);
+  auto linalgOp =
+      rewriter.create<linalg::MapOp>(loc, tensorType, /*inputs=*/ValueRange(),
+                                     /*init=*/tensorDestination);
+  Block &linalgBody = linalgOp.getMapper().emplaceBlock();
+
+  // Create linalg::IndexOps.
+  rewriter.setInsertionPointToStart(&linalgBody);
+  SmallVector<Value> indices;
+  for (int64_t dim = 0; dim < tensorType.getRank(); ++dim)
+    indices.push_back(rewriter.create<linalg::IndexOp>(loc, dim));
+
+  // Move over body.
+  rewriter.mergeBlocks(&generateBody.front(), &linalgBody, indices);
+  auto yieldOp = cast<tensor::YieldOp>(linalgBody.getTerminator());
+  rewriter.replaceOpWithNewOp<linalg::YieldOp>(yieldOp, yieldOp.getValue());
+
+  return linalgOp.getResult()[0];
+}
+
 /// Bufferization of tensor.generate.
 struct GenerateOpInterface
     : public BufferizableOpInterface::ExternalModel<GenerateOpInterface,
@@ -506,89 +559,31 @@ struct GenerateOpInterface
     if (options.defaultMemorySpace != static_cast<unsigned>(0))
       return op->emitError("memory space not implemented yet");
 
-    auto tensorType = generateOp.getType().cast<RankedTensorType>();
     // Allocate memory.
     Location loc = op->getLoc();
-    // TODO: Create alloc_tensor ops during TensorCopyInsertion.
     FailureOr<Value> tensorAlloc =
         allocateTensorForShapedValue(rewriter, loc, generateOp.getResult(),
                                      /*escape=*/!dealloc, options,
                                      /*copy=*/false);
     if (failed(tensorAlloc))
       return failure();
-    auto memrefType =
-        MemRefType::get(tensorType.getShape(), tensorType.getElementType());
-    Value buffer = rewriter.create<bufferization::ToMemrefOp>(
-        op->getLoc(), memrefType, *tensorAlloc);
 
-    // Collect loop bounds.
-    int64_t rank = memrefType.getRank();
-    Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    Value one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-    SmallVector<Value, 4> lowerBounds(rank, zero);
-    SmallVector<Value, 4> steps(rank, one);
-    SmallVector<Value, 4> upperBounds;
-    int nextDynamicIndex = 0;
-    for (int i = 0; i < rank; i++) {
-      Value upperBound =
-          memrefType.isDynamicDim(i)
-              ? generateOp.getDynamicExtents()[nextDynamicIndex++]
-              : rewriter.create<arith::ConstantIndexOp>(
-                    loc, memrefType.getDimSize(i));
-      upperBounds.push_back(upperBound);
-    }
-
-    // Generate tensor elements with a parallel loop that stores into
-    // each element of the resulting memref. We use mergeBlockBefore to "move"
-    // this op's body into the scf.parallel's body.
-    auto parallel =
-        rewriter.create<scf::ParallelOp>(loc, lowerBounds, upperBounds, steps);
-    Block *parallelBody = parallel.getBody();
-    rewriter.mergeBlockBefore(&generateOp.getBody().front(),
-                              parallelBody->getTerminator(),
-                              parallelBody->getArguments());
-    // Replace the inlined yield op with a store op. The scf.parallel's builder
-    // already populated an scf.yield at the end, so we don't need to worry
-    // about creating that.
-    Operation *elementYield = parallelBody->getTerminator()->getPrevNode();
-    rewriter.setInsertionPointAfter(elementYield);
-    rewriter.replaceOpWithNewOp<memref::StoreOp>(
-        elementYield, elementYield->getOperands()[0], buffer,
-        parallelBody->getArguments());
-
-    replaceOpWithBufferizedValues(rewriter, op, buffer);
+    Value result = lowerGenerateLikeOpBody(rewriter, loc, *tensorAlloc,
+                                           generateOp.getDynamicExtents(),
+                                           generateOp.getBody());
+    rewriter.replaceOp(generateOp, result);
 
     return success();
   }
 };
 
 /// Bufferization of tensor.insert. Replace with memref.store.
+///
+/// Note: DstBufferizableOpInterfaceExternalModel provides many default method
+/// implementations for DestinationStyle ops.
 struct InsertOpInterface
-    : public BufferizableOpInterface::ExternalModel<InsertOpInterface,
-                                                    tensor::InsertOp> {
-  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const AnalysisState &state) const {
-    return true;
-  }
-
-  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const AnalysisState &state) const {
-    return true;
-  }
-
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
-    assert(&opOperand == &op->getOpOperand(1) /*dest*/ &&
-           "expected dest OpOperand");
-    return {op->getOpResult(0)};
-  }
-
-  SmallVector<OpOperand *>
-  getAliasingOpOperand(Operation *op, OpResult opResult,
-                       const AnalysisState &state) const {
-    return {&op->getOpOperand(1) /*dest*/};
-  }
-
+    : public DstBufferizableOpInterfaceExternalModel<InsertOpInterface,
+                                                     tensor::InsertOp> {
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
                           const BufferizationOptions &options) const {
     auto insertOp = cast<tensor::InsertOp>(op);
@@ -600,11 +595,6 @@ struct InsertOpInterface
                                      *destMemref, insertOp.getIndices());
     replaceOpWithBufferizedValues(rewriter, op, *destMemref);
     return success();
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
   }
 };
 
@@ -732,31 +722,12 @@ static bool isNotConflictingInsertSliceLikeOp(Operation *op, OpOperand *uRead,
 
 /// Bufferization of tensor.insert_slice. Replace with a memory copy. Under
 /// certain circumstances, this op can also be a no-op.
+///
+/// Note: DstBufferizableOpInterfaceExternalModel provides many default method
+/// implementations for DestinationStyle ops.
 struct InsertSliceOpInterface
-    : public BufferizableOpInterface::ExternalModel<InsertSliceOpInterface,
-                                                    tensor::InsertSliceOp> {
-  bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
-                              const AnalysisState &state) const {
-    return true;
-  }
-
-  bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
-                               const AnalysisState &state) const {
-    return &opOperand == &op->getOpOperand(1) /*dest*/;
-  }
-
-  SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
-                                            const AnalysisState &state) const {
-    if (&opOperand == &op->getOpOperand(1) /*dest*/)
-      return {op->getResult(0)};
-    return {};
-  }
-
-  BufferRelation bufferRelation(Operation *op, OpResult opResult,
-                                const AnalysisState &state) const {
-    return BufferRelation::Equivalent;
-  }
-
+    : public DstBufferizableOpInterfaceExternalModel<InsertSliceOpInterface,
+                                                     tensor::InsertSliceOp> {
   bool isNotConflicting(Operation *op, OpOperand *uRead,
                         OpOperand *uConflictingWrite,
                         const AnalysisState &state) const {
@@ -808,7 +779,8 @@ struct InsertSliceOpInterface
   }
 };
 
-/// Bufferization of tensor.pad. Replace with tensor.generate + insert_slice.
+/// Bufferization of tensor.pad. Replace with bufferization.alloc_tensor +
+/// linalg.map + insert_slice.
 /// For best performance, vectorize before bufferization (better performance in
 /// case of padding with a constant).
 struct PadOpInterface
@@ -831,6 +803,21 @@ struct PadOpInterface
   SmallVector<OpResult> getAliasingOpResult(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
     return {};
+  }
+
+  FailureOr<BaseMemRefType>
+  getBufferType(Operation *op, Value value, const BufferizationOptions &options,
+                const DenseMap<Value, BaseMemRefType> &fixedTypes) const {
+    // Infer memory space from the source tensor.
+    auto padOp = cast<tensor::PadOp>(op);
+    auto maybeSrcBufferType =
+        bufferization::getBufferType(padOp.getSource(), options, fixedTypes);
+    if (failed(maybeSrcBufferType))
+      return failure();
+    MemRefLayoutAttrInterface layout;
+    return MemRefType::get(padOp.getResultType().getShape(),
+                           padOp.getResultType().getElementType(), layout,
+                           maybeSrcBufferType->getMemorySpace());
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,
@@ -866,17 +853,22 @@ struct PadOpInterface
       dynamicSizes.push_back(sum);
     }
 
-    // Create tensor::GenerateOp.
-    auto generateOp =
-        rewriter.create<tensor::GenerateOp>(loc, resultType, dynamicSizes);
-    // Move over "escape" attribute if present.
-    if (padOp->hasAttr(BufferizationDialect::kEscapeAttrName))
-      generateOp->setAttr(
-          BufferizationDialect::kEscapeAttrName,
-          padOp->getAttr(BufferizationDialect::kEscapeAttrName));
-    // TODO: Memory space
-    rewriter.inlineRegionBefore(padOp.getRegion(), generateOp.getBody(),
-                                generateOp.getBody().begin());
+    // Should the buffer be deallocated?
+    bool dealloc =
+        shouldDeallocateOpResult(padOp.getResult().cast<OpResult>(), options);
+    // Allocate a buffer for the padded result.
+    FailureOr<Value> tensorAlloc =
+        allocateTensorForShapedValue(rewriter, loc, padOp.getResult(),
+                                     /*escape=*/!dealloc, options,
+                                     /*copy=*/false);
+    if (failed(tensorAlloc))
+      return failure();
+
+    // tensor::PadOp is like tensor::GenerateOp: The only difference is that
+    // only a part of the generated tensor is needed. For simplicity, we reuse
+    // the same functionality here.
+    Value filledBuffer = lowerGenerateLikeOpBody(
+        rewriter, loc, *tensorAlloc, dynamicSizes, padOp.getBodyRegion());
 
     // Create tensor::InsertSliceOp.
     SmallVector<OpFoldResult> sliceSizes =
@@ -884,7 +876,7 @@ struct PadOpInterface
     SmallVector<OpFoldResult> sliceStrides(srcType.getRank(),
                                            rewriter.getIndexAttr(1));
     rewriter.replaceOpWithNewOp<tensor::InsertSliceOp>(
-        padOp, padOp.getSource(), generateOp.getResult(),
+        padOp, padOp.getSource(), filledBuffer,
         /*offsets=*/padOp.getMixedLowPad(), sliceSizes, sliceStrides);
 
     return success();
@@ -1062,6 +1054,6 @@ void mlir::tensor::registerBufferizableOpInterfaceExternalModels(
     ReshapeOp::attachInterface<ReshapeOpInterface>(*ctx);
 
     // Load additional dialects of which ops may get created.
-    ctx->loadDialect<arith::ArithDialect, scf::SCFDialect>();
+    ctx->loadDialect<arith::ArithDialect, linalg::LinalgDialect>();
   });
 }

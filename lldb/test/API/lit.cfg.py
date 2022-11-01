@@ -173,9 +173,11 @@ if is_configured('llvm_tools_dir'):
 # If we have a just-built libcxx, prefer it over the system one.
 if is_configured('has_libcxx') and config.has_libcxx:
   if platform.system() != 'Windows':
-    if is_configured('llvm_include_dir') and is_configured('llvm_libs_dir'):
-      dotest_cmd += ['--libcxx-include-dir', os.path.join(config.llvm_include_dir, 'c++', 'v1')]
-      dotest_cmd += ['--libcxx-library-dir', config.llvm_libs_dir]
+    if is_configured('libcxx_include_dir') and is_configured('libcxx_libs_dir'):
+      dotest_cmd += ['--libcxx-include-dir', config.libcxx_include_dir]
+      if is_configured('libcxx_include_target_dir'):
+        dotest_cmd += ['--libcxx-include-target-dir', config.libcxx_include_target_dir]
+      dotest_cmd += ['--libcxx-library-dir', config.libcxx_libs_dir]
 
 # Forward ASan-specific environment variables to tests, as a test may load an
 # ASan-ified dylib.

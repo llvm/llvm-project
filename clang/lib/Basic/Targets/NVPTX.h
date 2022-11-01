@@ -177,6 +177,8 @@ public:
   }
 
   bool hasBitIntType() const override { return true; }
+  bool hasBFloat16Type() const override { return true; }
+  const char *getBFloat16Mangling() const override { return "u6__bf16"; };
 };
 } // namespace targets
 } // namespace clang

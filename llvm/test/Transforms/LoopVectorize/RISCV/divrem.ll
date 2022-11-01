@@ -1015,10 +1015,8 @@ define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
 ; CHECK-NEXT:    ret void
 ;
 ; FIXED-LABEL: @predicated_sdiv_by_minus_one(
-; FIXED-NEXT:  iter.check:
-; FIXED-NEXT:    br i1 false, label [[VEC_EPILOG_SCALAR_PH:%.*]], label [[VECTOR_MAIN_LOOP_ITER_CHECK:%.*]]
-; FIXED:       vector.main.loop.iter.check:
-; FIXED-NEXT:    br i1 false, label [[VEC_EPILOG_PH:%.*]], label [[VECTOR_PH:%.*]]
+; FIXED-NEXT:  entry:
+; FIXED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; FIXED:       vector.ph:
 ; FIXED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; FIXED:       vector.body:
@@ -1048,35 +1046,12 @@ define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; FIXED:       middle.block:
 ; FIXED-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, 1024
-; FIXED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
-; FIXED:       vec.epilog.iter.check:
-; FIXED-NEXT:    br i1 true, label [[VEC_EPILOG_SCALAR_PH]], label [[VEC_EPILOG_PH]]
-; FIXED:       vec.epilog.ph:
-; FIXED-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 1024, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; FIXED-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
-; FIXED:       vec.epilog.vector.body:
-; FIXED-NEXT:    [[OFFSET_IDX:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT7:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; FIXED-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], 0
-; FIXED-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP15]]
-; FIXED-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP16]], i32 0
-; FIXED-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x i8>, ptr [[TMP17]], align 1
-; FIXED-NEXT:    [[TMP18:%.*]] = icmp ne <8 x i8> [[WIDE_LOAD5]], <i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128, i8 -128>
-; FIXED-NEXT:    [[TMP19:%.*]] = select <8 x i1> [[TMP18]], <8 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>, <8 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
-; FIXED-NEXT:    [[TMP20:%.*]] = sdiv <8 x i8> [[WIDE_LOAD5]], [[TMP19]]
-; FIXED-NEXT:    [[TMP21:%.*]] = xor <8 x i1> [[TMP18]], <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
-; FIXED-NEXT:    [[PREDPHI6:%.*]] = select <8 x i1> [[TMP18]], <8 x i8> [[TMP20]], <8 x i8> [[WIDE_LOAD5]]
-; FIXED-NEXT:    store <8 x i8> [[PREDPHI6]], ptr [[TMP17]], align 1
-; FIXED-NEXT:    [[INDEX_NEXT7]] = add nuw i64 [[OFFSET_IDX]], 8
-; FIXED-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT7]], 1024
-; FIXED-NEXT:    br i1 [[TMP22]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
-; FIXED:       vec.epilog.middle.block:
-; FIXED-NEXT:    [[CMP_N3:%.*]] = icmp eq i64 1024, 1024
-; FIXED-NEXT:    br i1 [[CMP_N3]], label [[FOR_END]], label [[VEC_EPILOG_SCALAR_PH]]
-; FIXED:       vec.epilog.scalar.ph:
-; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[VEC_EPILOG_MIDDLE_BLOCK]] ], [ 1024, [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[ITER_CHECK:%.*]] ]
+; FIXED-NEXT:    br i1 [[CMP_N]], label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; FIXED:       scalar.ph:
+; FIXED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; FIXED-NEXT:    br label [[FOR_BODY:%.*]]
 ; FIXED:       for.body:
-; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; FIXED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
 ; FIXED-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[IV]]
 ; FIXED-NEXT:    [[ELEM:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; FIXED-NEXT:    [[C:%.*]] = icmp ne i8 [[ELEM]], -128
@@ -1089,7 +1064,7 @@ define void @predicated_sdiv_by_minus_one(ptr noalias nocapture %a, i64 %n) {
 ; FIXED-NEXT:    store i8 [[PHI]], ptr [[ARRAYIDX]], align 1
 ; FIXED-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; FIXED-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], 1024
-; FIXED-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
+; FIXED-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; FIXED:       for.end:
 ; FIXED-NEXT:    ret void
 ;

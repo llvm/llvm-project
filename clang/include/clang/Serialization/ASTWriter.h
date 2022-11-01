@@ -466,7 +466,7 @@ private:
   createSignature(StringRef AllBytes, StringRef ASTBlockBytes);
 
   void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts,
-                       std::set<const FileEntry *> &AffectingModuleMaps);
+                       std::set<const FileEntry *> &AffectingClangModuleMaps);
   void WriteSourceManagerBlock(SourceManager &SourceMgr,
                                const Preprocessor &PP);
   void writeIncludedFiles(raw_ostream &Out, const Preprocessor &PP);

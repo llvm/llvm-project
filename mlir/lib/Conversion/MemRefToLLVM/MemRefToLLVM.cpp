@@ -2098,6 +2098,50 @@ public:
   }
 };
 
+/// Materialize the MemRef descriptor represented by the results of
+/// ExtractStridedMetadataOp.
+class ExtractStridedMetadataOpLowering
+    : public ConvertOpToLLVMPattern<memref::ExtractStridedMetadataOp> {
+public:
+  using ConvertOpToLLVMPattern<
+      memref::ExtractStridedMetadataOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::ExtractStridedMetadataOp extractStridedMetadataOp,
+                  OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    if (!LLVM::isCompatibleType(adaptor.getOperands().front().getType()))
+      return failure();
+
+    // Create the descriptor.
+    MemRefDescriptor sourceMemRef(adaptor.getOperands().front());
+    Location loc = extractStridedMetadataOp.getLoc();
+    Value source = extractStridedMetadataOp.getSource();
+
+    auto sourceMemRefType = source.getType().cast<MemRefType>();
+    int64_t rank = sourceMemRefType.getRank();
+    SmallVector<Value> results;
+    results.reserve(2 + rank * 2);
+
+    // Base buffer.
+    results.push_back(sourceMemRef.allocatedPtr(rewriter, loc));
+
+    // Offset.
+    results.push_back(sourceMemRef.offset(rewriter, loc));
+
+    // Sizes.
+    for (unsigned i = 0; i < rank; ++i)
+      results.push_back(sourceMemRef.size(rewriter, loc, i));
+    // Strides.
+    for (unsigned i = 0; i < rank; ++i)
+      results.push_back(sourceMemRef.stride(rewriter, loc, i));
+
+    rewriter.replaceOp(extractStridedMetadataOp, results);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateMemRefToLLVMConversionPatterns(LLVMTypeConverter &converter,
@@ -2110,6 +2154,7 @@ void mlir::populateMemRefToLLVMConversionPatterns(LLVMTypeConverter &converter,
       AssumeAlignmentOpLowering,
       ConvertExtractAlignedPointerAsIndex,
       DimOpLowering,
+      ExtractStridedMetadataOpLowering,
       GenericAtomicRMWOpLowering,
       GlobalMemrefOpLowering,
       GetGlobalMemrefOpLowering,

@@ -21,6 +21,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cctype>
+#include <map>
 #include <sstream>
 
 namespace llvm {
@@ -162,6 +163,85 @@ template <typename MapType> void deleteList(MapType &Map) {
   for (typename MapType::const_reference Entry : Map)
     delete Entry.second;
 }
+
+// Double map data structure.
+template <typename FirstKeyType, typename SecondKeyType, typename ValueType>
+class LVDoubleMap {
+  static_assert(std::is_pointer<ValueType>::value,
+                "ValueType must be a pointer.");
+  using LVSecondMapType = std::map<SecondKeyType, ValueType>;
+  using LVFirstMapType = std::map<FirstKeyType, LVSecondMapType *>;
+  using LVAuxMapType = std::map<SecondKeyType, FirstKeyType>;
+  using LVValueTypes = std::vector<ValueType>;
+  LVFirstMapType FirstMap;
+  LVAuxMapType AuxMap;
+
+public:
+  LVDoubleMap() = default;
+  ~LVDoubleMap() {
+    for (auto &Entry : FirstMap)
+      delete Entry.second;
+  }
+
+  void add(FirstKeyType FirstKey, SecondKeyType SecondKey, ValueType Value) {
+    LVSecondMapType *SecondMap = nullptr;
+    typename LVFirstMapType::iterator FirstIter = FirstMap.find(FirstKey);
+    if (FirstIter == FirstMap.end()) {
+      SecondMap = new LVSecondMapType();
+      FirstMap.emplace(FirstKey, SecondMap);
+    } else {
+      SecondMap = FirstIter->second;
+    }
+
+    assert(SecondMap && "SecondMap is null.");
+    if (SecondMap && SecondMap->find(SecondKey) == SecondMap->end())
+      SecondMap->emplace(SecondKey, Value);
+
+    typename LVAuxMapType::iterator AuxIter = AuxMap.find(SecondKey);
+    if (AuxIter == AuxMap.end()) {
+      AuxMap.emplace(SecondKey, FirstKey);
+    }
+  }
+
+  LVSecondMapType *findMap(FirstKeyType FirstKey) const {
+    typename LVFirstMapType::const_iterator FirstIter = FirstMap.find(FirstKey);
+    if (FirstIter == FirstMap.end())
+      return nullptr;
+
+    LVSecondMapType *SecondMap = FirstIter->second;
+    return SecondMap;
+  }
+
+  ValueType find(FirstKeyType FirstKey, SecondKeyType SecondKey) const {
+    LVSecondMapType *SecondMap = findMap(FirstKey);
+    if (!SecondMap)
+      return nullptr;
+
+    typename LVSecondMapType::const_iterator SecondIter =
+        SecondMap->find(SecondKey);
+    return (SecondIter != SecondMap->end()) ? SecondIter->second : nullptr;
+  }
+
+  ValueType find(SecondKeyType SecondKey) const {
+    typename LVAuxMapType::const_iterator AuxIter = AuxMap.find(SecondKey);
+    if (AuxIter == AuxMap.end())
+      return nullptr;
+    return find(AuxIter->second, SecondKey);
+  }
+
+  // Return a vector with all the 'ValueType' values.
+  LVValueTypes find() const {
+    LVValueTypes Values;
+    if (FirstMap.empty())
+      return Values;
+    for (typename LVFirstMapType::const_reference FirstEntry : FirstMap) {
+      LVSecondMapType *SecondMap = FirstEntry.second;
+      for (typename LVSecondMapType::const_reference SecondEntry : *SecondMap)
+        Values.push_back(SecondEntry.second);
+    }
+    return Values;
+  }
+};
 
 // Unified and flattened pathnames.
 std::string transformPath(StringRef Path);

@@ -542,7 +542,9 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Interpret these flags early because error()/warn() depend on them.
   errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
   errorHandler().fatalWarnings =
-      args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
+      args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false) &&
+      !args.hasArg(OPT_no_warnings);
+  errorHandler().suppressWarnings = args.hasArg(OPT_no_warnings);
   checkZOptions(args);
 
   // Handle -help

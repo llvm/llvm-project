@@ -1594,7 +1594,7 @@ static bool suggestModule(HeaderSearch &HS, const FileEntry *File,
         return true;
       }
       // TODO: Add this module (or just its module map file) into something like
-      // `RequestingModule->AffectingModules`.
+      // `RequestingModule->AffectingClangModules`.
       return false;
     }
   }

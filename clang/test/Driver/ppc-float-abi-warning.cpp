@@ -3,6 +3,11 @@
 // RUN:  --gcc-toolchain=%S/Inputs/powerpc64le-linux-gnu-tree/gcc-11.2.0 \
 // RUN:  -mabi=ieeelongdouble -stdlib=libstdc++ 2>&1 | FileCheck %s
 // RUN: %clang -### --driver-mode=g++ -target powerpc64le-linux-gnu %s \
+// RUN:  --gcc-toolchain=%S/Inputs/powerpc64le-linux-gnu-tree/gcc-12 \
+// RUN:  --dyld-prefix=%S/Inputs/powerpc64le-linux-gnu-tree/gcc-12 \
+// RUN:  -mabi=ieeelongdouble -stdlib=libstdc++ 2>&1 | \
+// RUN:  FileCheck %s --check-prefix=NOWARN
+// RUN: %clang -### --driver-mode=g++ -target powerpc64le-linux-gnu %s \
 // RUN:  -mabi=ieeelongdouble -stdlib=libc++ 2>&1 | FileCheck %s
 // RUN: %clang -### --driver-mode=g++ -target powerpc64le-linux-gnu %s\
 // RUN:  -mabi=ieeelongdouble -stdlib=libc++ -Wno-unsupported-abi 2>&1 | \

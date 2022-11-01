@@ -223,11 +223,12 @@ bool InstCombinerImpl::isDesirableIntType(unsigned BitWidth) const {
 
 /// Return true if it is desirable to convert an integer computation from a
 /// given bit width to a new bit width.
-/// We don't want to convert from a legal to an illegal type or from a smaller
-/// to a larger illegal type. A width of '1' is always treated as a desirable
-/// type because i1 is a fundamental type in IR, and there are many specialized
-/// optimizations for i1 types. Common/desirable widths are equally treated as
-/// legal to convert to, in order to open up more combining opportunities.
+/// We don't want to convert from a legal or desirable type (like i8) to an
+/// illegal type or from a smaller to a larger illegal type. A width of '1'
+/// is always treated as a desirable type because i1 is a fundamental type in
+/// IR, and there are many specialized optimizations for i1 types.
+/// Common/desirable widths are equally treated as legal to convert to, in
+/// order to open up more combining opportunities.
 bool InstCombinerImpl::shouldChangeType(unsigned FromWidth,
                                         unsigned ToWidth) const {
   bool FromLegal = FromWidth == 1 || DL.isLegalInteger(FromWidth);
@@ -238,9 +239,9 @@ bool InstCombinerImpl::shouldChangeType(unsigned FromWidth,
   if (ToWidth < FromWidth && isDesirableIntType(ToWidth))
     return true;
 
-  // If this is a legal integer from type, and the result would be an illegal
-  // type, don't do the transformation.
-  if (FromLegal && !ToLegal)
+  // If this is a legal or desiable integer from type, and the result would be
+  // an illegal type, don't do the transformation.
+  if ((FromLegal || isDesirableIntType(FromWidth)) && !ToLegal)
     return false;
 
   // Otherwise, if both are illegal, do not increase the size of the result. We

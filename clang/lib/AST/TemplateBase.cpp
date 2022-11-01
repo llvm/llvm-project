@@ -363,7 +363,8 @@ bool TemplateArgument::structurallyEquals(const TemplateArgument &Other) const {
            TemplateArg.NumExpansions == Other.TemplateArg.NumExpansions;
 
   case Declaration:
-    return getAsDecl() == Other.getAsDecl();
+    return getAsDecl() == Other.getAsDecl() &&
+           getParamTypeForDecl() == Other.getParamTypeForDecl();
 
   case Integral:
     return getIntegralType() == Other.getIntegralType() &&
@@ -421,10 +422,10 @@ void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
   }
 
   case Declaration: {
-    // FIXME: Include the type if it's not obvious from the context.
     NamedDecl *ND = getAsDecl();
     if (getParamTypeForDecl()->isRecordType()) {
       if (auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
+        TPO->getType().getUnqualifiedType().print(Out, Policy);
         TPO->printAsInit(Out, Policy);
         break;
       }

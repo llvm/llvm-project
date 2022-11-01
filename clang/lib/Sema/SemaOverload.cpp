@@ -640,7 +640,7 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     auto *Saved = new (Context) DFIDeducedMismatchArgs;
     Saved->FirstArg = Info.FirstArg;
     Saved->SecondArg = Info.SecondArg;
-    Saved->TemplateArgs = Info.take();
+    Saved->TemplateArgs = Info.takeSugared();
     Saved->CallArgIndex = Info.CallArgIndex;
     Result.Data = Saved;
     break;
@@ -669,7 +669,7 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
   }
 
   case Sema::TDK_SubstitutionFailure:
-    Result.Data = Info.take();
+    Result.Data = Info.takeSugared();
     if (Info.hasSFINAEDiagnostic()) {
       PartialDiagnosticAt *Diag = new (Result.Diagnostic) PartialDiagnosticAt(
           SourceLocation(), PartialDiagnostic::NullDiagnostic());
@@ -680,7 +680,7 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
 
   case Sema::TDK_ConstraintsNotSatisfied: {
     CNSInfo *Saved = new (Context) CNSInfo;
-    Saved->TemplateArgs = Info.take();
+    Saved->TemplateArgs = Info.takeSugared();
     Saved->Satisfaction = Info.AssociatedConstraintsSatisfaction;
     Result.Data = Saved;
     break;
@@ -1280,26 +1280,42 @@ bool Sema::IsOverload(FunctionDecl *New, FunctionDecl *Old,
        !FunctionParamTypesAreEqual(OldType, NewType)))
     return true;
 
-  // C++ [temp.over.link]p4:
-  //   The signature of a function template consists of its function
-  //   signature, its return type and its template parameter list. The names
-  //   of the template parameters are significant only for establishing the
-  //   relationship between the template parameters and the rest of the
-  //   signature.
-  //
-  // We check the return type and template parameter lists for function
-  // templates first; the remaining checks follow.
-  //
-  // However, we don't consider either of these when deciding whether
-  // a member introduced by a shadow declaration is hidden.
-  if (!UseMemberUsingDeclRules && NewTemplate &&
-      (!TemplateParameterListsAreEqual(NewTemplate->getTemplateParameters(),
-                                       OldTemplate->getTemplateParameters(),
-                                       false, TPL_TemplateMatch) ||
-       !Context.hasSameType(Old->getDeclaredReturnType(),
-                            New->getDeclaredReturnType())))
-    return true;
-
+  if (NewTemplate) {
+    // C++ [temp.over.link]p4:
+    //   The signature of a function template consists of its function
+    //   signature, its return type and its template parameter list. The names
+    //   of the template parameters are significant only for establishing the
+    //   relationship between the template parameters and the rest of the
+    //   signature.
+    //
+    // We check the return type and template parameter lists for function
+    // templates first; the remaining checks follow.
+    bool SameTemplateParameterList = TemplateParameterListsAreEqual(
+        NewTemplate->getTemplateParameters(),
+        OldTemplate->getTemplateParameters(), false, TPL_TemplateMatch);
+    bool SameReturnType = Context.hasSameType(Old->getDeclaredReturnType(),
+                                              New->getDeclaredReturnType());
+    // FIXME(GH58571): Match template parameter list even for non-constrained
+    // template heads. This currently ensures that the code prior to C++20 is
+    // not newly broken.
+    bool ConstraintsInTemplateHead =
+        NewTemplate->getTemplateParameters()->hasAssociatedConstraints() ||
+        OldTemplate->getTemplateParameters()->hasAssociatedConstraints();
+    // C++ [namespace.udecl]p11:
+    //   The set of declarations named by a using-declarator that inhabits a
+    //   class C does not include member functions and member function
+    //   templates of a base class that "correspond" to (and thus would
+    //   conflict with) a declaration of a function or function template in
+    //   C.
+    // Comparing return types is not required for the "correspond" check to
+    // decide whether a member introduced by a shadow declaration is hidden.
+    if (UseMemberUsingDeclRules && ConstraintsInTemplateHead &&
+        !SameTemplateParameterList)
+      return true;
+    if (!UseMemberUsingDeclRules &&
+        (!SameTemplateParameterList || !SameReturnType))
+      return true;
+  }
   // If the function is a class member, its signature includes the
   // cv-qualifiers (if any) and ref-qualifier (if any) on the function itself.
   //
@@ -4590,15 +4606,6 @@ CompareDerivedToBaseConversions(Sema &S, SourceLocation Loc,
   return ImplicitConversionSequence::Indistinguishable;
 }
 
-/// Determine whether the given type is valid, e.g., it is not an invalid
-/// C++ class.
-static bool isTypeValid(QualType T) {
-  if (CXXRecordDecl *Record = T->getAsCXXRecordDecl())
-    return !Record->isInvalidDecl();
-
-  return true;
-}
-
 static QualType withoutUnaligned(ASTContext &Ctx, QualType T) {
   if (!T.getQualifiers().hasUnaligned())
     return T;
@@ -4648,7 +4655,6 @@ Sema::CompareReferenceRelationship(SourceLocation Loc,
   if (UnqualT1 == UnqualT2) {
     // Nothing to do.
   } else if (isCompleteType(Loc, OrigT2) &&
-             isTypeValid(UnqualT1) && isTypeValid(UnqualT2) &&
              IsDerivedFrom(Loc, UnqualT2, UnqualT1))
     Conv |= ReferenceConversions::DerivedToBase;
   else if (UnqualT1->isObjCObjectOrInterfaceType() &&
@@ -10033,13 +10039,13 @@ bool clang::isBetterOverloadCandidate(
   //      parameter-type-lists, and F1 is more constrained than F2 [...],
   if (!Cand1IsSpecialization && !Cand2IsSpecialization &&
       sameFunctionParameterTypeLists(S, Cand1, Cand2)) {
-    Expr *RC1 = Cand1.Function->getTrailingRequiresClause();
-    Expr *RC2 = Cand2.Function->getTrailingRequiresClause();
+    const Expr *RC1 = Cand1.Function->getTrailingRequiresClause();
+    const Expr *RC2 = Cand2.Function->getTrailingRequiresClause();
     if (RC1 && RC2) {
       bool AtLeastAsConstrained1, AtLeastAsConstrained2;
-      if (S.IsAtLeastAsConstrained(Cand1.Function, {RC1}, Cand2.Function, {RC2},
+      if (S.IsAtLeastAsConstrained(Cand1.Function, RC1, Cand2.Function, RC2,
                                    AtLeastAsConstrained1) ||
-          S.IsAtLeastAsConstrained(Cand2.Function, {RC2}, Cand1.Function, {RC1},
+          S.IsAtLeastAsConstrained(Cand2.Function, RC2, Cand1.Function, RC1,
                                    AtLeastAsConstrained2))
         return false;
       if (AtLeastAsConstrained1 != AtLeastAsConstrained2)

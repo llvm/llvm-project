@@ -98,13 +98,13 @@ define void @push_before_probe(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i
 ; CHECK-X64-NEXT:    .cfi_def_cfa_offset 71888
 ; CHECK-X64-NEXT:    .cfi_offset %rax, -16
 ; CHECK-X64-NEXT:    movl 71888(%rsp), %eax
-; CHECK-X64-NEXT:    addl %esi, %edi
 ; CHECK-X64-NEXT:    addl %ecx, %edx
-; CHECK-X64-NEXT:    addl %edi, %edx
-; CHECK-X64-NEXT:    addl %r9d, %r8d
 ; CHECK-X64-NEXT:    addl 71896(%rsp), %eax
+; CHECK-X64-NEXT:    addl %esi, %edx
+; CHECK-X64-NEXT:    addl %r9d, %eax
 ; CHECK-X64-NEXT:    addl %r8d, %eax
 ; CHECK-X64-NEXT:    addl %edx, %eax
+; CHECK-X64-NEXT:    addl %edi, %eax
 ; CHECK-X64-NEXT:    movl %eax, 264(%rsp)
 ; CHECK-X64-NEXT:    movl %eax, 28664(%rsp)
 ; CHECK-X64-NEXT:    addq $71872, %rsp # imm = 0x118C0
@@ -141,16 +141,16 @@ define void @push_before_probe(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i
 ; CHECK-X86-NEXT:    .cfi_offset %edx, -12
 ; CHECK-X86-NEXT:    .cfi_offset %esi, -8
 ; CHECK-X86-NEXT:    movl 72056(%esp), %eax
-; CHECK-X86-NEXT:    movl 72048(%esp), %edx
-; CHECK-X86-NEXT:    movl 72040(%esp), %ecx
+; CHECK-X86-NEXT:    movl 72048(%esp), %ecx
+; CHECK-X86-NEXT:    movl 72040(%esp), %edx
 ; CHECK-X86-NEXT:    movl 72032(%esp), %esi
 ; CHECK-X86-NEXT:    addl 72036(%esp), %esi
-; CHECK-X86-NEXT:    addl 72044(%esp), %ecx
-; CHECK-X86-NEXT:    addl %esi, %ecx
-; CHECK-X86-NEXT:    addl 72052(%esp), %edx
+; CHECK-X86-NEXT:    addl 72044(%esp), %edx
+; CHECK-X86-NEXT:    addl 72052(%esp), %ecx
 ; CHECK-X86-NEXT:    addl 72060(%esp), %eax
-; CHECK-X86-NEXT:    addl %edx, %eax
 ; CHECK-X86-NEXT:    addl %ecx, %eax
+; CHECK-X86-NEXT:    addl %edx, %eax
+; CHECK-X86-NEXT:    addl %esi, %eax
 ; CHECK-X86-NEXT:    movl %eax, 392(%esp)
 ; CHECK-X86-NEXT:    movl %eax, 28792(%esp)
 ; CHECK-X86-NEXT:    addl $72012, %esp # imm = 0x1194C
@@ -184,13 +184,13 @@ define void @push_before_probe(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i
 ; CHECK-X32-NEXT:    .cfi_def_cfa_offset 71888
 ; CHECK-X32-NEXT:    .cfi_offset %rax, -16
 ; CHECK-X32-NEXT:    movl 71888(%esp), %eax
-; CHECK-X32-NEXT:    addl %esi, %edi
 ; CHECK-X32-NEXT:    addl %ecx, %edx
-; CHECK-X32-NEXT:    addl %edi, %edx
-; CHECK-X32-NEXT:    addl %r9d, %r8d
 ; CHECK-X32-NEXT:    addl 71896(%esp), %eax
+; CHECK-X32-NEXT:    addl %esi, %edx
+; CHECK-X32-NEXT:    addl %r9d, %eax
 ; CHECK-X32-NEXT:    addl %r8d, %eax
 ; CHECK-X32-NEXT:    addl %edx, %eax
+; CHECK-X32-NEXT:    addl %edi, %eax
 ; CHECK-X32-NEXT:    movl %eax, 264(%esp)
 ; CHECK-X32-NEXT:    movl %eax, 28664(%esp)
 ; CHECK-X32-NEXT:    addl $71872, %esp # imm = 0x118C0

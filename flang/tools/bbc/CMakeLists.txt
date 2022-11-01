@@ -1,3 +1,6 @@
+set(LLVM_LINK_COMPONENTS
+Passes
+)
 
 add_flang_tool(bbc bbc.cpp
 DEPENDS
@@ -20,5 +23,4 @@ FortranParser
 FortranEvaluate
 FortranSemantics
 FortranLower
-LLVMPasses
 )

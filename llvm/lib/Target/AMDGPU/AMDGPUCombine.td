@@ -9,10 +9,10 @@
 include "llvm/Target/GlobalISel/Combine.td"
 
 // TODO: This really belongs after legalization after scalarization.
-// TODO: GICombineRules should accept subtarget predicates
 
 def fmin_fmax_legacy_matchdata : GIDefMatchData<"AMDGPUPostLegalizerCombinerHelper::FMinFMaxLegacyInfo">;
 
+let Predicates = [HasFminFmaxLegacy] in
 def fcmp_select_to_fmin_fmax_legacy : GICombineRule<
   (defs root:$select, fmin_fmax_legacy_matchdata:$matchinfo),
   (match (wip_match_opcode G_SELECT):$select,

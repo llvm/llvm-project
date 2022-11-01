@@ -1220,7 +1220,7 @@ static bool isCopyCompatibleType(LLT SrcTy, LLT DstTy) {
   DstTy = DstTy.getScalarType();
 
   return (SrcTy.isPointer() && DstTy.isScalar()) ||
-         (DstTy.isScalar() && SrcTy.isPointer());
+         (DstTy.isPointer() && SrcTy.isScalar());
 }
 
 void CallLowering::IncomingValueHandler::assignValueToReg(Register ValVReg,

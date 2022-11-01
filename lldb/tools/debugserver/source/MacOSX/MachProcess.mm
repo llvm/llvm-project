@@ -720,7 +720,8 @@ MachProcess::GetDeploymentInfo(const struct load_command &lc,
   return info;
 }
 
-const char *MachProcess::GetPlatformString(unsigned char platform) {
+std::optional<std::string>
+MachProcess::GetPlatformString(unsigned char platform) {
   switch (platform) {
   case PLATFORM_MACOS:
     return "macosx";
@@ -742,8 +743,10 @@ const char *MachProcess::GetPlatformString(unsigned char platform) {
     return "bridgeos";
   case PLATFORM_DRIVERKIT:
     return "driverkit";
+  default:
+    DNBLogError("Unknown platform %u found for one binary", platform);
+    return std::nullopt;
   }
-  return nullptr;
 }
 
 static bool mach_header_validity_test(uint32_t magic, uint32_t cputype) {
@@ -867,7 +870,8 @@ bool MachProcess::GetMachOInformationFromMemory(
     }
     if (DeploymentInfo deployment_info = GetDeploymentInfo(
             lc, load_cmds_p, inf.mach_header.filetype == MH_EXECUTE)) {
-      const char *lc_platform = GetPlatformString(deployment_info.platform);
+      std::optional<std::string> lc_platform =
+          GetPlatformString(deployment_info.platform);
       if (dyld_platform != PLATFORM_MACCATALYST &&
           inf.min_version_os_name == "macosx") {
         // macCatalyst support.
@@ -882,7 +886,7 @@ bool MachProcess::GetMachOInformationFromMemory(
         // processed, ignore this one, which is presumed to be a
         // PLATFORM_MACCATALYST one.
       } else {
-        inf.min_version_os_name = lc_platform;
+        inf.min_version_os_name = lc_platform.value_or("");
         inf.min_version_os_version = "";
         inf.min_version_os_version +=
             std::to_string(deployment_info.major_version);

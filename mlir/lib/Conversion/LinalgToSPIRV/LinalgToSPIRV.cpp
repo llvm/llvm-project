@@ -70,7 +70,7 @@ SingleWorkgroupReduction::matchAsPerformingReduction(
     return llvm::None;
 
   // Make sure this is reduction with one input and one output.
-  if (genericOp.getNumInputs() != 1 || genericOp.getNumOutputs() != 1)
+  if (genericOp.getNumDpsInputs() != 1 || genericOp.getNumDpsInits() != 1)
     return llvm::None;
 
   auto originalInputType = op->getOperand(0).getType().cast<MemRefType>();

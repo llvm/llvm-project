@@ -829,8 +829,8 @@ static bool checkOmittedBlockReturnType(Sema &S, Declarator &declarator,
 /// Apply Objective-C type arguments to the given type.
 static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
                                   ArrayRef<TypeSourceInfo *> typeArgs,
-                                  SourceRange typeArgsRange,
-                                  bool failOnError = false) {
+                                  SourceRange typeArgsRange, bool failOnError,
+                                  bool rebuilding) {
   // We can only apply type arguments to an Objective-C class type.
   const auto *objcObjectType = type->getAs<ObjCObjectType>();
   if (!objcObjectType || !objcObjectType->getInterface()) {
@@ -894,7 +894,9 @@ static QualType applyObjCTypeArgs(Sema &S, SourceLocation loc, QualType type,
         }
       }
 
-      if (!diagnosed) {
+      // When rebuilding, qualifiers might have gotten here through a
+      // final substitution.
+      if (!rebuilding && !diagnosed) {
         S.Diag(qual.getBeginLoc(), diag::err_objc_type_arg_qualified)
             << typeArg << typeArg.getQualifiers().getAsString()
             << FixItHint::CreateRemoval(rangeToRemove);
@@ -1056,22 +1058,18 @@ QualType Sema::BuildObjCTypeParamType(const ObjCTypeParamDecl *Decl,
   return Result;
 }
 
-QualType Sema::BuildObjCObjectType(QualType BaseType,
-                                   SourceLocation Loc,
-                                   SourceLocation TypeArgsLAngleLoc,
-                                   ArrayRef<TypeSourceInfo *> TypeArgs,
-                                   SourceLocation TypeArgsRAngleLoc,
-                                   SourceLocation ProtocolLAngleLoc,
-                                   ArrayRef<ObjCProtocolDecl *> Protocols,
-                                   ArrayRef<SourceLocation> ProtocolLocs,
-                                   SourceLocation ProtocolRAngleLoc,
-                                   bool FailOnError) {
+QualType Sema::BuildObjCObjectType(
+    QualType BaseType, SourceLocation Loc, SourceLocation TypeArgsLAngleLoc,
+    ArrayRef<TypeSourceInfo *> TypeArgs, SourceLocation TypeArgsRAngleLoc,
+    SourceLocation ProtocolLAngleLoc, ArrayRef<ObjCProtocolDecl *> Protocols,
+    ArrayRef<SourceLocation> ProtocolLocs, SourceLocation ProtocolRAngleLoc,
+    bool FailOnError, bool Rebuilding) {
   QualType Result = BaseType;
   if (!TypeArgs.empty()) {
-    Result = applyObjCTypeArgs(*this, Loc, Result, TypeArgs,
-                               SourceRange(TypeArgsLAngleLoc,
-                                           TypeArgsRAngleLoc),
-                               FailOnError);
+    Result =
+        applyObjCTypeArgs(*this, Loc, Result, TypeArgs,
+                          SourceRange(TypeArgsLAngleLoc, TypeArgsRAngleLoc),
+                          FailOnError, Rebuilding);
     if (FailOnError && Result.isNull())
       return QualType();
   }
@@ -1170,10 +1168,11 @@ TypeResult Sema::actOnObjCTypeArgsAndProtocolQualifiers(
       T, BaseTypeInfo->getTypeLoc().getSourceRange().getBegin(),
       TypeArgsLAngleLoc, ActualTypeArgInfos, TypeArgsRAngleLoc,
       ProtocolLAngleLoc,
-      llvm::makeArrayRef((ObjCProtocolDecl * const *)Protocols.data(),
+      llvm::makeArrayRef((ObjCProtocolDecl *const *)Protocols.data(),
                          Protocols.size()),
       ProtocolLocs, ProtocolRAngleLoc,
-      /*FailOnError=*/false);
+      /*FailOnError=*/false,
+      /*Rebuilding=*/false);
 
   if (Result == T)
     return BaseType;

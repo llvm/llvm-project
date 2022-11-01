@@ -1874,26 +1874,37 @@ private:
   void insertBraces(SmallVectorImpl<AnnotatedLine *> &Lines,
                     tooling::Replacements &Result) {
     const auto &SourceMgr = Env.getSourceManager();
+    int OpeningBraceSurplus = 0;
     for (AnnotatedLine *Line : Lines) {
       insertBraces(Line->Children, Result);
-      if (!Line->Affected)
+      if (!Line->Affected && OpeningBraceSurplus == 0)
         continue;
       for (FormatToken *Token = Line->First; Token && !Token->Finalized;
            Token = Token->Next) {
-        if (Token->BraceCount == 0)
+        int BraceCount = Token->BraceCount;
+        if (BraceCount == 0)
           continue;
         std::string Brace;
-        if (Token->BraceCount < 0) {
-          assert(Token->BraceCount == -1);
+        if (BraceCount < 0) {
+          assert(BraceCount == -1);
+          if (!Line->Affected)
+            break;
           Brace = Token->is(tok::comment) ? "\n{" : "{";
+          ++OpeningBraceSurplus;
         } else {
-          Brace = '\n' + std::string(Token->BraceCount, '}');
+          if (OpeningBraceSurplus == 0)
+            break;
+          if (OpeningBraceSurplus < BraceCount)
+            BraceCount = OpeningBraceSurplus;
+          Brace = '\n' + std::string(BraceCount, '}');
+          OpeningBraceSurplus -= BraceCount;
         }
         Token->BraceCount = 0;
         const auto Start = Token->Tok.getEndLoc();
         cantFail(Result.add(tooling::Replacement(SourceMgr, Start, 0, Brace)));
       }
     }
+    assert(OpeningBraceSurplus == 0);
   }
 };
 

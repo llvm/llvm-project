@@ -30,7 +30,7 @@ add_library(MLIRSparseTensorEnums INTERFACE)
 foreach(hdr ${MLIRSparseTensorEnums_hdrs})
   target_sources(MLIRSparseTensorEnums INTERFACE
     $<BUILD_INTERFACE:${MLIR_MAIN_INCLUDE_DIR}/${hdr}>
-    $<INSTALL_INTERFACE:${hdr}>)
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${hdr}>)
 endforeach()
 # The `add_mlir_library_install` is required for other libraries to
 # depend on this one, but the conditional itself and the phony target

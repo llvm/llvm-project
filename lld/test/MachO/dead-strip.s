@@ -46,14 +46,14 @@
 ## Check that dead stripped symbols get listed properly.
 # RUN: FileCheck --check-prefix=MAP %s < %t/map
 
-# MAP: _main
+# MAP:        _main
 # MAP-LABEL: Dead Stripped Symbols
-# MAP: <<dead>> 0x00000001 [ 1] _unref_com
-# MAP: <<dead>> 0x00000008 [ 1] _unref_data
-# MAP: <<dead>> 0x00000006 [ 1] _unref_extern
-# MAP: <<dead>> 0x00000001 [ 1] _unref_local
-# MAP: <<dead>> 0x00000007 [ 1] _unref_private_extern
-# MAP: <<dead>> 0x00000008 [ 1] l_unref_data
+# MAP-DAG:   <<dead>> 0x00000001 [ 1] _unref_com
+# MAP-DAG:   <<dead>> 0x00000008 [ 1] _unref_data
+# MAP-DAG:   <<dead>> 0x00000006 [ 1] _unref_extern
+# MAP-DAG:   <<dead>> 0x00000001 [ 1] _unref_local
+# MAP-DAG:   <<dead>> 0x00000007 [ 1] _unref_private_extern
+# MAP-DAG:   <<dead>> 0x00000008 [ 1] l_unref_data
 
 ## Run dead stripping on code without any dead symbols.
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \

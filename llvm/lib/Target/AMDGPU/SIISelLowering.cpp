@@ -4282,7 +4282,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     const DebugLoc &DL = MI.getDebugLoc();
     MachineInstr *Br = BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_CBRANCH_SCC1))
                            .add(MI.getOperand(0));
-    Br->getOperand(1).setIsUndef(true); // read undef SCC
+    Br->getOperand(1).setIsUndef(); // read undef SCC
     MI.eraseFromParent();
     return BB;
   }

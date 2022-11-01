@@ -1,5 +1,11 @@
 cmake_minimum_required(VERSION 3.13.4)
 
+if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
+  set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
+endif()
+include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
+  NO_POLICY_SCOPE)
+
 # If we are not building as a part of LLVM, build LLD as an
 # standalone project, using LLVM as an external library:
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -138,10 +144,6 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
 "from there, passing the path to this source directory as the last argument. "
 "This process created the file `CMakeCache.txt' and the directory "
 "`CMakeFiles'. Please delete them.")
-endif()
-
-if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
-  set(LLVM_COMMON_CMAKE_UTILS ${LLD_SOURCE_DIR}/../cmake)
 endif()
 
 # Add path for custom modules.

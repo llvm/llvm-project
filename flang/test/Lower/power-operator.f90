@@ -1,4 +1,9 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX-FAST"
+! RUN: bbc --math-runtime=precise -emit-fir %s -o - | FileCheck %s --check-prefixes="CMPLX-PRECISE"
+! RUN: bbc --disable-mlir-complex -emit-fir %s -o - | FileCheck %s --check-prefixes="CMPLX-PRECISE"
+! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX-FAST"
+! RUN: %flang_fc1 -emit-fir -mllvm --math-runtime=precise %s -o - | FileCheck %s --check-prefixes="CMPLX-PRECISE"
+! RUN: %flang_fc1 -emit-fir -mllvm --disable-mlir-complex %s -o - | FileCheck %s --check-prefixes="CMPLX-PRECISE"
 
 ! Test power operation lowering
 
@@ -121,13 +126,15 @@ end subroutine
 subroutine pow_c4_c4(x, y, z)
   complex :: x, y, z
   z = x ** y
-  ! CHECK: call @cpowf
+  ! CMPLX-FAST: complex.pow %{{.*}}, %{{.*}} : complex<f32>
+  ! CMPLX-PRECISE: call @cpowf
 end subroutine
 
 ! CHECK-LABEL: pow_c8_c8
 subroutine pow_c8_c8(x, y, z)
   complex(8) :: x, y, z
   z = x ** y
-  ! CHECK: call @cpow
+  ! CMPLX-FAST: complex.pow %{{.*}}, %{{.*}} : complex<f64>
+  ! CMPLX-PRECISE: call @cpow
 end subroutine
 

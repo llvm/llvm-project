@@ -10,9 +10,6 @@ from lldbsuite.test import lldbutil
 
 class CompileUnitAPITestCase(TestBase):
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     def test(self):
         """Exercise some SBCompileUnit APIs."""
         self.build()

@@ -408,7 +408,10 @@ endif
 ifeq (1,$(USE_LIBCPP))
 	ifneq ($(and $(LIBCPP_INCLUDE_DIR), $(LIBCPP_LIBRARY_DIR)),)
 		CXXFLAGS += -nostdlib++ -nostdinc++ -cxx-isystem $(LIBCPP_INCLUDE_DIR)
-		LDFLAGS += -L$(LLVM_LIBS_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
+		ifneq "$(LIBCPP_INCLUDE_TARGET_DIR)" ""
+				CXXFLAGS += -cxx-isystem $(LIBCPP_INCLUDE_TARGET_DIR)
+		endif
+		LDFLAGS += -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
 	else
 		ifeq "$(OS)" "Android"
 				# Nothing to do, this is already handled in
@@ -430,7 +433,10 @@ endif
 ifeq ($(or $(USE_LIBSTDCPP), $(USE_LIBCPP), $(USE_SYSTEM_STDLIB)),)
 	ifneq ($(and $(LIBCPP_INCLUDE_DIR), $(LIBCPP_LIBRARY_DIR)),)
 		CXXFLAGS += -nostdlib++ -nostdinc++ -cxx-isystem $(LIBCPP_INCLUDE_DIR)
-		LDFLAGS += -L$(LLVM_LIBS_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
+		ifneq "$(LIBCPP_INCLUDE_TARGET_DIR)" ""
+				CXXFLAGS += -cxx-isystem $(LIBCPP_INCLUDE_TARGET_DIR)
+		endif
+		LDFLAGS += -L$(LIBCPP_LIBRARY_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
 	endif
 endif
 

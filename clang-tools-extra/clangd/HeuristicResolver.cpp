@@ -80,9 +80,9 @@ const Type *HeuristicResolver::getPointeeType(const Type *T) const {
   auto *TST = T->getAs<TemplateSpecializationType>();
   if (!TST)
     return nullptr;
-  if (TST->getNumArgs() == 0)
+  if (TST->template_arguments().size() == 0)
     return nullptr;
-  const TemplateArgument &FirstArg = TST->getArg(0);
+  const TemplateArgument &FirstArg = TST->template_arguments()[0];
   if (FirstArg.getKind() != TemplateArgument::Type)
     return nullptr;
   return FirstArg.getAsType().getTypePtrOrNull();

@@ -138,7 +138,7 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
   // TODO: Avoid the loads if the corresponding argument of the
   // region has no uses.
   // 1.a. Emit load from input operand or for scalars access the operand itself.
-  for (OpOperand *inputOperand : linalgOp.getInputOperands()) {
+  for (OpOperand *inputOperand : linalgOp.getDpsInputOperands()) {
     if (linalgOp.isScalar(inputOperand)) {
       indexedValues.push_back(inputOperand->get());
       continue;
@@ -149,7 +149,7 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
         b.create<LoadOpTy>(loc, inputOperand->get(), indexing));
   }
   // 1.b. Emit load from output views.
-  for (OpOperand *outputOperand : linalgOp.getOutputOperands()) {
+  for (OpOperand *outputOperand : linalgOp.getDpsInitOperands()) {
     SmallVector<Value> indexing = makeCanonicalAffineApplies(
         b, loc, linalgOp.getMatchingIndexingMap(outputOperand), allIvsPlusDims);
     indexedValues.push_back(
@@ -161,7 +161,7 @@ static void emitScalarImplementation(OpBuilder &b, Location loc,
   // 3. Emit store.
   SmallVector<SmallVector<Value>, 8> indexing;
   SmallVector<Value> outputBuffers;
-  for (OpOperand *outputOperand : linalgOp.getOutputOperands()) {
+  for (OpOperand *outputOperand : linalgOp.getDpsInitOperands()) {
     if (!outputOperand->get().getType().isa<MemRefType>())
       continue;
     indexing.push_back(makeCanonicalAffineApplies(

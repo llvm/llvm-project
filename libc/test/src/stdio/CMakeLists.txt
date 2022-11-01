@@ -170,5 +170,22 @@ add_libc_unittest(
     libc.src.stdio.fwrite
 )
 
+add_libc_unittest(
+  fgets_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fgets_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.stdio
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fgets
+    libc.src.stdio.fopen
+    libc.src.stdio.fwrite
+)
+
 add_subdirectory(printf_core)
 add_subdirectory(testdata)

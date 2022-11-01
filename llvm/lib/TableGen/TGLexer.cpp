@@ -569,6 +569,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
     .Case("mul", tgtok::XMUL)
     .Case("div", tgtok::XDIV)
     .Case("not", tgtok::XNOT)
+    .Case("logtwo", tgtok::XLOG2)
     .Case("and", tgtok::XAND)
     .Case("or", tgtok::XOR)
     .Case("xor", tgtok::XXOR)

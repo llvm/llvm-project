@@ -480,10 +480,10 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
   assert(TiedIdx == -1 || TiedIdx == Component::DST);
   HasSrc2Acc = TiedIdx != -1;
 
-  SrcOperandsNum = OpDesc.getNumOperands() - OpDesc.getNumDefs() - HasSrc2Acc;
+  SrcOperandsNum = OpDesc.getNumOperands() - OpDesc.getNumDefs();
   assert(SrcOperandsNum <= Component::MAX_SRC_NUM);
 
-  auto OperandsNum = OpDesc.getNumOperands() - HasSrc2Acc;
+  auto OperandsNum = OpDesc.getNumOperands();
   for (unsigned OprIdx = Component::SRC1; OprIdx < OperandsNum; ++OprIdx) {
     if (OpDesc.OpInfo[OprIdx].OperandType == AMDGPU::OPERAND_KIMM32) {
       MandatoryLiteralIdx = OprIdx;
@@ -500,7 +500,7 @@ unsigned ComponentInfo::getParsedOperandIndex(unsigned OprIdx) const {
 
   auto SrcIdx = OprIdx - Component::DST_NUM;
   if (SrcIdx < getSrcOperandsNum())
-    return getParsedSrcIndex(SrcIdx);
+    return getParsedSrcIndex(SrcIdx, hasSrc2Acc());
 
   // The specified operand does not exist.
   return 0;
@@ -539,8 +539,6 @@ InstInfo::RegIndices InstInfo::getRegIndices(
   unsigned Src2Reg = 0;
   if (Comp.hasRegularSrcOperand(2))
     Src2Reg = GetRegIdx(ComponentIdx, Comp.getSrcIndex(2));
-  else if (Comp.hasSrc2Acc())
-    Src2Reg = DstReg;
 
   return {DstReg, Src0Reg, Src1Reg, Src2Reg};
 }
@@ -557,8 +555,9 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
   const auto &OpXDesc = InstrInfo->get(OpX);
   const auto &OpYDesc = InstrInfo->get(OpY);
   VOPD::ComponentInfo OpXInfo(OpXDesc, VOPD::ComponentKind::COMPONENT_X);
-  VOPD::ComponentInfo OpYInfo(OpYDesc, VOPD::ComponentKind::COMPONENT_Y,
-                              OpXInfo.getSrcOperandsNum());
+  VOPD::ComponentInfo OpYInfo(
+      OpYDesc, VOPD::ComponentKind::COMPONENT_Y, OpXInfo.getSrcOperandsNum(),
+      OpXInfo.getSrcOperandsNum() - OpXInfo.hasSrc2Acc());
   return VOPD::InstInfo(OpXInfo, OpYInfo);
 }
 

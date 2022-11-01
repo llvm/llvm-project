@@ -234,3 +234,136 @@ end module
   call test_ptr(42., i)
   call test_nested(42., t_array(x=43., i=[5,6,7,8,9]))
 end
+
+! CHECK-LABEL: func.func @_QPtest_parent_component1() {
+! CHECK:         %[[VAL_0:.*]] = fir.alloca !fir.type<_QFtest_parent_component1Tbase{x:i32,y:!fir.array<2xi32>}>
+! CHECK:         %[[VAL_1:.*]] = fir.alloca !fir.type<_QFtest_parent_component1Tmid{x:i32,y:!fir.array<2xi32>,mask:!fir.logical<4>}>
+! CHECK:         %[[VAL_14:.*]] = fir.field_index x, !fir.type<_QFtest_parent_component1Tbase{x:i32,y:!fir.array<2xi32>}>
+! CHECK:         %[[VAL_15:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_14]] : (!fir.ref<!fir.type<_QFtest_parent_component1Tbase{x:i32,y:!fir.array<2xi32>}>>, !fir.field) -> !fir.ref<i32>
+! CHECK:         %[[VAL_16:.*]] = arith.constant 1 : i32
+! CHECK:         fir.store %[[VAL_16]] to %[[VAL_15]] : !fir.ref<i32>
+! CHECK:         %[[VAL_17:.*]] = fir.field_index y, !fir.type<_QFtest_parent_component1Tbase{x:i32,y:!fir.array<2xi32>}>
+! CHECK:         %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_17]] : (!fir.ref<!fir.type<_QFtest_parent_component1Tbase{x:i32,y:!fir.array<2xi32>}>>, !fir.field) -> !fir.ref<!fir.array<2xi32>>
+! CHECK:         %[[VAL_19:.*]] = arith.constant 2 : index
+! CHECK:         %[[VAL_20:.*]] = fir.shape %[[VAL_19]] : (index) -> !fir.shape<1>
+! CHECK:         %[[VAL_21:.*]] = fir.array_load %[[VAL_18]](%[[VAL_20]]) : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> !fir.array<2xi32>
+! CHECK:         %[[VAL_23:.*]] = arith.constant 2 : index
+! CHECK:         %[[VAL_24:.*]] = fir.shape %[[VAL_23]] : (index) -> !fir.shape<1>
+! CHECK:         %[[VAL_25:.*]] = fir.array_load %[[VAL_22:.*]](%[[VAL_24]]) : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> !fir.array<2xi32>
+! CHECK:         %[[VAL_26:.*]] = arith.constant 1 : index
+! CHECK:         %[[VAL_27:.*]] = arith.constant 0 : index
+! CHECK:         %[[VAL_28:.*]] = arith.subi %[[VAL_19]], %[[VAL_26]] : index
+! CHECK:         %[[VAL_29:.*]] = fir.do_loop %[[VAL_30:.*]] = %[[VAL_27]] to %[[VAL_28]] step %[[VAL_26]] unordered iter_args(%[[VAL_31:.*]] = %[[VAL_21]]) -> (!fir.array<2xi32>) {
+! CHECK:           %[[VAL_32:.*]] = fir.array_fetch %[[VAL_25]], %[[VAL_30]] : (!fir.array<2xi32>, index) -> i32
+! CHECK:           %[[VAL_33:.*]] = fir.array_update %[[VAL_31]], %[[VAL_32]], %[[VAL_30]] : (!fir.array<2xi32>, i32, index) -> !fir.array<2xi32>
+! CHECK:           fir.result %[[VAL_33]] : !fir.array<2xi32>
+! CHECK:         }
+! CHECK:         fir.array_merge_store %[[VAL_21]], %[[VAL_34:.*]] to %[[VAL_18]] : !fir.array<2xi32>, !fir.array<2xi32>, !fir.ref<!fir.array<2xi32>>
+! CHECK:         %[[VAL_35:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.type<_QFtest_parent_component1Tmid{x:i32,y:!fir.array<2xi32>,mask:!fir.logical<4>}>>) -> !fir.ref<!fir.type<_QFtest_parent_component1Tbase{x:i32,y:!fir.array<2xi32>}>>
+! CHECK:         %[[VAL_36:.*]] = fir.field_index x, !fir.type<_QFtest_parent_component1Tbase{x:i32,y:!fir.array<2xi32>}>
+! CHECK:         %[[VAL_37:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_36]] : (!fir.ref<!fir.type<_QFtest_parent_component1Tbase{x:i32,y:!fir.array<2xi32>}>>, !fir.field) -> !fir.ref<i32>
+! CHECK:         %[[VAL_38:.*]] = fir.field_index x, !fir.type<_QFtest_parent_component1Tbase{x:i32,y:!fir.array<2xi32>}>
+! CHECK:         %[[VAL_39:.*]] = fir.coordinate_of %[[VAL_35]], %[[VAL_38]] : (!fir.ref<!fir.type<_QFtest_parent_component1Tbase{x:i32,y:!fir.array<2xi32>}>>, !fir.field) -> !fir.ref<i32>
+! CHECK:         %[[VAL_40:.*]] = fir.load %[[VAL_37]] : !fir.ref<i32>
+! CHECK:         fir.store %[[VAL_40]] to %[[VAL_39]] : !fir.ref<i32>
+! CHECK:         %[[VAL_41:.*]] = fir.field_index y, !fir.type<_QFtest_parent_component1Tbase{x:i32,y:!fir.array<2xi32>}>
+! CHECK:         %[[VAL_42:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_41]] : (!fir.ref<!fir.type<_QFtest_parent_component1Tbase{x:i32,y:!fir.array<2xi32>}>>, !fir.field) -> !fir.ref<!fir.array<2xi32>>
+! CHECK:         %[[VAL_43:.*]] = fir.field_index y, !fir.type<_QFtest_parent_component1Tbase{x:i32,y:!fir.array<2xi32>}>
+! CHECK:         %[[VAL_44:.*]] = fir.coordinate_of %[[VAL_35]], %[[VAL_43]] : (!fir.ref<!fir.type<_QFtest_parent_component1Tbase{x:i32,y:!fir.array<2xi32>}>>, !fir.field) -> !fir.ref<!fir.array<2xi32>>
+! CHECK:         %[[VAL_45:.*]] = arith.constant 0 : index
+! CHECK:         %[[VAL_46:.*]] = arith.constant 1 : index
+! CHECK:         %[[VAL_47:.*]] = arith.constant 1 : index
+! CHECK:         fir.do_loop %[[VAL_48:.*]] = %[[VAL_45]] to %[[VAL_47]] step %[[VAL_46]] {
+! CHECK:           %[[VAL_49:.*]] = fir.coordinate_of %[[VAL_44]], %[[VAL_48]] : (!fir.ref<!fir.array<2xi32>>, index) -> !fir.ref<i32>
+! CHECK:           %[[VAL_50:.*]] = fir.coordinate_of %[[VAL_42]], %[[VAL_48]] : (!fir.ref<!fir.array<2xi32>>, index) -> !fir.ref<i32>
+! CHECK:           %[[VAL_51:.*]] = fir.load %[[VAL_50]] : !fir.ref<i32>
+! CHECK:           fir.store %[[VAL_51]] to %[[VAL_49]] : !fir.ref<i32>
+! CHECK:         }
+! CHECK:         %[[VAL_52:.*]] = fir.field_index mask, !fir.type<_QFtest_parent_component1Tmid{x:i32,y:!fir.array<2xi32>,mask:!fir.logical<4>}>
+! CHECK:         %[[VAL_53:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_52]] : (!fir.ref<!fir.type<_QFtest_parent_component1Tmid{x:i32,y:!fir.array<2xi32>,mask:!fir.logical<4>}>>, !fir.field) -> !fir.ref<!fir.logical<4>>
+! CHECK:         %[[VAL_54:.*]] = arith.constant true
+! CHECK:         %[[VAL_55:.*]] = fir.convert %[[VAL_54]] : (i1) -> !fir.logical<4>
+! CHECK:         fir.store %[[VAL_55]] to %[[VAL_53]] : !fir.ref<!fir.logical<4>>
+! CHECK:         fir.call @_QPprint_parent_component1(%[[VAL_1]]) : (!fir.ref<!fir.type<_QFtest_parent_component1Tmid{x:i32,y:!fir.array<2xi32>,mask:!fir.logical<4>}>>) -> ()
+! CHECK:         return
+! CHECK:       }
+
+subroutine test_parent_component1()
+  type base
+    integer :: x, y(2)
+  end type base
+  type, extends(base) :: mid
+    logical :: mask
+  end type mid
+
+  call print_parent_component1(mid(base = base(1, [2, 3]), mask = .true.))
+end
+
+! CHECK-LABEL: func.func @_QPtest_parent_component2() {
+! CHECK:         %[[VAL_0:.*]] = fir.alloca !fir.type<_QFtest_parent_component2Tmid{z:!fir.char<1,5>,mask:!fir.logical<4>}>
+! CHECK:         %[[VAL_1:.*]] = fir.address_of(@_QFtest_parent_component2Epv) : !fir.ref<!fir.type<_QFtest_parent_component2Tbase{z:!fir.char<1,5>}>>
+! CHECK:         %[[VAL_8:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.type<_QFtest_parent_component2Tmid{z:!fir.char<1,5>,mask:!fir.logical<4>}>>) -> !fir.ref<!fir.type<_QFtest_parent_component2Tbase{z:!fir.char<1,5>}>>
+! CHECK:         %[[VAL_9:.*]] = fir.field_index z, !fir.type<_QFtest_parent_component2Tbase{z:!fir.char<1,5>}>
+! CHECK:         %[[VAL_10:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_9]] : (!fir.ref<!fir.type<_QFtest_parent_component2Tbase{z:!fir.char<1,5>}>>, !fir.field) -> !fir.ref<!fir.char<1,5>>
+! CHECK:         %[[VAL_11:.*]] = fir.field_index z, !fir.type<_QFtest_parent_component2Tbase{z:!fir.char<1,5>}>
+! CHECK:         %[[VAL_12:.*]] = fir.coordinate_of %[[VAL_8]], %[[VAL_11]] : (!fir.ref<!fir.type<_QFtest_parent_component2Tbase{z:!fir.char<1,5>}>>, !fir.field) -> !fir.ref<!fir.char<1,5>>
+! CHECK:         %[[VAL_13:.*]] = arith.constant 5 : index
+! CHECK:         %[[VAL_14:.*]] = arith.constant 1 : i64
+! CHECK:         %[[VAL_15:.*]] = fir.convert %[[VAL_13]] : (index) -> i64
+! CHECK:         %[[VAL_16:.*]] = arith.muli %[[VAL_14]], %[[VAL_15]] : i64
+! CHECK:         %[[VAL_17:.*]] = arith.constant false
+! CHECK:         %[[VAL_18:.*]] = fir.convert %[[VAL_12]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
+! CHECK:         %[[VAL_19:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
+! CHECK:         fir.call @llvm.memmove.p0.p0.i64(%[[VAL_18]], %[[VAL_19]], %[[VAL_16]], %[[VAL_17]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:         %[[VAL_20:.*]] = fir.field_index mask, !fir.type<_QFtest_parent_component2Tmid{z:!fir.char<1,5>,mask:!fir.logical<4>}>
+! CHECK:         %[[VAL_21:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_20]] : (!fir.ref<!fir.type<_QFtest_parent_component2Tmid{z:!fir.char<1,5>,mask:!fir.logical<4>}>>, !fir.field) -> !fir.ref<!fir.logical<4>>
+! CHECK:         %[[VAL_22:.*]] = arith.constant true
+! CHECK:         %[[VAL_23:.*]] = fir.convert %[[VAL_22]] : (i1) -> !fir.logical<4>
+! CHECK:         fir.store %[[VAL_23]] to %[[VAL_21]] : !fir.ref<!fir.logical<4>>
+! CHECK:         fir.call @_QPprint_parent_component2(%[[VAL_0]]) : (!fir.ref<!fir.type<_QFtest_parent_component2Tmid{z:!fir.char<1,5>,mask:!fir.logical<4>}>>) -> ()
+! CHECK:         return
+! CHECK:       }
+
+subroutine test_parent_component2()
+  type base
+    character(5) :: z
+  end type base
+  type, extends(base) :: mid
+    logical :: mask
+  end type mid
+  type(base) :: pv = base("aaa")
+
+  call print_parent_component2(mid(base = pv, mask = .true.))
+end
+
+! CHECK-LABEL: func.func @_QPtest_parent_component3(
+! CHECK-SAME:                                       %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_parent_component3Tbase{m:!fir.array<2x!fir.char<1,5>>}>>>> {fir.bindc_name = "pp"}) {
+! CHECK:         %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.type<_QFtest_parent_component3Tbase{m:!fir.array<2x!fir.char<1,5>>}>>
+! CHECK:         %[[VAL_2:.*]] = fir.alloca !fir.type<_QFtest_parent_component3Tmid{m:!fir.array<2x!fir.char<1,5>>,mask:!fir.logical<4>}>
+! CHECK:         %[[VAL_9:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QFtest_parent_component3Tbase{m:!fir.array<2x!fir.char<1,5>>}>>>>
+! CHECK:         %[[VAL_10:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.type<_QFtest_parent_component3Tmid{m:!fir.array<2x!fir.char<1,5>>,mask:!fir.logical<4>}>>) -> !fir.ref<!fir.type<_QFtest_parent_component3Tbase{m:!fir.array<2x!fir.char<1,5>>}>>
+! CHECK:         %[[VAL_11:.*]] = fir.embox %[[VAL_10]] : (!fir.ref<!fir.type<_QFtest_parent_component3Tbase{m:!fir.array<2x!fir.char<1,5>>}>>) -> !fir.box<!fir.type<_QFtest_parent_component3Tbase{m:!fir.array<2x!fir.char<1,5>>}>>
+! CHECK:         fir.store %[[VAL_11]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.type<_QFtest_parent_component3Tbase{m:!fir.array<2x!fir.char<1,5>>}>>>
+! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.type<_QFtest_parent_component3Tbase{m:!fir.array<2x!fir.char<1,5>>}>>>) -> !fir.ref<!fir.box<none>>
+! CHECK:         %[[VAL_15:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.ptr<!fir.type<_QFtest_parent_component3Tbase{m:!fir.array<2x!fir.char<1,5>>}>>>) -> !fir.box<none>
+! CHECK:         %[[VAL_17:.*]] = fir.call @_FortranAAssign(%[[VAL_14]], %[[VAL_15]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:         %[[VAL_18:.*]] = fir.field_index mask, !fir.type<_QFtest_parent_component3Tmid{m:!fir.array<2x!fir.char<1,5>>,mask:!fir.logical<4>}>
+! CHECK:         %[[VAL_19:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_18]] : (!fir.ref<!fir.type<_QFtest_parent_component3Tmid{m:!fir.array<2x!fir.char<1,5>>,mask:!fir.logical<4>}>>, !fir.field) -> !fir.ref<!fir.logical<4>>
+! CHECK:         %[[VAL_20:.*]] = arith.constant true
+! CHECK:         %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i1) -> !fir.logical<4>
+! CHECK:         fir.store %[[VAL_21]] to %[[VAL_19]] : !fir.ref<!fir.logical<4>>
+! CHECK:         fir.call @_QPprint_parent_component3(%[[VAL_2]]) : (!fir.ref<!fir.type<_QFtest_parent_component3Tmid{m:!fir.array<2x!fir.char<1,5>>,mask:!fir.logical<4>}>>) -> ()
+! CHECK:         return
+! CHECK:       }
+
+subroutine test_parent_component3(pp)
+  type base
+    character(5) :: m(2)
+  end type base
+  type, extends(base) :: mid
+    logical :: mask
+  end type mid
+  type(base), pointer :: pp
+
+  call print_parent_component3(mid(base = pp, mask = .true.))
+end

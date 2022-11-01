@@ -3,6 +3,9 @@
 ; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
 target triple = "dxil-unknown-shadermodel6.5-library"
 
+; Make sure triple is restored after updated to dxil.
+; CHECK:target triple = "dxil-unknown-shadermodel6.5-library"
+
 define i32 @add(i32 %a, i32 %b) {
   %sum = add i32 %a, %b
   ret i32 %sum

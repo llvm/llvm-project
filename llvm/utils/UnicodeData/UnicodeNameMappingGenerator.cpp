@@ -43,7 +43,7 @@ loadDataFiles(const std::string &NamesFile, const std::string &AliasesFile) {
       if (FirstSemiPos == std::string::npos)
         continue;
       auto SecondSemiPos = Line.find(';', FirstSemiPos + 1);
-      if (FirstSemiPos == std::string::npos)
+      if (SecondSemiPos == std::string::npos)
         continue;
       unsigned long long CodePoint;
       if (llvm::getAsUnsignedInteger(

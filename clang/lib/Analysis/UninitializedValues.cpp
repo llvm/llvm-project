@@ -46,7 +46,8 @@ static bool isTrackedVar(const VarDecl *vd, const DeclContext *dc) {
       !vd->isExceptionVariable() && !vd->isInitCapture() &&
       !vd->isImplicit() && vd->getDeclContext() == dc) {
     QualType ty = vd->getType();
-    return ty->isScalarType() || ty->isVectorType() || ty->isRecordType();
+    return ty->isScalarType() || ty->isVectorType() || ty->isRecordType() ||
+           ty->isRVVType();
   }
   return false;
 }

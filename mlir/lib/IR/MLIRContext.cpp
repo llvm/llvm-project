@@ -429,9 +429,11 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
           ") while in a multi-threaded execution context (maybe "
           "the PassManager): this can indicate a "
           "missing `dependentDialects` in a pass for example.");
-#endif
-    std::unique_ptr<Dialect> &dialect =
-        impl.loadedDialects.insert({dialectNamespace, ctor()}).first->second;
+#endif // NDEBUG
+    // nullptr indicates that the dialect is currently being loaded.
+    impl.loadedDialects[dialectNamespace] = nullptr;
+    std::unique_ptr<Dialect> &dialect = impl.loadedDialects[dialectNamespace] =
+        ctor();
     assert(dialect && "dialect ctor failed");
 
     // Refresh all the identifiers dialect field, this catches cases where a
@@ -449,6 +451,14 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
     return dialect.get();
   }
 
+#ifndef NDEBUG
+  if (dialectIt->second == nullptr)
+    llvm::report_fatal_error(
+        "Loading (and getting) a dialect (" + dialectNamespace +
+        ") while the same dialect is still loading: use loadDialect instead "
+        "of getOrLoadDialect.");
+#endif // NDEBUG
+
   // Abort if dialect with namespace has already been registered.
   std::unique_ptr<Dialect> &dialect = dialectIt->second;
   if (dialect->getTypeID() != dialectID)
@@ -456,6 +466,12 @@ MLIRContext::getOrLoadDialect(StringRef dialectNamespace, TypeID dialectID,
                              "' has already been registered");
 
   return dialect.get();
+}
+
+bool MLIRContext::isDialectLoading(StringRef dialectNamespace) {
+  auto it = getImpl().loadedDialects.find(dialectNamespace);
+  // nullptr indicates that the dialect is currently being loaded.
+  return it != getImpl().loadedDialects.end() && it->second == nullptr;
 }
 
 DynamicDialect *MLIRContext::getOrLoadDynamicDialect(

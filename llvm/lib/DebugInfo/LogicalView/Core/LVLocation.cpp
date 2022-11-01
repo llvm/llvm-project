@@ -469,9 +469,9 @@ bool LVLocation::validateRanges() {
   if (!hasAssociatedRange())
     return true;
 
-  LVScopeCompileUnit *Scope = getReader().getCompileUnit();
-  LVLine *LowLine = Scope->lineLowerBound(getLowerAddress());
-  LVLine *HighLine = Scope->lineUpperBound(getUpperAddress());
+  LVLineRange Range = getReaderCompileUnit()->lineRange(this);
+  LVLine *LowLine = Range.first;
+  LVLine *HighLine = Range.second;
   if (LowLine)
     setLowerLine(LowLine);
   else {

@@ -1,4 +1,4 @@
-; RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir --delta-passes=simplify-instructions -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce -abort-on-invalid-reduction --delta-passes=simplify-instructions --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefix=RESULT %s < %t
 
 ; CHECK-INTERESTINGNESS: ret

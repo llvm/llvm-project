@@ -150,7 +150,7 @@ mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
 static Operation *matchLinalgReduction(OpOperand *outputOperand) {
   auto linalgOp = cast<LinalgOp>(outputOperand->getOwner());
   unsigned outputPos =
-      outputOperand->getOperandNumber() - linalgOp.getNumInputs();
+      outputOperand->getOperandNumber() - linalgOp.getNumDpsInputs();
   // Only single combiner operations are supported for now.
   SmallVector<Operation *, 4> combinerOps;
   if (!matchReduction(linalgOp.getRegionOutputArgs(), outputPos, combinerOps) ||
@@ -263,7 +263,7 @@ vectorizeLinalgYield(OpBuilder &b, Operation *op,
     // TODO: use a map.
     Value vectorValue = bvm.lookup(outputs.value());
     Value newResult = buildVectorWrite(
-        b, vectorValue, linalgOp.getOutputOperand(outputs.index()));
+        b, vectorValue, linalgOp.getDpsInitOperand(outputs.index()));
     if (newResult)
       newResults.push_back(newResult);
   }
@@ -435,12 +435,12 @@ vectorizeOneOp(OpBuilder &b, LinalgOp linalgOp, Operation *op,
   SmallVector<std::pair<Value, Value>> reductionOperands;
   for (Value operand : op->getOperands()) {
     auto arg = operand.dyn_cast<BlockArgument>();
-    if (!arg || arg.getArgNumber() < linalgOp.getNumInputs())
+    if (!arg || arg.getArgNumber() < linalgOp.getNumDpsInputs())
       continue;
     SmallVector<Operation *> reductionOps;
     Value reduceValue = matchReduction(
         linalgOp.getRegionOutputArgs(),
-        arg.getArgNumber() - linalgOp.getNumInputs(), reductionOps);
+        arg.getArgNumber() - linalgOp.getNumDpsInputs(), reductionOps);
     if (!reduceValue)
       continue;
     reductionOperands.push_back(std::make_pair(reduceValue, operand));
@@ -517,7 +517,7 @@ vectorizeAsLinalgGeneric(OpBuilder &b, LinalgOp linalgOp,
   mlir::getUsedValuesDefinedAbove(linalgOp->getRegion(0), valuesSet);
   bvm.map(valuesSet.getArrayRef(), valuesSet.getArrayRef());
 
-  if (linalgOp.getNumOutputs() == 0)
+  if (linalgOp.getNumDpsInits() == 0)
     return failure();
 
   // TODO: the common vector shape is equal to the static loop sizes only when
@@ -528,10 +528,10 @@ vectorizeAsLinalgGeneric(OpBuilder &b, LinalgOp linalgOp,
   // 3. Turn all BBArgs into vector.transfer_read / load.
   Location loc = linalgOp.getLoc();
   Value zero = b.create<arith::ConstantIndexOp>(loc, 0);
-  for (OpOperand &opOperand : linalgOp->getOpOperands()) {
-    BlockArgument bbarg = block->getArgument(opOperand.getOperandNumber());
-    if (linalgOp.isScalar(&opOperand)) {
-      bvm.map(bbarg, opOperand.get());
+  for (OpOperand *opOperand : linalgOp.getOpOperandsMatchingBBargs()) {
+    BlockArgument bbarg = linalgOp.getMatchingBlockArgument(opOperand);
+    if (linalgOp.isScalar(opOperand)) {
+      bvm.map(bbarg, opOperand->get());
       continue;
     }
     VectorType readType;
@@ -540,23 +540,23 @@ vectorizeAsLinalgGeneric(OpBuilder &b, LinalgOp linalgOp,
     // if (linalgOp.getShape(&opOperand).empty()) {
     //   readType = VectorType::get({}, bbarg.getType());
     // } else {
-    if (opOperand.getOperandNumber() < linalgOp.getNumInputs()) {
+    if (opOperand->getOperandNumber() < linalgOp.getNumDpsInputs()) {
       map = inverseAndBroadcastProjectedPermutation(
-          linalgOp.getMatchingIndexingMap(&opOperand));
+          linalgOp.getMatchingIndexingMap(opOperand));
       readType = VectorType::get(commonVectorShape,
-                                 getElementTypeOrSelf(opOperand.get()));
+                                 getElementTypeOrSelf(opOperand->get()));
     } else {
       map = inversePermutation(
-          reindexIndexingMap(linalgOp.getMatchingIndexingMap(&opOperand)));
-      readType = VectorType::get(map.compose(linalgOp.getShape(&opOperand)),
-                                 getElementTypeOrSelf(opOperand.get()));
+          reindexIndexingMap(linalgOp.getMatchingIndexingMap(opOperand)));
+      readType = VectorType::get(map.compose(linalgOp.getShape(opOperand)),
+                                 getElementTypeOrSelf(opOperand->get()));
     }
     // }
 
-    auto shape = linalgOp.getShape(&opOperand);
+    auto shape = linalgOp.getShape(opOperand);
     SmallVector<Value> indices(shape.size(), zero);
     Value readValue = b.create<vector::TransferReadOp>(
-        loc, readType, opOperand.get(), indices, map);
+        loc, readType, opOperand->get(), indices, map);
     // Not all ops support 0-d vectors, extract the scalar for now.
     // TODO: remove this.
     if (readValue.getType().cast<VectorType>().getRank() == 0)
@@ -564,7 +564,7 @@ vectorizeAsLinalgGeneric(OpBuilder &b, LinalgOp linalgOp,
 
     LDBG("new vectorized bbarg(" << bbarg.getArgNumber() << "): " << readValue);
     bvm.map(bbarg, readValue);
-    bvm.map(opOperand.get(), readValue);
+    bvm.map(opOperand->get(), readValue);
   }
 
   SmallVector<CustomVectorizationHook> hooks;
@@ -615,7 +615,7 @@ static LogicalResult reductionPreconditions(LinalgOp op) {
     LDBG("reduction precondition failed: no reduction iterator");
     return failure();
   }
-  for (OpOperand *opOperand : op.getOutputOperands()) {
+  for (OpOperand *opOperand : op.getDpsInitOperands()) {
     AffineMap indexingMap = op.getMatchingIndexingMap(opOperand);
     if (indexingMap.isPermutation())
       continue;
@@ -1426,11 +1426,11 @@ struct Conv1DGenerator : public StructuredGenerator<LinalgOp> {
       : StructuredGenerator<LinalgOp>(builder, linalgOp), strideW(strideW),
         dilationW(dilationW) {
     // Determine whether `linalgOp` can be generated with this generator
-    if (linalgOp.getNumInputs() != 2 || linalgOp.getNumOutputs() != 1)
+    if (linalgOp.getNumDpsInputs() != 2 || linalgOp.getNumDpsInits() != 1)
       return;
-    lhsShaped = linalgOp.getInputOperand(0)->get();
-    rhsShaped = linalgOp.getInputOperand(1)->get();
-    resShaped = linalgOp.getOutputOperand(0)->get();
+    lhsShaped = linalgOp.getDpsInputOperand(0)->get();
+    rhsShaped = linalgOp.getDpsInputOperand(1)->get();
+    resShaped = linalgOp.getDpsInitOperand(0)->get();
     lhsShapedType = lhsShaped.getType().dyn_cast<ShapedType>();
     rhsShapedType = rhsShaped.getType().dyn_cast<ShapedType>();
     resShapedType = resShaped.getType().dyn_cast<ShapedType>();
@@ -1442,7 +1442,7 @@ struct Conv1DGenerator : public StructuredGenerator<LinalgOp> {
       return;
 
     // Check for reduction `add` preceded by `mul`.
-    Operation *reduceOp = matchLinalgReduction(linalgOp.getOutputOperand(0));
+    Operation *reduceOp = matchLinalgReduction(linalgOp.getDpsInitOperand(0));
     if (!reduceOp)
       return;
     llvm::Optional<vector::CombiningKind> maybeKind;

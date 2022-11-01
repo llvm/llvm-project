@@ -72,12 +72,32 @@ static cl::opt<unsigned> UnrollForcePeelCount(
     "unroll-force-peel-count", cl::init(0), cl::Hidden,
     cl::desc("Force a peel count regardless of profiling information."));
 
+static cl::opt<bool> DisableAdvancedPeeling(
+    "disable-advanced-peeling", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Disable advance peeling. Issues for convergent targets (D134803)."));
+
 static const char *PeeledCountMetaData = "llvm.loop.peeled.count";
 
 // Check whether we are capable of peeling this loop.
 bool llvm::canPeel(Loop *L) {
   // Make sure the loop is in simplified form
-  return L->isLoopSimplifyForm();
+  if (!L->isLoopSimplifyForm())
+    return false;
+  if (!DisableAdvancedPeeling)
+    return true;
+
+  SmallVector<BasicBlock *, 4> Exits;
+  L->getUniqueNonLatchExitBlocks(Exits);
+  // The latch must either be the only exiting block or all non-latch exit
+  // blocks have either a deopt or unreachable terminator or compose a chain of
+  // blocks where the last one is either deopt or unreachable terminated. Both
+  // deopt and unreachable terminators are a strong indication they are not
+  // taken. Note that this is a profitability check, not a legality check. Also
+  // note that LoopPeeling currently can only update the branch weights of latch
+  // blocks and branch weights to blocks with deopt or unreachable do not need
+  // updating.
+  return llvm::all_of(Exits, IsBlockFollowedByDeoptOrUnreachable);
 }
 
 // This function calculates the number of iterations after which the given Phi

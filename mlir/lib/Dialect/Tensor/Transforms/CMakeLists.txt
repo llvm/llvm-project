@@ -19,6 +19,7 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRBufferizationDialect
   MLIRBufferizationTransforms
   MLIRIR
+  MLIRLinalgDialect
   MLIRMemRefDialect
   MLIRPass
   MLIRSCFDialect

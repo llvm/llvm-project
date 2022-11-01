@@ -243,6 +243,9 @@ HANDLE_DW_TAG(0x420c, SUN_f90_interface, 0, SUN, DW_KIND_NONE)
 HANDLE_DW_TAG(0x420d, SUN_fortran_vax_structure, 0, SUN, DW_KIND_NONE)
 HANDLE_DW_TAG(0x42ff, SUN_hi, 0, SUN, DW_KIND_NONE)
 
+// LLVM
+HANDLE_DW_TAG(0x4300, LLVM_ptrauth_type, 0, LLVM, DW_KIND_TYPE)
+
 // DSP-C/Starcore __circ, _rev
 HANDLE_DW_TAG(0x5101, ALTIUM_circ_type, 0, ALTIUM, DW_KIND_NONE)
 HANDLE_DW_TAG(0x5102, ALTIUM_mwa_circ_type, 0, ALTIUM, DW_KIND_NONE)
@@ -1226,6 +1229,8 @@ HANDLE_DW_IDX(0x02, type_unit)
 HANDLE_DW_IDX(0x03, die_offset)
 HANDLE_DW_IDX(0x04, parent)
 HANDLE_DW_IDX(0x05, type_hash)
+HANDLE_DW_IDX(0x2000, GNU_internal)
+HANDLE_DW_IDX(0x2001, GNU_external)
 
 // DWARF package file section identifiers.
 // DWARFv5, section 7.3.5.3, table 7.1.

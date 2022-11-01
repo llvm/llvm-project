@@ -72,13 +72,7 @@ static MapInfo gatherMapInfo() {
         info.files.push_back(file);
     }
   parallelSort(info.liveSymbols.begin(), info.liveSymbols.end(),
-               [](Defined *a, Defined *b) {
-                 return a->getVA() != b->getVA() ? a->getVA() < b->getVA()
-                                                 : a->getName() < b->getName();
-               });
-  parallelSort(
-      info.deadSymbols.begin(), info.deadSymbols.end(),
-      [](Defined *a, Defined *b) { return a->getName() < b->getName(); });
+               [](Defined *a, Defined *b) { return a->getVA() < b->getVA(); });
   return info;
 }
 

@@ -20,7 +20,7 @@ program test_sync_images
   ! Image set shall not depend on the value of errmsg-variable
   sync images(len(error_message), errmsg=error_message)
 
-  ! Image set shall be a scalar or rank-1 array
+  !ERROR: An image-set that is an int-expr must be a scalar or a rank-one array
   sync images(invalid_rank)
 
   !ERROR: Must have INTEGER type, but is LOGICAL(4)
@@ -32,16 +32,22 @@ program test_sync_images
   !ERROR: Must have CHARACTER type, but is LOGICAL(4)
   sync images(1, errmsg=invalid_type)
 
-  ! No specifier shall appear more than once in a given sync-stat-list
+  !ERROR: The stat-variable in a sync-stat-list may not be repeated
   sync images(1, stat=sync_status, stat=superfluous_stat)
 
-  ! No specifier shall appear more than once in a given sync-stat-list
+  !ERROR: The stat-variable in a sync-stat-list may not be repeated
+  sync images(1, stat=sync_status, errmsg=error_message, stat=superfluous_stat)
+
+  !ERROR: The errmsg-variable in a sync-stat-list may not be repeated
   sync images([1], errmsg=error_message, errmsg=superfluous_errmsg)
 
-  ! Fortran 2018 standard C1173: `stat` shall not be coindexed
+  !ERROR: The errmsg-variable in a sync-stat-list may not be repeated
+  sync images([1], stat=sync_status, errmsg=error_message, errmsg=superfluous_errmsg)
+
+  !ERROR: The stat-variable or errmsg-variable in a sync-stat-list may not be a coindexed object
   sync images(*, stat=coindexed_integer[1])
 
-  ! Fortran 2018 standard C1173: `errmsg` shall not be coindexed
+  !ERROR: The stat-variable or errmsg-variable in a sync-stat-list may not be a coindexed object
   sync images(1, errmsg=coindexed_character[1])
 
 end program test_sync_images

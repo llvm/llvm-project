@@ -917,31 +917,6 @@ TEST_F(MDNodeTest, deleteTemporaryWithTrackingRef) {
 
 typedef MetadataTest DILocationTest;
 
-TEST_F(DILocationTest, Overflow) {
-  DISubprogram *N = getSubprogram();
-  {
-    DILocation *L = DILocation::get(Context, 2, 7, N);
-    EXPECT_EQ(2u, L->getLine());
-    EXPECT_EQ(7u, L->getColumn());
-  }
-  unsigned U16 = 1u << 16;
-  {
-    DILocation *L = DILocation::get(Context, UINT32_MAX, U16 - 1, N);
-    EXPECT_EQ(UINT32_MAX, L->getLine());
-    EXPECT_EQ(U16 - 1, L->getColumn());
-  }
-  {
-    DILocation *L = DILocation::get(Context, UINT32_MAX, U16, N);
-    EXPECT_EQ(UINT32_MAX, L->getLine());
-    EXPECT_EQ(0u, L->getColumn());
-  }
-  {
-    DILocation *L = DILocation::get(Context, UINT32_MAX, U16 + 1, N);
-    EXPECT_EQ(UINT32_MAX, L->getLine());
-    EXPECT_EQ(0u, L->getColumn());
-  }
-}
-
 TEST_F(DILocationTest, Merge) {
   DISubprogram *N = getSubprogram();
   DIScope *S = DILexicalBlock::get(Context, N, getFile(), 3, 4);
@@ -961,9 +936,22 @@ TEST_F(DILocationTest, Merge) {
     auto *A = DILocation::get(Context, 2, 7, N);
     auto *B = DILocation::get(Context, 2, 7, S);
     auto *M = DILocation::getMergedLocation(A, B);
-    EXPECT_EQ(0u, M->getLine()); // FIXME: Should this be 2?
-    EXPECT_EQ(0u, M->getColumn()); // FIXME: Should this be 7?
+    EXPECT_EQ(2u, M->getLine());
+    EXPECT_EQ(7u, M->getColumn());
     EXPECT_EQ(N, M->getScope());
+  }
+
+  {
+    // Same line, different column.
+    auto *A = DILocation::get(Context, 2, 7, N);
+    auto *B = DILocation::get(Context, 2, 10, S);
+    auto *M0 = DILocation::getMergedLocation(A, B);
+    auto *M1 = DILocation::getMergedLocation(B, A);
+    for (auto *M : {M0, M1}) {
+      EXPECT_EQ(2u, M->getLine());
+      EXPECT_EQ(0u, M->getColumn());
+      EXPECT_EQ(N, M->getScope());
+    }
   }
 
   {
@@ -998,15 +986,36 @@ TEST_F(DILocationTest, Merge) {
 
     auto *I = DILocation::get(Context, 2, 7, N);
     auto *A = DILocation::get(Context, 1, 6, SP1, I);
-    auto *B = DILocation::get(Context, 2, 7, SP2, I);
+    auto *B = DILocation::get(Context, 3, 8, SP2, I);
     auto *M = DILocation::getMergedLocation(A, B);
-    EXPECT_EQ(0u, M->getLine());
-    EXPECT_EQ(0u, M->getColumn());
-    EXPECT_TRUE(isa<DILocalScope>(M->getScope()));
-    EXPECT_EQ(I, M->getInlinedAt());
+    EXPECT_EQ(2u, M->getLine());
+    EXPECT_EQ(7u, M->getColumn());
+    EXPECT_EQ(N, M->getScope());
+    EXPECT_EQ(nullptr, M->getInlinedAt());
   }
 
-   {
+  {
+    // Different function, inlined-at same line, but different column.
+    auto *F = getFile();
+    auto *SP1 = DISubprogram::getDistinct(Context, F, "a", "a", F, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+    auto *SP2 = DISubprogram::getDistinct(Context, F, "b", "b", F, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *IA = DILocation::get(Context, 2, 7, N);
+    auto *IB = DILocation::get(Context, 2, 8, N);
+    auto *A = DILocation::get(Context, 1, 6, SP1, IA);
+    auto *B = DILocation::get(Context, 3, 8, SP2, IB);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(2u, M->getLine());
+    EXPECT_EQ(0u, M->getColumn());
+    EXPECT_EQ(N, M->getScope());
+    EXPECT_EQ(nullptr, M->getInlinedAt());
+  }
+
+  {
     // Completely different.
     auto *I = DILocation::get(Context, 2, 7, N);
     auto *A = DILocation::get(Context, 1, 6, S, I);
@@ -1016,6 +1025,67 @@ TEST_F(DILocationTest, Merge) {
     EXPECT_EQ(0u, M->getColumn());
     EXPECT_TRUE(isa<DILocalScope>(M->getScope()));
     EXPECT_EQ(S, M->getScope());
+    EXPECT_EQ(nullptr, M->getInlinedAt());
+  }
+
+  // Two locations, same line/column different file, inlined at the same place.
+  {
+    auto *FA = getFile();
+    auto *FB = getFile();
+    auto *FI = getFile();
+
+    auto *SPA = DISubprogram::getDistinct(Context, FA, "a", "a", FA, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPB = DISubprogram::getDistinct(Context, FB, "b", "b", FB, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPI = DISubprogram::getDistinct(Context, FI, "i", "i", FI, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *I = DILocation::get(Context, 3, 8, SPI);
+    auto *A = DILocation::get(Context, 2, 7, SPA, I);
+    auto *B = DILocation::get(Context, 2, 7, SPB, I);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(3u, M->getLine());
+    EXPECT_EQ(8u, M->getColumn());
+    EXPECT_TRUE(isa<DILocalScope>(M->getScope()));
+    EXPECT_EQ(SPI, M->getScope());
+    EXPECT_EQ(nullptr, M->getInlinedAt());
+  }
+
+  // Two locations, same line/column different file, one location with 2 scopes,
+  // inlined at the same place.
+  {
+    auto *FA = getFile();
+    auto *FB = getFile();
+    auto *FI = getFile();
+
+    auto *SPA = DISubprogram::getDistinct(Context, FA, "a", "a", FA, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPB = DISubprogram::getDistinct(Context, FB, "b", "b", FB, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPI = DISubprogram::getDistinct(Context, FI, "i", "i", FI, 0, nullptr,
+                                          0, nullptr, 0, 0, DINode::FlagZero,
+                                          DISubprogram::SPFlagZero, nullptr);
+
+    auto *SPAScope = DILexicalBlock::getDistinct(Context, SPA, FA, 4, 9);
+
+    auto *I = DILocation::get(Context, 3, 8, SPI);
+    auto *A = DILocation::get(Context, 2, 7, SPAScope, I);
+    auto *B = DILocation::get(Context, 2, 7, SPB, I);
+    auto *M = DILocation::getMergedLocation(A, B);
+    EXPECT_EQ(3u, M->getLine());
+    EXPECT_EQ(8u, M->getColumn());
+    EXPECT_TRUE(isa<DILocalScope>(M->getScope()));
+    EXPECT_EQ(SPI, M->getScope());
     EXPECT_EQ(nullptr, M->getInlinedAt());
   }
 }
@@ -2962,12 +3032,43 @@ TEST_F(DIExpressionTest, createFragmentExpression) {
   EXPECT_VALID_FRAGMENT(16, 16, dwarf::DW_OP_LLVM_fragment, 0, 32);
 
   // Invalid fragment expressions (incompatible ops).
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 6, dwarf::DW_OP_plus);
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 14, dwarf::DW_OP_minus);
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shr);
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shl);
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shra);
-  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 6, dwarf::DW_OP_plus,
+                          dwarf::DW_OP_stack_value);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 14, dwarf::DW_OP_minus,
+                          dwarf::DW_OP_stack_value);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shr,
+                          dwarf::DW_OP_stack_value);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shl,
+                          dwarf::DW_OP_stack_value);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 16, dwarf::DW_OP_shra,
+                          dwarf::DW_OP_stack_value);
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                          dwarf::DW_OP_stack_value);
+
+  // Fragments can be created for expressions using DW_OP_plus to compute an
+  // address.
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_constu, 6, dwarf::DW_OP_plus);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6, dwarf::DW_OP_deref);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6, dwarf::DW_OP_deref,
+                        dwarf::DW_OP_stack_value);
+
+  // Check the other deref operations work in the same way.
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                        dwarf::DW_OP_deref_size, 1);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                        dwarf::DW_OP_deref_type, 1, 1);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                        dwarf::DW_OP_xderef);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                        dwarf::DW_OP_xderef_size, 1);
+  EXPECT_VALID_FRAGMENT(0, 32, dwarf::DW_OP_plus_uconst, 6,
+                        dwarf::DW_OP_xderef_type, 1, 1);
+
+  // Fragments cannot be created for expressions using DW_OP_plus to compute an
+  // implicit value (check that this correctly fails even though there is a
+  // deref in the expression).
+  EXPECT_INVALID_FRAGMENT(0, 32, dwarf::DW_OP_deref, dwarf::DW_OP_plus_uconst,
+                          2, dwarf::DW_OP_stack_value);
 
 #undef EXPECT_VALID_FRAGMENT
 #undef EXPECT_INVALID_FRAGMENT

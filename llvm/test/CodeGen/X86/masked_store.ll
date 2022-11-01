@@ -5325,11 +5325,8 @@ define void @widen_masked_store(<3 x i32> %v, <3 x i32>* %p, <3 x i1> %mask) {
 ; AVX512F-LABEL: widen_masked_store:
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; AVX512F-NEXT:    movw $-3, %ax
-; AVX512F-NEXT:    kmovw %eax, %k0
 ; AVX512F-NEXT:    andl $1, %esi
-; AVX512F-NEXT:    kmovw %esi, %k1
-; AVX512F-NEXT:    kandw %k0, %k1, %k0
+; AVX512F-NEXT:    kmovw %esi, %k0
 ; AVX512F-NEXT:    kmovw %edx, %k1
 ; AVX512F-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512F-NEXT:    kshiftrw $14, %k1, %k1
@@ -5341,6 +5338,9 @@ define void @widen_masked_store(<3 x i32> %v, <3 x i32>* %p, <3 x i1> %mask) {
 ; AVX512F-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512F-NEXT:    kshiftrw $13, %k1, %k1
 ; AVX512F-NEXT:    korw %k1, %k0, %k0
+; AVX512F-NEXT:    movb $7, %al
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    kandw %k1, %k0, %k0
 ; AVX512F-NEXT:    kshiftlw $12, %k0, %k0
 ; AVX512F-NEXT:    kshiftrw $12, %k0, %k1
 ; AVX512F-NEXT:    vmovdqu32 %zmm0, (%rdi) {%k1}
@@ -5349,33 +5349,30 @@ define void @widen_masked_store(<3 x i32> %v, <3 x i32>* %p, <3 x i1> %mask) {
 ;
 ; AVX512VLDQ-LABEL: widen_masked_store:
 ; AVX512VLDQ:       ## %bb.0:
-; AVX512VLDQ-NEXT:    movb $-3, %al
-; AVX512VLDQ-NEXT:    kmovw %eax, %k0
+; AVX512VLDQ-NEXT:    kmovw %edx, %k0
+; AVX512VLDQ-NEXT:    kshiftlb $7, %k0, %k0
+; AVX512VLDQ-NEXT:    kshiftrb $6, %k0, %k0
 ; AVX512VLDQ-NEXT:    kmovw %esi, %k1
 ; AVX512VLDQ-NEXT:    kshiftlb $7, %k1, %k1
 ; AVX512VLDQ-NEXT:    kshiftrb $7, %k1, %k1
-; AVX512VLDQ-NEXT:    kandw %k0, %k1, %k0
-; AVX512VLDQ-NEXT:    kmovw %edx, %k1
-; AVX512VLDQ-NEXT:    kshiftlb $7, %k1, %k1
-; AVX512VLDQ-NEXT:    kshiftrb $6, %k1, %k1
-; AVX512VLDQ-NEXT:    korw %k1, %k0, %k0
+; AVX512VLDQ-NEXT:    korw %k0, %k1, %k0
 ; AVX512VLDQ-NEXT:    movb $-5, %al
 ; AVX512VLDQ-NEXT:    kmovw %eax, %k1
 ; AVX512VLDQ-NEXT:    kandw %k1, %k0, %k0
 ; AVX512VLDQ-NEXT:    kmovw %ecx, %k1
 ; AVX512VLDQ-NEXT:    kshiftlb $7, %k1, %k1
 ; AVX512VLDQ-NEXT:    kshiftrb $5, %k1, %k1
-; AVX512VLDQ-NEXT:    korw %k1, %k0, %k1
+; AVX512VLDQ-NEXT:    korw %k1, %k0, %k0
+; AVX512VLDQ-NEXT:    movb $7, %al
+; AVX512VLDQ-NEXT:    kmovw %eax, %k1
+; AVX512VLDQ-NEXT:    kandw %k1, %k0, %k1
 ; AVX512VLDQ-NEXT:    vmovdqa32 %xmm0, (%rdi) {%k1}
 ; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: widen_masked_store:
 ; AVX512VLBW:       ## %bb.0:
-; AVX512VLBW-NEXT:    movw $-3, %ax
-; AVX512VLBW-NEXT:    kmovd %eax, %k0
 ; AVX512VLBW-NEXT:    andl $1, %esi
-; AVX512VLBW-NEXT:    kmovw %esi, %k1
-; AVX512VLBW-NEXT:    kandw %k0, %k1, %k0
+; AVX512VLBW-NEXT:    kmovw %esi, %k0
 ; AVX512VLBW-NEXT:    kmovd %edx, %k1
 ; AVX512VLBW-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512VLBW-NEXT:    kshiftrw $14, %k1, %k1
@@ -5386,29 +5383,32 @@ define void @widen_masked_store(<3 x i32> %v, <3 x i32>* %p, <3 x i1> %mask) {
 ; AVX512VLBW-NEXT:    kmovd %ecx, %k1
 ; AVX512VLBW-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512VLBW-NEXT:    kshiftrw $13, %k1, %k1
-; AVX512VLBW-NEXT:    korw %k1, %k0, %k1
+; AVX512VLBW-NEXT:    korw %k1, %k0, %k0
+; AVX512VLBW-NEXT:    movb $7, %al
+; AVX512VLBW-NEXT:    kmovd %eax, %k1
+; AVX512VLBW-NEXT:    kandw %k1, %k0, %k1
 ; AVX512VLBW-NEXT:    vmovdqa32 %xmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    retq
 ;
 ; X86-AVX512-LABEL: widen_masked_store:
 ; X86-AVX512:       ## %bb.0:
-; X86-AVX512-NEXT:    movb $-3, %al
-; X86-AVX512-NEXT:    kmovd %eax, %k0
+; X86-AVX512-NEXT:    kmovb {{[0-9]+}}(%esp), %k0
+; X86-AVX512-NEXT:    kshiftlb $7, %k0, %k0
+; X86-AVX512-NEXT:    kshiftrb $6, %k0, %k0
 ; X86-AVX512-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
 ; X86-AVX512-NEXT:    kshiftlb $7, %k1, %k1
 ; X86-AVX512-NEXT:    kshiftrb $7, %k1, %k1
-; X86-AVX512-NEXT:    kandw %k0, %k1, %k0
-; X86-AVX512-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
-; X86-AVX512-NEXT:    kshiftlb $7, %k1, %k1
-; X86-AVX512-NEXT:    kshiftrb $6, %k1, %k1
-; X86-AVX512-NEXT:    korw %k1, %k0, %k0
+; X86-AVX512-NEXT:    korw %k0, %k1, %k0
 ; X86-AVX512-NEXT:    movb $-5, %al
 ; X86-AVX512-NEXT:    kmovd %eax, %k1
 ; X86-AVX512-NEXT:    kandw %k1, %k0, %k0
 ; X86-AVX512-NEXT:    kmovb {{[0-9]+}}(%esp), %k1
 ; X86-AVX512-NEXT:    kshiftlb $7, %k1, %k1
 ; X86-AVX512-NEXT:    kshiftrb $5, %k1, %k1
-; X86-AVX512-NEXT:    korw %k1, %k0, %k1
+; X86-AVX512-NEXT:    korw %k1, %k0, %k0
+; X86-AVX512-NEXT:    movb $7, %al
+; X86-AVX512-NEXT:    kmovd %eax, %k1
+; X86-AVX512-NEXT:    kandw %k1, %k0, %k1
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    vmovdqa32 %xmm0, (%eax) {%k1}
 ; X86-AVX512-NEXT:    retl

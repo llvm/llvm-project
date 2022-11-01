@@ -16,7 +16,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_SIMPLEEXECUTORDYLIBMANAGER_H
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_SIMPLEEXECUTORDYLIBMANAGER_H
 
-#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
@@ -44,7 +44,7 @@ public:
   void addBootstrapSymbols(StringMap<ExecutorAddr> &M) override;
 
 private:
-  using DylibsMap = DenseMap<uint64_t, sys::DynamicLibrary>;
+  using DylibSet = DenseSet<void *>;
 
   static llvm::orc::shared::CWrapperFunctionResult
   openWrapper(const char *ArgData, size_t ArgSize);
@@ -53,8 +53,7 @@ private:
   lookupWrapper(const char *ArgData, size_t ArgSize);
 
   std::mutex M;
-  uint64_t NextId = 0;
-  DylibsMap Dylibs;
+  DylibSet Dylibs;
 };
 
 } // end namespace rt_bootstrap

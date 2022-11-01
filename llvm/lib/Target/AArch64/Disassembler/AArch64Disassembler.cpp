@@ -137,6 +137,9 @@ static DecodeStatus DecodePPRRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodePPR_3bRegisterClass(MCInst &Inst, unsigned RegNo,
                                               uint64_t Address,
                                               const MCDisassembler *Decoder);
+static DecodeStatus
+DecodePPR_p8to15RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
+                              const MCDisassembler *Decoder);
 
 static DecodeStatus DecodeFixedPointScaleImm32(MCInst &Inst, unsigned Imm,
                                                uint64_t Address,
@@ -707,6 +710,16 @@ static DecodeStatus DecodePPR_3bRegisterClass(MCInst &Inst, unsigned RegNo,
 
   // Just reuse the PPR decode table
   return DecodePPRRegisterClass(Inst, RegNo, Addr, Decoder);
+}
+
+static DecodeStatus
+DecodePPR_p8to15RegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Addr,
+                              const MCDisassembler *Decoder) {
+  if (RegNo > 7)
+    return Fail;
+
+  // Just reuse the PPR decode table
+  return DecodePPRRegisterClass(Inst, RegNo + 8, Addr, Decoder);
 }
 
 static DecodeStatus DecodeQQRegisterClass(MCInst &Inst, unsigned RegNo,

@@ -339,7 +339,7 @@ promoteSubViews(ImplicitLocOpBuilder &b, LinalgOp op,
       else
         opViews.push_back(
             (*promotedBuffersAndViews)[operandNumber].partialLocalView);
-      if (operandNumber >= op.getNumInputs())
+      if (operandNumber >= op.getNumDpsInputs())
         writebackViews.emplace_back(std::make_pair(
             opOperand.get(),
             (*promotedBuffersAndViews)[operandNumber].partialLocalView));

@@ -229,6 +229,7 @@ public:
     /// This causes clang to:
     ///   - Reverse the implementation for DR692, DR1395 and DR1432.
     ///   - pack non-POD members of packed structs.
+    ///   - consider classes with defaulted special member functions non-pod.
     Ver15,
 
     /// Conform to the underlying platform's C and C++ ABIs as closely
@@ -376,7 +377,7 @@ public:
     /// Any trailing array member of undefined or 0 size is a FAM.
     ZeroOrIncomplete = 2,
     /// Any trailing array member of undefined size is a FAM.
-    Incomplete = 3,
+    IncompleteOnly = 3,
   };
 
 public:

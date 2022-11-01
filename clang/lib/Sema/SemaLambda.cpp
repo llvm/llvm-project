@@ -284,7 +284,8 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     DataMember,
     StaticDataMember,
     InlineVariable,
-    VariableTemplate
+    VariableTemplate,
+    Concept
   } Kind = Normal;
 
   // Default arguments of member function parameters that appear in a class
@@ -309,6 +310,8 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
       }
     } else if (isa<FieldDecl>(ManglingContextDecl)) {
       Kind = DataMember;
+    } else if (isa<ImplicitConceptSpecializationDecl>(ManglingContextDecl)) {
+      Kind = Concept;
     }
   }
 
@@ -332,6 +335,11 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     return std::make_tuple(nullptr, nullptr);
   }
 
+  case Concept:
+    // Concept definitions aren't code generated and thus aren't mangled,
+    // however the ManglingContextDecl is important for the purposes of
+    // re-forming the template argument list of the lambda for constraint
+    // evaluation.
   case StaticDataMember:
     //  -- the initializers of nonspecialized static members of template classes
     if (!IsInNonspecializedTemplate)

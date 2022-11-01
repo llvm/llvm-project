@@ -6,7 +6,7 @@
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx512f | FileCheck %s --check-prefixes=AVX,AVX512,AVX512F
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx512f,avx512dq,avx512vl | FileCheck %s --check-prefixes=AVX,AVX512,AVX512VL,AVX512VLDQ
 ; RUN: llc < %s -disable-peephole -mtriple=x86_64-apple-darwin -mattr=avx512f,avx512bw,avx512vl | FileCheck %s --check-prefixes=AVX,AVX512,AVX512VL,AVX512VLBW
-; RUN: llc < %s -mtriple=i686-apple-darwin -mattr=avx512f,avx512bw,avx512dq,avx512vl | FileCheck %s --check-prefixes=X86-AVX512
+; RUN: llc < %s -mtriple=i686-apple-darwin -mattr=avx512f,avx512bw,avx512dq,avx512vl -verify-machineinstrs | FileCheck %s --check-prefixes=X86-AVX512
 
 ;
 ; vXf64

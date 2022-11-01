@@ -68,11 +68,11 @@ define i32 @test_i32_add_add_idx0(i32 %x, i32 %y, i32 %z) nounwind {
 ;
 ; X64-LABEL: test_i32_add_add_idx0:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $esi killed $esi def $rsi
+; X64-NEXT:    # kill: def $edx killed $edx def $rdx
 ; X64-NEXT:    # kill: def $edi killed $edi def $rdi
-; X64-NEXT:    leal (%rdi,%rsi), %eax
 ; X64-NEXT:    andl $1, %edx
-; X64-NEXT:    addl %edx, %eax
+; X64-NEXT:    leal (%rdx,%rdi), %eax
+; X64-NEXT:    addl %esi, %eax
 ; X64-NEXT:    retq
   %add = add i32 %y, %x
   %mask = and i32 %z, 1

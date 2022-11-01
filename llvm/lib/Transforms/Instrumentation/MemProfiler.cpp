@@ -204,22 +204,6 @@ private:
   Value *DynamicShadowOffset = nullptr;
 };
 
-class MemProfilerLegacyPass : public FunctionPass {
-public:
-  static char ID;
-
-  explicit MemProfilerLegacyPass() : FunctionPass(ID) {
-    initializeMemProfilerLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  StringRef getPassName() const override { return "MemProfilerFunctionPass"; }
-
-  bool runOnFunction(Function &F) override {
-    MemProfiler Profiler(*F.getParent());
-    return Profiler.instrumentFunction(F);
-  }
-};
-
 class ModuleMemProfiler {
 public:
   ModuleMemProfiler(Module &M) { TargetTriple = Triple(M.getTargetTriple()); }
@@ -230,24 +214,6 @@ private:
   Triple TargetTriple;
   ShadowMapping Mapping;
   Function *MemProfCtorFunction = nullptr;
-};
-
-class ModuleMemProfilerLegacyPass : public ModulePass {
-public:
-  static char ID;
-
-  explicit ModuleMemProfilerLegacyPass() : ModulePass(ID) {
-    initializeModuleMemProfilerLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  StringRef getPassName() const override { return "ModuleMemProfiler"; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {}
-
-  bool runOnModule(Module &M) override {
-    ModuleMemProfiler MemProfiler(M);
-    return MemProfiler.instrumentModule(M);
-  }
 };
 
 } // end anonymous namespace
@@ -271,30 +237,6 @@ PreservedAnalyses ModuleMemProfilerPass::run(Module &M,
   if (Profiler.instrumentModule(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
-}
-
-char MemProfilerLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(MemProfilerLegacyPass, "memprof",
-                      "MemProfiler: profile memory allocations and accesses.",
-                      false, false)
-INITIALIZE_PASS_END(MemProfilerLegacyPass, "memprof",
-                    "MemProfiler: profile memory allocations and accesses.",
-                    false, false)
-
-FunctionPass *llvm::createMemProfilerFunctionPass() {
-  return new MemProfilerLegacyPass();
-}
-
-char ModuleMemProfilerLegacyPass::ID = 0;
-
-INITIALIZE_PASS(ModuleMemProfilerLegacyPass, "memprof-module",
-                "MemProfiler: profile memory allocations and accesses."
-                "ModulePass",
-                false, false)
-
-ModulePass *llvm::createModuleMemProfilerLegacyPassPass() {
-  return new ModuleMemProfilerLegacyPass();
 }
 
 Value *MemProfiler::memToShadow(Value *Shadow, IRBuilder<> &IRB) {

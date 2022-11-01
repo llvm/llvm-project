@@ -20,7 +20,6 @@
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -28,10 +27,8 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/Support/FormatVariadic.h"
 
 #include "../GPUCommon/GPUOpsLowering.h"
 #include "../GPUCommon/IndexIntrinsicsOpLowering.h"
@@ -231,6 +228,14 @@ void mlir::configureGpuToNVVMConversionLegality(ConversionTarget &target) {
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
 }
 
+template <typename OpTy>
+static void populateOpPatterns(LLVMTypeConverter &converter,
+                               RewritePatternSet &patterns, StringRef f32Func,
+                               StringRef f64Func) {
+  patterns.add<ScalarizeVectorOpLowering<OpTy>>(converter);
+  patterns.add<OpToFuncCallLowering<OpTy>>(converter, f32Func, f64Func);
+}
+
 void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                                RewritePatternSet &patterns) {
   populateWithGenerated(patterns);
@@ -254,42 +259,38 @@ void mlir::populateGpuToNVVMConversionPatterns(LLVMTypeConverter &converter,
       StringAttr::get(&converter.getContext(),
                       NVVM::NVVMDialect::getKernelFuncAttrName()));
 
-  patterns.add<OpToFuncCallLowering<math::AbsFOp>>(converter, "__nv_fabsf",
-                                                   "__nv_fabs");
-  patterns.add<OpToFuncCallLowering<math::AtanOp>>(converter, "__nv_atanf",
-                                                   "__nv_atan");
-  patterns.add<OpToFuncCallLowering<math::Atan2Op>>(converter, "__nv_atan2f",
-                                                    "__nv_atan2");
-  patterns.add<OpToFuncCallLowering<math::CeilOp>>(converter, "__nv_ceilf",
-                                                   "__nv_ceil");
-  patterns.add<OpToFuncCallLowering<math::CosOp>>(converter, "__nv_cosf",
-                                                  "__nv_cos");
-  patterns.add<OpToFuncCallLowering<math::ExpOp>>(converter, "__nv_expf",
-                                                  "__nv_exp");
-  patterns.add<OpToFuncCallLowering<math::Exp2Op>>(converter, "__nv_exp2f",
-                                                   "__nv_exp2");
-  patterns.add<OpToFuncCallLowering<math::ExpM1Op>>(converter, "__nv_expm1f",
-                                                    "__nv_expm1");
-  patterns.add<OpToFuncCallLowering<math::FloorOp>>(converter, "__nv_floorf",
-                                                    "__nv_floor");
-  patterns.add<OpToFuncCallLowering<math::LogOp>>(converter, "__nv_logf",
-                                                  "__nv_log");
-  patterns.add<OpToFuncCallLowering<math::Log1pOp>>(converter, "__nv_log1pf",
-                                                    "__nv_log1p");
-  patterns.add<OpToFuncCallLowering<math::Log10Op>>(converter, "__nv_log10f",
-                                                    "__nv_log10");
-  patterns.add<OpToFuncCallLowering<math::Log2Op>>(converter, "__nv_log2f",
-                                                   "__nv_log2");
-  patterns.add<OpToFuncCallLowering<math::PowFOp>>(converter, "__nv_powf",
-                                                   "__nv_pow");
-  patterns.add<OpToFuncCallLowering<math::RsqrtOp>>(converter, "__nv_rsqrtf",
-                                                    "__nv_rsqrt");
-  patterns.add<OpToFuncCallLowering<math::SinOp>>(converter, "__nv_sinf",
-                                                  "__nv_sin");
-  patterns.add<OpToFuncCallLowering<math::SqrtOp>>(converter, "__nv_sqrtf",
-                                                   "__nv_sqrt");
-  patterns.add<OpToFuncCallLowering<math::TanhOp>>(converter, "__nv_tanhf",
-                                                   "__nv_tanh");
+  populateOpPatterns<math::AbsFOp>(converter, patterns, "__nv_fabsf",
+                                   "__nv_fabs");
+  populateOpPatterns<math::AtanOp>(converter, patterns, "__nv_atanf",
+                                   "__nv_atan");
+  populateOpPatterns<math::Atan2Op>(converter, patterns, "__nv_atan2f",
+                                    "__nv_atan2");
+  populateOpPatterns<math::CeilOp>(converter, patterns, "__nv_ceilf",
+                                   "__nv_ceil");
+  populateOpPatterns<math::CosOp>(converter, patterns, "__nv_cosf", "__nv_cos");
+  populateOpPatterns<math::ExpOp>(converter, patterns, "__nv_expf", "__nv_exp");
+  populateOpPatterns<math::Exp2Op>(converter, patterns, "__nv_exp2f",
+                                   "__nv_exp2");
+  populateOpPatterns<math::ExpM1Op>(converter, patterns, "__nv_expm1f",
+                                    "__nv_expm1");
+  populateOpPatterns<math::FloorOp>(converter, patterns, "__nv_floorf",
+                                    "__nv_floor");
+  populateOpPatterns<math::LogOp>(converter, patterns, "__nv_logf", "__nv_log");
+  populateOpPatterns<math::Log1pOp>(converter, patterns, "__nv_log1pf",
+                                    "__nv_log1p");
+  populateOpPatterns<math::Log10Op>(converter, patterns, "__nv_log10f",
+                                    "__nv_log10");
+  populateOpPatterns<math::Log2Op>(converter, patterns, "__nv_log2f",
+                                   "__nv_log2");
+  populateOpPatterns<math::PowFOp>(converter, patterns, "__nv_powf",
+                                   "__nv_pow");
+  populateOpPatterns<math::RsqrtOp>(converter, patterns, "__nv_rsqrtf",
+                                    "__nv_rsqrt");
+  populateOpPatterns<math::SinOp>(converter, patterns, "__nv_sinf", "__nv_sin");
+  populateOpPatterns<math::SqrtOp>(converter, patterns, "__nv_sqrtf",
+                                   "__nv_sqrt");
+  populateOpPatterns<math::TanhOp>(converter, patterns, "__nv_tanhf",
+                                   "__nv_tanh");
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>

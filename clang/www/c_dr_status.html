@@ -1897,7 +1897,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_324.htm">324</a></td>
     <td>C99</td>
     <td>Tokenization obscurities</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="325">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_325.htm">325</a></td>
@@ -1921,7 +1921,14 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_328.htm">328</a></td>
     <td>C99</td>
     <td>String literals in compound literal initialization</td>
-    <td class="full" align="center">Yes</td>
+    <td class="partial" align="center">
+      <details><summary>Partial</summary>
+        Clang properly implements the use of string literals in a compound
+        literal initializer, but fails to diagnose use of a variably-modified
+        type at file scope. DR339 (about variably-modified types) is marked as
+        a duplicate of DR328.
+      </details>
+    </td>
   </tr>
   <tr id="329">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_329.htm">329</a></td>
@@ -1951,7 +1958,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_333.htm">333</a></td>
     <td>C99</td>
     <td>Missing Predefined Macro Name</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr class="open" id="334">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_334.htm">334</a></td>
@@ -1963,7 +1970,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_335.htm">335</a></td>
     <td>NAD</td>
     <td>_Bool bit-fields</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="336">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_336.htm">336</a></td>
@@ -1979,51 +1986,51 @@ conformance.</p>
   </tr>
   <tr id="338">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_338.htm">338</a></td>
-    <td>C11</td>
+    <td>C99</td>
     <td>C99 seems to exclude indeterminate value from being an uninitialized register</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="339">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_339.htm">339</a></td>
     <td>Dup</td>
     <td>Variably modified compound literal</td>
-    <td class="unknown" align="center">Duplicate of <a href="#328">328</a></td>
+    <td class="partial" align="center">Duplicate of <a href="#328">328</a></td>
   </tr>
   <tr id="340">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_340.htm">340</a></td>
     <td>C99</td>
     <td>Composite types for variable-length arrays</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="341">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_341.htm">341</a></td>
     <td>C99</td>
     <td>[*] in abstract declarators</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="342">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_342.htm">342</a></td>
     <td>Dup</td>
     <td>VLAs and conditional expressions</td>
-    <td class="unknown" align="center">Duplicate of <a href="#340">340</a></td>
+    <td class="full" align="center">Duplicate of <a href="#340">340</a></td>
   </tr>
   <tr id="343">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_343.htm">343</a></td>
     <td>C99</td>
     <td>Initializing qualified wchar_t arrays</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="344">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_344.htm">344</a></td>
     <td>C99</td>
     <td>Casts in preprocessor conditional expressions</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="345">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/dr_345.htm">345</a></td>
-    <td>C11</td>
+    <td>C99</td>
     <td>Where does parameter scope start?</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="400">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_400">400</a></td>
@@ -2035,13 +2042,13 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_401">401</a></td>
     <td>C11</td>
     <td>"happens before" can not be cyclic</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="402">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_402">402</a></td>
     <td>C11</td>
     <td>Memory model coherence is not aligned with C++11</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="403">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_403">403</a></td>
@@ -2065,7 +2072,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_406">406</a></td>
     <td>C11</td>
     <td>Visible sequences of side effects are redundant</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="407">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_407">407</a></td>
@@ -2094,20 +2101,20 @@ conformance.</p>
   <tr id="411">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_411">411</a></td>
     <td>C11</td>
-    <td>#elif</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td>Predefined macro values</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="412">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_412">412</a></td>
     <td>C11</td>
     <td>#elif</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="413">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_413">413</a></td>
     <td>NAD</td>
     <td>Initialization</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="414">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_414">414</a></td>
@@ -2143,7 +2150,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_419">419</a></td>
     <td>C11</td>
     <td>Generic Functions</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="420">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_420">420</a></td>
@@ -2184,7 +2191,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_425">425</a></td>
     <td>NAD</td>
     <td>No specification for the access to variables with temporary lifetime</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="426">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_426">426</a></td>
@@ -2226,7 +2233,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_432">432</a></td>
     <td>C11</td>
     <td>Possible defect report: Is 0.0 required to be a representable value?</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="433">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_433">433</a></td>
@@ -2250,7 +2257,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_436">436</a></td>
     <td>C11</td>
     <td>Request for interpretation of C11 6.8.5#6</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="437">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_437">437</a></td>
@@ -2298,7 +2305,11 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_444">444</a></td>
     <td>C11</td>
     <td>Issues with alignment in C11, part 1</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="partial" align="center">
+      <details><summary>Partial</summary>
+      Clang rejects use of an alignment specifier in a compound literal expression.
+      </details>
+    </td>
   </tr>
   <tr id="445">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_445">445</a></td>
@@ -2316,7 +2327,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_447">447</a></td>
     <td>C11</td>
     <td>Boolean from complex</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="448">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_448">448</a></td>
@@ -2370,7 +2381,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_456">456</a></td>
     <td>Dup</td>
     <td>Compile time definition of UINTN_C(value)</td>
-    <td class="na" align="center">Duplicate of <a href="#209">209</a></td>
+    <td class="partial" align="center">Duplicate of <a href="#209">209</a></td>
   </tr>
   <tr id="457">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_457">457</a></td>
@@ -2388,7 +2399,7 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_459">459</a></td>
     <td>C11</td>
     <td>atomic_load missing const qualifier</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="460">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_460">460</a></td>
@@ -2412,13 +2423,13 @@ conformance.</p>
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_463">463</a></td>
     <td>NAD</td>
     <td>Left-shifting into the sign bit</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="464">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_464">464</a></td>
     <td>C11</td>
     <td>Clarifying the Behavior of the #line Directive</td>
-    <td class="unknown" align="center">Unknown</td>
+    <td class="full" align="center">Yes</td>
   </tr>
   <tr id="465">
     <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2148.htm#dr_465">465</a></td>

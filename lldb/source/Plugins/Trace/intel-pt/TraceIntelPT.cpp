@@ -16,6 +16,7 @@
 #include "TraceIntelPTBundleSaver.h"
 #include "TraceIntelPTConstants.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "llvm/ADT/None.h"
@@ -39,11 +40,57 @@ TraceIntelPT::GetThreadTraceStartCommand(CommandInterpreter &interpreter) {
       new CommandObjectThreadTraceStartIntelPT(*this, interpreter));
 }
 
+#define LLDB_PROPERTIES_traceintelpt
+#include "TraceIntelPTProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_traceintelpt
+#include "TraceIntelPTPropertiesEnum.inc"
+};
+
+ConstString TraceIntelPT::PluginProperties::GetSettingName() {
+  return ConstString(TraceIntelPT::GetPluginNameStatic());
+}
+
+TraceIntelPT::PluginProperties::PluginProperties() : Properties() {
+  m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
+  m_collection_sp->Initialize(g_traceintelpt_properties);
+}
+
+uint64_t
+TraceIntelPT::PluginProperties::GetInfiniteDecodingLoopVerificationThreshold() {
+  const uint32_t idx = ePropertyInfiniteDecodingLoopVerificationThreshold;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_traceintelpt_properties[idx].default_uint_value);
+}
+
+uint64_t TraceIntelPT::PluginProperties::GetExtremelyLargeDecodingThreshold() {
+  const uint32_t idx = ePropertyExtremelyLargeDecodingThreshold;
+  return m_collection_sp->GetPropertyAtIndexAsUInt64(
+      nullptr, idx, g_traceintelpt_properties[idx].default_uint_value);
+}
+
+TraceIntelPT::PluginProperties &TraceIntelPT::GetGlobalProperties() {
+  static TraceIntelPT::PluginProperties g_settings;
+  return g_settings;
+}
+
 void TraceIntelPT::Initialize() {
-  PluginManager::RegisterPlugin(GetPluginNameStatic(), "Intel Processor Trace",
-                                CreateInstanceForTraceBundle,
-                                CreateInstanceForLiveProcess,
-                                TraceIntelPTBundleLoader::GetSchema());
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(), "Intel Processor Trace",
+      CreateInstanceForTraceBundle, CreateInstanceForLiveProcess,
+      TraceIntelPTBundleLoader::GetSchema(), DebuggerInitialize);
+}
+
+void TraceIntelPT::DebuggerInitialize(Debugger &debugger) {
+  if (!PluginManager::GetSettingForProcessPlugin(
+          debugger, PluginProperties::GetSettingName())) {
+    const bool is_global_setting = true;
+    PluginManager::CreateSettingForTracePlugin(
+        debugger, GetGlobalProperties().GetValueProperties(),
+        ConstString("Properties for the intel-pt trace plug-in."),
+        is_global_setting);
+  }
 }
 
 void TraceIntelPT::Terminate() {
@@ -273,6 +320,20 @@ void TraceIntelPT::DumpTraceInfo(Thread &thread, Stream &s, bool verbose,
                event_to_count.second);
     }
   }
+  // Trace error stats
+  {
+    const DecodedThread::ErrorStats &error_stats =
+        decoded_thread_sp->GetErrorStats();
+    s << "\n  Errors:\n";
+    s.Format("    Number of individual errors: {0}\n",
+             error_stats.GetTotalCount());
+    s.Format("      Number of fatal errors: {0}\n", error_stats.fatal_errors);
+    for (const auto &[kind, count] : error_stats.libipt_errors) {
+      s.Format("     Number of libipt errors of kind [{0}]: {1}\n", kind,
+               count);
+    }
+    s.Format("      Number of other errors: {0}\n", error_stats.other_errors);
+  }
 
   if (storage.multicpu_decoder) {
     s << "\n  Multi-cpu decoding:\n";
@@ -352,6 +413,19 @@ void TraceIntelPT::DumpTraceInfoAsJson(Thread &thread, Stream &s,
                 event_to_count.second);
           }
         });
+      });
+      // Trace error stats
+      const DecodedThread::ErrorStats &error_stats =
+          decoded_thread_sp->GetErrorStats();
+      json_str.attributeObject("errors", [&] {
+        json_str.attribute("totalCount", error_stats.GetTotalCount());
+        json_str.attributeObject("libiptErrors", [&] {
+          for (const auto &[kind, count] : error_stats.libipt_errors) {
+            json_str.attribute(kind, count);
+          }
+        });
+        json_str.attribute("fatalErrors", error_stats.fatal_errors);
+        json_str.attribute("otherErrors", error_stats.other_errors);
       });
 
       if (storage.multicpu_decoder) {

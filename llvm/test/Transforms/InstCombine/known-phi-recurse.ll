@@ -92,12 +92,11 @@ define i32 @neg_many_branches(i64 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Y:%.*]] = call i64 @llvm.ctpop.i64(i64 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[Y]] to i32
-; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc i64 [[Y]] to i7
-; CHECK-NEXT:    switch i7 [[TRUNC1]], label [[END:%.*]] [
-; CHECK-NEXT:    i7 1, label [[ONE:%.*]]
-; CHECK-NEXT:    i7 2, label [[TWO:%.*]]
-; CHECK-NEXT:    i7 3, label [[THREE:%.*]]
-; CHECK-NEXT:    i7 4, label [[FOUR:%.*]]
+; CHECK-NEXT:    switch i32 [[TRUNC]], label [[END:%.*]] [
+; CHECK-NEXT:    i32 1, label [[ONE:%.*]]
+; CHECK-NEXT:    i32 2, label [[TWO:%.*]]
+; CHECK-NEXT:    i32 3, label [[THREE:%.*]]
+; CHECK-NEXT:    i32 4, label [[FOUR:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       one:
 ; CHECK-NEXT:    [[A:%.*]] = add nuw nsw i32 [[TRUNC]], 1

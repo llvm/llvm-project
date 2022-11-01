@@ -24,5 +24,8 @@ static_library("LogicalView") {
     "Core/LVSupport.cpp",
     "Core/LVSymbol.cpp",
     "Core/LVType.cpp",
+    "LVReaderHandler.cpp",
+    "Readers/LVBinaryReader.cpp",
+    "Readers/LVELFReader.cpp",
   ]
 }

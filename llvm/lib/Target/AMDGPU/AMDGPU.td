@@ -1629,6 +1629,8 @@ def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
 def HasMinMaxDenormModes : Predicate<"Subtarget->supportsMinMaxDenormModes()">;
 def NotHasMinMaxDenormModes : Predicate<"!Subtarget->supportsMinMaxDenormModes()">;
 
+def HasFminFmaxLegacy : Predicate<"Subtarget->hasFminFmaxLegacy()">;
+
 def HasSDWA : Predicate<"Subtarget->hasSDWA()">,
   AssemblerPredicate<(all_of FeatureSDWA, FeatureVolcanicIslands)>;
 

@@ -190,6 +190,11 @@
 #endif
 
 #if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
+    defined(__AVXIFMA__)
+#include <avxifmaintrin.h>
+#endif
+
+#if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
     defined(__AVX512VBMI__)
 #include <avx512vbmiintrin.h>
 #endif
@@ -252,6 +257,11 @@
 #if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
     defined(__GFNI__)
 #include <gfniintrin.h>
+#endif
+
+#if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
+    defined(__AVXVNNIINT8__)
+#include <avxvnniint8intrin.h>
 #endif
 
 #if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
@@ -511,6 +521,11 @@ _storebe_i64(void * __P, long long __D) {
 #if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
     defined(__AMXFP16__)
 #include <amxfp16intrin.h>
+#endif
+
+#if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
+    defined(__CMPCCXADD__)
+#include <cmpccxaddintrin.h>
 #endif
 
 #if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \

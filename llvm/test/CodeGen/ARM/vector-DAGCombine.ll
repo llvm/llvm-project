@@ -104,6 +104,7 @@ define void @test_i16_constant_fold() nounwind optsize {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i8 d16, #0x1
 ; CHECK-NEXT:    vst1.8 {d16}, [r0]
+; CHECK-NEXT:    bx lr
 entry:
   %0 = sext <4 x i1> zeroinitializer to <4 x i16>
   %1 = add <4 x i16> %0, zeroinitializer
@@ -111,7 +112,7 @@ entry:
   %3 = add <8 x i16> %2, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %4 = trunc <8 x i16> %3 to <8 x i8>
   tail call void @llvm.arm.neon.vst1.p0i8.v8i8(i8* undef, <8 x i8> %4, i32 1)
-  unreachable
+  ret void
 }
 
 declare void @llvm.arm.neon.vst1.p0i8.v8i8(i8*, <8 x i8>, i32) nounwind

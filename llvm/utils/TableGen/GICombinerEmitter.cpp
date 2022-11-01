@@ -764,6 +764,29 @@ void GICombinerEmitter::generateCodeForTree(raw_ostream &OS,
 
     OS << Indent << "  if (1\n";
 
+    // Emit code for C++ Predicates.
+    if (RuleDef.getValue("Predicates")) {
+      ListInit *Preds = RuleDef.getValueAsListInit("Predicates");
+      for (Init *I : Preds->getValues()) {
+        if (DefInit *Pred = dyn_cast<DefInit>(I)) {
+          Record *Def = Pred->getDef();
+          if (!Def->isSubClassOf("Predicate")) {
+            PrintError(Def->getLoc(), "Unknown 'Predicate' Type");
+            return;
+          }
+
+          StringRef CondString = Def->getValueAsString("CondString");
+          if (CondString.empty())
+            continue;
+
+          OS << Indent << "      && (\n"
+             << Indent << "           // Predicate: " << Def->getName() << "\n"
+             << Indent << "           " << CondString << "\n"
+             << Indent << "         )\n";
+        }
+      }
+    }
+
     // Attempt to emit code for any untested predicates left over. Note that
     // isFullyTested() will remain false even if we succeed here and therefore
     // combine rule elision will not be performed. This is because we do not
@@ -804,7 +827,7 @@ void GICombinerEmitter::generateCodeForTree(raw_ostream &OS,
          << Indent << "      return true;\n"
          << Indent << "  }()";
     }
-    OS << ") {\n" << Indent << "   ";
+    OS << Indent << "     ) {\n" << Indent << "   ";
 
     if (const StringInit *Code = dyn_cast<StringInit>(Applyer->getArg(0))) {
       OS << CodeExpander(Code->getAsUnquotedString(), Expansions,

@@ -239,7 +239,7 @@ standards<CodingStandards>`. To enforce this language version, we check the most
 popular host toolchains for specific minimum versions in our build systems:
 
 * Clang 5.0
-* Apple Clang 9.3
+* Apple Clang 10.0
 * GCC 7.1
 * Visual Studio 2019 16.7
 

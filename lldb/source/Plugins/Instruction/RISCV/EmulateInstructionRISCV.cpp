@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <cstdlib>
-
 #include "EmulateInstructionRISCV.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
 #include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
+#include "RISCVCInstructions.h"
 #include "RISCVInstructions.h"
 
 #include "lldb/Core/Address.h"
@@ -86,8 +85,8 @@ constexpr uint32_t DecodeBImm(uint32_t inst) {
 }
 
 constexpr uint32_t DecodeSImm(uint32_t inst) {
-  return (uint64_t(int64_t(int32_t(inst & 0xFE00000)) >> 20)) // imm[11:5]
-         | ((inst & 0xF80) >> 7);                             // imm[4:0]
+  return (uint64_t(int64_t(int32_t(inst & 0xFE000000)) >> 20)) // imm[11:5]
+         | ((inst & 0xF80) >> 7);                              // imm[4:0]
 }
 
 constexpr uint32_t DecodeUImm(uint32_t inst) {
@@ -194,14 +193,14 @@ LoadStoreAddr(EmulateInstructionRISCV &emulator, I inst) {
 }
 
 // Read T from memory, then load its sign-extended value m_emu to register.
-template <typename I, typename T, typename m_emu>
+template <typename I, typename T, typename E>
 static std::enable_if_t<is_load<I>, bool>
-Load(EmulateInstructionRISCV &emulator, I inst, uint64_t (*extend)(m_emu)) {
+Load(EmulateInstructionRISCV &emulator, I inst, uint64_t (*extend)(E)) {
   auto addr = LoadStoreAddr(emulator, inst);
   if (!addr)
     return false;
   return emulator.ReadMem<T>(*addr)
-      .transform([&](T t) { return inst.rd.Write(emulator, extend(m_emu(t))); })
+      .transform([&](T t) { return inst.rd.Write(emulator, extend(E(t))); })
       .value_or(false);
 }
 
@@ -461,6 +460,38 @@ static const InstrPattern PATTERNS[] = {
     {"AMOMAX_D", 0xF800707F, 0xA000302F, DecodeRType<AMOMAX_D>},
     {"AMOMINU_D", 0xF800707F, 0xC000302F, DecodeRType<AMOMINU_D>},
     {"AMOMAXU_D", 0xF800707F, 0xE000302F, DecodeRType<AMOMAXU_D>},
+
+    // RVC (Compressed Instructions) //
+    {"C_LWSP", 0xE003, 0x4002, DecodeC_LWSP},
+    {"C_LDSP", 0xE003, 0x6002, DecodeC_LDSP},
+    {"C_SWSP", 0xE003, 0xC002, DecodeC_SWSP},
+    {"C_SDSP", 0xE003, 0xE002, DecodeC_SDSP},
+    {"C_LW", 0xE003, 0x4000, DecodeC_LW},
+    {"C_LD", 0xE003, 0x6000, DecodeC_LD},
+    {"C_SW", 0xE003, 0xC000, DecodeC_SW},
+    {"C_SD", 0xE003, 0xE000, DecodeC_SD},
+    {"C_J", 0xE003, 0xA001, DecodeC_J},
+    {"C_JR", 0xF07F, 0x8002, DecodeC_JR},
+    {"C_JALR", 0xF07F, 0x9002, DecodeC_JALR},
+    {"C_BNEZ", 0xE003, 0xE001, DecodeC_BNEZ},
+    {"C_BEQZ", 0xE003, 0xC001, DecodeC_BEQZ},
+    {"C_LI", 0xE003, 0x4001, DecodeC_LI},
+    {"C_LUI_ADDI16SP", 0xE003, 0x6001, DecodeC_LUI_ADDI16SP},
+    {"C_ADDI", 0xE003, 0x1, DecodeC_ADDI},
+    {"C_ADDIW", 0xE003, 0x2001, DecodeC_ADDIW},
+    {"C_ADDI4SPN", 0xE003, 0x0, DecodeC_ADDI4SPN},
+    {"C_SLLI", 0xE003, 0x2, DecodeC_SLLI},
+    {"C_SRLI", 0xEC03, 0x8001, DecodeC_SRLI},
+    {"C_SRAI", 0xEC03, 0x8401, DecodeC_SRAI},
+    {"C_ANDI", 0xEC03, 0x8801, DecodeC_ANDI},
+    {"C_MV", 0xF003, 0x8002, DecodeC_MV},
+    {"C_ADD", 0xF003, 0x9002, DecodeC_ADD},
+    {"C_AND", 0xFC63, 0x8C61, DecodeC_AND},
+    {"C_OR", 0xFC63, 0x8C41, DecodeC_OR},
+    {"C_XOR", 0xFC63, 0x8C21, DecodeC_XOR},
+    {"C_SUB", 0xFC63, 0x8C01, DecodeC_SUB},
+    {"C_SUBW", 0xFC63, 0x9C01, DecodeC_SUBW},
+    {"C_ADDW", 0xFC63, 0x9C21, DecodeC_ADDW},
 };
 
 llvm::Optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
@@ -473,9 +504,9 @@ llvm::Optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
 
   for (const InstrPattern &pat : PATTERNS) {
     if ((inst & pat.type_mask) == pat.eigen) {
-      LLDB_LOGF(log, "EmulateInstructionRISCV::%s: inst(%x) was decoded to %s",
-                __FUNCTION__, inst, pat.name);
-      auto decoded = pat.decode(inst);
+      LLDB_LOGF(log, "EmulateInstructionRISCV::%s: inst(%x at %lx) was decoded to %s",
+                __FUNCTION__, inst, m_addr, pat.name);
+      auto decoded = is_rvc ? pat.decode(try_rvc) : pat.decode(inst);
       return DecodeResult{decoded, inst, is_rvc, pat};
     }
   }
@@ -1017,6 +1048,11 @@ public:
         m_emu, inst, 8, ZextD,
         [](uint64_t a, uint64_t b) { return std::max(a, b); });
   }
+  bool operator()(INVALID inst) { return false; }
+  bool operator()(RESERVED inst) { return false; }
+  bool operator()(EBREAK inst) { return false; }
+  bool operator()(HINT inst) { return true; }
+  bool operator()(NOP inst) { return true; }
 };
 
 bool EmulateInstructionRISCV::Execute(DecodeResult inst, bool ignore_cond) {
