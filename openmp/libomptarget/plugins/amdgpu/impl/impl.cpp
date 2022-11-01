@@ -21,9 +21,13 @@ bool is_locked(void *ptr, hsa_status_t *err_p, void **agentBaseAddress) {
   info.size = sizeof(hsa_amd_pointer_info_t);
   err = hsa_amd_pointer_info(ptr, &info, nullptr, nullptr, nullptr);
 
-  if (err != HSA_STATUS_SUCCESS)
+  if (err_p)
+    *err_p = err;
+
+  if (err != HSA_STATUS_SUCCESS){
     DP("Error when getting pointer info\n");
-  else
+    return is_locked;
+  } else
     is_locked = (info.type == HSA_EXT_POINTER_TYPE_LOCKED);
 
   if (is_locked && agentBaseAddress != nullptr) {
@@ -35,8 +39,6 @@ bool is_locked(void *ptr, hsa_status_t *err_p, void **agentBaseAddress) {
                  (uint64_t)info.hostBaseAddress);
   }
 
-  if (err_p)
-    *err_p = err;
   return is_locked;
 }
 
