@@ -2565,8 +2565,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     // Note that we have to take special care to avoid looking through
     // truncating casts, e.g., int2ptr/ptr2int with appropriate sizes, as well
     // as casts that can alter the value, e.g., AddrSpaceCasts.
-    if (!isa<ScalableVectorType>(I->getOperand(0)->getType()) &&
-        !isa<ScalableVectorType>(I->getType()) &&
+    if (!isa<ScalableVectorType>(I->getType()) &&
         Q.DL.getTypeSizeInBits(I->getOperand(0)->getType()).getFixedSize() <=
         Q.DL.getTypeSizeInBits(I->getType()).getFixedSize())
       return isKnownNonZero(I->getOperand(0), Depth, Q);
@@ -2574,8 +2573,7 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
   case Instruction::PtrToInt:
     // Similar to int2ptr above, we can look through ptr2int here if the cast
     // is a no-op or an extend and not a truncate.
-    if (!isa<ScalableVectorType>(I->getOperand(0)->getType()) &&
-        !isa<ScalableVectorType>(I->getType()) &&
+    if (!isa<ScalableVectorType>(I->getType()) &&
         Q.DL.getTypeSizeInBits(I->getOperand(0)->getType()).getFixedSize() <=
         Q.DL.getTypeSizeInBits(I->getType()).getFixedSize())
       return isKnownNonZero(I->getOperand(0), Depth, Q);
