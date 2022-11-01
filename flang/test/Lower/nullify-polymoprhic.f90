@@ -43,7 +43,6 @@ end
 
 ! CHECK-LABEL: func.func @_QMpolyPtest_nullify()
 ! CHECK: %[[C_DESC:.*]] = fir.alloca !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>> {bindc_name = "c", uniq_name = "_QMpolyFtest_nullifyEc"}
-! CHECK: %[[C_ADDR:.*]] = fir.alloca !fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>> {uniq_name = "_QMpolyFtest_nullifyEc.addr"}
 ! CHECK: %{{.*}} = fir.call @_FortranAPointerAllocate(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK: %[[DECLARED_TYPE:.*]] = fir.address_of(@_QMpolyE.dt.p1) : !fir.ref<!fir.type<{{.*}}>>
 ! CHECK: %[[C_DESC_CAST:.*]] = fir.convert %[[C_DESC]] : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>

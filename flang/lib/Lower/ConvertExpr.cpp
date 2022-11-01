@@ -3747,7 +3747,7 @@ public:
         [&](const auto &e) {
           auto f = genarr(e);
           ExtValue exv = f(IterationSpace{});
-          if (fir::getBase(exv).getType().template isa<fir::BoxType>())
+          if (fir::getBase(exv).getType().template isa<fir::BaseBoxType>())
             return exv;
           fir::emitFatalError(getLoc(), "array must be emboxed");
         },
@@ -5912,7 +5912,9 @@ private:
       // This case just requires that an embox operation be created to box the
       // value. The value of the box is forwarded in the continuation.
       mlir::Type reduceTy = reduceRank(arrTy, slice);
-      auto boxTy = fir::BoxType::get(reduceTy);
+      mlir::Type boxTy = fir::BoxType::get(reduceTy);
+      if (memref.getType().isa<fir::ClassType>())
+        boxTy = fir::ClassType::get(reduceTy);
       if (components.substring) {
         // Adjust char length to substring size.
         fir::CharacterType charTy =
@@ -5925,7 +5927,7 @@ private:
                                    seqTy.getDimension()));
       }
       mlir::Value embox =
-          memref.getType().isa<fir::BoxType>()
+          memref.getType().isa<fir::BaseBoxType>()
               ? builder.create<fir::ReboxOp>(loc, boxTy, memref, shape, slice)
                     .getResult()
               : builder
