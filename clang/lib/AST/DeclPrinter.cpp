@@ -949,9 +949,9 @@ void DeclPrinter::VisitStaticAssertDecl(StaticAssertDecl *D) {
   Out << "static_assert(";
   D->getAssertExpr()->printPretty(Out, nullptr, Policy, Indentation, "\n",
                                   &Context);
-  if (StringLiteral *SL = D->getMessage()) {
+  if (Expr *E = D->getMessage()) {
     Out << ", ";
-    SL->printPretty(Out, nullptr, Policy, Indentation, "\n", &Context);
+    E->printPretty(Out, nullptr, Policy, Indentation, "\n", &Context);
   }
   Out << ")";
 }

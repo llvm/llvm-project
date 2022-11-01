@@ -169,10 +169,6 @@
 #error "wrong value for __cpp_if_constexpr"
 #endif
 
-// range_based_for checked below
-
-// static_assert checked below
-
 #if check(deduction_guides, 0, 0, 0, 201703, 201703, 201703, 201703)
 // FIXME: 201907 in C++20
 #error "wrong value for __cpp_deduction_guides"
@@ -308,7 +304,7 @@
 #error "wrong value for __cpp_range_based_for"
 #endif
 
-#if check(static_assert, 0, 200410, 200410, 201411, 201411, 201411, 201411)
+#if check(static_assert, 0, 200410, 200410, 201411, 201411, 201411, 202306)
 #error "wrong value for __cpp_static_assert"
 #endif
 

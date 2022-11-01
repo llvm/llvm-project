@@ -4010,12 +4010,12 @@ public:
 /// Represents a C++11 static_assert declaration.
 class StaticAssertDecl : public Decl {
   llvm::PointerIntPair<Expr *, 1, bool> AssertExprAndFailed;
-  StringLiteral *Message;
+  Expr *Message;
   SourceLocation RParenLoc;
 
   StaticAssertDecl(DeclContext *DC, SourceLocation StaticAssertLoc,
-                   Expr *AssertExpr, StringLiteral *Message,
-                   SourceLocation RParenLoc, bool Failed)
+                   Expr *AssertExpr, Expr *Message, SourceLocation RParenLoc,
+                   bool Failed)
       : Decl(StaticAssert, DC, StaticAssertLoc),
         AssertExprAndFailed(AssertExpr, Failed), Message(Message),
         RParenLoc(RParenLoc) {}
@@ -4027,15 +4027,15 @@ public:
 
   static StaticAssertDecl *Create(ASTContext &C, DeclContext *DC,
                                   SourceLocation StaticAssertLoc,
-                                  Expr *AssertExpr, StringLiteral *Message,
+                                  Expr *AssertExpr, Expr *Message,
                                   SourceLocation RParenLoc, bool Failed);
   static StaticAssertDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
   Expr *getAssertExpr() { return AssertExprAndFailed.getPointer(); }
   const Expr *getAssertExpr() const { return AssertExprAndFailed.getPointer(); }
 
-  StringLiteral *getMessage() { return Message; }
-  const StringLiteral *getMessage() const { return Message; }
+  Expr *getMessage() { return Message; }
+  const Expr *getMessage() const { return Message; }
 
   bool isFailed() const { return AssertExprAndFailed.getInt(); }
 
