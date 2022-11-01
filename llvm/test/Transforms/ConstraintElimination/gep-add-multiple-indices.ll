@@ -9,7 +9,7 @@ define i1 @test_outer_gep_last_index_no_overflow_all_inbounds(ptr %dst) {
 ; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds ptr, ptr [[DST]], i64 2
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds [2 x i32], ptr [[DST_0]], i64 1, i64 1
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[GEP_1]], [[UPPER]]
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 [[C_1]]
 ;
   %dst.0 = getelementptr inbounds ptr, ptr %dst, i64 0
   %upper = getelementptr inbounds ptr, ptr %dst, i64 2
@@ -24,7 +24,7 @@ define i1 @test_outer_gep_last_index_overflow_all_inbounds(ptr %dst) {
 ; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds ptr, ptr [[DST]], i64 2
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds [2 x i32], ptr [[DST_0]], i64 1, i64 2
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr [[GEP_1]], [[UPPER]]
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %dst.0 = getelementptr inbounds ptr, ptr %dst, i64 0
   %upper = getelementptr inbounds ptr, ptr %dst, i64 2
@@ -40,7 +40,7 @@ define i1 @test_inner_gep_multiple_indices_ult_true_all_inbounds(ptr %dst) {
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, ptr [[DST_0]], i64 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr [[GEP_1]], [[UPPER]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[GEP_1]], [[DST_0]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %dst.0 = getelementptr inbounds [2 x i32], ptr %dst, i64 0, i64 0
   %upper = getelementptr inbounds [2 x i32], ptr %dst, i64 0, i64 2
@@ -56,7 +56,7 @@ define i1 @test_inner_gep_multiple_indices_uge_true_all_inbounds(ptr %dst) {
 ; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds [2 x i32], ptr [[DST]], i64 0, i64 2
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, ptr [[DST_0]], i64 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge ptr [[GEP_1]], [[DST_0]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %dst.0 = getelementptr inbounds [2 x i32], ptr %dst, i64 0, i64 0
   %upper = getelementptr inbounds [2 x i32], ptr %dst, i64 0, i64 2
@@ -72,7 +72,7 @@ define i1 @test_inner_gep_multiple_indices_ult_false_all_inbounds(ptr %dst) {
 ; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds [2 x i32], ptr [[DST]], i64 0, i64 2
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, ptr [[DST_0]], i64 2
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult ptr [[GEP_1]], [[UPPER]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %dst.0 = getelementptr inbounds [2 x i32], ptr %dst, i64 0, i64 0
@@ -89,7 +89,7 @@ define i1 @test_inner_gep_multiple_indices_uge_true_all_inbounds_2(ptr %dst) {
 ; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds [2 x i32], ptr [[DST]], i64 0, i64 2
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, ptr [[DST_0]], i64 2
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge ptr [[GEP_1]], [[DST_0]]
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %dst.0 = getelementptr inbounds [2 x i32], ptr %dst, i64 0, i64 0
