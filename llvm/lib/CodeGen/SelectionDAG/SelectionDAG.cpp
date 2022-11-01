@@ -1482,6 +1482,20 @@ SDValue SelectionDAG::getVPLogicalNOT(const SDLoc &DL, SDValue Val,
   return getNode(ISD::VP_XOR, DL, VT, Val, TrueValue, Mask, EVL);
 }
 
+SDValue SelectionDAG::getVPPtrExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op,
+                                         SDValue Mask, SDValue EVL) {
+  return getVPZExtOrTrunc(DL, VT, Op, Mask, EVL);
+}
+
+SDValue SelectionDAG::getVPZExtOrTrunc(const SDLoc &DL, EVT VT, SDValue Op,
+                                       SDValue Mask, SDValue EVL) {
+  if (VT.bitsGT(Op.getValueType()))
+    return getNode(ISD::VP_ZERO_EXTEND, DL, VT, Op, Mask, EVL);
+  if (VT.bitsLT(Op.getValueType()))
+    return getNode(ISD::VP_TRUNCATE, DL, VT, Op, Mask, EVL);
+  return Op;
+}
+
 SDValue SelectionDAG::getBoolConstant(bool V, const SDLoc &DL, EVT VT,
                                       EVT OpVT) {
   if (!V)
