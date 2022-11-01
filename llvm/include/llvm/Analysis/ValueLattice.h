@@ -453,8 +453,14 @@ public:
   /// evaluated.
   Constant *getCompare(CmpInst::Predicate Pred, Type *Ty,
                        const ValueLatticeElement &Other) const {
-    if (isUnknownOrUndef() || Other.isUnknownOrUndef())
-      return UndefValue::get(Ty);
+    // Not yet resolved.
+    if (isUnknown() || Other.isUnknown())
+      return nullptr;
+
+    // TODO: Can be made more precise, but always returning undef would be
+    // incorrect.
+    if (isUndef() || isUndef())
+      return nullptr;
 
     if (isConstant() && Other.isConstant())
       return ConstantExpr::getCompare(Pred, getConstant(), Other.getConstant());
