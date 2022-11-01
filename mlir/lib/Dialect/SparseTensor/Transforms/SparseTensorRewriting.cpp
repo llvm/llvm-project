@@ -618,7 +618,7 @@ private:
     uint64_t rank = dstTp.getRank();
     // Gather the indices-arrays in the dst tensor storage order.
     SmallVector<Value, 4> xs(rank, Value());
-    for (int64_t i = 0; i < rank; i++) {
+    for (uint64_t i = 0; i < rank; i++) {
       uint64_t orgDim = toOrigDim(encSrc, i);
       xs[toStoredDim(encDst, orgDim)] = rewriter.create<ToIndicesOp>(
           loc, indTp, src, rewriter.getIndexAttr(orgDim));
