@@ -1044,9 +1044,6 @@ void SCCPInstVisitor::visitCmpInst(CmpInst &I) {
 
   Constant *C = V1State.getCompare(I.getPredicate(), I.getType(), V2State);
   if (C) {
-    // TODO: getCompare() currently has incorrect handling for unknown/undef.
-    if (isa<UndefValue>(C))
-      return;
     ValueLatticeElement CV;
     CV.markConstant(C);
     mergeInValue(&I, CV);
