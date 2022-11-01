@@ -184,27 +184,33 @@ public:
   }
 };
 
-/// FunctionArgList - Type for representing both the decl and type of parameters
-/// to a function. The decl must be either a ParmVarDecl or ImplicitParamDecl.
+/// Type for representing both the decl and type of parameters to a function.
+/// The decl must be either a ParmVarDecl or ImplicitParamDecl.
 class FunctionArgList : public llvm::SmallVector<const clang::VarDecl *, 16> {};
 
-/// ReturnValueSlot - Contains the address where the return value of a function
-/// can be stored, and whether the address is volatile or not.
+/// Contains the address where the return value of a function can be stored, and
+/// whether the address is volatile or not.
 class ReturnValueSlot {
   Address Addr = Address::invalid();
 
   // Return value slot flags
-  // unsigned IsVolatile : 1;
-  // unsigned IsUnused : 1;
-  // unsigned IsExternallyDestructed : 1;
+  unsigned IsVolatile : 1;
+  unsigned IsUnused : 1;
+  unsigned IsExternallyDestructed : 1;
 
 public:
-  // :
   ReturnValueSlot()
-  //   IsVolatile(false),
-  //   IsUnused(false),
-  //   IsExternallyDestructed(false)
-  {}
+      : IsVolatile(false), IsUnused(false), IsExternallyDestructed(false) {}
+  ReturnValueSlot(Address Addr, bool IsVolatile, bool IsUnused = false,
+                  bool IsExternallyDestructed = false)
+      : Addr(Addr), IsVolatile(IsVolatile), IsUnused(IsUnused),
+        IsExternallyDestructed(IsExternallyDestructed) {}
+
+  bool isNull() const { return !Addr.isValid(); }
+  bool isVolatile() const { return IsVolatile; }
+  Address getValue() const { return Addr; }
+  bool isUnused() const { return IsUnused; }
+  bool isExternallyDestructed() const { return IsExternallyDestructed; }
 };
 
 } // namespace cir
