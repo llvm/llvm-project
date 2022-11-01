@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenCall.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenTypes.h"
