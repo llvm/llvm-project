@@ -60,8 +60,6 @@ static cl::opt<unsigned> NumJobs(
 unsigned NumJobs = 1;
 #endif
 
-void writeOutput(ReducerWorkItem &M, llvm::StringRef Message);
-
 void writeBitcode(ReducerWorkItem &M, raw_ostream &OutStream);
 
 void readBitcode(ReducerWorkItem &M, MemoryBufferRef Data, LLVMContext &Ctx,
@@ -369,7 +367,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
       ReducedProgram = std::move(Result);
 
       // FIXME: Report meaningful progress info
-      writeOutput(*ReducedProgram, " **** SUCCESS | Saved new best reduction to ");
+      Test.writeOutput(" **** SUCCESS | Saved new best reduction to ");
     }
     // Delete uninteresting chunks
     erase_if(ChunksStillConsideredInteresting,

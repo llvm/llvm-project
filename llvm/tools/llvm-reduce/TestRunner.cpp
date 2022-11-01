@@ -9,15 +9,23 @@
 #include "TestRunner.h"
 #include "ReducerWorkItem.h"
 #include "deltas/Utils.h"
+#include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 
 using namespace llvm;
 
 TestRunner::TestRunner(StringRef TestName,
                        const std::vector<std::string> &TestArgs,
                        std::unique_ptr<ReducerWorkItem> Program,
-                       std::unique_ptr<TargetMachine> TM, const char *ToolName)
+                       std::unique_ptr<TargetMachine> TM, const char *ToolName,
+                       StringRef OutputName, bool OutputBitcode)
     : TestName(TestName), ToolName(ToolName), TestArgs(TestArgs),
-      Program(std::move(Program)), TM(std::move(TM)) {
+      Program(std::move(Program)), TM(std::move(TM)),
+      OutputFilename(OutputName), EmitBitcode(OutputBitcode) {
   assert(this->Program && "Initialized with null program?");
 }
 
@@ -57,4 +65,47 @@ int TestRunner::run(StringRef Filename) {
 void TestRunner::setProgram(std::unique_ptr<ReducerWorkItem> P) {
   assert(P && "Setting null program?");
   Program = std::move(P);
+}
+
+void writeBitcode(ReducerWorkItem &M, raw_ostream &OutStream) {
+  if (M.LTOInfo && M.LTOInfo->IsThinLTO && M.LTOInfo->EnableSplitLTOUnit) {
+    PassBuilder PB;
+    LoopAnalysisManager LAM;
+    FunctionAnalysisManager FAM;
+    CGSCCAnalysisManager CGAM;
+    ModuleAnalysisManager MAM;
+    PB.registerModuleAnalyses(MAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+    ModulePassManager MPM;
+    MPM.addPass(ThinLTOBitcodeWriterPass(OutStream, nullptr));
+    MPM.run(*M.M, MAM);
+  } else {
+    std::unique_ptr<ModuleSummaryIndex> Index;
+    if (M.LTOInfo && M.LTOInfo->HasSummary) {
+      ProfileSummaryInfo PSI(M);
+      Index = std::make_unique<ModuleSummaryIndex>(
+          buildModuleSummaryIndex(M, nullptr, &PSI));
+    }
+    WriteBitcodeToFile(M, OutStream, Index.get());
+  }
+}
+
+void TestRunner::writeOutput(StringRef Message) {
+  std::error_code EC;
+  raw_fd_ostream Out(OutputFilename, EC);
+  if (EC) {
+    errs() << "Error opening output file: " << EC.message() << "!\n";
+    exit(1);
+  }
+
+  // Requesting bitcode emission with mir is nonsense, so just ignore it.
+  if (EmitBitcode && !Program->isMIR())
+    writeBitcode(*Program, Out);
+  else
+    Program->print(Out, /*AnnotationWriter=*/nullptr);
+
+  errs() << Message << OutputFilename << '\n';
 }
