@@ -54698,7 +54698,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case X86ISD::GF2P8AFFINEQB:
       if (!IsSplat &&
           (VT.is256BitVector() ||
-           (VT.is512BitVector() && Subtarget.useBWIRegs())) &&
+           (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
           llvm::all_of(Ops, [Op0](SDValue Op) {
             return Op0.getOperand(2) == Op.getOperand(2);
           })) {
