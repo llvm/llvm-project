@@ -94,6 +94,10 @@ public:
   static mlir::Attribute emitForMemory(CIRGenModule &CGM, mlir::Attribute C,
                                        clang::QualType T);
 
+  /// Try to emit the initializer of the given declaration as an abstract
+  /// constant.
+  mlir::Attribute tryEmitAbstractForInitializer(const VarDecl &D);
+
   // These are private helper routines of the constant emitter that
   // can't actually be private because things are split out into helper
   // functions and classes.

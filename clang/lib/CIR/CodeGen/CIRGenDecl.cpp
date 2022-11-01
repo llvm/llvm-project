@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenCstEmitter.h"
 #include "CIRGenFunction.h"
 
 #include "clang/AST/Decl.h"

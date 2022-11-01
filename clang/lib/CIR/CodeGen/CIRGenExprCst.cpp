@@ -537,6 +537,13 @@ static QualType getNonMemoryType(CIRGenModule &CGM, QualType type) {
   return type;
 }
 
+mlir::Attribute
+ConstantEmitter::tryEmitAbstractForInitializer(const VarDecl &D) {
+  auto state = pushAbstract();
+  auto C = tryEmitPrivateForVarInit(D);
+  return validateAndPopAbstract(C, state);
+}
+
 mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
   // Make a quick check if variable can be default NULL initialized
   // and avoid going through rest of code which may do, for c++11,
@@ -761,13 +768,14 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &Value,
   }
   case APValue::LValue:
     return ConstantLValueEmitter(*this, Value, DestType).tryEmit();
+  case APValue::Struct:
+  case APValue::Union:
+    assert(0 && "not implemented");
   case APValue::FixedPoint:
   case APValue::ComplexInt:
   case APValue::ComplexFloat:
   case APValue::Vector:
   case APValue::AddrLabelDiff:
-  case APValue::Struct:
-  case APValue::Union:
   case APValue::MemberPointer:
     assert(0 && "not implemented");
   }
