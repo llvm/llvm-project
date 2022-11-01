@@ -7704,6 +7704,30 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
     }
     break;
   }
+  case ISD::VP_INTTOPTR: {
+    SDValue N = OpValues[0];
+    EVT DestVT = TLI.getValueType(DAG.getDataLayout(), VPIntrin.getType());
+    EVT PtrMemVT = TLI.getMemValueType(DAG.getDataLayout(), VPIntrin.getType());
+    N = DAG.getVPPtrExtOrTrunc(getCurSDLoc(), DestVT, N, OpValues[1],
+                               OpValues[2]);
+    N = DAG.getVPZExtOrTrunc(getCurSDLoc(), PtrMemVT, N, OpValues[1],
+                             OpValues[2]);
+    setValue(&VPIntrin, N);
+    break;
+  }
+  case ISD::VP_PTRTOINT: {
+    SDValue N = OpValues[0];
+    EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
+                                                          VPIntrin.getType());
+    EVT PtrMemVT = TLI.getMemValueType(DAG.getDataLayout(),
+                                       VPIntrin.getOperand(0)->getType());
+    N = DAG.getVPPtrExtOrTrunc(getCurSDLoc(), PtrMemVT, N, OpValues[1],
+                               OpValues[2]);
+    N = DAG.getVPZExtOrTrunc(getCurSDLoc(), DestVT, N, OpValues[1],
+                             OpValues[2]);
+    setValue(&VPIntrin, N);
+    break;
+  }
   }
 }
 
