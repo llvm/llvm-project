@@ -471,9 +471,9 @@ public:
   /// when the register pressure is high for one BB.
   /// Return true if register pressure for \p MBB is high and ABI is supported
   /// to reduce register pressure. Otherwise return false.
-  bool
-  shouldReduceRegisterPressure(MachineBasicBlock *MBB,
-                               RegisterClassInfo *RegClassInfo) const override;
+  bool shouldReduceRegisterPressure(
+      const MachineBasicBlock *MBB,
+      const RegisterClassInfo *RegClassInfo) const override;
 
   /// Fixup the placeholders we put in genAlternativeCodeSequence() for
   /// MachineCombiner.
