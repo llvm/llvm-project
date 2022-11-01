@@ -260,9 +260,12 @@ void CIRGenFunction::buildCXXConstructExpr(const CXXConstructExpr *E,
 
   assert(!E->requiresZeroInitialization() && "zero initialization NYI");
 
-  // If this is a call to a trivial default constructor, do nothing.
-  if (CD->isTrivial() && CD->isDefaultConstructor())
-    assert(!CD->isTrivial() && "trivial constructors NYI");
+  // If this is a call to a trivial default constructor:
+  // In LLVM: do nothing.
+  // In CIR: emit as a regular call, other later passes should lower the
+  // ctor call into trivial initialization.
+  // if (CD->isTrivial() && CD->isDefaultConstructor())
+  //  return;
 
   // Elide the constructor if we're constructing from a temporary
   if (getLangOpts().ElideConstructors && E->isElidable()) {

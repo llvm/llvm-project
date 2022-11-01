@@ -591,7 +591,12 @@ void CIRGenFunction::buildCXXConstructorCall(
     buildTypeCheck(CIRGenFunction::TCK_ConstructorCall, Loc, This.getPointer(),
                    getContext().getRecordType(ClassDecl), CharUnits::Zero());
 
-  assert(!D->isTrivial() && "Trivial ctor decl NYI");
+  // If this is a call to a trivial default constructor:
+  // In LLVM: do nothing.
+  // In CIR: emit as a regular call, other later passes should lower the
+  // ctor call into trivial initialization.
+  // if (CD->isTrivial() && CD->isDefaultConstructor())
+  //  return;
 
   assert(!isMemcpyEquivalentSpecialMember(D) && "NYI");
 
