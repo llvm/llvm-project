@@ -1,4 +1,4 @@
-# REQUIRES: system-darwin
+# UNSUPPORTED: system-windows
 # RUN: %clangxx_host -g -O0 %S/Inputs/names.cpp -std=c++17 -o %t.out
 # RUN: %lldb -b -s %s %t.out | FileCheck %s
 settings set -f frame-format "frame ${function.name-with-args}\n"
@@ -8,21 +8,19 @@ break set -n returns_func_ptr
 run
 # CHECK: frame int ns::foo<int ()>(t={{.*}})
 c
-# CHECK: frame int ns::foo<std::{{.*}}function<int ()>>(t= Function = bar() )
+# CHECK: frame int ns::foo<int ()>(str="bar")
 c
-# CHECK: frame int ns::foo<(anonymous namespace)::$_0>(t={{.*}})
+# CHECK: frame int ns::foo<(anonymous namespace)::$_0>(t=(anonymous namespace)::(unnamed class) @ {{.*}})
 c
-# CHECK: frame int ns::foo<std::{{.*}}function<int ()>>(t= Function = (anonymous namespace)::anon_bar() )
+# CHECK: frame int ns::foo<int (*)()>(t=({{.*}}`(anonymous namespace)::anon_bar() at {{.*}}))
 c
-# CHECK: frame int ns::foo<void (Foo::*)(std::{{.*}}function<int (int)> const&) const noexcept>(t={{.*}})
+# CHECK: frame int ns::foo<void (Foo::*)(int (*)(int)) const noexcept>(str="method")
 c
 # CHECK: frame ns::returns_func_ptr<int>((null)={{.*}})
 c
-# CHECK: frame void Foo::foo<std::{{.*}}function<int ()>>(this={{.*}}, t= Function = bar() ) const
+# CHECK: frame void Foo::foo<int (*)()>(this={{.*}}, arg=({{.*}}`(anonymous namespace)::anon_bar() at {{.*}}))
 c
-# CHECK: frame void Foo::foo<std::{{.*}}function<int ()>>(this={{.*}}, t= Function = (anonymous namespace)::anon_bar() ) const
-c
-# CHECK: frame void Foo::operator<<<1ul>(this={{.*}}, (null)=0)
+# CHECK: frame void Foo::operator<<<1>(this={{.*}}, (null)=0)
 c
 # CHECK: frame Foo::returns_func_ptr<int>(this={{.*}}, (null)={{.*}})
 q
