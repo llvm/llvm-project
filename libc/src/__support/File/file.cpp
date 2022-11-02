@@ -330,12 +330,49 @@ int File::close() {
   return 0;
 }
 
-void File::set_buffer(void *buffer, size_t size, bool owned) {
-  if (own_buf)
-    free(buf);
-  buf = static_cast<uint8_t *>(buffer);
-  bufsize = size;
-  own_buf = owned;
+int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
+  // We do not need to lock the file as this method should be called before
+  // other operations are performed on the file.
+
+  if (buffer != nullptr && size == 0)
+    return EINVAL;
+
+  switch (buffer_mode) {
+  case _IOFBF:
+  case _IOLBF:
+  case _IONBF:
+    break;
+  default:
+    return EINVAL;
+  }
+
+  if (buffer == nullptr && size != 0 && buffer_mode != _IONBF) {
+    // We exclude the case of buffer_mode == _IONBF in this branch
+    // because we don't need to allocate buffer in such a case.
+    if (own_buf) {
+      buf = realloc(buf, size);
+    } else {
+      buf = malloc(size);
+      own_buf = true;
+    }
+    bufsize = size;
+    // TODO: Handle allocation failures.
+  } else {
+    if (own_buf)
+      free(buf);
+    if (buffer_mode != _IONBF) {
+      buf = static_cast<uint8_t *>(buffer);
+      bufsize = size;
+    } else {
+      // We don't need any buffer.
+      buf = nullptr;
+      bufsize = 0;
+    }
+    own_buf = false;
+  }
+  bufmode = buffer_mode;
+  adjust_buf();
+  return 0;
 }
 
 File::ModeFlags File::mode_flags(const char *mode) {
