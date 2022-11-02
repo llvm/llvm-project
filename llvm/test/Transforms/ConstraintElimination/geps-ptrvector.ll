@@ -34,3 +34,26 @@ define <2 x i1> @test.vectorgep.ult.false(<2 x ptr> %vec) {
   %t.1 = icmp ult <2 x ptr> %gep.1, %vec
   ret <2 x i1> %t.1
 }
+
+
+define <vscale x 2 x i1> @test.scalable.vectorgep.ult.true(<vscale x 2 x ptr> %vec) {
+; CHECK-LABEL: @test.scalable.vectorgep.ult.true(
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, <vscale x 2 x ptr> [[VEC:%.*]], i64 1
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ult <vscale x 2 x ptr> [[VEC]], [[GEP_1]]
+; CHECK-NEXT:    ret <vscale x 2 x i1> [[T_1]]
+;
+  %gep.1 = getelementptr inbounds i32, <vscale x 2 x ptr> %vec, i64 1
+  %t.1 = icmp ult <vscale x 2 x ptr> %vec, %gep.1
+  ret <vscale x 2 x i1> %t.1
+}
+
+define <vscale x 2 x i1> @test.scalable.vectorgep.ult.false(<vscale x 2 x ptr> %vec) {
+; CHECK-LABEL: @test.scalable.vectorgep.ult.false(
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i32, <vscale x 2 x ptr> [[VEC:%.*]], i64 1
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ult <vscale x 2 x ptr> [[GEP_1]], [[VEC]]
+; CHECK-NEXT:    ret <vscale x 2 x i1> [[T_1]]
+;
+  %gep.1 = getelementptr inbounds i32, <vscale x 2 x ptr> %vec, i64 1
+  %t.1 = icmp ult <vscale x 2 x ptr> %gep.1, %vec
+  ret <vscale x 2 x i1> %t.1
+}
