@@ -79,7 +79,9 @@ uint32_t getKernelSize() { return __builtin_amdgcn_grid_size_x(); }
 
 uint32_t getBlockId() { return __builtin_amdgcn_workgroup_id_x(); }
 
-uint32_t getNumberOfBlocks() { return __builtin_amdgcn_grid_size_x(); }
+uint32_t getNumberOfBlocks() {
+  return __builtin_amdgcn_grid_size_x() / __builtin_amdgcn_workgroup_size_x();
+}
 
 uint32_t getWarpId() {
   return impl::getThreadIdInBlock() / mapping::getWarpSize();
