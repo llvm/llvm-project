@@ -24,14 +24,14 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; LA32-NEXT:    .cfi_offset 22, -8
 ; LA32-NEXT:    .cfi_offset 23, -12
 ; LA32-NEXT:    move $fp, $a0
-; LA32-NEXT:    beqz $a0, .LBB0_1
-; LA32-NEXT:  # %bb.2: # %bb2
+; LA32-NEXT:    beqz $a0, .LBB0_2
+; LA32-NEXT:  # %bb.1: # %bb2
 ; LA32-NEXT:  .Ltmp0:
 ; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    bl %plt(bar)
 ; LA32-NEXT:  .Ltmp1:
 ; LA32-NEXT:    b .LBB0_3
-; LA32-NEXT:  .LBB0_1: # %bb1
+; LA32-NEXT:  .LBB0_2: # %bb1
 ; LA32-NEXT:  .Ltmp2:
 ; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    bl %plt(foo)
@@ -61,14 +61,14 @@ define void @caller(ptr %p) personality ptr @__gxx_personality_v0 {
 ; LA64-NEXT:    .cfi_offset 22, -16
 ; LA64-NEXT:    .cfi_offset 23, -24
 ; LA64-NEXT:    move $fp, $a0
-; LA64-NEXT:    beqz $a0, .LBB0_1
-; LA64-NEXT:  # %bb.2: # %bb2
+; LA64-NEXT:    beqz $a0, .LBB0_2
+; LA64-NEXT:  # %bb.1: # %bb2
 ; LA64-NEXT:  .Ltmp0:
 ; LA64-NEXT:    move $a0, $fp
 ; LA64-NEXT:    bl %plt(bar)
 ; LA64-NEXT:  .Ltmp1:
 ; LA64-NEXT:    b .LBB0_3
-; LA64-NEXT:  .LBB0_1: # %bb1
+; LA64-NEXT:  .LBB0_2: # %bb1
 ; LA64-NEXT:  .Ltmp2:
 ; LA64-NEXT:    move $a0, $fp
 ; LA64-NEXT:    bl %plt(foo)
