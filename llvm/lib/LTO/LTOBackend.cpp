@@ -391,7 +391,8 @@ static void codegen(const Config &Conf, TargetMachine *TM,
                          EC.message());
   }
 
-  Expected<std::unique_ptr<CachedFileStream>> StreamOrErr = AddStream(Task);
+  Expected<std::unique_ptr<CachedFileStream>> StreamOrErr =
+      AddStream(Task, Mod.getModuleIdentifier());
   if (Error Err = StreamOrErr.takeError())
     report_fatal_error(std::move(Err));
   std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
