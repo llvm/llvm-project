@@ -6340,17 +6340,15 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
     while (NumLocations--) {
       assert(Idx < Record.size() &&
              "Invalid data, missing pragma diagnostic states");
-      SourceLocation Loc = ReadSourceLocation(F, Record[Idx++]);
-      auto IDAndOffset = SourceMgr.getDecomposedLoc(Loc);
-      assert(IDAndOffset.first.isValid() && "invalid FileID for transition");
-      assert(IDAndOffset.second == 0 && "not a start location for a FileID");
+      FileID FID = ReadFileID(F, Record, Idx);
+      assert(FID.isValid() && "invalid FileID for transition");
       unsigned Transitions = Record[Idx++];
 
       // Note that we don't need to set up Parent/ParentOffset here, because
       // we won't be changing the diagnostic state within imported FileIDs
       // (other than perhaps appending to the main source file, which has no
       // parent).
-      auto &F = Diag.DiagStatesByLoc.Files[IDAndOffset.first];
+      auto &F = Diag.DiagStatesByLoc.Files[FID];
       F.StateTransitions.reserve(F.StateTransitions.size() + Transitions);
       for (unsigned I = 0; I != Transitions; ++I) {
         unsigned Offset = Record[Idx++];
