@@ -1860,3 +1860,83 @@ define i32 @loadCombine_4consecutive_lower_index_comes_before(ptr %p) {
   ret i32 %o3
 }
 
+define i16 @loadCombine_2consecutive_badinsert(ptr %p) {
+; LE-LABEL: @loadCombine_2consecutive_badinsert(
+; LE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
+; LE-NEXT:    store i8 0, ptr [[P1]], align 1
+; LE-NEXT:    [[L1:%.*]] = load i16, ptr [[P]], align 1
+; LE-NEXT:    ret i16 [[L1]]
+;
+; BE-LABEL: @loadCombine_2consecutive_badinsert(
+; BE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
+; BE-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1
+; BE-NEXT:    store i8 0, ptr [[P1]], align 1
+; BE-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
+; BE-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i16
+; BE-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i16
+; BE-NEXT:    [[S2:%.*]] = shl i16 [[E2]], 8
+; BE-NEXT:    [[O1:%.*]] = or i16 [[E1]], [[S2]]
+; BE-NEXT:    ret i16 [[O1]]
+;
+  %p1 = getelementptr i8, ptr %p, i32 1
+  %l2 = load i8, ptr %p1
+  store i8 0, ptr %p1, align 1
+  %l1 = load i8, ptr %p
+  %e1 = zext i8 %l1 to i16
+  %e2 = zext i8 %l2 to i16
+  %s2 = shl i16 %e2, 8
+  %o1 = or i16 %e1, %s2
+  ret i16 %o1
+}
+
+define i32 @loadCombine_4consecutive_badinsert(ptr %p) {
+; LE-LABEL: @loadCombine_4consecutive_badinsert(
+; LE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
+; LE-NEXT:    store i8 0, ptr [[P1]], align 1
+; LE-NEXT:    [[L1:%.*]] = load i32, ptr [[P]], align 1
+; LE-NEXT:    ret i32 [[L1]]
+;
+; BE-LABEL: @loadCombine_4consecutive_badinsert(
+; BE-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i32 1
+; BE-NEXT:    [[P2:%.*]] = getelementptr i8, ptr [[P]], i32 2
+; BE-NEXT:    [[P3:%.*]] = getelementptr i8, ptr [[P]], i32 3
+; BE-NEXT:    [[L2:%.*]] = load i8, ptr [[P1]], align 1
+; BE-NEXT:    [[L3:%.*]] = load i8, ptr [[P2]], align 1
+; BE-NEXT:    store i8 0, ptr [[P1]], align 1
+; BE-NEXT:    [[L4:%.*]] = load i8, ptr [[P3]], align 1
+; BE-NEXT:    [[L1:%.*]] = load i8, ptr [[P]], align 1
+; BE-NEXT:    [[E1:%.*]] = zext i8 [[L1]] to i32
+; BE-NEXT:    [[E2:%.*]] = zext i8 [[L2]] to i32
+; BE-NEXT:    [[E3:%.*]] = zext i8 [[L3]] to i32
+; BE-NEXT:    [[E4:%.*]] = zext i8 [[L4]] to i32
+; BE-NEXT:    [[S2:%.*]] = shl i32 [[E2]], 8
+; BE-NEXT:    [[S3:%.*]] = shl i32 [[E3]], 16
+; BE-NEXT:    [[S4:%.*]] = shl i32 [[E4]], 24
+; BE-NEXT:    [[O1:%.*]] = or i32 [[E1]], [[S2]]
+; BE-NEXT:    [[O2:%.*]] = or i32 [[O1]], [[S3]]
+; BE-NEXT:    [[O3:%.*]] = or i32 [[O2]], [[S4]]
+; BE-NEXT:    ret i32 [[O3]]
+;
+  %p1 = getelementptr i8, ptr %p, i32 1
+  %p2 = getelementptr i8, ptr %p, i32 2
+  %p3 = getelementptr i8, ptr %p, i32 3
+  %l2 = load i8, ptr %p1
+  %l3 = load i8, ptr %p2
+  store i8 0, ptr %p1, align 1
+  %l4 = load i8, ptr %p3
+  %l1 = load i8, ptr %p
+
+  %e1 = zext i8 %l1 to i32
+  %e2 = zext i8 %l2 to i32
+  %e3 = zext i8 %l3 to i32
+  %e4 = zext i8 %l4 to i32
+
+  %s2 = shl i32 %e2, 8
+  %s3 = shl i32 %e3, 16
+  %s4 = shl i32 %e4, 24
+
+  %o1 = or i32 %e1, %s2
+  %o2 = or i32 %o1, %s3
+  %o3 = or i32 %o2, %s4
+  ret i32 %o3
+}
