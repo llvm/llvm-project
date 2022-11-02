@@ -1680,6 +1680,17 @@ llvm.func @fastmathFlags(%arg0: f32) {
   %14 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<afn>} : (f32) -> (f32)
   %15 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<reassoc>} : (f32) -> (f32)
   %16 = llvm.call @fastmathFlagsFunc(%arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32) -> (f32)
+
+// CHECK: call fast float @llvm.copysign.f32(float {{.*}}, float {{.*}})
+  %17 = "llvm.intr.copysign"(%arg0, %arg0) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
+// CHECK: call afn float @llvm.copysign.f32(float {{.*}}, float {{.*}})
+  %18 = "llvm.intr.copysign"(%arg0, %arg0) {fastmathFlags = #llvm.fastmath<afn>} : (f32, f32) -> f32
+
+// CHECK: call fast float @llvm.powi.f32.i32(float {{.*}}, i32 {{.*}})
+  %exp = llvm.mlir.constant(1 : i32) : i32
+  %19 = "llvm.intr.powi"(%arg0, %exp) {fastmathFlags = #llvm.fastmath<fast>} : (f32, i32) -> f32
+// CHECK: call afn float @llvm.powi.f32.i32(float {{.*}}, i32 {{.*}})
+  %20 = "llvm.intr.powi"(%arg0, %exp) {fastmathFlags = #llvm.fastmath<afn>} : (f32, i32) -> f32
   llvm.return
 }
 

@@ -796,12 +796,12 @@ func.func @omp_atomic_update(%x : memref<i32>, %expr : i32, %xBool : memref<i1>,
   }
   // CHECK: omp.atomic.update %[[X]] : memref<i32>
   // CHECK-NEXT: (%[[XVAL:.*]]: i32):
-  // CHECK-NEXT:   %[[NEWVAL:.*]] = "llvm.intr.smax"(%[[XVAL]], %[[EXPR]]) : (i32, i32) -> i32
+  // CHECK-NEXT:   %[[NEWVAL:.*]] = llvm.intr.smax(%[[XVAL]], %[[EXPR]]) : (i32, i32) -> i32
   // CHECK-NEXT:   omp.yield(%[[NEWVAL]] : i32)
   // CHECK-NEXT: }
   omp.atomic.update %x : memref<i32> {
   ^bb0(%xval: i32):
-    %newval = "llvm.intr.smax"(%xval, %expr) : (i32, i32) -> i32
+    %newval = llvm.intr.smax(%xval, %expr) : (i32, i32) -> i32
     omp.yield(%newval : i32)
   }
 
