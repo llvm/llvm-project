@@ -9,6 +9,46 @@
 #include "llvm/Analysis/ValueLattice.h"
 
 namespace llvm {
+Constant *
+ValueLatticeElement::getCompare(CmpInst::Predicate Pred, Type *Ty,
+                                const ValueLatticeElement &Other) const {
+  // Not yet resolved.
+  if (isUnknown() || Other.isUnknown())
+    return nullptr;
+
+  // TODO: Can be made more precise, but always returning undef would be
+  // incorrect.
+  if (isUndef() || isUndef())
+    return nullptr;
+
+  if (isConstant() && Other.isConstant())
+    return ConstantExpr::getCompare(Pred, getConstant(), Other.getConstant());
+
+  if (ICmpInst::isEquality(Pred)) {
+    // not(C) != C => true, not(C) == C => false.
+    if ((isNotConstant() && Other.isConstant() &&
+         getNotConstant() == Other.getConstant()) ||
+        (isConstant() && Other.isNotConstant() &&
+         getConstant() == Other.getNotConstant()))
+      return Pred == ICmpInst::ICMP_NE ? ConstantInt::getTrue(Ty)
+                                       : ConstantInt::getFalse(Ty);
+  }
+
+  // Integer constants are represented as ConstantRanges with single
+  // elements.
+  if (!isConstantRange() || !Other.isConstantRange())
+    return nullptr;
+
+  const auto &CR = getConstantRange();
+  const auto &OtherCR = Other.getConstantRange();
+  if (CR.icmp(Pred, OtherCR))
+    return ConstantInt::getTrue(Ty);
+  if (CR.icmp(CmpInst::getInversePredicate(Pred), OtherCR))
+    return ConstantInt::getFalse(Ty);
+
+  return nullptr;
+}
+
 raw_ostream &operator<<(raw_ostream &OS, const ValueLatticeElement &Val) {
   if (Val.isUnknown())
     return OS << "unknown";
