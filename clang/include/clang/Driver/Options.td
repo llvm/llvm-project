@@ -5638,6 +5638,11 @@ def fctor_dtor_return_this : Flag<["-"], "fctor-dtor-return-this">,
 
 } // let Flags = [CC1Option, NoDriverOption]
 
+def fexperimental_assignment_tracking :
+  Flag<["-"], "fexperimental-assignment-tracking">, Group<f_Group>,
+  HelpText<"Enable assignment tracking debug info">,
+  MarshallingInfoFlag<CodeGenOpts<"EnableAssignmentTracking">>;
+
 //===----------------------------------------------------------------------===//
 // Dependency Output Options
 //===----------------------------------------------------------------------===//
