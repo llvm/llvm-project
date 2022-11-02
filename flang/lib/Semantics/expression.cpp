@@ -698,9 +698,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ComplexPart &x) {
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::ComplexLiteralConstant &z) {
-  return AsMaybeExpr(
-      ConstructComplex(GetContextualMessages(), Analyze(std::get<0>(z.t)),
-          Analyze(std::get<1>(z.t)), GetDefaultKind(TypeCategory::Real)));
+  return AnalyzeComplex(Analyze(std::get<0>(z.t)), Analyze(std::get<1>(z.t)),
+      "complex literal constant");
 }
 
 // CHARACTER literal processing.
@@ -2861,22 +2860,9 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Subtract &x) {
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(
-    const parser::Expr::ComplexConstructor &x) {
-  auto re{Analyze(std::get<0>(x.t).value())};
-  auto im{Analyze(std::get<1>(x.t).value())};
-  if (re && re->Rank() > 0) {
-    context().Say(std::get<0>(x.t).value().source,
-        "Real part of complex constructor must be scalar"_err_en_US);
-  }
-  if (im && im->Rank() > 0) {
-    context().Say(std::get<1>(x.t).value().source,
-        "Imaginary part of complex constructor must be scalar"_err_en_US);
-  }
-  if (re && im) {
-    ConformabilityCheck(GetContextualMessages(), *re, *im);
-  }
-  return AsMaybeExpr(ConstructComplex(GetContextualMessages(), std::move(re),
-      std::move(im), GetDefaultKind(TypeCategory::Real)));
+    const parser::Expr::ComplexConstructor &z) {
+  return AnalyzeComplex(Analyze(std::get<0>(z.t).value()),
+      Analyze(std::get<1>(z.t).value()), "complex constructor");
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr::Concat &x) {
@@ -3389,6 +3375,21 @@ MaybeExpr ExpressionAnalyzer::MakeFunctionRef(
   } else {
     return std::nullopt;
   }
+}
+
+MaybeExpr ExpressionAnalyzer::AnalyzeComplex(
+    MaybeExpr &&re, MaybeExpr &&im, const char *what) {
+  if (re && re->Rank() > 0) {
+    Say("Real part of %s is not scalar"_port_en_US, what);
+  }
+  if (im && im->Rank() > 0) {
+    Say("Imaginary part of %s is not scalar"_port_en_US, what);
+  }
+  if (re && im) {
+    ConformabilityCheck(GetContextualMessages(), *re, *im);
+  }
+  return AsMaybeExpr(ConstructComplex(GetContextualMessages(), std::move(re),
+      std::move(im), GetDefaultKind(TypeCategory::Real)));
 }
 
 void ArgumentAnalyzer::Analyze(const parser::Variable &x) {
