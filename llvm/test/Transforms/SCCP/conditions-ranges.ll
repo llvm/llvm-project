@@ -1369,3 +1369,12 @@ bb139:                                            ; preds = %bb135
 bb142:                                            ; preds = %bb139
   ret void
 }
+
+define i1 @ptr_icmp_data_layout() {
+; CHECK-LABEL: @ptr_icmp_data_layout(
+; CHECK-NEXT:    ret i1 icmp eq (ptr getelementptr inbounds (i32, ptr @A, i64 1), ptr @A)
+;
+  %a.end = getelementptr i32, ptr @A, i64 1
+  %cmp = icmp eq ptr %a.end, @A
+  ret i1 %cmp
+}
