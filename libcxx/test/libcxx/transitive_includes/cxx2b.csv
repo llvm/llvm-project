@@ -1,6 +1,5 @@
 algorithm bit
 algorithm climits
-algorithm concepts
 algorithm cstddef
 algorithm cstdint
 algorithm cstdlib
@@ -12,7 +11,6 @@ algorithm new
 algorithm type_traits
 algorithm version
 any atomic
-any concepts
 any cstddef
 any cstdint
 any cstdlib
@@ -26,7 +24,6 @@ any type_traits
 any typeinfo
 any version
 array compare
-array concepts
 array cstddef
 array cstdlib
 array initializer_list
@@ -59,7 +56,6 @@ bit limits
 bit type_traits
 bit version
 bitset climits
-bitset concepts
 bitset cstddef
 bitset cstdint
 bitset cstdlib
@@ -75,7 +71,6 @@ bitset version
 ccomplex complex
 charconv cerrno
 charconv cmath
-charconv concepts
 charconv cstddef
 charconv cstdint
 charconv cstdlib
@@ -88,7 +83,6 @@ chrono bit
 chrono charconv
 chrono cmath
 chrono compare
-chrono concepts
 chrono cstddef
 chrono cstdint
 chrono cstdlib
@@ -111,7 +105,6 @@ cmath type_traits
 cmath version
 codecvt atomic
 codecvt cctype
-codecvt concepts
 codecvt cstddef
 codecvt cstdint
 codecvt cstdlib
@@ -142,7 +135,6 @@ concepts cstddef
 concepts type_traits
 concepts version
 condition_variable atomic
-condition_variable concepts
 condition_variable cstddef
 condition_variable cstdint
 condition_variable cstdlib
@@ -171,7 +163,6 @@ cwchar cwctype
 cwctype cctype
 deque atomic
 deque compare
-deque concepts
 deque cstddef
 deque cstdint
 deque cstdlib
@@ -248,7 +239,6 @@ experimental/vector experimental/memory_resource
 experimental/vector vector
 ext/hash_map algorithm
 ext/hash_map cmath
-ext/hash_map concepts
 ext/hash_map cstddef
 ext/hash_map cstdint
 ext/hash_map cstring
@@ -261,7 +251,6 @@ ext/hash_map string
 ext/hash_map type_traits
 ext/hash_set algorithm
 ext/hash_set cmath
-ext/hash_set concepts
 ext/hash_set cstddef
 ext/hash_set cstdint
 ext/hash_set cstring
@@ -273,7 +262,6 @@ ext/hash_set string
 ext/hash_set type_traits
 filesystem cerrno
 filesystem compare
-filesystem concepts
 filesystem cstddef
 filesystem cstdint
 filesystem cstdlib
@@ -292,7 +280,6 @@ filesystem version
 format array
 format bit
 format charconv
-format concepts
 format cstddef
 format cstdint
 format cstdlib
@@ -308,7 +295,6 @@ format type_traits
 format version
 forward_list atomic
 forward_list compare
-forward_list concepts
 forward_list cstddef
 forward_list cstdint
 forward_list cstdlib
@@ -324,7 +310,6 @@ forward_list typeinfo
 forward_list version
 fstream atomic
 fstream cctype
-fstream concepts
 fstream cstddef
 fstream cstdint
 fstream cstdio
@@ -345,7 +330,6 @@ fstream typeinfo
 fstream version
 functional array
 functional atomic
-functional concepts
 functional cstddef
 functional cstdint
 functional cstdlib
@@ -378,7 +362,6 @@ iomanip istream
 iomanip version
 ios atomic
 ios cctype
-ios concepts
 ios cstddef
 ios cstdint
 ios cstdlib
@@ -400,7 +383,6 @@ iostream istream
 iostream ostream
 iostream streambuf
 iostream version
-istream concepts
 istream cstddef
 istream iosfwd
 istream ostream
@@ -423,7 +405,6 @@ limits type_traits
 limits version
 list atomic
 list compare
-list concepts
 list cstddef
 list cstdint
 list cstdlib
@@ -439,7 +420,6 @@ list typeinfo
 list version
 locale atomic
 locale cctype
-locale concepts
 locale cstddef
 locale cstdint
 locale cstdio
@@ -459,7 +439,6 @@ locale type_traits
 locale typeinfo
 locale version
 map compare
-map concepts
 map cstddef
 map cstdlib
 map initializer_list
@@ -472,7 +451,6 @@ map type_traits
 map version
 memory atomic
 memory compare
-memory concepts
 memory cstddef
 memory cstdint
 memory cstdlib
@@ -495,7 +473,6 @@ memory_resource stdexcept
 memory_resource tuple
 memory_resource version
 mutex atomic
-mutex concepts
 mutex cstddef
 mutex cstdint
 mutex cstdlib
@@ -516,11 +493,9 @@ new cstdlib
 new exception
 new type_traits
 new version
-numbers concepts
 numbers type_traits
 numbers version
 numeric cmath
-numeric concepts
 numeric cstddef
 numeric limits
 numeric type_traits
@@ -547,7 +522,6 @@ ostream streambuf
 ostream type_traits
 ostream version
 queue compare
-queue concepts
 queue cstddef
 queue cstdlib
 queue deque
@@ -559,7 +533,6 @@ queue version
 random bit
 random climits
 random cmath
-random concepts
 random cstddef
 random cstdint
 random cstdlib
@@ -572,7 +545,6 @@ random type_traits
 random vector
 random version
 ranges compare
-ranges concepts
 ranges cstddef
 ranges cstdlib
 ranges initializer_list
@@ -593,7 +565,6 @@ ratio version
 regex atomic
 regex cctype
 regex compare
-regex concepts
 regex cstddef
 regex cstdint
 regex cstdlib
@@ -624,7 +595,6 @@ semaphore ratio
 semaphore type_traits
 semaphore version
 set compare
-set concepts
 set cstddef
 set cstdlib
 set initializer_list
@@ -643,7 +613,6 @@ shared_mutex system_error
 shared_mutex type_traits
 shared_mutex version
 span array
-span concepts
 span cstddef
 span initializer_list
 span limits
@@ -656,7 +625,6 @@ sstream string
 sstream type_traits
 sstream version
 stack compare
-stack concepts
 stack cstddef
 stack deque
 stack initializer_list
@@ -671,7 +639,6 @@ streambuf iosfwd
 streambuf version
 string climits
 string compare
-string concepts
 string cstddef
 string cstdint
 string cstdio
@@ -688,7 +655,6 @@ string tuple
 string type_traits
 string version
 string_view compare
-string_view concepts
 string_view cstddef
 string_view cstdint
 string_view cstdio
@@ -744,7 +710,6 @@ typeinfo exception
 typeinfo type_traits
 unordered_map cmath
 unordered_map compare
-unordered_map concepts
 unordered_map cstddef
 unordered_map cstdint
 unordered_map cstdlib
@@ -759,7 +724,6 @@ unordered_map type_traits
 unordered_map version
 unordered_set cmath
 unordered_set compare
-unordered_set concepts
 unordered_set cstddef
 unordered_set cstdint
 unordered_set cstdlib
@@ -780,7 +744,6 @@ utility limits
 utility type_traits
 utility version
 valarray cmath
-valarray concepts
 valarray cstddef
 valarray cstdlib
 valarray cstring
@@ -804,7 +767,6 @@ variant version
 vector atomic
 vector climits
 vector compare
-vector concepts
 vector cstddef
 vector cstdint
 vector cstdlib

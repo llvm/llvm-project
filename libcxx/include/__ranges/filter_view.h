@@ -10,6 +10,10 @@
 #define _LIBCPP___RANGES_FILTER_VIEW_H
 
 #include <__algorithm/ranges_find_if.h>
+#include <__concepts/constructible.h>
+#include <__concepts/copyable.h>
+#include <__concepts/derived_from.h>
+#include <__concepts/equality_comparable.h>
 #include <__config>
 #include <__debug>
 #include <__functional/bind_back.h>
@@ -30,7 +34,6 @@
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
-#include <concepts>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

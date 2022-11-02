@@ -335,7 +335,6 @@ filesystem version
 format array
 format bit
 format charconv
-format concepts
 format cstddef
 format cstdint
 format cstdlib
@@ -650,7 +649,6 @@ random type_traits
 random vector
 random version
 ranges compare
-ranges concepts
 ranges cstddef
 ranges cstdlib
 ranges initializer_list
