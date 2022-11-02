@@ -1,3 +1,4 @@
+# REQUIRES: x86_64-linux
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: split-file %s %t
 # RUN: llvm-mc -triple=x86_64-unknown-linux-gnu -filetype=obj -o %t/test_runner.o %t/test_runner.s
