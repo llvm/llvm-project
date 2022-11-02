@@ -2123,6 +2123,9 @@ bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
     };
     return false;
   };
+  auto InClassScope = [](const NamedDecl &ND) {
+    return ND.getDeclContext()->getDeclKind() == Decl::CXXRecord;
+  };
   // We only complete symbol's name, which is the same as the name of the
   // *primary* template in case of template specializations.
   if (isExplicitTemplateSpecialization(&ND))
@@ -2138,8 +2141,11 @@ bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
   if (InTopLevelScope(ND))
     return true;
 
+  // Always index enum constants, even if they're not in the top level scope:
+  // when
+  // --all-scopes-completion is set, we'll want to complete those as well.
   if (const auto *EnumDecl = dyn_cast<clang::EnumDecl>(ND.getDeclContext()))
-    return InTopLevelScope(*EnumDecl) && !EnumDecl->isScoped();
+    return (InTopLevelScope(*EnumDecl) || InClassScope(*EnumDecl)) && !EnumDecl->isScoped();
 
   return false;
 }
