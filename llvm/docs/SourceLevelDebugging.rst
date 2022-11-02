@@ -252,7 +252,7 @@ be indirect (i.e, a pointer to the source variable), provided that interpreting
 the complex expression derives the direct value.
 
 ``llvm.dbg.assign``
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: llvm
 
