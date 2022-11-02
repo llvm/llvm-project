@@ -641,6 +641,11 @@ def StdC : StandardSpec<"stdc"> {
                ArgSpec<ConstCharRestrictedPtr>,
                ArgSpec<VarArgType>]
           >,
+          FunctionSpec<
+              "ungetc",
+              RetValSpec<IntType>,
+              [ArgSpec<IntType>, ArgSpec<FILEPtr>]
+          >,
       ],
       [
           ObjectSpec<
