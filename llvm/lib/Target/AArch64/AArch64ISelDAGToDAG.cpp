@@ -2803,6 +2803,122 @@ static bool tryBitfieldInsertOpFromOrAndImm(SDNode *N, SelectionDAG *CurDAG) {
   return true;
 }
 
+static bool isWorthFoldingIntoOrrWithLeftShift(SDValue Dst,
+                                               SelectionDAG *CurDAG,
+                                               SDValue &LeftShiftedOperand,
+                                               uint64_t &LeftShiftAmount) {
+  // Avoid folding Dst into ORR-with-left-shift if Dst has other uses than ORR.
+  if (!Dst.hasOneUse())
+    return false;
+
+  EVT VT = Dst.getValueType();
+  assert((VT == MVT::i32 || VT == MVT::i64) &&
+         "Caller should guarantee that VT is one of i32 or i64");
+  const unsigned SizeInBits = VT.getSizeInBits();
+
+  SDLoc DL(Dst.getNode());
+  uint64_t AndImm, ShlImm;
+  if (isOpcWithIntImmediate(Dst.getNode(), ISD::AND, AndImm) &&
+      isShiftedMask_64(AndImm)) {
+    // Avoid transforming 'DstOp0' if it has other uses than the AND node.
+    SDValue DstOp0 = Dst.getOperand(0);
+    if (!DstOp0.hasOneUse())
+      return false;
+
+    // An example to illustrate the transformation
+    // From:
+    //    lsr     x8, x1, #1
+    //    and     x8, x8, #0x3f80
+    //    bfxil   x8, x1, #0, #7
+    // To:
+    //    and    x8, x23, #0x7f
+    //    ubfx   x9, x23, #8, #7
+    //    orr    x23, x8, x9, lsl #7
+    //
+    // The number of instructions remains the same, but ORR is faster than BFXIL
+    // on many AArch64 processors (or as good as BFXIL if not faster). Besides,
+    // the dependency chain is improved after the transformation.
+    uint64_t SrlImm;
+    if (isOpcWithIntImmediate(DstOp0.getNode(), ISD::SRL, SrlImm)) {
+      uint64_t NumTrailingZeroInShiftedMask = countTrailingZeros(AndImm);
+      if ((SrlImm + NumTrailingZeroInShiftedMask) < SizeInBits) {
+        unsigned MaskWidth =
+            countTrailingOnes(AndImm >> NumTrailingZeroInShiftedMask);
+        unsigned UBFMOpc =
+            (VT == MVT::i32) ? AArch64::UBFMWri : AArch64::UBFMXri;
+        SDNode *UBFMNode = CurDAG->getMachineNode(
+            UBFMOpc, DL, VT, DstOp0.getOperand(0),
+            CurDAG->getTargetConstant(SrlImm + NumTrailingZeroInShiftedMask, DL,
+                                      VT),
+            CurDAG->getTargetConstant(
+                SrlImm + NumTrailingZeroInShiftedMask + MaskWidth - 1, DL, VT));
+        LeftShiftedOperand = SDValue(UBFMNode, 0);
+        LeftShiftAmount = NumTrailingZeroInShiftedMask;
+        return true;
+      }
+    }
+  } else if (isOpcWithIntImmediate(Dst.getNode(), ISD::SHL, ShlImm)) {
+    LeftShiftedOperand = Dst.getOperand(0);
+    LeftShiftAmount = ShlImm;
+    return true;
+  }
+  // FIXME: Extend the implementation to optimize if Dst is an SRL node.
+  return false;
+}
+
+static bool tryOrrWithLeftShift(SDNode *N, SDValue OrOpd0, SDValue OrOpd1,
+                                SDValue Src, SDValue Dst, SelectionDAG *CurDAG,
+                                const bool BiggerPattern) {
+  EVT VT = N->getValueType(0);
+  assert((VT == MVT::i32 || VT == MVT::i64) &&
+         "Expect result type to be i32 or i64 since N is combinable to BFM");
+  SDLoc DL(N);
+
+  // Bail out if BFM simplifies away one node in BFM Dst.
+  if (OrOpd1 != Dst)
+    return false;
+
+  // For "BFM Rd, Rn, #immr, #imms", it's known that BFM simplifies away fewer
+  // nodes from Rn (or inserts additional shift node) if BiggerPattern is true.
+  if (BiggerPattern) {
+    uint64_t SrcAndImm;
+    if (isOpcWithIntImmediate(OrOpd0.getNode(), ISD::AND, SrcAndImm) &&
+        isMask_64(SrcAndImm) && OrOpd0.getOperand(0) == Src) {
+      // OrOpd0 = AND Src, #Mask
+      // So BFM simplifies away one AND node from Src and doesn't simplify away
+      // nodes from Dst. If ORR with left-shifted operand also simplifies away
+      // one node (from Rd), ORR is better since it has higher throughput and
+      // smaller latency than BFM on many AArch64 processors (and for the rest
+      // ORR is at least as good as BFM).
+      SDValue LeftShiftedOperand;
+      uint64_t LeftShiftAmount;
+      if (isWorthFoldingIntoOrrWithLeftShift(Dst, CurDAG, LeftShiftedOperand,
+                                             LeftShiftAmount)) {
+        unsigned OrrOpc = (VT == MVT::i32) ? AArch64::ORRWrs : AArch64::ORRXrs;
+        SDValue Ops[] = {OrOpd0, LeftShiftedOperand,
+                         CurDAG->getTargetConstant(LeftShiftAmount, DL, VT)};
+        CurDAG->SelectNodeTo(N, OrrOpc, VT, Ops);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  assert((!BiggerPattern) && "BiggerPattern should be handled above");
+
+  uint64_t ShlImm;
+  // FIXME: Extend the implementation if OrOpd0 is an SRL node.
+  if (isOpcWithIntImmediate(OrOpd0.getNode(), ISD::SHL, ShlImm) &&
+      OrOpd0.getOperand(0) == Src && OrOpd0.hasOneUse()) {
+    unsigned OrrOpc = (VT == MVT::i32) ? AArch64::ORRWrs : AArch64::ORRXrs;
+    SDValue Ops[] = {Dst, Src, CurDAG->getTargetConstant(ShlImm, DL, VT)};
+    CurDAG->SelectNodeTo(N, OrrOpc, VT, Ops);
+    return true;
+  }
+
+  return false;
+}
+
 static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
                                       SelectionDAG *CurDAG) {
   assert(N->getOpcode() == ISD::OR && "Expect a OR operation");
@@ -2904,6 +3020,14 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
       // Maybe the AND has been removed by simplify-demanded-bits
       // or is useful because it discards more bits
       Dst = OrOpd1Val;
+
+    // Before selecting ISD::OR node to AArch64::BFM, see if an AArch64::ORR
+    // with left-shifted operand is more efficient.
+    // FIXME: Extend this to compare AArch64::BFM and AArch64::ORR with
+    // right-shifted operand as well.
+    if (tryOrrWithLeftShift(N, OrOpd0Val, OrOpd1Val, Src, Dst, CurDAG,
+                            BiggerPattern))
+      return true;
 
     // both parts match
     SDLoc DL(N);
