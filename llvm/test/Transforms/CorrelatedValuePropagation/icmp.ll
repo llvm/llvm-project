@@ -1180,10 +1180,8 @@ define void @non_const_range(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[AND]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[A_100:%.*]] = add nuw nsw i32 [[A]], 100
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[A_100]], [[B]]
-; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i32 [[A_100]], [[B]]
-; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 false)
 ; CHECK-NEXT:    [[A_10:%.*]] = add nuw nsw i32 [[A]], 10
 ; CHECK-NEXT:    [[CMP5:%.*]] = icmp ne i32 [[A_10]], [[B]]
 ; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
@@ -1220,8 +1218,7 @@ define i1 @non_const_range_minmax(i8 %a, i8 %b) {
 ; CHECK-LABEL: @non_const_range_minmax(
 ; CHECK-NEXT:    [[A2:%.*]] = call i8 @llvm.umin.i8(i8 [[A:%.*]], i8 10)
 ; CHECK-NEXT:    [[B2:%.*]] = call i8 @llvm.umax.i8(i8 [[B:%.*]], i8 11)
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[A2]], [[B2]]
-; CHECK-NEXT:    ret i1 [[CMP1]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a2 = call i8 @llvm.umin.i8(i8 %a, i8 10)
   %b2 = call i8 @llvm.umax.i8(i8 %b, i8 11)
@@ -1229,6 +1226,7 @@ define i1 @non_const_range_minmax(i8 %a, i8 %b) {
   ret i1 %cmp1
 }
 
+; FIXME: Also support vectors.
 define <2 x i1> @non_const_range_minmax_vec(<2 x i8> %a, <2 x i8> %b) {
 ; CHECK-LABEL: @non_const_range_minmax_vec(
 ; CHECK-NEXT:    [[A2:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 10, i8 10>)
