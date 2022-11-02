@@ -7209,15 +7209,29 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (SplitLTOUnit)
     CmdArgs.push_back("-fsplit-lto-unit");
 
-  if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
-                               options::OPT_fno_global_isel)) {
+  A = Args.getLastArg(options::OPT_fglobal_isel, options::OPT_fno_global_isel);
+  // If a configuration is fully supported, we don't issue any warnings or
+  // remarks.
+  bool IsFullySupported = getToolChain().getTriple().isOSDarwin() &&
+                          Triple.getArch() == llvm::Triple::aarch64;
+  if (IsFullySupported) {
+    if (A && A->getOption().matches(options::OPT_fno_global_isel)) {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-global-isel=0");
+    } else {
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-global-isel=1");
+      CmdArgs.push_back("-mllvm");
+      CmdArgs.push_back("-global-isel-abort=0");
+    }
+  } else if (A) {
     CmdArgs.push_back("-mllvm");
     if (A->getOption().matches(options::OPT_fglobal_isel)) {
       CmdArgs.push_back("-global-isel=1");
 
       // GISel is on by default on AArch64 -O0, so don't bother adding
       // the fallback remarks for it. Other combinations will add a warning of
-      // some kind.
+      // some kind, unless we're on Darwin.
       bool IsArchSupported = Triple.getArch() == llvm::Triple::aarch64;
       bool IsOptLevelSupported = false;
 
