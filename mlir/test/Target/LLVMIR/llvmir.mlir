@@ -1049,30 +1049,64 @@ llvm.func @llvm_noalias(%arg0: !llvm.ptr<f32> {llvm.noalias}) {
   llvm.return
 }
 
+// CHECK-LABEL: declare void @llvm_noalias_decl(ptr noalias)
+llvm.func @llvm_noalias_decl(!llvm.ptr<f32> {llvm.noalias})
+
+// CHECK-LABEL: define void @byrefattr(ptr byref(i32) %
+llvm.func @byrefattr(%arg0: !llvm.ptr<i32> {llvm.byref = i32}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @byrefattr_decl(ptr byref(i32))
+llvm.func @byrefattr_decl(!llvm.ptr<i32> {llvm.byref = i32})
+
 // CHECK-LABEL: define void @byvalattr(ptr byval(i32) %
 llvm.func @byvalattr(%arg0: !llvm.ptr<i32> {llvm.byval = i32}) {
   llvm.return
 }
+
+// CHECK-LABEL: declare void @byvalattr_decl(ptr byval(i32))
+llvm.func @byvalattr_decl(!llvm.ptr<i32> {llvm.byval = i32})
 
 // CHECK-LABEL: define void @sretattr(ptr sret(i32) %
 llvm.func @sretattr(%arg0: !llvm.ptr<i32> {llvm.sret = i32}) {
   llvm.return
 }
 
+// CHECK-LABEL: declare void @sretattr_decl(ptr sret(i32))
+llvm.func @sretattr_decl(!llvm.ptr<i32> {llvm.sret = i32})
+
 // CHECK-LABEL: define void @nestattr(ptr nest %
 llvm.func @nestattr(%arg0: !llvm.ptr<i32> {llvm.nest}) {
   llvm.return
 }
+
+// CHECK-LABEL: declare void @nestattr_decl(ptr nest)
+llvm.func @nestattr_decl(!llvm.ptr<i32> {llvm.nest})
 
 // CHECK-LABEL: define void @noundefattr(i32 noundef %
 llvm.func @noundefattr(%arg0: i32 {llvm.noundef}) {
   llvm.return
 }
 
+// CHECK-LABEL: declare void @noundefattr_decl(i32 noundef)
+llvm.func @noundefattr_decl(i32 {llvm.noundef})
+
 // CHECK-LABEL: define void @llvm_align(ptr align 4 {{%*.}})
 llvm.func @llvm_align(%arg0: !llvm.ptr<f32> {llvm.align = 4}) {
   llvm.return
 }
+
+// CHECK-LABEL: declare void @llvm_align_decl(ptr align 4)
+llvm.func @llvm_align_decl(!llvm.ptr<f32> {llvm.align = 4})
+
+// CHECK-LABEL: define void @inallocaattr(ptr inalloca(i32) %
+llvm.func @inallocaattr(%arg0: !llvm.ptr<i32> {llvm.inalloca = i32}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @inallocaattr_decl(ptr inalloca(i32))
+llvm.func @inallocaattr_decl(!llvm.ptr<i32> {llvm.inalloca = i32})
 
 // CHECK-LABEL: @llvm_varargs(...)
 llvm.func @llvm_varargs(...)
