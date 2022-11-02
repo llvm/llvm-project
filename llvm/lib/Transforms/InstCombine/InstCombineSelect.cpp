@@ -2769,16 +2769,16 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
           return replaceInstUsesWith(SI, V);
   }
 
-  // select (select a, true, b), c, false -> select a, c, false
-  // select c, (select a, true, b), false -> select c, a, false
+  // select (a || b), c, false -> select a, c, false
+  // select c, (a || b), false -> select c, a, false
   //   if c implies that b is false.
-  if (match(CondVal, m_Select(m_Value(A), m_One(), m_Value(B))) &&
+  if (match(CondVal, m_LogicalOr(m_Value(A), m_Value(B))) &&
       match(FalseVal, m_Zero())) {
     Optional<bool> Res = isImpliedCondition(TrueVal, B, DL);
     if (Res && *Res == false)
       return replaceOperand(SI, 0, A);
   }
-  if (match(TrueVal, m_Select(m_Value(A), m_One(), m_Value(B))) &&
+  if (match(TrueVal, m_LogicalOr(m_Value(A), m_Value(B))) &&
       match(FalseVal, m_Zero())) {
     Optional<bool> Res = isImpliedCondition(CondVal, B, DL);
     if (Res && *Res == false)
@@ -2787,6 +2787,7 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // select c, true, (select a, b, false)  -> select c, true, a
   // select (select a, b, false), true, c  -> select a, true, c
   //   if c = false implies that b = true
+  // FIXME: This should use m_LogicalAnd instead of matching a select operand.
   if (match(TrueVal, m_One()) &&
       match(FalseVal, m_Select(m_Value(A), m_Value(B), m_Zero()))) {
     Optional<bool> Res = isImpliedCondition(CondVal, B, DL, false);
