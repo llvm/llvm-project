@@ -120,6 +120,21 @@ contains
     call p%proc_pass(1)
   end subroutine
 
+  subroutine no_pass_array(a)
+    class(p1) :: a(:)
+    call a(1)%proc_nopass()
+  end subroutine
+
+  subroutine no_pass_array_allocatable(a)
+    class(p1), allocatable :: a(:)
+    call a(1)%proc_nopass()
+  end subroutine
+
+  subroutine no_pass_array_pointer(a)
+    class(p1), allocatable :: a(:)
+    call a(1)%proc_nopass()
+  end subroutine
+
 end module
 
 program test_type_to_class
@@ -232,6 +247,9 @@ end
 ! CHECK: %[[FUNC_PTR:.*]] = inttoptr i64 %[[FUNC_ADDR]] to ptr
 ! CHECK: call void %[[FUNC_PTR]](ptr %[[INT32]], ptr %[[CLASS]])
 
+! CHECK-LABEL: _QMdispatch1Pno_pass_array
+! CHECK-LABEL: _QMdispatch1Pno_pass_array_allocatable
+! CHECK-LABEL: _QMdispatch1Pno_pass_array_pointer
 
 ! Check the layout of the binding table. This is easier to do in FIR than in 
 ! LLVM IR.
