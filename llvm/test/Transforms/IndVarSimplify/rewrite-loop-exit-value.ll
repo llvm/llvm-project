@@ -164,20 +164,15 @@ define i16 @pr57336(i16 %end, i16 %m) mustprogress {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INC8:%.*]] = phi i16 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[INC137:%.*]] = phi i32 [ [[INC1:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[INC1]] = add nuw nsw i32 [[INC137]], 1
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i16 [[INC8]], 1
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i16 [[M:%.*]], [[INC8]]
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i16 [[END:%.*]], [[MUL]]
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[CRIT_EDGE:%.*]], label [[FOR_BODY]]
 ; CHECK:       crit_edge:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[END]], 1
-; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[TMP0]], i16 0)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i16 [[END]], 32767
-; CHECK-NEXT:    [[UMIN:%.*]] = zext i1 [[TMP1]] to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i16 [[SMAX]], [[UMIN]]
-; CHECK-NEXT:    [[UMAX:%.*]] = call i16 @llvm.umax.i16(i16 [[M]], i16 1)
-; CHECK-NEXT:    [[TMP3:%.*]] = udiv i16 [[TMP2]], [[UMAX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i16 [[TMP3]], [[UMIN]]
-; CHECK-NEXT:    ret i16 [[TMP4]]
+; CHECK-NEXT:    [[CONV:%.*]] = trunc i32 [[INC137]] to i16
+; CHECK-NEXT:    ret i16 [[CONV]]
 ;
 entry:
   br label %for.body
@@ -217,13 +212,7 @@ define i32 @vscale_slt_with_vp_umin(ptr nocapture %A, i32 %n) mustprogress vscal
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[TMP0]], [[VF]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], [[VSCALE]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[N]], [[TMP3]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[VF]], i32 [[TMP4]])
-; CHECK-NEXT:    ret i32 [[UMIN]]
+; CHECK-NEXT:    ret i32 [[VF_CAPPED]]
 ;
 entry:
   %vscale = call i32 @llvm.vscale.i32()
@@ -269,13 +258,7 @@ define i32 @vscale_slt_with_vp_umin2(ptr nocapture %A, i32 %n) mustprogress vsca
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[ADD]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[TMP0]], [[VF]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], [[VSCALE]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[N]], [[TMP3]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[VF]], i32 [[TMP4]])
-; CHECK-NEXT:    ret i32 [[UMIN]]
+; CHECK-NEXT:    ret i32 [[VF_CAPPED]]
 ;
 entry:
   %vscale = call i32 @llvm.vscale.i32()

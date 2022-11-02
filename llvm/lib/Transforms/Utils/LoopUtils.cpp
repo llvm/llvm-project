@@ -1526,6 +1526,16 @@ static bool checkIsIndPhi(PHINode *Phi, Loop *L, ScalarEvolution *SE,
   return InductionDescriptor::isInductionPHI(Phi, L, SE, ID);
 }
 
+// Return true if S contains (A udiv B) and B is not a constant.
+static bool containNonConstantDivisorUDiv(const SCEV *S) {
+  return SCEVExprContains(S, [](const SCEV *S) {
+    if (auto *Udiv = dyn_cast<SCEVUDivExpr>(S)) {
+      return !isa<SCEVConstant>(Udiv->getRHS());
+    }
+    return false;
+  });
+}
+
 int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
                                 ScalarEvolution *SE,
                                 const TargetTransformInfo *TTI,
@@ -1642,6 +1652,13 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
               !Rewriter.isSafeToExpand(ExitValue))
             continue;
         }
+
+        // Do not replace to ExitValue if it contains udiv with non-constant
+        // divisor. Because udiv with non-constant divisor will hard to be
+        // optimized out in the later optimization passes and will generate
+        // udiv eventually.
+        if (containNonConstantDivisorUDiv(ExitValue))
+          continue;
 
         // Computing the value outside of the loop brings no benefit if it is
         // definitely used inside the loop in a way which can not be optimized
