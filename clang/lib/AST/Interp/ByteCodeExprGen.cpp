@@ -279,10 +279,15 @@ bool ByteCodeExprGen<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueInitExpr *E) {
-  if (std::optional<PrimType> T = classify(E))
-    return this->emitZero(*T, E);
+  std::optional<PrimType> T = classify(E);
 
-  return false;
+  if (!T)
+    return false;
+
+  if (E->getType()->isPointerType())
+    return this->emitNullPtr(E);
+
+  return this->emitZero(*T, E);
 }
 
 template <class Emitter>
