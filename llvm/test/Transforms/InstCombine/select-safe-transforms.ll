@@ -685,6 +685,8 @@ define i1 @orn_and_cmp_1_logical(i37 %a, i37 %b, i1 %y) {
   ret i1 %or
 }
 
+; TODO: This should fold the same way as the next test.
+
 define i1 @orn_and_cmp_1_partial_logical(i37 %a, i37 %b, i1 %y) {
 ; CHECK-LABEL: @orn_and_cmp_1_partial_logical(
 ; CHECK-NEXT:    [[X:%.*]] = icmp sgt i37 [[A:%.*]], [[B:%.*]]
@@ -703,10 +705,8 @@ define i1 @orn_and_cmp_1_partial_logical(i37 %a, i37 %b, i1 %y) {
 define i1 @orn_and_cmp_1_partial_logical_commute(i37 %a, i37 %b) {
 ; CHECK-LABEL: @orn_and_cmp_1_partial_logical_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = call i1 @gen1()
-; CHECK-NEXT:    [[X:%.*]] = icmp sgt i37 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[X_INV:%.*]] = icmp sle i37 [[A]], [[B]]
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[Y]], [[X]]
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[X_INV]], i1 true, i1 [[AND]]
+; CHECK-NEXT:    [[X_INV:%.*]] = icmp sle i37 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[X_INV]], i1 true, i1 [[Y]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
   %y = call i1 @gen1() ; thwart complexity-based canonicalization
@@ -760,10 +760,31 @@ define i1 @orn_and_cmp_2_partial_logical_commute(i16 %a, i16 %b) {
   ret i1 %or
 }
 
+; PR58552 - this would crash trying to replace non-matching types
+
+define <2 x i1> @not_logical_and(i1 %b, <2 x i32> %a) {
+; CHECK-LABEL: @not_logical_and(
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult <2 x i32> [[A:%.*]], <i32 3, i32 3>
+; CHECK-NEXT:    [[IMPLIED:%.*]] = icmp ugt <2 x i32> [[A]], <i32 1, i32 1>
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[B:%.*]], <2 x i1> [[COND]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[IMPLIED]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[AND]]
+; CHECK-NEXT:    ret <2 x i1> [[OR]]
+;
+  %cond = icmp ult <2 x i32> %a, <i32 3, i32 3>
+  %implied = icmp ugt <2 x i32> %a, <i32 1, i32 1>
+  %and = select i1 %b, <2 x i1> %cond, <2 x i1> zeroinitializer
+  %or = select <2 x i1> %implied, <2 x i1> <i1 true, i1 true>, <2 x i1> %and
+  ret <2 x i1> %or
+}
+
+; This could reduce, but we do not match select-of-vectors with scalar condition as logical-and.
+
 define <2 x i1> @not_logical_and2(i1 %b, <2 x i32> %a) {
 ; CHECK-LABEL: @not_logical_and2(
-; CHECK-NEXT:    [[IMPLIED:%.*]] = icmp ugt <2 x i32> [[A:%.*]], <i32 1, i32 1>
-; CHECK-NEXT:    [[OR:%.*]] = select i1 [[B:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[IMPLIED]]
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult <2 x i32> [[A:%.*]], <i32 3, i32 3>
+; CHECK-NEXT:    [[IMPLIED:%.*]] = icmp ugt <2 x i32> [[A]], <i32 1, i32 1>
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[B:%.*]], <2 x i1> [[COND]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[AND]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[IMPLIED]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %cond = icmp ult <2 x i32> %a, <i32 3, i32 3>
