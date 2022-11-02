@@ -447,6 +447,22 @@ private:
   /// User ModuleMaps skipped when writing control block.
   std::set<const FileEntry *> SkippedModuleMaps;
 
+  /// Returns an adjusted \c FileID, accounting for any non-affecting input
+  /// files.
+  FileID getAdjustedFileID(FileID FID) const;
+  /// Returns an adjusted number of \c FileIDs created within the specified \c
+  /// FileID, accounting for any non-affecting input files.
+  unsigned getAdjustedNumCreatedFIDs(FileID FID) const;
+  /// Returns an adjusted \c SourceLocation, accounting for any non-affecting
+  /// input files.
+  SourceLocation getAdjustedLocation(SourceLocation Loc) const;
+  /// Returns an adjusted \c SourceRange, accounting for any non-affecting input
+  /// files.
+  SourceRange getAdjustedRange(SourceRange Range) const;
+  /// Returns an adjusted \c SourceLocation offset, accounting for any
+  /// non-affecting input files.
+  SourceLocation::UIntTy getAdjustedOffset(SourceLocation::UIntTy Offset) const;
+
   /// Retrieve or create a submodule ID for this module.
   unsigned getSubmoduleID(Module *Mod);
 
