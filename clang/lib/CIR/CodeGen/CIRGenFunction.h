@@ -192,9 +192,7 @@ private:
       return &*RetBlocks.back();
     }
 
-    // ---
     // Scope entry block tracking
-    // ---
     mlir::Block *getEntryBlock() { return EntryBlock; }
 
     mlir::Location BeginLoc, EndLoc;
@@ -227,6 +225,144 @@ private:
 
   LexicalScopeContext *currLexScope = nullptr;
 
+  // ---------------------
+  // Opaque value handling
+  // ---------------------
+
+  /// Keeps track of the current set of opaque value expressions.
+  llvm::DenseMap<const OpaqueValueExpr *, LValue> OpaqueLValues;
+  llvm::DenseMap<const OpaqueValueExpr *, RValue> OpaqueRValues;
+
+public:
+  /// A non-RAII class containing all the information about a bound
+  /// opaque value.  OpaqueValueMapping, below, is a RAII wrapper for
+  /// this which makes individual mappings very simple; using this
+  /// class directly is useful when you have a variable number of
+  /// opaque values or don't want the RAII functionality for some
+  /// reason.
+  class OpaqueValueMappingData {
+    const OpaqueValueExpr *OpaqueValue;
+    bool BoundLValue;
+
+    OpaqueValueMappingData(const OpaqueValueExpr *ov, bool boundLValue)
+        : OpaqueValue(ov), BoundLValue(boundLValue) {}
+
+  public:
+    OpaqueValueMappingData() : OpaqueValue(nullptr) {}
+
+    static bool shouldBindAsLValue(const Expr *expr) {
+      // gl-values should be bound as l-values for obvious reasons.
+      // Records should be bound as l-values because IR generation
+      // always keeps them in memory.  Expressions of function type
+      // act exactly like l-values but are formally required to be
+      // r-values in C.
+      return expr->isGLValue() || expr->getType()->isFunctionType() ||
+             hasAggregateEvaluationKind(expr->getType());
+    }
+
+    static OpaqueValueMappingData
+    bind(CIRGenFunction &CGF, const OpaqueValueExpr *ov, const Expr *e) {
+      if (shouldBindAsLValue(ov))
+        return bind(CGF, ov, CGF.buildLValue(e));
+      return bind(CGF, ov, CGF.buildAnyExpr(e));
+    }
+
+    static OpaqueValueMappingData
+    bind(CIRGenFunction &CGF, const OpaqueValueExpr *ov, const LValue &lv) {
+      assert(shouldBindAsLValue(ov));
+      CGF.OpaqueLValues.insert(std::make_pair(ov, lv));
+      return OpaqueValueMappingData(ov, true);
+    }
+
+    static OpaqueValueMappingData
+    bind(CIRGenFunction &CGF, const OpaqueValueExpr *ov, const RValue &rv) {
+      assert(!shouldBindAsLValue(ov));
+      CGF.OpaqueRValues.insert(std::make_pair(ov, rv));
+
+      OpaqueValueMappingData data(ov, false);
+
+      // Work around an extremely aggressive peephole optimization in
+      // EmitScalarConversion which assumes that all other uses of a
+      // value are extant.
+      assert(!UnimplementedFeature::peepholeProtection() && "NYI");
+      return data;
+    }
+
+    bool isValid() const { return OpaqueValue != nullptr; }
+    void clear() { OpaqueValue = nullptr; }
+
+    void unbind(CIRGenFunction &CGF) {
+      assert(OpaqueValue && "no data to unbind!");
+
+      if (BoundLValue) {
+        CGF.OpaqueLValues.erase(OpaqueValue);
+      } else {
+        CGF.OpaqueRValues.erase(OpaqueValue);
+        assert(!UnimplementedFeature::peepholeProtection() && "NYI");
+      }
+    }
+  };
+
+  /// An RAII object to set (and then clear) a mapping for an OpaqueValueExpr.
+  class OpaqueValueMapping {
+    CIRGenFunction &CGF;
+    OpaqueValueMappingData Data;
+
+  public:
+    static bool shouldBindAsLValue(const Expr *expr) {
+      return OpaqueValueMappingData::shouldBindAsLValue(expr);
+    }
+
+    /// Build the opaque value mapping for the given conditional
+    /// operator if it's the GNU ?: extension.  This is a common
+    /// enough pattern that the convenience operator is really
+    /// helpful.
+    ///
+    OpaqueValueMapping(CIRGenFunction &CGF,
+                       const AbstractConditionalOperator *op)
+        : CGF(CGF) {
+      if (isa<ConditionalOperator>(op))
+        // Leave Data empty.
+        return;
+
+      const BinaryConditionalOperator *e = cast<BinaryConditionalOperator>(op);
+      Data = OpaqueValueMappingData::bind(CGF, e->getOpaqueValue(),
+                                          e->getCommon());
+    }
+
+    /// Build the opaque value mapping for an OpaqueValueExpr whose source
+    /// expression is set to the expression the OVE represents.
+    OpaqueValueMapping(CIRGenFunction &CGF, const OpaqueValueExpr *OV)
+        : CGF(CGF) {
+      if (OV) {
+        assert(OV->getSourceExpr() && "wrong form of OpaqueValueMapping used "
+                                      "for OVE with no source expression");
+        Data = OpaqueValueMappingData::bind(CGF, OV, OV->getSourceExpr());
+      }
+    }
+
+    OpaqueValueMapping(CIRGenFunction &CGF, const OpaqueValueExpr *opaqueValue,
+                       LValue lvalue)
+        : CGF(CGF),
+          Data(OpaqueValueMappingData::bind(CGF, opaqueValue, lvalue)) {}
+
+    OpaqueValueMapping(CIRGenFunction &CGF, const OpaqueValueExpr *opaqueValue,
+                       RValue rvalue)
+        : CGF(CGF),
+          Data(OpaqueValueMappingData::bind(CGF, opaqueValue, rvalue)) {}
+
+    void pop() {
+      Data.unbind(CGF);
+      Data.clear();
+    }
+
+    ~OpaqueValueMapping() {
+      if (Data.isValid())
+        Data.unbind(CGF);
+    }
+  };
+
+private:
   /// Declare a variable in the current scope, return success if the variable
   /// wasn't declared yet.
   mlir::LogicalResult declare(const clang::Decl *var, clang::QualType ty,
