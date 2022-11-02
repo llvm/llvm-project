@@ -582,6 +582,9 @@ public:
   void AddAlignPackInfo(const Sema::AlignPackInfo &Info,
                         RecordDataImpl &Record);
 
+  /// Emit a FileID.
+  void AddFileID(FileID FID, RecordDataImpl &Record);
+
   /// Emit a source location.
   void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
                          LocSeq *Seq = nullptr);

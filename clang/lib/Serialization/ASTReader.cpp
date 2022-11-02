@@ -1344,10 +1344,7 @@ void ASTReader::ParseLineTable(ModuleFile &F, const RecordData &Record) {
   // Parse the line entries
   std::vector<LineEntry> Entries;
   while (Idx < Record.size()) {
-    int FID = Record[Idx++];
-    assert(FID >= 0 && "Serialized line entries for non-local file.");
-    // Remap FileID from 1-based old view.
-    FID += F.SLocEntryBaseID - 1;
+    FileID FID = ReadFileID(F, Record, Idx);
 
     // Extract the line entries
     unsigned NumEntries = Record[Idx++];
@@ -1364,7 +1361,7 @@ void ASTReader::ParseLineTable(ModuleFile &F, const RecordData &Record) {
       Entries.push_back(LineEntry::get(FileOffset, LineNo, FilenameID,
                                        FileKind, IncludeOffset));
     }
-    LineTable.AddEntry(FileID::get(FID), Entries);
+    LineTable.AddEntry(FID, Entries);
   }
 }
 
@@ -4295,10 +4292,8 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
 
     // Map the original source file ID into the ID space of the current
     // compilation.
-    if (F.OriginalSourceFileID.isValid()) {
-      F.OriginalSourceFileID = FileID::get(
-          F.SLocEntryBaseID + F.OriginalSourceFileID.getOpaqueValue() - 1);
-    }
+    if (F.OriginalSourceFileID.isValid())
+      F.OriginalSourceFileID = TranslateFileID(F, F.OriginalSourceFileID);
 
     // Preload all the pending interesting identifiers by marking them out of
     // date.
