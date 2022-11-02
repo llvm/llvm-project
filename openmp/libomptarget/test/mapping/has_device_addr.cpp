@@ -25,9 +25,60 @@ struct view {
   }
 };
 
+void poo() {
+  short a = 1;
+  short &ar = a;
+
+#pragma omp target data map(tofrom : ar) use_device_addr(ar)
+  {
+#pragma omp target has_device_addr(ar)
+    {
+      ar = 222;
+      // CHECK: 222
+      printf("%hd %p\n", ar, &ar); // 222 p2
+    }
+  }
+  // CHECK: 222
+  printf("%hd %p\n", ar, &ar); // 222 p1
+}
+
+void noo() {
+  short *b = (short *)malloc(sizeof(short));
+  short *&br = b;
+  br = br - 1;
+
+  br[1] = 111;
+#pragma omp target data map(tofrom : br[1]) use_device_addr(br[1])
+#pragma omp target has_device_addr(br[1])
+  {
+    br[1] = 222;
+    // CHECK: 222
+    printf("%hd %p %p %p\n", br[1], br, &br[1], &br);
+  }
+  // CHECK: 222
+  printf("%hd %p %p %p\n", br[1], br, &br[1], &br);
+}
+
+void ooo() {
+  short a = 1;
+
+#pragma omp target data map(tofrom : a) use_device_addr(a)
+#pragma omp target has_device_addr(a)
+  {
+    a = 222;
+    // CHECK: 222
+    printf("%hd %p\n", a, &a);
+  }
+  // CHECK: 222
+  printf("%hd %p\n", a, &a);
+}
+
 int main() {
   view a;
   a.foo();
+  poo();
+  noo();
+  ooo();
   // CHECK: PASSED
   printf("PASSED\n");
 }
