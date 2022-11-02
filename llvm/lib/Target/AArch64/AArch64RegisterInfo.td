@@ -1542,6 +1542,8 @@ class MatrixOperand<RegisterClass RC, int EltSize> : RegisterOperand<RC> {
 
 def MatrixOp : MatrixOperand<MPR, 0>;
 // SME2 register operands and classes
+def MatrixOp8 : MatrixOperand<MPR, 8>;
+def MatrixOp16 : MatrixOperand<MPR, 16>;
 def MatrixOp32 : MatrixOperand<MPR, 32>;
 def MatrixOp64 : MatrixOperand<MPR, 64>;
 
