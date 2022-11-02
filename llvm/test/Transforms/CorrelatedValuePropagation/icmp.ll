@@ -1172,4 +1172,49 @@ if.false:
   ret void
 }
 
+define void @non_const_range(i32 %a, i32 %b) {
+; CHECK-LABEL: @non_const_range(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i32 [[A:%.*]], 11
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[B:%.*]], 21
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[CMP1]], i1 [[CMP2]], i1 false
+; CHECK-NEXT:    br i1 [[AND]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[A_100:%.*]] = add nuw nsw i32 [[A]], 100
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[A_100]], [[B]]
+; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i32 [[A_100]], [[B]]
+; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
+; CHECK-NEXT:    [[A_10:%.*]] = add nuw nsw i32 [[A]], 10
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp ne i32 [[A_10]], [[B]]
+; CHECK-NEXT:    call void @check1(i1 [[CMP5]])
+; CHECK-NEXT:    [[CMP6:%.*]] = icmp eq i32 [[A_10]], [[B]]
+; CHECK-NEXT:    call void @check1(i1 [[CMP6]])
+; CHECK-NEXT:    ret void
+; CHECK:       else:
+; CHECK-NEXT:    ret void
+;
+  %cmp1 = icmp ult i32 %a, 11
+  %cmp2 = icmp ult i32 %b, 21
+  %and = select i1 %cmp1, i1 %cmp2, i1 false
+  br i1 %and, label %if, label %else
+
+if:
+  %a.100 = add nuw nsw i32 %a, 100
+  %cmp3 = icmp ne i32 %a.100, %b
+  call void @check1(i1 %cmp3)
+  %cmp4 = icmp eq i32 %a.100, %b
+  call void @check1(i1 %cmp4)
+
+  %a.10 = add nuw nsw i32 %a, 10
+  %cmp5 = icmp ne i32 %a.10, %b
+  call void @check1(i1 %cmp5)
+  %cmp6 = icmp eq i32 %a.10, %b
+  call void @check1(i1 %cmp6)
+  ret void
+
+else:
+  ret void
+}
+
+
 attributes #4 = { noreturn }
