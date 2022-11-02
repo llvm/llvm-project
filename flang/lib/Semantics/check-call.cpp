@@ -391,22 +391,25 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   }
 
   // Definability
-  const char *reason{nullptr};
-  if (dummy.intent == common::Intent::Out) {
-    reason = "INTENT(OUT)";
-  } else if (dummy.intent == common::Intent::InOut) {
-    reason = "INTENT(IN OUT)";
-  }
-  if (reason && scope) {
-    DefinabilityFlags flags;
-    if (isElemental || dummyIsValue) { // 15.5.2.4(21)
-      flags.set(DefinabilityFlag::VectorSubscriptIsOk);
+  if (scope) {
+    const char *reason{nullptr};
+    // Problems with polymorphism are caught in the callee's definition.
+    DefinabilityFlags flags{DefinabilityFlag::PolymorphicOkInPure};
+    if (dummy.intent == common::Intent::Out) {
+      reason = "INTENT(OUT)";
+    } else if (dummy.intent == common::Intent::InOut) {
+      reason = "INTENT(IN OUT)";
     }
-    if (auto whyNot{WhyNotDefinable(messages.at(), *scope, flags, actual)}) {
-      if (auto *msg{messages.Say(
-              "Actual argument associated with %s %s is not definable"_err_en_US,
-              reason, dummyName)}) {
-        msg->Attach(std::move(*whyNot));
+    if (reason) {
+      if (isElemental || dummyIsValue) { // 15.5.2.4(21)
+        flags.set(DefinabilityFlag::VectorSubscriptIsOk);
+      }
+      if (auto whyNot{WhyNotDefinable(messages.at(), *scope, flags, actual)}) {
+        if (auto *msg{messages.Say(
+                "Actual argument associated with %s %s is not definable"_err_en_US,
+                reason, dummyName)}) {
+          msg->Attach(std::move(*whyNot));
+        }
       }
     }
   }
