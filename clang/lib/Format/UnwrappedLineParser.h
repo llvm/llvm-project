@@ -119,7 +119,6 @@ private:
   void parsePPDirective();
   void parsePPDefine();
   void parsePPIf(bool IfDef);
-  void parsePPElIf();
   void parsePPElse();
   void parsePPEndIf();
   void parsePPPragma();
