@@ -697,3 +697,31 @@ TEST(FormatVariadicTest, FormatError) {
   EXPECT_EQ("X", formatv("{0}", fmt_consume(std::move(E1))).str());
   EXPECT_FALSE(E1.isA<StringError>()); // consumed
 }
+
+TEST(FormatVariadicTest, FormatFilterRange) {
+  std::vector<int> Vec{0, 1, 2};
+  auto Range = map_range(Vec, [](int V) { return V + 1; });
+  EXPECT_EQ("1, 2, 3", formatv("{0}", Range).str());
+}
+
+namespace {
+
+class IntegerValuesRange final
+    : public indexed_accessor_range<IntegerValuesRange, NoneType, int, int *,
+                                    int> {
+public:
+  using indexed_accessor_range<IntegerValuesRange, NoneType, int, int *,
+                               int>::indexed_accessor_range;
+
+  static int dereference(const NoneType &, ptrdiff_t Index) {
+    return static_cast<int>(Index);
+  }
+};
+
+TEST(FormatVariadicTest, FormatRangeNonRef) {
+  IntegerValuesRange Range(None, 0, 3);
+  EXPECT_EQ("0, 1, 2",
+            formatv("{0}", make_range(Range.begin(), Range.end())).str());
+}
+
+} // namespace
