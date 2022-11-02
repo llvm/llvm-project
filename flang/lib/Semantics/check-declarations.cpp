@@ -88,6 +88,7 @@ private:
   void CheckGenericOps(const Scope &);
   bool CheckConflicting(const Symbol &, Attr, Attr);
   void WarnMissingFinal(const Symbol &);
+  void CheckSymbolType(const Symbol &); // C702
   bool InPure() const {
     return innermostSymbol_ && IsPureProcedure(*innermostSymbol_);
   }
@@ -494,15 +495,7 @@ void CheckHelper::CheckAssumedTypeEntity( // C709
 
 void CheckHelper::CheckObjectEntity(
     const Symbol &symbol, const ObjectEntityDetails &details) {
-  if (!IsAllocatableOrPointer(symbol)) { // C702
-    if (auto dyType{evaluate::DynamicType::From(symbol)}) {
-      if (dyType->HasDeferredTypeParameter()) {
-        messages_.Say(
-            "'%s' has a type %s with a deferred type parameter but is neither an allocatable or a pointer"_err_en_US,
-            symbol.name(), dyType->AsFortran());
-      }
-    }
-  }
+  CheckSymbolType(symbol);
   CheckArraySpec(symbol, details.shape());
   Check(details.shape());
   Check(details.coshape());
@@ -801,6 +794,7 @@ void CheckHelper::CheckArraySpec(
 
 void CheckHelper::CheckProcEntity(
     const Symbol &symbol, const ProcEntityDetails &details) {
+  CheckSymbolType(symbol);
   if (details.isDummy()) {
     if (!symbol.attrs().test(Attr::POINTER) && // C843
         (symbol.attrs().test(Attr::INTENT_IN) ||
@@ -2332,6 +2326,18 @@ void CheckHelper::CheckDefinedIoProc(const Symbol &symbol,
           break;
         default:;
         }
+      }
+    }
+  }
+}
+
+void CheckHelper::CheckSymbolType(const Symbol &symbol) {
+  if (!IsAllocatableOrPointer(symbol)) { // C702
+    if (auto dyType{evaluate::DynamicType::From(symbol)}) {
+      if (dyType->HasDeferredTypeParameter()) {
+        messages_.Say(
+            "'%s' has a type %s with a deferred type parameter but is neither an allocatable or a pointer"_err_en_US,
+            symbol.name(), dyType->AsFortran());
       }
     }
   }
