@@ -22,12 +22,11 @@
 
 /// Create a fir.box describing the new address, bounds, and length parameters
 /// for a MutableBox \p box.
-static mlir::Value createNewFirBox(fir::FirOpBuilder &builder,
-                                   mlir::Location loc,
-                                   const fir::MutableBoxValue &box,
-                                   mlir::Value addr, mlir::ValueRange lbounds,
-                                   mlir::ValueRange extents,
-                                   mlir::ValueRange lengths) {
+static mlir::Value
+createNewFirBox(fir::FirOpBuilder &builder, mlir::Location loc,
+                const fir::MutableBoxValue &box, mlir::Value addr,
+                mlir::ValueRange lbounds, mlir::ValueRange extents,
+                mlir::ValueRange lengths, mlir::Value tdesc = {}) {
   if (addr.getType().isa<fir::BaseBoxType>())
     // The entity is already boxed.
     return builder.createConvert(loc, box.getBoxTy(), addr);
@@ -72,7 +71,7 @@ static mlir::Value createNewFirBox(fir::FirOpBuilder &builder,
   }
   mlir::Value emptySlice;
   return builder.create<fir::EmboxOp>(loc, box.getBoxTy(), cleanedAddr, shape,
-                                      emptySlice, cleanedLengths);
+                                      emptySlice, cleanedLengths, tdesc);
 }
 
 //===----------------------------------------------------------------------===//
@@ -201,11 +200,12 @@ public:
   /// Length parameters must be provided for the length parameters that are
   /// deferred.
   void updateMutableBox(mlir::Value addr, mlir::ValueRange lbounds,
-                        mlir::ValueRange extents, mlir::ValueRange lengths) {
+                        mlir::ValueRange extents, mlir::ValueRange lengths,
+                        mlir::Value tdesc = {}) {
     if (box.isDescribedByVariables())
       updateMutableProperties(addr, lbounds, extents, lengths);
     else
-      updateIRBox(addr, lbounds, extents, lengths);
+      updateIRBox(addr, lbounds, extents, lengths, tdesc);
   }
 
   /// Update MutableBoxValue with a new fir.box. This requires that the mutable
@@ -267,9 +267,10 @@ public:
 private:
   /// Update the IR box (fir.ref<fir.box<T>>) of the MutableBoxValue.
   void updateIRBox(mlir::Value addr, mlir::ValueRange lbounds,
-                   mlir::ValueRange extents, mlir::ValueRange lengths) {
-    mlir::Value irBox =
-        createNewFirBox(builder, loc, box, addr, lbounds, extents, lengths);
+                   mlir::ValueRange extents, mlir::ValueRange lengths,
+                   mlir::Value tdesc = {}) {
+    mlir::Value irBox = createNewFirBox(builder, loc, box, addr, lbounds,
+                                        extents, lengths, tdesc);
     builder.create<fir::StoreOp>(loc, irBox, box.getAddr());
   }
 
@@ -477,8 +478,12 @@ void fir::factory::associateMutableBox(fir::FirOpBuilder &builder,
   MutablePropertyWriter writer(builder, loc, box);
   source.match(
       [&](const fir::PolymorphicValue &p) {
+        mlir::Value tdesc;
+        if (auto polyBox = source.getBoxOf<fir::PolymorphicValue>())
+          tdesc = polyBox->getTdesc();
         writer.updateMutableBox(p.getAddr(), /*lbounds=*/llvm::None,
-                                /*extents=*/llvm::None, /*lengths=*/llvm::None);
+                                /*extents=*/llvm::None, /*lengths=*/llvm::None,
+                                tdesc);
       },
       [&](const fir::UnboxedValue &addr) {
         writer.updateMutableBox(addr, /*lbounds=*/llvm::None,

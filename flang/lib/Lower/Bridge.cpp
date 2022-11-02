@@ -2442,9 +2442,16 @@ private:
               std::optional<Fortran::evaluate::DynamicType> rhsType =
                   assign.rhs.GetType();
               // Polymorphic lhs/rhs may need more care. See F2018 10.2.2.3.
-              if ((lhsType && lhsType->IsPolymorphic()) ||
+              // If the pointer object is not polymorphic (7.3.2.3) and the
+              // pointer target is polymorphic with dynamic type that differs
+              // from its declared type, the assignment target is the ancestor
+              // component of the pointer target that has the type of the
+              // pointer object. Otherwise, the assignment target is the pointer
+              // target.
+              if ((lhsType && !lhsType->IsPolymorphic()) &&
                   (rhsType && rhsType->IsPolymorphic()))
-                TODO(loc, "pointer assignment involving polymorphic entity");
+                TODO(loc, "non-polymorphic pointer assignment with polymorphic "
+                          "entity on rhs");
 
               llvm::SmallVector<mlir::Value> lbounds;
               for (const Fortran::evaluate::ExtentExpr &lbExpr : lbExprs)

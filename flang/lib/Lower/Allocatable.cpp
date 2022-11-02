@@ -621,6 +621,19 @@ isNonContiguousArrayPointer(const Fortran::semantics::Symbol &sym) {
          !sym.attrs().test(Fortran::semantics::Attr::CONTIGUOUS);
 }
 
+/// Is this symbol a polymorphic pointer?
+static inline bool isPolymorphicPointer(const Fortran::semantics::Symbol &sym) {
+  return Fortran::semantics::IsPointer(sym) &&
+         Fortran::semantics::IsPolymorphic(sym);
+}
+
+/// Is this symbol a polymorphic allocatable?
+static inline bool
+isPolymorphicAllocatable(const Fortran::semantics::Symbol &sym) {
+  return Fortran::semantics::IsAllocatable(sym) &&
+         Fortran::semantics::IsPolymorphic(sym);
+}
+
 /// Is this a local procedure symbol in a procedure that contains internal
 /// procedures ?
 static bool mayBeCapturedInInternalProc(const Fortran::semantics::Symbol &sym) {
@@ -665,7 +678,8 @@ createMutableProperties(Fortran::lower::AbstractConverter &converter,
       Fortran::semantics::IsFunctionResult(sym) ||
       sym.attrs().test(Fortran::semantics::Attr::VOLATILE) ||
       isNonContiguousArrayPointer(sym) || useAllocateRuntime ||
-      useDescForMutableBox || mayBeCapturedInInternalProc(sym))
+      useDescForMutableBox || mayBeCapturedInInternalProc(sym) ||
+      isPolymorphicPointer(sym) || isPolymorphicAllocatable(sym))
     return {};
   fir::MutableProperties mutableProperties;
   std::string name = converter.mangleName(sym);
@@ -754,6 +768,7 @@ void Fortran::lower::associateMutableBox(
   fir::ExtendedValue rhs = isArraySectionWithoutVectorSubscript(source)
                                ? converter.genExprBox(loc, source, stmtCtx)
                                : converter.genExprAddr(loc, source, stmtCtx);
+
   fir::factory::associateMutableBox(builder, loc, box, rhs, lbounds);
 }
 
