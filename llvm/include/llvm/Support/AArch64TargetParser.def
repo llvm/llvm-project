@@ -129,6 +129,7 @@ AARCH64_ARCH_EXT_NAME("sve2-sm4",     AArch64::AEK_SVE2SM4,     "+sve2-sm4",    
 AARCH64_ARCH_EXT_NAME("sve2-sha3",    AArch64::AEK_SVE2SHA3,    "+sve2-sha3",    "-sve2-sha3")
 AARCH64_ARCH_EXT_NAME("sve2-bitperm", AArch64::AEK_SVE2BITPERM, "+sve2-bitperm", "-sve2-bitperm")
 AARCH64_ARCH_EXT_NAME("sve2p1",       AArch64::AEK_SVE2p1,      "+sve2p1",       "-sve2p1")
+AARCH64_ARCH_EXT_NAME("b16b16",       AArch64::AEK_B16B16,      "+b16b16",       "-b16b16")
 AARCH64_ARCH_EXT_NAME("rcpc",         AArch64::AEK_RCPC,        "+rcpc",         "-rcpc")
 AARCH64_ARCH_EXT_NAME("rng",          AArch64::AEK_RAND,        "+rand",         "-rand")
 AARCH64_ARCH_EXT_NAME("memtag",       AArch64::AEK_MTE,         "+mte",          "-mte")

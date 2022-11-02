@@ -138,6 +138,8 @@ def HasSVE2SHA3      : Predicate<"Subtarget->hasSVE2SHA3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2SHA3), "sve2-sha3">;
 def HasSVE2BitPerm   : Predicate<"Subtarget->hasSVE2BitPerm()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2BitPerm), "sve2-bitperm">;
+def HasB16B16        : Predicate<"Subtarget->hasB16B16()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureB16B16), "b16b16">;
 def HasSME           : Predicate<"Subtarget->hasSME()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME), "sme">;
 def HasSMEF64F64     : Predicate<"Subtarget->hasSMEF64F64()">,

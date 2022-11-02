@@ -75,6 +75,7 @@ enum ArchExtKind : uint64_t {
   AEK_SME2 =        1ULL << 43, // FEAT_SME2
   AEK_SVE2p1 =      1ULL << 44, // FEAT_SVE2p1
   AEK_SME2p1 =      1ULL << 45, // FEAT_SME2p1
+  AEK_B16B16 =      1ULL << 46  // FEAT_B16B16
 };
 
 enum class ArchKind {
