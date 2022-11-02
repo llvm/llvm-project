@@ -350,6 +350,10 @@ end
   pointer-valued function reference.
   No other Fortran compiler seems to handle this correctly for
   `ASSOCIATE`, though NAG gets it right for `SELECT TYPE`.
+* The standard doesn't explicitly require that a named constant that
+  appears as part of a complex-literal-constant be a scalar, but
+  most compilers emit an error when an array appears.
+  f18 supports them with a portability warning.
 
 ## Behavior in cases where the standard is ambiguous or indefinite
 
