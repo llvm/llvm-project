@@ -1465,7 +1465,7 @@ struct Conv1DGenerator : public StructuredGenerator<LinalgOp> {
       return;
     for (Value operand : mulOp->getOperands()) {
       if (Operation *def = operand.getDefiningOp()) {
-        if (!isa<arith::ExtFOp>(def))
+        if (!isa<CastOpInterface>(def))
           return;
         operand = def->getOperand(0);
       }
