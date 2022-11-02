@@ -96,9 +96,10 @@ class CompilerInvocation : public CompilerInvocationBase {
 
   bool warnAsErr = false;
 
-  /// This flag controls the unparsing and is used to decide whether to print out
-  /// the semantically analyzed version of an object or expression or the plain
-  /// version that does not include any information from semantic analysis.
+  /// This flag controls the unparsing and is used to decide whether to print
+  /// out the semantically analyzed version of an object or expression or the
+  /// plain version that does not include any information from semantic
+  /// analysis.
   bool useAnalyzedObjectsForUnparse = true;
 
   // Fortran Dialect options

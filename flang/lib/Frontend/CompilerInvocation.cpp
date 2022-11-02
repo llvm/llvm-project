@@ -379,12 +379,13 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   }
 
   // Set fortranForm based on options -ffree-form and -ffixed-form.
-  if (const auto *arg = args.getLastArg(clang::driver::options::OPT_ffixed_form,
-          clang::driver::options::OPT_ffree_form)) {
+  if (const auto *arg =
+          args.getLastArg(clang::driver::options::OPT_ffixed_form,
+                          clang::driver::options::OPT_ffree_form)) {
     opts.fortranForm =
         arg->getOption().matches(clang::driver::options::OPT_ffixed_form)
-        ? FortranForm::FixedForm
-        : FortranForm::FreeForm;
+            ? FortranForm::FixedForm
+            : FortranForm::FreeForm;
   }
 
   // Set fixedFormColumns based on -ffixed-line-length=<value>
@@ -425,22 +426,26 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   opts.features.Enable(
       Fortran::common::LanguageFeature::ImplicitNoneTypeAlways,
       args.hasFlag(clang::driver::options::OPT_fimplicit_none,
-          clang::driver::options::OPT_fno_implicit_none, false));
+                   clang::driver::options::OPT_fno_implicit_none, false));
 
   // -f{no-}backslash
   opts.features.Enable(Fortran::common::LanguageFeature::BackslashEscapes,
-      args.hasFlag(clang::driver::options::OPT_fbackslash,
-          clang::driver::options::OPT_fno_backslash, false));
+                       args.hasFlag(clang::driver::options::OPT_fbackslash,
+                                    clang::driver::options::OPT_fno_backslash,
+                                    false));
 
   // -f{no-}logical-abbreviations
-  opts.features.Enable(Fortran::common::LanguageFeature::LogicalAbbreviations,
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::LogicalAbbreviations,
       args.hasFlag(clang::driver::options::OPT_flogical_abbreviations,
-          clang::driver::options::OPT_fno_logical_abbreviations, false));
+                   clang::driver::options::OPT_fno_logical_abbreviations,
+                   false));
 
   // -f{no-}xor-operator
-  opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::XOROperator,
       args.hasFlag(clang::driver::options::OPT_fxor_operator,
-          clang::driver::options::OPT_fno_xor_operator, false));
+                   clang::driver::options::OPT_fno_xor_operator, false));
 
   // -fno-automatic
   if (args.hasArg(clang::driver::options::OPT_fno_automatic)) {
@@ -494,11 +499,11 @@ static std::string getOpenMPHeadersDir() {
 ///
 /// \param [in] opts The preprocessor options instance
 /// \param [out] args The list of input arguments
-static void parsePreprocessorArgs(
-    Fortran::frontend::PreprocessorOptions &opts, llvm::opt::ArgList &args) {
+static void parsePreprocessorArgs(Fortran::frontend::PreprocessorOptions &opts,
+                                  llvm::opt::ArgList &args) {
   // Add macros from the command line.
-  for (const auto *currentArg : args.filtered(
-           clang::driver::options::OPT_D, clang::driver::options::OPT_U)) {
+  for (const auto *currentArg : args.filtered(clang::driver::options::OPT_D,
+                                              clang::driver::options::OPT_U)) {
     if (currentArg->getOption().matches(clang::driver::options::OPT_D)) {
       opts.addMacroDef(currentArg->getValue());
     } else {
@@ -513,7 +518,7 @@ static void parsePreprocessorArgs(
   // Prepend the ordered list of -intrinsic-modules-path
   // to the default location to search.
   for (const auto *currentArg :
-      args.filtered(clang::driver::options::OPT_fintrinsic_modules_path))
+       args.filtered(clang::driver::options::OPT_fintrinsic_modules_path))
     opts.searchDirectoriesFromIntrModPath.emplace_back(currentArg->getValue());
 
   // -cpp/-nocpp
@@ -521,8 +526,8 @@ static void parsePreprocessorArgs(
           clang::driver::options::OPT_cpp, clang::driver::options::OPT_nocpp))
     opts.macrosFlag =
         (currentArg->getOption().matches(clang::driver::options::OPT_cpp))
-        ? PPMacrosFlag::Include
-        : PPMacrosFlag::Exclude;
+            ? PPMacrosFlag::Include
+            : PPMacrosFlag::Exclude;
 
   opts.noReformat = args.hasArg(clang::driver::options::OPT_fno_reformat);
   opts.noLineDirectives = args.hasArg(clang::driver::options::OPT_P);
@@ -531,7 +536,7 @@ static void parsePreprocessorArgs(
 /// Parses all semantic related arguments and populates the variables
 /// options accordingly. Returns false if new errors are generated.
 static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
-    clang::DiagnosticsEngine &diags) {
+                          clang::DiagnosticsEngine &diags) {
   unsigned numErrorsBefore = diags.getNumErrors();
 
   // -J/module-dir option
@@ -542,7 +547,7 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   if (moduleDirList.size() > 1) {
     const unsigned diagID =
         diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
-            "Only one '-module-dir/-J' option allowed");
+                              "Only one '-module-dir/-J' option allowed");
     diags.Report(diagID);
   }
   if (moduleDirList.size() == 1)
@@ -570,7 +575,7 @@ static bool parseSemaArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 /// Parses all diagnostics related arguments and populates the variables
 /// options accordingly. Returns false if new errors are generated.
 static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
-    clang::DiagnosticsEngine &diags) {
+                          clang::DiagnosticsEngine &diags) {
   unsigned numErrorsBefore = diags.getNumErrors();
 
   // -Werror option
@@ -583,7 +588,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     } else {
       const unsigned diagID =
           diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
-              "Only `-Werror` is supported currently.");
+                                "Only `-Werror` is supported currently.");
       diags.Report(diagID);
     }
   }
@@ -598,7 +603,7 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 /// Parses all Dialect related arguments and populates the variables
 /// options accordingly. Returns false if new errors are generated.
 static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
-    clang::DiagnosticsEngine &diags) {
+                             clang::DiagnosticsEngine &diags) {
   unsigned numErrorsBefore = diags.getNumErrors();
 
   // -fdefault* family
@@ -615,9 +620,9 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     if (!args.hasArg(clang::driver::options::OPT_fdefault_real_8)) {
       // -fdefault-double-8 has to be used with -fdefault-real-8
       // to be compatible with gfortran
-      const unsigned diagID =
-          diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
-              "Use of `-fdefault-double-8` requires `-fdefault-real-8`");
+      const unsigned diagID = diags.getCustomDiagID(
+          clang::DiagnosticsEngine::Error,
+          "Use of `-fdefault-double-8` requires `-fdefault-real-8`");
       diags.Report(diagID);
     }
     // https://gcc.gnu.org/onlinedocs/gfortran/Fortran-Dialect-Options.html
@@ -651,7 +656,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     } else {
       const unsigned diagID =
           diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
-              "Only -std=f2018 is allowed currently.");
+                                "Only -std=f2018 is allowed currently.");
       diags.Report(diagID);
     }
   }
@@ -812,12 +817,12 @@ void CompilerInvocation::setDefaultPredefinitions() {
 
   // Populate the macro list with version numbers and other predefinitions.
   fortranOptions.predefinitions.emplace_back("__flang__", "1");
-  fortranOptions.predefinitions.emplace_back(
-      "__flang_major__", FLANG_VERSION_MAJOR_STRING);
-  fortranOptions.predefinitions.emplace_back(
-      "__flang_minor__", FLANG_VERSION_MINOR_STRING);
-  fortranOptions.predefinitions.emplace_back(
-      "__flang_patchlevel__", FLANG_VERSION_PATCHLEVEL_STRING);
+  fortranOptions.predefinitions.emplace_back("__flang_major__",
+                                             FLANG_VERSION_MAJOR_STRING);
+  fortranOptions.predefinitions.emplace_back("__flang_minor__",
+                                             FLANG_VERSION_MINOR_STRING);
+  fortranOptions.predefinitions.emplace_back("__flang_patchlevel__",
+                                             FLANG_VERSION_PATCHLEVEL_STRING);
 
   // Add predefinitions based on extensions enabled
   if (frontendOptions.features.IsEnabled(
