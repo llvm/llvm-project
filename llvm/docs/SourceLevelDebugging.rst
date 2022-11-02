@@ -253,6 +253,10 @@ the complex expression derives the direct value.
 
 ``llvm.dbg.assign``
 ^^^^^^^^^^^^^^^^^^^
+.. toctree::
+   :hidden:
+
+   AssignmentTracking
 
 .. code-block:: llvm
 
