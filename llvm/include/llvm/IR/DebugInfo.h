@@ -159,6 +159,8 @@ private:
   SmallPtrSet<const MDNode *, 32> NodesSeen;
 };
 
+/// Return true if assignment tracking is enabled.
+bool getEnableAssignmentTracking();
 } // end namespace llvm
 
 #endif // LLVM_IR_DEBUGINFO_H
