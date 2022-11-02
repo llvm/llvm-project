@@ -38,16 +38,6 @@ endif()
 # Must go below project(..)
 include(GNUInstallDirs)
 
-# MSVC + clang-cl build requires clang_rt.builtin.${target} library
-if (MSVC)
-  include(HandleCompilerRT)
-  find_compiler_rt_library(builtins CLANG_RT_BUILTINS_LIBRARY)
-  get_filename_component(LIBDIR "${CLANG_RT_BUILTINS_LIBRARY}" DIRECTORY)
-  if (IS_DIRECTORY "${LIBDIR}")
-    link_libraries(${CLANG_RT_BUILTINS_LIBRARY})
-  endif()
-endif()
-
 if (FLANG_STANDALONE_BUILD)
   set(FLANG_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
   if (NOT MSVC_IDE)
