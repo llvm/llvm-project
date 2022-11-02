@@ -3,7 +3,7 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
 define i8 @test1(i32 %a, i32 %length) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@test1
 ; CHECK-SAME: (i32 [[A:%.*]], i32 [[LENGTH:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -37,7 +37,7 @@ exit:
 }
 
 define i8 @test2(i32 %n) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@test2
 ; CHECK-SAME: (i32 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -185,8 +185,8 @@ declare void @llvm.assume(i1) nounwind
 declare void @dummy(i1) nounwind
 declare void @llvm.experimental.guard(i1, ...)
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { inaccessiblememonly nocallback nofree nosync nounwind willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; CHECK: attributes #[[ATTR2]] = { nounwind }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync willreturn }
 ;.

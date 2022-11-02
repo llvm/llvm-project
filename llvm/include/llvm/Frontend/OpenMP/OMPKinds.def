@@ -487,6 +487,7 @@ __OMP_RTL(__last, false, Void, )
 #define EnumAttr(Kind) Attribute::get(Ctx, Attribute::AttrKind::Kind)
 #define EnumAttrInt(Kind, N) Attribute::get(Ctx, Attribute::AttrKind::Kind, N)
 #define AllocSizeAttr(N, M) Attribute::getWithAllocSizeArgs(Ctx, N, M)
+#define MemoryAttr(ME) Attribute::getWithMemoryEffects(Ctx, ME)
 #define AttributeSet(...)                                                      \
   AttributeSet::get(Ctx, ArrayRef<Attribute>({__VA_ARGS__}))
 
@@ -496,27 +497,29 @@ __OMP_RTL(__last, false, Void, )
 
 #define __OMP_ATTRS_SET(VarName, AttrSet) OMP_ATTRS_SET(VarName, AttrSet)
 
-__OMP_ATTRS_SET(GetterAttrs,
-                OptimisticAttributes
-                    ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(ReadOnly),
-                                   EnumAttr(NoSync), EnumAttr(NoFree),
-                                   EnumAttr(InaccessibleMemOnly),
-                                   EnumAttr(WillReturn))
-                    : AttributeSet(EnumAttr(NoUnwind)))
-__OMP_ATTRS_SET(GetterArgWriteAttrs,
-                OptimisticAttributes
-                    ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(NoSync),
-                                   EnumAttr(NoFree),
-                                   EnumAttr(InaccessibleMemOrArgMemOnly),
-                                   EnumAttr(WillReturn))
-                    : AttributeSet(EnumAttr(NoUnwind)))
-__OMP_ATTRS_SET(SetterAttrs,
-                OptimisticAttributes
-                    ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(WriteOnly),
-                                   EnumAttr(NoSync), EnumAttr(NoFree),
-                                   EnumAttr(InaccessibleMemOnly),
-                                   EnumAttr(WillReturn))
-                    : AttributeSet(EnumAttr(NoUnwind)))
+__OMP_ATTRS_SET(
+    GetterAttrs,
+    OptimisticAttributes
+        ? AttributeSet(
+              EnumAttr(NoUnwind), EnumAttr(NoSync), EnumAttr(NoFree),
+              EnumAttr(WillReturn),
+              MemoryAttr(MemoryEffects::inaccessibleMemOnly(ModRefInfo::Ref)))
+        : AttributeSet(EnumAttr(NoUnwind)))
+__OMP_ATTRS_SET(
+    GetterArgWriteAttrs,
+    OptimisticAttributes
+        ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(NoSync), EnumAttr(NoFree),
+                       EnumAttr(WillReturn),
+                       MemoryAttr(MemoryEffects::inaccessibleOrArgMemOnly()))
+        : AttributeSet(EnumAttr(NoUnwind)))
+__OMP_ATTRS_SET(
+  SetterAttrs,
+  OptimisticAttributes
+      ? AttributeSet(
+            EnumAttr(NoUnwind), EnumAttr(NoSync), EnumAttr(NoFree),
+            EnumAttr(WillReturn),
+            MemoryAttr(MemoryEffects::inaccessibleMemOnly(ModRefInfo::Mod)))
+      : AttributeSet(EnumAttr(NoUnwind)))
 
 __OMP_ATTRS_SET(DefaultAttrs,
                 OptimisticAttributes
@@ -529,12 +532,13 @@ __OMP_ATTRS_SET(BarrierAttrs,
                     ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(Convergent))
                     : AttributeSet(EnumAttr(NoUnwind), EnumAttr(Convergent)))
 
-__OMP_ATTRS_SET(InaccessibleArgOnlyAttrs,
-                OptimisticAttributes
-                    ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(NoSync),
-                                   EnumAttr(InaccessibleMemOrArgMemOnly),
-                                   EnumAttr(WillReturn), EnumAttr(NoFree))
-                    : AttributeSet(EnumAttr(NoUnwind)))
+__OMP_ATTRS_SET(
+    InaccessibleArgOnlyAttrs,
+    OptimisticAttributes
+         ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(NoSync), EnumAttr(NoFree),
+                        EnumAttr(WillReturn),
+                        MemoryAttr(MemoryEffects::inaccessibleOrArgMemOnly()))
+         : AttributeSet(EnumAttr(NoUnwind)))
 
 __OMP_ATTRS_SET(AlwaysInlineAttrs,
                 OptimisticAttributes
@@ -542,12 +546,13 @@ __OMP_ATTRS_SET(AlwaysInlineAttrs,
                     : AttributeSet(EnumAttr(AlwaysInline)))
 
 #if 0
-__OMP_ATTRS_SET(InaccessibleOnlyAttrs,
-                OptimisticAttributes
-                    ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(NoSync),
-                                   EnumAttr(InaccessibleMemOnly),
-                                   EnumAttr(WillReturn), EnumAttr(NoFree))
-                    : AttributeSet(EnumAttr(NoUnwind)))
+__OMP_ATTRS_SET(
+    InaccessibleOnlyAttrs,
+    OptimisticAttributes
+        ? AttributeSet(EnumAttr(NoUnwind), EnumAttr(NoSync), EnumAttr(NoFree),
+                       EnumAttr(WillReturn),
+                       MemoryAttr(MemoryEffects::inaccessibleMemOnly()))
+        : AttributeSet(EnumAttr(NoUnwind)))
 #endif
 
 __OMP_ATTRS_SET(AllocAttrs,

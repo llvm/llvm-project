@@ -338,4 +338,4 @@ exit:
   ret void
 }
 
-; CHECK: attributes #0 = { nofree nosync readnone }
+; CHECK: attributes #0 = { nofree nosync memory(none) }

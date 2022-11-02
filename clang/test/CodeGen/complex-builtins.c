@@ -197,9 +197,9 @@ void foo(float f) {
 // HAS_ERRNO: declare { x86_fp80, x86_fp80 } @ctanhl(ptr noundef byval({ x86_fp80, x86_fp80 }) align 16) [[NOT_READNONE]]
 };
 
-// NO__ERRNO: attributes [[READNONE]] = { {{.*}}readnone{{.*}} }
+// NO__ERRNO: attributes [[READNONE]] = { {{.*}}memory(none){{.*}} }
 // NO__ERRNO: attributes [[NOT_READNONE]] = { nounwind {{.*}} }
 
 // HAS_ERRNO: attributes [[NOT_READNONE]] = { nounwind {{.*}} }
-// HAS_ERRNO: attributes [[READNONE]] = { {{.*}}readnone{{.*}} }
+// HAS_ERRNO: attributes [[READNONE]] = { {{.*}}memory(none){{.*}} }
 // HAS_ERRNO: attributes [[WILLRETURN_NOT_READNONE]] = { nounwind willreturn {{.*}} }

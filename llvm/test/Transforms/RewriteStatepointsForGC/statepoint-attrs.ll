@@ -20,6 +20,6 @@ define void @test1(i8 addrspace(1)* %arg) gc "statepoint-example" {
 
 attributes #1 = { norecurse noimplicitfloat }
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nounwind memory(none) }
 ; CHECK: attributes #[[ATTR1]] = { noimplicitfloat norecurse }
 ;.
