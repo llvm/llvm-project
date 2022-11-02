@@ -227,7 +227,8 @@ InstructionCost
 RISCVTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                     unsigned AddressSpace,
                                     TTI::TargetCostKind CostKind) {
-  if (!isa<ScalableVectorType>(Src))
+  if (!isLegalMaskedLoadStore(Src, Alignment) ||
+      CostKind != TTI::TCK_RecipThroughput)
     return BaseT::getMaskedMemoryOpCost(Opcode, Src, Alignment, AddressSpace,
                                         CostKind);
 
