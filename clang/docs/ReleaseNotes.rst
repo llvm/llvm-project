@@ -274,6 +274,10 @@ Bug Fixes
   result in a stack overflow.
   `Issue 44304 <https://github.com/llvm/llvm-project/issues/44304>`_
   `Issue 50891 <https://github.com/llvm/llvm-project/issues/50891>`_
+- Clang 14 predeclared some builtin POSIX library functions in ``gnu2x`` mode,
+  and Clang 15 accidentally stopped predeclaring those functions in that
+  language mode. Clang 16 now predeclares those functions again. This fixes
+  `Issue 56607 <https://github.com/llvm/llvm-project/issues/56607>`_.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
