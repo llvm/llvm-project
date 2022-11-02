@@ -6270,12 +6270,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       } else
         CmdArgs.push_back("-fno-openmp-target-fast");
 
-      if (Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
-                       options::OPT_fno_openmp_target_new_runtime, true))
-        CmdArgs.push_back("-fopenmp-target-new-runtime");
-      else
-        CmdArgs.push_back("-fno-openmp-target-new-runtime");
-
       if (Args.hasFlag(options::OPT_fopenmp_target_ignore_env_vars,
                        options::OPT_fno_openmp_target_ignore_env_vars,
                        shouldIgnoreEnvVars(Args)))
@@ -6291,10 +6285,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
       // When in OpenMP offloading mode, enable or disable the new device
       // runtime.
-      if (Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
-                       options::OPT_fno_openmp_target_new_runtime,
-                       /*Default=*/false))
-        CmdArgs.push_back("-fopenmp-target-new-runtime");
+      CmdArgs.push_back("-fopenmp-target-new-runtime");
 
       // When in OpenMP offloading mode, enable debugging on the device.
       Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_target_debug_EQ);

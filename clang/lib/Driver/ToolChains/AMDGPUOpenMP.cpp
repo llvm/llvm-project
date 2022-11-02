@@ -151,9 +151,7 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
   // (only available in new device rtl)
   if (llvm::sys::fs::exists(disable_fn) &&
       Args.hasFlag(options::OPT_fdisable_host_devmem,
-                   options::OPT_fenable_host_devmem, false) &&
-      Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
-                   options::OPT_fno_openmp_target_new_runtime, true)) {
+                   options::OPT_fenable_host_devmem, false)) {
     input_count++;
     CmdArgs.push_back(Args.MakeArgString(disable_fn));
   }
@@ -216,13 +214,8 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
     }
   }
 
-  if (Args.hasFlag(options::OPT_fopenmp_target_new_runtime,
-                   options::OPT_fno_openmp_target_new_runtime, true))
-    BCLibs.push_back(Args.MakeArgString(libpath + "/libomptarget-new-amdgpu-" +
-                                        GPUArch + ".bc"));
-  else
-    BCLibs.push_back(Args.MakeArgString(libpath + "/libomptarget-amdgcn-" +
-                                        GPUArch + ".bc"));
+  BCLibs.push_back(Args.MakeArgString(libpath + "/libomptarget-new-amdgpu-" +
+                                      GPUArch + ".bc"));
 
   // Add the generic set of libraries, OpenMP subset only
   BCLibs.append(AMDGPUOpenMPTC.getCommonDeviceLibNames(C.getArgs(),
@@ -571,11 +564,7 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
     return;
 
   std::string BitcodeSuffix;
-  if (DriverArgs.hasFlag(options::OPT_fopenmp_target_new_runtime,
-                         options::OPT_fno_openmp_target_new_runtime, true))
-    BitcodeSuffix = llvm::Twine("new-amdgpu-" + GPUArch).str();
-  else
-    BitcodeSuffix = llvm::Twine("amdgcn-" + GPUArch).str();
+  BitcodeSuffix = llvm::Twine("new-amdgpu-" + GPUArch).str();
 
   addDirectoryList(DriverArgs, LibraryPaths, "", "HIP_DEVICE_LIB_PATH");
 

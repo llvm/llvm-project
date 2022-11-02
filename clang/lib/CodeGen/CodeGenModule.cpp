@@ -7818,8 +7818,7 @@ CodeGenModule::checkAndSetNoLoopKernel(const OMPExecutableDirective &D) {
 CodeGenModule::NoLoopXteamErr
 CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
   NoLoopXteamErr NxStatus = NxSuccess;
-  if (!getLangOpts().OpenMPTargetIgnoreEnvVars ||
-      !getLangOpts().OpenMPTargetNewRuntime)
+  if (!getLangOpts().OpenMPTargetIgnoreEnvVars)
     return NxOptionDisabled;
 
   // Allowing only a combined construct for now

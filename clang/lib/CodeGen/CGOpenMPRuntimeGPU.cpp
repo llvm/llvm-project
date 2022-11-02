@@ -1763,7 +1763,7 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
                                    CGF.VoidPtrPtrTy),
         llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
     if (CGM.getLangOpts().OpenMPNoNestedParallelism &&
-        CGM.getLangOpts().OpenMPTargetNewRuntime && CGM.IsSPMDExecutionMode())
+        CGM.IsSPMDExecutionMode())
       CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                               CGM.getModule(), OMPRTL___kmpc_parallel_spmd),
                           Args);
