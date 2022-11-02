@@ -453,8 +453,8 @@ define i32 @zext_load_i32_by_i8_shl_8(i32* %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrb w8, [x0]
 ; CHECK-NEXT:    ldrb w9, [x0, #1]
-; CHECK-NEXT:    lsl w0, w8, #8
-; CHECK-NEXT:    bfi w0, w9, #16, #8
+; CHECK-NEXT:    lsl w8, w8, #8
+; CHECK-NEXT:    orr w0, w8, w9, lsl #16
 ; CHECK-NEXT:    ret
 
   %tmp = bitcast i32* %arg to i8*
@@ -477,8 +477,8 @@ define i32 @zext_load_i32_by_i8_shl_16(i32* %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrb w8, [x0]
 ; CHECK-NEXT:    ldrb w9, [x0, #1]
-; CHECK-NEXT:    lsl w0, w8, #16
-; CHECK-NEXT:    bfi w0, w9, #24, #8
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    orr w0, w8, w9, lsl #24
 ; CHECK-NEXT:    ret
 
   %tmp = bitcast i32* %arg to i8*
@@ -521,8 +521,8 @@ define i32 @zext_load_i32_by_i8_bswap_shl_8(i32* %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrb w8, [x0, #1]
 ; CHECK-NEXT:    ldrb w9, [x0]
-; CHECK-NEXT:    lsl w0, w8, #8
-; CHECK-NEXT:    bfi w0, w9, #16, #8
+; CHECK-NEXT:    lsl w8, w8, #8
+; CHECK-NEXT:    orr w0, w8, w9, lsl #16
 ; CHECK-NEXT:    ret
 
   %tmp = bitcast i32* %arg to i8*
@@ -545,8 +545,8 @@ define i32 @zext_load_i32_by_i8_bswap_shl_16(i32* %arg) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrb w8, [x0, #1]
 ; CHECK-NEXT:    ldrb w9, [x0]
-; CHECK-NEXT:    lsl w0, w8, #16
-; CHECK-NEXT:    bfi w0, w9, #24, #8
+; CHECK-NEXT:    lsl w8, w8, #16
+; CHECK-NEXT:    orr w0, w8, w9, lsl #24
 ; CHECK-NEXT:    ret
 
   %tmp = bitcast i32* %arg to i8*
@@ -603,7 +603,7 @@ define void @short_vector_to_i32_unused_low_i8(<4 x i8>* %in, i32* %out, i32* %p
 ; CHECK-NEXT:    umov w10, v0.h[3]
 ; CHECK-NEXT:    lsl w8, w8, #16
 ; CHECK-NEXT:    bfi w8, w9, #8, #8
-; CHECK-NEXT:    bfi w8, w10, #24, #8
+; CHECK-NEXT:    orr w8, w8, w10, lsl #24
 ; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
   %ld = load <4 x i8>, <4 x i8>* %in, align 4
@@ -634,8 +634,8 @@ define void @short_vector_to_i32_unused_high_i8(<4 x i8>* %in, i32* %out, i32* %
 ; CHECK-NEXT:    ldrh w9, [x0]
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-NEXT:    umov w8, v0.h[2]
-; CHECK-NEXT:    bfi w9, w8, #16, #8
-; CHECK-NEXT:    str w9, [x1]
+; CHECK-NEXT:    orr w8, w9, w8, lsl #16
+; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
   %ld = load <4 x i8>, <4 x i8>* %in, align 4
 
@@ -665,7 +665,7 @@ define void @short_vector_to_i32_unused_low_i16(<4 x i8>* %in, i32* %out, i32* %
 ; CHECK-NEXT:    umov w8, v0.h[3]
 ; CHECK-NEXT:    umov w9, v0.h[2]
 ; CHECK-NEXT:    lsl w8, w8, #24
-; CHECK-NEXT:    bfi w8, w9, #16, #8
+; CHECK-NEXT:    orr w8, w8, w9, lsl #16
 ; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
   %ld = load <4 x i8>, <4 x i8>* %in, align 4
