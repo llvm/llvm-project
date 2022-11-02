@@ -130,7 +130,7 @@ LogicalResult transform::TransformState::updatePayloadOps(
   if (failed(result.checkAndReport()))
     return failure();
 
-  std::swap(association, updated);
+  it->second = updated;
   return success();
 }
 
