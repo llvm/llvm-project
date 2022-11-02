@@ -8739,34 +8739,10 @@ public:
     // If this declaration appears in a is_device_ptr clause we just have to
     // pass the pointer by value. If it is a reference to a declaration, we just
     // pass its value.
-    if (VD && DevPointersMap.count(VD)) {
+    if (VD && (DevPointersMap.count(VD) || HasDevAddrsMap.count(VD))) {
       CombinedInfo.Exprs.push_back(VD);
       CombinedInfo.BasePointers.emplace_back(Arg, VD);
       CombinedInfo.Pointers.push_back(Arg);
-      CombinedInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
-          CGF.getTypeSize(CGF.getContext().VoidPtrTy), CGF.Int64Ty,
-          /*isSigned=*/true));
-      CombinedInfo.Types.push_back(
-          (Cap->capturesVariable() ? OMP_MAP_TO : OMP_MAP_LITERAL) |
-          OMP_MAP_TARGET_PARAM);
-      CombinedInfo.Mappers.push_back(nullptr);
-      return;
-    }
-    if (VD && HasDevAddrsMap.count(VD)) {
-      auto I = HasDevAddrsMap.find(VD);
-      CombinedInfo.Exprs.push_back(VD);
-      Expr *E = nullptr;
-      for (auto &MCL : I->second) {
-        E = MCL.begin()->getAssociatedExpression();
-        break;
-      }
-      llvm::Value *Ptr = nullptr;
-      if (E->isGLValue())
-        Ptr = CGF.EmitLValue(E).getPointer(CGF);
-      else
-        Ptr = CGF.EmitScalarExpr(E);
-      CombinedInfo.BasePointers.emplace_back(Ptr, VD);
-      CombinedInfo.Pointers.push_back(Ptr);
       CombinedInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
           CGF.getTypeSize(CGF.getContext().VoidPtrTy), CGF.Int64Ty,
           /*isSigned=*/true));
