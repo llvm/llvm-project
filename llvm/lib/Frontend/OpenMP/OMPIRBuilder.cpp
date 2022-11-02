@@ -4692,6 +4692,181 @@ void OpenMPIRBuilder::OutlineInfo::collectBlocks(
   }
 }
 
+void OpenMPIRBuilder::createOffloadEntry(bool IsTargetCodegen, Constant *ID,
+                                         Constant *Addr, uint64_t Size,
+                                         int32_t Flags,
+                                         GlobalValue::LinkageTypes) {
+  if (!IsTargetCodegen) {
+    emitOffloadingEntry(ID, Addr->getName(), Size, Flags);
+    return;
+  }
+  // TODO: Add support for global variables on the device after declare target
+  // support.
+  Function *Fn = dyn_cast<Function>(Addr);
+  if (!Fn)
+    return;
+
+  Module &M = *(Fn->getParent());
+  LLVMContext &Ctx = M.getContext();
+
+  // Get "nvvm.annotations" metadata node.
+  NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
+
+  Metadata *MDVals[] = {
+      ConstantAsMetadata::get(Fn), MDString::get(Ctx, "kernel"),
+      ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(Ctx), 1))};
+  // Append metadata to nvvm.annotations.
+  MD->addOperand(MDNode::get(Ctx, MDVals));
+
+  // Add a function attribute for the kernel.
+  Fn->addFnAttr(Attribute::get(Ctx, "kernel"));
+}
+
+// We only generate metadata for function that contain target regions.
+void OpenMPIRBuilder::createOffloadEntriesAndInfoMetadata(
+    OffloadEntriesInfoManager &OffloadEntriesInfoManager, bool IsTargetCodegen,
+    bool IsEmbedded, bool HasRequiresUnifiedSharedMemory,
+    EmitMetadataErrorReportFunctionTy &ErrorFn) {
+
+  // If there are no entries, we don't need to do anything.
+  if (OffloadEntriesInfoManager.empty())
+    return;
+
+  LLVMContext &C = M.getContext();
+  SmallVector<std::pair<const OffloadEntriesInfoManager::OffloadEntryInfo *,
+                        TargetRegionEntryInfo>,
+              16>
+      OrderedEntries(OffloadEntriesInfoManager.size());
+
+  // Auxiliary methods to create metadata values and strings.
+  auto &&GetMDInt = [this](unsigned V) {
+    return ConstantAsMetadata::get(ConstantInt::get(Builder.getInt32Ty(), V));
+  };
+
+  auto &&GetMDString = [&C](StringRef V) { return MDString::get(C, V); };
+
+  // Create the offloading info metadata node.
+  NamedMDNode *MD = M.getOrInsertNamedMetadata("omp_offload.info");
+  auto &&TargetRegionMetadataEmitter =
+      [this, &C, MD, &OrderedEntries, &GetMDInt, &GetMDString](
+          const TargetRegionEntryInfo &EntryInfo,
+          const OffloadEntriesInfoManager::OffloadEntryInfoTargetRegion &E) {
+        // Generate metadata for target regions. Each entry of this metadata
+        // contains:
+        // - Entry 0 -> Kind of this type of metadata (0).
+        // - Entry 1 -> Device ID of the file where the entry was identified.
+        // - Entry 2 -> File ID of the file where the entry was identified.
+        // - Entry 3 -> Mangled name of the function where the entry was
+        // identified.
+        // - Entry 4 -> Line in the file where the entry was identified.
+        // - Entry 5 -> Order the entry was created.
+        // The first element of the metadata node is the kind.
+        Metadata *Ops[] = {
+            GetMDInt(E.getKind()),      GetMDInt(EntryInfo.DeviceID),
+            GetMDInt(EntryInfo.FileID), GetMDString(EntryInfo.ParentName),
+            GetMDInt(EntryInfo.Line),   GetMDInt(E.getOrder())};
+
+        // Save this entry in the right position of the ordered entries array.
+        OrderedEntries[E.getOrder()] = std::make_pair(&E, EntryInfo);
+
+        // Add metadata to the named metadata node.
+        MD->addOperand(MDNode::get(C, Ops));
+      };
+
+  OffloadEntriesInfoManager.actOnTargetRegionEntriesInfo(
+      TargetRegionMetadataEmitter);
+
+  // Create function that emits metadata for each device global variable entry;
+  auto &&DeviceGlobalVarMetadataEmitter =
+      [&C, &OrderedEntries, &GetMDInt, &GetMDString, MD](
+          StringRef MangledName,
+          const OffloadEntriesInfoManager::OffloadEntryInfoDeviceGlobalVar &E) {
+        // Generate metadata for global variables. Each entry of this metadata
+        // contains:
+        // - Entry 0 -> Kind of this type of metadata (1).
+        // - Entry 1 -> Mangled name of the variable.
+        // - Entry 2 -> Declare target kind.
+        // - Entry 3 -> Order the entry was created.
+        // The first element of the metadata node is the kind.
+        Metadata *Ops[] = {GetMDInt(E.getKind()), GetMDString(MangledName),
+                           GetMDInt(E.getFlags()), GetMDInt(E.getOrder())};
+
+        // Save this entry in the right position of the ordered entries array.
+        TargetRegionEntryInfo varInfo(MangledName, 0, 0, 0);
+        OrderedEntries[E.getOrder()] = std::make_pair(&E, varInfo);
+
+        // Add metadata to the named metadata node.
+        MD->addOperand(MDNode::get(C, Ops));
+      };
+
+  OffloadEntriesInfoManager.actOnDeviceGlobalVarEntriesInfo(
+      DeviceGlobalVarMetadataEmitter);
+
+  for (const auto &E : OrderedEntries) {
+    assert(E.first && "All ordered entries must exist!");
+    if (const auto *CE =
+            dyn_cast<OffloadEntriesInfoManager::OffloadEntryInfoTargetRegion>(
+                E.first)) {
+      if (!CE->getID() || !CE->getAddress()) {
+        // Do not blame the entry if the parent funtion is not emitted.
+        TargetRegionEntryInfo EntryInfo = E.second;
+        StringRef FnName = EntryInfo.ParentName;
+        if (!M.getNamedValue(FnName))
+          continue;
+        ErrorFn(EMIT_MD_TARGET_REGION_ERROR, EntryInfo);
+        continue;
+      }
+      createOffloadEntry(IsTargetCodegen, CE->getID(), CE->getAddress(),
+                         /*Size=*/0, CE->getFlags(),
+                         GlobalValue::WeakAnyLinkage);
+    } else if (const auto *CE = dyn_cast<
+                   OffloadEntriesInfoManager::OffloadEntryInfoDeviceGlobalVar>(
+                   E.first)) {
+      OffloadEntriesInfoManager::OMPTargetGlobalVarEntryKind Flags =
+          static_cast<OffloadEntriesInfoManager::OMPTargetGlobalVarEntryKind>(
+              CE->getFlags());
+      switch (Flags) {
+      case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryTo: {
+        if (IsEmbedded && HasRequiresUnifiedSharedMemory)
+          continue;
+        if (!CE->getAddress()) {
+          ErrorFn(EMIT_MD_DECLARE_TARGET_ERROR, E.second);
+          continue;
+        }
+        // The vaiable has no definition - no need to add the entry.
+        if (CE->getVarSize() == 0)
+          continue;
+        break;
+      }
+      case OffloadEntriesInfoManager::OMPTargetGlobalVarEntryLink:
+        assert(((IsEmbedded && !CE->getAddress()) ||
+                (!IsEmbedded && CE->getAddress())) &&
+               "Declaret target link address is set.");
+        if (IsEmbedded)
+          continue;
+        if (!CE->getAddress()) {
+          ErrorFn(EMIT_MD_GLOBAL_VAR_LINK_ERROR, TargetRegionEntryInfo());
+          continue;
+        }
+        break;
+      }
+
+      // Hidden or internal symbols on the device are not externally visible.
+      // We should not attempt to register them by creating an offloading
+      // entry.
+      if (auto *GV = dyn_cast<GlobalValue>(CE->getAddress()))
+        if (GV->hasLocalLinkage() || GV->hasHiddenVisibility())
+          continue;
+
+      createOffloadEntry(IsTargetCodegen, CE->getAddress(), CE->getAddress(),
+                         CE->getVarSize(), Flags, CE->getLinkage());
+
+    } else {
+      llvm_unreachable("Unsupported entry kind.");
+    }
+  }
+}
+
 void TargetRegionEntryInfo::getTargetRegionEntryFnName(
     SmallVectorImpl<char> &Name, StringRef ParentName, unsigned DeviceID,
     unsigned FileID, unsigned Line) {
