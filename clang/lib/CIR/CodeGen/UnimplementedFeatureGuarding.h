@@ -52,6 +52,7 @@ struct UnimplementedFeature {
   static bool incrementProfileCounter() { return false; }
   static bool requiresReturnValueCheck() { return false; }
   static bool shouldEmitLifetimeMarkers() { return false; }
+  static bool peepholeProtection() { return false; }
 };
 } // namespace cir
 
