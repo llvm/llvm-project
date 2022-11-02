@@ -78,7 +78,7 @@ define internal i8* @side_effects(i8 %v) {
 }
 
 define internal i8* @no_side_effects(i8 %v) readonly nounwind {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@no_side_effects
 ; CGSCC-SAME: (i8 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:    ret i8* null
@@ -96,5 +96,5 @@ define internal i8* @dont_zap_me(i8 %v) {
   ret i8* null
 }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.

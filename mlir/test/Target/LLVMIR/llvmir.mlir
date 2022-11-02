@@ -2009,5 +2009,5 @@ llvm.func @vararg_function(%arg0: i32, ...) {
 // Function attributes: readnone
 
 // CHECK: declare void @readnone_function() #[[ATTR:[0-9]+]]
-// CHECK: attributes #[[ATTR]] = { readnone }
+// CHECK: attributes #[[ATTR]] = { memory(none) }
 llvm.func @readnone_function() attributes {llvm.readnone}

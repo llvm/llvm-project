@@ -69,10 +69,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "function-attrs"
 
-STATISTIC(NumArgMemOnly, "Number of functions marked argmemonly");
-STATISTIC(NumReadNone, "Number of functions marked readnone");
-STATISTIC(NumReadOnly, "Number of functions marked readonly");
-STATISTIC(NumWriteOnly, "Number of functions marked writeonly");
+STATISTIC(NumMemoryAttr, "Number of functions with improved memory attribute");
 STATISTIC(NumNoCapture, "Number of arguments marked nocapture");
 STATISTIC(NumReturned, "Number of arguments marked returned");
 STATISTIC(NumReadNoneArg, "Number of arguments marked readnone");
@@ -254,78 +251,13 @@ static void addMemoryAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter,
       return;
   }
 
-  ModRefInfo MR = ME.getModRef();
-
   for (Function *F : SCCNodes) {
-    if (F->doesNotAccessMemory())
-      // Already perfect!
-      continue;
-
-    if (ME.doesNotAccessMemory()) {
-      // For readnone, remove all other memory attributes.
-      AttributeMask AttrsToRemove;
-      AttrsToRemove.addAttribute(Attribute::ReadOnly);
-      AttrsToRemove.addAttribute(Attribute::WriteOnly);
-      AttrsToRemove.addAttribute(Attribute::ArgMemOnly);
-      AttrsToRemove.addAttribute(Attribute::InaccessibleMemOnly);
-      AttrsToRemove.addAttribute(Attribute::InaccessibleMemOrArgMemOnly);
-
-      ++NumReadNone;
-      F->removeFnAttrs(AttrsToRemove);
-      F->addFnAttr(Attribute::ReadNone);
+    MemoryEffects OldME = F->getMemoryEffects();
+    MemoryEffects NewME = ME & OldME;
+    if (NewME != OldME) {
+      ++NumMemoryAttr;
+      F->setMemoryEffects(NewME);
       Changed.insert(F);
-      continue;
-    }
-
-    // Add argmemonly, inaccessiblememonly, or inaccessible_or_argmemonly
-    // attributes if possible.
-    AttributeMask AttrsToRemove;
-    AttrsToRemove.addAttribute(Attribute::ArgMemOnly);
-    AttrsToRemove.addAttribute(Attribute::InaccessibleMemOnly);
-    AttrsToRemove.addAttribute(Attribute::InaccessibleMemOrArgMemOnly);
-    if (ME.onlyAccessesArgPointees()) {
-      if (!F->onlyAccessesArgMemory()) {
-        NumArgMemOnly++;
-        F->removeFnAttrs(AttrsToRemove);
-        F->addFnAttr(Attribute::ArgMemOnly);
-        Changed.insert(F);
-      }
-    } else if (ME.onlyAccessesInaccessibleMem()) {
-      if (!F->onlyAccessesInaccessibleMemory()) {
-        F->removeFnAttrs(AttrsToRemove);
-        F->addFnAttr(Attribute::InaccessibleMemOnly);
-        Changed.insert(F);
-      }
-    } else if (ME.onlyAccessesInaccessibleOrArgMem() &&
-               !F->onlyAccessesInaccessibleMemOrArgMem()) {
-      F->removeFnAttrs(AttrsToRemove);
-      F->addFnAttr(Attribute::InaccessibleMemOrArgMemOnly);
-      Changed.insert(F);
-    }
-
-    // The SCC contains functions both writing and reading from memory. We
-    // cannot add readonly or writeonline attributes.
-    if (MR == ModRefInfo::ModRef)
-      continue;
-
-    if (F->onlyReadsMemory() && MR == ModRefInfo::Ref)
-      continue;
-
-    if (F->onlyWritesMemory() && MR == ModRefInfo::Mod)
-      continue;
-
-    Changed.insert(F);
-
-    // Add in the new attribute.
-    if (MR == ModRefInfo::Mod) {
-      ++NumWriteOnly;
-      F->removeFnAttr(Attribute::ReadOnly);
-      F->addFnAttr(Attribute::WriteOnly);
-    } else {
-      ++NumReadOnly;
-      assert(MR == ModRefInfo::Ref);
-      F->removeFnAttr(Attribute::WriteOnly);
-      F->addFnAttr(Attribute::ReadOnly);
     }
   }
 }

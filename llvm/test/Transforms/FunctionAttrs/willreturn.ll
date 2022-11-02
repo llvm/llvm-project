@@ -2,7 +2,7 @@
 ; RUN: opt -function-attrs -S %s | FileCheck %s
 
 define void @mustprogress_readnone() mustprogress {
-; CHECK: Function Attrs: mustprogress nofree norecurse noreturn nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse noreturn nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: @mustprogress_readnone(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
@@ -17,7 +17,7 @@ while.body:
 }
 
 define i32 @mustprogress_load(ptr %ptr) mustprogress {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse noreturn nosync nounwind readonly willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse noreturn nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: @mustprogress_load(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
@@ -34,7 +34,7 @@ while.body:
 }
 
 define void @mustprogress_store(ptr %ptr) mustprogress {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse noreturn nosync nounwind writeonly
+; CHECK: Function Attrs: mustprogress nofree norecurse noreturn nosync nounwind memory(argmem: write)
 ; CHECK-LABEL: @mustprogress_store(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
@@ -63,7 +63,7 @@ define void @mustprogress_call_unknown_fn() mustprogress {
 }
 
 define i32 @mustprogress_call_known_functions(ptr %ptr) mustprogress {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse noreturn nosync nounwind readonly willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse noreturn nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: @mustprogress_call_known_functions(
 ; CHECK-NEXT:    call void @mustprogress_readnone()
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @mustprogress_load(ptr [[PTR:%.*]])
@@ -77,7 +77,7 @@ define i32 @mustprogress_call_known_functions(ptr %ptr) mustprogress {
 declare i32 @__gxx_personality_v0(...)
 
 define i64 @mustprogress_mayunwind() mustprogress personality ptr @__gxx_personality_v0 {
-; CHECK: Function Attrs: mustprogress nofree nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: @mustprogress_mayunwind(
 ; CHECK-NEXT:    [[A:%.*]] = invoke i64 @fn_noread()
 ; CHECK-NEXT:    to label [[A:%.*]] unwind label [[B:%.*]]
@@ -141,7 +141,7 @@ define void @willreturn_non_returning_function(i1 %c, ptr %p) {
 
 ; Infinite loop without mustprogress, will not return.
 define void @willreturn_loop() {
-; CHECK: Function Attrs: nofree norecurse noreturn nosync nounwind readnone
+; CHECK: Function Attrs: nofree norecurse noreturn nosync nounwind memory(none)
 ; CHECK-LABEL: @willreturn_loop(
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -156,7 +156,7 @@ loop:
 ; Finite loop. Could be willreturn but not detected.
 ; FIXME
 define void @willreturn_finite_loop() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone
+; CHECK: Function Attrs: nofree norecurse nosync nounwind memory(none)
 ; CHECK-LABEL: @willreturn_finite_loop(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -183,7 +183,7 @@ end:
 
 ; Infinite recursion without mustprogress, will not return.
 define void @willreturn_recursion() {
-; CHECK: Function Attrs: nofree nosync nounwind readnone
+; CHECK: Function Attrs: nofree nosync nounwind memory(none)
 ; CHECK-LABEL: @willreturn_recursion(
 ; CHECK-NEXT:    tail call void @willreturn_recursion()
 ; CHECK-NEXT:    ret void
@@ -194,7 +194,7 @@ define void @willreturn_recursion() {
 
 ; Irreducible infinite loop, will not return.
 define void @willreturn_irreducible(i1 %c) {
-; CHECK: Function Attrs: nofree norecurse noreturn nosync nounwind readnone
+; CHECK: Function Attrs: nofree norecurse noreturn nosync nounwind memory(none)
 ; CHECK-LABEL: @willreturn_irreducible(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       bb1:

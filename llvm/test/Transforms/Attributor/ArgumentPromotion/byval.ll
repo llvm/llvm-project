@@ -7,7 +7,7 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 %struct.ss = type { i32, i64 }
 
 define internal i32 @f(%struct.ss* byval(%struct.ss)  %b) nounwind  {
-; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@f
 ; CHECK-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -32,7 +32,7 @@ entry:
 
 
 define internal i32 @g(%struct.ss* byval(%struct.ss) align 32 %b) nounwind {
-; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@g
 ; CHECK-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -57,7 +57,7 @@ entry:
 
 
 define i32 @main() nounwind  {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@main
 ; TUNIT-SAME: () #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
@@ -65,20 +65,20 @@ define i32 @main() nounwind  {
 ; TUNIT-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 0
 ; TUNIT-NEXT:    store i32 1, i32* [[TMP1]], align 8
 ; TUNIT-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i32 0, i32 1
-; TUNIT-NEXT:    [[S_CAST1:%.*]] = bitcast %struct.ss* [[S]] to i32*
-; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, i32* [[S_CAST1]], align 8
-; TUNIT-NEXT:    [[S_0_12:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i64 0, i32 1
-; TUNIT-NEXT:    [[TMP1:%.*]] = load i64, i64* [[S_0_12]], align 8
-; TUNIT-NEXT:    [[C0:%.*]] = call i32 @f(i32 [[TMP0]], i64 [[TMP1]]) #[[ATTR2:[0-9]+]]
 ; TUNIT-NEXT:    [[S_CAST:%.*]] = bitcast %struct.ss* [[S]] to i32*
-; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, i32* [[S_CAST]], align 32
+; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, i32* [[S_CAST]], align 8
 ; TUNIT-NEXT:    [[S_0_1:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i64 0, i32 1
-; TUNIT-NEXT:    [[TMP3:%.*]] = load i64, i64* [[S_0_1]], align 32
+; TUNIT-NEXT:    [[TMP1:%.*]] = load i64, i64* [[S_0_1]], align 8
+; TUNIT-NEXT:    [[C0:%.*]] = call i32 @f(i32 [[TMP0]], i64 [[TMP1]]) #[[ATTR2:[0-9]+]]
+; TUNIT-NEXT:    [[S_CAST1:%.*]] = bitcast %struct.ss* [[S]] to i32*
+; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, i32* [[S_CAST1]], align 32
+; TUNIT-NEXT:    [[S_0_12:%.*]] = getelementptr [[STRUCT_SS]], %struct.ss* [[S]], i64 0, i32 1
+; TUNIT-NEXT:    [[TMP3:%.*]] = load i64, i64* [[S_0_12]], align 32
 ; TUNIT-NEXT:    [[C1:%.*]] = call i32 @g(i32 [[TMP2]], i64 [[TMP3]]) #[[ATTR2]]
 ; TUNIT-NEXT:    [[A:%.*]] = add i32 [[C0]], [[C1]]
 ; TUNIT-NEXT:    ret i32 [[A]]
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@main
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -104,11 +104,11 @@ entry:
 
 
 ;.
-; TUNIT: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
+; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn }
-; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { nounwind willreturn }
 ;.
