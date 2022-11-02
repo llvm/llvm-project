@@ -24,6 +24,7 @@
 
 namespace llvm {
 class CanonicalLoopInfo;
+struct TargetRegionEntryInfo;
 class OffloadEntriesInfoManager;
 
 /// Move the instruction after an InsertPoint to the beginning of another
@@ -1092,6 +1093,37 @@ public:
                                     OpenMPIRBuilder::TargetDataInfo &Info,
                                     bool EmitDebug = false,
                                     bool ForEndCall = false);
+
+  /// Creates offloading entry for the provided entry ID \a ID,
+  /// address \a Addr, size \a Size, and flags \a Flags.
+  void createOffloadEntry(bool IsTargetCodegen, Constant *ID, Constant *Addr,
+                          uint64_t Size, int32_t Flags,
+                          GlobalValue::LinkageTypes);
+
+  /// The kind of errors that can occur when emitting the offload entries and
+  /// metadata.
+  enum EmitMetadataErrorKind {
+    EMIT_MD_TARGET_REGION_ERROR,
+    EMIT_MD_DECLARE_TARGET_ERROR,
+    EMIT_MD_GLOBAL_VAR_LINK_ERROR
+  };
+
+  /// Callback function type
+  using EmitMetadataErrorReportFunctionTy =
+      std::function<void(EmitMetadataErrorKind, TargetRegionEntryInfo)>;
+
+  // Emit the offloading entries and metadata so that the device codegen side
+  // can easily figure out what to emit. The produced metadata looks like
+  // this:
+  //
+  // !omp_offload.info = !{!1, ...}
+  //
+  // We only generate metadata for function that contain target regions.
+  void createOffloadEntriesAndInfoMetadata(
+      OffloadEntriesInfoManager &OffloadEntriesInfoManager,
+      bool IsTargetCodegen, bool IsEmbedded,
+      bool HasRequiresUnifiedSharedMemory,
+      EmitMetadataErrorReportFunctionTy &ErrorReportFunction);
 
 public:
   /// Generator for __kmpc_copyprivate
