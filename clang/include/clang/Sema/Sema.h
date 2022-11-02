@@ -5409,7 +5409,7 @@ public:
   void MarkDeclRefReferenced(DeclRefExpr *E, const Expr *Base = nullptr);
   void MarkMemberReferenced(MemberExpr *E);
   void MarkFunctionParmPackReferenced(FunctionParmPackExpr *E);
-  void MarkCaptureUsedInEnclosingContext(VarDecl *Capture, SourceLocation Loc,
+  void MarkCaptureUsedInEnclosingContext(ValueDecl *Capture, SourceLocation Loc,
                                          unsigned CapturingScopeIndex);
 
   ExprResult CheckLValueToRValueConversionOperand(Expr *E);
