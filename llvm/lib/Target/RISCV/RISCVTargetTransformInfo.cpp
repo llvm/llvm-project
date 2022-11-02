@@ -153,7 +153,9 @@ Optional<unsigned> RISCVTTIImpl::getMaxVScale() const {
 
 Optional<unsigned> RISCVTTIImpl::getVScaleForTuning() const {
   if (ST->hasVInstructions())
-    return ST->getRealMinVLen() / RISCV::RVVBitsPerBlock;
+    if (unsigned MinVLen = ST->getRealMinVLen();
+        MinVLen >= RISCV::RVVBitsPerBlock)
+      return MinVLen / RISCV::RVVBitsPerBlock;
   return BaseT::getVScaleForTuning();
 }
 
@@ -169,7 +171,10 @@ RISCVTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
         ST->useRVVForFixedLengthVectors() ? LMUL * ST->getRealMinVLen() : 0);
   case TargetTransformInfo::RGK_ScalableVector:
     return TypeSize::getScalable(
-        ST->hasVInstructions() ? LMUL * RISCV::RVVBitsPerBlock : 0);
+        (ST->hasVInstructions() &&
+         ST->getRealMinVLen() >= RISCV::RVVBitsPerBlock)
+            ? LMUL * RISCV::RVVBitsPerBlock
+            : 0);
   }
 
   llvm_unreachable("Unsupported register kind");
