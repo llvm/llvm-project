@@ -2784,17 +2784,16 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     if (Res && *Res == false)
       return replaceOperand(SI, 1, A);
   }
-  // select c, true, (select a, b, false)  -> select c, true, a
-  // select (select a, b, false), true, c  -> select a, true, c
+  // select c, true, (a && b)  -> select c, true, a
+  // select (a && b), true, c  -> select a, true, c
   //   if c = false implies that b = true
-  // FIXME: This should use m_LogicalAnd instead of matching a select operand.
   if (match(TrueVal, m_One()) &&
-      match(FalseVal, m_Select(m_Value(A), m_Value(B), m_Zero()))) {
+      match(FalseVal, m_LogicalAnd(m_Value(A), m_Value(B)))) {
     Optional<bool> Res = isImpliedCondition(CondVal, B, DL, false);
     if (Res && *Res == true)
       return replaceOperand(SI, 2, A);
   }
-  if (match(CondVal, m_Select(m_Value(A), m_Value(B), m_Zero())) &&
+  if (match(CondVal, m_LogicalAnd(m_Value(A), m_Value(B))) &&
       match(TrueVal, m_One())) {
     Optional<bool> Res = isImpliedCondition(FalseVal, B, DL, false);
     if (Res && *Res == true)
