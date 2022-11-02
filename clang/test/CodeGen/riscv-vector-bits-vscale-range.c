@@ -14,6 +14,7 @@
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +zve64x -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ZVE64
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +zve64f -target-feature +f -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ZVE64
 // RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +zve64d -target-feature +f -target-feature +d -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ZVE64
+// RUN: %clang_cc1 -triple riscv64-none-linux-gnu -target-feature +zve32x -S -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK-ZVE32
 
 // CHECK-LABEL: @func() #0
 // CHECK: attributes #0 = { {{.*}} vscale_range([[#VBITS]],[[#VBITS]]) {{.*}} }
@@ -22,4 +23,6 @@
 // CHECK-V: attributes #0 = { {{.*}} vscale_range(2,1024) {{.*}} }
 // CHECK-ZVL: attributes #0 = { {{.*}} vscale_range(8,1024) {{.*}} }
 // CHECK-ZVE64: attributes #0 = { {{.*}} vscale_range(1,1024) {{.*}} }
+// CHECK-ZVE32: attributes #0
+// CHECK-ZVE32-NOT: vscale_range
 void func(void) {}
