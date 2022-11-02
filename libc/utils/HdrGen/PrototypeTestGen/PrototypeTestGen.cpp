@@ -94,6 +94,7 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
   // We provide dummy malloc and free implementations to support the case
   // when LLVM libc does to include them.
   OS << "void *malloc(size_t) { return nullptr; }\n";
+  OS << "void *realloc(void *, size_t) { return nullptr; }\n";
   OS << "void free(void *) {}\n";
 
   return false;
