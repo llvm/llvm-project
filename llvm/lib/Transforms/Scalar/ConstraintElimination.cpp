@@ -754,6 +754,13 @@ static Constant *getScalarConstOrSplat(ConstantInt *C, Type *Ty) {
 
 static bool checkAndReplaceCondition(CmpInst *Cmp, ConstraintInfo &Info) {
   LLVM_DEBUG(dbgs() << "Checking " << *Cmp << "\n");
+
+  // TODO: Implement splat of boolean value for scalable vectors.
+  if (isa<ScalableVectorType>(Cmp->getType())) {
+    LLVM_DEBUG(dbgs() << "   skipping due to scalable vectors\n");
+    return false;
+  }
+
   CmpInst::Predicate Pred = Cmp->getPredicate();
   Value *A = Cmp->getOperand(0);
   Value *B = Cmp->getOperand(1);
