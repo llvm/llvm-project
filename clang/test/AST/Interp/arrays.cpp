@@ -235,9 +235,6 @@ constexpr BU bu; // expected-error {{must be initialized by a constant expressio
                  // ref-note {{in call to 'BU()'}}
 
 namespace IncDec {
-  // FIXME: Pointer arithmethic needs to be supported in inc/dec
-  //   unary operators
-#if 0
   constexpr int getNextElem(const int *A, int I) {
     const int *B = (A + I);
     ++B;
@@ -245,6 +242,91 @@ namespace IncDec {
   }
   constexpr int E[] = {1,2,3,4};
 
-  static_assert(getNextElem(E, 1) == 3);
-#endif
+  static_assert(getNextElem(E, 1) == 3, "");
+
+  constexpr int getFirst() {
+    const int *e = E;
+    return *(e++);
+  }
+  static_assert(getFirst() == 1, "");
+
+  constexpr int getFirst2() {
+    const int *e = E;
+    e++;
+    return *e;
+  }
+  static_assert(getFirst2() == 2, "");
+
+  constexpr int getSecond() {
+    const int *e = E;
+    return *(++e);
+  }
+  static_assert(getSecond() == 2, "");
+
+  constexpr int getSecond2() {
+    const int *e = E;
+    ++e;
+    return *e;
+  }
+  static_assert(getSecond2() == 2, "");
+
+  constexpr int getLast() {
+    const int *e = E + 3;
+    return *(e--);
+  }
+  static_assert(getLast() == 4, "");
+
+  constexpr int getLast2() {
+    const int *e = E + 3;
+    e--;
+    return *e;
+  }
+  static_assert(getLast2() == 3, "");
+
+  constexpr int getSecondToLast() {
+    const int *e = E + 3;
+    return *(--e);
+  }
+  static_assert(getSecondToLast() == 3, "");
+
+  constexpr int getSecondToLast2() {
+    const int *e = E + 3;
+    --e;
+    return *e;
+  }
+  static_assert(getSecondToLast2() == 3, "");
+
+  constexpr int bad1() { // ref-error {{never produces a constant expression}}
+    const int *e =  E + 3;
+    e++; // This is fine because it's a one-past-the-end pointer
+    return *e; // expected-note {{read of dereferenced one-past-the-end pointer}} \
+               // ref-note 2{{read of dereferenced one-past-the-end pointer}}
+  }
+  static_assert(bad1() == 0, ""); // expected-error {{not an integral constant expression}} \
+                                  // expected-note {{in call to}} \
+                                  // ref-error {{not an integral constant expression}} \
+                                  // ref-note {{in call to}}
+
+  constexpr int bad2() { // ref-error {{never produces a constant expression}}
+    const int *e = E + 4;
+    e++; // expected-note {{cannot refer to element 5 of array of 4 elements}} \
+         // ref-note 2{{cannot refer to element 5 of array of 4 elements}}
+    return *e; // This is UB as well
+  }
+  static_assert(bad2() == 0, ""); // expected-error {{not an integral constant expression}} \
+                                  // expected-note {{in call to}} \
+                                  // ref-error {{not an integral constant expression}} \
+                                  // ref-note {{in call to}}
+
+
+  constexpr int bad3() { // ref-error {{never produces a constant expression}}
+    const int *e = E;
+    e--; // expected-note {{cannot refer to element -1 of array of 4 elements}} \
+         // ref-note 2{{cannot refer to element -1 of array of 4 elements}}
+    return *e; // This is UB as well
+  }
+   static_assert(bad3() == 0, ""); // expected-error {{not an integral constant expression}} \
+                                   // expected-note {{in call to}} \
+                                   // ref-error {{not an integral constant expression}} \
+                                  // ref-note {{in call to}}
 };

@@ -1333,11 +1333,17 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   const Expr *SubExpr = E->getSubExpr();
   std::optional<PrimType> T = classify(SubExpr->getType());
 
-  // TODO: Support pointers for inc/dec operators.
   switch (E->getOpcode()) {
   case UO_PostInc: { // x++
     if (!this->visit(SubExpr))
       return false;
+
+    if (T == PT_Ptr) {
+      if (!this->emitIncPtr(E))
+        return false;
+
+      return DiscardResult ? this->emitPopPtr(E) : true;
+    }
 
     return DiscardResult ? this->emitIncPop(*T, E) : this->emitInc(*T, E);
   }
@@ -1345,11 +1351,25 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (!this->visit(SubExpr))
       return false;
 
+    if (T == PT_Ptr) {
+      if (!this->emitDecPtr(E))
+        return false;
+
+      return DiscardResult ? this->emitPopPtr(E) : true;
+    }
+
     return DiscardResult ? this->emitDecPop(*T, E) : this->emitDec(*T, E);
   }
   case UO_PreInc: { // ++x
     if (!this->visit(SubExpr))
       return false;
+
+    if (T == PT_Ptr) {
+      this->emitLoadPtr(E);
+      this->emitConstUint8(1, E);
+      this->emitAddOffsetUint8(E);
+      return DiscardResult ? this->emitStorePopPtr(E) : this->emitStorePtr(E);
+    }
 
     // Post-inc and pre-inc are the same if the value is to be discarded.
     if (DiscardResult)
@@ -1363,6 +1383,13 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
   case UO_PreDec: { // --x
     if (!this->visit(SubExpr))
       return false;
+
+    if (T == PT_Ptr) {
+      this->emitLoadPtr(E);
+      this->emitConstUint8(1, E);
+      this->emitSubOffsetUint8(E);
+      return DiscardResult ? this->emitStorePopPtr(E) : this->emitStorePtr(E);
+    }
 
     // Post-dec and pre-dec are the same if the value is to be discarded.
     if (DiscardResult)
