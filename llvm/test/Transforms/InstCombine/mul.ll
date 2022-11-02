@@ -227,12 +227,14 @@ define i32 @shl1_increment_use(i32 %x, i32 %y) {
   ret i32 %m
 }
 
+; ((-1 << x) ^ -1) * y --> (y << x) - y
+
 define i8 @shl1_decrement(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl1_decrement(
-; CHECK-NEXT:    [[POW2X:%.*]] = shl i8 -1, [[X:%.*]]
-; CHECK-NEXT:    [[X1:%.*]] = xor i8 [[POW2X]], -1
-; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X1]], [[Y:%.*]]
-; CHECK-NEXT:    ret i8 [[M]]
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i8 [[Y:%.*]]
+; CHECK-NEXT:    [[MULSHL:%.*]] = shl i8 [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    [[M1:%.*]] = sub i8 [[MULSHL]], [[Y_FR]]
+; CHECK-NEXT:    ret i8 [[M1]]
 ;
   %pow2x = shl i8 -1, %x
   %x1 = xor i8 %pow2x, -1
@@ -243,10 +245,9 @@ define i8 @shl1_decrement(i8 %x, i8 %y) {
 define i8 @shl1_decrement_commute(i8 %x, i8 noundef %p) {
 ; CHECK-LABEL: @shl1_decrement_commute(
 ; CHECK-NEXT:    [[Y:%.*]] = ashr i8 [[P:%.*]], 1
-; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[X:%.*]]
-; CHECK-NEXT:    [[X1:%.*]] = xor i8 [[NOTMASK]], -1
-; CHECK-NEXT:    [[M:%.*]] = mul i8 [[Y]], [[X1]]
-; CHECK-NEXT:    ret i8 [[M]]
+; CHECK-NEXT:    [[MULSHL:%.*]] = shl i8 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[M1:%.*]] = sub i8 [[MULSHL]], [[Y]]
+; CHECK-NEXT:    ret i8 [[M1]]
 ;
   %y = ashr i8 %p, 1 ; thwart complexity-based canonicalization
   %pow2x = shl i8 1, %x
@@ -257,10 +258,10 @@ define i8 @shl1_decrement_commute(i8 %x, i8 noundef %p) {
 
 define i8 @shl1_nuw_decrement(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl1_nuw_decrement(
-; CHECK-NEXT:    [[POW2X:%.*]] = shl i8 -1, [[X:%.*]]
-; CHECK-NEXT:    [[X1:%.*]] = xor i8 [[POW2X]], -1
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X1]], [[Y:%.*]]
-; CHECK-NEXT:    ret i8 [[M]]
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i8 [[Y:%.*]]
+; CHECK-NEXT:    [[MULSHL:%.*]] = shl i8 [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    [[M1:%.*]] = sub i8 [[MULSHL]], [[Y_FR]]
+; CHECK-NEXT:    ret i8 [[M1]]
 ;
   %pow2x = shl i8 -1, %x
   %x1 = xor i8 %pow2x, -1
@@ -270,16 +271,18 @@ define i8 @shl1_nuw_decrement(i8 %x, i8 %y) {
 
 define i8 @shl1_nsw_decrement(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl1_nsw_decrement(
-; CHECK-NEXT:    [[POW2X:%.*]] = shl nsw i8 -1, [[X:%.*]]
-; CHECK-NEXT:    [[X1:%.*]] = xor i8 [[POW2X]], -1
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[X1]], [[Y:%.*]]
-; CHECK-NEXT:    ret i8 [[M]]
+; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i8 [[Y:%.*]]
+; CHECK-NEXT:    [[MULSHL:%.*]] = shl i8 [[Y_FR]], [[X:%.*]]
+; CHECK-NEXT:    [[M1:%.*]] = sub i8 [[MULSHL]], [[Y_FR]]
+; CHECK-NEXT:    ret i8 [[M1]]
 ;
   %pow2x = shl nsw i8 -1, %x
   %x1 = xor i8 %pow2x, -1
   %m = mul nsw i8 %x1, %y
   ret i8 %m
 }
+
+; negative test - extra use would require more instructions
 
 define i32 @shl1_decrement_use(i32 %x, i32 %y) {
 ; CHECK-LABEL: @shl1_decrement_use(
@@ -296,12 +299,13 @@ define i32 @shl1_decrement_use(i32 %x, i32 %y) {
   ret i32 %m
 }
 
+; the fold works for vectors too and if 'y' is a constant, sub becomes add
+
 define <2 x i8> @shl1_decrement_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @shl1_decrement_vec(
-; CHECK-NEXT:    [[POW2X:%.*]] = shl <2 x i8> <i8 -1, i8 -1>, [[X:%.*]]
-; CHECK-NEXT:    [[X1:%.*]] = xor <2 x i8> [[POW2X]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[M:%.*]] = mul <2 x i8> [[X1]], <i8 42, i8 -3>
-; CHECK-NEXT:    ret <2 x i8> [[M]]
+; CHECK-NEXT:    [[MULSHL:%.*]] = shl <2 x i8> <i8 42, i8 -3>, [[X:%.*]]
+; CHECK-NEXT:    [[M1:%.*]] = add <2 x i8> [[MULSHL]], <i8 -42, i8 3>
+; CHECK-NEXT:    ret <2 x i8> [[M1]]
 ;
   %pow2x = shl <2 x i8> <i8 -1, i8 -1>, %x
   %x1 = xor <2 x i8> %pow2x, <i8 -1, i8 -1>
