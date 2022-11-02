@@ -161,8 +161,8 @@ static TypeCode getTypeCodeForTypeClass(Type::TypeClass id) {
 
 namespace {
 
-std::set<const FileEntry *> GetAllModuleMaps(const HeaderSearch &HS,
-                                             Module *RootModule) {
+std::set<const FileEntry *> GetAffectingModuleMaps(const HeaderSearch &HS,
+                                                   Module *RootModule) {
   std::set<const FileEntry *> ModuleMaps{};
   std::set<const Module *> ProcessedModules;
   SmallVector<const Module *> ModulesToProcess{RootModule};
@@ -1477,15 +1477,8 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
   AddFileID(SM.getMainFileID(), Record);
   Stream.EmitRecord(ORIGINAL_FILE_ID, Record);
 
-  std::set<const FileEntry *> AffectingClangModuleMaps;
-  if (WritingModule) {
-    AffectingClangModuleMaps =
-        GetAllModuleMaps(PP.getHeaderSearchInfo(), WritingModule);
-  }
-
   WriteInputFiles(Context.SourceMgr,
-                  PP.getHeaderSearchInfo().getHeaderSearchOpts(),
-                  AffectingClangModuleMaps);
+                  PP.getHeaderSearchInfo().getHeaderSearchOpts());
   Stream.ExitBlock();
 }
 
@@ -1503,9 +1496,8 @@ struct InputFileEntry {
 
 } // namespace
 
-void ASTWriter::WriteInputFiles(
-    SourceManager &SourceMgr, HeaderSearchOptions &HSOpts,
-    std::set<const FileEntry *> &AffectingClangModuleMaps) {
+void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
+                                HeaderSearchOptions &HSOpts) {
   using namespace llvm;
 
   Stream.EnterSubblock(INPUT_FILES_BLOCK_ID, 4);
@@ -1545,15 +1537,9 @@ void ASTWriter::WriteInputFiles(
     if (!Cache->OrigEntry)
       continue;
 
-    if (isModuleMap(File.getFileCharacteristic()) &&
-        !isSystem(File.getFileCharacteristic()) &&
-        !AffectingClangModuleMaps.empty() &&
-        AffectingClangModuleMaps.find(Cache->OrigEntry) ==
-            AffectingClangModuleMaps.end()) {
-      SkippedModuleMaps.insert(Cache->OrigEntry);
-      // Do not emit modulemaps that do not affect current module.
+    // Do not emit input files that do not affect current module.
+    if (!IsSLocAffecting[I])
       continue;
-    }
 
     InputFileEntry Entry;
     Entry.File = Cache->OrigEntry;
@@ -2064,12 +2050,9 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr,
     if (SLoc->isFile()) {
       const SrcMgr::FileInfo &File = SLoc->getFile();
       const SrcMgr::ContentCache *Content = &File.getContentCache();
-      if (Content->OrigEntry && !SkippedModuleMaps.empty() &&
-          SkippedModuleMaps.find(Content->OrigEntry) !=
-              SkippedModuleMaps.end()) {
-        // Do not emit files that were not listed as inputs.
+      // Do not emit files that were not listed as inputs.
+      if (!IsSLocAffecting[I])
         continue;
-      }
       SLocEntryOffsets.push_back(Offset);
       // Starting offset of this entry within this module, so skip the dummy.
       Record.push_back(getAdjustedOffset(SLoc->getOffset()) - 2);
@@ -4527,6 +4510,69 @@ static void AddLazyVectorDecls(ASTWriter &Writer, Vector &Vec,
   }
 }
 
+void ASTWriter::collectNonAffectingInputFiles() {
+  SourceManager &SrcMgr = PP->getSourceManager();
+  unsigned N = SrcMgr.local_sloc_entry_size();
+
+  IsSLocAffecting.resize(N, true);
+
+  if (!WritingModule)
+    return;
+
+  auto AffectingModuleMaps =
+      GetAffectingModuleMaps(PP->getHeaderSearchInfo(), WritingModule);
+
+  unsigned FileIDAdjustment = 0;
+  unsigned OffsetAdjustment = 0;
+
+  NonAffectingFileIDAdjustments.reserve(N);
+  NonAffectingOffsetAdjustments.reserve(N);
+
+  NonAffectingFileIDAdjustments.push_back(FileIDAdjustment);
+  NonAffectingOffsetAdjustments.push_back(OffsetAdjustment);
+
+  for (unsigned I = 1; I != N; ++I) {
+    const SrcMgr::SLocEntry *SLoc = &SrcMgr.getLocalSLocEntry(I);
+    FileID FID = FileID::get(I);
+    assert(&SrcMgr.getSLocEntry(FID) == SLoc);
+
+    if (!SLoc->isFile())
+      continue;
+    const SrcMgr::FileInfo &File = SLoc->getFile();
+    const SrcMgr::ContentCache *Cache = &File.getContentCache();
+    if (!Cache->OrigEntry)
+      continue;
+
+    if (!isModuleMap(File.getFileCharacteristic()) ||
+        isSystem(File.getFileCharacteristic()) || AffectingModuleMaps.empty() ||
+        AffectingModuleMaps.find(Cache->OrigEntry) != AffectingModuleMaps.end())
+      continue;
+
+    IsSLocAffecting[I] = false;
+
+    FileIDAdjustment += 1;
+    // Even empty files take up one element in the offset table.
+    OffsetAdjustment += SrcMgr.getFileIDSize(FID) + 1;
+
+    // If the previous file was non-affecting as well, just extend its entry
+    // with our information.
+    if (!NonAffectingFileIDs.empty() &&
+        NonAffectingFileIDs.back().ID == FID.ID - 1) {
+      NonAffectingFileIDs.back() = FID;
+      NonAffectingRanges.back().setEnd(SrcMgr.getLocForEndOfFile(FID));
+      NonAffectingFileIDAdjustments.back() = FileIDAdjustment;
+      NonAffectingOffsetAdjustments.back() = OffsetAdjustment;
+      continue;
+    }
+
+    NonAffectingFileIDs.push_back(FID);
+    NonAffectingRanges.emplace_back(SrcMgr.getLocForStartOfFile(FID),
+                                    SrcMgr.getLocForEndOfFile(FID));
+    NonAffectingFileIDAdjustments.push_back(FileIDAdjustment);
+    NonAffectingOffsetAdjustments.push_back(OffsetAdjustment);
+  }
+}
+
 ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
                                          Module *WritingModule) {
   using namespace llvm;
@@ -4539,6 +4585,8 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
 
   ASTContext &Context = SemaRef.Context;
   Preprocessor &PP = SemaRef.PP;
+
+  collectNonAffectingInputFiles();
 
   // Set up predefined declaration IDs.
   auto RegisterPredefDecl = [&] (Decl *D, PredefinedDeclIDs ID) {
@@ -5229,32 +5277,65 @@ void ASTWriter::AddAlignPackInfo(const Sema::AlignPackInfo &Info,
 }
 
 FileID ASTWriter::getAdjustedFileID(FileID FID) const {
-  // TODO: Actually adjust this.
-  return FID;
+  if (FID.isInvalid() || PP->getSourceManager().isLoadedFileID(FID) ||
+      NonAffectingFileIDs.empty())
+    return FID;
+  auto It = llvm::lower_bound(NonAffectingFileIDs, FID);
+  unsigned Idx = std::distance(NonAffectingFileIDs.begin(), It);
+  unsigned Offset = NonAffectingFileIDAdjustments[Idx];
+  return FileID::get(FID.getOpaqueValue() - Offset);
 }
 
 unsigned ASTWriter::getAdjustedNumCreatedFIDs(FileID FID) const {
-  // TODO: Actually adjust this.
-  return PP->getSourceManager()
-      .getLocalSLocEntry(FID.ID)
-      .getFile()
-      .NumCreatedFIDs;
+  unsigned NumCreatedFIDs = PP->getSourceManager()
+                                .getLocalSLocEntry(FID.ID)
+                                .getFile()
+                                .NumCreatedFIDs;
+
+  unsigned AdjustedNumCreatedFIDs = 0;
+  for (unsigned I = FID.ID, N = I + NumCreatedFIDs; I != N; ++I)
+    if (IsSLocAffecting[I])
+      ++AdjustedNumCreatedFIDs;
+  return AdjustedNumCreatedFIDs;
 }
 
 SourceLocation ASTWriter::getAdjustedLocation(SourceLocation Loc) const {
-  // TODO: Actually adjust this.
-  return Loc;
+  if (Loc.isInvalid())
+    return Loc;
+  return Loc.getLocWithOffset(-getAdjustment(Loc.getOffset()));
 }
 
 SourceRange ASTWriter::getAdjustedRange(SourceRange Range) const {
-  // TODO: Actually adjust this.
-  return Range;
+  return SourceRange(getAdjustedLocation(Range.getBegin()),
+                     getAdjustedLocation(Range.getEnd()));
 }
 
 SourceLocation::UIntTy
 ASTWriter::getAdjustedOffset(SourceLocation::UIntTy Offset) const {
-  // TODO: Actually adjust this.
-  return Offset;
+  return Offset - getAdjustment(Offset);
+}
+
+SourceLocation::UIntTy
+ASTWriter::getAdjustment(SourceLocation::UIntTy Offset) const {
+  if (NonAffectingRanges.empty())
+    return 0;
+
+  if (PP->getSourceManager().isLoadedOffset(Offset))
+    return 0;
+
+  if (Offset > NonAffectingRanges.back().getEnd().getOffset())
+    return NonAffectingOffsetAdjustments.back();
+
+  if (Offset < NonAffectingRanges.front().getBegin().getOffset())
+    return 0;
+
+  auto Contains = [](const SourceRange &Range, SourceLocation::UIntTy Offset) {
+    return Range.getEnd().getOffset() < Offset;
+  };
+
+  auto It = llvm::lower_bound(NonAffectingRanges, Offset, Contains);
+  unsigned Idx = std::distance(NonAffectingRanges.begin(), It);
+  return NonAffectingOffsetAdjustments[Idx];
 }
 
 void ASTWriter::AddFileID(FileID FID, RecordDataImpl &Record) {
@@ -5517,6 +5598,7 @@ void ASTWriter::associateDeclWithFile(const Decl *D, DeclID ID) {
   if (FID.isInvalid())
     return;
   assert(SM.getSLocEntry(FID).isFile());
+  assert(IsSLocAffecting[FID.ID]);
 
   std::unique_ptr<DeclIDInFileInfo> &Info = FileDeclIDs[FID];
   if (!Info)
