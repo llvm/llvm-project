@@ -47,8 +47,8 @@ public:
 
 private:
   std::unique_ptr<llvm::lto::LTO> ltoObj;
-  std::vector<SmallString<0>> buf;
-  std::vector<std::unique_ptr<MemoryBuffer>> files;
+  std::vector<std::pair<std::string, SmallString<0>>> buf;
+  std::vector<std::pair<std::string, std::unique_ptr<MemoryBuffer>>> files;
   std::unique_ptr<llvm::raw_fd_ostream> indexFile;
   llvm::DenseSet<StringRef> thinIndices;
 };
