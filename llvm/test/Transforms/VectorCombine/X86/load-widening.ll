@@ -8,72 +8,72 @@
 ; Here we know we can load 128 bits as per dereferenceability and alignment.
 
 ; We don't widen scalar loads per-se.
-define <1 x float> @scalar(<1 x float>* align 16 dereferenceable(16) %p) {
+define <1 x float> @scalar(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @scalar(
-; CHECK-NEXT:    [[R:%.*]] = load <1 x float>, <1 x float>* [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <1 x float>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <1 x float> [[R]]
 ;
-  %r = load <1 x float>, <1 x float>* %p, align 16
+  %r = load <1 x float>, ptr %p, align 16
   ret <1 x float> %r
 }
 
 ; We don't widen single-element loads, these get scalarized.
-define <1 x float> @vec_with_1elt(<1 x float>* align 16 dereferenceable(16) %p) {
+define <1 x float> @vec_with_1elt(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @vec_with_1elt(
-; CHECK-NEXT:    [[R:%.*]] = load <1 x float>, <1 x float>* [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <1 x float>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <1 x float> [[R]]
 ;
-  %r = load <1 x float>, <1 x float>* %p, align 16
+  %r = load <1 x float>, ptr %p, align 16
   ret <1 x float> %r
 }
 
-define <2 x float> @vec_with_2elts(<2 x float>* align 16 dereferenceable(16) %p) {
+define <2 x float> @vec_with_2elts(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @vec_with_2elts(
-; CHECK-NEXT:    [[R:%.*]] = load <2 x float>, <2 x float>* [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <2 x float>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
-  %r = load <2 x float>, <2 x float>* %p, align 16
+  %r = load <2 x float>, ptr %p, align 16
   ret <2 x float> %r
 }
 
-define <3 x float> @vec_with_3elts(<3 x float>* align 16 dereferenceable(16) %p) {
+define <3 x float> @vec_with_3elts(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @vec_with_3elts(
-; CHECK-NEXT:    [[R:%.*]] = load <3 x float>, <3 x float>* [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <3 x float>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <3 x float> [[R]]
 ;
-  %r = load <3 x float>, <3 x float>* %p, align 16
+  %r = load <3 x float>, ptr %p, align 16
   ret <3 x float> %r
 }
 
 ; Full-vector load. All good already.
-define <4 x float> @vec_with_4elts(<4 x float>* align 16 dereferenceable(16) %p) {
+define <4 x float> @vec_with_4elts(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @vec_with_4elts(
-; CHECK-NEXT:    [[R:%.*]] = load <4 x float>, <4 x float>* [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
-  %r = load <4 x float>, <4 x float>* %p, align 16
+  %r = load <4 x float>, ptr %p, align 16
   ret <4 x float> %r
 }
 
 ; We don't know we can load 256 bits though.
-define <5 x float> @vec_with_5elts(<5 x float>* align 16 dereferenceable(16) %p) {
+define <5 x float> @vec_with_5elts(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @vec_with_5elts(
-; CHECK-NEXT:    [[R:%.*]] = load <5 x float>, <5 x float>* [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <5 x float>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <5 x float> [[R]]
 ;
-  %r = load <5 x float>, <5 x float>* %p, align 16
+  %r = load <5 x float>, ptr %p, align 16
   ret <5 x float> %r
 }
 
 ;-------------------------------------------------------------------------------
 
 ; We can load 128 bits, and the fact that it's underaligned isn't relevant.
-define <3 x float> @vec_with_3elts_underaligned(<3 x float>* align 8 dereferenceable(16) %p) {
+define <3 x float> @vec_with_3elts_underaligned(ptr align 8 dereferenceable(16) %p) {
 ; CHECK-LABEL: @vec_with_3elts_underaligned(
-; CHECK-NEXT:    [[R:%.*]] = load <3 x float>, <3 x float>* [[P:%.*]], align 8
+; CHECK-NEXT:    [[R:%.*]] = load <3 x float>, ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret <3 x float> [[R]]
 ;
-  %r = load <3 x float>, <3 x float>* %p, align 8
+  %r = load <3 x float>, ptr %p, align 8
   ret <3 x float> %r
 }
 
@@ -81,145 +81,145 @@ define <3 x float> @vec_with_3elts_underaligned(<3 x float>* align 8 dereference
 ; FIXME: this should still get widened.
 define <3 x float> @vec_with_3elts_underdereferenceable(<3 x float>* align 16 dereferenceable(12) %p) {
 ; CHECK-LABEL: @vec_with_3elts_underdereferenceable(
-; CHECK-NEXT:    [[R:%.*]] = load <3 x float>, <3 x float>* [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <3 x float>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <3 x float> [[R]]
 ;
-  %r = load <3 x float>, <3 x float>* %p, align 16
+  %r = load <3 x float>, ptr %p, align 16
   ret <3 x float> %r
 }
 
 ; We can't tell if we can load 128 bits.
-define <3 x float> @vec_with_3elts_underaligned_underdereferenceable(<3 x float>* align 8 dereferenceable(12) %p) {
+define <3 x float> @vec_with_3elts_underaligned_underdereferenceable(ptr align 8 dereferenceable(12) %p) {
 ; CHECK-LABEL: @vec_with_3elts_underaligned_underdereferenceable(
-; CHECK-NEXT:    [[R:%.*]] = load <3 x float>, <3 x float>* [[P:%.*]], align 8
+; CHECK-NEXT:    [[R:%.*]] = load <3 x float>, ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret <3 x float> [[R]]
 ;
-  %r = load <3 x float>, <3 x float>* %p, align 8
+  %r = load <3 x float>, ptr %p, align 8
   ret <3 x float> %r
 }
 
 ;-------------------------------------------------------------------------------
 ; Here we know we can load 256 bits as per dereferenceability and alignment.
 
-define <1 x float> @vec_with_1elt_256bits(<1 x float>* align 32 dereferenceable(32) %p) {
+define <1 x float> @vec_with_1elt_256bits(ptr align 32 dereferenceable(32) %p) {
 ; CHECK-LABEL: @vec_with_1elt_256bits(
-; CHECK-NEXT:    [[R:%.*]] = load <1 x float>, <1 x float>* [[P:%.*]], align 32
+; CHECK-NEXT:    [[R:%.*]] = load <1 x float>, ptr [[P:%.*]], align 32
 ; CHECK-NEXT:    ret <1 x float> [[R]]
 ;
-  %r = load <1 x float>, <1 x float>* %p, align 32
+  %r = load <1 x float>, ptr %p, align 32
   ret <1 x float> %r
 }
 
-define <2 x float> @vec_with_2elts_256bits(<2 x float>* align 32 dereferenceable(32) %p) {
+define <2 x float> @vec_with_2elts_256bits(ptr align 32 dereferenceable(32) %p) {
 ; CHECK-LABEL: @vec_with_2elts_256bits(
-; CHECK-NEXT:    [[R:%.*]] = load <2 x float>, <2 x float>* [[P:%.*]], align 32
+; CHECK-NEXT:    [[R:%.*]] = load <2 x float>, ptr [[P:%.*]], align 32
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
-  %r = load <2 x float>, <2 x float>* %p, align 32
+  %r = load <2 x float>, ptr %p, align 32
   ret <2 x float> %r
 }
 
-define <3 x float> @vec_with_3elts_256bits(<3 x float>* align 32 dereferenceable(32) %p) {
+define <3 x float> @vec_with_3elts_256bits(ptr align 32 dereferenceable(32) %p) {
 ; CHECK-LABEL: @vec_with_3elts_256bits(
-; CHECK-NEXT:    [[R:%.*]] = load <3 x float>, <3 x float>* [[P:%.*]], align 32
+; CHECK-NEXT:    [[R:%.*]] = load <3 x float>, ptr [[P:%.*]], align 32
 ; CHECK-NEXT:    ret <3 x float> [[R]]
 ;
-  %r = load <3 x float>, <3 x float>* %p, align 32
+  %r = load <3 x float>, ptr %p, align 32
   ret <3 x float> %r
 }
 
-define <4 x float> @vec_with_4elts_256bits(<4 x float>* align 32 dereferenceable(32) %p) {
+define <4 x float> @vec_with_4elts_256bits(ptr align 32 dereferenceable(32) %p) {
 ; CHECK-LABEL: @vec_with_4elts_256bits(
-; CHECK-NEXT:    [[R:%.*]] = load <4 x float>, <4 x float>* [[P:%.*]], align 32
+; CHECK-NEXT:    [[R:%.*]] = load <4 x float>, ptr [[P:%.*]], align 32
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
-  %r = load <4 x float>, <4 x float>* %p, align 32
+  %r = load <4 x float>, ptr %p, align 32
   ret <4 x float> %r
 }
 
-define <5 x float> @vec_with_5elts_256bits(<5 x float>* align 32 dereferenceable(32) %p) {
+define <5 x float> @vec_with_5elts_256bits(ptr align 32 dereferenceable(32) %p) {
 ; CHECK-LABEL: @vec_with_5elts_256bits(
-; CHECK-NEXT:    [[R:%.*]] = load <5 x float>, <5 x float>* [[P:%.*]], align 32
+; CHECK-NEXT:    [[R:%.*]] = load <5 x float>, ptr [[P:%.*]], align 32
 ; CHECK-NEXT:    ret <5 x float> [[R]]
 ;
-  %r = load <5 x float>, <5 x float>* %p, align 32
+  %r = load <5 x float>, ptr %p, align 32
   ret <5 x float> %r
 }
 
-define <6 x float> @vec_with_6elts_256bits(<6 x float>* align 32 dereferenceable(32) %p) {
+define <6 x float> @vec_with_6elts_256bits(ptr align 32 dereferenceable(32) %p) {
 ; CHECK-LABEL: @vec_with_6elts_256bits(
-; CHECK-NEXT:    [[R:%.*]] = load <6 x float>, <6 x float>* [[P:%.*]], align 32
+; CHECK-NEXT:    [[R:%.*]] = load <6 x float>, ptr [[P:%.*]], align 32
 ; CHECK-NEXT:    ret <6 x float> [[R]]
 ;
-  %r = load <6 x float>, <6 x float>* %p, align 32
+  %r = load <6 x float>, ptr %p, align 32
   ret <6 x float> %r
 }
 
-define <7 x float> @vec_with_7elts_256bits(<7 x float>* align 32 dereferenceable(32) %p) {
+define <7 x float> @vec_with_7elts_256bits(ptr align 32 dereferenceable(32) %p) {
 ; CHECK-LABEL: @vec_with_7elts_256bits(
-; CHECK-NEXT:    [[R:%.*]] = load <7 x float>, <7 x float>* [[P:%.*]], align 32
+; CHECK-NEXT:    [[R:%.*]] = load <7 x float>, ptr [[P:%.*]], align 32
 ; CHECK-NEXT:    ret <7 x float> [[R]]
 ;
-  %r = load <7 x float>, <7 x float>* %p, align 32
+  %r = load <7 x float>, ptr %p, align 32
   ret <7 x float> %r
 }
 
 ; Full-vector load. All good already.
-define <8 x float> @vec_with_8elts_256bits(<8 x float>* align 32 dereferenceable(32) %p) {
+define <8 x float> @vec_with_8elts_256bits(ptr align 32 dereferenceable(32) %p) {
 ; CHECK-LABEL: @vec_with_8elts_256bits(
-; CHECK-NEXT:    [[R:%.*]] = load <8 x float>, <8 x float>* [[P:%.*]], align 32
+; CHECK-NEXT:    [[R:%.*]] = load <8 x float>, ptr [[P:%.*]], align 32
 ; CHECK-NEXT:    ret <8 x float> [[R]]
 ;
-  %r = load <8 x float>, <8 x float>* %p, align 32
+  %r = load <8 x float>, ptr %p, align 32
   ret <8 x float> %r
 }
 
 ; We can't tell if we can load more than 256 bits.
-define <9 x float> @vec_with_9elts_256bits(<9 x float>* align 32 dereferenceable(32) %p) {
+define <9 x float> @vec_with_9elts_256bits(ptr align 32 dereferenceable(32) %p) {
 ; CHECK-LABEL: @vec_with_9elts_256bits(
-; CHECK-NEXT:    [[R:%.*]] = load <9 x float>, <9 x float>* [[P:%.*]], align 32
+; CHECK-NEXT:    [[R:%.*]] = load <9 x float>, ptr [[P:%.*]], align 32
 ; CHECK-NEXT:    ret <9 x float> [[R]]
 ;
-  %r = load <9 x float>, <9 x float>* %p, align 32
+  %r = load <9 x float>, ptr %p, align 32
   ret <9 x float> %r
 }
 
 ;-------------------------------------------------------------------------------
 
 ; Weird types we don't deal with
-define <2 x i7> @vec_with_two_subbyte_elts(<2 x i7>* align 16 dereferenceable(16) %p) {
+define <2 x i7> @vec_with_two_subbyte_elts(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @vec_with_two_subbyte_elts(
-; CHECK-NEXT:    [[R:%.*]] = load <2 x i7>, <2 x i7>* [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <2 x i7>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <2 x i7> [[R]]
 ;
-  %r = load <2 x i7>, <2 x i7>* %p, align 16
+  %r = load <2 x i7>, ptr %p, align 16
   ret <2 x i7> %r
 }
 
-define <2 x i9> @vec_with_two_nonbyte_sized_elts(<2 x i9>* align 16 dereferenceable(16) %p) {
+define <2 x i9> @vec_with_two_nonbyte_sized_elts(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @vec_with_two_nonbyte_sized_elts(
-; CHECK-NEXT:    [[R:%.*]] = load <2 x i9>, <2 x i9>* [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <2 x i9>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <2 x i9> [[R]]
 ;
-  %r = load <2 x i9>, <2 x i9>* %p, align 16
+  %r = load <2 x i9>, ptr %p, align 16
   ret <2 x i9> %r
 }
 
-define <2 x i24> @vec_with_two_nonpoweroftwo_sized_elts(<2 x i24>* align 16 dereferenceable(16) %p) {
+define <2 x i24> @vec_with_two_nonpoweroftwo_sized_elts(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @vec_with_two_nonpoweroftwo_sized_elts(
-; CHECK-NEXT:    [[R:%.*]] = load <2 x i24>, <2 x i24>* [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <2 x i24>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <2 x i24> [[R]]
 ;
-  %r = load <2 x i24>, <2 x i24>* %p, align 16
+  %r = load <2 x i24>, ptr %p, align 16
   ret <2 x i24> %r
 }
 
-define <2 x float> @vec_with_2elts_addressspace(<2 x float> addrspace(2)* align 16 dereferenceable(16) %p) {
+define <2 x float> @vec_with_2elts_addressspace(ptr addrspace(2) align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @vec_with_2elts_addressspace(
-; CHECK-NEXT:    [[R:%.*]] = load <2 x float>, <2 x float> addrspace(2)* [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <2 x float>, ptr addrspace(2) [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
-  %r = load <2 x float>, <2 x float> addrspace(2)* %p, align 16
+  %r = load <2 x float>, ptr addrspace(2) %p, align 16
   ret <2 x float> %r
 }
 
@@ -227,27 +227,115 @@ define <2 x float> @vec_with_2elts_addressspace(<2 x float> addrspace(2)* align 
 
 ; Widening these would change the legalized type, so leave them alone.
 
-define <2 x i1> @vec_with_2elts_128bits_i1(<2 x i1>* align 16 dereferenceable(16) %p) {
+define <2 x i1> @vec_with_2elts_128bits_i1(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @vec_with_2elts_128bits_i1(
-; CHECK-NEXT:    [[R:%.*]] = load <2 x i1>, <2 x i1>* [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <2 x i1>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
-  %r = load <2 x i1>, <2 x i1>* %p, align 16
+  %r = load <2 x i1>, ptr %p, align 16
   ret <2 x i1> %r
 }
-define <2 x i2> @vec_with_2elts_128bits_i2(<2 x i2>* align 16 dereferenceable(16) %p) {
+define <2 x i2> @vec_with_2elts_128bits_i2(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @vec_with_2elts_128bits_i2(
-; CHECK-NEXT:    [[R:%.*]] = load <2 x i2>, <2 x i2>* [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <2 x i2>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <2 x i2> [[R]]
 ;
-  %r = load <2 x i2>, <2 x i2>* %p, align 16
+  %r = load <2 x i2>, ptr %p, align 16
   ret <2 x i2> %r
 }
-define <2 x i4> @vec_with_2elts_128bits_i4(<2 x i4>* align 16 dereferenceable(16) %p) {
+define <2 x i4> @vec_with_2elts_128bits_i4(ptr align 16 dereferenceable(16) %p) {
 ; CHECK-LABEL: @vec_with_2elts_128bits_i4(
-; CHECK-NEXT:    [[R:%.*]] = load <2 x i4>, <2 x i4>* [[P:%.*]], align 16
+; CHECK-NEXT:    [[R:%.*]] = load <2 x i4>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <2 x i4> [[R]]
 ;
-  %r = load <2 x i4>, <2 x i4>* %p, align 16
+  %r = load <2 x i4>, ptr %p, align 16
   ret <2 x i4> %r
+}
+
+define <4 x float> @load_v1f32_v4f32(ptr dereferenceable(16) %p) {
+; CHECK-LABEL: @load_v1f32_v4f32(
+; CHECK-NEXT:    [[L:%.*]] = load <1 x float>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <1 x float> [[L]], <1 x float> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %l = load <1 x float>, ptr %p, align 16
+  %s = shufflevector <1 x float> %l, <1 x float> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  ret <4 x float> %s
+}
+
+define <4 x float> @load_v2f32_v4f32(ptr align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_v2f32_v4f32(
+; CHECK-NEXT:    [[L:%.*]] = load <2 x float>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x float> [[L]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %l = load <2 x float>, ptr %p, align 1
+  %s = shufflevector <2 x float> %l, <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  ret <4 x float> %s
+}
+
+define <4 x float> @load_v3f32_v4f32(ptr dereferenceable(16) %p) {
+; CHECK-LABEL: @load_v3f32_v4f32(
+; CHECK-NEXT:    [[L:%.*]] = load <3 x float>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <3 x float> [[L]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %l = load <3 x float>, ptr %p, align 1
+  %s = shufflevector <3 x float> %l, <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+  ret <4 x float> %s
+}
+
+define <4 x float> @load_v3f32_v4f32_wrong_mask(ptr dereferenceable(16) %p) {
+; CHECK-LABEL: @load_v3f32_v4f32_wrong_mask(
+; CHECK-NEXT:    [[L:%.*]] = load <3 x float>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <3 x float> [[L]], <3 x float> poison, <4 x i32> <i32 1, i32 0, i32 2, i32 undef>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %l = load <3 x float>, ptr %p, align 1
+  %s = shufflevector <3 x float> %l, <3 x float> poison, <4 x i32> <i32 1, i32 0, i32 2, i32 undef>
+  ret <4 x float> %s
+}
+
+define <4 x float> @load_v3f32_v4f32_not_deref(ptr dereferenceable(15) %p) {
+; CHECK-LABEL: @load_v3f32_v4f32_not_deref(
+; CHECK-NEXT:    [[L:%.*]] = load <3 x float>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <3 x float> [[L]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %l = load <3 x float>, ptr %p, align 16
+  %s = shufflevector <3 x float> %l, <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+  ret <4 x float> %s
+}
+
+define <8 x float> @load_v2f32_v8f32(ptr dereferenceable(32) %p) {
+; CHECK-LABEL: @load_v2f32_v8f32(
+; CHECK-NEXT:    [[L:%.*]] = load <2 x float>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x float> [[L]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    ret <8 x float> [[S]]
+;
+  %l = load <2 x float>, ptr %p, align 1
+  %s = shufflevector <2 x float> %l, <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <8 x float> %s
+}
+
+define <4 x i32> @load_v2i32_v4i32(ptr dereferenceable(16) %p) {
+; CHECK-LABEL: @load_v2i32_v4i32(
+; CHECK-NEXT:    [[L:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x i32> [[L]], <2 x i32> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %l = load <2 x i32>, ptr %p, align 1
+  %s = shufflevector <2 x i32> %l, <2 x i32> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  ret <4 x i32> %s
+}
+
+define <4 x i32> @load_v2i32_v4i32_non_canonical_mask(ptr dereferenceable(16) %p) {
+; CHECK-LABEL: @load_v2i32_v4i32_non_canonical_mask(
+; CHECK-NEXT:    [[L:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x i32> [[L]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %l = load <2 x i32>, ptr %p, align 1
+  %s = shufflevector <2 x i32> %l, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+  ret <4 x i32> %s
 }
