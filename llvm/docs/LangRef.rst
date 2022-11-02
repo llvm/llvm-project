@@ -3648,7 +3648,7 @@ The semantics of non-zero address spaces are target-specific. Memory
 access through a non-dereferenceable pointer is undefined behavior in
 any address space. Pointers with the bit-value 0 are only assumed to
 be non-dereferenceable in address space 0, unless the function is
-marked with the ``null_pointer_is_valid attribute``.
+marked with the ``null_pointer_is_valid`` attribute.
 
 If an object can be proven accessible through a pointer with a
 different address space, the access may be modified to use that
