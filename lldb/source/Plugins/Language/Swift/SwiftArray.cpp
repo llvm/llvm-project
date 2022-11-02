@@ -376,8 +376,10 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
     if (handler && handler->IsValid())
       return handler;
     return nullptr;
-  } else if (valobj_typename.startswith("Swift.ArraySlice<")) {
-    // Swift.ArraySlice
+  } else if (valobj_typename.startswith("Swift.ArraySlice<") ||
+             (valobj_typename.startswith("Swift.Array<") &&
+              valobj_typename.endswith(">.SubSequence"))) {
+    // ArraySlice or Array<T>.SubSequence, which is a typealias to ArraySlice.
     static ConstString g_buffer("_buffer");
 
     ValueObjectSP buffer_sp(

@@ -16,6 +16,5 @@ class TestCase(TestBase):
             self, "break here", lldb.SBFileSpec("main.swift")
         )
 
-        # TODO: Fix `arraySubSequence` rdar://92898538
-        for var in ("someSlice", "arraySlice"):
+        for var in ("someSlice", "arraySlice", "arraySubSequence"):
             self.expect(f"v {var}", substrs=[f"{var} = 2 values", "[1] = 2", "[2] = 3"])
