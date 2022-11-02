@@ -424,6 +424,90 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
   return tilingResult;
 }
 
+FailureOr<scf::SCFReductionTilingResult>
+mlir::scf::tileReductionUsingScf(PatternRewriter &b,
+                                 PartialReductionOpInterface op,
+                                 ArrayRef<OpFoldResult> tileSize) {
+  Location loc = op.getLoc();
+  // Ops implementing PartialReductionOpInterface are expected to implement
+  // TilingInterface.
+  auto tilingInterfaceOp = cast<TilingInterface>(op.getOperation());
+  SmallVector<Range> iterationDomain = tilingInterfaceOp.getIterationDomain(b);
+  SmallVector<Value> tileSizeVector =
+      getValueOrCreateConstantIndexOp(b, loc, tileSize);
+  if (tileSizeVector.size() < iterationDomain.size()) {
+    auto zero = b.create<arith::ConstantIndexOp>(loc, 0);
+    tileSizeVector.append(iterationDomain.size() - tileSizeVector.size(), zero);
+  }
+  if (op->getNumResults() != 1)
+    return b.notifyMatchFailure(
+        op, "don't support ops with multiple results for now");
+  SmallVector<utils::IteratorType> iterators =
+      tilingInterfaceOp.getLoopIteratorTypes();
+  int64_t numReductionDims = llvm::count(
+      tilingInterfaceOp.getLoopIteratorTypes(), utils::IteratorType::reduction);
+  if (numReductionDims != 1)
+    return b.notifyMatchFailure(
+        op, "only support ops with one reduction dimension.");
+  int reductionDim;
+  for (auto &[idx, iteratorType] :
+       llvm::enumerate(tilingInterfaceOp.getLoopIteratorTypes())) {
+    if (iteratorType == utils::IteratorType::reduction) {
+      reductionDim = idx;
+      break;
+    }
+  }
+  // 1. create the inital tensor value.
+  FailureOr<Operation *> identityTensor =
+      op.generateInitialTensorForPartialReduction(b, loc, tileSize,
+                                                  reductionDim);
+  if (failed(identityTensor))
+    return b.notifyMatchFailure(op,
+                                "cannot create a tensor of identity value.");
+  // 2. Create the nested loops.
+  SmallVector<OpFoldResult> offsets, sizes;
+  SmallVector<scf::ForOp> loops = generateTileLoopNest(
+      b, loc, iterationDomain, tileSizeVector, offsets, sizes);
+
+  // 3. Generate the tiled implementation within the inner most loop.
+  b.setInsertionPoint(loops.back().getBody()->getTerminator());
+  Operation *parallelOp =
+      op.tileToPartialReduction(b, loc, identityTensor.value()->getResults(),
+                                offsets, sizes, reductionDim);
+
+  SmallVector<OpFoldResult> resultSizesList;
+  for (size_t i = 0; i < offsets.size(); i++)
+    resultSizesList.push_back(
+        b.createOrFold<tensor::DimOp>(loc, parallelOp->getResult(0), i));
+  SmallVector<OpFoldResult> outOffsets(offsets.size(), b.getIndexAttr(0));
+  FailureOr<SmallVector<Value>> replacementOr = yieldTiledValues(
+      b, identityTensor.value()->getResults(), parallelOp->getResults(),
+      outOffsets, resultSizesList, loops);
+  if (failed(replacementOr))
+    return b.notifyMatchFailure(op, "failed to yield replacement");
+
+  auto dstOp = cast<DestinationStyleOpInterface>(parallelOp);
+  auto innerMostLoop = loops.back();
+  SmallVector<Value> destinationTensors = dstOp.getDpsInitOperands();
+  assert(destinationTensors.size() ==
+             innerMostLoop.getRegionIterArgs().size() &&
+         "unexpected number of outputs");
+  updateDestinationOperandsForTiledOp(b, destinationTensors,
+                                      innerMostLoop.getRegionIterArgs());
+
+  // 4. Apply the merge reduction to combine all the partial values.
+  b.setInsertionPointAfter(*loops.begin());
+  Operation *mergeOp =
+      op.mergeReductions(b, loc, replacementOr.value(), reductionDim);
+  b.replaceOp(op, mergeOp->getResults());
+
+  SCFReductionTilingResult results;
+  results.initialOp = identityTensor.value();
+  results.loops = std::move(loops);
+  results.parallelTiledOp = parallelOp;
+  results.mergeOp = mergeOp;
+  return results;
+}
 //===----------------------------------------------------------------------===//
 // tileConsumerAndFuseProducerGreedilyUsingSCFForOp implementation.
 //===----------------------------------------------------------------------===//

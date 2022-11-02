@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Linalg/Transforms/TilingInterfaceImpl.h"
 
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
@@ -240,11 +241,170 @@ struct LinalgOpTilingInterface
   }
 };
 
+//===----------------------------------------------------------------------===//
+// External Model for implementing `PartialReductionInterface` for `LinalgOp`s.
+//===----------------------------------------------------------------------===//
+
+/// External model implementation of PartialReductionInterface for LinalgOps.
+template <typename LinalgOpTy>
+struct LinalgOpPartialReductionInterface
+    : public PartialReductionOpInterface::ExternalModel<
+          LinalgOpPartialReductionInterface<LinalgOpTy>, LinalgOpTy> {
+  FailureOr<Operation *> generateInitialTensorForPartialReduction(
+      Operation *op, OpBuilder &b, Location loc, ArrayRef<OpFoldResult> sizes,
+      ArrayRef<int> reductionDims) const {
+    auto linalgOp = cast<LinalgOp>(op);
+    OpBuilder::InsertionGuard guard(b);
+    assert(reductionDims.size() == 1 &&
+           "only support single reduction right now.");
+    if (linalgOp.hasBufferSemantics())
+      return op->emitOpError("expected operation to have tensor semantics");
+    // Insert the new parallel dimension based on the index of the reduction
+    // loop. This could be controlled by user for more flexibility.
+    int64_t insertSplitDimension = reductionDims[0];
+
+    SmallVector<Operation *, 4> combinerOps;
+    if (!matchReduction(linalgOp.getRegionOutputArgs(), 0, combinerOps) ||
+        combinerOps.size() != 1)
+      return op->emitOpError("Failed to anaysis the reduction operation.");
+
+    Operation *reductionOp = combinerOps[0];
+    Optional<Attribute> identity = getNeutralElement(reductionOp);
+    if (!identity.has_value())
+      return op->emitOpError(
+          "Failed to get an identity value for the reduction operation.");
+
+    // Calculate the new shape, we insert the new dimension based on the index
+    // of the reduction dimension.
+    SmallVector<int64_t> newOutputShape;
+    ArrayRef<int64_t> oldShape =
+        linalgOp.getShape(linalgOp.getDpsInitOperand(0));
+    SmallVector<Value> dynamicDims;
+    for (int64_t idx : llvm::seq<int64_t>(0, oldShape.size() + 1)) {
+      if (idx == insertSplitDimension) {
+        dispatchIndexOpFoldResults(sizes[idx], dynamicDims, newOutputShape,
+                                   ShapedType::kDynamicStrideOrOffset);
+        continue;
+      }
+      int64_t oldIdx = idx < insertSplitDimension ? idx : idx - 1;
+      int64_t dim = oldShape[oldIdx];
+      newOutputShape.push_back(dim);
+      if (ShapedType::isDynamic(dim))
+        dynamicDims.push_back(b.createOrFold<tensor::DimOp>(
+            loc, linalgOp.getDpsInitOperand(0)->get(), oldIdx));
+    }
+    Value emptyTensor = b.create<tensor::EmptyOp>(
+        loc, newOutputShape, linalgOp.getRegionOutputArgs()[0].getType(),
+        dynamicDims);
+    Value constantOp = b.create<arith::ConstantOp>(loc, *identity);
+    auto identityTensor =
+        b.create<linalg::FillOp>(loc, constantOp, emptyTensor);
+    return identityTensor.getOperation();
+  }
+
+  Operation *tileToPartialReduction(Operation *op, OpBuilder &b, Location loc,
+                                    ValueRange init,
+                                    ArrayRef<OpFoldResult> offsets,
+                                    ArrayRef<OpFoldResult> sizes,
+                                    ArrayRef<int> reductionDims) const {
+    OpBuilder::InsertionGuard guard(b);
+    auto linalgOp = cast<LinalgOp>(op);
+    assert(reductionDims.size() == 1 &&
+           "only support single reduction right now.");
+    int64_t insertSplitDimension = reductionDims[0];
+
+    AffineMap oldOutputMap =
+        linalgOp.getMatchingIndexingMap(linalgOp.getDpsInitOperand(0));
+    SmallVector<AffineExpr> outputExpr;
+    for (auto &[idx, expr] : llvm::enumerate(oldOutputMap.getResults())) {
+      if (static_cast<int64_t>(idx) == insertSplitDimension) {
+        outputExpr.push_back(b.getAffineDimExpr(reductionDims[0]));
+      }
+      outputExpr.push_back(expr);
+    }
+    if (insertSplitDimension == oldOutputMap.getNumResults())
+      outputExpr.push_back(b.getAffineDimExpr(reductionDims[0]));
+
+    // Step 1: Extract a slice of the input operands.
+    SmallVector<Value> valuesToTile = linalgOp.getDpsInputOperands();
+    SmallVector<Value, 4> tiledOperands =
+        makeTiledShapes(b, loc, op, valuesToTile, offsets, sizes, {}, true);
+
+    // Step 2: Extract the accumulator operands
+    SmallVector<OpFoldResult> strides(offsets.size(), b.getIndexAttr(1));
+    SmallVector<OpFoldResult> outOffsets(offsets.size(), b.getIndexAttr(0));
+    // TODO: use SubsetExtractOpInterface once it is available.
+    Value out = b.create<tensor::ExtractSliceOp>(loc, init[0], outOffsets,
+                                                 sizes, strides);
+
+    // Step3. create a generic op where the reduction dimension is replaced by a
+    // parallel dimension of the size of reduction.
+    SmallVector<StringRef> newIteratorTypes = linalgOp.getIteratorTypesArray();
+    newIteratorTypes[reductionDims[0]] = getParallelIteratorTypeName();
+    SmallVector<AffineMap> newMaps = linalgOp.getIndexingMapsArray();
+    newMaps.back() = AffineMap::get(newMaps.back().getNumDims(), 0, outputExpr,
+                                    linalgOp.getContext());
+    auto genericOp =
+        b.create<GenericOp>(loc, TypeRange({out.getType()}), tiledOperands,
+                            ValueRange({out}), newMaps, newIteratorTypes);
+    BlockAndValueMapping mapping;
+    op->getRegion(0).cloneInto(&genericOp.getRegion(),
+                               genericOp.getRegion().begin(), mapping);
+    return genericOp.getOperation();
+  }
+
+  Operation *mergeReductions(Operation *op, OpBuilder &b, Location loc,
+                             ValueRange partialReduce,
+                             ArrayRef<int> reductionDims) const {
+    auto linalgOp = cast<LinalgOp>(op);
+    assert(reductionDims.size() == 1 &&
+           "only support single reduction right now.");
+    int64_t dimToMerge = reductionDims[0];
+
+    // Then create a new reduction that only reduce the newly added dimension
+    // from the previous op.
+    int64_t intermRank =
+        partialReduce[0].getType().cast<ShapedType>().getRank();
+    AffineMap inputMap = b.getMultiDimIdentityMap(intermRank);
+    SmallVector<StringRef> reductionIteratorTypes;
+    SmallVector<AffineExpr> exprs;
+    for (int64_t i : llvm::seq<int64_t>(0, intermRank)) {
+      if (dimToMerge == i) {
+        reductionIteratorTypes.push_back(getReductionIteratorTypeName());
+      } else {
+        exprs.push_back(b.getAffineDimExpr(i));
+        reductionIteratorTypes.push_back(getParallelIteratorTypeName());
+      }
+    }
+    AffineMap outputMap =
+        AffineMap::get(intermRank, 0, exprs, op->getContext());
+    SmallVector<AffineMap> reductionMaps = {inputMap, outputMap};
+
+    SmallVector<Operation *, 4> combinerOps;
+    matchReduction(linalgOp.getRegionOutputArgs(), 0, combinerOps);
+    Operation *reductionOp = combinerOps[0];
+
+    auto reduction = b.create<GenericOp>(
+        loc, op->getResultTypes(), ValueRange({partialReduce[0]}),
+        SmallVector<Value>{linalgOp.getDpsInitOperands()}, reductionMaps,
+        reductionIteratorTypes,
+        [reductionOp](OpBuilder &b, Location loc, ValueRange inputs) {
+          Operation *clonedReductionOp = b.clone(*reductionOp);
+          clonedReductionOp->setOperand(0, inputs[0]);
+          clonedReductionOp->setOperand(1, inputs[1]);
+          b.create<linalg::YieldOp>(loc, clonedReductionOp->getResult(0));
+        });
+    return reduction.getOperation();
+  }
+};
+
 } // namespace
 
 template <typename OpType>
 static void registerOne(MLIRContext *ctx) {
   OpType::template attachInterface<LinalgOpTilingInterface<OpType>>(*ctx);
+  OpType::template attachInterface<LinalgOpPartialReductionInterface<OpType>>(
+      *ctx);
 }
 
 /// Variadic helper function.
