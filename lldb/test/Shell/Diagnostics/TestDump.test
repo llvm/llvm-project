@@ -12,4 +12,4 @@
 # RUN: %lldb -o 'diagnostics dump -d %t.nonexisting'
 # RUN: file %t.nonexisting | FileCheck %s
 
-# CHECK: : directory
+# CHECK: directory
