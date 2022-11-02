@@ -809,28 +809,29 @@ fir::factory::MutableBoxReallocation fir::factory::genReallocIfNeeded(
               TODO(loc, "automatic allocation of derived type allocatable with "
                         "length parameters");
             }
-            auto ifOp =
-                builder
-                    .genIfOp(loc, {addrType}, mustReallocate,
-                             /*withElseRegion=*/true)
-                    .genThen([&]() {
-                      // If shape or length mismatch, allocate new storage.
-                      // When rhs is a scalar, keep the previous shape
-                      auto extents = shape.empty()
-                                         ? mlir::ValueRange(previousExtents)
-                                         : shape;
-                      auto heap = allocateAndInitNewStorage(
-                          builder, loc, box, extents, lengthParams,
-                          ".auto.alloc");
-                      if (storageHandler)
-                        storageHandler(getExtValForStorage(heap));
-                      builder.create<fir::ResultOp>(loc, heap);
-                    })
-                    .genElse([&]() {
-                      if (storageHandler)
-                        storageHandler(getExtValForStorage(addr));
-                      builder.create<fir::ResultOp>(loc, addr);
-                    });
+            auto ifOp = builder
+                            .genIfOp(loc, {addrType}, mustReallocate,
+                                     /*withElseRegion=*/true)
+                            .genThen([&]() {
+                              // If shape or length mismatch, allocate new
+                              // storage. When rhs is a scalar, keep the
+                              // previous shape
+                              auto extents =
+                                  shape.empty()
+                                      ? mlir::ValueRange(previousExtents)
+                                      : shape;
+                              auto heap = allocateAndInitNewStorage(
+                                  builder, loc, box, extents, lengthParams,
+                                  ".auto.alloc");
+                              if (storageHandler)
+                                storageHandler(getExtValForStorage(heap));
+                              builder.create<fir::ResultOp>(loc, heap);
+                            })
+                            .genElse([&]() {
+                              if (storageHandler)
+                                storageHandler(getExtValForStorage(addr));
+                              builder.create<fir::ResultOp>(loc, addr);
+                            });
             ifOp.end();
             auto newAddr = ifOp.getResults()[0];
             builder.create<fir::ResultOp>(

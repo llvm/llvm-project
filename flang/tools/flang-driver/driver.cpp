@@ -72,8 +72,8 @@ static int executeFC1Tool(llvm::SmallVectorImpl<const char *> &argV) {
   return 1;
 }
 
-static void ExpandResponseFiles(
-    llvm::StringSaver &saver, llvm::SmallVectorImpl<const char *> &args) {
+static void ExpandResponseFiles(llvm::StringSaver &saver,
+                                llvm::SmallVectorImpl<const char *> &args) {
   // We're defaulting to the GNU syntax, since we don't have a CL mode.
   llvm::cl::TokenizerCallback tokenizer = &llvm::cl::TokenizeGNUCommandLine;
   llvm::cl::ExpansionContext ExpCtx(saver.getAllocator(), tokenizer);
@@ -96,8 +96,8 @@ int main(int argc, const char **argv) {
   ExpandResponseFiles(saver, args);
 
   // Check if flang-new is in the frontend mode
-  auto firstArg = std::find_if(
-      args.begin() + 1, args.end(), [](const char *a) { return a != nullptr; });
+  auto firstArg = std::find_if(args.begin() + 1, args.end(),
+                               [](const char *a) { return a != nullptr; });
   if (firstArg != args.end()) {
     if (llvm::StringRef(args[1]).startswith("-cc1")) {
       llvm::errs() << "error: unknown integrated tool '" << args[1] << "'. "
@@ -127,7 +127,8 @@ int main(int argc, const char **argv) {
 
   // Prepare the driver
   clang::driver::Driver theDriver(driverPath,
-      llvm::sys::getDefaultTargetTriple(), diags, "flang LLVM compiler");
+                                  llvm::sys::getDefaultTargetTriple(), diags,
+                                  "flang LLVM compiler");
   theDriver.setTargetAndMode(targetandMode);
   std::unique_ptr<clang::driver::Compilation> c(
       theDriver.BuildCompilation(args));
