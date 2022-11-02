@@ -352,6 +352,8 @@ Improvements to Clang's diagnostics
   Fixes `Issue 57562 <https://github.com/llvm/llvm-project/issues/57562>`_.
 - Better error recovery for pack expansion of expressions.
   `Issue 58673 <https://github.com/llvm/llvm-project/issues/58673>`_.
+- Better diagnostics when the user has missed `auto` in a declaration.
+  `Issue 49129 <https://github.com/llvm/llvm-project/issues/49129>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
