@@ -444,8 +444,21 @@ private:
   std::vector<std::unique_ptr<ModuleFileExtensionWriter>>
       ModuleFileExtensionWriters;
 
-  /// User ModuleMaps skipped when writing control block.
-  std::set<const FileEntry *> SkippedModuleMaps;
+  /// Mapping from a source location entry to whether it is affecting or not.
+  llvm::BitVector IsSLocAffecting;
+
+  /// Mapping from \c FileID to an index into the FileID adjustment table.
+  std::vector<FileID> NonAffectingFileIDs;
+  std::vector<unsigned> NonAffectingFileIDAdjustments;
+
+  /// Mapping from an offset to an index into the offset adjustment table.
+  std::vector<SourceRange> NonAffectingRanges;
+  std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
+
+  /// Collects input files that didn't affect compilation of the current module,
+  /// and initializes data structures necessary for leaving those files out
+  /// during \c SourceManager serialization.
+  void collectNonAffectingInputFiles();
 
   /// Returns an adjusted \c FileID, accounting for any non-affecting input
   /// files.
@@ -462,6 +475,9 @@ private:
   /// Returns an adjusted \c SourceLocation offset, accounting for any
   /// non-affecting input files.
   SourceLocation::UIntTy getAdjustedOffset(SourceLocation::UIntTy Offset) const;
+  /// Returns an adjustment for offset into SourceManager, accounting for any
+  /// non-affecting input files.
+  SourceLocation::UIntTy getAdjustment(SourceLocation::UIntTy Offset) const;
 
   /// Retrieve or create a submodule ID for this module.
   unsigned getSubmoduleID(Module *Mod);
@@ -481,8 +497,7 @@ private:
   static std::pair<ASTFileSignature, ASTFileSignature>
   createSignature(StringRef AllBytes, StringRef ASTBlockBytes);
 
-  void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts,
-                       std::set<const FileEntry *> &AffectingClangModuleMaps);
+  void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
   void WriteSourceManagerBlock(SourceManager &SourceMgr,
                                const Preprocessor &PP);
   void writeIncludedFiles(raw_ostream &Out, const Preprocessor &PP);
