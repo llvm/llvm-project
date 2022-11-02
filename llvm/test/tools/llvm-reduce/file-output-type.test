@@ -40,7 +40,7 @@
 
 
 # Make sure MIR ignores requests for bitcode
-# RUN: llvm-reduce -output-bitcode --delta-passes=instructions -o %t.3  --test FileCheck --test-arg --check-prefix=MIR --test-arg %s --test-arg --input-file %p/Inputs/test-output-format.mir
+# RUN: llvm-reduce -mtriple=x86_64-- -output-bitcode --delta-passes=instructions -o %t.3  --test FileCheck --test-arg --check-prefix=MIR --test-arg %s --test-arg --input-file %p/Inputs/test-output-format.mir
 # RUN: llc -x mir -run-pass=none -o /dev/null %t.3
 
 
