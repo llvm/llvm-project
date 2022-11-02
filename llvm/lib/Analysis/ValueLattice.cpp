@@ -20,7 +20,7 @@ ValueLatticeElement::getCompare(CmpInst::Predicate Pred, Type *Ty,
 
   // TODO: Can be made more precise, but always returning undef would be
   // incorrect.
-  if (isUndef() || isUndef())
+  if (isUndef() || Other.isUndef())
     return nullptr;
 
   if (isConstant() && Other.isConstant())
