@@ -1622,7 +1622,7 @@ void AArch64InstPrinter::printAlignedLabel(const MCInst *MI, uint64_t Address,
       dyn_cast<MCConstantExpr>(MI->getOperand(OpNum).getExpr());
   int64_t TargetAddress;
   if (BranchTarget && BranchTarget->evaluateAsAbsolute(TargetAddress)) {
-    O << formatHex(TargetAddress);
+    O << formatHex((uint64_t)TargetAddress);
   } else {
     // Otherwise, just print the expression.
     MI->getOperand(OpNum).getExpr()->print(O, &MAI);
