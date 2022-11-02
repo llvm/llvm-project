@@ -452,7 +452,8 @@ public:
   /// true, false or undef constants, or nullptr if the comparison cannot be
   /// evaluated.
   Constant *getCompare(CmpInst::Predicate Pred, Type *Ty,
-                       const ValueLatticeElement &Other) const;
+                       const ValueLatticeElement &Other,
+                       const DataLayout &DL) const;
 
   unsigned getNumRangeExtensions() const { return NumRangeExtensions; }
   void setNumRangeExtensions(unsigned N) { NumRangeExtensions = N; }
