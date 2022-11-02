@@ -433,6 +433,14 @@ public:
       m_language = lldb::eLanguageTypeSwift;
   }
 
+  bool GetPlaygroundTransformHighPerformance() const {
+    return m_playground_transforms_hp;
+  }
+
+  void SetPlaygroundTransformHighPerformance(bool b) {
+    m_playground_transforms_hp = b;
+  }
+
   void SetCancelCallback(lldb::ExpressionCancelCallback callback, void *baton) {
     m_cancel_callback_baton = baton;
     m_cancel_callback = callback;
@@ -500,6 +508,7 @@ private:
   bool m_trap_exceptions = true;
   bool m_repl = false;
   bool m_playground = false;
+  bool m_playground_transforms_hp = true;
   bool m_generate_debug_info = false;
   bool m_ansi_color_errors = false;
   bool m_result_is_internal = false;
