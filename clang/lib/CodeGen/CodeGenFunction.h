@@ -3247,6 +3247,7 @@ public:
   /// This function should be called after ensuring that legality
   /// conditions for an optimized reduction kernel are met.
   void EmitXteamRedKernel(const OMPExecutableDirective &D, const Stmt *S,
+                          const FunctionArgList &Args,
                           const CodeGenModule::NoLoopIntermediateStmts &,
                           SourceLocation Loc);
 
@@ -3388,7 +3389,12 @@ public:
                                      const OMPExecutableDirective &D,
                                      SourceLocation Loc);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
-                                  SmallVectorImpl<llvm::Value *> &CapturedVars);
+                                  SmallVectorImpl<llvm::Value *> &CapturedVars,
+                                  bool GenXteamAllocation = false);
+  void
+  GenerateXteamRedCapturedVars(SmallVectorImpl<llvm::Value *> &CapturedVars,
+                               QualType RedVarQualType,
+                               bool GenXteamAllocation);
   void emitOMPSimpleStore(LValue LVal, RValue RVal, QualType RValTy,
                           SourceLocation Loc);
   /// Perform element by element copying of arrays with type \a
@@ -4900,7 +4906,7 @@ private:
   void EmitXteamRedInc(const ForStmt &FStmt, const VarDecl *LoopVar,
                        const Address &NoLoopIvAddr);
   void EmitXteamLocalAggregator(const ForStmt *FStmt);
-  void EmitXteamRedSum(const ForStmt *FStmt);
+  void EmitXteamRedSum(const ForStmt *FStmt, const FunctionArgList &Args);
   bool EmitXteamRedStmt(const Stmt *S);
 };
 

@@ -7638,6 +7638,7 @@ CodeGenModule::NoLoopXteamErr CodeGenModule::getXteamRedCombinedClausesStatus(
       D.hasClausesOfKind<OMPDeviceClause>() ||
       D.hasClausesOfKind<OMPIfClause>() ||
       D.hasClausesOfKind<OMPInReductionClause>() ||
+      D.hasClausesOfKind<OMPNowaitClause>() ||
       D.hasClausesOfKind<OMPThreadLimitClause>() ||
       D.hasClausesOfKind<OMPNumThreadsClause>() ||
       D.hasClausesOfKind<OMPDefaultClause>() ||
@@ -7660,7 +7661,6 @@ CodeGenModule::NoLoopXteamErr CodeGenModule::getXteamRedCombinedClausesStatus(
 std::pair<CodeGenModule::NoLoopXteamErr, CodeGenModule::XteamRedVarMap>
 CodeGenModule::collectXteamRedVars(const OMPExecutableDirective &D) {
   XteamRedVarMap VarMap;
-  Address InitAddr = Address::invalid();
   // Either we emit Xteam code for all reduction variables or none at all
   for (const auto *C : D.getClausesOfKind<OMPReductionClause>()) {
     for (const Expr *Ref : C->varlists()) {
@@ -7681,8 +7681,9 @@ CodeGenModule::collectXteamRedVars(const OMPExecutableDirective &D) {
         return std::make_pair(NxUnsupportedRedIntSize, VarMap);
 
       const VarDecl *VD = cast<VarDecl>(ValDecl);
-      // Address of the local var will be populated later
-      VarMap.insert(std::make_pair(VD, std::make_pair(Ref, InitAddr)));
+      // Address of the local var and arg pos will be populated later
+      XteamRedVarInfo XRVI(Ref, Address::invalid(), -1);
+      VarMap.insert(std::make_pair(VD, XRVI));
     }
     // Now make sure that we support all the operators. Today, only sum
     for (const Expr *Ref : C->reduction_ops()) {
@@ -7697,12 +7698,11 @@ CodeGenModule::collectXteamRedVars(const OMPExecutableDirective &D) {
         return std::make_pair(NxUnsupportedRedOp, VarMap);
     }
   }
+  // We support multiple reduction operations in the same loop with the new
+  // DeviceRTL APIs. So bail out only if none was found.
   if (VarMap.size() == 0)
     return std::make_pair(NxNoRedVar, VarMap);
-  // TODO support multiple reduction operations in the same loop with the new
-  // DeviceRTL APIs.
-  if (VarMap.size() > 1)
-    return std::make_pair(NxMultRedVar, VarMap);
+
   return std::make_pair(NxSuccess, VarMap);
 }
 
@@ -7850,12 +7850,13 @@ CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
   // directive to be pushed.
   NoLoopIntermediateStmts IntermediateStmts;
   IntermediateStmts.push_back(&D);
-  // Create a map from the ForStmt, the corresponding info will be populated
-  // later
+  // Create a map from the ForStmt, some of the info will be populated later
   const ForStmt *FStmt = getSingleForStmt(AssocStmt);
   assert(FStmt && "For stmt cannot be null");
-  setXteamRedKernel(FStmt,
-                    std::make_pair(IntermediateStmts, RedVarMapPair.second));
+  XteamRedKernels.insert(std::make_pair(
+      FStmt, XteamRedKernelInfo(/*ThreadStartIndex=*/nullptr,
+                                /*NumTeams=*/nullptr, IntermediateStmts,
+                                RedVarMapPair.second)));
 
   // All checks passed
   return NxSuccess;

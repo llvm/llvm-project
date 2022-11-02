@@ -10125,7 +10125,8 @@ void CGOpenMPRuntime::emitTargetCall(
   const CapturedStmt &CS = *D.getCapturedStmt(OMPD_target);
   auto &&ArgsCodegen = [&CS, &CapturedVars](CodeGenFunction &CGF,
                                             PrePostActionTy &) {
-    CGF.GenerateOpenMPCapturedVars(CS, CapturedVars);
+    CGF.GenerateOpenMPCapturedVars(CS, CapturedVars,
+                                   /*GenXteamAllocation=*/true);
   };
   emitInlinedDirective(CGF, OMPD_unknown, ArgsCodegen);
 
@@ -10274,9 +10275,11 @@ void CGOpenMPRuntime::emitTargetCall(
 
     auto RI = CS.getCapturedRecordDecl()->field_begin();
     auto *CV = CapturedVars.begin();
+    uint32_t CapturedCount = 0;
     for (CapturedStmt::const_capture_iterator CI = CS.capture_begin(),
                                               CE = CS.capture_end();
          CI != CE; ++CI, ++RI, ++CV) {
+      ++CapturedCount;
       MappableExprsHandler::MapCombinedInfoTy CurInfo;
       MappableExprsHandler::StructRangeInfoTy PartialStruct;
 
@@ -10338,6 +10341,38 @@ void CGOpenMPRuntime::emitTargetCall(
     // weren't referenced within the construct.
     MEHandler.generateAllInfo(CombinedInfo, MappedVarSet);
 
+    // If doing Xteam reduction, add the corresponding vars to Info
+    const ForStmt *FStmt = CGF.CGM.getSingleForStmt(D.getAssociatedStmt());
+    if (FStmt && CGF.CGM.isXteamRedKernel(FStmt)) {
+      CodeGenModule::XteamRedVarMap &XteamRVM =
+          CGF.CGM.getXteamRedVarMap(FStmt);
+      assert((CapturedVars.size() == CapturedCount + 2 * XteamRVM.size()) &&
+             "Unexpected number of captured vars");
+
+      for (; CapturedCount < CapturedVars.size(); ++CapturedCount) {
+        MappableExprsHandler::MapCombinedInfoTy CurInfo;
+        CurInfo.Exprs.push_back(nullptr);
+        CurInfo.BasePointers.push_back(CapturedVars[CapturedCount]);
+        CurInfo.Pointers.push_back(CapturedVars[CapturedCount]);
+        CurInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
+            CGF.getTypeSize(CGF.getContext().VoidPtrTy), CGF.Int64Ty,
+            /*isSigned=*/true));
+        // Copy to the device as an argument. No need to retrieve it.
+        CurInfo.Types.push_back(MappableExprsHandler::OMP_MAP_LITERAL |
+                                MappableExprsHandler::OMP_MAP_TARGET_PARAM);
+        CurInfo.Mappers.push_back(nullptr);
+
+        assert(CurInfo.BasePointers.size() == CurInfo.Pointers.size() &&
+               CurInfo.BasePointers.size() == CurInfo.Sizes.size() &&
+               CurInfo.BasePointers.size() == CurInfo.Types.size() &&
+               CurInfo.BasePointers.size() == CurInfo.Mappers.size() &&
+               "Inconsistent map information sizes!");
+
+        // We need to append the results of this capture to what we already
+        // have.
+        CombinedInfo.append(CurInfo);
+      }
+    }
     CGOpenMPRuntime::TargetDataInfo Info;
     // Fill up the arrays and create the arguments.
     emitOffloadingArrays(CGF, CombinedInfo, Info, OMPBuilder);
@@ -10388,6 +10423,31 @@ void CGOpenMPRuntime::emitTargetCall(
   } else {
     RegionCodeGenTy ElseRCG(TargetElseGen);
     ElseRCG(CGF);
+  }
+  // If in Xteam, generate the deallocate calls.
+  const ForStmt *FStmt = CGM.getSingleForStmt(D.getAssociatedStmt());
+  if (FStmt && CGM.isXteamRedKernel(FStmt)) {
+    assert(!CGM.getLangOpts().OpenMPIsDevice && "Expecting host CG");
+    CodeGenModule::XteamRedVarMap &XteamRVM = CGM.getXteamRedVarMap(FStmt);
+    assert((CapturedVars.size() >= 2 * XteamRVM.size()) &&
+           "Unexpected number of captured vars");
+    auto XteamOffset = CapturedVars.size() - 2 * XteamRVM.size();
+
+    const ASTContext &Context = CGM.getContext();
+    // TODO Should move to CGOpenMPRuntime.cpp new APIs for Xteam.
+    auto &OmpBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+
+    // TODO use device id from target construct, if any
+    llvm::CallInst *DevIdVal =
+        CGF.EmitRuntimeCall(OmpBuilder.getOrCreateRuntimeFunction(
+                                CGM.getModule(), OMPRTL_omp_get_default_device),
+                            "default_dev");
+    for (; XteamOffset < CapturedVars.size(); ++XteamOffset) {
+      llvm::Value *FreeArgs[] = {CapturedVars[XteamOffset], DevIdVal};
+      CGF.EmitRuntimeCall(OmpBuilder.getOrCreateRuntimeFunction(
+                              CGM.getModule(), OMPRTL_omp_target_free),
+                          FreeArgs);
+    }
   }
 }
 

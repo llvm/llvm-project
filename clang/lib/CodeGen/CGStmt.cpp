@@ -105,6 +105,13 @@ CodeGenFunction::EmitXteamRedStartingIndex(const ForStmt &FStmt) {
   llvm::Value *Gtid =
       Builder.CreateIntCast(GlobalGpuThreadId, IvAddr.getElementType(), false);
   llvm::Value *Iv = Builder.CreateAdd(Gtid, Builder.CreateLoad(IvAddr));
+
+  // Cache the thread specific initial loop iteration value and the number of
+  // teams
+  CGM.updateXteamRedKernel(&FStmt, Builder.CreateIntCast(Iv, Int64Ty, false),
+                           RT.getGPUNumBlocks(*this));
+
+  // Set the initial value of the loop iteration
   Builder.CreateStore(Iv, IvAddr);
 
   return std::make_pair(LoopVD, IvAddr);
@@ -132,7 +139,8 @@ void CodeGenFunction::EmitXteamRedInc(const ForStmt &FStmt,
 
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
   llvm::Value *BlockSize = RT.getXteamRedBlockSize(*this);
-  llvm::Value *NumBlocks = RT.getGPUNumBlocks(*this);
+  llvm::Value *NumBlocks = CGM.getXteamRedNumTeams(&FStmt);
+  assert(NumBlocks && "Number of blocks cannot be null");
   // prod = block_size * num_blocks
   llvm::Value *Prod = Builder.CreateMul(BlockSize, NumBlocks);
 
@@ -283,7 +291,7 @@ void CodeGenFunction::EmitNoLoopKernel(const OMPExecutableDirective &D,
 }
 
 void CodeGenFunction::EmitXteamRedKernel(
-    const OMPExecutableDirective &D, const Stmt *S,
+    const OMPExecutableDirective &D, const Stmt *S, const FunctionArgList &Args,
     const CodeGenModule::NoLoopIntermediateStmts &IntermediateStmts,
     SourceLocation Loc) {
   assert(S && "Null statement?");
@@ -307,7 +315,7 @@ void CodeGenFunction::EmitXteamRedKernel(
   EmitStmt(CapturedForStmt);
 
   // Now emit the calls to xteam_sum, one for each reduction variable
-  EmitXteamRedSum(CapturedForStmt);
+  EmitXteamRedSum(CapturedForStmt, Args);
 
   // Xteam codegen done
   CGM.setCurrentXteamRedStmt(nullptr);
@@ -318,7 +326,7 @@ void CodeGenFunction::EmitXteamRedKernel(
 void CodeGenFunction::EmitXteamLocalAggregator(const ForStmt *FStmt) {
   const CodeGenModule::XteamRedVarMap &RedVarMap = CGM.getXteamRedVarMap(FStmt);
   for (const auto &RedVarInfo : RedVarMap) {
-    const Expr *RedVarExpr = RedVarInfo.second.first;
+    const Expr *RedVarExpr = RedVarInfo.second.RedVarExpr;
     llvm::Type *RedVarType = ConvertTypeForMem(RedVarExpr->getType());
     assert((RedVarType->isFloatTy() || RedVarType->isDoubleTy() ||
             RedVarType->isIntegerTy()) &&
@@ -337,6 +345,8 @@ void CodeGenFunction::EmitXteamLocalAggregator(const ForStmt *FStmt) {
     Builder.CreateStore(InitVal, XteamRedVarAddr);
 
     // Update the map with the local aggregator address
+    // TODO update only the address, the expression is already there
+    // TODO don't do a lookup again, use the element avail here
     CGM.updateXteamRedVarMap(FStmt, RedVarInfo.first, RedVarExpr,
                              XteamRedVarAddr);
   }
@@ -344,16 +354,32 @@ void CodeGenFunction::EmitXteamLocalAggregator(const ForStmt *FStmt) {
 
 // Emit __kmpc_xteam_sum(*xteam_red_local_addr, red_var_addr) for each reduction
 // in the helper map for the given For Stmt
-void CodeGenFunction::EmitXteamRedSum(const ForStmt *FStmt) {
+void CodeGenFunction::EmitXteamRedSum(const ForStmt *FStmt,
+                                      const FunctionArgList &Args) {
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGM.getOpenMPRuntime());
   const CodeGenModule::XteamRedVarMap &RedVarMap = CGM.getXteamRedVarMap(FStmt);
+  llvm::Value *ThreadStartIdx = CGM.getXteamRedThreadStartIndex(FStmt);
+  assert(ThreadStartIdx && "Thread start index cannot be null");
+  llvm::Value *NumTeams = CGM.getXteamRedNumTeams(FStmt);
+  assert(NumTeams && "Number of teams cannot be null");
   for (const auto &RedVarInfo : RedVarMap) {
-    const Expr *OrigRedVarExpr = RedVarInfo.second.first;
+    const CodeGenModule::XteamRedVarInfo &RVI = RedVarInfo.second;
+
+    assert(RVI.ArgPos + 1 < Args.size() && "Arg position beyond bounds");
+
+    Address XteamRedSumArg1 = GetAddrOfLocalVar(Args[RVI.ArgPos]);
+    llvm::Value *DTeamVals = Builder.CreateLoad(XteamRedSumArg1);
+
+    Address XteamRedSumArg2 = GetAddrOfLocalVar(Args[RVI.ArgPos + 1]);
+    llvm::Value *DTeamsDonePtr = Builder.CreateLoad(XteamRedSumArg2);
+
+    const Expr *OrigRedVarExpr = RVI.RedVarExpr;
     const DeclRefExpr *DRE = cast<DeclRefExpr>(OrigRedVarExpr);
     Address OrigRedVarAddr = EmitLValue(DRE).getAddress(*this);
     // Pass in OrigRedVarAddr.getPointer to kmpc_xteam_sum
-    RT.getXteamRedSum(*this, Builder.CreateLoad(RedVarInfo.second.second),
-                      OrigRedVarAddr.getPointer());
+    RT.getXteamRedSum(*this, Builder.CreateLoad(RVI.RedVarAddr),
+                      OrigRedVarAddr.getPointer(), DTeamVals, DTeamsDonePtr,
+                      ThreadStartIdx, NumTeams);
   }
 }
 
@@ -427,7 +453,7 @@ bool CodeGenFunction::EmitXteamRedStmt(const Stmt *S) {
   }
   assert(RedRHSExpr != nullptr && "Did not find a valid reduction rhs");
   llvm::Value *RHSValue = EmitScalarExpr(RedRHSExpr);
-  Address XteamRedLocalAddr = RedVarMap.find(RedVarDecl)->second.second;
+  Address XteamRedLocalAddr = RedVarMap.find(RedVarDecl)->second.RedVarAddr;
   // Compute *xteam_red_local_addr + rhs_value
   llvm::Value *RedRHS = nullptr;
   llvm::Type *RedVarType = ConvertTypeForMem(RedVarDecl->getType());

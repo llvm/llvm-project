@@ -335,11 +335,32 @@ public:
   /// Map construct statement to the intermediate ones for no-loop codegen
   using NoLoopKernelMap = llvm::DenseMap<const Stmt *, NoLoopIntermediateStmts>;
 
-  /// Map a reduction variable to the corresponding reduction expression and the
-  /// corresponding Xteam local aggregator var
-  using XteamRedVarMap =
-      llvm::DenseMap<const VarDecl *, std::pair<const Expr *, Address>>;
-  using XteamRedKernelInfo = std::pair<NoLoopIntermediateStmts, XteamRedVarMap>;
+  /// Map a reduction variable to the corresponding metadata. The metadata
+  /// contains
+  // the reduction expression, the coorresponding Xteam local aggregator var,
+  // and the start arg position in the offloading function signature.
+  struct XteamRedVarInfo {
+    XteamRedVarInfo(const Expr *E, Address A, size_t Pos)
+        : RedVarExpr{E}, RedVarAddr{A}, ArgPos{Pos} {}
+    XteamRedVarInfo() = delete;
+    const Expr *RedVarExpr;
+    Address RedVarAddr;
+    size_t ArgPos;
+  };
+  using XteamRedVarMap = llvm::DenseMap<const VarDecl *, XteamRedVarInfo>;
+  //  using XteamRedKernelInfo = std::pair<NoLoopIntermediateStmts,
+  //  XteamRedVarMap>;
+  struct XteamRedKernelInfo {
+    XteamRedKernelInfo(llvm::Value *TSI, llvm::Value *NT,
+                       NoLoopIntermediateStmts Stmts, XteamRedVarMap RVM)
+        : ThreadStartIndex{TSI}, NumTeams{NT}, XteamIntStmts{Stmts},
+          XteamRedVars{RVM} {}
+
+    llvm::Value *ThreadStartIndex;
+    llvm::Value *NumTeams;
+    NoLoopIntermediateStmts XteamIntStmts;
+    XteamRedVarMap XteamRedVars;
+  };
   using XteamRedKernelMap = llvm::DenseMap<const Stmt *, XteamRedKernelInfo>;
 
 private:
@@ -1645,20 +1666,24 @@ public:
   /// intermediate statements for a split directive.
   const NoLoopIntermediateStmts &getXteamRedStmts(const Stmt *S) {
     assert(isXteamRedKernel(S));
-    return XteamRedKernels.find(S)->second.first;
+    return XteamRedKernels.find(S)->second.XteamIntStmts;
   }
 
   /// Given a ForStmt for which Xteam codegen will be done, return the
   /// corresponding metadata
   XteamRedVarMap &getXteamRedVarMap(const Stmt *S) {
     assert(isXteamRedKernel(S));
-    return XteamRedKernels.find(S)->second.second;
+    return XteamRedKernels.find(S)->second.XteamRedVars;
   }
 
-  /// Set provided metadata for the provided ForStmt
-  void setXteamRedVarMap(const Stmt *S, XteamRedVarMap VM) {
+  llvm::Value *getXteamRedThreadStartIndex(const Stmt *S) {
     assert(isXteamRedKernel(S));
-    XteamRedKernels.find(S)->second.second = VM;
+    return XteamRedKernels.find(S)->second.ThreadStartIndex;
+  }
+
+  llvm::Value *getXteamRedNumTeams(const Stmt *S) {
+    assert(isXteamRedKernel(S));
+    return XteamRedKernels.find(S)->second.NumTeams;
   }
 
   /// Given a ForStmt for which Xteam codegen will be done, update the metadata.
@@ -1668,8 +1693,22 @@ public:
     assert(isXteamRedKernel(S));
     XteamRedVarMap &RVM = getXteamRedVarMap(S);
     assert(RVM.find(VD) != RVM.end());
-    RVM.find(VD)->second.first = RVE;
-    RVM.find(VD)->second.second = AggVarAddr;
+    RVM.find(VD)->second.RedVarExpr = RVE;
+    RVM.find(VD)->second.RedVarAddr = AggVarAddr;
+    // Another API is used to set ArgPos
+  }
+
+  void updateXteamRedVarArgPos(XteamRedVarInfo *RVInfo, size_t ArgP) {
+    assert(RVInfo);
+    RVInfo->ArgPos = ArgP;
+  }
+
+  void updateXteamRedKernel(const Stmt *S, llvm::Value *ThdIndex,
+                            llvm::Value *NTeams) {
+    assert(isXteamRedKernel(S));
+    auto &KernelInfo = XteamRedKernels.find(S)->second;
+    KernelInfo.ThreadStartIndex = ThdIndex;
+    KernelInfo.NumTeams = NTeams;
   }
 
   /// Erase spec-red related metadata for the input statement
@@ -1906,12 +1945,8 @@ private:
   /// Populate the map used for no-loop codegen
   void setNoLoopKernel(const Stmt *S,
                        NoLoopIntermediateStmts IntermediateStmts) {
+    assert(!isNoLoopKernel(S) && "No-Loop already set");
     NoLoopKernels[S] = IntermediateStmts;
-  }
-
-  /// Populate the map used for xteam reduction codegen
-  void setXteamRedKernel(const Stmt *S, XteamRedKernelInfo KI) {
-    XteamRedKernels[S] = KI;
   }
 };
 
