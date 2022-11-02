@@ -17,6 +17,10 @@ module poly
     procedure :: proc2 => proc2_p2
   end type
 
+  type with_alloc
+    class(p1), pointer :: element
+  end type
+
 contains
   subroutine proc1_p1()
     print*, 'call proc1_p1'
@@ -348,7 +352,30 @@ contains
     allocate(p)
     deallocate(p)
   end subroutine
+
+  subroutine test_type_with_polymorphic_pointer_component()
+    type(with_alloc), pointer :: a
+    allocate(a)
+    allocate(a%element)
+  end subroutine
 end module
+
+! CHECK-LABEL: func.func @_QMpolyPtest_type_with_polymorphic_pointer_component()
+! CHECK: %[[TYPE_PTR:.*]] = fir.alloca !fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>> {uniq_name = "_QMpolyFtest_type_with_polymorphic_pointer_componentEa.addr"}
+! CHECK: %[[TYPE_PTR_LOAD:.*]] = fir.load %[[TYPE_PTR]] : !fir.ref<!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>>
+! CHECK: %[[ELEMENT:.*]] = fir.field_index element, !fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>
+! CHECK: %[[ELEMENT_DESC:.*]] = fir.coordinate_of %[[TYPE_PTR_LOAD]], %[[ELEMENT]] : (!fir.ptr<!fir.type<_QMpolyTwith_alloc{element:!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>}>>, !fir.field) -> !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
+! CHECK: %[[ZERO:.*]] = fir.zero_bits !fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>
+! CHECK: %[[ZERO_DESC:.*]] = fir.embox %[[ZERO]] : (!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>) -> !fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>
+! CHECK: fir.store %[[ZERO_DESC]] to %[[ELEMENT_DESC]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>
+! CHECK: %[[TYPE_DESC_P1:.*]] = fir.address_of(@_QMpolyE.dt.p1) : !fir.ref<!fir.type<{{.*}}>>
+! CHECK: %[[ELEMENT_DESC_CAST:.*]] = fir.convert %[[ELEMENT_DESC]] : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %[[TYPE_DESC_P1_CAST:.*]] = fir.convert %[[TYPE_DESC_P1]] : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<none> 
+! CHECK: %[[RANK:.*]] = arith.constant 0 : i32
+! CHECK: %[[CORANK:.*]] = arith.constant 0 : i32
+! CHECK: %{{.*}} = fir.call @_FortranAPointerNullifyDerived(%[[ELEMENT_DESC_CAST]], %[[TYPE_DESC_P1_CAST]], %[[RANK]], %[[CORANK]]) : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none
+! CHECK: %[[ELEMENT_DESC_CAST:.*]] = fir.convert %[[ELEMENT_DESC]] : (!fir.ref<!fir.class<!fir.ptr<!fir.type<_QMpolyTp1{a:i32,b:i32}>>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %{{.*}} = fir.call @_FortranAPointerAllocate(%[[ELEMENT_DESC_CAST]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 
 program test_alloc
   use poly
