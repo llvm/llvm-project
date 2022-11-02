@@ -1,6 +1,4 @@
 // REQUIRES: x86-registered-target, amdgpu-registered-target
-// See issue #58711
-// XFAIL: *
 
 // Check that clang unbundles the two bitcodes and links via llvm-link
 // RUN: rm -rf %t && mkdir %t
@@ -21,7 +19,7 @@
 // BITCODE: "{{.*}}llvm-link" "-o" "bundle1-hip-amdgcn-amd-amdhsa-gfx906.bc" "[[B1DEV2]]" "[[B2DEV2]]"
 
 // Check that clang unbundles the bitcode and archive and links via llvm-link
-// RUN: touch %t/libhipbundle.a
+// RUN: ar rc %t/libhipbundle.a
 // RUN: touch %t/bundle.bc
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx906 --hip-link \
