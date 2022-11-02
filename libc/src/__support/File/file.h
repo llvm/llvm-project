@@ -187,6 +187,14 @@ public:
 
   int flush_unlocked();
 
+  // Returns EOF on error and keeps the file unchanged.
+  int ungetc_unlocked(int c);
+
+  int ungetc(int c) {
+    FileLock lock(this);
+    return ungetc_unlocked(c);
+  }
+
   // Sets the internal buffer to |buffer| with buffering mode |mode|.
   // |size| is the size of |buffer|. This new |buffer| is owned by the
   // stream only if |owned| is true.
