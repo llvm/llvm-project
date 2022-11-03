@@ -74,7 +74,14 @@ FormatSection Parser::get_next_section() {
       section.output_ptr = GET_ARG_VAL_SIMPLEST(void *, conv_index);
     }
 
-    ++cur_pos;
+    // If the end of the format section is on the '\0'. This means we need to
+    // not advance the cur_pos and we should not count this has having a
+    // conversion.
+    if (str[cur_pos] != '\0') {
+      ++cur_pos;
+    } else {
+      section.has_conv = false;
+    }
 
     // If the format is a bracketed one, then we need to parse out the insides
     // of the brackets.
