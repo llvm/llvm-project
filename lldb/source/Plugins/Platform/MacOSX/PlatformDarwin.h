@@ -154,6 +154,10 @@ protected:
   ///     \b nullptr if process has no crash information annotations.
   StructuredData::ArraySP ExtractCrashInfoAnnotations(Process &process);
 
+  /// Extract the `Application Specific Information` messages from a crash
+  /// report.
+  StructuredData::DictionarySP ExtractAppSpecificInfo(Process &process);
+
   void ReadLibdispatchOffsetsAddress(Process *process);
 
   void ReadLibdispatchOffsets(Process *process);

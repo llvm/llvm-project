@@ -38,7 +38,7 @@ class PlatformProcessCrashInfoTestCase(TestBase):
 
         self.expect('process status --verbose',
                     patterns=["Extended Crash Information",
-                              "crash-info annotations",
+                              "Crash-Info Annotations",
                               "pointer being freed was not allocated"])
 
 

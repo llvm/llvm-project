@@ -66,6 +66,8 @@ public:
     return llvm::None;
   }
 
+  virtual StructuredData::DictionarySP GetMetadata() { return nullptr; }
+
 protected:
   friend class ScriptedThread;
   virtual lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() {
@@ -99,6 +101,8 @@ public:
   virtual llvm::Optional<std::string> GetRegisterContext() {
     return llvm::None;
   }
+
+  virtual StructuredData::ArraySP GetExtendedInfo() { return nullptr; }
 };
 } // namespace lldb_private
 

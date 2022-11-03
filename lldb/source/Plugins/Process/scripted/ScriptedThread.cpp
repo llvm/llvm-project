@@ -343,3 +343,16 @@ std::shared_ptr<DynamicRegisterInfo> ScriptedThread::GetDynamicRegisterInfo() {
 
   return m_register_info_sp;
 }
+
+StructuredData::ObjectSP ScriptedThread::FetchThreadExtendedInfo() {
+  CheckInterpreterAndScriptObject();
+
+  Status error;
+  StructuredData::ArraySP extended_info_sp = GetInterface()->GetExtendedInfo();
+
+  if (!extended_info_sp || !extended_info_sp->GetSize())
+    return ScriptedInterface::ErrorWithMessage<StructuredData::ObjectSP>(
+        LLVM_PRETTY_FUNCTION, "No extended information found", error);
+
+  return extended_info_sp;
+}

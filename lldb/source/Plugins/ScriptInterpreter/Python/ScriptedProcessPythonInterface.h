@@ -57,6 +57,8 @@ public:
 
   llvm::Optional<std::string> GetScriptedThreadPluginName() override;
 
+  StructuredData::DictionarySP GetMetadata() override;
+
 private:
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
 };
