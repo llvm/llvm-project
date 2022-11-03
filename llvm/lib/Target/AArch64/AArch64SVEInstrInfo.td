@@ -3784,4 +3784,13 @@ def EXTQ_ZZI : sve2p1_extq<"extq">;
 
 defm PMOV_PZI : sve2p1_vector_to_pred<"pmov">;
 defm PMOV_ZIP : sve2p1_pred_to_vector<"pmov">;
+
+defm ORQV_VPZ   : sve2p1_int_reduce_q<0b1100, "orqv">;
+defm EORQV_VPZ  : sve2p1_int_reduce_q<0b1101, "eorqv">;
+defm ANDQV_VPZ  : sve2p1_int_reduce_q<0b1110, "andqv">;
+defm ADDQV_VPZ  : sve2p1_int_reduce_q<0b0001, "addqv">;
+defm SMAXQV_VPZ : sve2p1_int_reduce_q<0b0100, "smaxqv">;
+defm UMAXQV_VPZ : sve2p1_int_reduce_q<0b0101, "umaxqv">;
+defm SMINQV_VPZ : sve2p1_int_reduce_q<0b0110, "sminqv">;
+defm UMINQV_VPZ : sve2p1_int_reduce_q<0b0111, "uminqv">;
 } // End HasSVE2p1_or_HasSME2p1

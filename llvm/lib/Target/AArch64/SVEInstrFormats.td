@@ -9501,3 +9501,32 @@ multiclass sve2p1_pred_to_vector<string mnemonic> {
   def : InstAlias<mnemonic # "\t$Zd, $Pn",
                  (!cast<Instruction>(NAME # _B) ZPRAny:$Zd, 0, PPR8:$Pn), 1>;
 }
+
+
+// SVE bitwise logical/add/min/max reductions (quadwords)
+class sve2p1_int_reduce_q<bits<2> sz, bits<4> opc, string mnemonic,
+                          RegisterOperand zpr_ty, string vec_sfx>
+    : I<(outs V128:$Vd), (ins PPR3bAny:$Pg, zpr_ty:$Zn),
+        mnemonic, "\t$Vd." # vec_sfx # ", $Pg, $Zn",
+        "", []>, Sched<[]> {
+  bits<5> Vd;
+  bits<5> Zn;
+  bits<3> Pg;
+  let Inst{31-24} = 0b00000100;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b0;
+  let Inst{20-19} = opc{3-2};
+  let Inst{18}    = 0b1;
+  let Inst{17-16} = opc{1-0};
+  let Inst{15-13} = 0b001;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Vd;
+}
+
+multiclass sve2p1_int_reduce_q<bits<4> opc, string mnemonic> {
+  def _B : sve2p1_int_reduce_q<0b00, opc, mnemonic, ZPR8,  "16b">;
+  def _H : sve2p1_int_reduce_q<0b01, opc, mnemonic, ZPR16, "8h">;
+  def _S : sve2p1_int_reduce_q<0b10, opc, mnemonic, ZPR32, "4s">;
+  def _D : sve2p1_int_reduce_q<0b11, opc, mnemonic, ZPR64, "2d">;
+}
