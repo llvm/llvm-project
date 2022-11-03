@@ -4705,6 +4705,54 @@ void TargetRegionEntryInfo::getTargetRegionEntryFnName(
   getTargetRegionEntryFnName(Name, ParentName, DeviceID, FileID, Line);
 }
 
+/// Loads all the offload entries information from the host IR
+/// metadata.
+void OpenMPIRBuilder::loadOffloadInfoMetadata(
+    Module &M, OffloadEntriesInfoManager &OffloadEntriesInfoManager) {
+  // If we are in target mode, load the metadata from the host IR. This code has
+  // to match the metadata creation in createOffloadEntriesAndInfoMetadata().
+
+  NamedMDNode *MD = M.getNamedMetadata(ompOffloadInfoName);
+  if (!MD)
+    return;
+
+  for (MDNode *MN : MD->operands()) {
+    auto &&GetMDInt = [MN](unsigned Idx) {
+      auto *V = cast<ConstantAsMetadata>(MN->getOperand(Idx));
+      return cast<ConstantInt>(V->getValue())->getZExtValue();
+    };
+
+    auto &&GetMDString = [MN](unsigned Idx) {
+      auto *V = cast<MDString>(MN->getOperand(Idx));
+      return V->getString();
+    };
+
+    switch (GetMDInt(0)) {
+    default:
+      llvm_unreachable("Unexpected metadata!");
+      break;
+    case OffloadEntriesInfoManager::OffloadEntryInfo::
+        OffloadingEntryInfoTargetRegion: {
+      TargetRegionEntryInfo EntryInfo(/*ParentName=*/GetMDString(3),
+                                      /*DeviceID=*/GetMDInt(1),
+                                      /*FileID=*/GetMDInt(2),
+                                      /*Line=*/GetMDInt(4));
+      OffloadEntriesInfoManager.initializeTargetRegionEntryInfo(
+          EntryInfo, /*Order=*/GetMDInt(5));
+      break;
+    }
+    case OffloadEntriesInfoManager::OffloadEntryInfo::
+        OffloadingEntryInfoDeviceGlobalVar:
+      OffloadEntriesInfoManager.initializeDeviceGlobalVarEntryInfo(
+          /*MangledName=*/GetMDString(1),
+          static_cast<OffloadEntriesInfoManager::OMPTargetGlobalVarEntryKind>(
+              /*Flags=*/GetMDInt(2)),
+          /*Order=*/GetMDInt(3));
+      break;
+    }
+  }
+}
+
 bool OffloadEntriesInfoManager::empty() const {
   return OffloadEntriesTargetRegion.empty() &&
          OffloadEntriesDeviceGlobalVar.empty();
