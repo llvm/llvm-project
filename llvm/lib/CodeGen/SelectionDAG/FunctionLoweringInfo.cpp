@@ -369,8 +369,7 @@ void FunctionLoweringInfo::clear() {
 
 /// CreateReg - Allocate a single virtual register for the given type.
 Register FunctionLoweringInfo::CreateReg(MVT VT, bool isDivergent) {
-  return RegInfo->createVirtualRegister(
-      MF->getSubtarget().getTargetLowering()->getRegClassFor(VT, isDivergent));
+  return RegInfo->createVirtualRegister(TLI->getRegClassFor(VT, isDivergent));
 }
 
 /// CreateRegs - Allocate the appropriate number of virtual registers of
@@ -381,8 +380,6 @@ Register FunctionLoweringInfo::CreateReg(MVT VT, bool isDivergent) {
 /// will assign registers for each member or element.
 ///
 Register FunctionLoweringInfo::CreateRegs(Type *Ty, bool isDivergent) {
-  const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
-
   SmallVector<EVT, 4> ValueVTs;
   ComputeValueVTs(*TLI, MF->getDataLayout(), Ty, ValueVTs);
 
