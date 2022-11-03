@@ -37,6 +37,10 @@ func main() {
   var optString_None : String? = nil
   var uoptString_None : String! = nil
 
+  var optTrue: Bool? = true
+  var optFalse: Bool? = false
+  var optNil: Bool? = nil
+
   print("//Set breakpoint here") // Set breakpoint here
 }
 
