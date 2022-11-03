@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/JSON.h"
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Expression/Expression.h"
@@ -546,6 +547,9 @@ public:
   /// process to tell the TypeSystem to send any diagnostics to the
   /// process so they can be surfaced to the user.
   virtual void DiagnoseWarnings(Process &process, Module &module) const;
+
+  virtual llvm::Optional<llvm::json::Value> ReportStatistics();
+
 protected:
   SymbolFile *m_sym_file = nullptr;
 };
