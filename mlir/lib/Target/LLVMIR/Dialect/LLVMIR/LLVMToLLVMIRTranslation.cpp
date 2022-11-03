@@ -258,6 +258,70 @@ static SmallVector<unsigned> extractPosition(ArrayRef<int64_t> indices) {
   return position;
 }
 
+/// Get the declaration of an overloaded llvm intrinsic. First we get the
+/// overloaded argument types and/or result type from the CallIntrinsicOp, and
+/// then use those to get the correct declaration of the overloaded intrinsic.
+static FailureOr<llvm::Function *>
+getOverloadedDeclaration(CallIntrinsicOp &op, llvm::Intrinsic::ID id,
+                         llvm::Module *module,
+                         LLVM::ModuleTranslation &moduleTranslation) {
+  SmallVector<llvm::Type *, 8> allArgTys;
+  for (Type type : op->getOperandTypes())
+    allArgTys.push_back(moduleTranslation.convertType(type));
+
+  llvm::Type *resTy;
+  if (op.getNumResults() == 0)
+    resTy = llvm::Type::getVoidTy(module->getContext());
+  else
+    resTy = moduleTranslation.convertType(op.getResult(0).getType());
+
+  // ATM we do not support variadic intrinsics.
+  llvm::FunctionType *ft = llvm::FunctionType::get(resTy, allArgTys, false);
+
+  SmallVector<llvm::Intrinsic::IITDescriptor, 8> table;
+  getIntrinsicInfoTableEntries(id, table);
+  ArrayRef<llvm::Intrinsic::IITDescriptor> tableRef = table;
+
+  SmallVector<llvm::Type *, 8> overloadedArgTys;
+  if (llvm::Intrinsic::matchIntrinsicSignature(ft, tableRef,
+                                               overloadedArgTys) !=
+      llvm::Intrinsic::MatchIntrinsicTypesResult::MatchIntrinsicTypes_Match) {
+    return op.emitOpError("intrinsic type is not a match");
+  }
+
+  ArrayRef<llvm::Type *> overloadedArgTysRef = overloadedArgTys;
+  return llvm::Intrinsic::getDeclaration(module, id, overloadedArgTysRef);
+}
+
+/// Builder for LLVM_CallIntrinsicOp
+static LogicalResult
+convertCallLLVMIntrinsicOp(CallIntrinsicOp &op, llvm::IRBuilderBase &builder,
+                           LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *module = builder.GetInsertBlock()->getModule();
+  llvm::Intrinsic::ID id =
+      llvm::Function::lookupIntrinsicID(op.getIntrinAttr());
+  if (!id)
+    return op.emitOpError()
+           << "couldn't find intrinsic: " << op.getIntrinAttr();
+
+  llvm::Function *fn = nullptr;
+  if (llvm::Intrinsic::isOverloaded(id)) {
+    auto fnOrFailure =
+        getOverloadedDeclaration(op, id, module, moduleTranslation);
+    if (failed(fnOrFailure))
+      return failure();
+    fn = fnOrFailure.value();
+  } else {
+    fn = llvm::Intrinsic::getDeclaration(module, id, {});
+  }
+
+  auto *inst =
+      builder.CreateCall(fn, moduleTranslation.lookupValues(op.getOperands()));
+  if (op.getNumResults() == 1)
+    moduleTranslation.mapValue(op->getResults().front()) = inst;
+  return success();
+}
+
 static LogicalResult
 convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
@@ -272,8 +336,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   // Emit function calls.  If the "callee" attribute is present, this is a
   // direct function call and we also need to look up the remapped function
   // itself.  Otherwise, this is an indirect call and the callee is the first
-  // operand, look it up as a normal value.  Return the llvm::Value representing
-  // the function result, which may be of llvm::VoidTy type.
+  // operand, look it up as a normal value.  Return the llvm::Value
+  // representing the function result, which may be of llvm::VoidTy type.
   auto convertCall = [&](Operation &op) -> llvm::Value * {
     auto operands = moduleTranslation.lookupValues(op.getOperands());
     ArrayRef<llvm::Value *> operandsRef(operands);
@@ -404,8 +468,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     return success();
   }
 
-  // Emit branches.  We need to look up the remapped blocks and ignore the block
-  // arguments that were transformed into PHI nodes.
+  // Emit branches.  We need to look up the remapped blocks and ignore the
+  // block arguments that were transformed into PHI nodes.
   if (auto brOp = dyn_cast<LLVM::BrOp>(opInst)) {
     llvm::BranchInst *branch =
         builder.CreateBr(moduleTranslation.lookupBlock(brOp.getSuccessor()));
