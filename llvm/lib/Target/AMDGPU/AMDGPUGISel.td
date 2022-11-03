@@ -227,10 +227,8 @@ def : GINodeEquiv<G_AMDGPU_TBUFFER_STORE_FORMAT, SItbuffer_store>;
 def : GINodeEquiv<G_AMDGPU_TBUFFER_STORE_FORMAT_D16, SItbuffer_store_d16>;
 
 // FIXME: Check MMO is atomic
-def : GINodeEquiv<G_AMDGPU_ATOMIC_INC, SIatomic_inc>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_DEC, SIatomic_dec>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_INC, atomic_inc_glue>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_DEC, atomic_dec_glue>;
+def : GINodeEquiv<G_ATOMICRMW_UINC_WRAP, atomic_load_uinc_wrap_glue>;
+def : GINodeEquiv<G_ATOMICRMW_UDEC_WRAP, atomic_load_udec_wrap_glue>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_FMIN, SIatomic_fmin>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_FMAX, SIatomic_fmax>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_FMIN, atomic_load_fmin_glue>;
