@@ -5364,13 +5364,13 @@ def int_x86_cmpccxadd32
     : ClangBuiltin<"__builtin_ia32_cmpccxadd32">,
       Intrinsic<[llvm_i32_ty],
                 [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-                [IntrArgMemOnly, ImmArg<ArgIndex<3>>]>;
+                [ImmArg<ArgIndex<3>>]>;
 
 def int_x86_cmpccxadd64
     : ClangBuiltin<"__builtin_ia32_cmpccxadd64">,
       Intrinsic<[llvm_i64_ty],
                 [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty, llvm_i32_ty],
-                [IntrArgMemOnly, ImmArg<ArgIndex<3>>]>;
+                [ImmArg<ArgIndex<3>>]>;
 }
 //===----------------------------------------------------------------------===//
 let TargetPrefix = "x86" in {
