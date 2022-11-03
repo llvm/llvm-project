@@ -144,4 +144,15 @@ ScriptedThreadPythonInterface::GetRegisterContext() {
   return obj->GetAsString()->GetValue().str();
 }
 
+StructuredData::ArraySP ScriptedThreadPythonInterface::GetExtendedInfo() {
+  Status error;
+  StructuredData::ArraySP arr =
+      Dispatch<StructuredData::ArraySP>("get_extended_info", error);
+
+  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, arr, error))
+    return {};
+
+  return arr;
+}
+
 #endif

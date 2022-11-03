@@ -462,6 +462,12 @@ class JSONCrashLogParser(CrashLogParser):
             self.parse_images(self.data['usedImages'])
             self.parse_main_image(self.data)
             self.parse_threads(self.data['threads'])
+            if 'asi' in self.data:
+                self.crashlog.asi = self.data['asi']
+            if 'asiBacktraces' in self.data:
+                self.parse_app_specific_backtraces(self.data['asiBacktraces'])
+            if 'lastExceptionBacktrace' in self.data:
+                self.crashlog.asb = self.data['lastExceptionBacktrace']
             self.parse_errors(self.data)
             thread = self.crashlog.threads[self.crashlog.crashed_thread_idx]
             reason = self.parse_crash_reason(self.data['exception'])
@@ -572,6 +578,31 @@ class JSONCrashLogParser(CrashLogParser):
             self.parse_frames(thread, json_thread.get('frames', []))
             self.crashlog.threads.append(thread)
             idx += 1
+
+    def parse_asi_backtrace(self, thread, bt):
+        for line in bt.split('\n'):
+            frame_match = TextCrashLogParser.frame_regex.search(line)
+            if not frame_match:
+                print("error: can't parse application specific backtrace.")
+                return False
+
+            (frame_id, frame_img_name, frame_addr,
+                frame_ofs) = frame_match.groups()
+
+            thread.add_ident(frame_img_name)
+            if frame_img_name not in self.crashlog.idents:
+                self.crashlog.idents.append(frame_img_name)
+            thread.frames.append(self.crashlog.Frame(int(frame_id), int(
+                frame_addr, 0), frame_ofs))
+
+        return True
+
+    def parse_app_specific_backtraces(self, json_app_specific_bts):
+        for idx, backtrace in enumerate(json_app_specific_bts):
+            thread = self.crashlog.Thread(idx, True)
+            thread.queue = "Application Specific Backtrace"
+            if self.parse_asi_backtrace(thread, backtrace):
+                self.crashlog.threads.append(thread)
 
     def parse_thread_registers(self, json_thread_state, prefix=None):
         registers = dict()
@@ -1102,8 +1133,8 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result)
             run_options.SetEchoCommands(True)
 
             commands_stream = lldb.SBStream()
-            commands_stream.Print("process status\n")
-            commands_stream.Print("thread backtrace\n")
+            commands_stream.Print("process status --verbose\n")
+            commands_stream.Print("thread backtrace --extended true\n")
             error = debugger.SetInputString(commands_stream.GetData())
             if error.Success():
                 debugger.RunCommandInterpreter(True, False, run_options, 0, False, True)

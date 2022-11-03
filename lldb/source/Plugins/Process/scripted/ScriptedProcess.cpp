@@ -485,6 +485,19 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos() {
   return loaded_images_sp;
 }
 
+lldb_private::StructuredData::DictionarySP ScriptedProcess::GetMetadata() {
+  CheckInterpreterAndScriptObject();
+
+  StructuredData::DictionarySP metadata_sp = GetInterface().GetMetadata();
+
+  Status error;
+  if (!metadata_sp || !metadata_sp->GetSize())
+    return ScriptedInterface::ErrorWithMessage<StructuredData::DictionarySP>(
+        LLVM_PRETTY_FUNCTION, "No metadata.", error);
+
+  return metadata_sp;
+}
+
 ScriptedProcessInterface &ScriptedProcess::GetInterface() const {
   return m_interpreter->GetScriptedProcessInterface();
 }
