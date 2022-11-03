@@ -10375,7 +10375,7 @@ SDValue SITargetLowering::performFCanonicalizeCombine(
   // If it's free to do so, push canonicalizes further up the source, which may
   // find a canonical source.
   //
-  // TODO: More opcodes. Note this is unsafe for the the _ieee minnum/maxnum for
+  // TODO: More opcodes. Note this is unsafe for the _ieee minnum/maxnum for
   // sNaNs.
   if (SrcOpc == ISD::FMINNUM || SrcOpc == ISD::FMAXNUM) {
     auto *CRHS = dyn_cast<ConstantFPSDNode>(N0.getOperand(1));
