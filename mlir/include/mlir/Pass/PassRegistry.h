@@ -231,7 +231,8 @@ struct PassPipelineCLParserImpl;
 /// options for each of the passes and pipelines that have been registered with
 /// the pass registry; Meaning that `-cse` will refer to the CSE pass in MLIR.
 /// It also registers an argument, `pass-pipeline`, that supports parsing a
-/// textual description of a pipeline.
+/// textual description of a pipeline. This option is mutually exclusive with
+/// the individual pass options.
 class PassPipelineCLParser {
 public:
   /// Construct a pass pipeline parser with the given command line description.
@@ -254,6 +255,8 @@ public:
 
 private:
   std::unique_ptr<detail::PassPipelineCLParserImpl> impl;
+
+  llvm::cl::opt<std::string> passPipeline;
 };
 
 /// This class implements a command-line parser specifically for MLIR pass
