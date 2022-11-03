@@ -452,7 +452,7 @@ func.func @dfs_block_order(%arg0: i32) -> (i32) {
 // CHECK-LABEL: func @ceilf(
 // CHECK-SAME: f32
 func.func @ceilf(%arg0 : f32) {
-  // CHECK: "llvm.intr.ceil"(%arg0) : (f32) -> f32
+  // CHECK: llvm.intr.ceil(%arg0) : (f32) -> f32
   %0 = math.ceil %arg0 : f32
   func.return
 }
@@ -462,7 +462,7 @@ func.func @ceilf(%arg0 : f32) {
 // CHECK-LABEL: func @floorf(
 // CHECK-SAME: f32
 func.func @floorf(%arg0 : f32) {
-  // CHECK: "llvm.intr.floor"(%arg0) : (f32) -> f32
+  // CHECK: llvm.intr.floor(%arg0) : (f32) -> f32
   %0 = math.floor %arg0 : f32
   func.return
 }
@@ -503,9 +503,9 @@ func.func private @zero_result_func()
 // CHECK-SAME: %[[ARG0:.*]]: f32
 // CHECK-SAME: %[[ARG1:.*]]: vector<4xf32>
 func.func @fmaf(%arg0: f32, %arg1: vector<4xf32>) {
-  // CHECK: %[[S:.*]] = "llvm.intr.fma"(%[[ARG0]], %[[ARG0]], %[[ARG0]]) : (f32, f32, f32) -> f32
+  // CHECK: %[[S:.*]] = llvm.intr.fma(%[[ARG0]], %[[ARG0]], %[[ARG0]]) : (f32, f32, f32) -> f32
   %0 = math.fma %arg0, %arg0, %arg0 : f32
-  // CHECK: %[[V:.*]] = "llvm.intr.fma"(%[[ARG1]], %[[ARG1]], %[[ARG1]]) : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  // CHECK: %[[V:.*]] = llvm.intr.fma(%[[ARG1]], %[[ARG1]], %[[ARG1]]) : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> vector<4xf32>
   %1 = math.fma %arg1, %arg1, %arg1 : vector<4xf32>
   func.return
 }
