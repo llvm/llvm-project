@@ -459,97 +459,6 @@ public:
     return getMemoryEffects(F).onlyReadsMemory();
   }
 
-  /// getModRefInfo (for call sites) - Return information about whether
-  /// a particular call site modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc);
-
-  /// getModRefInfo (for call sites) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const CallBase *Call, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(Call, MemoryLocation(P, Size));
-  }
-
-  /// getModRefInfo (for loads) - Return information about whether
-  /// a particular load modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const LoadInst *L, const MemoryLocation &Loc);
-
-  /// getModRefInfo (for loads) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const LoadInst *L, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(L, MemoryLocation(P, Size));
-  }
-
-  /// getModRefInfo (for stores) - Return information about whether
-  /// a particular store modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const StoreInst *S, const MemoryLocation &Loc);
-
-  /// getModRefInfo (for stores) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const StoreInst *S, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(S, MemoryLocation(P, Size));
-  }
-
-  /// getModRefInfo (for fences) - Return information about whether
-  /// a particular store modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const FenceInst *S, const MemoryLocation &Loc);
-
-  /// getModRefInfo (for fences) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const FenceInst *S, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(S, MemoryLocation(P, Size));
-  }
-
-  /// getModRefInfo (for cmpxchges) - Return information about whether
-  /// a particular cmpxchg modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const AtomicCmpXchgInst *CX,
-                           const MemoryLocation &Loc);
-
-  /// getModRefInfo (for cmpxchges) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const AtomicCmpXchgInst *CX, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(CX, MemoryLocation(P, Size));
-  }
-
-  /// getModRefInfo (for atomicrmws) - Return information about whether
-  /// a particular atomicrmw modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const AtomicRMWInst *RMW, const MemoryLocation &Loc);
-
-  /// getModRefInfo (for atomicrmws) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const AtomicRMWInst *RMW, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(RMW, MemoryLocation(P, Size));
-  }
-
-  /// getModRefInfo (for va_args) - Return information about whether
-  /// a particular va_arg modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const VAArgInst *I, const MemoryLocation &Loc);
-
-  /// getModRefInfo (for va_args) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const VAArgInst *I, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(I, MemoryLocation(P, Size));
-  }
-
-  /// getModRefInfo (for catchpads) - Return information about whether
-  /// a particular catchpad modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const CatchPadInst *I, const MemoryLocation &Loc);
-
-  /// getModRefInfo (for catchpads) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const CatchPadInst *I, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(I, MemoryLocation(P, Size));
-  }
-
-  /// getModRefInfo (for catchrets) - Return information about whether
-  /// a particular catchret modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const CatchReturnInst *I, const MemoryLocation &Loc);
-
-  /// getModRefInfo (for catchrets) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const CatchReturnInst *I, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(I, MemoryLocation(P, Size));
-  }
-
   /// Check whether or not an instruction may read or write the optionally
   /// specified memory location.
   ///
@@ -575,11 +484,6 @@ public:
   /// Return information about whether a call and an instruction may refer to
   /// the same memory locations.
   ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call);
-
-  /// Return information about whether two call sites may refer to the same set
-  /// of memory locations. See the AA documentation for details:
-  ///   http://llvm.org/docs/AliasAnalysis.html#ModRefInfo
-  ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2);
 
   /// Return information about whether a particular call site modifies
   /// or reads the specified memory location \p MemLoc before instruction \p I
@@ -704,12 +608,6 @@ public:
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
                                bool IgnoreLocals = false) {
     return AA.getModRefInfoMask(Loc, AAQI, IgnoreLocals);
-  }
-  ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc) {
-    return AA.getModRefInfo(Call, Loc, AAQI);
-  }
-  ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2) {
-    return AA.getModRefInfo(Call1, Call2, AAQI);
   }
   ModRefInfo getModRefInfo(const Instruction *I,
                            const Optional<MemoryLocation> &OptLoc) {
