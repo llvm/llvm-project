@@ -265,6 +265,39 @@ define i32 @load_after_memset_0(ptr %a) {
   ret i32 %v
 }
 
+define float @load_after_memset_0_float(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_float(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    ret float [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %v = load float, ptr %a
+  ret float %v
+}
+
+define i27 @load_after_memset_0_non_byte_sized(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_non_byte_sized(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load i27, ptr [[A]], align 4
+; CHECK-NEXT:    ret i27 [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %v = load i27, ptr %a
+  ret i27 %v
+}
+
+define <4 x i8> @load_after_memset_0_vec(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_vec(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load <4 x i8>, ptr [[A]], align 4
+; CHECK-NEXT:    ret <4 x i8> [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %v = load <4 x i8>, ptr %a
+  ret <4 x i8> %v
+}
+
 define i32 @load_after_memset_1(ptr %a) {
 ; CHECK-LABEL: @load_after_memset_1(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 1, i64 16, i1 false)
@@ -274,6 +307,39 @@ define i32 @load_after_memset_1(ptr %a) {
   call void @llvm.memset.p0.i64(ptr %a, i8 1, i64 16, i1 false)
   %v = load i32, ptr %a
   ret i32 %v
+}
+
+define float @load_after_memset_1_float(ptr %a) {
+; CHECK-LABEL: @load_after_memset_1_float(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 1, i64 16, i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    ret float [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 1, i64 16, i1 false)
+  %v = load float, ptr %a
+  ret float %v
+}
+
+define i27 @load_after_memset_1_non_byte_sized(ptr %a) {
+; CHECK-LABEL: @load_after_memset_1_non_byte_sized(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 1, i64 16, i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load i27, ptr [[A]], align 4
+; CHECK-NEXT:    ret i27 [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 1, i64 16, i1 false)
+  %v = load i27, ptr %a
+  ret i27 %v
+}
+
+define <4 x i8> @load_after_memset_1_vec(ptr %a) {
+; CHECK-LABEL: @load_after_memset_1_vec(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 1, i64 16, i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load <4 x i8>, ptr [[A]], align 4
+; CHECK-NEXT:    ret <4 x i8> [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 1, i64 16, i1 false)
+  %v = load <4 x i8>, ptr %a
+  ret <4 x i8> %v
 }
 
 define i32 @load_after_memset_unknown(ptr %a, i8 %byte) {
@@ -348,6 +414,39 @@ define i256 @load_after_memset_0_too_small(ptr %a) {
   call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
   %v = load i256, ptr %a
   ret i256 %v
+}
+
+define i32 @load_after_memset_0_unknown_length(ptr %a, i64 %len) {
+; CHECK-LABEL: @load_after_memset_0_unknown_length(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[A:%.*]], i8 0, i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 %len, i1 false)
+  %v = load i32, ptr %a
+  ret i32 %v
+}
+
+define i32 @load_after_memset_0_atomic(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_atomic(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load atomic i32, ptr [[A]] seq_cst, align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %v = load atomic i32, ptr %a seq_cst, align 4
+  ret i32 %v
+}
+
+define <vscale x 1 x i32> @load_after_memset_0_scalable(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_scalable(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load <vscale x 1 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    ret <vscale x 1 x i32> [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %v = load <vscale x 1 x i32>, ptr %a
+  ret <vscale x 1 x i32> %v
 }
 
 declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)
