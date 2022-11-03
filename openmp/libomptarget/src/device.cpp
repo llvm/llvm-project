@@ -366,9 +366,12 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
     if (Size) {
       // When allocating under unified_shared_memory, amdgpu plugin
       // can optimize memory access latency by registering allocated
-      // memory as coarse_grain
-      if (HstPtrBegin && RTL->set_coarse_grain_mem_region)
+      // memory as coarse_grain. The usage of coarse grained memory can be overriden 
+      // by setting the env-var OMPX_DISABLE_USM_MAPS=1
+      if (!PM->RTLs.EnableFineGrainedMemory &&
+          (HstPtrBegin && RTL->set_coarse_grain_mem_region)){
         RTL->set_coarse_grain_mem_region(HstPtrBegin, Size);
+      }
 
       if (!PM->RTLs.NoUSMMapChecks) {
         // even under unified_shared_memory need to check for correctness of

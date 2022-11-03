@@ -111,7 +111,15 @@ void RTLsTy::loadRTLs() {
     if (NoMapChecksStr)
       NoUSMMapChecks = std::stoi(NoMapChecksStr);
 
-  DP("Loading RTLs...\n");
+  // Parse environement variable OMPX_DISABLE_USM_MAPS (if set)
+  if (auto *disable_usm_maps{std::getenv("OMPX_DISABLE_USM_MAPS")}){
+    auto Value{std::stoi(disable_usm_maps)};
+    if(Value > 0){
+      EnableFineGrainedMemory = true;
+    }
+  }
+
+    DP("Loading RTLs...\n");
 
   // Attempt to open all the plugins and, if they exist, check if the interface
   // is correct and if they are supporting any devices.
