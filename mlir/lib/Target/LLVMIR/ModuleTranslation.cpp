@@ -984,6 +984,25 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
         llvmArg.addAttrs(llvm::AttrBuilder(llvmArg.getContext())
                              .addAttribute(llvm::Attribute::NoUndef));
       }
+      if (auto attr = function.getArgAttrOfType<UnitAttr>(
+              argIdx, LLVMDialect::getSExtAttrName())) {
+        // llvm.signext can be added to any integer argument type.
+        if (!mlirArgTy.isa<mlir::IntegerType>())
+          return function.emitError(
+              "llvm.signext attribute attached to LLVM non-integer argument");
+        llvmArg.addAttrs(llvm::AttrBuilder(llvmArg.getContext())
+                             .addAttribute(llvm::Attribute::SExt));
+      }
+      if (auto attr = function.getArgAttrOfType<UnitAttr>(
+              argIdx, LLVMDialect::getZExtAttrName())) {
+        // llvm.zeroext can be added to any integer argument type.
+        if (!mlirArgTy.isa<mlir::IntegerType>())
+          return function.emitError(
+              "llvm.zeroext attribute attached to LLVM non-integer argument");
+        llvmArg.addAttrs(llvm::AttrBuilder(llvmArg.getContext())
+                             .addAttribute(llvm::Attribute::ZExt));
+      }
+
       ++argIdx;
     }
 

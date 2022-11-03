@@ -1108,6 +1108,22 @@ llvm.func @inallocaattr(%arg0: !llvm.ptr<i32> {llvm.inalloca = i32}) {
 // CHECK-LABEL: declare void @inallocaattr_decl(ptr inalloca(i32))
 llvm.func @inallocaattr_decl(!llvm.ptr<i32> {llvm.inalloca = i32})
 
+// CHECK-LABEL: define void @signextattr(i1 signext %
+llvm.func @signextattr(%arg0: i1 {llvm.signext}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @signextattr_decl(i1 signext)
+llvm.func @signextattr_decl(i1 {llvm.signext})
+
+// CHECK-LABEL: define void @zeroextattr(i1 zeroext %
+llvm.func @zeroextattr(%arg0: i1 {llvm.zeroext}) {
+  llvm.return
+}
+
+// CHECK-LABEL: declare void @zeroextattr_decl(i1 zeroext)
+llvm.func @zeroextattr_decl(i1 {llvm.zeroext})
+
 // CHECK-LABEL: @llvm_varargs(...)
 llvm.func @llvm_varargs(...)
 
