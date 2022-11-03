@@ -48,7 +48,7 @@ namespace llvm {
     Function *LabelFn;       ///< llvm.dbg.label
     Function *AddrFn;        ///< llvm.dbg.addr
 
-    SmallVector<Metadata *, 4> AllEnumTypes;
+    SmallVector<TrackingMDNodeRef, 4> AllEnumTypes;
     /// Track the RetainTypes, since they can be updated later on.
     SmallVector<TrackingMDNodeRef, 4> AllRetainTypes;
     SmallVector<Metadata *, 4> AllSubprograms;
