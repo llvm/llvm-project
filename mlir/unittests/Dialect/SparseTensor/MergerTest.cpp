@@ -420,7 +420,7 @@ protected:
 /// Tests with operation on sparse output.
 ///
 
-class MergerTest3T1L_SO : public MergerTestBase {
+class MergerTest3T1LSo : public MergerTestBase {
 protected:
   // Our three tensors (two inputs, one output, one synthetic).
   const unsigned t0 = 0, t1 = 1, t2 = 2, t3 = 3;
@@ -428,7 +428,7 @@ protected:
   // Our single loop.
   const unsigned l0 = 0;
 
-  MergerTest3T1L_SO() : MergerTestBase(3, 1) {
+  MergerTest3T1LSo() : MergerTestBase(3, 1) {
     EXPECT_TRUE(merger.getOutTensorID() == t2);
     EXPECT_TRUE(merger.getSynTensorID() == t3);
 
@@ -494,7 +494,7 @@ FOREVERY_PAIR_OF_COMMON_CONJ_CONJ_BINOP(IMPL_MERGER_TEST_CONJ_CONJ_UNDEF)
 ///   lat( i_03_U / (tensor_0 * tensor_1 * output_tensor2) )
 /// }
 #define IMPL_MERGER_TEST_CONJ_CONJ_SPARSE_OUT(CONJ1, CONJ2)                    \
-  TEST_F(MergerTest3T1L_SO, vector_##CONJ1##_##CONJ2) {                        \
+  TEST_F(MergerTest3T1LSo, vector_##CONJ1##_##CONJ2) {                         \
     auto em = CONJ1##Expr(t0, t1);                                             \
     auto e = CONJ2##Expr(em, t2);                                              \
     auto p0 = tensorPattern(t0);                                               \
