@@ -269,8 +269,7 @@ define i32 @test_nouseful_bits(i8 %a, i32 %b) {
 ; CHECK-NEXT:    lsl w8, w8, #8
 ; CHECK-NEXT:    mov w9, w8
 ; CHECK-NEXT:    bfxil w9, w0, #0, #8
-; CHECK-NEXT:    bfi w8, w9, #16, #16
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    orr w0, w8, w9, lsl #16
 ; CHECK-NEXT:    ret
   %conv = zext i8 %a to i32     ;   0  0  0  A
   %shl = shl i32 %b, 8          ;   B2 B1 B0 0
@@ -612,10 +611,9 @@ define i64 @test_and_extended_shift_with_imm(i64 %0) {
 define i64 @test_orr_not_bfxil_i64(i64 %0) {
 ; CHECK-LABEL: test_orr_not_bfxil_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr x8, x0, #1
-; CHECK-NEXT:    and x8, x8, #0x3f80
-; CHECK-NEXT:    bfxil x8, x0, #0, #7
-; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    ubfx x8, x0, #8, #7
+; CHECK-NEXT:    and x9, x0, #0x7f
+; CHECK-NEXT:    orr x0, x9, x8, lsl #7
 ; CHECK-NEXT:    ret
   %2 = and i64 %0, 127
   %3 = lshr i64 %0, 1
@@ -628,10 +626,9 @@ define i64 @test_orr_not_bfxil_i64(i64 %0) {
 define i32 @test_orr_not_bfxil_i32(i32 %0) {
 ; CHECK-LABEL: test_orr_not_bfxil_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr w8, w0, #1
-; CHECK-NEXT:    and w8, w8, #0x3f80
-; CHECK-NEXT:    bfxil w8, w0, #0, #7
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    ubfx w8, w0, #8, #7
+; CHECK-NEXT:    and w9, w0, #0x7f
+; CHECK-NEXT:    orr w0, w9, w8, lsl #7
 ; CHECK-NEXT:    ret
   %2 = and i32 %0, 127
   %3 = lshr i32 %0, 1

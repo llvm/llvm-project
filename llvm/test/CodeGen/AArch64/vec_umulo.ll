@@ -299,14 +299,15 @@ define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 ; CHECK-NEXT:    fmov d2, d0
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    and v1.8b, v2.8b, v1.8b
-; CHECK-NEXT:    umov w8, v1.h[1]
-; CHECK-NEXT:    umov w9, v1.h[0]
+; CHECK-NEXT:    umov w8, v1.h[0]
+; CHECK-NEXT:    umov w9, v1.h[1]
 ; CHECK-NEXT:    umov w10, v1.h[2]
 ; CHECK-NEXT:    umov w11, v1.h[3]
-; CHECK-NEXT:    bfi w9, w8, #1, #1
-; CHECK-NEXT:    bfi w9, w10, #2, #1
-; CHECK-NEXT:    bfi w9, w11, #3, #29
-; CHECK-NEXT:    and w8, w9, #0xf
+; CHECK-NEXT:    and w8, w8, #0x1
+; CHECK-NEXT:    bfi w8, w9, #1, #1
+; CHECK-NEXT:    bfi w8, w10, #2, #1
+; CHECK-NEXT:    orr w8, w8, w11, lsl #3
+; CHECK-NEXT:    and w8, w8, #0xf
 ; CHECK-NEXT:    strb w8, [x0]
 ; CHECK-NEXT:    ret
   %t = call {<4 x i1>, <4 x i1>} @llvm.umul.with.overflow.v4i1(<4 x i1> %a0, <4 x i1> %a1)
