@@ -1253,13 +1253,6 @@ bool DIExpression::startsWithDeref() const {
   return getNumElements() > 0 && getElement(0) == dwarf::DW_OP_deref;
 }
 
-DIAssignID *DIAssignID::getImpl(LLVMContext &Context, StorageType Storage,
-                                bool ShouldCreate) {
-  // Uniqued DIAssignID are not supported as the instance address *is* the ID.
-  assert(Storage != StorageType::Uniqued && "uniqued DIAssignID unsupported");
-  return new (0u, Storage) DIAssignID(Context, Storage);
-}
-
 unsigned DIExpression::ExprOperand::getSize() const {
   uint64_t Op = getOp();
 
