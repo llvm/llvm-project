@@ -7,11 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/ValueLattice.h"
+#include "llvm/Analysis/ConstantFolding.h"
 
 namespace llvm {
 Constant *
 ValueLatticeElement::getCompare(CmpInst::Predicate Pred, Type *Ty,
-                                const ValueLatticeElement &Other) const {
+                                const ValueLatticeElement &Other,
+                                const DataLayout &DL) const {
   // Not yet resolved.
   if (isUnknown() || Other.isUnknown())
     return nullptr;
@@ -22,7 +24,8 @@ ValueLatticeElement::getCompare(CmpInst::Predicate Pred, Type *Ty,
     return nullptr;
 
   if (isConstant() && Other.isConstant())
-    return ConstantExpr::getCompare(Pred, getConstant(), Other.getConstant());
+    return ConstantFoldCompareInstOperands(Pred, getConstant(),
+                                           Other.getConstant(), DL);
 
   if (ICmpInst::isEquality(Pred)) {
     // not(C) != C => true, not(C) == C => false.

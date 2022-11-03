@@ -1042,7 +1042,7 @@ void SCCPInstVisitor::visitCmpInst(CmpInst &I) {
   auto V1State = getValueState(Op1);
   auto V2State = getValueState(Op2);
 
-  Constant *C = V1State.getCompare(I.getPredicate(), I.getType(), V2State);
+  Constant *C = V1State.getCompare(I.getPredicate(), I.getType(), V2State, DL);
   if (C) {
     ValueLatticeElement CV;
     CV.markConstant(C);
