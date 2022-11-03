@@ -164,6 +164,7 @@ protected:
   void printTypedVectorList(const MCInst *MI, unsigned OpNum,
                             const MCSubtargetInfo &STI, raw_ostream &O);
 
+  template <unsigned Scale = 1>
   void printVectorIndex(const MCInst *MI, unsigned OpNum,
                         const MCSubtargetInfo &STI, raw_ostream &O);
   void printMatrixIndex(const MCInst *MI, unsigned OpNum,
