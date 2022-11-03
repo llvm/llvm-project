@@ -4646,6 +4646,24 @@ bool LLParser::parseDILocation(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
+/// parseDIAssignID:
+///   ::= distinct !DIAssignID()
+bool LLParser::parseDIAssignID(MDNode *&Result, bool IsDistinct) {
+  if (!IsDistinct)
+    return Lex.Error("missing 'distinct', required for !DIAssignID()");
+
+  Lex.Lex();
+
+  // Now eat the parens.
+  if (parseToken(lltok::lparen, "expected '(' here"))
+    return true;
+  if (parseToken(lltok::rparen, "expected ')' here"))
+    return true;
+
+  Result = DIAssignID::getDistinct(Context);
+  return false;
+}
+
 /// parseGenericDINode:
 ///   ::= !GenericDINode(tag: 15, header: "...", operands: {...})
 bool LLParser::parseGenericDINode(MDNode *&Result, bool IsDistinct) {
