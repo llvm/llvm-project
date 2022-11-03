@@ -4020,7 +4020,7 @@ void BoUpSLP::reorderNodeWithReuses(TreeEntry &TE, ArrayRef<int> Mask) const {
   for (auto *It = TE.ReuseShuffleIndices.begin(),
             *End = TE.ReuseShuffleIndices.end();
        It != End; std::advance(It, Sz))
-    std::iota(It, std::next(It + Sz), 0);
+    std::iota(It, std::next(It, Sz), 0);
 }
 
 void BoUpSLP::reorderTopToBottom() {
