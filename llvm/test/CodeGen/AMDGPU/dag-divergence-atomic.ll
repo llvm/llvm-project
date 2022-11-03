@@ -430,8 +430,9 @@ define protected amdgpu_kernel void @inc(ptr addrspace(1) %p, ptr addrspace(1) %
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_atomic_inc v2, v0, v0, s[0:1] glc
+; CHECK-NEXT:    global_atomic_inc v2, v0, v1, s[0:1] glc
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s3
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
@@ -439,7 +440,7 @@ define protected amdgpu_kernel void @inc(ptr addrspace(1) %p, ptr addrspace(1) %
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = call i32 @llvm.amdgcn.atomic.inc.i32.p1(ptr addrspace(1) %p, i32 0, i32 0, i32 0, i1 false)
+  %n32 = atomicrmw uinc_wrap ptr addrspace(1) %p, i32 1 monotonic
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -451,8 +452,9 @@ define protected amdgpu_kernel void @dec(ptr addrspace(1) %p, ptr addrspace(1) %
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
+; CHECK-NEXT:    v_mov_b32_e32 v1, 1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_atomic_dec v2, v0, v0, s[0:1] glc
+; CHECK-NEXT:    global_atomic_dec v2, v0, v1, s[0:1] glc
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s3
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
@@ -460,7 +462,7 @@ define protected amdgpu_kernel void @dec(ptr addrspace(1) %p, ptr addrspace(1) %
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1.0
 ; CHECK-NEXT:    global_store_dword v[0:1], v2, off
 ; CHECK-NEXT:    s_endpgm
-  %n32 = call i32 @llvm.amdgcn.atomic.dec.i32.p1(ptr addrspace(1) %p, i32 0, i32 0, i32 0, i1 false)
+  %n32 = atomicrmw udec_wrap ptr addrspace(1) %p, i32 1 monotonic
   %n64 = zext i32 %n32 to i64
   %p1 = getelementptr inbounds %S, ptr addrspace(1) %q, i64 %n64, i32 0
   store float 1.0, ptr addrspace(1) %p1
@@ -952,8 +954,6 @@ define protected amdgpu_kernel void @buffer.ptr.atomic.fmax(ptr addrspace(8) inr
   ret void
 }
 
-declare i32 @llvm.amdgcn.atomic.inc.i32.p1(ptr addrspace(1), i32, i32 immarg, i32 immarg, i1 immarg)
-declare i32 @llvm.amdgcn.atomic.dec.i32.p1(ptr addrspace(1), i32, i32 immarg, i32 immarg, i1 immarg)
 declare double @llvm.amdgcn.global.atomic.fmin.f64.p1.f64(ptr addrspace(1), double)
 declare double @llvm.amdgcn.global.atomic.fmax.f64.p1.f64(ptr addrspace(1), double)
 declare i32 @llvm.amdgcn.raw.ptr.buffer.atomic.swap.i32(i32, ptr addrspace(8), i32, i32, i32)
