@@ -148,6 +148,7 @@ AARCH64_ARCH_EXT_NAME("flagm",        AArch64::AEK_FLAGM,       "+flagm",       
 AARCH64_ARCH_EXT_NAME("sme",          AArch64::AEK_SME,         "+sme",          "-sme")
 AARCH64_ARCH_EXT_NAME("sme-f64f64",   AArch64::AEK_SMEF64F64,   "+sme-f64f64",   "-sme-f64f64")
 AARCH64_ARCH_EXT_NAME("sme-i16i64",   AArch64::AEK_SMEI16I64,   "+sme-i16i64",   "-sme-i16i64")
+AARCH64_ARCH_EXT_NAME("sme-f16f16",   AArch64::AEK_SMEF16F16,   "+sme-f16f16",   "-sme-f16f16")
 AARCH64_ARCH_EXT_NAME("sme2",         AArch64::AEK_SME2,        "+sme2",         "-sme2")
 AARCH64_ARCH_EXT_NAME("sme2p1",       AArch64::AEK_SME2p1,      "+sme2p1",       "-sme2p1")
 AARCH64_ARCH_EXT_NAME("hbc",          AArch64::AEK_HBC,         "+hbc",          "-hbc")

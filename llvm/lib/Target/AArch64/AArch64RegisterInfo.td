@@ -1595,6 +1595,7 @@ class MatrixTileOperand<int EltSize, int NumBitsForTile, RegisterClass RC>
   let PrintMethod = "printMatrixTile";
 }
 
+def TileOp16  : MatrixTileOperand<16, 1, MPR16>;
 def TileOp32  : MatrixTileOperand<32, 2, MPR32>;
 def TileOp64  : MatrixTileOperand<64, 3, MPR64>;
 
