@@ -715,7 +715,8 @@ bool GenericKind::Is(GenericKind::OtherKind x) const {
   return y && *y == x;
 }
 
-bool SymbolOffsetCompare::operator()(const SymbolRef &x, const SymbolRef &y) const {
+bool SymbolOffsetCompare::operator()(
+    const SymbolRef &x, const SymbolRef &y) const {
   const Symbol *xCommon{FindCommonBlockContaining(*x)};
   const Symbol *yCommon{FindCommonBlockContaining(*y)};
   if (xCommon) {

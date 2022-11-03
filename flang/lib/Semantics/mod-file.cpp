@@ -687,7 +687,7 @@ void ModFileWriter::PutProcEntity(llvm::raw_ostream &os, const Symbol &symbol) {
     return;
   }
   const auto &details{symbol.get<ProcEntityDetails>()};
-  const ProcInterface &interface{details.interface()};
+  const ProcInterface &interface { details.interface() };
   Attrs attrs{symbol.attrs()};
   if (details.passName()) {
     attrs.reset(Attr::PASS);

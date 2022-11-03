@@ -17,7 +17,7 @@ class Location;
 namespace fir {
 class FirOpBuilder;
 class RecordType;
-}
+} // namespace fir
 
 namespace fir::runtime {
 

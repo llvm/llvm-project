@@ -2307,17 +2307,17 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(
     const parser::ProcedureDesignator &pd, ActualArguments &&arguments,
     bool isSubroutine, bool mightBeStructureConstructor)
     -> std::optional<CalleeAndArguments> {
-  return common::visit(
-      common::visitors{
-          [&](const parser::Name &name) {
-            return GetCalleeAndArguments(name, std::move(arguments),
-                isSubroutine, mightBeStructureConstructor);
-          },
-          [&](const parser::ProcComponentRef &pcr) {
-            return AnalyzeProcedureComponentRef(
-                pcr, std::move(arguments), isSubroutine);
-          },
-      },
+  return common::visit(common::visitors{
+                           [&](const parser::Name &name) {
+                             return GetCalleeAndArguments(name,
+                                 std::move(arguments), isSubroutine,
+                                 mightBeStructureConstructor);
+                           },
+                           [&](const parser::ProcComponentRef &pcr) {
+                             return AnalyzeProcedureComponentRef(
+                                 pcr, std::move(arguments), isSubroutine);
+                           },
+                       },
       pd.u);
 }
 
@@ -3417,26 +3417,26 @@ void ArgumentAnalyzer::Analyze(
   // be detected and represented (they're not expressions).
   // TODO: C1534: Don't allow a "restricted" specific intrinsic to be passed.
   std::optional<ActualArgument> actual;
-  common::visit(
-      common::visitors{
-          [&](const common::Indirection<parser::Expr> &x) {
-            actual = AnalyzeExpr(x.value());
-            SetArgSourceLocation(actual, x.value().source);
-          },
-          [&](const parser::AltReturnSpec &label) {
-            if (!isSubroutine) {
-              context_.Say("alternate return specification may not appear on"
-                           " function reference"_err_en_US);
-            }
-            actual = ActualArgument(label.v);
-          },
-          [&](const parser::ActualArg::PercentRef &) {
-            context_.Say("%REF() intrinsic for arguments"_todo_en_US);
-          },
-          [&](const parser::ActualArg::PercentVal &) {
-            context_.Say("%VAL() intrinsic for arguments"_todo_en_US);
-          },
-      },
+  common::visit(common::visitors{
+                    [&](const common::Indirection<parser::Expr> &x) {
+                      actual = AnalyzeExpr(x.value());
+                      SetArgSourceLocation(actual, x.value().source);
+                    },
+                    [&](const parser::AltReturnSpec &label) {
+                      if (!isSubroutine) {
+                        context_.Say(
+                            "alternate return specification may not appear on"
+                            " function reference"_err_en_US);
+                      }
+                      actual = ActualArgument(label.v);
+                    },
+                    [&](const parser::ActualArg::PercentRef &) {
+                      context_.Say("%REF() intrinsic for arguments"_todo_en_US);
+                    },
+                    [&](const parser::ActualArg::PercentVal &) {
+                      context_.Say("%VAL() intrinsic for arguments"_todo_en_US);
+                    },
+                },
       std::get<parser::ActualArg>(arg.t).u);
   if (actual) {
     if (const auto &argKW{std::get<std::optional<parser::Keyword>>(arg.t)}) {

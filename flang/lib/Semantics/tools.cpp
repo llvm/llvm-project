@@ -456,9 +456,7 @@ const Symbol *FindInterface(const Symbol &symbol) {
   return common::visit(
       common::visitors{
           [](const ProcEntityDetails &details) {
-            const Symbol *interface {
-              details.interface().symbol()
-            };
+            const Symbol *interface { details.interface().symbol() };
             return interface ? FindInterface(*interface) : nullptr;
           },
           [](const ProcBindingDetails &details) {
