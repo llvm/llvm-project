@@ -691,6 +691,12 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.setFPContractMode(fpContractMode);
   }
 
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_menable_no_infinities)) {
+    diags.Report(diagUnimplemented) << a->getOption().getName();
+    opts.NoHonorInfs = true;
+  }
+
   return true;
 }
 

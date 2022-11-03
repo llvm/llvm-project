@@ -83,6 +83,7 @@ void Flang::AddPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
 static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   StringRef FPContract;
+  bool HonorINFs = true;
 
   if (const Arg *A = Args.getLastArg(options::OPT_ffp_contract)) {
     const StringRef Val = A->getValue();
@@ -101,8 +102,30 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
           << A->getOption().getName() << Val;
   }
 
+  for (const Arg *A : Args) {
+    auto optId = A->getOption().getID();
+    switch (optId) {
+    // if this isn't an FP option, skip the claim below
+    default:
+      continue;
+
+    case options::OPT_fhonor_infinities:
+      HonorINFs = true;
+      break;
+    case options::OPT_fno_honor_infinities:
+      HonorINFs = false;
+      break;
+    }
+
+    // If we handled this option claim it
+    A->claim();
+  }
+
   if (!FPContract.empty())
     CmdArgs.push_back(Args.MakeArgString("-ffp-contract=" + FPContract));
+
+  if (!HonorINFs)
+    CmdArgs.push_back("-menable-no-infs");
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,

@@ -130,6 +130,7 @@
 ! HELP-FC1-NEXT: -init-only             Only execute frontend initialization
 ! HELP-FC1-NEXT: -I <dir>               Add directory to the end of the list of include search paths
 ! HELP-FC1-NEXT: -load <dsopath>        Load the named plugin (dynamic shared object)
+! HELP-FC1-NEXT: -menable-no-infs       Allow optimization to assume there are no infinities.
 ! HELP-FC1-NEXT: -mllvm <value>         Additional arguments to forward to LLVM's option processing
 ! HELP-FC1-NEXT: -mmlir <value>         Additional arguments to forward to MLIR's option processing
 ! HELP-FC1-NEXT: -module-dir <dir>      Put MODULE files in <dir>
