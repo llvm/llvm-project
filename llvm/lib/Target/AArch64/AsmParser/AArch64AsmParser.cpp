@@ -3485,6 +3485,7 @@ static const struct Extension {
     {"sme-f64f64", {AArch64::FeatureSMEF64F64}},
     {"sme-i16i64", {AArch64::FeatureSMEI16I64}},
     {"sme2", {AArch64::FeatureSME2}},
+    {"sme2p1", {AArch64::FeatureSME2p1}},
     {"hbc", {AArch64::FeatureHBC}},
     {"mops", {AArch64::FeatureMOPS}},
     // FIXME: Unsupported extensions
