@@ -281,6 +281,69 @@ def Index_MaxUOp : IndexBinaryOp<"maxu"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ShlOp
+//===----------------------------------------------------------------------===//
+
+def Index_ShlOp : IndexBinaryOp<"shl"> {
+  let summary = "index shift left";
+  let description = [{
+    The `index.shl` operation shifts an index value to the left by a variable
+    amount. The low order bits are filled with zeroes. The RHS operand is always
+    treated as unsigned. If the RHS operand is equal to or greater than the
+    index bitwidth, the operation is undefined.
+
+    Example:
+
+    ```mlir
+    // c = a << b
+    %c = index.shl %a, %b
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ShrSOp
+//===----------------------------------------------------------------------===//
+
+def Index_ShrSOp : IndexBinaryOp<"shrs"> {
+  let summary = "signed index shift right";
+  let description = [{
+    The `index.shrs` operation shifts an index value to the right by a variable
+    amount. The LHS operand is treated as signed. The high order bits are filled
+    with copies of the most significant bit. If the RHS operand is equal to or
+    greater than the index bitwidth, the operation is undefined.
+
+    Example:
+
+    ```mlir
+    // c = a >> b
+    %c = index.shrs %a, %b
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ShrUOp
+//===----------------------------------------------------------------------===//
+
+def Index_ShrUOp : IndexBinaryOp<"shru"> {
+  let summary = "unsigned index shift right";
+  let description = [{
+    The `index.shru` operation shifts an index value to the right by a variable
+    amount. The LHS operand is treated as unsigned. The high order bits are
+    filled with zeroes. If the RHS operand is equal to or greater than the index
+    bitwidth, the operation is undefined.
+
+    Example:
+
+    ```mlir
+    // c = a >> b
+    %c = index.shru %a, %b
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // CastSOp
 //===----------------------------------------------------------------------===//
 
