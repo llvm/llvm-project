@@ -223,9 +223,7 @@ define amdgpu_kernel void @v_pack_b32.fneg(half addrspace(1)* %in0, half addrspa
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    v_add_f16_e32 v0, 2.0, v1
 ; GISEL-NEXT:    v_add_f16_e32 v1, 2.0, v2
-; GISEL-NEXT:    v_sub_f16_e32 v0, 0x8000, v0
-; GISEL-NEXT:    v_sub_f16_e32 v1, 0x8000, v1
-; GISEL-NEXT:    v_pack_b32_f16 v0, v0, v1
+; GISEL-NEXT:    v_pack_b32_f16 v0, -v0, -v1
 ; GISEL-NEXT:    ;;#ASMSTART
 ; GISEL-NEXT:    ; use v0
 ; GISEL-NEXT:    ;;#ASMEND

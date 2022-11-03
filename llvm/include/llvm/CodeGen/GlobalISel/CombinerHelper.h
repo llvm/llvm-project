@@ -696,6 +696,9 @@ public:
   ///           (fma fneg(x), fneg(y), z) -> (fma x, y, z)
   bool matchRedundantNegOperands(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  bool matchFsubToFneg(MachineInstr &MI, Register &MatchInfo);
+  void applyFsubToFneg(MachineInstr &MI, Register &MatchInfo);
+
   bool canCombineFMadOrFMA(MachineInstr &MI, bool &AllowFusionGlobally,
                            bool &HasFMAD, bool &Aggressive,
                            bool CanReassociate = false);
