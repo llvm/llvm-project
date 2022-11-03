@@ -5,6 +5,7 @@
 ; This test case test the LocalStackSlotAllocation pass that use a base register
 ; for the frame index that its offset is out-of-range (for RISC-V. the immediate
 ; is 12 bits for the load store instruction (excludes vector load / store))
+; TODO: Enable LocalStackSlotAllocation pass.
 define void @use_frame_base_reg() {
 ; RV32I-LABEL: use_frame_base_reg:
 ; RV32I:       # %bb.0:
@@ -13,9 +14,12 @@ define void @use_frame_base_reg() {
 ; RV32I-NEXT:    sub sp, sp, a0
 ; RV32I-NEXT:    .cfi_def_cfa_offset 100016
 ; RV32I-NEXT:    lui a0, 24
+; RV32I-NEXT:    addi a0, a0, 1708
+; RV32I-NEXT:    add a0, sp, a0
+; RV32I-NEXT:    lb a0, 0(a0)
+; RV32I-NEXT:    lui a0, 24
 ; RV32I-NEXT:    addi a0, a0, 1704
 ; RV32I-NEXT:    add a0, sp, a0
-; RV32I-NEXT:    lb a1, 4(a0)
 ; RV32I-NEXT:    lb a0, 0(a0)
 ; RV32I-NEXT:    lui a0, 24
 ; RV32I-NEXT:    addi a0, a0, 1712
@@ -29,9 +33,12 @@ define void @use_frame_base_reg() {
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    .cfi_def_cfa_offset 100016
 ; RV64I-NEXT:    lui a0, 24
+; RV64I-NEXT:    addiw a0, a0, 1708
+; RV64I-NEXT:    add a0, sp, a0
+; RV64I-NEXT:    lb a0, 0(a0)
+; RV64I-NEXT:    lui a0, 24
 ; RV64I-NEXT:    addiw a0, a0, 1704
 ; RV64I-NEXT:    add a0, sp, a0
-; RV64I-NEXT:    lb a1, 4(a0)
 ; RV64I-NEXT:    lb a0, 0(a0)
 ; RV64I-NEXT:    lui a0, 24
 ; RV64I-NEXT:    addiw a0, a0, 1712
