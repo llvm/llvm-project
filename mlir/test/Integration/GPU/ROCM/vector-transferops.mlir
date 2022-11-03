@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s \
 // RUN: | mlir-opt -convert-scf-to-cf \
 // RUN: | mlir-opt -gpu-kernel-outlining \
-// RUN: | mlir-opt -pass-pipeline='gpu.module(strip-debuginfo,convert-gpu-to-rocdl{chipset=%chip index-bitwidth=32},gpu-to-hsaco{chip=%chip})' \
+// RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-rocdl{chipset=%chip index-bitwidth=32},gpu-to-hsaco{chip=%chip}))' \
 // RUN: | mlir-opt -gpu-to-llvm \
 // RUN: | mlir-cpu-runner \
 // RUN:   --shared-libs=%mlir_lib_dir/libmlir_rocm_runtime%shlibext \
