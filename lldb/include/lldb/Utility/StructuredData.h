@@ -158,6 +158,12 @@ public:
       Serialize(jso);
     }
 
+    virtual void GetDescription(lldb_private::Stream &s) const {
+      s.IndentMore();
+      Dump(s, false);
+      s.IndentLess();
+    }
+
   private:
     lldb::StructuredDataType m_type;
   };
@@ -277,6 +283,8 @@ public:
 
     void Serialize(llvm::json::OStream &s) const override;
 
+    void GetDescription(lldb_private::Stream &s) const override;
+
   protected:
     typedef std::vector<ObjectSP> collection;
     collection m_items;
@@ -295,6 +303,8 @@ public:
 
     void Serialize(llvm::json::OStream &s) const override;
 
+    void GetDescription(lldb_private::Stream &s) const override;
+
   protected:
     uint64_t m_value;
   };
@@ -311,6 +321,8 @@ public:
     double GetValue() { return m_value; }
 
     void Serialize(llvm::json::OStream &s) const override;
+
+    void GetDescription(lldb_private::Stream &s) const override;
 
   protected:
     double m_value;
@@ -329,6 +341,8 @@ public:
 
     void Serialize(llvm::json::OStream &s) const override;
 
+    void GetDescription(lldb_private::Stream &s) const override;
+
   protected:
     bool m_value;
   };
@@ -344,6 +358,8 @@ public:
     llvm::StringRef GetValue() { return m_value; }
 
     void Serialize(llvm::json::OStream &s) const override;
+
+    void GetDescription(lldb_private::Stream &s) const override;
 
   protected:
     std::string m_value;
@@ -524,6 +540,8 @@ public:
 
     void Serialize(llvm::json::OStream &s) const override;
 
+    void GetDescription(lldb_private::Stream &s) const override;
+
   protected:
     typedef std::map<ConstString, ObjectSP> collection;
     collection m_dict;
@@ -538,6 +556,8 @@ public:
     bool IsValid() const override { return false; }
 
     void Serialize(llvm::json::OStream &s) const override;
+
+    void GetDescription(lldb_private::Stream &s) const override;
   };
 
   class Generic : public Object {
@@ -553,12 +573,15 @@ public:
 
     void Serialize(llvm::json::OStream &s) const override;
 
+    void GetDescription(lldb_private::Stream &s) const override;
+
   private:
     void *m_object;
   };
 
   static ObjectSP ParseJSON(const std::string &json_text);
   static ObjectSP ParseJSONFromFile(const FileSpec &file, Status &error);
+  static bool IsRecordType(const ObjectSP object_sp);
 };
 
 } // namespace lldb_private
