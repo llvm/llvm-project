@@ -1567,7 +1567,9 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
       return 1;
     }
   } else {
-    swift::performPlaygroundTransform(parsed_expr->source_file, true);
+    swift::performPlaygroundTransform(
+        parsed_expr->source_file,
+        m_options.GetPlaygroundTransformHighPerformance());
   }
 
   // FIXME: We now should have to do the name binding and type
