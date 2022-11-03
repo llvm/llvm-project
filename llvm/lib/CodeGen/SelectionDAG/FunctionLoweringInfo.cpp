@@ -119,10 +119,6 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       }
     }
   }
-  if (Personality == EHPersonality::Wasm_CXX) {
-    WasmEHFuncInfo &EHInfo = *MF->getWasmEHFuncInfo();
-    calculateWasmEHInfo(&fn, EHInfo);
-  }
 
   // Initialize the mapping of values to registers.  This is only set up for
   // instruction values that are used outside of the block that defines
@@ -323,10 +319,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
       const auto *BB = CME.Handler.get<const BasicBlock *>();
       CME.Handler = MBBMap[BB];
     }
-  }
-
-  else if (Personality == EHPersonality::Wasm_CXX) {
+  } else if (Personality == EHPersonality::Wasm_CXX) {
     WasmEHFuncInfo &EHInfo = *MF->getWasmEHFuncInfo();
+    calculateWasmEHInfo(&fn, EHInfo);
+
     // Map all BB references in the Wasm EH data to MBBs.
     DenseMap<BBOrMBB, BBOrMBB> SrcToUnwindDest;
     for (auto &KV : EHInfo.SrcToUnwindDest) {
