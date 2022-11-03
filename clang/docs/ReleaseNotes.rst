@@ -574,6 +574,7 @@ C++ Language Changes in Clang
   This means Clang will by default accept code using features from C++17 and
   conforming GNU extensions. Projects incompatible with C++17 can add
   ``-std=gnu++14`` to their build settings to restore the previous behaviour.
+- Implemented DR2358 allowing init captures in lambdas in default arguments.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
