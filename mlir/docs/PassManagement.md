@@ -1328,7 +1328,7 @@ module {
 {-#
   external_resources: {
     mlir_reproducer: {
-      pipeline: "func.func(cse,canonicalize),inline",
+      pipeline: "builtin.module(func.func(cse,canonicalize),inline)",
       disable_threading: true,
       verify_each: true
     }
@@ -1371,7 +1371,7 @@ module {
 {-#
   external_resources: {
     mlir_reproducer: {
-      pipeline: "func.func(canonicalize)",
+      pipeline: "builtin.module(func.func(canonicalize))",
       disable_threading: true,
       verify_each: true
     }
