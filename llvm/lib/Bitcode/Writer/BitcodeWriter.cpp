@@ -340,8 +340,6 @@ private:
                       unsigned Abbrev);
   void writeDIModule(const DIModule *N, SmallVectorImpl<uint64_t> &Record,
                      unsigned Abbrev);
-  void writeDIAssignID(const DIAssignID *N, SmallVectorImpl<uint64_t> &Record,
-                       unsigned Abbrev);
   void writeDITemplateTypeParameter(const DITemplateTypeParameter *N,
                                     SmallVectorImpl<uint64_t> &Record,
                                     unsigned Abbrev);
@@ -1954,15 +1952,6 @@ void ModuleBitcodeWriter::writeDIModule(const DIModule *N,
   Record.push_back(N->getIsDecl());
 
   Stream.EmitRecord(bitc::METADATA_MODULE, Record, Abbrev);
-  Record.clear();
-}
-
-void ModuleBitcodeWriter::writeDIAssignID(const DIAssignID *N,
-                                          SmallVectorImpl<uint64_t> &Record,
-                                          unsigned Abbrev) {
-  // There are no arguments for this metadata type.
-  Record.push_back(N->isDistinct());
-  Stream.EmitRecord(bitc::METADATA_ASSIGN_ID, Record, Abbrev);
   Record.clear();
 }
 
