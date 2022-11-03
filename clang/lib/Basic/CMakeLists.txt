@@ -112,3 +112,7 @@ add_clang_library(clangBasic
   omp_gen
   )
 
+target_link_libraries(clangBasic
+  PRIVATE
+  ${LLVM_ATOMIC_LIB}
+)
