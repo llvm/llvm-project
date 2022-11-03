@@ -1,3 +1,4 @@
+# REQUIRES: x86-registered-target
 # RUN: rm -f reduced.ll reduced.bc
 
 # RUN: llvm-as -o test-output-format.bc %p/Inputs/test-output-format.ll
