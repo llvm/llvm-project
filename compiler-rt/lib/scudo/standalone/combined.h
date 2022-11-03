@@ -560,7 +560,16 @@ public:
       }
     }
 
+    // Try to detect deallocation with a wrong MTE tag by touching the first
+    // byte with a correctly tagged pointer. Skip zero-sized allocations that do
+    // not always store the correct tag value anywhere (for example, a zero
+    // size, 32 byte aligned allocation in a 32-byte size class will end up with
+    // header at offset 16 in the block, payload at offset 32, and no space to
+    // store the tag).
     const uptr Size = getSize(Ptr, &Header);
+    if (useMemoryTagging<Params>(Options) && Size != 0)
+      *reinterpret_cast<volatile char *>(TaggedPtr);
+
     if (DeleteSize && Options.get(OptionBit::DeleteSizeMismatch)) {
       if (UNLIKELY(DeleteSize != Size))
         reportDeleteSizeMismatch(Ptr, DeleteSize, Size);
