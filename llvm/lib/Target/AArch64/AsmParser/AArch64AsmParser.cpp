@@ -2829,6 +2829,8 @@ unsigned AArch64AsmParser::getNumRegsForRegKind(RegKind K) {
   case RegKind::SVEPredicateVector:
   case RegKind::SVEPredicateAsCounter:
     return 16;
+  case RegKind::LookupTable:
+   return 512;
   }
   llvm_unreachable("Unsupported RegKind");
 }
@@ -4344,7 +4346,7 @@ OperandMatchResultTy
 AArch64AsmParser::tryParseZTOperand(OperandVector &Operands) {
   SMLoc StartLoc = getLoc();
   const AsmToken &Tok = getTok();
-  StringRef Name = Tok.getString().lower();
+  std::string Name = Tok.getString().lower();
 
   unsigned RegNum = matchRegisterNameAlias(Name, RegKind::LookupTable);
 
