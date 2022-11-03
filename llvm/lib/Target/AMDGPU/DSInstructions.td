@@ -1069,8 +1069,8 @@ multiclass DSAtomicCmpXChg_mc<DS_Pseudo inst, DS_Pseudo noRetInst, ValueType vt,
 defm : DSAtomicRetPat_mc<DS_WRXCHG_RTN_B32, i32, "atomic_swap">;
 defm : DSAtomicRetNoRetPat_mc<DS_ADD_RTN_U32, DS_ADD_U32, i32, "atomic_load_add">;
 defm : DSAtomicRetNoRetPat_mc<DS_SUB_RTN_U32, DS_SUB_U32, i32, "atomic_load_sub">;
-defm : DSAtomicRetNoRetPat_mc<DS_INC_RTN_U32, DS_INC_U32, i32, "atomic_inc">;
-defm : DSAtomicRetNoRetPat_mc<DS_DEC_RTN_U32, DS_DEC_U32, i32, "atomic_dec">;
+defm : DSAtomicRetNoRetPat_mc<DS_INC_RTN_U32, DS_INC_U32, i32, "atomic_load_uinc_wrap">;
+defm : DSAtomicRetNoRetPat_mc<DS_DEC_RTN_U32, DS_DEC_U32, i32, "atomic_load_udec_wrap">;
 defm : DSAtomicRetNoRetPat_mc<DS_AND_RTN_B32, DS_AND_B32, i32, "atomic_load_and">;
 defm : DSAtomicRetNoRetPat_mc<DS_OR_RTN_B32, DS_OR_B32, i32, "atomic_load_or">;
 defm : DSAtomicRetNoRetPat_mc<DS_XOR_RTN_B32, DS_XOR_B32, i32, "atomic_load_xor">;
@@ -1097,8 +1097,8 @@ defm : DSAtomicRetNoRetPat_mc<DS_ADD_RTN_F32, DS_ADD_F32, f32, "atomic_load_fadd
 defm : DSAtomicRetPat_mc<DS_WRXCHG_RTN_B64, i64, "atomic_swap">;
 defm : DSAtomicRetNoRetPat_mc<DS_ADD_RTN_U64, DS_ADD_U64, i64, "atomic_load_add">;
 defm : DSAtomicRetNoRetPat_mc<DS_SUB_RTN_U64, DS_SUB_U64, i64, "atomic_load_sub">;
-defm : DSAtomicRetNoRetPat_mc<DS_INC_RTN_U64, DS_INC_U64, i64, "atomic_inc">;
-defm : DSAtomicRetNoRetPat_mc<DS_DEC_RTN_U64, DS_DEC_U64, i64, "atomic_dec">;
+defm : DSAtomicRetNoRetPat_mc<DS_INC_RTN_U64, DS_INC_U64, i64, "atomic_load_uinc_wrap">;
+defm : DSAtomicRetNoRetPat_mc<DS_DEC_RTN_U64, DS_DEC_U64, i64, "atomic_load_udec_wrap">;
 defm : DSAtomicRetNoRetPat_mc<DS_AND_RTN_B64, DS_AND_B64, i64, "atomic_load_and">;
 defm : DSAtomicRetNoRetPat_mc<DS_OR_RTN_B64, DS_OR_B64, i64, "atomic_load_or">;
 defm : DSAtomicRetNoRetPat_mc<DS_XOR_RTN_B64, DS_XOR_B64, i64, "atomic_load_xor">;
