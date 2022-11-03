@@ -1016,6 +1016,19 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_FLAGM | AArch64::AEK_SB |
                              AArch64::AEK_I8MM | AArch64::AEK_BF16,
                          "9-A"),
+        ARMCPUTestParams("cortex-a715", "armv9-a", "neon-fp-armv8",
+                         AArch64::AEK_CRC | AArch64::AEK_FP | AArch64::AEK_BF16 |
+                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
+                             AArch64::AEK_LSE | AArch64::AEK_RDM |
+                             AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_MTE | AArch64::AEK_PAUTH |
+                             AArch64::AEK_SVE | AArch64::AEK_SVE2 |
+                             AArch64::AEK_SVE2BITPERM | AArch64::AEK_SSBS |
+                             AArch64::AEK_SB | AArch64::AEK_I8MM |
+                             AArch64::AEK_PERFMON | AArch64::AEK_PREDRES |
+                             AArch64::AEK_PROFILE | AArch64::AEK_FP16FML |
+                             AArch64::AEK_FP16 | AArch64::AEK_FLAGM,
+                         "9-A"),
         ARMCPUTestParams(
             "neoverse-v1", "armv8.4-a", "crypto-neon-fp-armv8",
             AArch64::AEK_RAS | AArch64::AEK_SVE | AArch64::AEK_SSBS |
@@ -1296,7 +1309,7 @@ INSTANTIATE_TEST_SUITE_P(
                          "8.2-A")));
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 59;
+static constexpr unsigned NumAArch64CPUArchs = 60;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
