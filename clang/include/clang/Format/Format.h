@@ -402,10 +402,11 @@ struct FormatStyle {
 
   /// Alignment options
   struct TrailingCommentsAlignmentStyle {
-    /// Specifies the way to align trailing comments
+    /// Specifies the way to align trailing comments.
     TrailingCommentsAlignmentKinds Kind;
-    /// How many empty lines to apply alignment
-    /// With ``MaxEmptyLinesToKeep`` is 2 and ``OverEmptyLines`` is 2,
+    /// How many empty lines to apply alignment.
+    /// When both ``MaxEmptyLinesToKeep`` and ``OverEmptyLines`` are set to 2,
+    /// it formats like below.
     /// \code
     ///   int a;      // all these
     ///
@@ -414,7 +415,9 @@ struct FormatStyle {
     ///
     ///   int abcdef; // aligned
     /// \endcode
-    /// And with ``MaxEmptyLinesToKeep`` is 2 and ``OverEmptyLines`` is 1,
+    ///
+    /// When ``MaxEmptyLinesToKeep`` is set to 2 and ``OverEmptyLines`` is set
+    /// to 1, it formats like below.
     /// \code
     ///   int a;  // these are
     ///
