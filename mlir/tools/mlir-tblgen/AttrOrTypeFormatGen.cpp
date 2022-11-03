@@ -1006,7 +1006,7 @@ DefFormatParser::verifyOptionalGroupElements(llvm::SMLoc loc,
     } else if (auto *custom = dyn_cast<CustomDirective>(el)) {
       for (FormatElement *el : custom->getArguments()) {
         // If the custom argument is a variable, then it must be optional.
-        if (auto param = dyn_cast<ParameterElement>(el))
+        if (auto *param = dyn_cast<ParameterElement>(el))
           if (!param->isOptional())
             return emitError(loc,
                              "`custom` is only allowed in an optional group if "
@@ -1023,10 +1023,11 @@ DefFormatParser::verifyOptionalGroupElements(llvm::SMLoc loc,
     }
     // If the anchor is a custom directive, make sure at least one of its
     // arguments is a bound parameter.
-    if (auto custom = dyn_cast<CustomDirective>(anchor)) {
-      auto bound = llvm::find_if(custom->getArguments(), [](FormatElement *el) {
-        return isa<ParameterElement>(el);
-      });
+    if (auto *custom = dyn_cast<CustomDirective>(anchor)) {
+      const auto *bound =
+          llvm::find_if(custom->getArguments(), [](FormatElement *el) {
+            return isa<ParameterElement>(el);
+          });
       if (bound == custom->getArguments().end())
         return emitError(loc, "`custom` directive with no bound parameters "
                               "cannot be used as optional group anchor");
