@@ -84,7 +84,9 @@ void DIBuilder::finalize() {
   }
 
   if (!AllEnumTypes.empty())
-    CUNode->replaceEnumTypes(MDTuple::get(VMContext, AllEnumTypes));
+    CUNode->replaceEnumTypes(MDTuple::get(
+        VMContext, SmallVector<Metadata *, 16>(AllEnumTypes.begin(),
+                                               AllEnumTypes.end())));
 
   SmallVector<Metadata *, 16> RetainValues;
   // Declarations and definitions of the same type may be retained. Some
@@ -556,7 +558,7 @@ DICompositeType *DIBuilder::createEnumerationType(
       getNonCompileUnitScope(Scope), UnderlyingType, SizeInBits, AlignInBits, 0,
       IsScoped ? DINode::FlagEnumClass : DINode::FlagZero, Elements, 0, nullptr,
       nullptr, UniqueIdentifier);
-  AllEnumTypes.push_back(CTy);
+  AllEnumTypes.emplace_back(CTy);
   trackIfUnresolved(CTy);
   return CTy;
 }
