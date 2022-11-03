@@ -4932,8 +4932,17 @@ void DeclarationVisitor::Post(const parser::ProcComponentDefStmt &) {
 bool DeclarationVisitor::Pre(const parser::ProcPointerInit &x) {
   if (auto *name{std::get_if<parser::Name>(&x.u)}) {
     return !NameIsKnownOrIntrinsic(*name) && !CheckUseError(*name);
+  } else {
+    const auto &null{DEREF(std::get_if<parser::NullInit>(&x.u))};
+    Walk(null);
+    if (auto nullInit{EvaluateExpr(null)}) {
+      if (!evaluate::IsNullPointer(*nullInit)) {
+        Say(null.v.value().source,
+            "Procedure pointer initializer must be a name or intrinsic NULL()"_err_en_US);
+      }
+    }
+    return false;
   }
-  return true;
 }
 void DeclarationVisitor::Post(const parser::ProcInterface &x) {
   if (auto *name{std::get_if<parser::Name>(&x.u)}) {
@@ -6886,9 +6895,9 @@ void DeclarationVisitor::Initialization(const parser::Name &name,
           [&](const parser::NullInit &null) { // => NULL()
             Walk(null);
             if (auto nullInit{EvaluateExpr(null)}) {
-              if (!evaluate::IsNullPointer(*nullInit)) {
-                Say(name,
-                    "Pointer initializer must be intrinsic NULL()"_err_en_US); // C813
+              if (!evaluate::IsNullPointer(*nullInit)) { // C813
+                Say(null.v.value().source,
+                    "Pointer initializer must be intrinsic NULL()"_err_en_US);
               } else if (IsPointer(ultimate)) {
                 if (auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
                   object->set_init(std::move(*nullInit));
@@ -6947,14 +6956,14 @@ void DeclarationVisitor::PointerInitialization(
       if (IsProcedurePointer(ultimate)) {
         auto &details{ultimate.get<ProcEntityDetails>()};
         CHECK(!details.init());
-        Walk(target);
         if (const auto *targetName{std::get_if<parser::Name>(&target.u)}) {
+          Walk(target);
           if (!CheckUseError(*targetName) && targetName->symbol) {
             // Validation is done in declaration checking.
             details.set_init(*targetName->symbol);
           }
-        } else {
-          details.set_init(nullptr); // explicit NULL()
+        } else { // explicit NULL
+          details.set_init(nullptr);
         }
       } else {
         Say(name,
