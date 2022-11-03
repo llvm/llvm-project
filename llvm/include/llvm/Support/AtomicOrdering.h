@@ -74,7 +74,8 @@ bool operator>=(AtomicOrdering, AtomicOrdering) = delete;
 // is a valid AtomicOrdering.
 template <typename Int> inline bool isValidAtomicOrdering(Int I) {
   return static_cast<Int>(AtomicOrdering::NotAtomic) <= I &&
-         I <= static_cast<Int>(AtomicOrdering::SequentiallyConsistent);
+         I <= static_cast<Int>(AtomicOrdering::SequentiallyConsistent) &&
+         I != 3;
 }
 
 /// String used by LLVM IR to represent atomic ordering.
