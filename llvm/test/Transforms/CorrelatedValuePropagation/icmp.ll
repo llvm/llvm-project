@@ -16,10 +16,10 @@ define void @test1(i64 %tmp35) {
 ; CHECK-NEXT:    [[TMP36:%.*]] = icmp sgt i64 [[TMP35:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP36]], label [[BB_TRUE:%.*]], label [[BB_FALSE:%.*]]
 ; CHECK:       bb_true:
-; CHECK-NEXT:    tail call void @check1(i1 false) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    tail call void @check1(i1 false) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb_false:
-; CHECK-NEXT:    tail call void @check2(i1 true) #[[ATTR1]]
+; CHECK-NEXT:    tail call void @check2(i1 true) #[[ATTR2]]
 ; CHECK-NEXT:    unreachable
 ;
 bb:
@@ -55,7 +55,7 @@ define void @test2(i64 %tmp35, i1 %inner_cmp) {
 ; CHECK-NEXT:    tail call void @check1(i1 false)
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb_false:
-; CHECK-NEXT:    tail call void @check2(i1 true) #[[ATTR1]]
+; CHECK-NEXT:    tail call void @check2(i1 true) #[[ATTR2]]
 ; CHECK-NEXT:    unreachable
 ;
 bb:
@@ -1216,5 +1216,35 @@ else:
   ret void
 }
 
+define i1 @non_const_range_minmax(i8 %a, i8 %b) {
+; CHECK-LABEL: @non_const_range_minmax(
+; CHECK-NEXT:    [[A2:%.*]] = call i8 @llvm.umin.i8(i8 [[A:%.*]], i8 10)
+; CHECK-NEXT:    [[B2:%.*]] = call i8 @llvm.umax.i8(i8 [[B:%.*]], i8 11)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i8 [[A2]], [[B2]]
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %a2 = call i8 @llvm.umin.i8(i8 %a, i8 10)
+  %b2 = call i8 @llvm.umax.i8(i8 %b, i8 11)
+  %cmp1 = icmp ult i8 %a2, %b2
+  ret i1 %cmp1
+}
+
+define <2 x i1> @non_const_range_minmax_vec(<2 x i8> %a, <2 x i8> %b) {
+; CHECK-LABEL: @non_const_range_minmax_vec(
+; CHECK-NEXT:    [[A2:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 10, i8 10>)
+; CHECK-NEXT:    [[B2:%.*]] = call <2 x i8> @llvm.umax.v2i8(<2 x i8> [[B:%.*]], <2 x i8> <i8 11, i8 11>)
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult <2 x i8> [[A2]], [[B2]]
+; CHECK-NEXT:    ret <2 x i1> [[CMP1]]
+;
+  %a2 = call <2 x i8> @llvm.umin.v2i8(<2 x i8> %a, <2 x i8> <i8 10, i8 10>)
+  %b2 = call <2 x i8> @llvm.umax.v2i8(<2 x i8> %b, <2 x i8> <i8 11, i8 11>)
+  %cmp1 = icmp ult <2 x i8> %a2, %b2
+  ret <2 x i1> %cmp1
+}
+
+declare i8 @llvm.umin.i8(i8, i8)
+declare i8 @llvm.umax.i8(i8, i8)
+declare <2 x i8> @llvm.umin.v2i8(<2 x i8>, <2 x i8>)
+declare <2 x i8> @llvm.umax.v2i8(<2 x i8>, <2 x i8>)
 
 attributes #4 = { noreturn }
