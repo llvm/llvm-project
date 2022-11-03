@@ -763,17 +763,17 @@ unsigned LoopPredication::collectChecks(SmallVectorImpl<Value *> &Checks,
   // resulting list of subconditions in Checks vector.
   SmallVector<Value *, 4> Worklist(1, Condition);
   SmallPtrSet<Value *, 4> Visited;
+  Visited.insert(Condition);
   Value *WideableCond = nullptr;
   do {
     Value *Condition = Worklist.pop_back_val();
-    if (!Visited.insert(Condition).second)
-      continue;
-
     Value *LHS, *RHS;
     using namespace llvm::PatternMatch;
     if (match(Condition, m_And(m_Value(LHS), m_Value(RHS)))) {
-      Worklist.push_back(LHS);
-      Worklist.push_back(RHS);
+      if (Visited.insert(LHS).second)
+        Worklist.push_back(LHS);
+      if (Visited.insert(RHS).second)
+        Worklist.push_back(RHS);
       continue;
     }
 
