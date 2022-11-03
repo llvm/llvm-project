@@ -28,6 +28,17 @@ def testCapsule():
     assert pm1 is not None  # And does not crash.
 run(testCapsule)
 
+# CHECK-LABEL: TEST: testConstruct
+@run
+def testConstruct():
+  with Context():
+    # CHECK: pm1: 'any()'
+    # CHECK: pm2: 'builtin.module()'
+    pm1 = PassManager()
+    pm2 = PassManager("builtin.module")
+    log(f"pm1: '{pm1}'")
+    log(f"pm2: '{pm2}'")
+
 
 # Verify successful round-trip.
 # CHECK-LABEL: TEST: testParseSuccess
