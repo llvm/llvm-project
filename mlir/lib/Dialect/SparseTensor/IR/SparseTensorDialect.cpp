@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -559,7 +561,8 @@ LogicalResult InsertOp::verify() {
 void PushBackOp::build(OpBuilder &builder, OperationState &result,
                        Type outBuffer, Value bufferSizes, Value inBuffer,
                        Value value, APInt idx) {
-  build(builder, result, outBuffer, bufferSizes, inBuffer, value, idx, Value());
+  build(builder, result, outBuffer, bufferSizes, inBuffer, value,
+        std::move(idx), Value());
 }
 
 LogicalResult PushBackOp::verify() {
