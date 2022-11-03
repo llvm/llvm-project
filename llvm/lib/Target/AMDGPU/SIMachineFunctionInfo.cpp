@@ -106,7 +106,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
     if (ST.hasGFX90AInsts() &&
         ST.getMaxNumVGPRs(F) <= AMDGPU::VGPR_32RegClass.getNumRegs() &&
-        !mayUseAGPRs(MF))
+        !mayUseAGPRs(F))
       MayNeedAGPRs = false; // We will select all MAI with VGPR operands.
   }
 
@@ -664,8 +664,8 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   return false;
 }
 
-bool SIMachineFunctionInfo::mayUseAGPRs(const MachineFunction &MF) const {
-  for (const BasicBlock &BB : MF.getFunction()) {
+bool SIMachineFunctionInfo::mayUseAGPRs(const Function &F) const {
+  for (const BasicBlock &BB : F) {
     for (const Instruction &I : BB) {
       const auto *CB = dyn_cast<CallBase>(&I);
       if (!CB)
