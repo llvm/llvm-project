@@ -14442,23 +14442,15 @@ AArch64TargetLowering::isDesirableToCommuteWithShift(const SDNode *N,
   SDValue ShiftLHS = N->getOperand(0);
   EVT VT = N->getValueType(0);
 
-  // If ShiftLHS is unsigned bit extraction: ((x >> C) & mask), then do not
-  // combine it with shift 'N' to let it be lowered to UBFX except:
-  // ((x >> C) & mask) << C.
+  // If ShiftLHS is unsigned bit extraction: ((x >> C) & mask), then do not combine
+  // it with shift 'N' to let it be lowered to UBFX.
   if (ShiftLHS.getOpcode() == ISD::AND && (VT == MVT::i32 || VT == MVT::i64) &&
       isa<ConstantSDNode>(ShiftLHS.getOperand(1))) {
     uint64_t TruncMask = ShiftLHS.getConstantOperandVal(1);
-    if (isMask_64(TruncMask)) {
-      SDValue AndLHS = ShiftLHS.getOperand(0);
-      if (AndLHS.getOpcode() == ISD::SRL) {
-        if (auto *SRLC = dyn_cast<ConstantSDNode>(AndLHS.getOperand(1))) {
-          if (N->getOpcode() == ISD::SHL)
-            if (auto *SHLC = dyn_cast<ConstantSDNode>(N->getOperand(1)))
-              return SRLC->getAPIntValue() == SHLC->getAPIntValue();
-          return false;
-        }
-      }
-    }
+    if (isMask_64(TruncMask) &&
+        ShiftLHS.getOperand(0).getOpcode() == ISD::SRL &&
+        isa<ConstantSDNode>(ShiftLHS.getOperand(0).getOperand(1)))
+      return false;
   }
   return true;
 }
