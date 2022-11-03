@@ -162,7 +162,7 @@ func.func @cmpi_const_right(%arg0: i64)
 
 // -----
 
-// CHECK-LABEL: @cmpOfExtSI
+// CHECK-LABEL: @cmpOfExtSI(
 //  CHECK-NEXT:   return %arg0
 func.func @cmpOfExtSI(%arg0: i1) -> i1 {
   %ext = arith.extsi %arg0 : i1 to i64
@@ -171,13 +171,33 @@ func.func @cmpOfExtSI(%arg0: i1) -> i1 {
   return %res : i1
 }
 
-// CHECK-LABEL: @cmpOfExtUI
+// CHECK-LABEL: @cmpOfExtUI(
 //  CHECK-NEXT:   return %arg0
 func.func @cmpOfExtUI(%arg0: i1) -> i1 {
   %ext = arith.extui %arg0 : i1 to i64
   %c0 = arith.constant 0 : i64
   %res = arith.cmpi ne, %ext, %c0 : i64
   return %res : i1
+}
+
+// -----
+
+// CHECK-LABEL: @cmpOfExtSIVector(
+//  CHECK-NEXT:   return %arg0
+func.func @cmpOfExtSIVector(%arg0: vector<4xi1>) -> vector<4xi1> {
+  %ext = arith.extsi %arg0 : vector<4xi1> to vector<4xi64>
+  %c0 = arith.constant dense<0> : vector<4xi64>
+  %res = arith.cmpi ne, %ext, %c0 : vector<4xi64>
+  return %res : vector<4xi1>
+}
+
+// CHECK-LABEL: @cmpOfExtUIVector(
+//  CHECK-NEXT:   return %arg0
+func.func @cmpOfExtUIVector(%arg0: vector<4xi1>) -> vector<4xi1> {
+  %ext = arith.extui %arg0 : vector<4xi1> to vector<4xi64>
+  %c0 = arith.constant dense<0> : vector<4xi64>
+  %res = arith.cmpi ne, %ext, %c0 : vector<4xi64>
+  return %res : vector<4xi1>
 }
 
 // -----
@@ -1660,3 +1680,5 @@ func.func @xorxor3(%a : i32, %b : i32) -> i32 {
   %res = arith.xori %b, %c : i32
   return %res : i32
 }
+
+// -----
