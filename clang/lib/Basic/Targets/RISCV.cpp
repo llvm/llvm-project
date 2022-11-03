@@ -252,7 +252,8 @@ RISCVTargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
     return std::pair<unsigned, unsigned>(
         LangOpts.VScaleMin ? LangOpts.VScaleMin : 1, LangOpts.VScaleMax);
 
-  if (unsigned MinVLen = ISAInfo->getMinVLen()) {
+  if (unsigned MinVLen = ISAInfo->getMinVLen();
+      MinVLen >= llvm::RISCV::RVVBitsPerBlock) {
     unsigned MaxVLen = ISAInfo->getMaxVLen();
     // RISCV::RVVBitsPerBlock is 64.
     return std::make_pair(MinVLen / llvm::RISCV::RVVBitsPerBlock,
