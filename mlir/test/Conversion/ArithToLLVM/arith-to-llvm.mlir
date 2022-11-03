@@ -1,4 +1,4 @@
-// RUN: mlir-opt -pass-pipeline="func.func(convert-arith-to-llvm)" %s -split-input-file | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm))" %s -split-input-file | FileCheck %s
 
 // CHECK-LABEL: @vector_ops
 func.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) -> vector<4xf32> {
@@ -429,22 +429,22 @@ func.func @select(%arg0 : i1, %arg1 : i32, %arg2 : i32) -> i32 {
 
 // CHECK-LABEL: @minmaxi
 func.func @minmaxi(%arg0 : i32, %arg1 : i32) -> i32 {
-  // CHECK: = "llvm.intr.smin"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: = llvm.intr.smin(%arg0, %arg1) : (i32, i32) -> i32
   %0 = arith.minsi %arg0, %arg1 : i32
-  // CHECK: = "llvm.intr.smax"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: = llvm.intr.smax(%arg0, %arg1) : (i32, i32) -> i32
   %1 = arith.maxsi %arg0, %arg1 : i32
-  // CHECK: = "llvm.intr.umin"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: = llvm.intr.umin(%arg0, %arg1) : (i32, i32) -> i32
   %2 = arith.minui %arg0, %arg1 : i32
-  // CHECK: = "llvm.intr.umax"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: = llvm.intr.umax(%arg0, %arg1) : (i32, i32) -> i32
   %3 = arith.maxui %arg0, %arg1 : i32
   return %0 : i32
 }
 
 // CHECK-LABEL: @minmaxf
 func.func @minmaxf(%arg0 : f32, %arg1 : f32) -> f32 {
-  // CHECK: = "llvm.intr.minnum"(%arg0, %arg1) : (f32, f32) -> f32
+  // CHECK: = llvm.intr.minnum(%arg0, %arg1) : (f32, f32) -> f32
   %0 = arith.minf %arg0, %arg1 : f32
-  // CHECK: = "llvm.intr.maxnum"(%arg0, %arg1) : (f32, f32) -> f32
+  // CHECK: = llvm.intr.maxnum(%arg0, %arg1) : (f32, f32) -> f32
   %1 = arith.maxf %arg0, %arg1 : f32
   return %0 : f32
 }

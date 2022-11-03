@@ -190,7 +190,7 @@ EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
       Rc = SrcDev.retrieveData(Buffer, SrcAddr, Length, AsyncInfo);
     }
     if (Rc == OFFLOAD_SUCCESS) {
-      AsyncInfoTy AsyncInfo(SrcDev);
+      AsyncInfoTy AsyncInfo(DstDev);
       Rc = DstDev.submitData(DstAddr, Buffer, Length, AsyncInfo);
     }
     free(Buffer);

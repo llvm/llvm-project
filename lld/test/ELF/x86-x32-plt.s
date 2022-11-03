@@ -5,7 +5,7 @@
 
 # RUN: ld.lld %t.o %t2.so -o %t
 # RUN: llvm-readelf -S -r %t | FileCheck %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefixes=DISASM
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s --check-prefixes=DISASM
 
 # CHECK:      Name      Type     Address          Off    Size   ES Flg Lk Inf Al
 # CHECK:      .plt      PROGBITS 002011e0 0001e0 000030 00 AX   0   0 16

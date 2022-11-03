@@ -200,6 +200,10 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
   const Symbol &last{ref.GetLastSymbol()};
   const Symbol &symbol{BypassGeneric(last).GetUltimate()};
   if (semantics::IsProcedure(symbol)) {
+    if (symbol.attrs().test(semantics::Attr::ABSTRACT)) {
+      Say("Abstract procedure interface '%s' may not be used as a designator"_err_en_US,
+          last.name());
+    }
     if (auto *component{std::get_if<Component>(&ref.u)}) {
       return Expr<SomeType>{ProcedureDesignator{std::move(*component)}};
     } else if (!std::holds_alternative<SymbolRef>(ref.u)) {
@@ -336,6 +340,32 @@ bool ExpressionAnalyzer::CheckRanks(const DataRef &dataRef) {
       dataRef.u);
 }
 
+// C911 - if the last name in a data-ref has an abstract derived type,
+// it must also be polymorphic.
+bool ExpressionAnalyzer::CheckPolymorphic(const DataRef &dataRef) {
+  if (auto type{DynamicType::From(dataRef.GetLastSymbol())}) {
+    if (type->category() == TypeCategory::Derived && !type->IsPolymorphic()) {
+      const Symbol &typeSymbol{
+          type->GetDerivedTypeSpec().typeSymbol().GetUltimate()};
+      if (typeSymbol.attrs().test(semantics::Attr::ABSTRACT)) {
+        AttachDeclaration(
+            Say("Reference to object with abstract derived type '%s' must be polymorphic"_err_en_US,
+                typeSymbol.name()),
+            typeSymbol);
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool ExpressionAnalyzer::CheckDataRef(const DataRef &dataRef) {
+  // Always check both, don't short-circuit
+  bool ranksOk{CheckRanks(dataRef)};
+  bool polyOk{CheckPolymorphic(dataRef)};
+  return ranksOk && polyOk;
+}
+
 // Parse tree correction after a substring S(j:k) was misparsed as an
 // array section.  Fortran substrings must have a range, not a
 // single index.
@@ -407,26 +437,21 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Designator &d) {
   }
   // These checks have to be deferred to these "top level" data-refs where
   // we can be sure that there are no following subscripts (yet).
-  if (MaybeExpr result{Analyze(d.u)}) {
-    if (std::optional<DataRef> dataRef{ExtractDataRef(std::move(result))}) {
-      if (!CheckRanks(std::move(*dataRef))) {
-        return std::nullopt;
-      }
-      return Designate(std::move(*dataRef));
-    } else if (std::optional<DataRef> dataRef{
-                   ExtractDataRef(std::move(result), /*intoSubstring=*/true)}) {
-      if (!CheckRanks(std::move(*dataRef))) {
-        return std::nullopt;
-      }
-    } else if (std::optional<DataRef> dataRef{ExtractDataRef(std::move(result),
-                   /*intoSubstring=*/false, /*intoComplexPart=*/true)}) {
-      if (!CheckRanks(std::move(*dataRef))) {
-        return std::nullopt;
+  MaybeExpr result{Analyze(d.u)};
+  if (result) {
+    std::optional<DataRef> dataRef{ExtractDataRef(std::move(result))};
+    if (!dataRef) {
+      dataRef = ExtractDataRef(std::move(result), /*intoSubstring=*/true);
+      if (!dataRef) {
+        dataRef = ExtractDataRef(std::move(result),
+            /*intoSubstring=*/false, /*intoComplexPart=*/true);
       }
     }
-    return result;
+    if (dataRef && !CheckDataRef(*dataRef)) {
+      result.reset();
+    }
   }
-  return std::nullopt;
+  return result;
 }
 
 // A utility subroutine to repackage optional expressions of various levels
@@ -1783,11 +1808,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(
       }
       unavailable.insert(symbol->name());
       if (value) {
+        const auto &innermost{context_.FindScope(expr.source)};
         if (symbol->has<semantics::ProcEntityDetails>()) {
           CHECK(IsPointer(*symbol));
         } else if (symbol->has<semantics::ObjectEntityDetails>()) {
           // C1594(4)
-          const auto &innermost{context_.FindScope(expr.source)};
           if (const auto *pureProc{FindPureProcedureContaining(innermost)}) {
             if (const Symbol * pointer{FindPointerComponent(*symbol)}) {
               if (const Symbol *
@@ -1817,8 +1842,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(
           continue;
         }
         if (IsPointer(*symbol)) {
-          semantics::CheckPointerAssignment(
-              GetFoldingContext(), *symbol, *value); // C7104, C7105
+          semantics::CheckStructConstructorPointerComponent(
+              GetFoldingContext(), *symbol, *value, innermost); // C7104, C7105
           result.Add(*symbol, Fold(std::move(*value)));
         } else if (MaybeExpr converted{
                        ConvertToType(*symbol, std::move(*value))}) {
@@ -2025,7 +2050,7 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
           }
         }
         std::optional<DataRef> dataRef{ExtractDataRef(std::move(*dtExpr))};
-        if (dataRef.has_value() && !CheckRanks(std::move(*dataRef))) {
+        if (dataRef && !CheckDataRef(*dataRef)) {
           return std::nullopt;
         }
         if (const Symbol *
@@ -2282,17 +2307,17 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(
     const parser::ProcedureDesignator &pd, ActualArguments &&arguments,
     bool isSubroutine, bool mightBeStructureConstructor)
     -> std::optional<CalleeAndArguments> {
-  return common::visit(
-      common::visitors{
-          [&](const parser::Name &name) {
-            return GetCalleeAndArguments(name, std::move(arguments),
-                isSubroutine, mightBeStructureConstructor);
-          },
-          [&](const parser::ProcComponentRef &pcr) {
-            return AnalyzeProcedureComponentRef(
-                pcr, std::move(arguments), isSubroutine);
-          },
-      },
+  return common::visit(common::visitors{
+                           [&](const parser::Name &name) {
+                             return GetCalleeAndArguments(name,
+                                 std::move(arguments), isSubroutine,
+                                 mightBeStructureConstructor);
+                           },
+                           [&](const parser::ProcComponentRef &pcr) {
+                             return AnalyzeProcedureComponentRef(
+                                 pcr, std::move(arguments), isSubroutine);
+                           },
+                       },
       pd.u);
 }
 
@@ -2319,6 +2344,10 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
       // re-resolve name to the specific procedure
       name.symbol = const_cast<Symbol *>(resolution);
     }
+  } else if (IsProcedure(ultimate) &&
+      ultimate.attrs().test(semantics::Attr::ABSTRACT)) {
+    Say("Abstract procedure interface '%s' may not be referenced"_err_en_US,
+        name.source);
   } else {
     resolution = symbol;
   }
@@ -2822,6 +2851,14 @@ MaybeExpr ExpressionAnalyzer::Analyze(
     const parser::Expr::ComplexConstructor &x) {
   auto re{Analyze(std::get<0>(x.t).value())};
   auto im{Analyze(std::get<1>(x.t).value())};
+  if (re && re->Rank() > 0) {
+    context().Say(std::get<0>(x.t).value().source,
+        "Real part of complex constructor must be scalar"_err_en_US);
+  }
+  if (im && im->Rank() > 0) {
+    context().Say(std::get<1>(x.t).value().source,
+        "Imaginary part of complex constructor must be scalar"_err_en_US);
+  }
   if (re && im) {
     ConformabilityCheck(GetContextualMessages(), *re, *im);
   }
@@ -3380,26 +3417,26 @@ void ArgumentAnalyzer::Analyze(
   // be detected and represented (they're not expressions).
   // TODO: C1534: Don't allow a "restricted" specific intrinsic to be passed.
   std::optional<ActualArgument> actual;
-  common::visit(
-      common::visitors{
-          [&](const common::Indirection<parser::Expr> &x) {
-            actual = AnalyzeExpr(x.value());
-            SetArgSourceLocation(actual, x.value().source);
-          },
-          [&](const parser::AltReturnSpec &label) {
-            if (!isSubroutine) {
-              context_.Say("alternate return specification may not appear on"
-                           " function reference"_err_en_US);
-            }
-            actual = ActualArgument(label.v);
-          },
-          [&](const parser::ActualArg::PercentRef &) {
-            context_.Say("%REF() intrinsic for arguments"_todo_en_US);
-          },
-          [&](const parser::ActualArg::PercentVal &) {
-            context_.Say("%VAL() intrinsic for arguments"_todo_en_US);
-          },
-      },
+  common::visit(common::visitors{
+                    [&](const common::Indirection<parser::Expr> &x) {
+                      actual = AnalyzeExpr(x.value());
+                      SetArgSourceLocation(actual, x.value().source);
+                    },
+                    [&](const parser::AltReturnSpec &label) {
+                      if (!isSubroutine) {
+                        context_.Say(
+                            "alternate return specification may not appear on"
+                            " function reference"_err_en_US);
+                      }
+                      actual = ActualArgument(label.v);
+                    },
+                    [&](const parser::ActualArg::PercentRef &) {
+                      context_.Say("%REF() intrinsic for arguments"_todo_en_US);
+                    },
+                    [&](const parser::ActualArg::PercentVal &) {
+                      context_.Say("%VAL() intrinsic for arguments"_todo_en_US);
+                    },
+                },
       std::get<parser::ActualArg>(arg.t).u);
   if (actual) {
     if (const auto &argKW{std::get<std::optional<parser::Keyword>>(arg.t)}) {

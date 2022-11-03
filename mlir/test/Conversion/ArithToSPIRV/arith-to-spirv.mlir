@@ -163,63 +163,6 @@ func.func @one_elem_vector(%arg0: vector<1xi32>) {
   return
 }
 
-// CHECK-LABEL: @unsupported_5elem_vector
-func.func @unsupported_5elem_vector(%arg0: vector<5xi32>) {
-  // CHECK: arith.subi
-  %1 = arith.subi %arg0, %arg0: vector<5xi32>
-  return
-}
-
-// CHECK-LABEL: @unsupported_2x2elem_vector
-func.func @unsupported_2x2elem_vector(%arg0: vector<2x2xi32>) {
-  // CHECK: arith.muli
-  %2 = arith.muli %arg0, %arg0: vector<2x2xi32>
-  return
-}
-
-} // end module
-
-// -----
-
-// Check that types are converted to 32-bit when no special capabilities.
-module attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
-} {
-
-// CHECK-LABEL: @int_vector23
-func.func @int_vector23(%arg0: vector<2xi8>, %arg1: vector<3xi16>) {
-  // CHECK: spirv.SDiv %{{.*}}, %{{.*}}: vector<2xi32>
-  %0 = arith.divsi %arg0, %arg0: vector<2xi8>
-  // CHECK: spirv.SDiv %{{.*}}, %{{.*}}: vector<3xi32>
-  %1 = arith.divsi %arg1, %arg1: vector<3xi16>
-  return
-}
-
-// CHECK-LABEL: @float_scalar
-func.func @float_scalar(%arg0: f16, %arg1: f64) {
-  // CHECK: spirv.FAdd %{{.*}}, %{{.*}}: f32
-  %0 = arith.addf %arg0, %arg0: f16
-  // CHECK: spirv.FMul %{{.*}}, %{{.*}}: f32
-  %1 = arith.mulf %arg1, %arg1: f64
-  return
-}
-
-} // end module
-
-// -----
-
-// Check that types are converted to 32-bit when no special capabilities that
-// are not supported.
-module attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
-} {
-
-func.func @int_vector4_invalid(%arg0: vector<4xi64>) {
-  // expected-error @+1 {{bitwidth emulation is not implemented yet on unsigned op}}
-  %0 = arith.divui %arg0, %arg0: vector<4xi64>
-  return
-}
-
 } // end module
 
 // -----
@@ -640,17 +583,6 @@ func.func @corner_cases() {
   // CHECK: spirv.Constant true
   %10 = arith.constant true
 
-  return
-}
-
-// CHECK-LABEL: @unsupported_cases
-func.func @unsupported_cases() {
-  // CHECK: %{{.*}} = arith.constant 4294967296 : i64
-  %0 = arith.constant 4294967296 : i64 // 2^32
-  // CHECK: %{{.*}} = arith.constant -2147483649 : i64
-  %1 = arith.constant -2147483649 : i64 // -2^31 - 1
-  // CHECK: %{{.*}} = arith.constant 1.0000000000000002 : f64
-  %2 = arith.constant 0x3FF0000000000001 : f64 // smallest number > 1
   return
 }
 
@@ -1258,20 +1190,6 @@ func.func @one_elem_vector(%arg0: vector<1xi32>) {
   return
 }
 
-// CHECK-LABEL: @unsupported_5elem_vector
-func.func @unsupported_5elem_vector(%arg0: vector<5xi32>) {
-  // CHECK: subi
-  %1 = arith.subi %arg0, %arg0: vector<5xi32>
-  return
-}
-
-// CHECK-LABEL: @unsupported_2x2elem_vector
-func.func @unsupported_2x2elem_vector(%arg0: vector<2x2xi32>) {
-  // CHECK: muli
-  %2 = arith.muli %arg0, %arg0: vector<2x2xi32>
-  return
-}
-
 } // end module
 
 // -----
@@ -1296,22 +1214,6 @@ func.func @float_scalar(%arg0: f16, %arg1: f64) {
   %0 = arith.addf %arg0, %arg0: f16
   // CHECK: spirv.FMul %{{.*}}, %{{.*}}: f32
   %1 = arith.mulf %arg1, %arg1: f64
-  return
-}
-
-} // end module
-
-// -----
-
-// Check that types are converted to 32-bit when no special capabilities that
-// are not supported.
-module attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
-} {
-
-func.func @int_vector4_invalid(%arg0: vector<4xi64>) {
-  // expected-error@+1 {{bitwidth emulation is not implemented yet on unsigned op}}
-  %0 = arith.divui %arg0, %arg0: vector<4xi64>
   return
 }
 
@@ -1672,17 +1574,6 @@ func.func @corner_cases() {
   // CHECK: spirv.Constant true
   %10 = arith.constant true
 
-  return
-}
-
-// CHECK-LABEL: @unsupported_cases
-func.func @unsupported_cases() {
-  // CHECK: %{{.*}} = arith.constant 4294967296 : i64
-  %0 = arith.constant 4294967296 : i64 // 2^32
-  // CHECK: %{{.*}} = arith.constant -2147483649 : i64
-  %1 = arith.constant -2147483649 : i64 // -2^31 - 1
-  // CHECK: %{{.*}} = arith.constant 1.0000000000000002 : f64
-  %2 = arith.constant 0x3FF0000000000001 : f64 // smallest number > 1
   return
 }
 

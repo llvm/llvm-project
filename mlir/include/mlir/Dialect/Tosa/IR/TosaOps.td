@@ -1793,10 +1793,26 @@ def Tosa_CustomOp : Tosa_Op<"custom"> {
     that are not expressed in the existing TOSA operations. These operators are
     not expected to be portable across TOSA implementations. The input and
     output signatures must be expressed in the corresponding TOSA node.
+
+    `identifier` is a string that tells the backend which custom operator is being
+    called.
+
+    `config` is a string identifier which can help avoid name collisions on the
+    identifier field.
+
+    `implementation_attrs` is a string which is a backend and identifier specific
+    set of attributes to the custom operator.
+
+    `inputs` is the set of tensor inputs to the custom operator.
+
+    `outputs is the list of tensors returned by the operator. The number of operators
+    is backend specific.
   }];
 
   let arguments = (ins
     StrAttr:$identifier,
+    StrAttr:$config,
+    StrAttr:$implementation_attrs,
     Variadic<Tosa_Tensor>:$inputs
   );
 

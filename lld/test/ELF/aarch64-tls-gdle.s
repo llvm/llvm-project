@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux %p/Inputs/aarch64-tls-ie.s -o %ttlsie.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux %s -o %tmain.o
 # RUN: ld.lld %tmain.o %ttlsie.o -o %tout
-# RUN: llvm-objdump -d --no-show-raw-insn %tout | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %tout | FileCheck %s
 # RUN: llvm-readobj -r %tout | FileCheck -check-prefix=RELOC %s
 
 ## Local-Dynamic to Local-Exec relax creates no dynamic relocations.

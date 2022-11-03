@@ -140,13 +140,14 @@ static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
     ME |= MemoryEffects::argMemOnly(ModRefInfo::ModRef);
 
   auto AddLocAccess = [&](const MemoryLocation &Loc, ModRefInfo MR) {
-    // Ignore accesses to local memory.
-    if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
+    // Ignore accesses to known-invariant or local memory.
+    MR &= AAR.getModRefInfoMask(Loc, /*IgnoreLocal=*/true);
+    if (isNoModRef(MR))
       return;
 
     const Value *UO = getUnderlyingObject(Loc.Ptr);
     assert(!isa<AllocaInst>(UO) &&
-           "Should have been handled by pointsToConstantMemory()");
+           "Should have been handled by getModRefInfoMask()");
     if (isa<Argument>(UO)) {
       ME |= MemoryEffects::argMemOnly(MR);
       return;

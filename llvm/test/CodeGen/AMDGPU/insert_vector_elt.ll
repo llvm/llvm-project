@@ -1230,11 +1230,12 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; SI-NEXT:    v_mov_b32_e32 v1, s4
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v1, 5, v1, vcc
-; SI-NEXT:    s_lshr_b32 s4, s11, 8
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
 ; SI-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; SI-NEXT:    s_lshr_b32 s4, s11, 8
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 24, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; SI-NEXT:    s_cmp_lg_u32 s6, 13
-; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    v_mov_b32_e32 v1, s4
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s6, 12
@@ -1246,7 +1247,6 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; SI-NEXT:    v_and_b32_e32 v2, 0xff, v2
 ; SI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; SI-NEXT:    s_lshr_b32 s4, s10, 24
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; SI-NEXT:    s_cmp_lg_u32 s6, 11
 ; SI-NEXT:    v_or_b32_e32 v3, v1, v0
@@ -1258,11 +1258,12 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; SI-NEXT:    v_mov_b32_e32 v1, s4
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v1, 5, v1, vcc
-; SI-NEXT:    s_lshr_b32 s4, s10, 8
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
 ; SI-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; SI-NEXT:    s_lshr_b32 s4, s10, 8
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 24, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; SI-NEXT:    s_cmp_lg_u32 s6, 9
-; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    v_mov_b32_e32 v1, s4
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s6, 8
@@ -1274,7 +1275,6 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; SI-NEXT:    v_and_b32_e32 v2, 0xff, v2
 ; SI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; SI-NEXT:    s_lshr_b32 s4, s9, 24
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; SI-NEXT:    s_cmp_lg_u32 s6, 7
 ; SI-NEXT:    v_or_b32_e32 v2, v1, v0
@@ -1286,11 +1286,12 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; SI-NEXT:    v_mov_b32_e32 v1, s4
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v1, 5, v1, vcc
-; SI-NEXT:    s_lshr_b32 s4, s9, 8
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
 ; SI-NEXT:    v_and_b32_e32 v1, 0xff, v1
+; SI-NEXT:    s_lshr_b32 s4, s9, 8
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 24, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; SI-NEXT:    s_cmp_lg_u32 s6, 5
-; SI-NEXT:    v_or_b32_e32 v0, v1, v0
+; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    v_mov_b32_e32 v1, s4
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s6, 4
@@ -1302,7 +1303,6 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; SI-NEXT:    v_and_b32_e32 v4, 0xff, v4
 ; SI-NEXT:    v_or_b32_e32 v1, v4, v1
 ; SI-NEXT:    s_lshr_b32 s4, s8, 24
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; SI-NEXT:    s_cmp_lg_u32 s6, 3
 ; SI-NEXT:    v_or_b32_e32 v1, v1, v0
@@ -1314,11 +1314,12 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; SI-NEXT:    v_mov_b32_e32 v4, s4
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    v_cndmask_b32_e32 v4, 5, v4, vcc
-; SI-NEXT:    s_lshr_b32 s4, s8, 8
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 8, v0
 ; SI-NEXT:    v_and_b32_e32 v4, 0xff, v4
+; SI-NEXT:    s_lshr_b32 s4, s8, 8
+; SI-NEXT:    v_lshlrev_b32_e32 v0, 24, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; SI-NEXT:    s_cmp_lg_u32 s6, 1
-; SI-NEXT:    v_or_b32_e32 v0, v4, v0
+; SI-NEXT:    v_or_b32_e32 v0, v0, v4
 ; SI-NEXT:    v_mov_b32_e32 v4, s4
 ; SI-NEXT:    s_cselect_b64 vcc, -1, 0
 ; SI-NEXT:    s_cmp_lg_u32 s6, 0
@@ -1329,7 +1330,6 @@ define amdgpu_kernel void @dynamic_insertelement_v16i8(<16 x i8> addrspace(1)* %
 ; SI-NEXT:    v_lshlrev_b32_e32 v4, 8, v4
 ; SI-NEXT:    v_and_b32_e32 v5, 0xff, v5
 ; SI-NEXT:    v_or_b32_e32 v4, v5, v4
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v4
 ; SI-NEXT:    v_or_b32_e32 v0, v4, v0
 ; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0

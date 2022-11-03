@@ -829,7 +829,7 @@ private:
     if (cat == Fortran::common::TypeCategory::Derived) {
       // TODO is kept under experimental flag until feature is complete.
       if (dynamicType.IsPolymorphic() &&
-          !getConverter().getLoweringOptions().isPolymorphicTypeImplEnabled())
+          !getConverter().getLoweringOptions().getPolymorphicTypeImpl())
         TODO(interface.converter.getCurrentLocation(),
              "support for polymorphic types");
 

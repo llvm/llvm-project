@@ -178,6 +178,10 @@ TypeSystem::CreateUtilityFunction(std::string text, std::string name) {
   return {};
 }
 
+llvm::Optional<llvm::json::Value> TypeSystem::ReportStatistics() {
+  return llvm::None;
+}
+
 #pragma mark TypeSystemMap
 
 TypeSystemMap::TypeSystemMap() : m_mutex(), m_map() {}

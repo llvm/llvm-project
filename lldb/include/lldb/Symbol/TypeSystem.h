@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/JSON.h"
 
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Expression/Expression.h"
@@ -178,8 +179,6 @@ public:
     return false;
   }
 
-  virtual bool IsBooleanType(lldb::opaque_compiler_type_t type) = 0;
-
   virtual bool IsScopedEnumerationType(lldb::opaque_compiler_type_t type) = 0;
 
   virtual bool IsPossibleDynamicType(lldb::opaque_compiler_type_t type,
@@ -208,7 +207,8 @@ public:
 
   // Accessors
 
-  virtual ConstString GetTypeName(lldb::opaque_compiler_type_t type) = 0;
+  virtual ConstString GetTypeName(lldb::opaque_compiler_type_t type,
+                                  bool BaseOnly) = 0;
 
   virtual ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) = 0;
 
@@ -508,6 +508,8 @@ public:
   // formatters that are discovered on such a type as attributable to the
   // meaningless type itself, instead preferring to use the dynamic type
   virtual bool IsMeaninglessWithoutDynamicResolution(void *type);
+
+  virtual llvm::Optional<llvm::json::Value> ReportStatistics();
 
 protected:
   SymbolFile *m_sym_file = nullptr;

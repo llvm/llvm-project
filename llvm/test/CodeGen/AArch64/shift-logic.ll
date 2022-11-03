@@ -151,3 +151,27 @@ define i32 @lshr_or_extra_use(i32 %x, i32 %y, i32* %p) nounwind {
   %sh1 = lshr i32 %r, 7
   ret i32 %sh1
 }
+
+define i64 @desirable_to_commute1(i64 %x) {
+; CHECK-LABEL: desirable_to_commute1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and x0, x0, #0x7fff8
+; CHECK-NEXT:    ret
+  %s1 = lshr i64 %x, 3
+  %a = and i64 %s1, 65535
+  %s2 = shl i64 %a, 3
+  ret i64 %s2
+}
+
+define i64 @desirable_to_commute2(i64* %p, i64 %i) {
+; CHECK-LABEL: desirable_to_commute2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and x8, x1, #0x1ff8
+; CHECK-NEXT:    ldr x0, [x0, x8]
+; CHECK-NEXT:    ret
+  %lshr = lshr i64 %i, 3
+  %and = and i64 %lshr, 1023
+  %pidx = getelementptr i64, i64* %p, i64 %and
+  %r = load i64, i64* %pidx
+  ret i64 %r
+}

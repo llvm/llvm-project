@@ -1174,8 +1174,10 @@ struct AAPointerInfoImpl
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     for (const auto &It : OtherAAImpl.getState()) {
       AA::OffsetAndSize OAS = AA::OffsetAndSize::getUnknown();
-      if (Offset != AA::OffsetAndSize::Unknown)
+      if (Offset != AA::OffsetAndSize::Unknown &&
+          !It.first.offsetOrSizeAreUnknown()) {
         OAS = AA::OffsetAndSize(It.first.Offset + Offset, It.first.Size);
+      }
       Accesses *Bin = AccessBins.lookup(OAS);
       for (const AAPointerInfo::Access &RAcc : *It.second) {
         if (IsByval && !RAcc.isRead())

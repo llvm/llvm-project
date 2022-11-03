@@ -173,6 +173,9 @@ public:
 
   bool isNarrowingProfitable(EVT VT1, EVT VT2) const override;
 
+  bool isDesirableToCommuteWithShift(const SDNode *N,
+                                     CombineLevel Level) const override;
+
   EVT getTypeForExtReturn(LLVMContext &Context, EVT VT,
                           ISD::NodeType ExtendKind) const override;
 

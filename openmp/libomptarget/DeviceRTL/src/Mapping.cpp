@@ -26,9 +26,6 @@ namespace impl {
 
 // Forward declarations defined to be defined for AMDGCN and NVPTX.
 const llvm::omp::GV &getGridValue();
-uint32_t getGridDim(uint32_t n, uint16_t d);
-uint32_t getWorkgroupDim(uint32_t group_id, uint32_t grid_size,
-                         uint16_t group_size);
 uint32_t getNumHardwareThreadsInBlock();
 LaneMaskTy activemask();
 LaneMaskTy lanemaskLT();
@@ -50,21 +47,8 @@ const llvm::omp::GV &getGridValue() {
   return llvm::omp::getAMDGPUGridValues<__AMDGCN_WAVEFRONT_SIZE>();
 }
 
-uint32_t getGridDim(uint32_t n, uint16_t d) {
-  uint32_t q = n / d;
-  return q + (n > q * d);
-}
-
-uint32_t getWorkgroupDim(uint32_t group_id, uint32_t grid_size,
-                         uint16_t group_size) {
-  uint32_t r = grid_size - group_id * group_size;
-  return (r < group_size) ? r : group_size;
-}
-
 uint32_t getNumHardwareThreadsInBlock() {
-  return getWorkgroupDim(__builtin_amdgcn_workgroup_id_x(),
-                         __builtin_amdgcn_grid_size_x(),
-                         __builtin_amdgcn_workgroup_size_x());
+  return __builtin_amdgcn_workgroup_size_x();
 }
 
 LaneMaskTy activemask() { return __builtin_amdgcn_read_exec(); }
@@ -96,8 +80,7 @@ uint32_t getKernelSize() { return __builtin_amdgcn_grid_size_x(); }
 uint32_t getBlockId() { return __builtin_amdgcn_workgroup_id_x(); }
 
 uint32_t getNumberOfBlocks() {
-  return getGridDim(__builtin_amdgcn_grid_size_x(),
-                    __builtin_amdgcn_workgroup_size_x());
+  return __builtin_amdgcn_grid_size_x() / __builtin_amdgcn_workgroup_size_x();
 }
 
 uint32_t getWarpId() {
@@ -228,8 +211,8 @@ uint32_t mapping::getThreadIdInBlock() {
 uint32_t mapping::getWarpSize() { return impl::getWarpSize(); }
 
 uint32_t mapping::getBlockSize(bool IsSPMD) {
-  uint32_t BlockSize = mapping::getNumberOfProcessorElements() -
-                       (!IsSPMD * impl::getWarpSize());
+  uint32_t BlockSize =
+      mapping::getNumberOfProcessorElements() - (!IsSPMD * impl::getWarpSize());
   return BlockSize;
 }
 uint32_t mapping::getBlockSize() {

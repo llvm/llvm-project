@@ -4,7 +4,7 @@
 // RUN: ld.lld %t2 -soname fixed-length-string.so -o %t2.so -shared
 // RUN: ld.lld --hash-style=sysv %t %t2.so -o %t3
 // RUN: llvm-readobj -S  %t3 | FileCheck --check-prefix=SEC %s
-// RUN: llvm-objdump -s -d %t3 | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -s -d %t3 | FileCheck %s
 
 // SEC:      Name: .plt
 // SEC-NEXT: Type: SHT_PROGBITS

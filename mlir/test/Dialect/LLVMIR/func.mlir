@@ -104,6 +104,24 @@ module {
     llvm.return
   }
 
+  // CHECK: llvm.func @llvm_noalias_decl(!llvm.ptr<f32> {llvm.noalias})
+  llvm.func @llvm_noalias_decl(!llvm.ptr<f32> {llvm.noalias})
+  // CHECK: llvm.func @byrefattr_decl(!llvm.ptr<i32> {llvm.byref = i32})
+  llvm.func @byrefattr_decl(!llvm.ptr<i32> {llvm.byref = i32})
+  // CHECK: llvm.func @byvalattr_decl(!llvm.ptr<i32> {llvm.byval = i32})
+  llvm.func @byvalattr_decl(!llvm.ptr<i32> {llvm.byval = i32})
+  // CHECK: llvm.func @sretattr_decl(!llvm.ptr<i32> {llvm.sret = i32})
+  llvm.func @sretattr_decl(!llvm.ptr<i32> {llvm.sret = i32})
+  // CHECK: llvm.func @nestattr_decl(!llvm.ptr<i32> {llvm.nest})
+  llvm.func @nestattr_decl(!llvm.ptr<i32> {llvm.nest})
+  // CHECK: llvm.func @noundefattr_decl(i32 {llvm.noundef})
+  llvm.func @noundefattr_decl(i32 {llvm.noundef})
+  // CHECK: llvm.func @llvm_align_decl(!llvm.ptr<f32> {llvm.align = 4 : i64})
+  llvm.func @llvm_align_decl(!llvm.ptr<f32> {llvm.align = 4})
+  // CHECK: llvm.func @inallocaattr_decl(!llvm.ptr<i32> {llvm.inalloca = i32})
+  llvm.func @inallocaattr_decl(!llvm.ptr<i32> {llvm.inalloca = i32})
+
+
   // CHECK: llvm.func @variadic(...)
   llvm.func @variadic(...)
 

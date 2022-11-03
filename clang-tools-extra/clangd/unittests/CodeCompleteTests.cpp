@@ -21,6 +21,7 @@
 #include "TestTU.h"
 #include "index/Index.h"
 #include "index/MemIndex.h"
+#include "index/SymbolOrigin.h"
 #include "support/Threading.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -29,6 +30,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Annotations.h"
 #include "llvm/Testing/Support/Error.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <condition_variable>
@@ -83,6 +85,9 @@ MATCHER(insertInclude, "") {
 MATCHER_P(snippetSuffix, Text, "") { return arg.SnippetSuffix == Text; }
 MATCHER_P(origin, OriginSet, "") { return arg.Origin == OriginSet; }
 MATCHER_P(signature, S, "") { return arg.Signature == S; }
+MATCHER_P(replacesRange, Range, "") {
+  return arg.CompletionTokenRange == Range;
+}
 
 // Shorthand for Contains(named(Name)).
 Matcher<const std::vector<CodeCompletion> &> has(std::string Name) {
@@ -2962,14 +2967,20 @@ TEST(CompletionTest, AllScopesCompletion) {
     }
   )cpp",
       {cls("nx::Clangd1"), cls("ny::Clangd2"), cls("Clangd3"),
-       cls("na::nb::Clangd4")},
+       cls("na::nb::Clangd4"), enmConstant("na::C::Clangd5")},
       Opts);
   EXPECT_THAT(
       Results.Completions,
-      UnorderedElementsAre(AllOf(qualifier("nx::"), named("Clangd1")),
-                           AllOf(qualifier("ny::"), named("Clangd2")),
-                           AllOf(qualifier(""), scope(""), named("Clangd3")),
-                           AllOf(qualifier("nb::"), named("Clangd4"))));
+      UnorderedElementsAre(AllOf(qualifier("nx::"), named("Clangd1"),
+                                 kind(CompletionItemKind::Class)),
+                           AllOf(qualifier("ny::"), named("Clangd2"),
+                                 kind(CompletionItemKind::Class)),
+                           AllOf(qualifier(""), scope(""), named("Clangd3"),
+                                 kind(CompletionItemKind::Class)),
+                           AllOf(qualifier("nb::"), named("Clangd4"),
+                                 kind(CompletionItemKind::Class)),
+                           AllOf(qualifier("C::"), named("Clangd5"),
+                                 kind(CompletionItemKind::EnumMember))));
 }
 
 TEST(CompletionTest, NoQualifierIfShadowed) {
@@ -3353,6 +3364,33 @@ TEST(CompletionTest, UsingDecl) {
                                 kind(CompletionItemKind::Reference))));
 }
 
+TEST(CompletionTest, Enums) {
+  const char *Header(R"cpp(
+    namespace ns {
+      enum Unscoped { Clangd1 };
+      class C {
+      enum Unscoped { Clangd2 };
+      };
+      enum class Scoped { Clangd3 };
+    })cpp");
+  const char *Source(R"cpp(
+    void bar() {
+      Clangd^
+    })cpp");
+  auto Index = TestTU::withHeaderCode(Header).index();
+  clangd::CodeCompleteOptions Opts;
+  Opts.Index = Index.get();
+  Opts.AllScopes = true;
+  auto R = completions(Source, {}, Opts);
+  EXPECT_THAT(R.Completions, UnorderedElementsAre(
+                                 AllOf(scope("ns::"), named("Clangd1"),
+                                       kind(CompletionItemKind::EnumMember)),
+                                 AllOf(scope("ns::C::"), named("Clangd2"),
+                                       kind(CompletionItemKind::EnumMember)),
+                                 AllOf(scope("ns::Scoped::"), named("Clangd3"),
+                                       kind(CompletionItemKind::EnumMember))));
+}
+
 TEST(CompletionTest, ScopeIsUnresolved) {
   clangd::CodeCompleteOptions Opts = {};
   Opts.AllScopes = true;
@@ -3713,7 +3751,6 @@ TEST(CompletionTest, PreambleCodeComplete) {
 }
 
 TEST(CompletionTest, CommentParamName) {
-  clangd::CodeCompleteOptions Opts;
   const std::string Code = R"cpp(
     void fun(int foo, int bar);
     void overloaded(int param_int);
@@ -3722,23 +3759,46 @@ TEST(CompletionTest, CommentParamName) {
     int main() {
   )cpp";
 
-  EXPECT_THAT(completions(Code + "fun(/*^", {}, Opts).Completions,
-              UnorderedElementsAre(labeled("foo=")));
-  EXPECT_THAT(completions(Code + "fun(1, /*^", {}, Opts).Completions,
-              UnorderedElementsAre(labeled("bar=")));
-  EXPECT_THAT(completions(Code + "/*^", {}, Opts).Completions, IsEmpty());
+  EXPECT_THAT(completions(Code + "fun(/*^").Completions,
+              UnorderedElementsAre(labeled("foo=*/")));
+  EXPECT_THAT(completions(Code + "fun(1, /*^").Completions,
+              UnorderedElementsAre(labeled("bar=*/")));
+  EXPECT_THAT(completions(Code + "/*^").Completions, IsEmpty());
   // Test de-duplication.
   EXPECT_THAT(
-      completions(Code + "overloaded(/*^", {}, Opts).Completions,
-      UnorderedElementsAre(labeled("param_int="), labeled("param_char=")));
+      completions(Code + "overloaded(/*^").Completions,
+      UnorderedElementsAre(labeled("param_int=*/"), labeled("param_char=*/")));
   // Comment already has some text in it.
-  EXPECT_THAT(completions(Code + "fun(/*  ^", {}, Opts).Completions,
-              UnorderedElementsAre(labeled("foo=")));
-  EXPECT_THAT(completions(Code + "fun(/* f^", {}, Opts).Completions,
-              UnorderedElementsAre(labeled("foo=")));
-  EXPECT_THAT(completions(Code + "fun(/* x^", {}, Opts).Completions, IsEmpty());
-  EXPECT_THAT(completions(Code + "fun(/* f ^", {}, Opts).Completions,
-              IsEmpty());
+  EXPECT_THAT(completions(Code + "fun(/*  ^").Completions,
+              UnorderedElementsAre(labeled("foo=*/")));
+  EXPECT_THAT(completions(Code + "fun(/* f^").Completions,
+              UnorderedElementsAre(labeled("foo=*/")));
+  EXPECT_THAT(completions(Code + "fun(/* x^").Completions, IsEmpty());
+  EXPECT_THAT(completions(Code + "fun(/* f ^").Completions, IsEmpty());
+
+  // Test ranges
+  {
+    std::string CompletionRangeTest(Code + "fun(/*[[^]]");
+    auto Results = completions(CompletionRangeTest);
+    EXPECT_THAT(Results.CompletionRange,
+                llvm::ValueIs(Annotations(CompletionRangeTest).range()));
+    EXPECT_THAT(
+        Results.Completions,
+        testing::Each(
+            AllOf(replacesRange(Annotations(CompletionRangeTest).range()),
+                  origin(SymbolOrigin::AST), kind(CompletionItemKind::Text))));
+  }
+  {
+    std::string CompletionRangeTest(Code + "fun(/*[[fo^]]");
+    auto Results = completions(CompletionRangeTest);
+    EXPECT_THAT(Results.CompletionRange,
+                llvm::ValueIs(Annotations(CompletionRangeTest).range()));
+    EXPECT_THAT(
+        Results.Completions,
+        testing::Each(
+            AllOf(replacesRange(Annotations(CompletionRangeTest).range()),
+                  origin(SymbolOrigin::AST), kind(CompletionItemKind::Text))));
+  }
 }
 
 TEST(CompletionTest, Concepts) {

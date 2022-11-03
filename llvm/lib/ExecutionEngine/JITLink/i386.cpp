@@ -14,17 +14,22 @@
 
 #define DEBUG_TYPE "jitlink"
 
-namespace llvm {
-namespace jitlink {
-namespace i386 {
+namespace llvm::jitlink::i386 {
 
 const char *getEdgeKindName(Edge::Kind K) {
   switch (K) {
   case None:
     return "None";
+  case Pointer32:
+    return "Pointer32";
+  case PCRel32:
+    return "PCRel32";
+  case Pointer16:
+    return "Pointer16";
+  case PCRel16:
+    return "PCRel16";
   }
   return getGenericEdgeKindName(K);
 }
-} // namespace i386
-} // namespace jitlink
-} // namespace llvm
+
+} // namespace llvm::jitlink::i386

@@ -185,8 +185,9 @@ let test_constants () =
   let c = const_array i32_type [| three; four |] in
   ignore (define_global "const_array" c m);
   insist ((array_type i32_type 2) = (type_of c));
-  insist (three = (const_element c 0));
-  insist (four = (const_element c 1));
+  insist (Some three = (aggregate_element c 0));
+  insist (Some four = (aggregate_element c 1));
+  insist (None = (aggregate_element c 2));
 
   (* CHECK: const_vector{{.*}}<i16 1, i16 2{{.*}}>
    *)

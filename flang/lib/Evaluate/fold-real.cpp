@@ -105,8 +105,14 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           context, std::move(funcRef), &Scalar<T>::ABS);
     } else if (auto *z{UnwrapExpr<Expr<SomeComplex>>(args[0])}) {
       return FoldElementalIntrinsic<T, ComplexT>(context, std::move(funcRef),
-          ScalarFunc<T, ComplexT>([](const Scalar<ComplexT> &z) -> Scalar<T> {
-            return z.ABS().value;
+          ScalarFunc<T, ComplexT>([&name, &context](
+                                      const Scalar<ComplexT> &z) -> Scalar<T> {
+            ValueWithRealFlags<Scalar<T>> y{z.ABS()};
+            if (y.flags.test(RealFlag::Overflow)) {
+              context.messages().Say(
+                  "complex ABS intrinsic folding overflow"_warn_en_US, name);
+            }
+            return y.value;
           }));
     } else {
       common::die(" unexpected argument type inside abs");
@@ -121,15 +127,15 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
             ? common::RoundingMode::ToZero
             : common::RoundingMode::TiesAwayFromZero};
     return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
-        ScalarFunc<T, T>([&name, &context, mode](
-                             const Scalar<T> &x) -> Scalar<T> {
-          ValueWithRealFlags<Scalar<T>> y{x.ToWholeNumber(mode)};
-          if (y.flags.test(RealFlag::Overflow)) {
-            context.messages().Say(
-                "%s intrinsic folding overflow"_warn_en_US, name);
-          }
-          return y.value;
-        }));
+        ScalarFunc<T, T>(
+            [&name, &context, mode](const Scalar<T> &x) -> Scalar<T> {
+              ValueWithRealFlags<Scalar<T>> y{x.ToWholeNumber(mode)};
+              if (y.flags.test(RealFlag::Overflow)) {
+                context.messages().Say(
+                    "%s intrinsic folding overflow"_warn_en_US, name);
+              }
+              return y.value;
+            }));
   } else if (name == "dim") {
     return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
         ScalarFunc<T, T, T>(

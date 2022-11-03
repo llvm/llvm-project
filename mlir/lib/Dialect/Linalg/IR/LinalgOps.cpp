@@ -935,10 +935,9 @@ struct DeduplicateAndRemoveDeadOperandsAndResults
     // Create the new op with the body being empty.
     Location loc = genericOp.getLoc();
     SmallVector<Type> newResultTypes;
-    if (genericOp.hasTensorSemantics()) {
-      newResultTypes = llvm::to_vector(llvm::map_range(
-          newOutputOperands, [](Value v) { return v.getType(); }));
-    }
+    for (Value v : newOutputOperands)
+      if (v.getType().isa<TensorType>())
+        newResultTypes.push_back(v.getType());
     auto newOp = rewriter.create<GenericOp>(
         loc, newResultTypes, newInputOperands, newOutputOperands,
         rewriter.getAffineMapArrayAttr(newIndexingMaps),

@@ -611,137 +611,6 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-
-/// Rewrite a func as a coroutine by:
-/// 1) Wrapping the results into `async.value`.
-/// 2) Prepending the results with `async.token`.
-/// 3) Setting up coroutine blocks.
-/// 4) Rewriting return ops as yield op and branch op into the suspend block.
-static CoroMachinery rewriteFuncAsCoroutine(func::FuncOp func) {
-  auto *ctx = func->getContext();
-  auto loc = func.getLoc();
-  SmallVector<Type> resultTypes;
-  resultTypes.reserve(func.getCallableResults().size());
-  llvm::transform(func.getCallableResults(), std::back_inserter(resultTypes),
-                  [](Type type) { return ValueType::get(type); });
-  func.setType(
-      FunctionType::get(ctx, func.getFunctionType().getInputs(), resultTypes));
-  func.insertResult(0, TokenType::get(ctx), {});
-  for (Block &block : func.getBlocks()) {
-    Operation *terminator = block.getTerminator();
-    if (auto returnOp = dyn_cast<func::ReturnOp>(*terminator)) {
-      ImplicitLocOpBuilder builder(loc, returnOp);
-      builder.create<YieldOp>(returnOp.getOperands());
-      returnOp.erase();
-    }
-  }
-  return setupCoroMachinery(func);
-}
-
-/// Rewrites a call into a function that has been rewritten as a coroutine.
-///
-/// The invocation of this function is safe only when call ops are traversed in
-/// reverse order of how they appear in a single block. See `funcsToCoroutines`.
-static void rewriteCallsiteForCoroutine(func::CallOp oldCall,
-                                        func::FuncOp func) {
-  auto loc = func.getLoc();
-  ImplicitLocOpBuilder callBuilder(loc, oldCall);
-  auto newCall = callBuilder.create<func::CallOp>(
-      func.getName(), func.getCallableResults(), oldCall.getArgOperands());
-
-  // Await on the async token and all the value results and unwrap the latter.
-  callBuilder.create<AwaitOp>(loc, newCall.getResults().front());
-  SmallVector<Value> unwrappedResults;
-  unwrappedResults.reserve(newCall->getResults().size() - 1);
-  for (Value result : newCall.getResults().drop_front())
-    unwrappedResults.push_back(
-        callBuilder.create<AwaitOp>(loc, result).getResult());
-  // Careful, when result of a call is piped into another call this could lead
-  // to a dangling pointer.
-  oldCall.replaceAllUsesWith(unwrappedResults);
-  oldCall.erase();
-}
-
-static bool isAllowedToBlock(func::FuncOp func) {
-  return !!func->getAttrOfType<UnitAttr>(AsyncDialect::kAllowedToBlockAttrName);
-}
-
-static LogicalResult funcsToCoroutines(
-    ModuleOp module,
-    llvm::DenseMap<func::FuncOp, CoroMachinery> &outlinedFunctions) {
-  // The following code supports the general case when 2 functions mutually
-  // recurse into each other. Because of this and that we are relying on
-  // SymbolUserMap to find pointers to calling FuncOps, we cannot simply erase
-  // a FuncOp while inserting an equivalent coroutine, because that could lead
-  // to dangling pointers.
-
-  SmallVector<func::FuncOp> funcWorklist;
-
-  // Careful, it's okay to add a func to the worklist multiple times if and only
-  // if the loop processing the worklist will skip the functions that have
-  // already been converted to coroutines.
-  auto addToWorklist = [&](func::FuncOp func) {
-    if (isAllowedToBlock(func))
-      return;
-    // N.B. To refactor this code into a separate pass the lookup in
-    // outlinedFunctions is the most obvious obstacle. Looking at an arbitrary
-    // func and recognizing if it has a coroutine structure is messy. Passing
-    // this dict between the passes is ugly.
-    if (isAllowedToBlock(func) ||
-        outlinedFunctions.find(func) == outlinedFunctions.end()) {
-      for (Operation &op : func.getBody().getOps()) {
-        if (isa<AwaitOp, AwaitAllOp>(op)) {
-          funcWorklist.push_back(func);
-          break;
-        }
-      }
-    }
-  };
-
-  // Traverse in post-order collecting for each func op the await ops it has.
-  for (func::FuncOp func : module.getOps<func::FuncOp>())
-    addToWorklist(func);
-
-  SymbolTableCollection symbolTable;
-  SymbolUserMap symbolUserMap(symbolTable, module);
-
-  // Rewrite funcs, while updating call sites and adding them to the worklist.
-  while (!funcWorklist.empty()) {
-    auto func = funcWorklist.pop_back_val();
-    auto insertion = outlinedFunctions.insert({func, CoroMachinery{}});
-    if (!insertion.second)
-      // This function has already been processed because this is either
-      // the corecursive case, or a caller with multiple calls to a newly
-      // created corouting. Either way, skip updating the call sites.
-      continue;
-    insertion.first->second = rewriteFuncAsCoroutine(func);
-    SmallVector<Operation *> users(symbolUserMap.getUsers(func).begin(),
-                                   symbolUserMap.getUsers(func).end());
-    // If there are multiple calls from the same block they need to be traversed
-    // in reverse order so that symbolUserMap references are not invalidated
-    // when updating the users of the call op which is earlier in the block.
-    llvm::sort(users, [](Operation *a, Operation *b) {
-      Block *blockA = a->getBlock();
-      Block *blockB = b->getBlock();
-      // Impose arbitrary order on blocks so that there is a well-defined order.
-      return blockA > blockB || (blockA == blockB && !a->isBeforeInBlock(b));
-    });
-    // Rewrite the callsites to await on results of the newly created coroutine.
-    for (Operation *op : users) {
-      if (func::CallOp call = dyn_cast<func::CallOp>(*op)) {
-        func::FuncOp caller = call->getParentOfType<func::FuncOp>();
-        rewriteCallsiteForCoroutine(call, func); // Careful, erases the call op.
-        addToWorklist(caller);
-      } else {
-        op->emitError("Unexpected reference to func referenced by symbol");
-        return failure();
-      }
-    }
-  }
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 void AsyncToAsyncRuntimePass::runOnOperation() {
   ModuleOp module = getOperation();
   SymbolTable symbolTable(module);
@@ -763,12 +632,6 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
     auto parentFunc = op->getParentOfType<func::FuncOp>();
     return outlinedFunctions.find(parentFunc) != outlinedFunctions.end();
   };
-
-  if (eliminateBlockingAwaitOps &&
-      failed(funcsToCoroutines(module, outlinedFunctions))) {
-    signalPassFailure();
-    return;
-  }
 
   // Lower async operations to async.runtime operations.
   MLIRContext *ctx = module->getContext();
@@ -814,12 +677,6 @@ void AsyncToAsyncRuntimePass::runOnOperation() {
         auto func = op->getParentOfType<func::FuncOp>();
         return outlinedFunctions.find(func) == outlinedFunctions.end();
       });
-
-  if (eliminateBlockingAwaitOps)
-    runtimeTarget.addDynamicallyLegalOp<RuntimeAwaitOp>(
-        [&](RuntimeAwaitOp op) -> bool {
-          return isAllowedToBlock(op->getParentOfType<func::FuncOp>());
-        });
 
   if (failed(applyPartialConversion(module, runtimeTarget,
                                     std::move(asyncPatterns)))) {

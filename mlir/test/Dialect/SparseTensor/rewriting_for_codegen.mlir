@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s -sparse-tensor-rewrite=enable-runtime-library=false | FileCheck %s
+// RUN: mlir-opt %s -sparse-tensor-rewrite="enable-runtime-library=false enable-convert=false" |\
+// RUN: FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{
   dimLevelType = ["dense", "compressed"]

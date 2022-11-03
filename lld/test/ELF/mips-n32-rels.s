@@ -7,7 +7,7 @@
 # RUN:         . = 0x20000;  .text ALIGN(0x100) : { *(.text) } \
 # RUN:       }" > %t.script
 # RUN: ld.lld %t.o -script %t.script -o %t.exe
-# RUN: llvm-objdump -t -d -s --no-show-raw-insn %t.exe | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -t -d -s --no-show-raw-insn %t.exe | FileCheck %s
 # RUN: llvm-readelf -h %t.exe | FileCheck -check-prefix=ELF %s
 
   .option pic2

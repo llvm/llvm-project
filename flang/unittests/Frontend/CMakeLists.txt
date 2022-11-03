@@ -12,6 +12,7 @@ target_link_libraries(FlangFrontendTests
   clangBasic
   flangFrontend
   flangFrontendTool
+  FortranLower
   FortranParser
   FortranSemantics
   FortranCommon

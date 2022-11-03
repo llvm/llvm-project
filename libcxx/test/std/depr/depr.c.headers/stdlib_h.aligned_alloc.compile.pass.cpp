@@ -18,6 +18,9 @@
 // ::aligned_alloc is not implemented on Windows
 // XFAIL: target={{.+}}-windows-{{.+}}
 
+// ::aligned_alloc is available starting with Android P (API 28)
+// XFAIL: target={{.+}}-android{{(eabi)?(21|22|23|24|25|26|27)}}
+
 #include <stdlib.h>
 #include <type_traits>
 

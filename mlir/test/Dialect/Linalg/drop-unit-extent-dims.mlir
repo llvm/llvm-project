@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -pass-pipeline="func.func(linalg-fold-unit-extent-dims)" | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -pass-pipeline="builtin.module(func.func(linalg-fold-unit-extent-dims))" | FileCheck %s
 
 #accesses = [
   affine_map<(i, j, k, l, m) -> (i, k, m)>,

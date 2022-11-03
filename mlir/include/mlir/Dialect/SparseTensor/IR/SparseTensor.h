@@ -33,6 +33,10 @@ namespace sparse_tensor {
 /// Returns null-attribute for any type without an encoding.
 SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
 
+/// Returns true iff the given type is a type for a COO tensor with the last
+/// dimension level type being unique.
+bool isUniqueCOOType(RankedTensorType tp);
+
 //
 // Dimension level types.
 //

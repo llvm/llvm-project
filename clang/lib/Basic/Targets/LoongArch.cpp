@@ -88,6 +88,10 @@ bool LoongArchTargetInfo::validateAsmConstraint(
     // A signed 12-bit constant (for arithmetic instructions).
     Info.setRequiresImmediate(-2048, 2047);
     return true;
+  case 'J':
+    // Integer zero.
+    Info.setRequiresImmediate(0);
+    return true;
   case 'K':
     // An unsigned 12-bit constant (for logic instructions).
     Info.setRequiresImmediate(0, 4095);

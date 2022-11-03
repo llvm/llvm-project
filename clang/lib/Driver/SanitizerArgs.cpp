@@ -923,10 +923,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         !TC.getTriple().isOSBinFormatELF() || TC.getTriple().isOSFuchsia() ||
             TC.getTriple().isPS());
 
+    // Enable ODR indicators which allow better handling of mixed instrumented
+    // and uninstrumented globals. Disable them for Windows where weak odr
+    // indicators (.weak.__odr_asan_gen*) may cause multiple definition linker
+    // errors in the absence of -lldmingw.
     AsanUseOdrIndicator =
         Args.hasFlag(options::OPT_fsanitize_address_use_odr_indicator,
                      options::OPT_fno_sanitize_address_use_odr_indicator,
-                     AsanUseOdrIndicator);
+                     !TC.getTriple().isOSWindows());
 
     if (AllAddedKinds & SanitizerKind::PointerCompare & ~AllRemove) {
       AsanInvalidPointerCmp = true;
@@ -1236,8 +1240,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (AsanGlobalsDeadStripping)
     CmdArgs.push_back("-fsanitize-address-globals-dead-stripping");
 
-  if (AsanUseOdrIndicator)
-    CmdArgs.push_back("-fsanitize-address-use-odr-indicator");
+  if (!AsanUseOdrIndicator)
+    CmdArgs.push_back("-fno-sanitize-address-use-odr-indicator");
 
   if (AsanInvalidPointerCmp) {
     CmdArgs.push_back("-mllvm");

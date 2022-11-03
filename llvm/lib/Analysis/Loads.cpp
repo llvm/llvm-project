@@ -513,6 +513,39 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
         return ConstantFoldLoadFromConst(C, AccessTy, DL);
   }
 
+  if (auto *MSI = dyn_cast<MemSetInst>(Inst)) {
+    // Don't forward from (non-atomic) memset to atomic load.
+    if (AtLeastAtomic)
+      return nullptr;
+
+    // Only handle constant memsets.
+    auto *Val = dyn_cast<ConstantInt>(MSI->getValue());
+    auto *Len = dyn_cast<ConstantInt>(MSI->getLength());
+    if (!Val || !Len)
+      return nullptr;
+
+    // TODO: Handle offsets.
+    Value *Dst = MSI->getDest();
+    if (!AreEquivalentAddressValues(Dst, Ptr))
+      return nullptr;
+
+    if (IsLoadCSE)
+      *IsLoadCSE = false;
+
+    // Make sure the read bytes are contained in the memset.
+    TypeSize LoadSize = DL.getTypeSizeInBits(AccessTy);
+    if (LoadSize.isScalable() ||
+        (Len->getValue() * 8).ult(LoadSize.getFixedSize()))
+      return nullptr;
+
+    APInt Splat = APInt::getSplat(LoadSize.getFixedSize(), Val->getValue());
+    ConstantInt *SplatC = ConstantInt::get(MSI->getContext(), Splat);
+    if (CastInst::isBitOrNoopPointerCastable(SplatC->getType(), AccessTy, DL))
+      return SplatC;
+
+    return nullptr;
+  }
+
   return nullptr;
 }
 
