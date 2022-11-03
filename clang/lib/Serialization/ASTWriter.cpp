@@ -4551,7 +4551,7 @@ void ASTWriter::collectNonAffectingInputFiles() {
       continue;
 
     if (!isModuleMap(File.getFileCharacteristic()) ||
-        isSystem(File.getFileCharacteristic()) || AffectingModuleMaps.empty() ||
+        AffectingModuleMaps.empty() ||
         AffectingModuleMaps.find(Cache->OrigEntry) != AffectingModuleMaps.end())
       continue;
 
