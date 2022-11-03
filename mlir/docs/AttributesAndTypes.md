@@ -959,6 +959,8 @@ User defined storage classes must adhere to the following:
 - Provide a method to hash an instance of the `KeyTy`. (Note: This is not
   necessary if an `llvm::DenseMapInfo<KeyTy>` specialization exists)
   - `static llvm::hash_code hashKey(const KeyTy &)`
+- Provide a method to generate the `KeyTy` from an instance of the storage class.
+  - `static KeyTy getAsKey()`
 
 Let's look at an example:
 
@@ -995,6 +997,11 @@ struct ComplexTypeStorage : public TypeStorage {
   static ComplexTypeStorage *construct(StorageAllocator &allocator, const KeyTy &key) {
     return new (allocator.allocate<ComplexTypeStorage>())
         ComplexTypeStorage(key.first, key.second);
+  }
+
+  /// Construct an instance of the key from this storage class.
+  KeyTy getAsKey() const {
+    return KeyTy(nonZeroParam, integerType);
   }
 
   /// The parametric data held by the storage class.
