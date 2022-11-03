@@ -1045,6 +1045,12 @@ public:
     return m_source_manager_up.get();
   }
 
+  /// Complete a type from debug info, or mark it as forcefully completed if
+  /// there is no definition of the type in the current Module. Call this
+  /// function in contexts where the usual C++ rules require a type to be
+  /// complete (base class, member, etc.).
+  static void RequireCompleteType(CompilerType type);
+
 private:
   /// Returns the PrintingPolicy used when generating the internal type names.
   /// These type names are mostly used for the formatter selection.

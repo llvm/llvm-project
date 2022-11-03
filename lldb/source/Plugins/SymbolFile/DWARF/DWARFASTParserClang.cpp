@@ -227,28 +227,6 @@ static void ForcefullyCompleteType(CompilerType type) {
   ts.GetMetadata(td)->SetIsForcefullyCompleted();
 }
 
-/// Complete a type from debug info, or mark it as forcefully completed if
-/// there is no definition of the type in the current Module. Call this function
-/// in contexts where the usual C++ rules require a type to be complete (base
-/// class, member, etc.).
-static void RequireCompleteType(CompilerType type) {
-  // Technically, enums can be incomplete too, but we don't handle those as they
-  // are emitted even under -flimit-debug-info.
-  if (!TypeSystemClang::IsCXXClassType(type))
-    return;
-
-  if (type.GetCompleteType())
-    return;
-
-  // No complete definition in this module.  Mark the class as complete to
-  // satisfy local ast invariants, but make a note of the fact that
-  // it is not _really_ complete so we can later search for a definition in a
-  // different module.
-  // Since we provide layout assistance, layouts of types containing this class
-  // will be correct even if we  are not able to find the definition elsewhere.
-  ForcefullyCompleteType(type);
-}
-
 /// This function serves a similar purpose as RequireCompleteType above, but it
 /// avoids completing the type if it is not immediately necessary. It only
 /// ensures we _can_ complete the type later.
@@ -1323,7 +1301,7 @@ DWARFASTParserClang::ParseArrayType(const DWARFDIE &die,
   if (byte_stride == 0 && bit_stride == 0)
     byte_stride = element_type->GetByteSize(nullptr).value_or(0);
   CompilerType array_element_type = element_type->GetForwardCompilerType();
-  RequireCompleteType(array_element_type);
+  TypeSystemClang::RequireCompleteType(array_element_type);
 
   uint64_t array_element_bit_stride = byte_stride * 8 + bit_stride;
   CompilerType clang_type;
@@ -2212,7 +2190,8 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
         clang::TypeSourceInfo *type_source_info =
             base_class->getTypeSourceInfo();
         if (type_source_info)
-          RequireCompleteType(m_ast.GetType(type_source_info->getType()));
+          TypeSystemClang::RequireCompleteType(
+              m_ast.GetType(type_source_info->getType()));
       }
 
       m_ast.TransferBaseClasses(clang_type.GetOpaqueQualType(),
@@ -3018,7 +2997,7 @@ void DWARFASTParserClang::ParseSingleMember(
     }
   }
 
-  RequireCompleteType(member_clang_type);
+  TypeSystemClang::RequireCompleteType(member_clang_type);
 
   clang::FieldDecl *field_decl = TypeSystemClang::AddFieldToRecordType(
       class_clang_type, attrs.name, member_clang_type, attrs.accessibility,
