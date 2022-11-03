@@ -1,5 +1,10 @@
 add_libc_testsuite(libc_setjmp_unittests)
 
+# Skip setjmp tests under sanitizers
+if(LLVM_USE_SANITIZER)
+  return
+endif()
+
 add_libc_unittest(
   setjmp_test
   SUITE
