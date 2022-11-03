@@ -16,8 +16,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Check that globals were instrumented:
 
-; CHECK: @global = global { i32, [28 x i8] } zeroinitializer, align 32
-; CHECK: @.str = internal constant { [14 x i8], [18 x i8] } { [14 x i8] c"Hello, world!\00", [18 x i8] zeroinitializer }, align 32
+; CHECK: @global = global { i32, [28 x i8] } zeroinitializer, comdat, align 32
+; CHECK: @.str = internal constant { [14 x i8], [18 x i8] } { [14 x i8] c"Hello, world!\00", [18 x i8] zeroinitializer }, comdat({{.*}}), align 32
 
 ; Check emitted location descriptions:
 ; CHECK: [[VARNAME:@___asan_gen_.[0-9]+]] = private unnamed_addr constant [7 x i8] c"global\00", align 1
