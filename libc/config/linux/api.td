@@ -106,6 +106,7 @@ def MathAPI : PublicAPI<"math.h"> {
     SimpleMacroDef<"MATH_ERREXCEPT", "2">,
     MathErrHandlingMacro,
 
+    SimpleMacroDef<"HUGE_VAL", "__builtin_huge_val()">,
     SimpleMacroDef<"INFINITY", "__builtin_inff()">,
     SimpleMacroDef<"NAN", "__builtin_nanf(\"\")">,
 
@@ -207,6 +208,7 @@ def SysMManAPI : PublicAPI<"sys/mman.h"> {
 
 def SignalAPI : PublicAPI<"signal.h"> {
   let Types = [
+    "sig_atomic_t",
     "sigset_t",
     "struct sigaction",
     "union sigval",
