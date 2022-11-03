@@ -21,6 +21,7 @@
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsLoongArch.h"
 #include "llvm/Support/Debug.h"
@@ -160,7 +161,12 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setLibcallName(RTLIB::MUL_I128, nullptr);
 
   setOperationAction(ISD::FP_TO_UINT, GRLenVT, Custom);
-  setOperationAction(ISD::UINT_TO_FP, GRLenVT, Custom);
+  setOperationAction(ISD::UINT_TO_FP, GRLenVT, Expand);
+  if ((Subtarget.is64Bit() && Subtarget.hasBasicF() &&
+       !Subtarget.hasBasicD())) {
+    setOperationAction(ISD::SINT_TO_FP, GRLenVT, Custom);
+    setOperationAction(ISD::UINT_TO_FP, GRLenVT, Custom);
+  }
 
   // Compute derived properties from the register classes.
   computeRegisterProperties(STI.getRegisterInfo());
@@ -220,6 +226,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerBITCAST(Op, DAG);
   case ISD::UINT_TO_FP:
     return lowerUINT_TO_FP(Op, DAG);
+  case ISD::SINT_TO_FP:
+    return lowerSINT_TO_FP(Op, DAG);
   case ISD::VASTART:
     return lowerVASTART(Op, DAG);
   case ISD::FRAMEADDR:
@@ -302,19 +310,61 @@ SDValue LoongArchTargetLowering::lowerVASTART(SDValue Op,
 
 SDValue LoongArchTargetLowering::lowerUINT_TO_FP(SDValue Op,
                                                  SelectionDAG &DAG) const {
+  assert(Subtarget.is64Bit() && Subtarget.hasBasicF() &&
+         !Subtarget.hasBasicD() && "unexpected target features");
 
   SDLoc DL(Op);
-  auto &TLI = DAG.getTargetLoweringInfo();
-  SDValue Tmp1, Tmp2;
-  SDValue Op1 = Op.getOperand(0);
-  if (Op1->getOpcode() == ISD::AssertZext ||
-      Op1->getOpcode() == ISD::AssertSext)
+  SDValue Op0 = Op.getOperand(0);
+  if (Op0->getOpcode() == ISD::AND) {
+    auto *C = dyn_cast<ConstantSDNode>(Op0.getOperand(1));
+    if (C && C->getZExtValue() < UINT64_C(0xFFFFFFFF))
+      return Op;
+  }
+
+  if (Op0->getOpcode() == LoongArchISD::BSTRPICK &&
+      Op0.getConstantOperandVal(1) < UINT64_C(0X1F) &&
+      Op0.getConstantOperandVal(2) == UINT64_C(0))
     return Op;
-  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Op.getOperand(0));
-  SDValue Res = DAG.getNode(ISD::UINT_TO_FP, DL, MVT::f64, Trunc);
-  SDNode *N = Res.getNode();
-  TLI.expandUINT_TO_FP(N, Tmp1, Tmp2, DAG);
-  return Tmp1;
+
+  if (Op0.getOpcode() == ISD::AssertZext &&
+      dyn_cast<VTSDNode>(Op0.getOperand(1))->getVT().bitsLT(MVT::i32))
+    return Op;
+
+  EVT OpVT = Op0.getValueType();
+  EVT RetVT = Op.getValueType();
+  RTLIB::Libcall LC = RTLIB::getUINTTOFP(OpVT, RetVT);
+  MakeLibCallOptions CallOptions;
+  CallOptions.setTypeListBeforeSoften(OpVT, RetVT, true);
+  SDValue Chain = SDValue();
+  SDValue Result;
+  std::tie(Result, Chain) =
+      makeLibCall(DAG, LC, Op.getValueType(), Op0, CallOptions, DL, Chain);
+  return Result;
+}
+
+SDValue LoongArchTargetLowering::lowerSINT_TO_FP(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  assert(Subtarget.is64Bit() && Subtarget.hasBasicF() &&
+         !Subtarget.hasBasicD() && "unexpected target features");
+
+  SDLoc DL(Op);
+  SDValue Op0 = Op.getOperand(0);
+
+  if ((Op0.getOpcode() == ISD::AssertSext ||
+       Op0.getOpcode() == ISD::SIGN_EXTEND_INREG) &&
+      dyn_cast<VTSDNode>(Op0.getOperand(1))->getVT().bitsLE(MVT::i32))
+    return Op;
+
+  EVT OpVT = Op0.getValueType();
+  EVT RetVT = Op.getValueType();
+  RTLIB::Libcall LC = RTLIB::getSINTTOFP(OpVT, RetVT);
+  MakeLibCallOptions CallOptions;
+  CallOptions.setTypeListBeforeSoften(OpVT, RetVT, true);
+  SDValue Chain = SDValue();
+  SDValue Result;
+  std::tie(Result, Chain) =
+      makeLibCall(DAG, LC, Op.getValueType(), Op0, CallOptions, DL, Chain);
+  return Result;
 }
 
 SDValue LoongArchTargetLowering::lowerBITCAST(SDValue Op,
