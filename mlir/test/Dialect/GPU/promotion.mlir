@@ -1,4 +1,4 @@
-// RUN: mlir-opt -allow-unregistered-dialect -test-gpu-memory-promotion -pass-pipeline='gpu.module(gpu.func(test-gpu-memory-promotion))' -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -pass-pipeline='gpu.module(gpu.func(test-gpu-memory-promotion))' -split-input-file %s | FileCheck %s
 
 gpu.module @foo {
 
