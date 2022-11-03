@@ -757,6 +757,13 @@ struct AccessAsInstructionInfo : DenseMapInfo<Instruction *> {
 
 /// A type to track pointer/struct usage and accesses for AAPointerInfo.
 struct AA::PointerInfo::State : public AbstractState {
+
+  ~State() {
+    // We do not delete the Accesses objects but need to destroy them still.
+    for (auto &It : AccessBins)
+      It.second->~Accesses();
+  }
+
   /// Return the best possible representable state.
   static State getBestState(const State &SIS) { return State(); }
 
@@ -768,7 +775,9 @@ struct AA::PointerInfo::State : public AbstractState {
   }
 
   State() = default;
-  State(State &&SIS) = default;
+  State(State &&SIS) : AccessBins(std::move(SIS.AccessBins)) {
+    SIS.AccessBins.clear();
+  }
 
   const State &getAssumed() const { return *this; }
 
@@ -794,9 +803,7 @@ struct AA::PointerInfo::State : public AbstractState {
     if (this == &R)
       return *this;
     BS = R.BS;
-    AccessList = R.AccessList;
-    OffsetBins = R.OffsetBins;
-    RemoteIMap = R.RemoteIMap;
+    AccessBins = R.AccessBins;
     return *this;
   }
 
@@ -804,51 +811,98 @@ struct AA::PointerInfo::State : public AbstractState {
     if (this == &R)
       return *this;
     std::swap(BS, R.BS);
-    std::swap(AccessList, R.AccessList);
-    std::swap(OffsetBins, R.OffsetBins);
-    std::swap(RemoteIMap, R.RemoteIMap);
+    std::swap(AccessBins, R.AccessBins);
     return *this;
   }
 
-  /// Add a new Access to the state at offset \p Offset and with size \p Size.
+  bool operator==(const State &R) const {
+    if (BS != R.BS)
+      return false;
+    if (AccessBins.size() != R.AccessBins.size())
+      return false;
+    auto It = begin(), RIt = R.begin(), E = end();
+    while (It != E) {
+      if (It->getFirst() != RIt->getFirst())
+        return false;
+      auto &Accs = It->getSecond();
+      auto &RAccs = RIt->getSecond();
+      if (Accs->size() != RAccs->size())
+        return false;
+      for (const auto &ZipIt : llvm::zip(*Accs, *RAccs))
+        if (std::get<0>(ZipIt) != std::get<1>(ZipIt))
+          return false;
+      ++It;
+      ++RIt;
+    }
+    return true;
+  }
+  bool operator!=(const State &R) const { return !(*this == R); }
+
+  /// We store accesses in a set with the instruction as key.
+  struct Accesses {
+    SmallVector<AAPointerInfo::Access, 4> Accesses;
+    DenseMap<const Instruction *, unsigned> Map;
+
+    unsigned size() const { return Accesses.size(); }
+
+    using vec_iterator = decltype(Accesses)::iterator;
+    vec_iterator begin() { return Accesses.begin(); }
+    vec_iterator end() { return Accesses.end(); }
+
+    using iterator = decltype(Map)::const_iterator;
+    iterator find(AAPointerInfo::Access &Acc) {
+      return Map.find(Acc.getRemoteInst());
+    }
+    iterator find_end() { return Map.end(); }
+
+    AAPointerInfo::Access &get(iterator &It) {
+      return Accesses[It->getSecond()];
+    }
+
+    void insert(AAPointerInfo::Access &Acc) {
+      Map[Acc.getRemoteInst()] = Accesses.size();
+      Accesses.push_back(Acc);
+    }
+  };
+
+  /// We store all accesses in bins denoted by their offset and size.
+  using AccessBinsTy = DenseMap<AA::OffsetAndSize, Accesses *>;
+
+  AccessBinsTy::const_iterator begin() const { return AccessBins.begin(); }
+  AccessBinsTy::const_iterator end() const { return AccessBins.end(); }
+
+protected:
+  /// The bins with all the accesses for the associated pointer.
+  AccessBinsTy AccessBins;
+
+  /// Add a new access to the state at offset \p Offset and with size \p Size.
   /// The access is associated with \p I, writes \p Content (if anything), and
-  /// is of kind \p Kind. If an Access already exists for the same \p I and same
-  /// \p RemoteI, the two are combined, potentially losing information about
-  /// offset and size. The resulting access must now be moved from its original
-  /// OffsetBin to the bin for its new offset.
-  ///
+  /// is of kind \p Kind.
   /// \Returns CHANGED, if the state changed, UNCHANGED otherwise.
   ChangeStatus addAccess(Attributor &A, int64_t Offset, int64_t Size,
                          Instruction &I, Optional<Value *> Content,
                          AAPointerInfo::AccessKind Kind, Type *Ty,
-                         Instruction *RemoteI = nullptr);
-
-  using OffsetBinsTy = DenseMap<OffsetAndSize, SmallSet<unsigned, 4>>;
-
-  using const_bin_iterator = OffsetBinsTy::const_iterator;
-  const_bin_iterator begin() const { return OffsetBins.begin(); }
-  const_bin_iterator end() const { return OffsetBins.end(); }
-
-  const AAPointerInfo::Access &getAccess(unsigned Index) const {
-    return AccessList[Index];
+                         Instruction *RemoteI = nullptr,
+                         Accesses *BinPtr = nullptr) {
+    AA::OffsetAndSize Key{Offset, Size};
+    Accesses *&Bin = BinPtr ? BinPtr : AccessBins[Key];
+    if (!Bin)
+      Bin = new (A.Allocator) Accesses;
+    AAPointerInfo::Access Acc(&I, RemoteI ? RemoteI : &I, Content, Kind, Ty);
+    // Check if we have an access for this instruction in this bin, if not,
+    // simply add it.
+    auto It = Bin->find(Acc);
+    if (It == Bin->find_end()) {
+      Bin->insert(Acc);
+      return ChangeStatus::CHANGED;
+    }
+    // If the existing access is the same as then new one, nothing changed.
+    AAPointerInfo::Access &Current = Bin->get(It);
+    AAPointerInfo::Access Before = Current;
+    // The new one will be combined with the existing one.
+    Current &= Acc;
+    return Current == Before ? ChangeStatus::UNCHANGED : ChangeStatus::CHANGED;
   }
-
-protected:
-  // Every memory instruction results in an Access object. We maintain a list of
-  // all Access objects that we own, along with the following maps:
-  //
-  // - OffsetBins: OffsetAndSize -> { Access }
-  // - RemoteIMap: RemoteI x LocalI -> Access
-  //
-  // A RemoteI is any instruction that accesses memory. RemoteI is different
-  // from LocalI if and only if LocalI is a call; then RemoteI is some
-  // instruction in the callgraph starting from LocalI. Multiple paths in the
-  // callgraph from LocalI to RemoteI may produce multiple accesses, but these
-  // are all combined into a single Access object. This may result in loss of
-  // information in OffsetAndSize in the Access object.
-  SmallVector<AAPointerInfo::Access> AccessList;
-  OffsetBinsTy OffsetBins;
-  DenseMap<const Instruction *, SmallVector<unsigned>> RemoteIMap;
 
   /// See AAPointerInfo::forallInterferingAccesses.
   bool forallInterferingAccesses(
@@ -857,16 +911,14 @@ protected:
     if (!isValidState())
       return false;
 
-    for (const auto &It : OffsetBins) {
+    for (const auto &It : AccessBins) {
       AA::OffsetAndSize ItOAS = It.getFirst();
       if (!OAS.mayOverlap(ItOAS))
         continue;
       bool IsExact = OAS == ItOAS && !OAS.offsetOrSizeAreUnknown();
-      for (auto Index : It.getSecond()) {
-        auto &Access = AccessList[Index];
+      for (auto &Access : *It.getSecond())
         if (!CB(Access, IsExact))
           return false;
-      }
     }
     return true;
   }
@@ -875,19 +927,32 @@ protected:
   bool forallInterferingAccesses(
       Instruction &I,
       function_ref<bool(const AAPointerInfo::Access &, bool)> CB,
-      AA::OffsetAndSize &OAS) const {
+      AA::OffsetAndSize *OASPtr) const {
     if (!isValidState())
       return false;
 
-    auto LocalList = RemoteIMap.find(&I);
-    if (LocalList == RemoteIMap.end()) {
-      return true;
+    // First find the offset and size of I.
+    AA::OffsetAndSize OAS;
+    for (const auto &It : AccessBins) {
+      for (auto &Access : *It.getSecond()) {
+        if (Access.getRemoteInst() == &I) {
+          OAS = It.getFirst();
+          break;
+        }
+      }
+      if (OAS.Size != AA::OffsetAndSize::Unassigned)
+        break;
     }
 
-    for (auto LI : LocalList->getSecond()) {
-      auto &Access = AccessList[LI];
-      OAS &= {Access.getOffset(), Access.getSize()};
-    }
+    if (OASPtr)
+      *OASPtr = OAS;
+
+    // No access for I was found, we are done.
+    if (OAS.Size == AA::OffsetAndSize::Unassigned)
+      return true;
+
+    // Now that we have an offset and size, find all overlapping ones and use
+    // the callback on the accesses.
     return forallInterferingAccesses(OAS, CB);
   }
 
@@ -895,56 +960,6 @@ private:
   /// State to track fixpoint and validity.
   BooleanState BS;
 };
-
-ChangeStatus AA::PointerInfo::State::addAccess(Attributor &A, int64_t Offset,
-                                               int64_t Size, Instruction &I,
-                                               Optional<Value *> Content,
-                                               AAPointerInfo::AccessKind Kind,
-                                               Type *Ty, Instruction *RemoteI) {
-  RemoteI = RemoteI ? RemoteI : &I;
-  AAPointerInfo::Access Acc(&I, RemoteI, Offset, Size, Content, Kind, Ty);
-
-  // Check if we have an access for this instruction, if not, simply add it.
-  auto &LocalList = RemoteIMap[RemoteI];
-  bool AccExists = false;
-  unsigned AccIndex = AccessList.size();
-  for (auto Index : LocalList) {
-    auto &A = AccessList[Index];
-    if (A.getLocalInst() == &I) {
-      AccExists = true;
-      AccIndex = Index;
-      break;
-    }
-  }
-  if (!AccExists) {
-    AccessList.push_back(Acc);
-    LocalList.push_back(AccIndex);
-  } else {
-    // The new one will be combined with the existing one.
-    auto &Current = AccessList[AccIndex];
-    auto Before = Current;
-    Current &= Acc;
-    if (Current == Before)
-      return ChangeStatus::UNCHANGED;
-
-    Acc = Current;
-    AA::OffsetAndSize Key{Before.getOffset(), Before.getSize()};
-    assert(OffsetBins.count(Key) && "Existing Access must be in some bin.");
-    auto &Bin = OffsetBins[Key];
-    assert(Bin.count(AccIndex) &&
-           "Expected bin to actually contain the Access.");
-    LLVM_DEBUG(dbgs() << "[AAPointerInfo] Removing Access "
-                      << AccessList[AccIndex] << " with key {" << Key.Offset
-                      << ',' << Key.Size << "}\n");
-    Bin.erase(AccIndex);
-  }
-
-  AA::OffsetAndSize Key{Acc.getOffset(), Acc.getSize()};
-  LLVM_DEBUG(dbgs() << "[AAPointerInfo] Inserting Access " << Acc
-                    << " with key {" << Key.Offset << ',' << Key.Size << "}\n");
-  OffsetBins[Key].insert(AccIndex);
-  return ChangeStatus::CHANGED;
-}
 
 namespace {
 struct AAPointerInfoImpl
@@ -956,7 +971,7 @@ struct AAPointerInfoImpl
   const std::string getAsStr() const override {
     return std::string("PointerInfo ") +
            (isValidState() ? (std::string("#") +
-                              std::to_string(OffsetBins.size()) + " bins")
+                              std::to_string(AccessBins.size()) + " bins")
                            : "<invalid>");
   }
 
@@ -975,7 +990,7 @@ struct AAPointerInfoImpl
   bool forallInterferingAccesses(
       Attributor &A, const AbstractAttribute &QueryingAA, Instruction &I,
       function_ref<bool(const Access &, bool)> UserCB, bool &HasBeenWrittenTo,
-      AA::OffsetAndSize &OAS) const override {
+      AA::OffsetAndSize *OASPtr = nullptr) const override {
     HasBeenWrittenTo = false;
 
     SmallPtrSet<const Access *, 8> DominatingWrites;
@@ -1090,7 +1105,7 @@ struct AAPointerInfoImpl
       InterferingAccesses.push_back({&Acc, Exact});
       return true;
     };
-    if (!State::forallInterferingAccesses(I, AccessCB, OAS))
+    if (!State::forallInterferingAccesses(I, AccessCB, OASPtr))
       return false;
 
     if (HasBeenWrittenTo) {
@@ -1157,15 +1172,14 @@ struct AAPointerInfoImpl
 
     // Combine the accesses bin by bin.
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
-    const auto &State = OtherAAImpl.getState();
-    for (const auto &It : State) {
+    for (const auto &It : OtherAAImpl.getState()) {
       AA::OffsetAndSize OAS = AA::OffsetAndSize::getUnknown();
       if (Offset != AA::OffsetAndSize::Unknown &&
           !It.first.offsetOrSizeAreUnknown()) {
         OAS = AA::OffsetAndSize(It.first.Offset + Offset, It.first.Size);
       }
-      for (auto Index : It.getSecond()) {
-        const auto &RAcc = State.getAccess(Index);
+      Accesses *Bin = AccessBins.lookup(OAS);
+      for (const AAPointerInfo::Access &RAcc : *It.second) {
         if (IsByval && !RAcc.isRead())
           continue;
         bool UsedAssumedInformation = false;
@@ -1178,8 +1192,9 @@ struct AAPointerInfoImpl
               AccessKind(AK & (IsByval ? AccessKind::AK_R : AccessKind::AK_RW));
           AK = AccessKind(AK | (RAcc.isMayAccess() ? AK_MAY : AK_MUST));
         }
-        Changed = Changed | addAccess(A, OAS.Offset, OAS.Size, CB, Content, AK,
-                                      RAcc.getType(), RAcc.getRemoteInst());
+        Changed =
+            Changed | addAccess(A, OAS.Offset, OAS.Size, CB, Content, AK,
+                                RAcc.getType(), RAcc.getRemoteInst(), Bin);
       }
     }
     return Changed;
@@ -1191,11 +1206,10 @@ struct AAPointerInfoImpl
 
   /// Dump the state into \p O.
   void dumpState(raw_ostream &O) {
-    for (auto &It : OffsetBins) {
+    for (auto &It : AccessBins) {
       O << "[" << It.first.Offset << "-" << It.first.Offset + It.first.Size
-        << "] : " << It.getSecond().size() << "\n";
-      for (auto AccIndex : It.getSecond()) {
-        auto &Acc = AccessList[AccIndex];
+        << "] : " << It.getSecond()->size() << "\n";
+      for (auto &Acc : *It.getSecond()) {
         O << "     - " << Acc.getKind() << " - " << *Acc.getLocalInst() << "\n";
         if (Acc.getLocalInst() != Acc.getRemoteInst())
           O << "     -->                         " << *Acc.getRemoteInst()

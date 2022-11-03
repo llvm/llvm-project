@@ -2223,7 +2223,6 @@ define i8 @phi_no_store_2() {
 ; TUNIT:       loop:
 ; TUNIT-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a2 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; TUNIT-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; TUNIT-NEXT:    store i8 1, i8* [[P]], align 2
 ; TUNIT-NEXT:    [[G]] = getelementptr i8, i8* bitcast (i32* @a2 to i8*), i64 2
 ; TUNIT-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; TUNIT-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
@@ -2242,7 +2241,6 @@ define i8 @phi_no_store_2() {
 ; CGSCC:       loop:
 ; CGSCC-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a2 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; CGSCC-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; CGSCC-NEXT:    store i8 1, i8* [[P]], align 2
 ; CGSCC-NEXT:    [[G]] = getelementptr i8, i8* bitcast (i32* @a2 to i8*), i64 2
 ; CGSCC-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; CGSCC-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
@@ -2283,7 +2281,6 @@ define i8 @phi_no_store_3() {
 ; TUNIT:       loop:
 ; TUNIT-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a3 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; TUNIT-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; TUNIT-NEXT:    store i8 1, i8* [[P]], align 2
 ; TUNIT-NEXT:    [[G]] = getelementptr i8, i8* bitcast (i32* @a3 to i8*), i64 2
 ; TUNIT-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; TUNIT-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
@@ -2305,7 +2302,6 @@ define i8 @phi_no_store_3() {
 ; CGSCC:       loop:
 ; CGSCC-NEXT:    [[P:%.*]] = phi i8* [ bitcast (i32* @a3 to i8*), [[ENTRY:%.*]] ], [ [[G:%.*]], [[LOOP]] ]
 ; CGSCC-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[O:%.*]], [[LOOP]] ]
-; CGSCC-NEXT:    store i8 1, i8* [[P]], align 2
 ; CGSCC-NEXT:    [[G]] = getelementptr i8, i8* bitcast (i32* @a3 to i8*), i64 2
 ; CGSCC-NEXT:    [[O]] = add nsw i8 [[I]], 1
 ; CGSCC-NEXT:    [[C:%.*]] = icmp eq i8 [[O]], 7
