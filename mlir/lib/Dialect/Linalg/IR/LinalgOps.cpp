@@ -836,8 +836,8 @@ ParseResult GenericOp::parse(OpAsmParser &parser, OperationState &result) {
 static void getGenericEffectsImpl(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects,
-    ValueRange results, OpOperandVector inputOperands,
-    OpOperandVector outputOperands) {
+    ValueRange results, const OpOperandVector &inputOperands,
+    const OpOperandVector &outputOperands) {
   for (auto *operand : inputOperands) {
     if (!operand->get().getType().isa<MemRefType>())
       continue;
