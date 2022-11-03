@@ -807,3 +807,37 @@ LogicalResult transform::WithPDLPatternsOp::verify() {
 
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// PrintOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::PrintOp::apply(transform::TransformResults &results,
+                          transform::TransformState &state) {
+  llvm::errs() << "[[[ IR printer: ";
+  if (getName().has_value())
+    llvm::errs() << *getName() << " ";
+
+  if (!getTarget()) {
+    llvm::errs() << "top-level ]]]\n" << *state.getTopLevel() << "\n";
+    return DiagnosedSilenceableFailure::success();
+  }
+
+  llvm::errs() << "]]]\n";
+  ArrayRef<Operation *> targets = state.getPayloadOps(getTarget());
+  for (Operation *target : targets)
+    llvm::errs() << *target << "\n";
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::PrintOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getTarget(), effects);
+  onlyReadsPayload(effects);
+
+  // There is no resource for stderr file descriptor, so just declare print
+  // writes into the default resource.
+  effects.emplace_back(MemoryEffects::Write::get());
+}
