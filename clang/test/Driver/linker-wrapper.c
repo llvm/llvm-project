@@ -115,8 +115,8 @@
 // RUN:   --image=file=%S/Inputs/dummy-elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx908
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
 // RUN:   -fembed-offload-object=%t.out
-// RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu -linker-path \
-// RUN:   /usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=HIP
+// RUN: clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --linker-path=/usr/bin/ld -- %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=HIP
 
 // HIP: lld{{.*}}-flavor gnu --no-undefined -shared -plugin-opt=-amdgpu-internalize-symbols -plugin-opt=mcpu=gfx908 -o {{.*}}.out {{.*}}.o
 // HIP: lld{{.*}}-flavor gnu --no-undefined -shared -plugin-opt=-amdgpu-internalize-symbols -plugin-opt=mcpu=gfx90a -o {{.*}}.out {{.*}}.o
@@ -133,6 +133,12 @@
 
 // LINKER_ARGS: lld{{.*}}-flavor gnu --no-undefined -shared -plugin-opt=-amdgpu-internalize-symbols -plugin-opt=mcpu=gfx908 -o {{.*}}.out {{.*}}.o a
 // LINKER_ARGS: nvlink{{.*}}-m64 -o {{.*}}.out -arch sm_70 {{.*}}.o a b
+
+// RUN: not clang-linker-wrapper --dry-run --host-triple=x86_64-unknown-linux-gnu -ldummy \
+// RUN:   --linker-path=/usr/bin/ld --device-linker=a --device-linker=nvptx64-nvidia-cuda=b -- \
+// RUN:   -o a.out 2>&1 | FileCheck %s --check-prefix=MISSING-LIBRARY
+
+// MISSING-LIBRARY: error: unable to find library -ldummy
 
 /// Ensure that temp files aren't leftoever from static libraries.
 // RUN: clang-offload-packager -o %t-lib.out \
