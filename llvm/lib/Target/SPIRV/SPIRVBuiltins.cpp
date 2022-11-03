@@ -14,6 +14,7 @@
 #include "SPIRVBuiltins.h"
 #include "SPIRV.h"
 #include "SPIRVUtils.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include <string>
 #include <tuple>
@@ -1361,6 +1362,156 @@ static bool generateSpecConstantInst(const SPIRV::IncomingCall *Call,
   }
 }
 
+static MachineInstr *getBlockStructInstr(Register ParamReg,
+                                         MachineRegisterInfo *MRI) {
+  // We expect the following sequence of instructions:
+  //   %0:_(pN) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.alloca)
+  //   or       = G_GLOBAL_VALUE @block_literal_global
+  //   %1:_(pN) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.bitcast), %0
+  //   %2:_(p4) = G_ADDRSPACE_CAST %1:_(pN)
+  MachineInstr *MI = MRI->getUniqueVRegDef(ParamReg);
+  assert(MI->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST &&
+         MI->getOperand(1).isReg());
+  Register BitcastReg = MI->getOperand(1).getReg();
+  MachineInstr *BitcastMI = MRI->getUniqueVRegDef(BitcastReg);
+  assert(isSpvIntrinsic(*BitcastMI, Intrinsic::spv_bitcast) &&
+         BitcastMI->getOperand(2).isReg());
+  Register ValueReg = BitcastMI->getOperand(2).getReg();
+  MachineInstr *ValueMI = MRI->getUniqueVRegDef(ValueReg);
+  return ValueMI;
+}
+
+// Return type of the instruction result from spv_assign_type intrinsic.
+// TODO: maybe unify with prelegalizer pass.
+static const Type *getMachineInstrType(MachineInstr *MI) {
+  MachineInstr *NextMI = MI->getNextNode();
+  if (isSpvIntrinsic(*NextMI, Intrinsic::spv_assign_name))
+    NextMI = NextMI->getNextNode();
+  Register ValueReg = MI->getOperand(0).getReg();
+  if (!isSpvIntrinsic(*NextMI, Intrinsic::spv_assign_type) ||
+      NextMI->getOperand(1).getReg() != ValueReg)
+    return nullptr;
+  Type *Ty = getMDOperandAsType(NextMI->getOperand(2).getMetadata(), 0);
+  assert(Ty && "Type is expected");
+  return getTypedPtrEltType(Ty);
+}
+
+static const Type *getBlockStructType(Register ParamReg,
+                                      MachineRegisterInfo *MRI) {
+  // In principle, this information should be passed to us from Clang via
+  // an elementtype attribute. However, said attribute requires that
+  // the function call be an intrinsic, which is not. Instead, we rely on being
+  // able to trace this to the declaration of a variable: OpenCL C specification
+  // section 6.12.5 should guarantee that we can do this.
+  MachineInstr *MI = getBlockStructInstr(ParamReg, MRI);
+  if (MI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE)
+    return getTypedPtrEltType(MI->getOperand(1).getGlobal()->getType());
+  assert(isSpvIntrinsic(*MI, Intrinsic::spv_alloca) &&
+         "Blocks in OpenCL C must be traceable to allocation site");
+  return getMachineInstrType(MI);
+}
+
+// TODO: maybe move to the global register.
+static SPIRVType *
+getOrCreateSPIRVDeviceEventPointer(MachineIRBuilder &MIRBuilder,
+                                   SPIRVGlobalRegistry *GR) {
+  LLVMContext &Context = MIRBuilder.getMF().getFunction().getContext();
+  Type *OpaqueType = StructType::getTypeByName(Context, "spirv.DeviceEvent");
+  if (!OpaqueType)
+    OpaqueType = StructType::getTypeByName(Context, "opencl.clk_event_t");
+  if (!OpaqueType)
+    OpaqueType = StructType::create(Context, "spirv.DeviceEvent");
+  unsigned SC0 = storageClassToAddressSpace(SPIRV::StorageClass::Function);
+  unsigned SC1 = storageClassToAddressSpace(SPIRV::StorageClass::Generic);
+  Type *PtrType = PointerType::get(PointerType::get(OpaqueType, SC0), SC1);
+  return GR->getOrCreateSPIRVType(PtrType, MIRBuilder);
+}
+
+static bool buildEnqueueKernel(const SPIRV::IncomingCall *Call,
+                               MachineIRBuilder &MIRBuilder,
+                               SPIRVGlobalRegistry *GR) {
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  const DataLayout &DL = MIRBuilder.getDataLayout();
+  bool HasEvents = Call->Builtin->Name.find("events") != StringRef::npos;
+  const SPIRVType *Int32Ty = GR->getOrCreateSPIRVIntegerType(32, MIRBuilder);
+
+  // Make vararg instructions before OpEnqueueKernel.
+  // Local sizes arguments: Sizes of block invoke arguments. Clang generates
+  // local size operands as an array, so we need to unpack them.
+  SmallVector<Register, 16> LocalSizes;
+  if (Call->Builtin->Name.find("_varargs") != StringRef::npos) {
+    const unsigned LocalSizeArrayIdx = HasEvents ? 9 : 6;
+    Register GepReg = Call->Arguments[LocalSizeArrayIdx];
+    MachineInstr *GepMI = MRI->getUniqueVRegDef(GepReg);
+    assert(isSpvIntrinsic(*GepMI, Intrinsic::spv_gep) &&
+           GepMI->getOperand(3).isReg());
+    Register ArrayReg = GepMI->getOperand(3).getReg();
+    MachineInstr *ArrayMI = MRI->getUniqueVRegDef(ArrayReg);
+    const Type *LocalSizeTy = getMachineInstrType(ArrayMI);
+    assert(LocalSizeTy && "Local size type is expected");
+    const uint64_t LocalSizeNum =
+        cast<ArrayType>(LocalSizeTy)->getNumElements();
+    unsigned SC = storageClassToAddressSpace(SPIRV::StorageClass::Generic);
+    const LLT LLType = LLT::pointer(SC, GR->getPointerSize());
+    const SPIRVType *PointerSizeTy = GR->getOrCreateSPIRVPointerType(
+        Int32Ty, MIRBuilder, SPIRV::StorageClass::Function);
+    for (unsigned I = 0; I < LocalSizeNum; ++I) {
+      Register Reg =
+          MIRBuilder.getMRI()->createVirtualRegister(&SPIRV::IDRegClass);
+      MIRBuilder.getMRI()->setType(Reg, LLType);
+      GR->assignSPIRVTypeToVReg(PointerSizeTy, Reg, MIRBuilder.getMF());
+      auto GEPInst = MIRBuilder.buildIntrinsic(Intrinsic::spv_gep,
+                                               ArrayRef<Register>{Reg}, true);
+      GEPInst
+          .addImm(GepMI->getOperand(2).getImm())          // In bound.
+          .addUse(ArrayMI->getOperand(0).getReg())        // Alloca.
+          .addUse(buildConstantIntReg(0, MIRBuilder, GR)) // Indices.
+          .addUse(buildConstantIntReg(I, MIRBuilder, GR));
+      LocalSizes.push_back(Reg);
+    }
+  }
+
+  // SPIRV OpEnqueueKernel instruction has 10+ arguments.
+  auto MIB = MIRBuilder.buildInstr(SPIRV::OpEnqueueKernel)
+                 .addDef(Call->ReturnRegister)
+                 .addUse(GR->getSPIRVTypeID(Int32Ty));
+
+  // Copy all arguments before block invoke function pointer.
+  const unsigned BlockFIdx = HasEvents ? 6 : 3;
+  for (unsigned i = 0; i < BlockFIdx; i++)
+    MIB.addUse(Call->Arguments[i]);
+
+  // If there are no event arguments in the original call, add dummy ones.
+  if (!HasEvents) {
+    MIB.addUse(buildConstantIntReg(0, MIRBuilder, GR)); // Dummy num events.
+    Register NullPtr = GR->getOrCreateConstNullPtr(
+        MIRBuilder, getOrCreateSPIRVDeviceEventPointer(MIRBuilder, GR));
+    MIB.addUse(NullPtr); // Dummy wait events.
+    MIB.addUse(NullPtr); // Dummy ret event.
+  }
+
+  MachineInstr *BlockMI = getBlockStructInstr(Call->Arguments[BlockFIdx], MRI);
+  assert(BlockMI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE);
+  // Invoke: Pointer to invoke function.
+  MIB.addGlobalAddress(BlockMI->getOperand(1).getGlobal());
+
+  Register BlockLiteralReg = Call->Arguments[BlockFIdx + 1];
+  // Param: Pointer to block literal.
+  MIB.addUse(BlockLiteralReg);
+
+  Type *PType = const_cast<Type *>(getBlockStructType(BlockLiteralReg, MRI));
+  // TODO: these numbers should be obtained from block literal structure.
+  // Param Size: Size of block literal structure.
+  MIB.addUse(buildConstantIntReg(DL.getTypeStoreSize(PType), MIRBuilder, GR));
+  // Param Aligment: Aligment of block literal structure.
+  MIB.addUse(
+      buildConstantIntReg(DL.getPrefTypeAlignment(PType), MIRBuilder, GR));
+
+  for (unsigned i = 0; i < LocalSizes.size(); i++)
+    MIB.addUse(LocalSizes[i]);
+  return true;
+}
+
 static bool generateEnqueueInst(const SPIRV::IncomingCall *Call,
                                 MachineIRBuilder &MIRBuilder,
                                 SPIRVGlobalRegistry *GR) {
@@ -1450,6 +1601,8 @@ static bool generateEnqueueInst(const SPIRV::IncomingCall *Call,
         .addUse(Call->Arguments[0])
         .addUse(TmpReg);
   }
+  case SPIRV::OpEnqueueKernel:
+    return buildEnqueueKernel(Call, MIRBuilder, GR);
   default:
     return false;
   }
@@ -1855,6 +2008,9 @@ SPIRVType *lowerBuiltinType(const StructType *OpaqueType,
     break;
   case SPIRV::OpTypePipe:
     TargetType = getPipeType(OpaqueType, MIRBuilder, GR);
+    break;
+  case SPIRV::OpTypeDeviceEvent:
+    TargetType = GR->getOrCreateOpTypeDeviceEvent(MIRBuilder);
     break;
   case SPIRV::OpTypeSampler:
     TargetType = getSamplerType(MIRBuilder, GR);

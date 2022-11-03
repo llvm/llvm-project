@@ -581,9 +581,8 @@ private:
   static const ParmVarDecl *getParamDefinition(const ParmVarDecl *P) {
     if (auto *Callee = dyn_cast<FunctionDecl>(P->getDeclContext())) {
       if (auto *Def = Callee->getDefinition()) {
-        auto I = std::distance(
-            Callee->param_begin(),
-            std::find(Callee->param_begin(), Callee->param_end(), P));
+        auto I = std::distance(Callee->param_begin(),
+                               llvm::find(Callee->parameters(), P));
         if (I < Callee->getNumParams()) {
           return Def->getParamDecl(I);
         }

@@ -90,9 +90,6 @@ module {
     // Release the resources.
     bufferization.dealloc_tensor %a : tensor<?x?xf64, #SparseMatrix>
 
-    // TODO(springerm): auto release!
-    bufferization.dealloc_tensor %b : tensor<?x?xf64>
-    bufferization.dealloc_tensor %x : tensor<?x?xf64>
 
     return
   }

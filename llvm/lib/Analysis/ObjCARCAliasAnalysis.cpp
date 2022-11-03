@@ -68,28 +68,29 @@ AliasResult ObjCARCAAResult::alias(const MemoryLocation &LocA,
   return AliasResult::MayAlias;
 }
 
-bool ObjCARCAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
-                                             AAQueryInfo &AAQI, bool OrLocal) {
+ModRefInfo ObjCARCAAResult::getModRefInfoMask(const MemoryLocation &Loc,
+                                              AAQueryInfo &AAQI,
+                                              bool IgnoreLocals) {
   if (!EnableARCOpts)
-    return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
+    return AAResultBase::getModRefInfoMask(Loc, AAQI, IgnoreLocals);
 
   // First, strip off no-ops, including ObjC-specific no-ops, and try making
   // a precise alias query.
   const Value *S = GetRCIdentityRoot(Loc.Ptr);
-  if (AAResultBase::pointsToConstantMemory(
-          MemoryLocation(S, Loc.Size, Loc.AATags), AAQI, OrLocal))
-    return true;
+  if (isNoModRef(AAResultBase::getModRefInfoMask(
+          MemoryLocation(S, Loc.Size, Loc.AATags), AAQI, IgnoreLocals)))
+    return ModRefInfo::NoModRef;
 
   // If that failed, climb to the underlying object, including climbing through
   // ObjC-specific no-ops, and try making an imprecise alias query.
   const Value *U = GetUnderlyingObjCPtr(S);
   if (U != S)
-    return AAResultBase::pointsToConstantMemory(
-        MemoryLocation::getBeforeOrAfter(U), AAQI, OrLocal);
+    return AAResultBase::getModRefInfoMask(MemoryLocation::getBeforeOrAfter(U),
+                                           AAQI, IgnoreLocals);
 
   // If that failed, fail. We don't need to chain here, since that's covered
   // by the earlier precise query.
-  return false;
+  return ModRefInfo::ModRef;
 }
 
 MemoryEffects ObjCARCAAResult::getMemoryEffects(const Function *F) {

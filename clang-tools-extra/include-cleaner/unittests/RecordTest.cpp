@@ -8,6 +8,7 @@
 
 #include "clang-include-cleaner/Record.h"
 #include "clang/Frontend/FrontendAction.h"
+#include "clang/Frontend/FrontendActions.h"
 #include "clang/Testing/TestAST.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
@@ -86,6 +87,64 @@ TEST_F(RecordASTTest, Macros) {
   )cpp";
   auto AST = build();
   EXPECT_THAT(Recorded.Roots, testing::ElementsAre(Named("x")));
+}
+
+class PragmaIncludeTest : public ::testing::Test {
+protected:
+  // We don't build an AST, we just run a preprocessor action!
+  TestInputs Inputs;
+  PragmaIncludes PI;
+
+  PragmaIncludeTest() {
+    Inputs.MakeAction = [this] {
+      struct Hook : public PreprocessOnlyAction {
+      public:
+        Hook(PragmaIncludes *Out) : Out(Out) {}
+        bool BeginSourceFileAction(clang::CompilerInstance &CI) override {
+          Out->record(CI);
+          return true;
+        }
+        PragmaIncludes *Out;
+      };
+      return std::make_unique<Hook>(&PI);
+    };
+  }
+
+  TestAST build() { return TestAST(Inputs); }
+};
+
+TEST_F(PragmaIncludeTest, IWYUKeep) {
+  Inputs.Code = R"cpp(// Line 1
+    #include "keep1.h" // IWYU pragma: keep
+    #include "keep2.h" /* IWYU pragma: keep */
+    #include "normal.h"
+  )cpp";
+  Inputs.ExtraFiles["keep1.h"] = Inputs.ExtraFiles["keep2.h"] =
+      Inputs.ExtraFiles["normal.h"] = "";
+
+  TestAST Processed = build();
+  EXPECT_FALSE(PI.shouldKeep(1));
+  EXPECT_TRUE(PI.shouldKeep(2));
+  EXPECT_TRUE(PI.shouldKeep(3));
+  EXPECT_FALSE(PI.shouldKeep(4));
+}
+
+TEST_F(PragmaIncludeTest, IWYUPrivate) {
+  Inputs.Code = R"cpp(
+    #include "public.h"
+  )cpp";
+  Inputs.ExtraFiles["public.h"] = "#include \"private.h\"";
+  Inputs.ExtraFiles["private.h"] = R"cpp(
+    // IWYU pragma: private, include "public2.h"
+    class Private {};
+  )cpp";
+  TestAST Processed = build();
+  auto PrivateFE = Processed.fileManager().getFile("private.h");
+  assert(PrivateFE);
+  EXPECT_EQ(PI.getPublic(PrivateFE.get()), "\"public2.h\"");
+  auto PublicFE = Processed.fileManager().getFile("public.h");
+  assert(PublicFE);
+  EXPECT_EQ(PI.getPublic(PublicFE.get()), ""); // no mapping.
 }
 
 } // namespace

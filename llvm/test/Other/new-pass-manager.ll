@@ -8,6 +8,9 @@
 ; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager \
 ; RUN:     -passes=no-op-module %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-MODULE-PASS
+; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager \
+; RUN:     -p no-op-module %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-MODULE-PASS
 ; CHECK-MODULE-PASS: Running pass: NoOpModulePass
 
 ; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=1 -debug-pass-manager \

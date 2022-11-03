@@ -165,8 +165,8 @@ define <2 x i1> @test24vec(<2 x i1> %a, <2 x i1> %b) {
 
 define i1 @test62(i1 %A, i1 %B) {
 ; CHECK-LABEL: @test62(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[NOT]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[NOT_A]], i1 [[B:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %not = xor i1 %A, true
@@ -176,8 +176,8 @@ define i1 @test62(i1 %A, i1 %B) {
 
 define <2 x i1> @test62vec(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test62vec(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT_A]], <2 x i1> [[B:%.*]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %not = xor <2 x i1> %A, <i1 true, i1 true>
@@ -187,8 +187,8 @@ define <2 x i1> @test62vec(<2 x i1> %A, <2 x i1> %B) {
 
 define i1 @test63(i1 %A, i1 %B) {
 ; CHECK-LABEL: @test63(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[C:%.*]] = select i1 [[NOT]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[C:%.*]] = select i1 [[NOT_A]], i1 true, i1 [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %not = xor i1 %A, true
@@ -198,8 +198,8 @@ define i1 @test63(i1 %A, i1 %B) {
 
 define <2 x i1> @test63vec(<2 x i1> %A, <2 x i1> %B) {
 ; CHECK-LABEL: @test63vec(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
-; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[B:%.*]]
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor <2 x i1> [[A:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[C:%.*]] = select <2 x i1> [[NOT_A]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %not = xor <2 x i1> %A, <i1 true, i1 true>
@@ -3407,4 +3407,27 @@ define <vscale x 2 x i32> @and_constant_select_svec(<vscale x 2 x i32> %x, <vsca
   %a = and <vscale x 2 x i32> %x, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
   %b = select <vscale x 2 x i1> %cond, <vscale x 2 x i32> %a, <vscale x 2 x i32> %x
   ret <vscale x 2 x i32> %b
+}
+
+define <vscale x 2 x i32> @scalable_sign_bits(<vscale x 2 x i8> %x) {
+; CHECK-LABEL: @scalable_sign_bits(
+; CHECK-NEXT:    [[A:%.*]] = sext <vscale x 2 x i8> [[X:%.*]] to <vscale x 2 x i32>
+; CHECK-NEXT:    [[B:%.*]] = shl nsw <vscale x 2 x i32> [[A]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 16, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[B]]
+;
+  %a = sext <vscale x 2 x i8> %x to <vscale x 2 x i32>
+  %b = shl <vscale x 2 x i32> %a, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 16, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x i32> %b
+}
+
+define <vscale x 2 x i1> @scalable_non_zero(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: @scalable_non_zero(
+; CHECK-NEXT:    [[A:%.*]] = or <vscale x 2 x i32> [[X:%.*]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule <vscale x 2 x i32> [[A]], shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 56, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 2 x i1> [[CMP]]
+;
+  %a = or <vscale x 2 x i32> %x, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  %b = add <vscale x 2 x i32> %a, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 -1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  %cmp = icmp ult <vscale x 2 x i32> %b, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 56, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x i1> %cmp
 }

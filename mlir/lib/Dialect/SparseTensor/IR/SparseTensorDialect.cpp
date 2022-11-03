@@ -262,6 +262,24 @@ mlir::sparse_tensor::getSparseTensorEncoding(Type type) {
   return nullptr;
 }
 
+bool mlir::sparse_tensor::isUniqueCOOType(RankedTensorType tp) {
+  SparseTensorEncodingAttr enc = getSparseTensorEncoding(tp);
+
+  if (!enc)
+    return false;
+
+  if (!isCompressedDim(tp, 0))
+    return false;
+
+  for (uint64_t i = 1, e = tp.getRank(); i < e; ++i)
+    if (!isSingletonDim(tp, i))
+      return false;
+
+  // This works for rank == 1 (unique the only compressed) and rank > 1 (unique
+  // on the last singleton).
+  return isUniqueDim(tp, tp.getRank() - 1);
+}
+
 uint64_t mlir::sparse_tensor::toOrigDim(const SparseTensorEncodingAttr &enc,
                                         uint64_t d) {
   if (enc) {

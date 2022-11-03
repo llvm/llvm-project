@@ -9,7 +9,6 @@
 // Per-type parsers for executable statements
 
 #include "basic-parsers.h"
-#include "debug-parser.h"
 #include "expr-parsers.h"
 #include "misc-parsers.h"
 #include "stmt-parser.h"
@@ -159,8 +158,8 @@ TYPE_PARSER(construct<Selector>(variable) / lookAhead(","_tok || ")"_tok) ||
     construct<Selector>(expr))
 
 // R1106 end-associate-stmt -> END ASSOCIATE [associate-construct-name]
-TYPE_PARSER(construct<EndAssociateStmt>(
-    recovery("END ASSOCIATE" >> maybe(name), endStmtErrorRecovery)))
+TYPE_PARSER(construct<EndAssociateStmt>(recovery(
+    "END ASSOCIATE" >> maybe(name), namedConstructEndStmtErrorRecovery)))
 
 // R1107 block-construct ->
 //         block-stmt [block-specification-part] block end-block-stmt
@@ -186,7 +185,7 @@ TYPE_PARSER(construct<BlockSpecificationPart>(specificationPart))
 
 // R1110 end-block-stmt -> END BLOCK [block-construct-name]
 TYPE_PARSER(construct<EndBlockStmt>(
-    recovery("END BLOCK" >> maybe(name), endStmtErrorRecovery)))
+    recovery("END BLOCK" >> maybe(name), namedConstructEndStmtErrorRecovery)))
 
 // R1111 change-team-construct -> change-team-stmt block end-change-team-stmt
 TYPE_CONTEXT_PARSER("CHANGE TEAM construct"_en_US,
@@ -226,8 +225,8 @@ TYPE_CONTEXT_PARSER("CRITICAL construct"_en_US,
         statement(Parser<EndCriticalStmt>{})))
 
 // R1118 end-critical-stmt -> END CRITICAL [critical-construct-name]
-TYPE_PARSER(construct<EndCriticalStmt>(
-    recovery("END CRITICAL" >> maybe(name), endStmtErrorRecovery)))
+TYPE_PARSER(construct<EndCriticalStmt>(recovery(
+    "END CRITICAL" >> maybe(name), namedConstructEndStmtErrorRecovery)))
 
 // R1119 do-construct -> do-stmt block end-do
 // R1120 do-stmt -> nonlabel-do-stmt | label-do-stmt
@@ -289,7 +288,7 @@ TYPE_CONTEXT_PARSER("nonlabel DO statement"_en_US,
 // R1132 end-do-stmt -> END DO [do-construct-name]
 TYPE_CONTEXT_PARSER("END DO statement"_en_US,
     construct<EndDoStmt>(
-        recovery("END DO" >> maybe(name), endStmtErrorRecovery)))
+        recovery("END DO" >> maybe(name), namedConstructEndStmtErrorRecovery)))
 
 // R1133 cycle-stmt -> CYCLE [do-construct-name]
 TYPE_CONTEXT_PARSER(
@@ -315,8 +314,8 @@ TYPE_CONTEXT_PARSER("IF construct"_en_US,
             block)),
         maybe(construct<IfConstruct::ElseBlock>(
             statement(construct<ElseStmt>("ELSE" >> maybe(name))), block)),
-        statement(construct<EndIfStmt>(
-            recovery("END IF" >> maybe(name), endStmtErrorRecovery)))))
+        statement(construct<EndIfStmt>(recovery(
+            "END IF" >> maybe(name), namedConstructEndStmtErrorRecovery)))))
 
 // R1139 if-stmt -> IF ( scalar-logical-expr ) action-stmt
 TYPE_CONTEXT_PARSER("IF statement"_en_US,
@@ -345,7 +344,7 @@ TYPE_CONTEXT_PARSER("CASE statement"_en_US,
 // R1151 end-select-rank-stmt -> END SELECT [select-construct-name]
 // R1155 end-select-type-stmt -> END SELECT [select-construct-name]
 TYPE_PARSER(construct<EndSelectStmt>(
-    recovery("END SELECT" >> maybe(name), endStmtErrorRecovery)))
+    recovery("END SELECT" >> maybe(name), namedConstructEndStmtErrorRecovery)))
 
 // R1145 case-selector -> ( case-value-range-list ) | DEFAULT
 constexpr auto defaultKeyword{construct<Default>("DEFAULT"_tok)};

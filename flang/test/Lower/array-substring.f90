@@ -6,7 +6,6 @@
 ! CHECK-DAG:         %[[VAL_2:.*]] = arith.constant 0 : index
 ! CHECK-DAG:         %[[VAL_3:.*]] = arith.constant 0 : i32
 ! CHECK-DAG:         %[[VAL_4:.*]] = arith.constant 8 : index
-! CHECK-DAG:         %[[VAL_5:.*]] = arith.constant 8 : i64
 ! CHECK:         %[[VAL_6:.*]]:2 = fir.unboxchar %[[VAL_0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:         %[[VAL_7:.*]] = fir.convert %[[VAL_6]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<1x!fir.char<1,12>>>
 ! CHECK:         %[[VAL_8:.*]] = fir.alloca !fir.array<1x!fir.logical<4>> {bindc_name = "test", uniq_name = "_QFtestEtest"}
@@ -27,7 +26,7 @@
 ! CHECK:         %[[VAL_21:.*]] = fir.convert %[[VAL_19]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_22:.*]] = fir.convert %[[VAL_20]] : (!fir.ref<!fir.char<1,8>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_23:.*]] = fir.convert %[[VAL_4]] : (index) -> i64
-! CHECK:         %[[VAL_24:.*]] = fir.call @_FortranACharacterCompareScalar1(%[[VAL_21]], %[[VAL_22]], %[[VAL_23]], %[[VAL_5]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i64) -> i32
+! CHECK:         %[[VAL_24:.*]] = fir.call @_FortranACharacterCompareScalar1(%[[VAL_21]], %[[VAL_22]], %[[VAL_23]], %[[VAL_23]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i64) -> i32
 ! CHECK:         %[[VAL_25:.*]] = arith.cmpi eq, %[[VAL_24]], %[[VAL_3]] : i32
 ! CHECK:         %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (i1) -> !fir.logical<4>
 ! CHECK:         %[[VAL_27:.*]] = fir.array_coor %[[VAL_8]](%[[VAL_9]]) %[[VAL_15]] : (!fir.ref<!fir.array<1x!fir.logical<4>>>, !fir.shape<1>, index) -> !fir.ref<!fir.logical<4>>

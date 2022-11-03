@@ -49,6 +49,7 @@ fn:
   addha za0.s, p0/m, p0/m, z0.s       // SME
   fmopa za0.d, p0/m, p0/m, z0.d, z0.d // SMEF64
   addha za0.d, p0/m, p0/m, z0.d       // SMEI64
+  add {z0.h, z1.h}, {z0.h, z1.h}, z0.h // SME2
 lbl:
   bc.eq lbl                           // HBC
   cpyfp [x0]!, [x1]!, x2!             // MOPS
@@ -95,6 +96,7 @@ lbl:
 # CHECK: addha  za0.s, p0/m, p0/m, z0.s
 # CHECK: fmopa  za0.d, p0/m, p0/m, z0.d, z0.d
 # CHECK: addha  za0.d, p0/m, p0/m, z0.d
-# CHECK: bc.eq  0x98
+# CHECK: add    { z0.h, z1.h }, { z0.h, z1.h }, z0.h
+# CHECK: bc.eq  0x9c
 # CHECK: cpyfp  [x0]!, [x1]!, x2!
 # CHECK: mrs    x0, PMCCNTR_EL0

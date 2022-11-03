@@ -197,9 +197,87 @@ func.func @omp_simdloop(%lb : index, %ub : index, %step : i32) -> () {
   "omp.simdloop" (%lb, %ub, %step) ({
     ^bb0(%iv: index):
       omp.yield
-  }) {operand_segment_sizes = array<i32: 1,1,1,0>} :
+  }) {operand_segment_sizes = array<i32: 1,1,1,0,0>} :
     (index, index, i32) -> ()
 
+  return
+}
+
+// -----
+
+func.func @omp_simdloop_pretty_aligned(%lb : index, %ub : index, %step : index,
+                                       %data_var : memref<i32>) -> () {
+  //  expected-error @below {{expected '->'}}
+  omp.simdloop aligned(%data_var : memref<i32>)
+  for (%iv) : index = (%lb) to (%ub) step (%step) {
+    omp.yield
+  }
+  return
+}
+
+// -----
+
+func.func @omp_simdloop_aligned_mismatch(%arg0 : index, %arg1 : index,
+                                         %arg2 : index, %arg3 : memref<i32>,
+                                         %arg4 : memref<i32>) -> () {
+  //  expected-error @below {{op expected as many alignment values as aligned variables}}
+  "omp.simdloop"(%arg0, %arg1, %arg2, %arg3, %arg4) ({
+    ^bb0(%arg5: index):
+      "omp.yield"() : () -> ()
+  }) {alignment_values = [128],
+      operand_segment_sizes = array<i32: 1, 1, 1, 2, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
+  return
+}
+
+// -----
+
+func.func @omp_simdloop_aligned_negative(%arg0 : index, %arg1 : index,
+                                         %arg2 : index, %arg3 : memref<i32>,
+                                         %arg4 : memref<i32>) -> () {
+  //  expected-error @below {{op alignment should be greater than 0}}
+  "omp.simdloop"(%arg0, %arg1, %arg2, %arg3, %arg4) ({
+    ^bb0(%arg5: index):
+      "omp.yield"() : () -> ()
+  }) {alignment_values = [-1, 128], operand_segment_sizes = array<i32: 1, 1, 1,2, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
+  return
+}
+
+// -----
+
+func.func @omp_simdloop_unexpected_alignment(%arg0 : index, %arg1 : index,
+                                             %arg2 : index, %arg3 : memref<i32>,
+                                             %arg4 : memref<i32>) -> () {
+  //  expected-error @below {{unexpected alignment values attribute}}
+  "omp.simdloop"(%arg0, %arg1, %arg2) ({
+    ^bb0(%arg5: index):
+      "omp.yield"() : () -> ()
+  }) {alignment_values = [1, 128], operand_segment_sizes = array<i32: 1, 1, 1, 0, 0>} : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @omp_simdloop_aligned_float(%arg0 : index, %arg1 : index,
+                                      %arg2 : index, %arg3 : memref<i32>,
+                                      %arg4 : memref<i32>) -> () {
+  //  expected-error @below {{failed to satisfy constraint: 64-bit integer array attribute}}
+  "omp.simdloop"(%arg0, %arg1, %arg2, %arg3, %arg4) ({
+    ^bb0(%arg5: index):
+      "omp.yield"() : () -> ()
+  }) {alignment_values = [1.5, 128], operand_segment_sizes = array<i32: 1, 1, 1,2, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
+  return
+}
+
+// -----
+
+func.func @omp_simdloop_aligned_the_same_var(%arg0 : index, %arg1 : index,
+                                             %arg2 : index, %arg3 : memref<i32>,
+                                             %arg4 : memref<i32>) -> () {
+  //  expected-error @below {{aligned variable used more than once}}
+  "omp.simdloop"(%arg0, %arg1, %arg2, %arg3, %arg3) ({
+    ^bb0(%arg5: index):
+      "omp.yield"() : () -> ()
+  }) {alignment_values = [1, 128], operand_segment_sizes = array<i32: 1, 1, 1,2, 0>} : (index, index, index, memref<i32>, memref<i32>) -> ()
   return
 }
 

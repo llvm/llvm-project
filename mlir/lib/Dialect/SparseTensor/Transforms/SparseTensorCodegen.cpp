@@ -31,6 +31,7 @@ using namespace mlir::sparse_tensor;
 
 namespace {
 
+static constexpr uint64_t DimSizesIdx = 0;
 static constexpr uint64_t MemSizesIdx = 2;
 static constexpr uint64_t FieldsIdx = 3;
 
@@ -85,11 +86,12 @@ static Optional<Value> sizeFromTensorAtDim(OpBuilder &rewriter, Location loc,
   if (!ShapedType::isDynamic(shape[dim]))
     return constantIndex(rewriter, loc, shape[dim]);
 
-  // Any other query can consult the dimSizes array at field 0 using,
+  // Any other query can consult the dimSizes array at field DimSizesIdx,
   // accounting for the reordering applied to the sparse storage.
   auto tuple = getTuple(adaptedValue);
   Value idx = constantIndex(rewriter, loc, toStoredDim(tensorTp, dim));
-  return rewriter.create<memref::LoadOp>(loc, tuple.getInputs().front(), idx)
+  return rewriter
+      .create<memref::LoadOp>(loc, tuple.getInputs()[DimSizesIdx], idx)
       .getResult();
 }
 
@@ -632,13 +634,7 @@ public:
                                      filled, index);
     rewriter.create<scf::YieldOp>(loc, fields);
     // Deallocate the buffers on exit of the full loop nest.
-    Operation *parent = op;
-    for (; isa<scf::ForOp>(parent->getParentOp()) ||
-           isa<scf::WhileOp>(parent->getParentOp()) ||
-           isa<scf::ParallelOp>(parent->getParentOp()) ||
-           isa<scf::IfOp>(parent->getParentOp());
-         parent = parent->getParentOp())
-      ;
+    Operation *parent = getTop(op);
     rewriter.setInsertionPointAfter(parent);
     rewriter.create<memref::DeallocOp>(loc, values);
     rewriter.create<memref::DeallocOp>(loc, filled);

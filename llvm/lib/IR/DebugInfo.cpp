@@ -39,6 +39,13 @@
 using namespace llvm;
 using namespace llvm::dwarf;
 
+static cl::opt<bool>
+    ExperimentalAssignmentTracking("experimental-assignment-tracking",
+                                   cl::init(false));
+bool llvm::getEnableAssignmentTracking() {
+  return ExperimentalAssignmentTracking;
+}
+
 /// Finds all intrinsics declaring local variables as living in the memory that
 /// 'V' points to. This may include a mix of dbg.declare and
 /// dbg.addr intrinsics.
@@ -1498,7 +1505,7 @@ void LLVMDisposeTemporaryMDNode(LLVMMetadataRef TempNode) {
 void LLVMMetadataReplaceAllUsesWith(LLVMMetadataRef TargetMetadata,
                                     LLVMMetadataRef Replacement) {
   auto *Node = unwrapDI<MDNode>(TargetMetadata);
-  Node->replaceAllUsesWith(unwrap<Metadata>(Replacement));
+  Node->replaceAllUsesWith(unwrap(Replacement));
   MDNode::deleteTemporary(Node);
 }
 

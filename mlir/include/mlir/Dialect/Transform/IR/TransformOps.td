@@ -290,6 +290,25 @@ def PDLMatchOp : TransformDialectOp<"pdl_match",
                        "functional-type(operands, results)";
 }
 
+def PrintOp : TransformDialectOp<"print",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "Dump each payload op";
+  let description = [{
+    This op dumps each payload op that is associated with the `target` operand
+    to stderr. It also prints the `name` string attribute. If no target is
+    specified, the top-level op is dumped.
+
+    This op is useful for printf-style debugging.
+  }];
+
+  let arguments = (ins Optional<TransformTypeInterface>:$target,
+                       OptionalAttr<StrAttr>:$name);
+  let results = (outs);
+  let assemblyFormat = "$target attr-dict (`:` type($target)^)?";
+}
+
+
 def ReplicateOp : TransformDialectOp<"replicate",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,

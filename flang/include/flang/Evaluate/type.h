@@ -186,8 +186,13 @@ public:
   // 7.3.2.3 & 15.5.2.4 type compatibility.
   // x.IsTkCompatibleWith(y) is true if "x => y" or passing actual y to
   // dummy argument x would be valid.  Be advised, this is not a reflexive
-  // relation.  Kind type parameters must match.
+  // relation.  Kind type parameters must match, but CHARACTER lengths
+  // need not do so.
   bool IsTkCompatibleWith(const DynamicType &) const;
+
+  // A stronger compatibility check that does not allow distinct known
+  // values for CHARACTER lengths for e.g. MOVE_ALLOC().
+  bool IsTkLenCompatibleWith(const DynamicType &) const;
 
   // EXTENDS_TYPE_OF (16.9.76); ignores type parameter values
   std::optional<bool> ExtendsTypeOf(const DynamicType &) const;

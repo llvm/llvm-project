@@ -1219,7 +1219,7 @@ Optional<std::string> searchLibraryBaseName(StringRef Name, StringRef Root,
                                             ArrayRef<StringRef> SearchPaths) {
   for (StringRef Dir : SearchPaths) {
     if (Optional<std::string> File = findFile(Dir, Root, "lib" + Name + ".so"))
-      return None;
+      return File;
     if (Optional<std::string> File = findFile(Dir, Root, "lib" + Name + ".a"))
       return File;
   }
@@ -1266,7 +1266,7 @@ Expected<SmallVector<OffloadFile>> getDeviceInput(const ArgList &Args) {
       return std::move(Err);
   }
 
-  // Try to extract input from input libraries.
+  // Try to extract input from input archive libraries.
   for (const opt::Arg *Arg : Args.filtered(OPT_library)) {
     if (auto Library = searchLibrary(Arg->getValue(), Root, LibraryPaths)) {
       ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
@@ -1274,8 +1274,15 @@ Expected<SmallVector<OffloadFile>> getDeviceInput(const ArgList &Args) {
       if (std::error_code EC = BufferOrErr.getError())
         reportError(createFileError(*Library, EC));
 
+      if (identify_magic((*BufferOrErr)->getBuffer()) != file_magic::archive)
+        continue;
+
       if (Error Err = extractOffloadBinaries(**BufferOrErr, LazyInputFiles))
         return std::move(Err);
+    } else {
+      reportError(createStringError(inconvertibleErrorCode(),
+                                    "unable to find library -l%s",
+                                    Arg->getValue()));
     }
   }
 

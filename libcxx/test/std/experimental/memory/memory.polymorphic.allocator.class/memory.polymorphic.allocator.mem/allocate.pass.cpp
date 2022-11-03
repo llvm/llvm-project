@@ -22,6 +22,8 @@
 
 // T* polymorphic_allocator<T>::allocate(size_t n)
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <experimental/memory_resource>
 #include <limits>
 #include <memory>

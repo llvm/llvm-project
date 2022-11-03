@@ -6845,9 +6845,12 @@ template <class _BidirT>
 using match_results = std::match_results<_BidirT, polymorphic_allocator<std::sub_match<_BidirT>>>;
 
 using cmatch  = match_results<const char*>;
-using wcmatch = match_results<const wchar_t*>;
 using smatch  = match_results<std::pmr::string::const_iterator>;
+
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+using wcmatch = match_results<const wchar_t*>;
 using wsmatch = match_results<std::pmr::wstring::const_iterator>;
+#endif
 } // namespace pmr
 _LIBCPP_END_NAMESPACE_STD
 #endif

@@ -109,8 +109,8 @@ function test_real4(x)
 end function
 
 ! ALL-LABEL: @_QPtest_real4
-! FAST: {{%[A-Za-z0-9._]+}} = "llvm.intr.round"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
-! RELAXED: {{%[A-Za-z0-9._]+}} = "llvm.intr.round"({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+! FAST: {{%[A-Za-z0-9._]+}} = llvm.intr.round({{%[A-Za-z0-9._]+}}) : (f32) -> f32
+! RELAXED: {{%[A-Za-z0-9._]+}} = llvm.intr.round({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @llvm.round.f32({{%[A-Za-z0-9._]+}}) : (f32) -> f32
 
 function test_real8(x)
@@ -119,8 +119,8 @@ function test_real8(x)
 end function
 
 ! ALL-LABEL: @_QPtest_real8
-! FAST: {{%[A-Za-z0-9._]+}} = "llvm.intr.round"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
-! RELAXED: {{%[A-Za-z0-9._]+}} = "llvm.intr.round"({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+! FAST: {{%[A-Za-z0-9._]+}} = llvm.intr.round({{%[A-Za-z0-9._]+}}) : (f64) -> f64
+! RELAXED: {{%[A-Za-z0-9._]+}} = llvm.intr.round({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @llvm.round.f64({{%[A-Za-z0-9._]+}}) : (f64) -> f64
 
 function test_real10(x)
@@ -129,8 +129,8 @@ function test_real10(x)
 end function
 
 ! ALL-LABEL: @_QPtest_real10
-! FAST: {{%[A-Za-z0-9._]+}} = "llvm.intr.round"({{%[A-Za-z0-9._]+}}) : (f80) -> f80
-! RELAXED: {{%[A-Za-z0-9._]+}} = "llvm.intr.round"({{%[A-Za-z0-9._]+}}) : (f80) -> f80
+! FAST: {{%[A-Za-z0-9._]+}} = llvm.intr.round({{%[A-Za-z0-9._]+}}) : (f80) -> f80
+! RELAXED: {{%[A-Za-z0-9._]+}} = llvm.intr.round({{%[A-Za-z0-9._]+}}) : (f80) -> f80
 ! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @llvm.round.f80({{%[A-Za-z0-9._]+}}) : (f80) -> f80
 
 ! TODO: wait until fp128 is supported well in llvm.round

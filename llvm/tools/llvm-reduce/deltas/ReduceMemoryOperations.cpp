@@ -103,5 +103,5 @@ static void reduceAtomicOrderingInModule(Oracle &O, Module &Mod) {
 }
 
 void llvm::reduceAtomicOrderingDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceAtomicOrderingInModule, "Reducing Atomic Odering");
+  runDeltaPass(Test, reduceAtomicOrderingInModule, "Reducing Atomic Ordering");
 }

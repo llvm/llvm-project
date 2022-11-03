@@ -2228,3 +2228,169 @@ define i8 @demand_sub_from_variable_lowbits3(i8 %x, i8 %y) {
   %r = lshr i8 %sub, 4    ; 4 low bits are not demanded
   ret i8 %r
 }
+
+; TODO:
+; C - ((C3 - X) & C2) --> (C - (C2 & C3)) + (X & C2) when:
+; (C3 - (C2 & C3) + 1) is pow2
+; ((C2 + C3) & ((C2 & C3) - 1)) == ((C2 & C3) - 1)
+; C2 is negative pow2
+define i10 @sub_to_and_nuw(i10 %x) {
+; CHECK-LABEL: @sub_to_and_nuw(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i10 71, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i10 [[SUB]], 120
+; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i10 443, [[AND]]
+; CHECK-NEXT:    ret i10 [[R]]
+;
+  %sub = sub nuw i10 71, %x
+  %and = and i10 %sub, 120
+  %r = sub i10 443, %and
+  ret i10 %r
+}
+
+; TODO:
+; C - ((C3 -nuw X) & C2) --> (C - (C2 & C3)) + (X & C2) when:
+; (C3 - (C2 & C3) + 1) is pow2
+; ((C2 + C3) & ((C2 & C3) - 1)) == ((C2 & C3) - 1)
+define i10 @sub_to_and_negpow2(i10 %x) {
+; CHECK-LABEL: @sub_to_and_negpow2(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i10 71, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i10 [[SUB]], -8
+; CHECK-NEXT:    [[R:%.*]] = sub i10 33, [[AND]]
+; CHECK-NEXT:    ret i10 [[R]]
+;
+  %sub = sub i10 71, %x
+  %and = and i10 %sub, -8
+  %r = sub i10 33, %and
+  ret i10 %r
+}
+
+; TODO:
+; C + ((C3 -nuw X) & C2) --> (C + (C2 & C3)) - (X & C2) when:
+define i10 @add_to_and_nuw(i10 %x) {
+; CHECK-LABEL: @add_to_and_nuw(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i10 71, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i10 [[SUB]], 120
+; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i10 [[AND]], 224
+; CHECK-NEXT:    ret i10 [[R]]
+;
+  %sub = sub nuw i10 71, %x
+  %and = and i10 %sub, 120
+  %r = add i10 224, %and
+  ret i10 %r
+}
+
+; (C3 - (C2 & C3) + 1) is not pow2
+define i10 @sub_to_and_negative1(i10 %x) {
+; CHECK-LABEL: @sub_to_and_negative1(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i10 71, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i10 [[SUB]], 248
+; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i10 444, [[AND]]
+; CHECK-NEXT:    ret i10 [[R]]
+;
+  %sub = sub nuw i10 327, %x
+  %and = and i10 %sub, 248
+  %r = sub i10 444, %and
+  ret i10 %r
+}
+
+; ((C2 + C3) & ((C2 & C3) - 1)) == ((C2 & C3) - 1)
+define i10 @sub_to_and_negative2(i10 %x) {
+; CHECK-LABEL: @sub_to_and_negative2(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i10 71, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i10 [[SUB]], 88
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i10 64, [[AND]]
+; CHECK-NEXT:    ret i10 [[R]]
+;
+  %sub = sub nuw i10 71, %x
+  %and = and i10 %sub, 88
+  %r = sub i10 64, %and
+  ret i10 %r
+}
+
+; no nuw && C2 is not neg-pow2
+define i10 @sub_to_and_negative3(i10 %x) {
+; CHECK-LABEL: @sub_to_and_negative3(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i10 71, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i10 [[SUB]], 120
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i10 64, [[AND]]
+; CHECK-NEXT:    ret i10 [[R]]
+;
+  %sub = sub i10 71, %x
+  %and = and i10 %sub, 120
+  %r = sub i10 64, %and
+  ret i10 %r
+}
+
+declare void @use10(i10)
+
+; and is not one-use
+define i10 @sub_to_and_negative4(i10 %x) {
+; CHECK-LABEL: @sub_to_and_negative4(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i10 71, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i10 [[SUB]], 120
+; CHECK-NEXT:    [[R:%.*]] = sub nsw i10 64, [[AND]]
+; CHECK-NEXT:    call void @use10(i10 [[AND]])
+; CHECK-NEXT:    ret i10 [[R]]
+;
+  %sub = sub i10 71, %x
+  %and = and i10 %sub, 120
+  %r = sub i10 64, %and
+  call void @use10(i10 %and)
+  ret i10 %r
+}
+
+
+define <2 x i8> @sub_to_and_vector1(<2 x i8> %x) {
+; CHECK-LABEL: @sub_to_and_vector1(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> <i8 71, i8 71>, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[SUB]], <i8 120, i8 120>
+; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> <i8 55, i8 55>, [[AND]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %sub = sub nuw <2 x i8> <i8 71, i8 71>, %x
+  %and = and <2 x i8> %sub, <i8 120, i8 120>
+  %r = sub <2 x i8>  <i8 55, i8 55>, %and
+  ret <2 x i8> %r
+}
+
+
+define <2 x i8> @sub_to_and_vector2(<2 x i8> %x) {
+; CHECK-LABEL: @sub_to_and_vector2(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> <i8 71, i8 undef>, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[SUB]], <i8 120, i8 120>
+; CHECK-NEXT:    [[R:%.*]] = sub nsw <2 x i8> <i8 77, i8 77>, [[AND]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %sub = sub nuw <2 x i8> <i8 71, i8 undef>, %x
+  %and = and <2 x i8> %sub, <i8 120, i8 120>
+  %r = sub <2 x i8>  <i8 77, i8 77>, %and
+  ret <2 x i8> %r
+}
+
+
+define <2 x i8> @sub_to_and_vector3(<2 x i8> %x) {
+; CHECK-LABEL: @sub_to_and_vector3(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> <i8 71, i8 71>, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[SUB]], <i8 120, i8 undef>
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> <i8 44, i8 44>, [[AND]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %sub = sub nuw <2 x i8> <i8 71, i8 71>, %x
+  %and = and <2 x i8> %sub, <i8 120, i8 undef>
+  %r = sub <2 x i8>  <i8 44, i8 44>, %and
+  ret <2 x i8> %r
+}
+
+
+define <2 x i8> @sub_to_and_vector4(<2 x i8> %x) {
+; CHECK-LABEL: @sub_to_and_vector4(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw <2 x i8> <i8 71, i8 71>, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[SUB]], <i8 120, i8 120>
+; CHECK-NEXT:    [[R:%.*]] = sub <2 x i8> <i8 88, i8 undef>, [[AND]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %sub = sub nuw <2 x i8> <i8 71, i8 71>, %x
+  %and = and <2 x i8> %sub, <i8 120, i8 120>
+  %r = sub <2 x i8>  <i8 88, i8 undef>, %and
+  ret <2 x i8> %r
+}

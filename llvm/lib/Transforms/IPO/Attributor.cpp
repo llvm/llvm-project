@@ -59,6 +59,7 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "attributor"
+#define VERBOSE_DEBUG_TYPE DEBUG_TYPE "-verbose"
 
 DEBUG_COUNTER(ManifestDBGCounter, "attributor-manifest",
               "Determine what attributes are manifested in the IR");
@@ -1384,7 +1385,7 @@ bool Attributor::checkForAllUses(
     const Use *U = Worklist.pop_back_val();
     if (isa<PHINode>(U->getUser()) && !Visited.insert(U).second)
       continue;
-    LLVM_DEBUG({
+    DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE, {
       if (auto *Fn = dyn_cast<Function>(U->getUser()))
         dbgs() << "[Attributor] Check use: " << **U << " in " << Fn->getName()
                << "\n";
@@ -1395,11 +1396,13 @@ bool Attributor::checkForAllUses(
     bool UsedAssumedInformation = false;
     if (isAssumedDead(*U, &QueryingAA, LivenessAA, UsedAssumedInformation,
                       CheckBBLivenessOnly, LivenessDepClass)) {
-      LLVM_DEBUG(dbgs() << "[Attributor] Dead use, skip!\n");
+      DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE,
+                      dbgs() << "[Attributor] Dead use, skip!\n");
       continue;
     }
     if (IgnoreDroppableUses && U->getUser()->isDroppable()) {
-      LLVM_DEBUG(dbgs() << "[Attributor] Droppable user, skip!\n");
+      DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE,
+                      dbgs() << "[Attributor] Droppable user, skip!\n");
       continue;
     }
 
@@ -1411,9 +1414,11 @@ bool Attributor::checkForAllUses(
         if (AA::getPotentialCopiesOfStoredValue(
                 *this, *SI, PotentialCopies, QueryingAA, UsedAssumedInformation,
                 /* OnlyExact */ true)) {
-          LLVM_DEBUG(dbgs() << "[Attributor] Value is stored, continue with "
-                            << PotentialCopies.size()
-                            << " potential copies instead!\n");
+          DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE,
+                          dbgs()
+                              << "[Attributor] Value is stored, continue with "
+                              << PotentialCopies.size()
+                              << " potential copies instead!\n");
           for (Value *PotentialCopy : PotentialCopies)
             if (!AddUsers(*PotentialCopy, U))
               return false;
@@ -1486,7 +1491,7 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
   SmallVector<const Use *, 8> Uses(make_pointer_range(Fn.uses()));
   for (unsigned u = 0; u < Uses.size(); ++u) {
     const Use &U = *Uses[u];
-    LLVM_DEBUG({
+    DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE, {
       if (auto *Fn = dyn_cast<Function>(U))
         dbgs() << "[Attributor] Check use: " << Fn->getName() << " in "
                << *U.getUser() << "\n";
@@ -1496,15 +1501,16 @@ bool Attributor::checkForAllCallSites(function_ref<bool(AbstractCallSite)> Pred,
     });
     if (isAssumedDead(U, QueryingAA, nullptr, UsedAssumedInformation,
                       /* CheckBBLivenessOnly */ true)) {
-      LLVM_DEBUG(dbgs() << "[Attributor] Dead use, skip!\n");
+      DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE,
+                      dbgs() << "[Attributor] Dead use, skip!\n");
       continue;
     }
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(U.getUser())) {
       if (CE->isCast() && CE->getType()->isPointerTy()) {
-        LLVM_DEBUG(
-            dbgs() << "[Attributor] Use, is constant cast expression, add "
-                   << CE->getNumUses()
-                   << " uses of that expression instead!\n");
+        DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE, {
+          dbgs() << "[Attributor] Use, is constant cast expression, add "
+                 << CE->getNumUses() << " uses of that expression instead!\n";
+        });
         for (const Use &CEU : CE->uses())
           Uses.push_back(&CEU);
         continue;
@@ -1634,8 +1640,9 @@ static bool checkForAllInstructionsImpl(
       if (A && !CheckPotentiallyDead &&
           A->isAssumedDead(IRPosition::inst(*I), QueryingAA, LivenessAA,
                            UsedAssumedInformation, CheckBBLivenessOnly)) {
-        LLVM_DEBUG(dbgs() << "[Attributor] Instruction " << *I
-                          << " is potentially dead, skip!\n";);
+        DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE,
+                        dbgs() << "[Attributor] Instruction " << *I
+                               << " is potentially dead, skip!\n";);
         continue;
       }
 
@@ -1744,19 +1751,22 @@ void Attributor::runTillFixpoint() {
       AbstractAttribute *InvalidAA = InvalidAAs[u];
 
       // Check the dependences to fast track invalidation.
-      LLVM_DEBUG(dbgs() << "[Attributor] InvalidAA: " << *InvalidAA << " has "
-                        << InvalidAA->Deps.size()
-                        << " required & optional dependences\n");
+      DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE,
+                      dbgs() << "[Attributor] InvalidAA: " << *InvalidAA
+                             << " has " << InvalidAA->Deps.size()
+                             << " required & optional dependences\n");
       while (!InvalidAA->Deps.empty()) {
         const auto &Dep = InvalidAA->Deps.back();
         InvalidAA->Deps.pop_back();
         AbstractAttribute *DepAA = cast<AbstractAttribute>(Dep.getPointer());
         if (Dep.getInt() == unsigned(DepClassTy::OPTIONAL)) {
-          LLVM_DEBUG(dbgs() << " - recompute: " << *DepAA);
+          DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE,
+                          dbgs() << " - recompute: " << *DepAA);
           Worklist.insert(DepAA);
           continue;
         }
-        LLVM_DEBUG(dbgs() << " - invalidate: " << *DepAA);
+        DEBUG_WITH_TYPE(VERBOSE_DEBUG_TYPE, dbgs()
+                                                << " - invalidate: " << *DepAA);
         DepAA->getState().indicatePessimisticFixpoint();
         assert(DepAA->getState().isAtFixpoint() && "Expected fixpoint state!");
         if (!DepAA->getState().isValidState())

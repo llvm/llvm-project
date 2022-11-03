@@ -915,12 +915,17 @@ struct DispatchOpConversion : public FIROpConversion<fir::DispatchOp> {
       return emitError(loc) << "no binding tables found";
 
     // Get derived type information.
-    auto declaredType = llvm::TypeSwitch<mlir::Type, mlir::Type>(
-                            dispatch.getObject().getType().getEleTy())
-                            .Case<fir::PointerType, fir::HeapType>(
-                                [](auto p) { return p.getEleTy(); })
-                            .Default([](mlir::Type t) { return t; });
-
+    auto declaredType =
+        llvm::TypeSwitch<mlir::Type, mlir::Type>(
+            dispatch.getObject().getType().getEleTy())
+            .Case<fir::PointerType, fir::HeapType, fir::SequenceType>(
+                [](auto p) {
+                  if (auto seq =
+                          p.getEleTy().template dyn_cast<fir::SequenceType>())
+                    return seq.getEleTy();
+                  return p.getEleTy();
+                })
+            .Default([](mlir::Type t) { return t; });
     assert(declaredType.isa<fir::RecordType>() && "expecting fir.type");
     auto recordType = declaredType.dyn_cast<fir::RecordType>();
     std::string typeDescName =
@@ -3116,7 +3121,7 @@ struct StoreOpConversion : public FIROpConversion<fir::StoreOp> {
   mlir::LogicalResult
   matchAndRewrite(fir::StoreOp store, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    if (store.getValue().getType().isa<fir::BoxType>()) {
+    if (store.getValue().getType().isa<fir::BaseBoxType>()) {
       // fir.box value is actually in memory, load it first before storing it.
       mlir::Location loc = store.getLoc();
       mlir::Type boxPtrTy = adaptor.getOperands()[0].getType();

@@ -2,12 +2,12 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %s -o %t.o
 
 # RUN: ld.lld --no-relax %t.o -o %t
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=PDE
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s --check-prefix=PDE
 # RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=PDE-RELOC
 
 # RUN: ld.lld -pie --no-relax %t.o -o %t
 # RUN: ld.lld -pie --no-relax --apply-dynamic-relocs %t.o -o %t.apply
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=PIE
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s --check-prefix=PIE
 # RUN: llvm-readobj -r -x .got.plt %t | FileCheck %s --check-prefixes=PIE-RELOC,NO-APPLY
 # RUN: llvm-readobj -r -x .got.plt %t.apply | FileCheck %s --check-prefixes=PIE-RELOC,APPLY
 

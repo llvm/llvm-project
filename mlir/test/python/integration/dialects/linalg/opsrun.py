@@ -192,10 +192,10 @@ def transform(module, boilerplate):
   mod = Module.parse("\n".join([str(op) for op in ops]) + boilerplate)
 
   pm = PassManager.parse(
-      "func.func(convert-linalg-to-loops, lower-affine, " +
+      "builtin.module(func.func(convert-linalg-to-loops, lower-affine, " +
       "convert-math-to-llvm, convert-scf-to-cf, arith-expand, memref-expand), "
       + "convert-vector-to-llvm, convert-memref-to-llvm, convert-func-to-llvm," +
-      "reconcile-unrealized-casts")
+      "reconcile-unrealized-casts)")
   pm.run(mod)
   return mod
 

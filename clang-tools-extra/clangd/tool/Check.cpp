@@ -34,6 +34,7 @@
 #include "ParsedAST.h"
 #include "Preamble.h"
 #include "Protocol.h"
+#include "SemanticHighlighting.h"
 #include "SourceCode.h"
 #include "XRefs.h"
 #include "index/CanonicalIncludes.h"
@@ -206,6 +207,14 @@ public:
     }
   }
 
+  void buildSemanticHighlighting(llvm::Optional<Range> LineRange) {
+    log("Building semantic highlighting");
+    auto Highlights = getSemanticHighlightings(*AST);
+    for (const auto HL : Highlights)
+      if (!LineRange || LineRange->contains(HL.R))
+        vlog(" {0} {1} {2}", HL.R, HL.Kind, HL.Modifiers);
+  }
+
   // Run AST-based features at each token in the file.
   void testLocationFeatures(llvm::Optional<Range> LineRange,
                             const bool EnableCodeCompletion) {
@@ -302,6 +311,7 @@ bool check(llvm::StringRef File, llvm::Optional<Range> LineRange,
       !C.buildAST())
     return false;
   C.buildInlayHints(LineRange);
+  C.buildSemanticHighlighting(LineRange);
   C.testLocationFeatures(LineRange, EnableCodeCompletion);
 
   log("All checks completed, {0} errors", C.ErrCount);
