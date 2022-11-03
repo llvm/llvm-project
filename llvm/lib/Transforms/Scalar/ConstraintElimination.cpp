@@ -746,12 +746,6 @@ void State::addInfoFor(BasicBlock &BB) {
     WorkList.emplace_back(DT.getNode(Br->getSuccessor(1)), CmpI, true);
 }
 
-static Constant *getScalarConstOrSplat(ConstantInt *C, Type *Ty) {
-  if (auto *VTy = dyn_cast<FixedVectorType>(Ty))
-    return ConstantVector::getSplat(VTy->getElementCount(), C);
-  return C;
-}
-
 static bool checkAndReplaceCondition(CmpInst *Cmp, ConstraintInfo &Info) {
   LLVM_DEBUG(dbgs() << "Checking " << *Cmp << "\n");
 
@@ -784,7 +778,6 @@ static bool checkAndReplaceCondition(CmpInst *Cmp, ConstraintInfo &Info) {
   });
 
   bool Changed = false;
-  LLVMContext &Ctx = Cmp->getModule()->getContext();
   if (CSToUse.isConditionImplied(R.Coefficients)) {
     if (!DebugCounter::shouldExecute(EliminatedCounter))
       return false;
@@ -794,7 +787,7 @@ static bool checkAndReplaceCondition(CmpInst *Cmp, ConstraintInfo &Info) {
       dumpWithNames(CSToUse, Info.getValue2Index(R.IsSigned));
     });
     Constant *TrueC =
-        getScalarConstOrSplat(ConstantInt::getTrue(Ctx), Cmp->getType());
+        ConstantInt::getTrue(CmpInst::makeCmpResultType(Cmp->getType()));
     Cmp->replaceUsesWithIf(TrueC, [](Use &U) {
       // Conditions in an assume trivially simplify to true. Skip uses
       // in assume calls to not destroy the available information.
@@ -813,7 +806,7 @@ static bool checkAndReplaceCondition(CmpInst *Cmp, ConstraintInfo &Info) {
       dumpWithNames(CSToUse, Info.getValue2Index(R.IsSigned));
     });
     Constant *FalseC =
-        getScalarConstOrSplat(ConstantInt::getFalse(Ctx), Cmp->getType());
+        ConstantInt::getFalse(CmpInst::makeCmpResultType(Cmp->getType()));
     Cmp->replaceAllUsesWith(FalseC);
     NumCondsRemoved++;
     Changed = true;
