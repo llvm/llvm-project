@@ -1858,7 +1858,7 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
   auto EntryInfo =
       getTargetEntryUniqueInfo(CGM.getContext(), Loc, VD->getName());
   SmallString<128> Buffer, Out;
-  EntryInfo.getTargetRegionEntryFnName(Buffer);
+  OffloadEntriesInfoManager.getTargetRegionEntryFnName(Buffer, EntryInfo);
 
   const Expr *Init = VD->getAnyInitializer();
   if (CGM.getLangOpts().CPlusPlus && PerformInit) {
@@ -6101,18 +6101,20 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
   // Create a unique name for the entry function using the source location
   // information of the current target region. The name will be something like:
   //
-  // __omp_offloading_DD_FFFF_PP_lBB
+  // __omp_offloading_DD_FFFF_PP_lBB[_CC]
   //
   // where DD_FFFF is an ID unique to the file (device and file IDs), PP is the
   // mangled name of the function that encloses the target region and BB is the
-  // line number of the target region.
+  // line number of the target region. CC is a count added when more than one
+  // region is located at the same location.
 
   const bool BuildOutlinedFn = CGM.getLangOpts().OpenMPIsDevice ||
                                !CGM.getLangOpts().OpenMPOffloadMandatory;
   auto EntryInfo =
       getTargetEntryUniqueInfo(CGM.getContext(), D.getBeginLoc(), ParentName);
+
   SmallString<64> EntryFnName;
-  EntryInfo.getTargetRegionEntryFnName(EntryFnName);
+  OffloadEntriesInfoManager.getTargetRegionEntryFnName(EntryFnName, EntryInfo);
 
   const CapturedStmt &CS = *D.getCapturedStmt(OMPD_target);
 
