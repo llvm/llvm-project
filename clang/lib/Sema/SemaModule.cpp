@@ -155,7 +155,6 @@ static bool DiagReservedModuleName(Sema &S, const IdentifierInfo *II,
     Reserved = 1,
   } Reason = Valid;
 
-  StringRef PartName = II->getName();
   if (II->isStr("module") || II->isStr("import"))
     Reason = Invalid;
   else if (II->isReserved(S.getLangOpts()) !=
