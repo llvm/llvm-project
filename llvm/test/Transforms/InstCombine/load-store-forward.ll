@@ -287,6 +287,45 @@ define i32 @load_after_memset_unknown(ptr %a, i8 %byte) {
   ret i32 %v
 }
 
+define i32 @load_after_memset_0_offset(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_offset(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %gep = getelementptr i8, ptr %a, i64 4
+  %v = load i32, ptr %gep
+  ret i32 %v
+}
+
+define i32 @load_after_memset_0_offset_too_large(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_offset_too_large(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 13
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %gep = getelementptr i8, ptr %a, i64 13
+  %v = load i32, ptr %gep
+  ret i32 %v
+}
+
+define i32 @load_after_memset_0_offset_negative(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_offset_negative(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 -1
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %gep = getelementptr i8, ptr %a, i64 -1
+  %v = load i32, ptr %gep
+  ret i32 %v
+}
+
 define i32 @load_after_memset_0_clobber(ptr %a) {
 ; CHECK-LABEL: @load_after_memset_0_clobber(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
