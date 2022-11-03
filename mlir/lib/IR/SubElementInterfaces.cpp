@@ -27,11 +27,6 @@ static void walkSubElementsImpl(InterfaceT interface,
                                 DenseSet<Type> &visitedTypes) {
   interface.walkImmediateSubElements(
       [&](Attribute attr) {
-        // Guard against potentially null inputs. This removes the need for the
-        // derived attribute/type to do it.
-        if (!attr)
-          return;
-
         // Avoid infinite recursion when visiting sub attributes later, if this
         // is a mutable attribute.
         if (LLVM_UNLIKELY(attr.hasTrait<AttributeTrait::IsMutable>())) {
@@ -48,11 +43,6 @@ static void walkSubElementsImpl(InterfaceT interface,
         walkAttrsFn(attr);
       },
       [&](Type type) {
-        // Guard against potentially null inputs. This removes the need for the
-        // derived attribute/type to do it.
-        if (!type)
-          return;
-
         // Avoid infinite recursion when visiting sub types later, if this
         // is a mutable type.
         if (LLVM_UNLIKELY(type.hasTrait<TypeTrait::IsMutable>())) {
@@ -102,10 +92,6 @@ static void updateSubElementImpl(
   if (failed(changed))
     return;
   newElements.push_back(element);
-
-  // Guard against potentially null inputs. We always map null to null.
-  if (!element)
-    return;
 
   // Check for an existing mapping for this element, and walk it if we haven't
   // yet.

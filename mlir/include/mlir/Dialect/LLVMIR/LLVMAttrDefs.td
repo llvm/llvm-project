@@ -151,7 +151,7 @@ def LLVM_DIBasicTypeAttr : LLVM_Attr<"DIBasicType", "di_basic_type",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit", [
-    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+    SubElementAttrInterface
   ], "DIScopeAttr"> {
   let parameters = (ins
     LLVM_DILanguageParameter:$sourceLanguage,
@@ -168,7 +168,7 @@ def LLVM_DICompileUnitAttr : LLVM_Attr<"DICompileUnit", "di_compile_unit", [
 //===----------------------------------------------------------------------===//
 
 def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type", [
-    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+    SubElementAttrInterface
   ], "DITypeAttr"> {
   let parameters = (ins
     LLVM_DITagParameter:$tag,
@@ -188,7 +188,7 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DIDerivedTypeAttr : LLVM_Attr<"DIDerivedType", "di_derived_type", [
-    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+    SubElementAttrInterface
   ], "DITypeAttr"> {
   let parameters = (ins
     LLVM_DITagParameter:$tag,
@@ -220,7 +220,7 @@ def LLVM_DIFileAttr : LLVM_Attr<"DIFile", "di_file", /*traits=*/[], "DIScopeAttr
 //===----------------------------------------------------------------------===//
 
 def LLVM_DILexicalBlockAttr : LLVM_Attr<"DILexicalBlock", "di_lexical_block", [
-    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+    SubElementAttrInterface
   ], "DIScopeAttr"> {
   let parameters = (ins
     "DIScopeAttr":$scope,
@@ -244,7 +244,7 @@ def LLVM_DILexicalBlockAttr : LLVM_Attr<"DILexicalBlock", "di_lexical_block", [
 //===----------------------------------------------------------------------===//
 
 def LLVM_DILexicalBlockFile : LLVM_Attr<"DILexicalBlockFile", "di_lexical_block_file", [
-    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+    SubElementAttrInterface
   ], "DIScopeAttr"> {
   let parameters = (ins
     "DIScopeAttr":$scope,
@@ -266,7 +266,7 @@ def LLVM_DILexicalBlockFile : LLVM_Attr<"DILexicalBlockFile", "di_lexical_block_
 //===----------------------------------------------------------------------===//
 
 def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable", [
-    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+    SubElementAttrInterface
   ], "DINodeAttr"> {
   let parameters = (ins
     "DIScopeAttr":$scope,
@@ -296,7 +296,7 @@ def LLVM_DILocalVariableAttr : LLVM_Attr<"DILocalVariable", "di_local_variable",
 //===----------------------------------------------------------------------===//
 
 def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram", [
-    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+    SubElementAttrInterface
   ], "DIScopeAttr"> {
   let parameters = (ins
     "DICompileUnitAttr":$compileUnit,
@@ -346,7 +346,7 @@ def LLVM_DISubrangeAttr : LLVM_Attr<"DISubrange", "di_subrange", /*traits=*/[],
 //===----------------------------------------------------------------------===//
 
 def LLVM_DISubroutineTypeAttr : LLVM_Attr<"DISubroutineType", "di_subroutine_type", [
-    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+    SubElementAttrInterface
   ], "DITypeAttr"> {
   let parameters = (ins
     LLVM_DICallingConventionParameter:$callingConvention,

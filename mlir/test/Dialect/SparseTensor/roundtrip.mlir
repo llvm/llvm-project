@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s -split-input-file | mlir-opt -split-input-file | FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
 

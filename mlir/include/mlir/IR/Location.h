@@ -107,6 +107,9 @@ public:
     return LocationAttr(reinterpret_cast<const AttributeStorage *>(pointer));
   }
 
+  /// Support llvm style casting.
+  static bool classof(Attribute attr) { return llvm::isa<LocationAttr>(attr); }
+
 protected:
   /// The internal backing location attribute.
   LocationAttr impl;
@@ -167,6 +170,23 @@ inline OpaqueLoc OpaqueLoc::get(T underlyingLocation, MLIRContext *context) {
   return get(reinterpret_cast<uintptr_t>(underlyingLocation), TypeID::get<T>(),
              UnknownLoc::get(context));
 }
+
+//===----------------------------------------------------------------------===//
+// SubElementInterfaces
+//===----------------------------------------------------------------------===//
+
+/// Enable locations to be introspected as sub-elements.
+template <>
+struct AttrTypeSubElementHandler<Location> {
+  static void walk(Location param, AttrTypeSubElementWalker &walker) {
+    walker.walk(param);
+  }
+  static Location replace(Location param, AttrSubElementReplacements &attrRepls,
+                          TypeSubElementReplacements &typeRepls) {
+    return cast<LocationAttr>(attrRepls.take_front(1)[0]);
+  }
+};
+
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
