@@ -286,6 +286,7 @@ static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI,
       FixableDef.insert(&MI);
       return true;
     }
+    break;
   }
 
   return false;
