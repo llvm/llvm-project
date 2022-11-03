@@ -6127,6 +6127,33 @@ TEST_F(FormatTest, LayoutStatementsAroundPreprocessorDirectives) {
                "#endif\n"
                "  x;\n"
                "}");
+
+  verifyFormat("#if 0\n"
+               "#endif\n"
+               "#if X\n"
+               "int something_fairly_long; // Align here please\n"
+               "#endif                     // Should be aligned");
+
+  verifyFormat("#if 0\n"
+               "#endif\n"
+               "#if X\n"
+               "#else  // Align\n"
+               ";\n"
+               "#endif // Align");
+
+  verifyFormat("void SomeFunction(int param1,\n"
+               "                  template <\n"
+               "#ifdef A\n"
+               "#if 0\n"
+               "#endif\n"
+               "                      MyType<Some>>\n"
+               "#else\n"
+               "                      Type1, Type2>\n"
+               "#endif\n"
+               "                  param2,\n"
+               "                  param3) {\n"
+               "  f();\n"
+               "}");
 }
 
 TEST_F(FormatTest, GraciouslyHandleIncorrectPreprocessorConditions) {
