@@ -174,11 +174,16 @@ define arm_aapcs_vfpcc <4 x i32> @vcmpz_zr_ult(<4 x i32> %0) {
   ret <4 x i32> %3
 }
 
-;define arm_aapcs_vfpcc <4 x i32> @vcmpz_zr_ule(<4 x i32> %0) {
-;  %2 = icmp ule <4 x i32> %0, zeroinitializer
-;  %3 = sext <4 x i1> %2 to <4 x i32>
-;  ret <4 x i32> %3
-;}
+define arm_aapcs_vfpcc <4 x i32> @vcmpz_zr_ule(<4 x i32> %0) {
+; CHECK-LABEL: vcmpz_zr_ule:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.i32 q8, #0x0
+; CHECK-NEXT:    vcge.u32 q0, q8, q0
+; CHECK-NEXT:    bx lr
+  %2 = icmp ule <4 x i32> %0, zeroinitializer
+  %3 = sext <4 x i1> %2 to <4 x i32>
+  ret <4 x i32> %3
+}
 
 define arm_aapcs_vfpcc <4 x i32> @vcmpz_zr_ugt(<4 x i32> %0) {
 ; CHECK-LABEL: vcmpz_zr_ugt:
@@ -294,8 +299,13 @@ define arm_aapcs_vfpcc <4 x i32> @vcmpz_zl_ugt(<4 x i32> %0) {
   ret <4 x i32> %3
 }
 
-;define arm_aapcs_vfpcc <4 x i32> @vcmpz_zl_uge(<4 x i32> %0) {
-;  %2 = icmp uge <4 x i32> zeroinitializer, %0
-;  %3 = sext <4 x i1> %2 to <4 x i32>
-;  ret <4 x i32> %3
-;}
+define arm_aapcs_vfpcc <4 x i32> @vcmpz_zl_uge(<4 x i32> %0) {
+; CHECK-LABEL: vcmpz_zl_uge:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.i32 q8, #0x0
+; CHECK-NEXT:    vcge.u32 q0, q8, q0
+; CHECK-NEXT:    bx lr
+  %2 = icmp uge <4 x i32> zeroinitializer, %0
+  %3 = sext <4 x i1> %2 to <4 x i32>
+  ret <4 x i32> %3
+}
