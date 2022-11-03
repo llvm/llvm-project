@@ -469,9 +469,13 @@ bool llvm::stripDebugInfo(Function &F) {
         if (NewLoopID != LoopID)
           I.setMetadata(LLVMContext::MD_loop, NewLoopID);
       }
-      // Strip heapallocsite attachments, they point into the DIType system.
-      if (I.hasMetadataOtherThanDebugLoc())
+      // Strip other attachments that are or use debug info.
+      if (I.hasMetadataOtherThanDebugLoc()) {
+        // Heapallocsites point into the DIType system.
         I.setMetadata("heapallocsite", nullptr);
+        // DIAssignID are debug info metadata primitives.
+        I.setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+      }
     }
   }
   return Changed;
