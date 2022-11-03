@@ -9283,3 +9283,29 @@ multiclass sve_mem_128b_cld_ss<bits<2> dtype, string mnemonic, RegisterOperand g
   def : InstAlias<mnemonic # " $Zt, $Pg/z, [$Rn, $Rm]",
                  (!cast<Instruction>(NAME) ZPR128:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprsh_ty:$Rm), 0>;
 }
+
+
+// SVE floating-point recursive reduction (quadwords)
+class sve2p1_fp_reduction_q<bits<2> sz, bits<3> opc, string mnemonic,
+                            RegisterOperand zpr_ty, string vec_sfx>
+    : I<(outs V128:$Vd), (ins PPR3bAny:$Pg, zpr_ty:$Zn),
+        mnemonic, "\t$Vd." # vec_sfx # ", $Pg, $Zn",
+        "", []>, Sched<[]> {
+  bits<5> Vd;
+  bits<5> Zn;
+  bits<3> Pg;
+  let Inst{31-24} = 0b01100100;
+  let Inst{23-22} = sz;
+  let Inst{21-19} = 0b010;
+  let Inst{18-16} = opc;
+  let Inst{15-13} = 0b101;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Vd;
+}
+
+multiclass sve2p1_fp_reduction_q<bits<3> opc, string mnemonic> {
+  def _H : sve2p1_fp_reduction_q<0b01, opc, mnemonic, ZPR16, "8h">;
+  def _S : sve2p1_fp_reduction_q<0b10, opc, mnemonic, ZPR32, "4s">;
+  def _D : sve2p1_fp_reduction_q<0b11, opc, mnemonic, ZPR64, "2d">;
+}
