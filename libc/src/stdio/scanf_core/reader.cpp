@@ -13,6 +13,7 @@ namespace __llvm_libc {
 namespace scanf_core {
 
 char Reader::getc() {
+  ++cur_chars_read;
   if (reader_type == ReaderType::String) {
     return string_reader->get_char();
   } else {
@@ -21,6 +22,7 @@ char Reader::getc() {
 }
 
 void Reader::ungetc(char c) {
+  --cur_chars_read;
   if (reader_type == ReaderType::String) {
     // The string reader ignores the char c passed to unget since it doesn't
     // need to place anything back into a buffer, and modifying the source

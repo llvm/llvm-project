@@ -26,6 +26,8 @@ class Reader final {
 
   const ReaderType reader_type;
 
+  size_t cur_chars_read = 0;
+
 public:
   Reader(StringReader *init_string_reader)
       : string_reader(init_string_reader), reader_type(ReaderType::String) {}
@@ -41,6 +43,8 @@ public:
   // This moves the input back by one character, placing c into the buffer if
   // this is a file reader, else c is ignored.
   void ungetc(char c);
+
+  size_t chars_read() { return cur_chars_read; }
 };
 
 } // namespace scanf_core
