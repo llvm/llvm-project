@@ -155,44 +155,57 @@ public:
 } // namespace
 
 namespace {
-class ConvertIfOpTypes : public OpConversionPattern<IfOp> {
+class ConvertIfOpTypes
+    : public Structural1ToNConversionPattern<IfOp, ConvertIfOpTypes> {
 public:
-  using OpConversionPattern::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(IfOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    // TODO: Generalize this to any type conversion, not just 1:1.
-    //
-    // We need to implement something more sophisticated here that tracks
-    // which types convert to which other types and does the appropriate
-    // materialization logic.
-    // For example, it's possible that one result type converts to 0 types and
-    // another to 2 types, so newResultTypes would at least be the right size
-    // to not crash in the llvm::zip call below, but then we would set the the
-    // wrong type on the SSA values! These edge cases are also why we cannot
-    // safely use the TypeConverter::convertTypes helper here.
-    SmallVector<Type, 6> newResultTypes;
-    for (auto type : op.getResultTypes()) {
-      Type newType = typeConverter->convertType(type);
-      if (!newType)
-        return rewriter.notifyMatchFailure(op, "not a 1:1 type conversion");
-      newResultTypes.push_back(newType);
-    }
+  using Structural1ToNConversionPattern::Structural1ToNConversionPattern;
 
-    // See comments in the ForOp pattern for why we clone without regions and
-    // then inline.
-    IfOp newOp = cast<IfOp>(rewriter.cloneWithoutRegions(*op.getOperation()));
+  Optional<IfOp> convertSourceOp(IfOp op, OpAdaptor adaptor,
+                                 ConversionPatternRewriter &rewriter,
+                                 TypeRange dstTypes) const {
+
+    IfOp newOp = rewriter.create<IfOp>(op.getLoc(), dstTypes,
+                                       adaptor.getCondition(), true);
+    newOp->setAttrs(op->getAttrs());
+
+    // We do not need the empty blocks created by rewriter.
+    rewriter.eraseBlock(newOp.elseBlock());
+    rewriter.eraseBlock(newOp.thenBlock());
+
+    // Inlines block from the original operation.
     rewriter.inlineRegionBefore(op.getThenRegion(), newOp.getThenRegion(),
                                 newOp.getThenRegion().end());
     rewriter.inlineRegionBefore(op.getElseRegion(), newOp.getElseRegion(),
                                 newOp.getElseRegion().end());
 
-    // Update the operands and types.
-    newOp->setOperands(adaptor.getOperands());
-    for (auto t : llvm::zip(newOp.getResults(), newResultTypes))
-      std::get<0>(t).setType(std::get<1>(t));
-    rewriter.replaceOp(op, newOp.getResults());
-    return success();
+    return newOp;
+  }
+};
+} // namespace
+
+namespace {
+class ConvertWhileOpTypes
+    : public Structural1ToNConversionPattern<WhileOp, ConvertWhileOpTypes> {
+public:
+  using Structural1ToNConversionPattern::Structural1ToNConversionPattern;
+
+  Optional<WhileOp> convertSourceOp(WhileOp op, OpAdaptor adaptor,
+                                    ConversionPatternRewriter &rewriter,
+                                    TypeRange dstTypes) const {
+    // Unpacked the iteration arguments.
+    SmallVector<Value> flatArgs;
+    for (Value arg : adaptor.getOperands())
+      unpackUnrealizedConversionCast(arg, flatArgs);
+
+    auto newOp = rewriter.create<WhileOp>(op.getLoc(), dstTypes, flatArgs);
+
+    for (auto i : {0u, 1u}) {
+      if (failed(rewriter.convertRegionTypes(&op.getRegion(i), *typeConverter)))
+        return llvm::None;
+      auto &dstRegion = newOp.getRegion(i);
+      rewriter.inlineRegionBefore(op.getRegion(i), dstRegion, dstRegion.end());
+    }
+    return newOp;
   }
 };
 } // namespace
@@ -218,42 +231,17 @@ public:
 } // namespace
 
 namespace {
-class ConvertWhileOpTypes : public OpConversionPattern<WhileOp> {
-public:
-  using OpConversionPattern<WhileOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(WhileOp op, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    auto *converter = getTypeConverter();
-    assert(converter);
-    SmallVector<Type> newResultTypes;
-    if (failed(converter->convertTypes(op.getResultTypes(), newResultTypes)))
-      return failure();
-
-    auto newOp = rewriter.create<WhileOp>(op.getLoc(), newResultTypes,
-                                          adaptor.getOperands());
-    for (auto i : {0u, 1u}) {
-      auto &dstRegion = newOp.getRegion(i);
-      rewriter.inlineRegionBefore(op.getRegion(i), dstRegion, dstRegion.end());
-      if (failed(rewriter.convertRegionTypes(&dstRegion, *converter)))
-        return rewriter.notifyMatchFailure(op, "could not convert body types");
-    }
-    rewriter.replaceOp(op, newOp.getResults());
-    return success();
-  }
-};
-} // namespace
-
-namespace {
 class ConvertConditionOpTypes : public OpConversionPattern<ConditionOp> {
 public:
   using OpConversionPattern<ConditionOp>::OpConversionPattern;
   LogicalResult
   matchAndRewrite(ConditionOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.updateRootInPlace(
-        op, [&]() { op->setOperands(adaptor.getOperands()); });
+    SmallVector<Value> unpackedYield;
+    for (Value operand : adaptor.getOperands())
+      unpackUnrealizedConversionCast(operand, unpackedYield);
+
+    rewriter.updateRootInPlace(op, [&]() { op->setOperands(unpackedYield); });
     return success();
   }
 };
