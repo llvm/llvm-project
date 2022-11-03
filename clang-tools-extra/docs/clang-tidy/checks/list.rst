@@ -259,6 +259,7 @@ Clang-Tidy Checks
    `misc-unused-alias-decls <misc/unused-alias-decls.html>`_, "Yes"
    `misc-unused-parameters <misc/unused-parameters.html>`_, "Yes"
    `misc-unused-using-decls <misc/unused-using-decls.html>`_, "Yes"
+   `misc-use-anonymous-namespace <misc/use-anonymous-namespace.html>`_,
    `modernize-avoid-bind <modernize/avoid-bind.html>`_, "Yes"
    `modernize-avoid-c-arrays <modernize/avoid-c-arrays.html>`_,
    `modernize-concat-nested-namespaces <modernize/concat-nested-namespaces.html>`_, "Yes"
