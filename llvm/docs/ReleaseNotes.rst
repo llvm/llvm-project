@@ -110,6 +110,8 @@ Changes to the LLVM IR
   types that need to be preserved through the optimizer, but otherwise are not
   introspectable by target-independent optimizations.
 
+* Added ``uinc_wrap`` and ``udec_wrap`` operations to ``atomicrmw``.
+
 Changes to building LLVM
 ------------------------
 

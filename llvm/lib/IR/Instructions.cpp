@@ -1802,6 +1802,10 @@ StringRef AtomicRMWInst::getOperationName(BinOp Op) {
     return "fmax";
   case AtomicRMWInst::FMin:
     return "fmin";
+  case AtomicRMWInst::UIncWrap:
+    return "uinc_wrap";
+  case AtomicRMWInst::UDecWrap:
+    return "udec_wrap";
   case AtomicRMWInst::BAD_BINOP:
     return "<invalid operation>";
   }
