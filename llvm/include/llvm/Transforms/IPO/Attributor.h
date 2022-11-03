@@ -250,22 +250,6 @@ struct OffsetAndSize {
     return OAS.Offset + OAS.Size > Offset && OAS.Offset < Offset + Size;
   }
 
-  OffsetAndSize &operator&=(const OffsetAndSize &R) {
-    if (Offset == Unassigned)
-      Offset = R.Offset;
-    else if (R.Offset != Unassigned && R.Offset != Offset)
-      Offset = Unknown;
-
-    if (Size == Unassigned)
-      Size = R.Size;
-    else if (Size == Unknown || R.Size == Unknown)
-      Size = Unknown;
-    else if (R.Size != Unassigned)
-      Size = std::max(Size, R.Size);
-
-    return *this;
-  }
-
   /// Constants used to represent special offsets or sizes.
   /// - This assumes that Offset and Size are non-negative.
   /// - The constants should not clash with DenseMapInfo, such as EmptyKey
@@ -5008,47 +4992,33 @@ struct AAPointerInfo : public AbstractAttribute {
 
   /// An access description.
   struct Access {
-    Access(Instruction *I, int64_t Offset, int64_t Size,
-           Optional<Value *> Content, AccessKind Kind, Type *Ty)
-        : LocalI(I), RemoteI(I), Content(Content), OAS(Offset, Size),
-          Kind(Kind), Ty(Ty) {
+    Access(Instruction *I, Optional<Value *> Content, AccessKind Kind, Type *Ty)
+        : LocalI(I), RemoteI(I), Content(Content), Kind(Kind), Ty(Ty) {
       verify();
     }
-    Access(Instruction *LocalI, Instruction *RemoteI, int64_t Offset,
-           int64_t Size, Optional<Value *> Content, AccessKind Kind, Type *Ty)
-        : LocalI(LocalI), RemoteI(RemoteI), Content(Content), OAS(Offset, Size),
-          Kind(Kind), Ty(Ty) {
+    Access(Instruction *LocalI, Instruction *RemoteI, Optional<Value *> Content,
+           AccessKind Kind, Type *Ty)
+        : LocalI(LocalI), RemoteI(RemoteI), Content(Content), Kind(Kind),
+          Ty(Ty) {
       verify();
     }
     Access(const Access &Other) = default;
     Access(const Access &&Other)
         : LocalI(Other.LocalI), RemoteI(Other.RemoteI), Content(Other.Content),
-          OAS(Other.OAS), Kind(Other.Kind), Ty(Other.Ty) {}
+          Kind(Other.Kind), Ty(Other.Ty) {}
 
     Access &operator=(const Access &Other) = default;
     bool operator==(const Access &R) const {
-      return LocalI == R.LocalI && RemoteI == R.RemoteI && OAS == R.OAS &&
+      return LocalI == R.LocalI && RemoteI == R.RemoteI &&
              Content == R.Content && Kind == R.Kind;
     }
     bool operator!=(const Access &R) const { return !(*this == R); }
 
     Access &operator&=(const Access &R) {
       assert(RemoteI == R.RemoteI && "Expected same instruction!");
-      assert(LocalI == R.LocalI && "Expected same instruction!");
+      Content =
+          AA::combineOptionalValuesInAAValueLatice(Content, R.Content, Ty);
       Kind = AccessKind(Kind | R.Kind);
-      auto Before = OAS;
-      OAS &= R.OAS;
-      if (Before.isUnassigned() || Before == OAS) {
-        Content =
-            AA::combineOptionalValuesInAAValueLatice(Content, R.Content, Ty);
-      } else {
-        // Since the OAS information changed, set a conservative state -- drop
-        // the contents, and assume MayAccess rather than MustAccess.
-        Content.reset();
-        Kind = AccessKind(Kind | AK_MAY);
-        Kind = AccessKind(Kind & ~AK_MUST);
-      }
-      verify();
       return *this;
     }
 
@@ -5096,12 +5066,6 @@ struct AAPointerInfo : public AbstractAttribute {
     /// determined.
     Optional<Value *> getContent() const { return Content; }
 
-    /// Return the offset for this access.
-    int64_t getOffset() const { return OAS.Offset; }
-
-    /// Return the size for this access.
-    int64_t getSize() const { return OAS.Size; }
-
   private:
     /// The instruction responsible for the access with respect to the local
     /// scope of the associated attribute.
@@ -5113,9 +5077,6 @@ struct AAPointerInfo : public AbstractAttribute {
     /// The value written, if any. `llvm::none` means "not known yet", `nullptr`
     /// cannot be determined.
     Optional<Value *> Content;
-
-    /// The object accessed, in terms of an offset and size in bytes.
-    AA::OffsetAndSize OAS;
 
     /// The access kind, e.g., READ, as bitset (could be more than one).
     AccessKind Kind;
@@ -5152,7 +5113,7 @@ struct AAPointerInfo : public AbstractAttribute {
   virtual bool forallInterferingAccesses(
       Attributor &A, const AbstractAttribute &QueryingAA, Instruction &I,
       function_ref<bool(const Access &, bool)> CB, bool &HasBeenWrittenTo,
-      AA::OffsetAndSize &OAS) const = 0;
+      AA::OffsetAndSize *OASPtr = nullptr) const = 0;
 
   /// This function should return true if the type of the \p AA is AAPointerInfo
   static bool classof(const AbstractAttribute *AA) {
