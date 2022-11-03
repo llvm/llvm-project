@@ -31,6 +31,20 @@ if(NOT (TARGET libc.src.__support.File.file))
 endif()
 
 add_object_library(
+  scanf_main
+  SRCS
+    scanf_main.cpp
+  HDRS
+    scanf_main.h
+  DEPENDS
+    .parser
+    .reader
+    .converter
+    .core_structs
+    libc.src.__support.arg_list
+)
+
+add_object_library(
   string_reader
   SRCS
     string_reader.cpp
@@ -57,4 +71,21 @@ add_object_library(
   DEPENDS
     .string_reader
     .file_reader
+)
+
+add_object_library(
+  converter
+  SRCS
+    converter.cpp
+    string_converter.cpp
+  HDRS
+    converter.h
+    string_converter.h
+  DEPENDS
+    .reader
+    .core_structs
+    libc.src.__support.ctype_utils
+    libc.src.__support.CPP.bitset
+    libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.limits
 )
