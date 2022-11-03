@@ -471,6 +471,7 @@ private:
   void visitCallStackMetadata(MDNode *MD);
   void visitMemProfMetadata(Instruction &I, MDNode *MD);
   void visitCallsiteMetadata(Instruction &I, MDNode *MD);
+  void visitDIAssignIDMetadata(Instruction &I, MDNode *MD);
   void visitAnnotationMetadata(MDNode *Annotation);
   void visitAliasScopeMetadata(const MDNode *MD);
   void visitAliasScopeListMetadata(const MDNode *MD);
@@ -1481,6 +1482,11 @@ void Verifier::visitDILocalVariable(const DILocalVariable &N) {
           "local variable requires a valid scope", &N, N.getRawScope());
   if (auto Ty = N.getType())
     CheckDI(!isa<DISubroutineType>(Ty), "invalid type", &N, N.getType());
+}
+
+void Verifier::visitDIAssignID(const DIAssignID &N) {
+  CheckDI(!N.getNumOperands(), "DIAssignID has no arguments", &N);
+  CheckDI(N.isDistinct(), "DIAssignID must be distinct", &N);
 }
 
 void Verifier::visitDILabel(const DILabel &N) {
@@ -4549,6 +4555,14 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
   }
 }
 
+void Verifier::visitDIAssignIDMetadata(Instruction &I, MDNode *MD) {
+  assert(I.hasMetadata(LLVMContext::MD_DIAssignID));
+  bool ExpectedInstTy =
+      isa<AllocaInst>(I) || isa<StoreInst>(I) || isa<MemIntrinsic>(I);
+  CheckDI(ExpectedInstTy, "!DIAssignID attached to unexpected instruction kind",
+          I, MD);
+}
+
 void Verifier::visitCallStackMetadata(MDNode *MD) {
   // Call stack metadata should consist of a list of at least 1 constant int
   // (representing a hash of the location).
@@ -4849,6 +4863,9 @@ void Verifier::visitInstruction(Instruction &I) {
 
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_callsite))
     visitCallsiteMetadata(I, MD);
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_DIAssignID))
+    visitDIAssignIDMetadata(I, MD);
 
   if (MDNode *Annotation = I.getMetadata(LLVMContext::MD_annotation))
     visitAnnotationMetadata(Annotation);
