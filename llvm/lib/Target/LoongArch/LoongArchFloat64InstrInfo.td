@@ -288,12 +288,10 @@ def : Pat<(f64 fpimm1), (FCVT_D_S (FFINT_S_W (MOVGR2FR_W (ADDI_W R0, 1))))>;
 /// Convert int to FP
 
 let Predicates = [HasBasicD, IsLA64] in {
+def : Pat<(f32 (sint_to_fp GPR:$src)), (FFINT_S_L (MOVGR2FR_D GPR:$src))>;
 def : Pat<(f64 (sint_to_fp (i64 (sexti32 (i64 GPR:$src))))),
           (FFINT_D_W (MOVGR2FR_W GPR:$src))>;
 def : Pat<(f64 (sint_to_fp GPR:$src)), (FFINT_D_L (MOVGR2FR_D GPR:$src))>;
-
-def : Pat<(f64 (uint_to_fp (i64 (zexti32 (i64 GPR:$src))))),
-          (FFINT_D_W (MOVGR2FR_W GPR:$src))>;
 
 def : Pat<(bitconvert GPR:$src), (MOVGR2FR_D GPR:$src)>;
 } // Predicates = [HasBasicD, IsLA64]
