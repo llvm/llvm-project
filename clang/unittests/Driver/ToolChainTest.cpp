@@ -596,9 +596,10 @@ TEST(ToolChainTest, ConfigInexistentInclude) {
     ASSERT_TRUE(C);
     ASSERT_TRUE(C->containsError());
     EXPECT_EQ(1U, DiagConsumer->Errors.size());
-    EXPECT_STREQ("cannot read configuration file '" USERCONFIG
-                 "': cannot not open file '" UNEXISTENT "'",
-                 DiagConsumer->Errors[0].c_str());
+    EXPECT_STRCASEEQ("cannot read configuration file '" USERCONFIG
+                     "': cannot not open file '" UNEXISTENT
+                     "': no such file or directory",
+                     DiagConsumer->Errors[0].c_str());
   }
 
 #undef USERCONFIG

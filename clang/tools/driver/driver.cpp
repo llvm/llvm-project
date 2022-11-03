@@ -378,7 +378,7 @@ int clang_main(int Argc, char **Argv) {
   llvm::cl::ExpansionContext ECtx(A, Tokenizer);
   ECtx.setMarkEOLs(MarkEOLs);
   if (llvm::Error Err = ECtx.expandResponseFiles(Args)) {
-    llvm::errs() << Err << '\n';
+    llvm::errs() << toString(std::move(Err)) << '\n';
     return 1;
   }
 
