@@ -601,3 +601,41 @@ define i64 @test_and_extended_shift_with_imm(i64 %0) {
   %3 = and i64 %2, 32640  ; #0x7f80
   ret i64 %3
 }
+
+; orr with left-shifted operand is better than bfi, since it improves data
+; dependency, and orr has a smaller latency and higher throughput than bfm on
+; some AArch64 processors (for the rest, orr is at least as good as bfm)
+;
+; ubfx x8, x0, #8, #7
+; and x9, x0, #0x7f
+; orr x0, x9, x8, lsl #7
+define i64 @test_orr_not_bfxil_i64(i64 %0) {
+; CHECK-LABEL: test_orr_not_bfxil_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr x8, x0, #1
+; CHECK-NEXT:    and x8, x8, #0x3f80
+; CHECK-NEXT:    bfxil x8, x0, #0, #7
+; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    ret
+  %2 = and i64 %0, 127
+  %3 = lshr i64 %0, 1
+  %4 = and i64 %3, 16256  ; 0x3f80
+  %5 = or i64 %4, %2
+  ret i64 %5
+}
+
+; The 32-bit test for `test_orr_not_bfxil_i64`.
+define i32 @test_orr_not_bfxil_i32(i32 %0) {
+; CHECK-LABEL: test_orr_not_bfxil_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr w8, w0, #1
+; CHECK-NEXT:    and w8, w8, #0x3f80
+; CHECK-NEXT:    bfxil w8, w0, #0, #7
+; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    ret
+  %2 = and i32 %0, 127
+  %3 = lshr i32 %0, 1
+  %4 = and i32 %3, 16256  ; 0x3f80
+  %5 = or i32 %4, %2
+  ret i32 %5
+}

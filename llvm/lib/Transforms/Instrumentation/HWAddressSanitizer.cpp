@@ -497,12 +497,10 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
       new GlobalVariable(M, Int8Arr0Ty, true, GlobalVariable::ExternalLinkage,
                          nullptr, "__start_hwasan_globals");
   Start->setVisibility(GlobalValue::HiddenVisibility);
-  Start->setDSOLocal(true);
   auto Stop =
       new GlobalVariable(M, Int8Arr0Ty, true, GlobalVariable::ExternalLinkage,
                          nullptr, "__stop_hwasan_globals");
   Stop->setVisibility(GlobalValue::HiddenVisibility);
-  Stop->setDSOLocal(true);
 
   // Null-terminated so actually 8 bytes, which are required in order to align
   // the note properly.
@@ -516,7 +514,6 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
   Note->setSection(".note.hwasan.globals");
   Note->setComdat(NoteComdat);
   Note->setAlignment(Align(4));
-  Note->setDSOLocal(true);
 
   // The pointers in the note need to be relative so that the note ends up being
   // placed in rodata, which is the standard location for notes.

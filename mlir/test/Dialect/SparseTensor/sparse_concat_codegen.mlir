@@ -1,4 +1,5 @@
-// RUN: mlir-opt %s --sparse-tensor-rewrite=enable-runtime-library=false --sparsification | FileCheck %s
+// RUN: mlir-opt %s --sparse-tensor-rewrite="enable-runtime-library=false enable-convert=false" \
+// RUN: --sparsification | FileCheck %s
 
 #DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
 

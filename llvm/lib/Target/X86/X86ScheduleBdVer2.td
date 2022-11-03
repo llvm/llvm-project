@@ -836,12 +836,10 @@ defm : PdWriteResXMMPair<WriteFMAX,         [PdFPU, PdFPFMA], 5, [1, 3]>;
 defm : PdWriteResYMMPair<WriteFMAY,         [PdFPU, PdFPFMA], 5, [1, 3]>;
 defm : X86WriteResPairUnsupported<WriteFMAZ>;
 
-
 defm : PdWriteResXMMPair<WriteDPPD,         [PdFPU1, PdFPFMA], 15, [1, 10], 15, 2>;
 
 defm : PdWriteResXMMPair<WriteDPPS,         [PdFPU1, PdFPFMA], 25, [1, 14],  16, 2>;
 defm : PdWriteResYMMPair<WriteDPPSY,        [PdFPU1, PdFPFMA], 27, [2, 25], /*or 29*/ 25, 4>;
-defm : X86WriteResPairUnsupported<WriteDPPSZ>;
 
 def PdWriteVDPPSrri : SchedWriteRes<[PdFPU1, PdFPFMA]> {
   let Latency = 27;

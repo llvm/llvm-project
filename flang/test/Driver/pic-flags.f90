@@ -1,3 +1,4 @@
+! REQUIRES: aarch64-registered-target && x86-registered-target && arm-registered-target
 ! RUN: %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu -fno-pie 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-STATIC,CHECK-STATIC-IR
 
 ! RUN: %flang -v -S -emit-llvm -o - %s --target=aarch64-linux-gnu 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-PIE-LEVEL2,CHECK-PIE-LEVEL2-IR
@@ -13,7 +14,6 @@
 ! RUN: %flang -v -### -o - %s --target=arm-none-eabi -fropi 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-ROPI
 ! RUN: %flang -v -### -o - %s --target=arm-none-eabi -frwpi 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-RWPI
 ! RUN: %flang -v -### -o - %s --target=arm-none-eabi -fropi -frwpi 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-ROPI-RWPI
-
 
 ! CHECK: -fc1
 

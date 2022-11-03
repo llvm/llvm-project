@@ -78,6 +78,8 @@ stages there is no ABI stability in any form.
    api_test
    mechanics_of_public_api
    source_layout
+   porting
+   contributing
 
 .. toctree::
    :hidden:
@@ -86,4 +88,6 @@ stages there is no ABI stability in any form.
 
    Source Code <https://github.com/llvm/llvm-project/tree/main/libc>
    Bug Reports <https://github.com/llvm/llvm-project/labels/libc>
+   Discourse <https://discourse.llvm.org/c/runtimes/libc>
+   Discord Channel <https://discord.com/channels/636084430946959380/636732994891284500>
    Buildbot <https://lab.llvm.org/buildbot/#/builders?tags=libc>

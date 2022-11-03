@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64-pc-linux %s -o %t.o
 // RUN: ld.lld --hash-style=sysv -shared %t.o -o %t.so
-// RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.so | FileCheck %s
 // RUN: llvm-readobj -r %t.so | FileCheck --check-prefix=REL %s
 
 	.text

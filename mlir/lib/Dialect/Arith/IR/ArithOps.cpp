@@ -24,31 +24,6 @@ using namespace mlir;
 using namespace mlir::arith;
 
 //===----------------------------------------------------------------------===//
-// Floating point op parse/print helpers
-//===----------------------------------------------------------------------===//
-static ParseResult parseArithFastMathAttr(OpAsmParser &parser,
-                                          Attribute &attr) {
-  if (succeeded(
-          parser.parseOptionalKeyword(FastMathFlagsAttr::getMnemonic()))) {
-    attr = FastMathFlagsAttr::parse(parser, Type{});
-    return success(static_cast<bool>(attr));
-  } else {
-    // No fastmath attribute mnemonic present - defer attribute creation and use
-    // the default value.
-    return success();
-  }
-}
-
-static void printArithFastMathAttr(OpAsmPrinter &printer, Operation *op,
-                                   FastMathFlagsAttr fmAttr) {
-  // Elide printing the fastmath attribute when fastmath=none
-  if (fmAttr && (fmAttr.getValue() != FastMathFlags::none)) {
-    printer << " " << FastMathFlagsAttr::getMnemonic();
-    fmAttr.print(printer);
-  }
-}
-
-//===----------------------------------------------------------------------===//
 // Pattern helpers
 //===----------------------------------------------------------------------===//
 

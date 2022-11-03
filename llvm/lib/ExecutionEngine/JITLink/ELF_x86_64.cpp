@@ -166,8 +166,8 @@ private:
             "No SHT_REL in valid x64 ELF object files",
             inconvertibleErrorCode());
 
-      if (Error Err = Base::forEachRelocation(RelSect, this,
-                                              &Self::addSingleRelocation))
+      if (Error Err = Base::forEachRelaRelocation(RelSect, this,
+                                                  &Self::addSingleRelocation))
         return Err;
     }
 

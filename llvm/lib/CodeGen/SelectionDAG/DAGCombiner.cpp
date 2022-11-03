@@ -8877,13 +8877,9 @@ SDValue DAGCombiner::visitShiftByConstant(SDNode *N) {
   if (!LHS.hasOneUse() || !TLI.isDesirableToCommuteWithShift(N, Level))
     return SDValue();
 
-  // TODO: This is limited to early combining because it may reveal regressions
-  //       otherwise. But since we just checked a target hook to see if this is
-  //       desirable, that should have filtered out cases where this interferes
-  //       with some other pattern matching.
-  if (!LegalTypes)
-    if (SDValue R = combineShiftOfShiftedLogic(N, DAG))
-      return R;
+  // Fold shift(bitop(shift(x,c1),y), c2) -> bitop(shift(x,c1+c2),shift(y,c2)).
+  if (SDValue R = combineShiftOfShiftedLogic(N, DAG))
+    return R;
 
   // We want to pull some binops through shifts, so that we have (and (shift))
   // instead of (shift (and)), likewise for add, or, xor, etc.  This sort of

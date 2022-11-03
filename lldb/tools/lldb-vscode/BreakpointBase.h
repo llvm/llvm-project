@@ -22,7 +22,7 @@ struct BreakpointBase {
   struct LogMessagePart {
     LogMessagePart(llvm::StringRef text, bool is_expr)
         : text(text), is_expr(is_expr) {}
-    llvm::StringRef text;
+    std::string text;
     bool is_expr;
   };
   // An optional expression for conditional breakpoints.
@@ -45,6 +45,13 @@ struct BreakpointBase {
   void SetHitCondition();
   void SetLogMessage();
   void UpdateBreakpoint(const BreakpointBase &request_bp);
+
+  // Format \param text and return formatted text in \param formatted.
+  // \return any formatting failures.
+  lldb::SBError FormatLogText(llvm::StringRef text, std::string &formatted);
+  lldb::SBError AppendLogMessagePart(llvm::StringRef part, bool is_expr);
+  void NotifyLogMessageError(llvm::StringRef error);
+
   static const char *GetBreakpointLabel();
   static bool BreakpointHitCallback(void *baton, lldb::SBProcess &process,
                                     lldb::SBThread &thread,

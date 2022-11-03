@@ -8713,14 +8713,14 @@ Sema::CorrectDelayedTyposInExpr(Expr *E, VarDecl *InitDecl,
 }
 
 ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
-                                     bool DiscardedValue,
-                                     bool IsConstexpr) {
+                                     bool DiscardedValue, bool IsConstexpr,
+                                     bool IsTemplateArgument) {
   ExprResult FullExpr = FE;
 
   if (!FullExpr.get())
     return ExprError();
 
-  if (DiagnoseUnexpandedParameterPack(FullExpr.get()))
+  if (!IsTemplateArgument && DiagnoseUnexpandedParameterPack(FullExpr.get()))
     return ExprError();
 
   if (DiscardedValue) {

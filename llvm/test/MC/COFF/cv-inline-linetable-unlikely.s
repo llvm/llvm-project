@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple=x86_64-windows -filetype=obj < %s -o %t.obj
-# RUN: llvm-objdump -d %t.obj | FileCheck %s --check-prefix=ASM
+# RUN: llvm-objdump --no-print-imm-hex -d %t.obj | FileCheck %s --check-prefix=ASM
 # RUN: llvm-pdbutil dump -symbols %t.obj | FileCheck %s --check-prefix=CODEVIEW
 
 # C source to generate the assembly:

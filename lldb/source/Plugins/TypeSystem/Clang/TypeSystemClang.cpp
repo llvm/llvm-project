@@ -3226,20 +3226,6 @@ bool TypeSystemClang::IsIntegerType(lldb::opaque_compiler_type_t type,
   return false;
 }
 
-bool TypeSystemClang::IsBooleanType(lldb::opaque_compiler_type_t type) {
-  if (!type)
-    return false;
-
-  clang::QualType qual_type(GetCanonicalQualType(type));
-  const clang::BuiltinType *builtin_type =
-      llvm::dyn_cast<clang::BuiltinType>(qual_type->getCanonicalTypeInternal());
-
-  if (!builtin_type)
-    return false;
-
-  return builtin_type->isBooleanType();
-}
-
 bool TypeSystemClang::IsEnumerationType(lldb::opaque_compiler_type_t type,
                                         bool &is_signed) {
   if (type) {
@@ -3781,7 +3767,8 @@ bool TypeSystemClang::GetCompleteType(lldb::opaque_compiler_type_t type) {
                              allow_completion);
 }
 
-ConstString TypeSystemClang::GetTypeName(lldb::opaque_compiler_type_t type) {
+ConstString TypeSystemClang::GetTypeName(lldb::opaque_compiler_type_t type,
+                                         bool BaseOnly) {
   if (!type)
     return ConstString();
 
@@ -3803,7 +3790,9 @@ ConstString TypeSystemClang::GetTypeName(lldb::opaque_compiler_type_t type) {
     return ConstString(GetTypeNameForDecl(typedef_decl));
   }
 
-  return ConstString(qual_type.getAsString(GetTypePrintingPolicy()));
+  clang::PrintingPolicy printing_policy(GetTypePrintingPolicy());
+  printing_policy.SuppressScope = BaseOnly;
+  return ConstString(qual_type.getAsString(printing_policy));
 }
 
 ConstString
@@ -7590,18 +7579,6 @@ clang::VarDecl *TypeSystemClang::AddVariableToRecordType(
   return var_decl;
 }
 
-void TypeSystemClang::SetBoolInitializerForVariable(VarDecl *var, bool value) {
-  assert(!var->hasInit() && "variable already initialized");
-
-  QualType qt = var->getType();
-  assert(qt->isSpecificBuiltinType(BuiltinType::Bool) &&
-         "only boolean supported");
-
-  clang::ASTContext &ast = var->getASTContext();
-  var->setInit(CXXBoolLiteralExpr::Create(ast, value, qt.getUnqualifiedType(),
-                                          SourceLocation()));
-}
-
 void TypeSystemClang::SetIntegerInitializerForVariable(
     VarDecl *var, const llvm::APInt &init_value) {
   assert(!var->hasInit() && "variable already initialized");
@@ -7616,8 +7593,15 @@ void TypeSystemClang::SetIntegerInitializerForVariable(
     const EnumDecl *enum_decl = enum_type->getDecl();
     qt = enum_decl->getIntegerType();
   }
-  var->setInit(IntegerLiteral::Create(ast, init_value, qt.getUnqualifiedType(),
-                                      SourceLocation()));
+  // Bools are handled separately because the clang AST printer handles bools
+  // separately from other integral types.
+  if (qt->isSpecificBuiltinType(BuiltinType::Bool)) {
+    var->setInit(CXXBoolLiteralExpr::Create(
+        ast, !init_value.isZero(), qt.getUnqualifiedType(), SourceLocation()));
+  } else {
+    var->setInit(IntegerLiteral::Create(
+        ast, init_value, qt.getUnqualifiedType(), SourceLocation()));
+  }
 }
 
 void TypeSystemClang::SetFloatingInitializerForVariable(
@@ -9353,7 +9337,9 @@ clang::ClassTemplateDecl *TypeSystemClang::ParseClassTemplateDecl(
     const TypeSystemClang::TemplateParameterInfos &template_param_infos) {
   if (template_param_infos.IsValid()) {
     std::string template_basename(parent_name);
-    template_basename.erase(template_basename.find('<'));
+    // With -gsimple-template-names we may omit template parameters in the name.
+    if (auto i = template_basename.find('<'); i != std::string::npos)
+      template_basename.erase(i);
 
     return CreateClassTemplateDecl(decl_ctx, owning_module, access_type,
                                    template_basename.c_str(), tag_decl_kind,

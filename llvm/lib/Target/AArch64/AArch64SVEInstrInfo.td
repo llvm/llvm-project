@@ -1108,6 +1108,9 @@ let Predicates = [HasSVE] in {
   defm GLDFF1W_D  : sve_mem_64b_gld_vs2_64_unscaled<0b1011, "ldff1w",  AArch64ldff1_gather_z,  nxv2i32>;
   defm GLD1D      : sve_mem_64b_gld_vs2_64_unscaled<0b1110, "ld1d",    AArch64ld1_gather_z,    nxv2i64>;
   defm GLDFF1D    : sve_mem_64b_gld_vs2_64_unscaled<0b1111, "ldff1d",  AArch64ldff1_gather_z,  nxv2i64>;
+  let Predicates = [HasSVE2p1] in {
+  defm GLD1Q      : sve_mem_128b_gld_64_unscaled<"ld1q">;
+  }
 
   // Gathers using scaled 64-bit offsets, e.g.
   //    ld1h z0.d, p0/z, [x0, z0.d, lsl #1]
@@ -1321,6 +1324,9 @@ let Predicates = [HasSVE] in {
   defm SST1H_D : sve_mem_sst_sv_64_unscaled<0b01, "st1h", AArch64st1_scatter, nxv2i16>;
   defm SST1W_D : sve_mem_sst_sv_64_unscaled<0b10, "st1w", AArch64st1_scatter, nxv2i32>;
   defm SST1D   : sve_mem_sst_sv_64_unscaled<0b11, "st1d", AArch64st1_scatter, nxv2i64>;
+  let Predicates = [HasSVE2p1] in {
+  defm SST1Q   : sve_mem_sst_128b_64_unscaled<"st1q">;
+  }
 
   // Scatters using scaled 64-bit offsets, e.g.
   //    st1h z0.d, p0, [x0, z0.d, lsl #1]
@@ -3032,7 +3038,7 @@ let Predicates = [HasSVEorSME] in {
             (EXTRACT_SUBREG (DUP_ZZI_D ZPR:$vec, sve_elm_idx_extdup_d:$index), dsub)>;
 
   // Extract element from vector with immediate index that's within the bottom 128-bits.
-  let AddedComplexity = 1 in {
+  let Predicates = [NotInStreamingSVEMode], AddedComplexity = 1 in {
   def : Pat<(i32 (vector_extract (nxv16i8 ZPR:$vec), VectorIndexB:$index)),
             (i32 (UMOVvi8 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index))>;
   def : Pat<(i32 (vector_extract (nxv8i16 ZPR:$vec), VectorIndexH:$index)),
@@ -3041,8 +3047,9 @@ let Predicates = [HasSVEorSME] in {
             (i32 (UMOVvi32 (v4i32 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexS:$index))>;
   def : Pat<(i64 (vector_extract (nxv2i64 ZPR:$vec), VectorIndexD:$index)),
             (i64 (UMOVvi64 (v2i64 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexD:$index))>;
-  }
+  } // End NotInStreamingSVEMode
 
+  let Predicates = [NotInStreamingSVEMode] in {
   def : Pat<(sext_inreg (vector_extract (nxv16i8 ZPR:$vec), VectorIndexB:$index), i8),
             (i32 (SMOVvi8to32 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index))>;
   def : Pat<(sext_inreg (anyext (vector_extract (nxv16i8 ZPR:$vec), VectorIndexB:$index)), i8),
@@ -3055,6 +3062,7 @@ let Predicates = [HasSVEorSME] in {
 
   def : Pat<(sext (vector_extract (nxv4i32 ZPR:$vec), VectorIndexS:$index)),
             (i64 (SMOVvi32to64 (v4i32 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexS:$index))>;
+  } // End NotInStreamingSVEMode
 
   // Extract first element from vector.
   let AddedComplexity = 2 in {
@@ -3587,10 +3595,104 @@ def UDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"udot", 0b1>;
 def SDOT_ZZZI_HtoS : sve2p1_two_way_dot_vvi<"sdot", 0b0>;
 def UDOT_ZZZI_HtoS : sve2p1_two_way_dot_vvi<"udot", 0b1>;
 
+defm CNTP_XCI : sve2p1_pcount_pn<"cntp", 0b000>;
 defm PEXT_PCI : sve2p1_pred_as_ctr_to_mask<"pext">;
+defm PEXT_2PCI : sve2p1_pred_as_ctr_to_mask_pair<"pext">;
 defm PTRUE_C  : sve2p1_ptrue_pn<"ptrue">;
 
 defm SQCVTN_Z2Z_StoH  : sve2p1_multi_vec_extract_narrow<"sqcvtn", 0b00>;
 defm UQCVTN_Z2Z_StoH  : sve2p1_multi_vec_extract_narrow<"uqcvtn", 0b01>;
 defm SQCVTUN_Z2Z_StoH : sve2p1_multi_vec_extract_narrow<"sqcvtun", 0b10>;
+defm SQRSHRN_Z2ZI_StoH  : sve2p1_multi_vec_shift_narrow<"sqrshrn", 0b101>;
+defm UQRSHRN_Z2ZI_StoH  : sve2p1_multi_vec_shift_narrow<"uqrshrn", 0b111>;
+defm SQRSHRUN_Z2ZI_StoH : sve2p1_multi_vec_shift_narrow<"sqrshrun", 0b001>;
+
+// Load to two registers
+def LD1B_2Z        : sve2p1_mem_cld_ss_2z<"ld1b", 0b00, 0b0, ZZ_b_mul_r, GPR64shifted8>;
+def LD1H_2Z        : sve2p1_mem_cld_ss_2z<"ld1h", 0b01, 0b0, ZZ_h_mul_r, GPR64shifted16>;
+def LD1W_2Z        : sve2p1_mem_cld_ss_2z<"ld1w", 0b10, 0b0, ZZ_s_mul_r, GPR64shifted32>;
+def LD1D_2Z        : sve2p1_mem_cld_ss_2z<"ld1d", 0b11, 0b0, ZZ_d_mul_r, GPR64shifted64>;
+defm LD1B_2Z_IMM   : sve2p1_mem_cld_si_2z<"ld1b", 0b00, 0b0, ZZ_b_mul_r>;
+defm LD1H_2Z_IMM   : sve2p1_mem_cld_si_2z<"ld1h", 0b01, 0b0, ZZ_h_mul_r>;
+defm LD1W_2Z_IMM   : sve2p1_mem_cld_si_2z<"ld1w", 0b10, 0b0, ZZ_s_mul_r>;
+defm LD1D_2Z_IMM   : sve2p1_mem_cld_si_2z<"ld1d", 0b11, 0b0, ZZ_d_mul_r>;
+def LDNT1B_2Z      : sve2p1_mem_cld_ss_2z<"ldnt1b", 0b00, 0b1, ZZ_b_mul_r, GPR64shifted8>;
+def LDNT1H_2Z      : sve2p1_mem_cld_ss_2z<"ldnt1h", 0b01, 0b1, ZZ_h_mul_r, GPR64shifted16>;
+def LDNT1W_2Z      : sve2p1_mem_cld_ss_2z<"ldnt1w", 0b10, 0b1, ZZ_s_mul_r, GPR64shifted32>;
+def LDNT1D_2Z      : sve2p1_mem_cld_ss_2z<"ldnt1d", 0b11, 0b1, ZZ_d_mul_r, GPR64shifted64>;
+defm LDNT1B_2Z_IMM : sve2p1_mem_cld_si_2z<"ldnt1b", 0b00, 0b1, ZZ_b_mul_r>;
+defm LDNT1H_2Z_IMM : sve2p1_mem_cld_si_2z<"ldnt1h", 0b01, 0b1, ZZ_h_mul_r>;
+defm LDNT1W_2Z_IMM : sve2p1_mem_cld_si_2z<"ldnt1w", 0b10, 0b1, ZZ_s_mul_r>;
+defm LDNT1D_2Z_IMM : sve2p1_mem_cld_si_2z<"ldnt1d", 0b11, 0b1, ZZ_d_mul_r>;
+
+// Load to four registers
+def LD1B_4Z        : sve2p1_mem_cld_ss_4z<"ld1b", 0b00, 0b0, ZZZZ_b_mul_r, GPR64shifted8>;
+def LD1H_4Z        : sve2p1_mem_cld_ss_4z<"ld1h", 0b01, 0b0, ZZZZ_h_mul_r, GPR64shifted16>;
+def LD1W_4Z        : sve2p1_mem_cld_ss_4z<"ld1w", 0b10, 0b0, ZZZZ_s_mul_r, GPR64shifted32>;
+def LD1D_4Z        : sve2p1_mem_cld_ss_4z<"ld1d", 0b11, 0b0, ZZZZ_d_mul_r, GPR64shifted64>;
+defm LD1B_4Z_IMM   : sve2p1_mem_cld_si_4z<"ld1b", 0b00, 0b0, ZZZZ_b_mul_r>;
+defm LD1H_4Z_IMM   : sve2p1_mem_cld_si_4z<"ld1h", 0b01, 0b0, ZZZZ_h_mul_r>;
+defm LD1W_4Z_IMM   : sve2p1_mem_cld_si_4z<"ld1w", 0b10, 0b0, ZZZZ_s_mul_r>;
+defm LD1D_4Z_IMM   : sve2p1_mem_cld_si_4z<"ld1d", 0b11, 0b0, ZZZZ_d_mul_r>;
+def LDNT1B_4Z      : sve2p1_mem_cld_ss_4z<"ldnt1b", 0b00, 0b1, ZZZZ_b_mul_r, GPR64shifted8>;
+def LDNT1H_4Z      : sve2p1_mem_cld_ss_4z<"ldnt1h", 0b01, 0b1, ZZZZ_h_mul_r, GPR64shifted16>;
+def LDNT1W_4Z      : sve2p1_mem_cld_ss_4z<"ldnt1w", 0b10, 0b1, ZZZZ_s_mul_r, GPR64shifted32>;
+def LDNT1D_4Z      : sve2p1_mem_cld_ss_4z<"ldnt1d", 0b11, 0b1, ZZZZ_d_mul_r, GPR64shifted64>;
+defm LDNT1B_4Z_IMM : sve2p1_mem_cld_si_4z<"ldnt1b", 0b00, 0b1, ZZZZ_b_mul_r>;
+defm LDNT1H_4Z_IMM : sve2p1_mem_cld_si_4z<"ldnt1h", 0b01, 0b1, ZZZZ_h_mul_r>;
+defm LDNT1W_4Z_IMM : sve2p1_mem_cld_si_4z<"ldnt1w", 0b10, 0b1, ZZZZ_s_mul_r>;
+defm LDNT1D_4Z_IMM : sve2p1_mem_cld_si_4z<"ldnt1d", 0b11, 0b1, ZZZZ_d_mul_r>;
+
+// Stores of two registers
+def ST1B_2Z        : sve2p1_mem_cst_ss_2z<"st1b", 0b00, 0b0, ZZ_b_mul_r, GPR64shifted8>;
+def ST1H_2Z        : sve2p1_mem_cst_ss_2z<"st1h", 0b01, 0b0, ZZ_h_mul_r, GPR64shifted16>;
+def ST1W_2Z        : sve2p1_mem_cst_ss_2z<"st1w", 0b10, 0b0, ZZ_s_mul_r, GPR64shifted32>;
+def ST1D_2Z        : sve2p1_mem_cst_ss_2z<"st1d", 0b11, 0b0, ZZ_d_mul_r, GPR64shifted64>;
+defm ST1B_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1b", 0b00, 0b0, ZZ_b_mul_r>;
+defm ST1H_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1h", 0b01, 0b0, ZZ_h_mul_r>;
+defm ST1W_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1w", 0b10, 0b0, ZZ_s_mul_r>;
+defm ST1D_2Z_IMM   : sve2p1_mem_cst_si_2z<"st1d", 0b11, 0b0, ZZ_d_mul_r>;
+def STNT1B_2Z      : sve2p1_mem_cst_ss_2z<"stnt1b", 0b00, 0b1, ZZ_b_mul_r, GPR64shifted8>;
+def STNT1H_2Z      : sve2p1_mem_cst_ss_2z<"stnt1h", 0b01, 0b1, ZZ_h_mul_r, GPR64shifted16>;
+def STNT1W_2Z      : sve2p1_mem_cst_ss_2z<"stnt1w", 0b10, 0b1, ZZ_s_mul_r, GPR64shifted32>;
+def STNT1D_2Z      : sve2p1_mem_cst_ss_2z<"stnt1d", 0b11, 0b1, ZZ_d_mul_r, GPR64shifted64>;
+defm STNT1B_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1b", 0b00, 0b1, ZZ_b_mul_r>;
+defm STNT1H_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1h", 0b01, 0b1, ZZ_h_mul_r>;
+defm STNT1W_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1w", 0b10, 0b1, ZZ_s_mul_r>;
+defm STNT1D_2Z_IMM : sve2p1_mem_cst_si_2z<"stnt1d", 0b11, 0b1, ZZ_d_mul_r>;
+
+// Stores of four registers
+def ST1B_4Z        : sve2p1_mem_cst_ss_4z<"st1b", 0b00, 0b0, ZZZZ_b_mul_r, GPR64shifted8>;
+def ST1H_4Z        : sve2p1_mem_cst_ss_4z<"st1h", 0b01, 0b0, ZZZZ_h_mul_r, GPR64shifted16>;
+def ST1W_4Z        : sve2p1_mem_cst_ss_4z<"st1w", 0b10, 0b0, ZZZZ_s_mul_r, GPR64shifted32>;
+def ST1D_4Z        : sve2p1_mem_cst_ss_4z<"st1d", 0b11, 0b0, ZZZZ_d_mul_r, GPR64shifted64>;
+defm ST1B_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1b", 0b00, 0b0, ZZZZ_b_mul_r>;
+defm ST1H_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1h", 0b01, 0b0, ZZZZ_h_mul_r>;
+defm ST1W_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1w", 0b10, 0b0, ZZZZ_s_mul_r>;
+defm ST1D_4Z_IMM   : sve2p1_mem_cst_si_4z<"st1d", 0b11, 0b0, ZZZZ_d_mul_r>;
+def STNT1B_4Z      : sve2p1_mem_cst_ss_4z<"stnt1b", 0b00, 0b1, ZZZZ_b_mul_r, GPR64shifted8>;
+def STNT1H_4Z      : sve2p1_mem_cst_ss_4z<"stnt1h", 0b01, 0b1, ZZZZ_h_mul_r, GPR64shifted16>;
+def STNT1W_4Z      : sve2p1_mem_cst_ss_4z<"stnt1w", 0b10, 0b1, ZZZZ_s_mul_r, GPR64shifted32>;
+def STNT1D_4Z      : sve2p1_mem_cst_ss_4z<"stnt1d", 0b11, 0b1, ZZZZ_d_mul_r, GPR64shifted64>;
+defm STNT1B_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1b", 0b00, 0b1, ZZZZ_b_mul_r>;
+defm STNT1H_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1h", 0b01, 0b1, ZZZZ_h_mul_r>;
+defm STNT1W_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1w", 0b10, 0b1, ZZZZ_s_mul_r>;
+defm STNT1D_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1d", 0b11, 0b1, ZZZZ_d_mul_r>;
+
+defm WHILEGE_2PXX : sve2p1_int_while_rr_pair<"whilege", 0b000>;
+defm WHILEGT_2PXX : sve2p1_int_while_rr_pair<"whilegt", 0b001>;
+defm WHILELT_2PXX : sve2p1_int_while_rr_pair<"whilelt", 0b010>;
+defm WHILELE_2PXX : sve2p1_int_while_rr_pair<"whilele", 0b011>;
+defm WHILEHS_2PXX : sve2p1_int_while_rr_pair<"whilehs", 0b100>;
+defm WHILEHI_2PXX : sve2p1_int_while_rr_pair<"whilehi", 0b101>;
+defm WHILELO_2PXX : sve2p1_int_while_rr_pair<"whilelo", 0b110>;
+defm WHILELS_2PXX : sve2p1_int_while_rr_pair<"whilels", 0b111>;
+defm WHILEGE_CXX  : sve2p1_int_while_rr_pn<"whilege", 0b000>;
+defm WHILEGT_CXX  : sve2p1_int_while_rr_pn<"whilegt", 0b001>;
+defm WHILELT_CXX  : sve2p1_int_while_rr_pn<"whilelt", 0b010>;
+defm WHILELE_CXX  : sve2p1_int_while_rr_pn<"whilele", 0b011>;
+defm WHILEHS_CXX  : sve2p1_int_while_rr_pn<"whilehs", 0b100>;
+defm WHILEHI_CXX  : sve2p1_int_while_rr_pn<"whilehi", 0b101>;
+defm WHILELO_CXX  : sve2p1_int_while_rr_pn<"whilelo", 0b110>;
+defm WHILELS_CXX  : sve2p1_int_while_rr_pn<"whilels", 0b111>;
 } // End HasSVE2p1_or_HasSME2

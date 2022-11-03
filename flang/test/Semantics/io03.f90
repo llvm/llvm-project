@@ -7,7 +7,7 @@
   character(20) advance
   character(20) :: cvar;
   character, parameter :: const_internal_file = "(I6)"
-  character, parameter :: const_cvar = "Ceci n'est pas une pipe."
+  character, parameter :: const_cvar*(*) = "Ceci n'est pas une pipe."
   integer*1 stat1
   integer*2 stat2, id2
   integer*8 stat8
@@ -61,16 +61,20 @@
   !ERROR: Internal file must not have a vector subscript
   read(internal_fileA(vv), *) jj
 
-  !ERROR: Input variable 'const_int' must be definable
+  !ERROR: Input variable 'const_int' is not definable
+  !BECAUSE: '15_4' is not a variable or pointer
   read(11, *) const_int
 
-  !ERROR: SIZE variable 'const_size' must be definable
+  !ERROR: SIZE variable 'const_size' is not definable
+  !BECAUSE: '13_4' is not a variable or pointer
   read(11, pos=ipos, size=const_size, end=9)
 
-  !ERROR: Input variable 'const_cvar' must be definable
+  !ERROR: Input variable 'const_cvar' is not definable
+  !BECAUSE: '"Ceci n'est pas une pipe."' is not a variable or pointer
   read(11, *) const_cvar
 
-  !ERROR: Input variable 'const_cvar' must be definable
+  !ERROR: Input variable 'const_cvar(3:13)' is not definable
+  !BECAUSE: '"ci n'est pa"' is not a variable or pointer
   read(11, *) const_cvar(3:13)
 
   !ERROR: Duplicate IOSTAT specifier
@@ -172,7 +176,8 @@ subroutine s(aa, n)
   read(*, *) aa(n:n+2,2)
   read(*, *) qq(2:5)%y
 
-  !ERROR: Input variable 'n' must be definable
+  !ERROR: Input variable 'n' is not definable
+  !BECAUSE: 'n' is an INTENT(IN) dummy argument
   read(*, *) n
 
   !ERROR: Whole assumed-size array 'aa' may not appear here without subscripts

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file --pass-pipeline='func.func(nvgpu-optimize-shared-memory)' | FileCheck %s
+// RUN: mlir-opt %s -split-input-file --pass-pipeline='builtin.module(func.func(nvgpu-optimize-shared-memory))' | FileCheck %s
 
 // CHECK: @optimize_128x32xf16_32x128xf16([[arg0:%.+]]: memref<{{.*}}>, [[ldRow:%.+]]: index, [[ldCol:%.+]]: index, [[stRow:%.+]]: index, [[stCol:%.+]]: index, [[fragRow:%.+]]: index, [[fragCol:%.+]]: index)
 func.func @optimize_128x32xf16_32x128xf16(%arg0: memref<128x128xf16>,

@@ -629,7 +629,8 @@ external const_packed_struct : llcontext -> llvalue array -> llvalue
                              = "llvm_const_packed_struct"
 external const_vector : llvalue array -> llvalue = "llvm_const_vector"
 external string_of_const : llvalue -> string option = "llvm_string_of_const"
-external const_element : llvalue -> int -> llvalue = "llvm_const_element"
+external aggregate_element : llvalue -> int -> llvalue option
+                           = "llvm_aggregate_element"
 
 (*--... Constant expressions ...............................................--*)
 external align_of : lltype -> llvalue = "LLVMAlignOf"
@@ -659,8 +660,8 @@ external const_lshr : llvalue -> llvalue -> llvalue = "LLVMConstLShr"
 external const_ashr : llvalue -> llvalue -> llvalue = "LLVMConstAShr"
 external const_gep : lltype -> llvalue -> llvalue array -> llvalue
                     = "llvm_const_gep"
-external const_in_bounds_gep : llvalue -> llvalue array -> llvalue
-                            = "llvm_const_in_bounds_gep"
+external const_in_bounds_gep : lltype -> llvalue -> llvalue array -> llvalue
+                             = "llvm_const_in_bounds_gep"
 external const_trunc : llvalue -> lltype -> llvalue = "LLVMConstTrunc"
 external const_sext : llvalue -> lltype -> llvalue = "LLVMConstSExt"
 external const_zext : llvalue -> lltype -> llvalue = "LLVMConstZExt"

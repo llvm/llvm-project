@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -pass-pipeline="func.func(convert-vector-to-scf)" -split-input-file -allow-unregistered-dialect | FileCheck %s
-// RUN: mlir-opt %s -pass-pipeline="func.func(convert-vector-to-scf{full-unroll=true})" -split-input-file -allow-unregistered-dialect | FileCheck %s --check-prefix=FULL-UNROLL
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf))" -split-input-file -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(convert-vector-to-scf{full-unroll=true}))" -split-input-file -allow-unregistered-dialect | FileCheck %s --check-prefix=FULL-UNROLL
 
 // CHECK-LABEL: func @vector_transfer_ops_0d(
 func.func @vector_transfer_ops_0d(%M: memref<f32>) {

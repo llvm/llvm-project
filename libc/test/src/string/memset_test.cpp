@@ -6,48 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/span.h"
+#include "memory_utils/memory_check_utils.h"
 #include "src/string/memset.h"
 #include "utils/UnitTest/Test.h"
 
-using __llvm_libc::cpp::array;
-using __llvm_libc::cpp::span;
-using Data = array<char, 2048>;
+namespace __llvm_libc {
 
-static const span<const char> k_deadcode("DEADC0DE", 8);
-
-// Returns a Data object filled with a repetition of `filler`.
-Data get_data(span<const char> filler) {
-  Data out;
-  for (size_t i = 0; i < out.size(); ++i)
-    out[i] = filler[i % filler.size()];
-  return out;
+// Adapt CheckMemset signature to op implementation signatures.
+template <auto FnImpl>
+void SetAdaptor(cpp::span<char> p1, uint8_t value, size_t size) {
+  FnImpl(p1.begin(), value, size);
 }
 
-TEST(LlvmLibcMemsetTest, Thorough) {
-  const Data dirty = get_data(k_deadcode);
-  for (int value = -1; value <= 1; ++value) {
-    for (size_t count = 0; count < 1024; ++count) {
-      for (size_t align = 0; align < 64; ++align) {
-        auto buffer = dirty;
-        void *const dst = &buffer[align];
-        void *const ret = __llvm_libc::memset(dst, value, count);
-        // Return value is `dst`.
-        ASSERT_EQ(ret, dst);
-        // Everything before copy is untouched.
-        for (size_t i = 0; i < align; ++i)
-          ASSERT_EQ(buffer[i], dirty[i]);
-        // Everything in between is copied.
-        for (size_t i = 0; i < count; ++i)
-          ASSERT_EQ(buffer[align + i], (char)value);
-        // Everything after copy is untouched.
-        for (size_t i = align + count; i < dirty.size(); ++i)
-          ASSERT_EQ(buffer[i], dirty[i]);
-      }
-    }
+TEST(LlvmLibcMemsetTest, SizeSweep) {
+  static constexpr size_t kMaxSize = 1024;
+  static constexpr auto Impl = SetAdaptor<__llvm_libc::memset>;
+  Buffer DstBuffer(kMaxSize);
+  for (size_t size = 0; size < kMaxSize; ++size) {
+    const char value = size % 10;
+    auto dst = DstBuffer.span().subspan(0, size);
+    ASSERT_TRUE((CheckMemset<Impl>(dst, value, size)));
   }
 }
 
-// FIXME: Add tests with reads and writes on the boundary of a read/write
-// protected page to check we're not reading nor writing prior/past the allowed
-// regions.
+} // namespace __llvm_libc

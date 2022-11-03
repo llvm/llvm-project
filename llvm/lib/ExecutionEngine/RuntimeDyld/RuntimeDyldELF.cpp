@@ -2292,18 +2292,75 @@ RelocationEntry RuntimeDyldELF::computeGOTOffsetRE(uint64_t GOTOffset,
   return RelocationEntry(GOTSectionID, GOTOffset, Type, SymbolOffset);
 }
 
+void RuntimeDyldELF::processNewSymbol(const SymbolRef &ObjSymbol, SymbolTableEntry& Symbol) {
+  // This should never return an error as `processNewSymbol` wouldn't have been
+  // called if getFlags() returned an error before.
+  auto ObjSymbolFlags = cantFail(ObjSymbol.getFlags());
+
+  if (ObjSymbolFlags & SymbolRef::SF_Indirect) {
+    if (IFuncStubSectionID == 0) {
+      // Create a dummy section for the ifunc stubs. It will be actually
+      // allocated in finalizeLoad() below.
+      IFuncStubSectionID = Sections.size();
+      Sections.push_back(
+          SectionEntry(".text.__llvm_IFuncStubs", nullptr, 0, 0, 0));
+      // First 64B are reserverd for the IFunc resolver
+      IFuncStubOffset = 64;
+    }
+
+    IFuncStubs.push_back(IFuncStub{IFuncStubOffset, Symbol});
+    // Modify the symbol so that it points to the ifunc stub instead of to the
+    // resolver function.
+    Symbol = SymbolTableEntry(IFuncStubSectionID, IFuncStubOffset,
+                              Symbol.getFlags());
+    IFuncStubOffset += getMaxIFuncStubSize();
+  }
+}
+
 Error RuntimeDyldELF::finalizeLoad(const ObjectFile &Obj,
                                   ObjSectionToIDMap &SectionMap) {
   if (IsMipsO32ABI)
     if (!PendingRelocs.empty())
       return make_error<RuntimeDyldError>("Can't find matching LO16 reloc");
 
+  // Create the IFunc stubs if necessary. This must be done before processing
+  // the GOT entries, as the IFunc stubs may create some.
+  if (IFuncStubSectionID != 0) {
+    uint8_t *IFuncStubsAddr = MemMgr.allocateCodeSection(
+        IFuncStubOffset, 1, IFuncStubSectionID, ".text.__llvm_IFuncStubs");
+    if (!IFuncStubsAddr)
+      return make_error<RuntimeDyldError>(
+          "Unable to allocate memory for IFunc stubs!");
+    Sections[IFuncStubSectionID] =
+        SectionEntry(".text.__llvm_IFuncStubs", IFuncStubsAddr, IFuncStubOffset,
+                     IFuncStubOffset, 0);
+
+    createIFuncResolver(IFuncStubsAddr);
+
+    LLVM_DEBUG(dbgs() << "Creating IFunc stubs SectionID: "
+                      << IFuncStubSectionID << " Addr: "
+                      << Sections[IFuncStubSectionID].getAddress() << '\n');
+    for (auto &IFuncStub : IFuncStubs) {
+      auto &Symbol = IFuncStub.OriginalSymbol;
+      LLVM_DEBUG(dbgs() << "\tSectionID: " << Symbol.getSectionID()
+                        << " Offset: " << format("%p", Symbol.getOffset())
+                        << " IFuncStubOffset: "
+                        << format("%p\n", IFuncStub.StubOffset));
+      createIFuncStub(IFuncStubSectionID, 0, IFuncStub.StubOffset,
+                      Symbol.getSectionID(), Symbol.getOffset());
+    }
+
+    IFuncStubSectionID = 0;
+    IFuncStubOffset = 0;
+    IFuncStubs.clear();
+  }
+
   // If necessary, allocate the global offset table
   if (GOTSectionID != 0) {
     // Allocate memory for the section
     size_t TotalSize = CurrentGOTIndex * getGOTEntrySize();
     uint8_t *Addr = MemMgr.allocateDataSection(TotalSize, getGOTEntrySize(),
-                                                GOTSectionID, ".got", false);
+                                               GOTSectionID, ".got", false);
     if (!Addr)
       return make_error<RuntimeDyldError>("Unable to allocate memory for GOT!");
 
@@ -2326,7 +2383,7 @@ Error RuntimeDyldELF::finalizeLoad(const ObjectFile &Obj,
 
           section_iterator RelocatedSection = *RelSecOrErr;
           ObjSectionToIDMap::iterator i = SectionMap.find(*RelocatedSection);
-          assert (i != SectionMap.end());
+          assert(i != SectionMap.end());
           SectionToGOTMap[i->second] = GOTSectionID;
         }
       }
@@ -2360,6 +2417,110 @@ Error RuntimeDyldELF::finalizeLoad(const ObjectFile &Obj,
 
 bool RuntimeDyldELF::isCompatibleFile(const object::ObjectFile &Obj) const {
   return Obj.isELF();
+}
+
+void RuntimeDyldELF::createIFuncResolver(uint8_t *Addr) const {
+  if (Arch == Triple::x86_64) {
+    // The adddres of the GOT1 entry is in %r11, the GOT2 entry is in %r11+8
+    // (see createIFuncStub() for details)
+    // The following code first saves all registers that contain the original
+    // function arguments as those registers are not saved by the resolver
+    // function. %r11 is saved as well so that the GOT2 entry can be updated
+    // afterwards. Then it calls the actual IFunc resolver function whose
+    // address is stored in GOT2. After the resolver function returns, all
+    // saved registers are restored and the return value is written to GOT1.
+    // Finally, jump to the now resolved function.
+    // clang-format off
+    const uint8_t StubCode[] = {
+        0x57,                   // push %rdi
+        0x56,                   // push %rsi
+        0x52,                   // push %rdx
+        0x51,                   // push %rcx
+        0x41, 0x50,             // push %r8
+        0x41, 0x51,             // push %r9
+        0x41, 0x53,             // push %r11
+        0x41, 0xff, 0x53, 0x08, // call *0x8(%r11)
+        0x41, 0x5b,             // pop %r11
+        0x41, 0x59,             // pop %r9
+        0x41, 0x58,             // pop %r8
+        0x59,                   // pop %rcx
+        0x5a,                   // pop %rdx
+        0x5e,                   // pop %rsi
+        0x5f,                   // pop %rdi
+        0x49, 0x89, 0x03,       // mov %rax,(%r11)
+        0xff, 0xe0              // jmp *%rax
+    };
+    // clang-format on
+    static_assert(sizeof(StubCode) <= 64,
+                  "maximum size of the IFunc resolver is 64B");
+    memcpy(Addr, StubCode, sizeof(StubCode));
+  } else {
+    report_fatal_error(
+        "IFunc resolver is not supported for target architecture");
+  }
+}
+
+void RuntimeDyldELF::createIFuncStub(unsigned IFuncStubSectionID,
+                                     uint64_t IFuncResolverOffset,
+                                     uint64_t IFuncStubOffset,
+                                     unsigned IFuncSectionID,
+                                     uint64_t IFuncOffset) {
+  auto &IFuncStubSection = Sections[IFuncStubSectionID];
+  auto *Addr = IFuncStubSection.getAddressWithOffset(IFuncStubOffset);
+
+  if (Arch == Triple::x86_64) {
+    // The first instruction loads a PC-relative address into %r11 which is a
+    // GOT entry for this stub. This initially contains the address to the
+    // IFunc resolver. We can use %r11 here as it's caller saved but not used
+    // to pass any arguments. In fact, x86_64 ABI even suggests using %r11 for
+    // code in the PLT. The IFunc resolver will use %r11 to update the GOT
+    // entry.
+    //
+    // The next instruction just jumps to the address contained in the GOT
+    // entry. As mentioned above, we do this two-step jump by first setting
+    // %r11 so that the IFunc resolver has access to it.
+    //
+    // The IFunc resolver of course also needs to know the actual address of
+    // the actual IFunc resolver function. This will be stored in a GOT entry
+    // right next to the first one for this stub. So, the IFunc resolver will
+    // be able to call it with %r11+8.
+    //
+    // In total, two adjacent GOT entries (+relocation) and one additional
+    // relocation are required:
+    // GOT1: Address of the IFunc resolver.
+    // GOT2: Address of the IFunc resolver function.
+    // IFuncStubOffset+3: 32-bit PC-relative address of GOT1.
+    uint64_t GOT1 = allocateGOTEntries(2);
+    uint64_t GOT2 = GOT1 + getGOTEntrySize();
+
+    RelocationEntry RE1(GOTSectionID, GOT1, ELF::R_X86_64_64,
+                        IFuncResolverOffset, {});
+    addRelocationForSection(RE1, IFuncStubSectionID);
+    RelocationEntry RE2(GOTSectionID, GOT2, ELF::R_X86_64_64, IFuncOffset, {});
+    addRelocationForSection(RE2, IFuncSectionID);
+
+    const uint8_t StubCode[] = {
+        0x4c, 0x8d, 0x1d, 0x00, 0x00, 0x00, 0x00, // leaq 0x0(%rip),%r11
+        0x41, 0xff, 0x23                          // jmpq *(%r11)
+    };
+    assert(sizeof(StubCode) <= getMaxIFuncStubSize() &&
+           "IFunc stub size must not exceed getMaxIFuncStubSize()");
+    memcpy(Addr, StubCode, sizeof(StubCode));
+
+    // The PC-relative value starts 4 bytes from the end of the leaq
+    // instruction, so the addend is -4.
+    resolveGOTOffsetRelocation(IFuncStubSectionID, IFuncStubOffset + 3,
+                               GOT1 - 4, ELF::R_X86_64_PC32);
+  } else {
+    report_fatal_error("IFunc stub is not supported for target architecture");
+  }
+}
+
+unsigned RuntimeDyldELF::getMaxIFuncStubSize() const {
+  if (Arch == Triple::x86_64) {
+    return 10;
+  }
+  return 0;
 }
 
 bool RuntimeDyldELF::relocationNeedsGot(const RelocationRef &R) const {

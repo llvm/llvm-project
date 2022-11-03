@@ -10,11 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-def imm_to_tile8   : ComplexPattern<i64, 1, "ImmToTile<AArch64::ZAB0>", []>;
-def imm_to_tile16  : ComplexPattern<i64, 1, "ImmToTile<AArch64::ZAH0>", []>;
-def imm_to_tile32  : ComplexPattern<i64, 1, "ImmToTile<AArch64::ZAS0>", []>;
-def imm_to_tile64  : ComplexPattern<i64, 1, "ImmToTile<AArch64::ZAD0>", []>;
-def imm_to_tile128 : ComplexPattern<i64, 1, "ImmToTile<AArch64::ZAQ0>", []>;
+def imm_to_tile8   : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAB0>", []>;
+def imm_to_tile16  : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAH0>", []>;
+def imm_to_tile32  : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAS0>", []>;
+def imm_to_tile64  : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAD0>", []>;
+def imm_to_tile128 : ComplexPattern<i32, 1, "ImmToTile<AArch64::ZAQ0>", []>;
 
 def tileslice8   : ComplexPattern<i32 , 2, "SelectSMETileSlice<4>", []>;
 def tileslice16  : ComplexPattern<i32 , 2, "SelectSMETileSlice<3>", []>;
@@ -29,7 +29,7 @@ def am_sme_indexed_b4 :ComplexPattern<iPTR, 2, "SelectAddrModeIndexedSVE<0,15>",
 //===----------------------------------------------------------------------===//
 
 class sme_outer_product_pseudo<ZPRRegOp zpr_ty>
-    : Pseudo<(outs), (ins i64imm:$tile, PPR3bAny:$pn, PPR3bAny:$pm,
+    : Pseudo<(outs), (ins i32imm:$tile, PPR3bAny:$pn, PPR3bAny:$pm,
                           zpr_ty:$zn, zpr_ty:$zm), []>,
       Sched<[]> {
   // Translated to the actual instructions in AArch64ISelLowering.cpp
@@ -69,9 +69,9 @@ multiclass sme_outer_product_fp32<bit S, string mnemonic, SDPatternOperator op> 
 
   def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR32>;
 
-  def : Pat<(op imm0_3:$tile, (nxv4i1 PPR3bAny:$pn), (nxv4i1 PPR3bAny:$pm),
+  def : Pat<(op timm32_0_3:$tile, (nxv4i1 PPR3bAny:$pn), (nxv4i1 PPR3bAny:$pm),
                 (nxv4f32 ZPR32:$zn), (nxv4f32 ZPR32:$zm)),
-            (!cast<Instruction>(NAME # _PSEUDO) imm0_3:$tile, $pn, $pm, $zn, $zm)>;
+            (!cast<Instruction>(NAME # _PSEUDO) timm32_0_3:$tile, $pn, $pm, $zn, $zm)>;
 }
 
 multiclass sme_outer_product_fp64<bit S, string mnemonic, SDPatternOperator op> {
@@ -82,9 +82,9 @@ multiclass sme_outer_product_fp64<bit S, string mnemonic, SDPatternOperator op> 
 
   def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR64>;
 
-  def : Pat<(op imm0_7:$tile, (nxv2i1 PPR3bAny:$pn), (nxv2i1 PPR3bAny:$pm),
+  def : Pat<(op timm32_0_7:$tile, (nxv2i1 PPR3bAny:$pn), (nxv2i1 PPR3bAny:$pm),
                 (nxv2f64 ZPR64:$zn), (nxv2f64 ZPR64:$zm)),
-            (!cast<Instruction>(NAME # _PSEUDO) imm0_7:$tile, $pn, $pm, $zn, $zm)>;
+            (!cast<Instruction>(NAME # _PSEUDO) timm32_0_7:$tile, $pn, $pm, $zn, $zm)>;
 }
 
 class sme_int_outer_product_inst<bits<3> opc, bit sz, bit sme2,
@@ -125,9 +125,9 @@ multiclass sme_int_outer_product_i32<bits<3> opc, string mnemonic,
 
   def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR8>;
 
-  def : Pat<(op imm0_3:$tile, (nxv16i1 PPR3bAny:$pn), (nxv16i1 PPR3bAny:$pm),
+  def : Pat<(op timm32_0_3:$tile, (nxv16i1 PPR3bAny:$pn), (nxv16i1 PPR3bAny:$pm),
                 (nxv16i8 ZPR8:$zn), (nxv16i8 ZPR8:$zm)),
-            (!cast<Instruction>(NAME # _PSEUDO) imm0_3:$tile, $pn, $pm, $zn, $zm)>;
+            (!cast<Instruction>(NAME # _PSEUDO) timm32_0_3:$tile, $pn, $pm, $zn, $zm)>;
 }
 
 multiclass sme_int_outer_product_i64<bits<3> opc, string mnemonic,
@@ -140,9 +140,9 @@ multiclass sme_int_outer_product_i64<bits<3> opc, string mnemonic,
 
   def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR16>;
 
-  def : Pat<(op imm0_7:$tile, (nxv8i1 PPR3bAny:$pn), (nxv8i1 PPR3bAny:$pm),
+  def : Pat<(op timm32_0_7:$tile, (nxv8i1 PPR3bAny:$pn), (nxv8i1 PPR3bAny:$pm),
                 (nxv8i16 ZPR16:$zn), (nxv8i16 ZPR16:$zm)),
-            (!cast<Instruction>(NAME # _PSEUDO) imm0_7:$tile, $pn, $pm, $zn, $zm)>;
+            (!cast<Instruction>(NAME # _PSEUDO) timm32_0_7:$tile, $pn, $pm, $zn, $zm)>;
 }
 
 class sme_outer_product_widening_inst<bits<3> opc, ZPRRegOp zpr_ty, string mnemonic>
@@ -177,9 +177,9 @@ multiclass sme_bf16_outer_product<bits<3> opc, string mnemonic, SDPatternOperato
 
   def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR16>;
 
-  def : Pat<(op imm0_3:$tile, (nxv8i1 PPR3bAny:$pn), (nxv8i1 PPR3bAny:$pm),
+  def : Pat<(op timm32_0_3:$tile, (nxv8i1 PPR3bAny:$pn), (nxv8i1 PPR3bAny:$pm),
                 (nxv8bf16 ZPR16:$zn), (nxv8bf16 ZPR16:$zm)),
-            (!cast<Instruction>(NAME # _PSEUDO) imm0_3:$tile, $pn, $pm, $zn, $zm)>;
+            (!cast<Instruction>(NAME # _PSEUDO) timm32_0_3:$tile, $pn, $pm, $zn, $zm)>;
 }
 
 multiclass sme_f16_outer_product<bits<3> opc, string mnemonic, SDPatternOperator op> {
@@ -187,9 +187,9 @@ multiclass sme_f16_outer_product<bits<3> opc, string mnemonic, SDPatternOperator
 
   def NAME # _PSEUDO : sme_outer_product_pseudo<ZPR16>;
 
-  def : Pat<(op imm0_3:$tile, (nxv8i1 PPR3bAny:$pn), (nxv8i1 PPR3bAny:$pm),
+  def : Pat<(op timm32_0_3:$tile, (nxv8i1 PPR3bAny:$pn), (nxv8i1 PPR3bAny:$pm),
                 (nxv8f16 ZPR16:$zn), (nxv8f16 ZPR16:$zm)),
-            (!cast<Instruction>(NAME # _PSEUDO) imm0_3:$tile, $pn, $pm, $zn, $zm)>;
+            (!cast<Instruction>(NAME # _PSEUDO) timm32_0_3:$tile, $pn, $pm, $zn, $zm)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -232,7 +232,7 @@ class sme_add_vector_to_tile_u64<bit V, string mnemonic>
 
 class sme_add_vector_to_tile_pseudo<ZPRRegOp zpr_ty>
     : Pseudo<(outs),
-             (ins i64imm:$tile, PPR3bAny:$Pn, PPR3bAny:$Pm, zpr_ty:$Zn), []>,
+             (ins i32imm:$tile, PPR3bAny:$Pn, PPR3bAny:$Pm, zpr_ty:$Zn), []>,
       Sched<[]> {
   // Translated to the actual instructions in AArch64ISelLowering.cpp
   let usesCustomInserter = 1;
@@ -242,26 +242,26 @@ def ADDHA_MPPZ_PSEUDO_S : sme_add_vector_to_tile_pseudo<ZPR32>;
 def ADDVA_MPPZ_PSEUDO_S : sme_add_vector_to_tile_pseudo<ZPR32>;
 
 def : Pat<(int_aarch64_sme_addha
-            imm0_3:$tile, (nxv4i1 PPR3bAny:$pn), (nxv4i1 PPR3bAny:$pm),
+            timm32_0_3:$tile, (nxv4i1 PPR3bAny:$pn), (nxv4i1 PPR3bAny:$pm),
             (nxv4i32 ZPR32:$zn)),
-          (ADDHA_MPPZ_PSEUDO_S imm0_3:$tile, $pn, $pm, $zn)>;
+          (ADDHA_MPPZ_PSEUDO_S timm32_0_3:$tile, $pn, $pm, $zn)>;
 def : Pat<(int_aarch64_sme_addva
-            imm0_3:$tile, (nxv4i1 PPR3bAny:$pn), (nxv4i1 PPR3bAny:$pm),
+            timm32_0_3:$tile, (nxv4i1 PPR3bAny:$pn), (nxv4i1 PPR3bAny:$pm),
             (nxv4i32 ZPR32:$zn)),
-          (ADDVA_MPPZ_PSEUDO_S imm0_3:$tile, $pn, $pm, $zn)>;
+          (ADDVA_MPPZ_PSEUDO_S timm32_0_3:$tile, $pn, $pm, $zn)>;
 
 let Predicates = [HasSMEI16I64] in {
 def ADDHA_MPPZ_PSEUDO_D : sme_add_vector_to_tile_pseudo<ZPR64>;
 def ADDVA_MPPZ_PSEUDO_D : sme_add_vector_to_tile_pseudo<ZPR64>;
 
 def : Pat<(int_aarch64_sme_addha
-            imm0_7:$tile, (nxv2i1 PPR3bAny:$pn), (nxv2i1 PPR3bAny:$pm),
+            timm32_0_7:$tile, (nxv2i1 PPR3bAny:$pn), (nxv2i1 PPR3bAny:$pm),
             (nxv2i64 ZPR64:$zn)),
-          (ADDHA_MPPZ_PSEUDO_D imm0_7:$tile, $pn, $pm, $zn)>;
+          (ADDHA_MPPZ_PSEUDO_D timm32_0_7:$tile, $pn, $pm, $zn)>;
 def : Pat<(int_aarch64_sme_addva
-            imm0_7:$tile, (nxv2i1 PPR3bAny:$pn), (nxv2i1 PPR3bAny:$pm),
+            timm32_0_7:$tile, (nxv2i1 PPR3bAny:$pn), (nxv2i1 PPR3bAny:$pm),
             (nxv2i64 ZPR64:$zn)),
-          (ADDVA_MPPZ_PSEUDO_D imm0_7:$tile, $pn, $pm, $zn)>;
+          (ADDVA_MPPZ_PSEUDO_D timm32_0_7:$tile, $pn, $pm, $zn)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -353,8 +353,8 @@ multiclass sme_mem_ld_ss_patterns<Instruction Inst, SDPatternOperator Load,
 }
 
 class sme_load_pseudo
-    : Pseudo<(outs), (ins i64imm:$tile, MatrixIndexGPR32Op12_15:$idx,
-                          i64imm:$imm, PPR3bAny:$pg, GPR64sp:$base, GPR64:$offset), []>,
+    : Pseudo<(outs), (ins i32imm:$tile, MatrixIndexGPR32Op12_15:$idx,
+                          i32imm:$imm, PPR3bAny:$pg, GPR64sp:$base, GPR64:$offset), []>,
       Sched<[]> {
   // Translated to the actual instructions in AArch64ISelLowering.cpp
   let usesCustomInserter = 1;
@@ -412,27 +412,27 @@ multiclass sme_mem_ld_v_ss<string mnemonic, bit is_col> {
   defm : sme_mem_ld_ss_patterns<!cast<Instruction>(NAME # _PSEUDO_B),
                                 !if(is_col, int_aarch64_sme_ld1b_vert,
                                             int_aarch64_sme_ld1b_horiz),
-                                sme_elm_idx0_0, imm0_15, am_sve_regreg_lsl0,
+                                sme_elm_idx0_0, timm32_0_15, am_sve_regreg_lsl0,
                                 tileslice8>;
   defm : sme_mem_ld_ss_patterns<!cast<Instruction>(NAME # _PSEUDO_H),
                                 !if(is_col, int_aarch64_sme_ld1h_vert,
                                             int_aarch64_sme_ld1h_horiz),
-                                imm0_1, imm0_7, am_sve_regreg_lsl1,
+                                timm32_0_1, timm32_0_7, am_sve_regreg_lsl1,
                                 tileslice16>;
   defm : sme_mem_ld_ss_patterns<!cast<Instruction>(NAME # _PSEUDO_S),
                                 !if(is_col, int_aarch64_sme_ld1w_vert,
                                             int_aarch64_sme_ld1w_horiz),
-                                imm0_3, imm0_3, am_sve_regreg_lsl2,
+                                timm32_0_3, timm32_0_3, am_sve_regreg_lsl2,
                                 tileslice32>;
   defm : sme_mem_ld_ss_patterns<!cast<Instruction>(NAME # _PSEUDO_D),
                                 !if(is_col, int_aarch64_sme_ld1d_vert,
                                             int_aarch64_sme_ld1d_horiz),
-                                imm0_7, imm0_1, am_sve_regreg_lsl3,
+                                timm32_0_7, timm32_0_1, am_sve_regreg_lsl3,
                                 tileslice64>;
   defm : sme_mem_ld_ss_patterns<!cast<Instruction>(NAME # _PSEUDO_Q),
                                 !if(is_col, int_aarch64_sme_ld1q_vert,
                                             int_aarch64_sme_ld1q_horiz),
-                                imm0_15, sme_elm_idx0_0, am_sve_regreg_lsl4,
+                                timm32_0_15, sme_elm_idx0_0, am_sve_regreg_lsl4,
                                 tileslice128>;
 }
 
@@ -542,22 +542,22 @@ multiclass sme_mem_st_v_ss<string mnemonic, bit is_col> {
   defm : sme_mem_st_ss_patterns<!cast<Instruction>(NAME # _B),
                                 !if(is_col, int_aarch64_sme_st1b_vert,
                                             int_aarch64_sme_st1b_horiz),
-                                imm0_15, imm_to_tile8, am_sve_regreg_lsl0,
+                                timm32_0_15, imm_to_tile8, am_sve_regreg_lsl0,
                                 tileslice8>;
   defm : sme_mem_st_ss_patterns<!cast<Instruction>(NAME # _H),
                                 !if(is_col, int_aarch64_sme_st1h_vert,
                                             int_aarch64_sme_st1h_horiz),
-                                imm0_7, imm_to_tile16, am_sve_regreg_lsl1,
+                                timm32_0_7, imm_to_tile16, am_sve_regreg_lsl1,
                                 tileslice16>;
   defm : sme_mem_st_ss_patterns<!cast<Instruction>(NAME # _S),
                                 !if(is_col, int_aarch64_sme_st1w_vert,
                                             int_aarch64_sme_st1w_horiz),
-                                imm0_3, imm_to_tile32, am_sve_regreg_lsl2,
+                                timm32_0_3, imm_to_tile32, am_sve_regreg_lsl2,
                                 tileslice32>;
   defm : sme_mem_st_ss_patterns<!cast<Instruction>(NAME # _D),
                                 !if(is_col, int_aarch64_sme_st1d_vert,
                                             int_aarch64_sme_st1d_horiz),
-                                imm0_1, imm_to_tile64, am_sve_regreg_lsl3,
+                                timm32_0_1, imm_to_tile64, am_sve_regreg_lsl3,
                                 tileslice64>;
   defm : sme_mem_st_ss_patterns<!cast<Instruction>(NAME # _Q),
                                 !if(is_col, int_aarch64_sme_st1q_vert,
@@ -703,8 +703,8 @@ multiclass sme_vector_to_tile_patterns<Instruction inst, ValueType zpr_vt,
 }
 
 class sme_mova_insert_pseudo
-    : Pseudo<(outs), (ins i64imm:$tile, MatrixIndexGPR32Op12_15:$idx,
-                          i64imm:$imm, PPR3bAny:$pg, ZPRAny:$zn), []>,
+    : Pseudo<(outs), (ins i32imm:$tile, MatrixIndexGPR32Op12_15:$idx,
+                          i32imm:$imm, PPR3bAny:$pg, ZPRAny:$zn), []>,
       Sched<[]> {
   // Translated to the actual instructions in AArch64ISelLowering.cpp
   let usesCustomInserter = 1;
@@ -782,28 +782,28 @@ multiclass sme_vector_v_to_tile<string mnemonic, bit is_col> {
                           int_aarch64_sme_write_horiz);
 
   defm : sme_vector_to_tile_patterns<!cast<Instruction>(NAME # _PSEUDO_B),
-                                     nxv16i8, nxv16i1, sme_elm_idx0_0, imm0_15,
+                                     nxv16i8, nxv16i1, sme_elm_idx0_0, sme_elm_idx0_15,
                                      op, tileslice8>;
   defm : sme_vector_to_tile_patterns<!cast<Instruction>(NAME # _PSEUDO_H),
-                                     nxv8i16, nxv8i1, sme_elm_idx0_1, imm0_7,
+                                     nxv8i16, nxv8i1, sme_elm_idx0_1, sme_elm_idx0_7,
                                      op, tileslice16>;
   defm : sme_vector_to_tile_patterns<!cast<Instruction>(NAME # _PSEUDO_H),
-                                     nxv8f16, nxv8i1, sme_elm_idx0_1, imm0_7,
+                                     nxv8f16, nxv8i1, sme_elm_idx0_1, sme_elm_idx0_7,
                                      op, tileslice16>;
   defm : sme_vector_to_tile_patterns<!cast<Instruction>(NAME # _PSEUDO_H),
-                                     nxv8bf16, nxv8i1, sme_elm_idx0_1, imm0_7,
+                                     nxv8bf16, nxv8i1, sme_elm_idx0_1, sme_elm_idx0_7,
                                      op, tileslice16>;
   defm : sme_vector_to_tile_patterns<!cast<Instruction>(NAME # _PSEUDO_S),
-                                     nxv4i32, nxv4i1, sme_elm_idx0_3, imm0_3,
+                                     nxv4i32, nxv4i1, sme_elm_idx0_3, sme_elm_idx0_3,
                                      op, tileslice32>;
   defm : sme_vector_to_tile_patterns<!cast<Instruction>(NAME # _PSEUDO_S),
-                                     nxv4f32, nxv4i1, sme_elm_idx0_3, imm0_3,
+                                     nxv4f32, nxv4i1, sme_elm_idx0_3, sme_elm_idx0_3,
                                      op, tileslice32>;
   defm : sme_vector_to_tile_patterns<!cast<Instruction>(NAME # _PSEUDO_D),
-                                     nxv2i64, nxv2i1, sme_elm_idx0_7, imm0_1,
+                                     nxv2i64, nxv2i1, sme_elm_idx0_7, sme_elm_idx0_1,
                                      op, tileslice64>;
   defm : sme_vector_to_tile_patterns<!cast<Instruction>(NAME # _PSEUDO_D),
-                                     nxv2f64, nxv2i1, sme_elm_idx0_7, imm0_1,
+                                     nxv2f64, nxv2i1, sme_elm_idx0_7, sme_elm_idx0_1,
                                      op, tileslice64>;
 
   defvar opq = !if(is_col, int_aarch64_sme_writeq_vert,
@@ -949,28 +949,28 @@ multiclass sme_tile_to_vector_v<string mnemonic, bit is_col> {
                           int_aarch64_sme_read_horiz);
 
   defm : sme_tile_to_vector_patterns<!cast<Instruction>(NAME # _B),
-                                     nxv16i8, nxv16i1, imm0_15,
+                                     nxv16i8, nxv16i1, sme_elm_idx0_15,
                                      imm_to_tile8, tileslice8, op>;
   defm : sme_tile_to_vector_patterns<!cast<Instruction>(NAME # _H),
-                                     nxv8i16, nxv8i1, imm0_7,
+                                     nxv8i16, nxv8i1, sme_elm_idx0_7,
                                      imm_to_tile16, tileslice16, op>;
   defm : sme_tile_to_vector_patterns<!cast<Instruction>(NAME # _H),
-                                     nxv8f16, nxv8i1, imm0_7,
+                                     nxv8f16, nxv8i1, sme_elm_idx0_7,
                                      imm_to_tile16, tileslice16, op>;
   defm : sme_tile_to_vector_patterns<!cast<Instruction>(NAME # _H),
-                                     nxv8bf16, nxv8i1, imm0_7,
+                                     nxv8bf16, nxv8i1, sme_elm_idx0_7,
                                      imm_to_tile16, tileslice16, op>;
   defm : sme_tile_to_vector_patterns<!cast<Instruction>(NAME # _S),
-                                     nxv4i32, nxv4i1, imm0_3,
+                                     nxv4i32, nxv4i1, sme_elm_idx0_3,
                                      imm_to_tile32, tileslice32, op>;
   defm : sme_tile_to_vector_patterns<!cast<Instruction>(NAME # _S),
-                                     nxv4f32, nxv4i1, imm0_3,
+                                     nxv4f32, nxv4i1, sme_elm_idx0_3,
                                      imm_to_tile32, tileslice32, op>;
   defm : sme_tile_to_vector_patterns<!cast<Instruction>(NAME # _D),
-                                     nxv2i64, nxv2i1, imm0_1,
+                                     nxv2i64, nxv2i1, sme_elm_idx0_1,
                                      imm_to_tile64, tileslice64, op>;
   defm : sme_tile_to_vector_patterns<!cast<Instruction>(NAME # _D),
-                                     nxv2f64, nxv2i1, imm0_1,
+                                     nxv2f64, nxv2i1, sme_elm_idx0_1,
                                      imm_to_tile64, tileslice64, op>;
 
   defvar opq = !if(is_col, int_aarch64_sme_readq_vert,
@@ -1041,14 +1041,14 @@ multiclass sme_zero<string mnemonic> {
   def : InstAlias<"zero\t\\{za0.s,za2.s,za3.s\\}", (!cast<Instruction>(NAME) 0b11011101), 1>;
   def : InstAlias<"zero\t\\{za1.s,za2.s,za3.s\\}", (!cast<Instruction>(NAME) 0b11101110), 1>;
 
-  def NAME # _PSEUDO : Pseudo<(outs), (ins i64imm:$tilelist), []>,
+  def NAME # _PSEUDO : Pseudo<(outs), (ins i32imm:$tilelist), []>,
       Sched<[]> {
     // Translated to the actual instructions in AArch64ISelLowering.cpp
     let usesCustomInserter = 1;
   }
 
-  def : Pat<(int_aarch64_sme_zero imm:$imm),
-            (!cast<Instruction>(NAME # _PSEUDO) imm:$imm)>;
+  def : Pat<(int_aarch64_sme_zero timm32_0_255:$imm),
+            (!cast<Instruction>(NAME # _PSEUDO) timm32_0_255:$imm)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2378,4 +2378,192 @@ multiclass sme2_int_mopx_tile<string mnemonic, bits<3> op> {
 
 multiclass  sme2_bfp_mopx_tile<string mnemonic, bits<3> op> {
   def NAME : sme_outer_product_widening_inst<op, ZPR32, mnemonic>;
+}
+
+//===----------------------------------------------------------------------===///
+// SME2 Zero Lookup Table.
+class sme2_zero_zt<string mnemonic, bits<4> opc>
+    : I<(outs ZTR:$ZT), (ins ),
+         mnemonic, "\t\\{ $ZT \\}",
+         "", []>, Sched<[]> {
+  let Inst{31-4} = 0b1100000001001000000000000000;
+  let Inst{3-0}  = opc;
+}
+
+//===----------------------------------------------------------------------===//
+// SME2 lookup table load/store
+class sme2_spill_fill_vector<string mnemonic, bits<8> opc>
+    : I<!if(opc{7}, (outs ), (outs ZTR:$ZTt)),
+        !if(opc{7}, (ins ZTR:$ZTt, GPR64sp:$Rn), (ins GPR64sp:$Rn)),
+        mnemonic, "\t$ZTt, [$Rn]",
+        "", []>, Sched<[]> {
+  bits<5> Rn;
+  let Inst{31-22} = 0b1110000100;
+  let Inst{21-16} = opc{7-2};
+  let Inst{15-10} = 0b100000;
+  let Inst{9-5}   = Rn;
+  let Inst{4-2}   = 0b000;
+  let Inst{1-0}   = opc{1-0};
+
+  let mayLoad     = !not(opc{7});
+  let mayStore    = opc{7};
+}
+
+//===----------------------------------------------------------------------===///
+// SME2 move to/from lookup table
+class sme2_movt_zt_to_scalar<string mnemonic, bits<7> opc>
+    : I<(outs GPR64:$Rt), (ins ZTR:$ZTt, uimm3s8:$imm3),
+         mnemonic, "\t$Rt, $ZTt$imm3",
+         "", []>, Sched<[]> {
+  bits<3> imm3;
+  bits<5> Rt;
+  let Inst{31-15} = 0b11000000010011000;
+  let Inst{14-12} = imm3;
+  let Inst{11-5}  = opc;
+  let Inst{4-0}   = Rt;
+}
+
+class sme2_movt_scalar_to_zt<string mnemonic, bits<7> opc>
+    : I<(outs ZTR:$ZTt), (ins uimm3s8:$imm3, GPR64:$Rt),
+         mnemonic, "\t$ZTt$imm3, $Rt",
+         "", []>, Sched<[]> {
+  bits<3> imm3;
+  bits<5> Rt;
+  let Inst{31-15} = 0b11000000010011100;
+  let Inst{14-12} = imm3;
+  let Inst{11-5}  = opc;
+  let Inst{4-0}   = Rt;
+}
+
+//===----------------------------------------------------------------------===//
+// SME2 lookup table expand one register
+class sme2_luti_vector_index<bits<2> sz, bits<7> opc, RegisterOperand vector_ty,
+                             AsmVectorIndexOpnd index_ty, string mnemonic>
+    : I<(outs vector_ty:$Zd),
+        (ins ZTR:$ZTt, ZPRAny:$Zn, index_ty:$i),
+        mnemonic, "\t$Zd, $ZTt, $Zn$i",
+        "", []>, Sched<[]> {
+  bits<5> Zn;
+  bits<5> Zd;
+  let Inst{31-19} = 0b1100000011001;
+  let Inst{18-14} = opc{6-2};
+  let Inst{13-12} = sz;
+  let Inst{11-10} = opc{1-0};
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+class sme2_luti2_vector_index<bits<2> sz, RegisterOperand vector_ty,
+                              string mnemonic>
+    : sme2_luti_vector_index<sz, {1,?,?,?,?,0,0}, vector_ty, VectorIndexB, mnemonic> {
+  bits<4> i;
+  let Inst{17-14} = i;
+}
+
+multiclass sme2_luti2_vector_index<string mnemonic> {
+  def _B : sme2_luti2_vector_index<0b00, ZPR8, mnemonic>;
+  def _H : sme2_luti2_vector_index<0b01, ZPR16, mnemonic>;
+  def _S : sme2_luti2_vector_index<0b10, ZPR32, mnemonic>;
+}
+
+class sme2_luti4_vector_index<bits<2> sz, RegisterOperand vector_ty,
+                              string mnemonic>
+    : sme2_luti_vector_index<sz, {0,1,?,?,?,0,0}, vector_ty, VectorIndexH, mnemonic> {
+  bits<3> i;
+  let Inst{16-14} = i;
+}
+
+multiclass sme2_luti4_vector_index<string mnemonic> {
+  def _B : sme2_luti4_vector_index<0b00, ZPR8, mnemonic>;
+  def _H : sme2_luti4_vector_index<0b01, ZPR16, mnemonic>;
+  def _S : sme2_luti4_vector_index<0b10, ZPR32, mnemonic>;
+}
+
+// SME2 lookup table expand two contiguous registers
+class sme2_luti_vector_vg2_index<bits<2> sz, bits<6> opc, RegisterOperand vector_ty,
+                                 AsmVectorIndexOpnd index_ty, string mnemonic>
+    : I<(outs vector_ty:$Zd),
+        (ins ZTR:$ZTt, ZPRAny:$Zn, index_ty:$i),
+        mnemonic, "\t$Zd, $ZTt, $Zn$i",
+        "", []>, Sched<[]> {
+  bits<5> Zn;
+  bits<4> Zd;
+  let Inst{31-19} = 0b1100000010001;
+  let Inst{18-15} = opc{5-2};
+  let Inst{14}    = 0b1;
+  let Inst{13-12} = sz;
+  let Inst{11-10} = opc{1-0};
+  let Inst{9-5}   = Zn;
+  let Inst{4-1}   = Zd;
+  let Inst{0}     = 0b0;
+}
+
+class sme2_luti2_vector_vg2_index<bits<2> sz, RegisterOperand vector_ty,
+                                  string mnemonic>
+    : sme2_luti_vector_vg2_index<sz, {1,?,?,?,0,0}, vector_ty, VectorIndexH, mnemonic> {
+  bits<3> i;
+  let Inst{17-15} = i;
+}
+
+multiclass sme2_luti2_vector_vg2_index<string mnemonic> {
+  def _B : sme2_luti2_vector_vg2_index<0b00, ZZ_b_mul_r, mnemonic>;
+  def _H : sme2_luti2_vector_vg2_index<0b01, ZZ_h_mul_r, mnemonic>;
+  def _S : sme2_luti2_vector_vg2_index<0b10, ZZ_s_mul_r, mnemonic>;
+}
+
+class sme2_luti4_vector_vg2_index<bits<2> sz, RegisterOperand vector_ty,
+                                 string mnemonic>
+    : sme2_luti_vector_vg2_index<sz, {0,1,?,?,0,0}, vector_ty, VectorIndexS, mnemonic> {
+  bits<2> i;
+  let Inst{16-15} = i;
+}
+
+multiclass sme2_luti4_vector_vg2_index<string mnemonic> {
+  def _B : sme2_luti4_vector_vg2_index<0b00, ZZ_b_mul_r, mnemonic>;
+  def _H : sme2_luti4_vector_vg2_index<0b01, ZZ_h_mul_r, mnemonic>;
+  def _S : sme2_luti4_vector_vg2_index<0b10, ZZ_s_mul_r, mnemonic>;
+}
+
+// SME2 lookup table expand four contiguous registers
+class sme2_luti_vector_vg4_index<bits<2> sz, bits<5>opc, RegisterOperand vector_ty,
+                                 AsmVectorIndexOpnd index_ty, string mnemonic>
+    : I<(outs vector_ty:$Zd),
+        (ins ZTR:$ZTt, ZPRAny:$Zn, index_ty:$i),
+        mnemonic, "\t$Zd, $ZTt, $Zn$i",
+        "", []>, Sched<[]> {
+  bits<5> Zn;
+  bits<3> Zd;
+  let Inst{31-19} = 0b1100000010001;
+  let Inst{18-16} = opc{4-2};
+  let Inst{15-14} = 0b10;
+  let Inst{13-12} = sz;
+  let Inst{11-10} = opc{1-0};
+  let Inst{9-5}   = Zn;
+  let Inst{4-2}   = Zd;
+  let Inst{1-0}   = 0b00;
+}
+
+class sme2_luti2_vector_vg4_index<bits<2> sz, RegisterOperand vector_ty,
+                                  string mnemonic>
+    : sme2_luti_vector_vg4_index<sz, {1,?,?,0,0}, vector_ty, VectorIndexS, mnemonic> {
+  bits<2> i;
+  let Inst{17-16} = i;
+}
+
+multiclass sme2_luti2_vector_vg4_index<string mnemonic> {
+  def _B : sme2_luti2_vector_vg4_index<0b00, ZZZZ_b_mul_r, mnemonic>;
+  def _H : sme2_luti2_vector_vg4_index<0b01, ZZZZ_h_mul_r, mnemonic>;
+  def _S : sme2_luti2_vector_vg4_index<0b10, ZZZZ_s_mul_r, mnemonic>;
+}
+
+class sme2_luti4_vector_vg4_index<bits<2> sz, RegisterOperand vector_ty,
+                                  string mnemonic>
+    : sme2_luti_vector_vg4_index<sz, {0,1,?,0,0}, vector_ty, VectorIndexD, mnemonic> {
+  bits<1> i;
+  let Inst{16}    = i;
+}
+
+multiclass sme2_luti4_vector_vg4_index<string mnemonic> {
+  def _H : sme2_luti4_vector_vg4_index<0b01, ZZZZ_h_mul_r, mnemonic>;
+  def _S : sme2_luti4_vector_vg4_index<0b10, ZZZZ_s_mul_r, mnemonic>;
 }

@@ -533,6 +533,10 @@ defm : DemangledNativeBuiltin<"barrier", OpenCL_std, Barrier, 1, 3, OpControlBar
 defm : DemangledNativeBuiltin<"work_group_barrier", OpenCL_std, Barrier, 1, 3, OpControlBarrier>;
 
 // Kernel enqueue builtin records:
+defm : DemangledNativeBuiltin<"__enqueue_kernel_basic", OpenCL_std, Enqueue, 5, 5, OpEnqueueKernel>;
+defm : DemangledNativeBuiltin<"__enqueue_kernel_basic_events", OpenCL_std, Enqueue, 8, 8, OpEnqueueKernel>;
+defm : DemangledNativeBuiltin<"__enqueue_kernel_varargs", OpenCL_std, Enqueue, 7, 7, OpEnqueueKernel>;
+defm : DemangledNativeBuiltin<"__enqueue_kernel_events_varargs", OpenCL_std, Enqueue, 10, 10, OpEnqueueKernel>;
 defm : DemangledNativeBuiltin<"retain_event", OpenCL_std, Enqueue, 1, 1, OpRetainEvent>;
 defm : DemangledNativeBuiltin<"release_event", OpenCL_std, Enqueue, 1, 1, OpReleaseEvent>;
 defm : DemangledNativeBuiltin<"create_user_event", OpenCL_std, Enqueue, 0, 0, OpCreateUserEvent>;

@@ -318,13 +318,18 @@ static bool AreCompatibleDerivedTypes(const semantics::DerivedTypeSpec *x,
 }
 
 static bool AreCompatibleTypes(const DynamicType &x, const DynamicType &y,
-    bool ignoreTypeParameterValues) {
+    bool ignoreTypeParameterValues, bool ignoreLengths) {
   if (x.IsUnlimitedPolymorphic()) {
     return true;
   } else if (y.IsUnlimitedPolymorphic()) {
     return false;
   } else if (x.category() != y.category()) {
     return false;
+  } else if (x.category() == TypeCategory::Character) {
+    const auto xLen{x.knownLength()};
+    const auto yLen{y.knownLength()};
+    return x.kind() == y.kind() &&
+        (ignoreLengths || !xLen || !yLen || *xLen == *yLen);
   } else if (x.category() != TypeCategory::Derived) {
     return x.kind() == y.kind();
   } else {
@@ -338,13 +343,17 @@ static bool AreCompatibleTypes(const DynamicType &x, const DynamicType &y,
 
 // See 7.3.2.3 (5) & 15.5.2.4
 bool DynamicType::IsTkCompatibleWith(const DynamicType &that) const {
-  return AreCompatibleTypes(*this, that, false);
+  return AreCompatibleTypes(*this, that, false, true);
+}
+
+bool DynamicType::IsTkLenCompatibleWith(const DynamicType &that) const {
+  return AreCompatibleTypes(*this, that, false, false);
 }
 
 // 16.9.165
 std::optional<bool> DynamicType::SameTypeAs(const DynamicType &that) const {
-  bool x{AreCompatibleTypes(*this, that, true)};
-  bool y{AreCompatibleTypes(that, *this, true)};
+  bool x{AreCompatibleTypes(*this, that, true, true)};
+  bool y{AreCompatibleTypes(that, *this, true, true)};
   if (x == y) {
     return x;
   } else {

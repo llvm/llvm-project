@@ -191,9 +191,10 @@ define i32 @combine_setcc_glue(i128 noundef %x, i128 noundef %y) {
 ; CHECK-LABEL: combine_setcc_glue:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp x0, x2
+; CHECK-NEXT:    cset w8, eq
 ; CHECK-NEXT:    ccmp x1, x3, #0, eq
-; CHECK-NEXT:    ccmp x0, x2, #4, ne
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    cset w9, eq
+; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
 entry:
   %cmp3 = icmp eq i128 %x, %y
@@ -205,5 +206,45 @@ entry:
   ret i32 %or
 }
 
+; Reduced test from https://github.com/llvm/llvm-project/issues/58675
+define [2 x i64] @PR58675(i128 %a.addr, i128 %b.addr) {
+; CHECK-LABEL: PR58675:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    mov x9, xzr
+; CHECK-NEXT:  .LBB12_1: // %do.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    cmp x0, x8
+; CHECK-NEXT:    csel x10, x0, x8, lo
+; CHECK-NEXT:    cmp x1, x9
+; CHECK-NEXT:    csel x8, x0, x8, lo
+; CHECK-NEXT:    csel x8, x10, x8, eq
+; CHECK-NEXT:    csel x10, x1, x9, lo
+; CHECK-NEXT:    subs x8, x2, x8
+; CHECK-NEXT:    sbc x9, x3, x10
+; CHECK-NEXT:    ccmp x3, x10, #0, eq
+; CHECK-NEXT:    b.ne .LBB12_1
+; CHECK-NEXT:  // %bb.2: // %do.end
+; CHECK-NEXT:    mov x0, xzr
+; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    ret
+entry:
+  br label %do.body
+
+do.body:                                      ; preds = %do.body, %entry
+  %a.addr.i1 = phi i128 [ 1, %do.body ], [ 0, %entry ]
+  %b.addr.i2 = phi i128 [ %sub, %do.body ], [ 0, %entry ]
+  %0 = tail call i128 @llvm.umin.i128(i128 %a.addr, i128 %b.addr.i2)
+  %1 = tail call i128 @llvm.umax.i128(i128 0, i128 %a.addr)
+  %sub = sub i128 %b.addr, %0
+  %cmp18.not = icmp eq i128 %b.addr, %0
+  br i1 %cmp18.not, label %do.end, label %do.body
+
+do.end:                                       ; preds = %do.body
+  ret [2 x i64] zeroinitializer
+}
+
+declare i128 @llvm.umin.i128(i128, i128)
+declare i128 @llvm.umax.i128(i128, i128)
 declare i32 @bcmp(ptr nocapture, ptr nocapture, i64)
 declare i32 @use(i32 noundef)

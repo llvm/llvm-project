@@ -729,15 +729,15 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   if (LoadSize1 < 8 || !isPowerOf2_64(LoadSize1))
     return false;
 
-  // Alias Analysis to check for store b/w the loads.
+  // TODO: Alias Analysis to check for stores b/w the loads.
+  // Currently bail out if there are stores b/w the loads.
   LoadInst *Start = LI1, *End = LI2;
   if (!LI1->comesBefore(LI2))
     std::swap(Start, End);
-  MemoryLocation Loc = MemoryLocation::get(End);
   unsigned NumScanned = 0;
   for (Instruction &Inst :
        make_range(Start->getIterator(), End->getIterator())) {
-    if (Inst.mayWriteToMemory() && isModSet(AA.getModRefInfo(&Inst, Loc)))
+    if (Inst.mayWriteToMemory())
       return false;
     if (++NumScanned > MaxInstrsToScan)
       return false;

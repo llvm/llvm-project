@@ -119,3 +119,7 @@ llvm::createAArch64ObjectTargetStreamer(MCStreamer &S,
     return new AArch64TargetWinCOFFStreamer(S);
   return nullptr;
 }
+
+MCTargetStreamer *llvm::createAArch64NullTargetStreamer(MCStreamer &S) {
+  return new AArch64TargetStreamer(S);
+}

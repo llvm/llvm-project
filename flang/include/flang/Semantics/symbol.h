@@ -187,6 +187,7 @@ class ObjectEntityDetails : public EntityDetails {
 public:
   explicit ObjectEntityDetails(EntityDetails &&);
   ObjectEntityDetails(const ObjectEntityDetails &) = default;
+  ObjectEntityDetails(ObjectEntityDetails &&) = default;
   ObjectEntityDetails &operator=(const ObjectEntityDetails &) = default;
   ObjectEntityDetails(bool isDummy = false) : EntityDetails(isDummy) {}
   MaybeExpr &init() { return init_; }
@@ -247,7 +248,10 @@ private:
 class ProcEntityDetails : public EntityDetails, public WithPassArg {
 public:
   ProcEntityDetails() = default;
-  explicit ProcEntityDetails(EntityDetails &&d);
+  explicit ProcEntityDetails(EntityDetails &&);
+  ProcEntityDetails(const ProcEntityDetails &) = default;
+  ProcEntityDetails(ProcEntityDetails &&) = default;
+  ProcEntityDetails &operator=(const ProcEntityDetails &) = default;
 
   const ProcInterface &interface() const { return interface_; }
   ProcInterface &interface() { return interface_; }
@@ -480,6 +484,7 @@ public:
   Symbol *derivedType() { return derivedType_; }
   const Symbol *derivedType() const { return derivedType_; }
   void set_derivedType(Symbol &derivedType);
+  void clear_derivedType();
   void AddUse(const Symbol &);
 
   // Copy in specificProcs, specific, and derivedType from another generic
@@ -558,6 +563,8 @@ public:
   const SourceName &name() const { return name_; }
   Attrs &attrs() { return attrs_; }
   const Attrs &attrs() const { return attrs_; }
+  Attrs &implicitAttrs() { return implicitAttrs_; }
+  const Attrs &implicitAttrs() const { return implicitAttrs_; }
   Flags &flags() { return flags_; }
   const Flags &flags() const { return flags_; }
   bool test(Flag flag) const { return flags_.test(flag); }
@@ -618,28 +625,27 @@ public:
   bool IsSubprogram() const;
   bool IsFromModFile() const;
   bool HasExplicitInterface() const {
-    return common::visit(common::visitors{
-                             [](const SubprogramDetails &) { return true; },
-                             [](const SubprogramNameDetails &) { return true; },
-                             [&](const ProcEntityDetails &x) {
-                               return attrs_.test(Attr::INTRINSIC) ||
-                                   x.HasExplicitInterface();
-                             },
-                             [](const ProcBindingDetails &x) {
-                               return x.symbol().HasExplicitInterface();
-                             },
-                             [](const UseDetails &x) {
-                               return x.symbol().HasExplicitInterface();
-                             },
-                             [](const HostAssocDetails &x) {
-                               return x.symbol().HasExplicitInterface();
-                             },
-                             [](const GenericDetails &x) {
-                               return x.specific() &&
-                                   x.specific()->HasExplicitInterface();
-                             },
-                             [](const auto &) { return false; },
-                         },
+    return common::visit(
+        common::visitors{
+            [](const SubprogramDetails &) { return true; },
+            [](const SubprogramNameDetails &) { return true; },
+            [&](const ProcEntityDetails &x) {
+              return attrs_.test(Attr::INTRINSIC) || x.HasExplicitInterface();
+            },
+            [](const ProcBindingDetails &x) {
+              return x.symbol().HasExplicitInterface();
+            },
+            [](const UseDetails &x) {
+              return x.symbol().HasExplicitInterface();
+            },
+            [](const HostAssocDetails &x) {
+              return x.symbol().HasExplicitInterface();
+            },
+            [](const GenericDetails &x) {
+              return x.specific() && x.specific()->HasExplicitInterface();
+            },
+            [](const auto &) { return false; },
+        },
         details_);
   }
 
@@ -684,6 +690,7 @@ private:
   const Scope *owner_;
   SourceName name_;
   Attrs attrs_;
+  Attrs implicitAttrs_; // subset of attrs_ that were not explicit
   Flags flags_;
   Scope *scope_{nullptr};
   std::size_t size_{0}; // size in bytes

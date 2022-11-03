@@ -130,9 +130,6 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
   if (Depth == MaxAnalysisRecursionDepth)
     return nullptr;
 
-  if (isa<ScalableVectorType>(VTy))
-    return nullptr;
-
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I) {
     computeKnownBits(V, Known, Depth, CxtI);
@@ -424,7 +421,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
 
     if (auto *DstVTy = dyn_cast<VectorType>(VTy)) {
       if (auto *SrcVTy = dyn_cast<VectorType>(I->getOperand(0)->getType())) {
-        if (cast<FixedVectorType>(DstVTy)->getNumElements() !=
+        if (isa<ScalableVectorType>(DstVTy) ||
+            isa<ScalableVectorType>(SrcVTy) ||
+            cast<FixedVectorType>(DstVTy)->getNumElements() !=
             cast<FixedVectorType>(SrcVTy)->getNumElements())
           // Don't touch a bitcast between vectors of different element counts.
           return nullptr;
