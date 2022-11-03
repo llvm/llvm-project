@@ -12,6 +12,7 @@
 
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/ConvertConstant.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Todo.h"
@@ -125,7 +126,26 @@ private:
 
   template <typename T>
   hlfir::FortranEntity gen(const Fortran::evaluate::Constant<T> &expr) {
-    TODO(getLoc(), "lowering constant to HLFIR");
+    mlir::Location loc = getLoc();
+    if constexpr (std::is_same_v<T, Fortran::evaluate::SomeDerived>) {
+      TODO(loc, "lowering derived type constant to HLFIR");
+    } else {
+      fir::FirOpBuilder &builder = getBuilder();
+      fir::ExtendedValue exv =
+          Fortran::lower::IntrinsicConstantBuilder<T::category, T::kind>::gen(
+              builder, loc, expr, /*outlineBigConstantInReadOnlyMemory=*/true);
+      if (const auto *scalarBox = exv.getUnboxed())
+        if (fir::isa_trivial(scalarBox->getType()))
+          return hlfir::FortranEntity(*scalarBox);
+      if (auto addressOf = fir::getBase(exv).getDefiningOp<fir::AddrOfOp>()) {
+        auto flags = fir::FortranVariableFlagsAttr::get(
+            builder.getContext(), fir::FortranVariableFlagsEnum::parameter);
+        return hlfir::genDeclare(
+            loc, builder, exv,
+            addressOf.getSymbol().getRootReference().getValue(), flags);
+      }
+      fir::emitFatalError(loc, "Constant<T> was lowered to unexpected format");
+    }
   }
 
   template <typename T>
