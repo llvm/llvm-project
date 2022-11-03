@@ -5,9 +5,9 @@
 ; enabled as indicator symbols will cause link time odr violations.
 ; This is to fix PR 47925.
 ;
-; RUN: opt < %s -passes=asan             -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,NOCOMDAT
+; RUN: opt < %s -passes=asan -asan-globals-live-support=1 -asan-use-odr-indicator=0 -S | FileCheck %s --check-prefixes=CHECK,NOCOMDAT
 ; Check that enabling odr indicators enables comdat for globals.
-; RUN: opt < %s -passes=asan             -asan-globals-live-support=1 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK,COMDAT
+; RUN: opt < %s -passes=asan -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,COMDAT
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -43,8 +43,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Check emitted location descriptions:
 ; CHECK: [[VARNAME:@___asan_gen_.[0-9]+]] = private unnamed_addr constant [7 x i8] c"global\00", align 1
-; COMDAT: @__asan_global_global = {{.*}}i64 ptrtoint (ptr @global to i64){{.*}} section "asan_globals"{{.*}}, !associated
-; COMDAT: @__asan_global_.str = {{.*}}i64 ptrtoint (ptr @{{.str|1}} to i64){{.*}} section "asan_globals"{{.*}}, !associated
+; COMDAT: @__asan_global_global = {{.*}}i64 ptrtoint (ptr @__odr_asan_gen_global to i64){{.*}} section "asan_globals"{{.*}}, comdat($global), !associated
+; COMDAT: @__asan_global_.str = {{.*}}i64 ptrtoint (ptr @___asan_gen_ to i64){{.*}} section "asan_globals"{{.*}}, comdat($.str.{{.*}}), !associated
 
 ; The metadata has to be inserted to llvm.compiler.used to avoid being stripped
 ; during LTO.

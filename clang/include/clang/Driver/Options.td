@@ -1758,7 +1758,7 @@ defm sanitize_address_globals_dead_stripping : BoolOption<"f", "sanitize-address
   NegFlag<SetFalse, [], "Disable linker dead stripping of globals in AddressSanitizer">>,
   Group<f_clang_Group>;
 defm sanitize_address_use_odr_indicator : BoolOption<"f", "sanitize-address-use-odr-indicator",
-  CodeGenOpts<"SanitizeAddressUseOdrIndicator">, DefaultFalse,
+  CodeGenOpts<"SanitizeAddressUseOdrIndicator">, DefaultTrue,
   PosFlag<SetTrue, [], "Enable ODR indicator globals to avoid false ODR violation"
             " reports in partially sanitized programs at the cost of an increase in binary size">,
   NegFlag<SetFalse, [], "Disable ODR indicator globals">>,
