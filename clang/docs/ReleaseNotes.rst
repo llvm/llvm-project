@@ -377,6 +377,9 @@ Improvements to Clang's diagnostics
   `Issue 58673 <https://github.com/llvm/llvm-project/issues/58673>`_.
 - Better diagnostics when the user has missed `auto` in a declaration.
   `Issue 49129 <https://github.com/llvm/llvm-project/issues/49129>`_.
+- Clang now diagnoses use of invalid or reserved module names in a module
+  export declaration. Both are diagnosed as an error, but the diagnostic is
+  suppressed for use of reserved names in a system header.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
