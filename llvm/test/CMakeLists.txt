@@ -24,6 +24,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_EXPENSIVE_CHECKS
   LLVM_INCLUDE_DXIL_TESTS
   LLVM_ENABLE_ONDISK_CAS
+  LLVM_CAS_ENABLE_REMOTE_CACHE
   LLVM_TOOL_LLVM_DRIVER_BUILD
   )
 
@@ -166,6 +167,10 @@ endif()
 
 if(TARGET LTO)
   set(LLVM_TEST_DEPENDS ${LLVM_TEST_DEPENDS} LTO)
+endif()
+
+if(TARGET llvm-remote-cache-test)
+  set(LLVM_TEST_DEPENDS ${LLVM_TEST_DEPENDS} llvm-remote-cache-test)
 endif()
 
 if(LLVM_BUILD_EXAMPLES)

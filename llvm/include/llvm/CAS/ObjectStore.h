@@ -75,7 +75,7 @@ class ObjectProxy;
 /// lifetime tradeoffs:
 ///
 /// - \a getData() accesses data without exposing lifetime at all.
-/// - \a loadIndependentDataBuffer() returns a \a MemoryBuffer whose lifetime
+/// - \a getMemoryBuffer() returns a \a MemoryBuffer whose lifetime
 ///   is independent of the CAS (it can live longer).
 /// - \a getDataString() return StringRef with lifetime is guaranteed to last as
 ///   long as \a ObjectStore.
@@ -252,12 +252,6 @@ public:
     OS << toStringRef(Data);
     return Data.size();
   }
-
-  /// Get a MemoryBuffer with the contents of \p Data whose lifetime is
-  /// independent of this CAS instance.
-  virtual Expected<std::unique_ptr<MemoryBuffer>>
-  loadIndependentDataBuffer(ObjectHandle Node, const Twine &Name = "",
-                            bool NullTerminate = true) const;
 
   /// Print the ObjectStore internals for debugging purpose.
   virtual void print(raw_ostream &) const {}
