@@ -598,7 +598,7 @@ public:
   ThinLTOProcessing(const TargetOptions &Options) {
     ThinGenerator.setCodePICModel(codegen::getExplicitRelocModel());
     ThinGenerator.setTargetOptions(Options);
-    ThinGenerator.setCacheDir(ThinLTOCacheDir);
+    cantFail(ThinGenerator.setCacheDir(ThinLTOCacheDir));
     ThinGenerator.setCachePruningInterval(ThinLTOCachePruningInterval);
     ThinGenerator.setCacheEntryExpiration(ThinLTOCacheEntryExpiration);
     ThinGenerator.setCacheMaxSizeFiles(ThinLTOCacheMaxSizeFiles);

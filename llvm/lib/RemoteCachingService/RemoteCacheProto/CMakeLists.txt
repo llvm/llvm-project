@@ -3,7 +3,7 @@ function(generate_llvm_protos_library LibraryName ProtoFile)
   cmake_parse_arguments(PARSE_ARGV 2 PROTO "" "" "")
   generate_proto_sources(ProtoSource ${ProtoFile} ${PROTO_UNPARSED_ARGUMENTS})
 
-  add_llvm_library(${LibraryName} ${ProtoSource}
+  add_llvm_component_library(${LibraryName} ${ProtoSource}
     PARTIAL_SOURCES_INTENDED
     LINK_LIBS PUBLIC grpc++ gpr protobuf)
 endfunction()

@@ -18,6 +18,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
+#include <atomic>
 #include <memory>
 #include <string>
 
@@ -40,7 +41,7 @@ public:
   bool hasPending() const { return NumPending != 0; }
 
 protected:
-  unsigned NumPending = 0;
+  std::atomic<unsigned> NumPending = 0;
 };
 
 /// An asynchronous gRPC client for the key-value service of the remote cache
@@ -61,6 +62,24 @@ public:
 
   using ValueTy = StringMap<std::string>;
 
+  Expected<Optional<ValueTy>> getValueSync(std::string Key) {
+    return getValueSyncImpl(std::move(Key));
+  }
+  Expected<Optional<ValueTy>> getValueSync(ArrayRef<uint8_t> Key) {
+    return getValueSync(toStringRef(Key).str());
+  }
+  Error putValueSync(std::string Key, const ValueTy &Value) {
+    return putValueSyncImpl(std::move(Key), Value);
+  }
+  Error putValueSync(ArrayRef<uint8_t> Key, const ValueTy &Value) {
+    return putValueSync(toStringRef(Key).str(), Value);
+  }
+
+protected:
+  virtual Expected<Optional<ValueTy>> getValueSyncImpl(std::string Key) = 0;
+  virtual Error putValueSyncImpl(std::string Key, const ValueTy &Value) = 0;
+
+public:
   class GetValueAsyncQueue : public AsyncQueueBase {
     virtual void anchor() override;
 
@@ -155,6 +174,51 @@ class CASDBClient {
 public:
   virtual ~CASDBClient() = default;
 
+  struct LoadResponse {
+    bool KeyNotFound = false;
+    Optional<std::string> BlobData;
+  };
+  struct GetResponse {
+    bool KeyNotFound = false;
+    Optional<std::string> BlobData;
+    std::vector<std::string> Refs;
+  };
+  Expected<LoadResponse> loadSync(std::string CASID,
+                                  Optional<std::string> OutFilePath = None) {
+    return loadSyncImpl(std::move(CASID), std::move(OutFilePath));
+  }
+  Expected<std::string> saveDataSync(std::string BlobData) {
+    return saveDataSyncImpl(std::move(BlobData));
+  }
+  Expected<std::string> saveFileSync(std::string FilePath) {
+    return saveFileSyncImpl(std::move(FilePath));
+  }
+  Expected<GetResponse> getSync(std::string CASID,
+                                Optional<std::string> OutFilePath = None) {
+    return getSyncImpl(std::move(CASID), std::move(OutFilePath));
+  }
+  Expected<std::string> putDataSync(std::string BlobData,
+                                    ArrayRef<std::string> Refs) {
+    return putDataSyncImpl(std::move(BlobData), Refs);
+  }
+  Expected<std::string> putFileSync(std::string FilePath,
+                                   ArrayRef<std::string> Refs) {
+    return putFileSyncImpl(std::move(FilePath), Refs);
+  }
+
+protected:
+  virtual Expected<LoadResponse>
+  loadSyncImpl(std::string CASID, Optional<std::string> OutFilePath) = 0;
+  virtual Expected<std::string> saveDataSyncImpl(std::string BlobData) = 0;
+  virtual Expected<std::string> saveFileSyncImpl(std::string FilePath) = 0;
+  virtual Expected<GetResponse>
+  getSyncImpl(std::string CASID, Optional<std::string> OutFilePath) = 0;
+  virtual Expected<std::string> putDataSyncImpl(std::string BlobData,
+                                                ArrayRef<std::string> Refs) = 0;
+  virtual Expected<std::string> putFileSyncImpl(std::string FilePath,
+                                                ArrayRef<std::string> Refs) = 0;
+
+public:
   class LoadAsyncQueue : public AsyncQueueBase {
     virtual void anchor() override;
 

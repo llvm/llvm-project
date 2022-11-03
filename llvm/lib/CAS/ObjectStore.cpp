@@ -110,16 +110,6 @@ Expected<ObjectProxy> ObjectStore::createProxy(ArrayRef<ObjectRef> Refs,
   return getProxy(*Ref);
 }
 
-Expected<std::unique_ptr<MemoryBuffer>>
-ObjectStore::loadIndependentDataBuffer(ObjectHandle Node, const Twine &Name,
-                                       bool NullTerminate) const {
-  SmallString<256> Bytes;
-  raw_svector_ostream OS(Bytes);
-  readData(Node, OS);
-  return std::make_unique<SmallVectorMemoryBuffer>(std::move(Bytes), Name.str(),
-                                                   NullTerminate);
-}
-
 std::unique_ptr<MemoryBuffer>
 ObjectProxy::getMemoryBuffer(StringRef Name,
                              bool RequiresNullTerminator) const {

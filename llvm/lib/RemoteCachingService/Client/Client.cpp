@@ -38,6 +38,119 @@ static Error errorFromGRPCStatus(const grpc::Status &Status) {
   return createStringError(inconvertibleErrorCode(), Status.error_message());
 }
 
+static Expected<Optional<KeyValueDBClient::ValueTy>>
+createGetValueResponse(const GetValueResponse &Resp) {
+  if (Resp.has_error())
+    return createStringError(inconvertibleErrorCode(),
+                             Resp.error().description());
+  if (!Resp.has_value())
+    return None;
+
+  KeyValueDBClient::ValueTy Ret;
+  const Value &V = Resp.value();
+  for (const auto &Entry : V.entries()) {
+    Ret[Entry.first] = Entry.second;
+  }
+  return Ret;
+}
+
+static Expected<CASDBClient::LoadResponse>
+createLoadResponse(const CASLoadResponse &Response,
+                   Optional<std::string> OutFilePath) {
+  CASDBClient::LoadResponse Resp;
+  switch (Response.outcome()) {
+  case CASLoadResponse_Outcome_OBJECT_NOT_FOUND:
+    Resp.KeyNotFound = true;
+    return Resp;
+  case CASLoadResponse_Outcome_ERROR:
+    return createStringError(inconvertibleErrorCode(),
+                             Response.error().description());
+  default:
+    break;
+  }
+  assert(Response.outcome() == CASLoadResponse_Outcome_SUCCESS);
+  const auto &Blob = Response.data().blob();
+  if (OutFilePath.has_value()) {
+    if (Blob.has_file_path()) {
+      if (std::error_code EC = sys::fs::rename(Blob.file_path(), *OutFilePath))
+        return createStringError(EC, "failed rename '" + Blob.file_path() +
+                                         "' to '" + *OutFilePath +
+                                         "': " + EC.message());
+    } else {
+      std::error_code EC;
+      raw_fd_ostream OS(*OutFilePath, EC);
+      if (EC)
+        return createStringError(EC, "failed creating ''" + *OutFilePath +
+                                         "': " + EC.message());
+      OS << Blob.data();
+      OS.close();
+    }
+  } else {
+    if (Blob.has_file_path()) {
+      ErrorOr<std::unique_ptr<MemoryBuffer>> FileBuf =
+          MemoryBuffer::getFile(Blob.file_path());
+      if (!FileBuf)
+        return createStringError(FileBuf.getError(),
+                                 "failed reading '" + Blob.file_path() +
+                                     "': " + FileBuf.getError().message());
+      Resp.BlobData = (*FileBuf)->getBuffer().str();
+    } else {
+      Resp.BlobData = Blob.data();
+    }
+  }
+  return Resp;
+}
+
+static Expected<CASDBClient::GetResponse>
+createGetResponse(const CASGetResponse &Response,
+                 Optional<std::string> OutFilePath) {
+  CASDBClient::GetResponse Resp;
+  switch (Response.outcome()) {
+  case CASGetResponse_Outcome_OBJECT_NOT_FOUND:
+    Resp.KeyNotFound = true;
+    return Resp;
+  case CASGetResponse_Outcome_ERROR:
+    return createStringError(inconvertibleErrorCode(),
+                             Response.error().description());
+  default:
+    break;
+  }
+  assert(Response.outcome() == CASGetResponse_Outcome_SUCCESS);
+  const auto &Blob = Response.data().blob();
+  if (OutFilePath.has_value()) {
+    if (Blob.has_file_path()) {
+      if (std::error_code EC = sys::fs::rename(Blob.file_path(), *OutFilePath))
+        return createStringError(EC, "failed rename '" + Blob.file_path() +
+                                         "' to '" + *OutFilePath +
+                                         "': " + EC.message());
+    } else {
+      std::error_code EC;
+      raw_fd_ostream OS(*OutFilePath, EC);
+      if (EC)
+        return createStringError(EC, "failed creating ''" + *OutFilePath +
+                                         "': " + EC.message());
+      OS << Blob.data();
+      OS.close();
+    }
+  } else {
+    if (Blob.has_file_path()) {
+      ErrorOr<std::unique_ptr<MemoryBuffer>> FileBuf =
+          MemoryBuffer::getFile(Blob.file_path());
+      if (!FileBuf)
+        return createStringError(FileBuf.getError(),
+                                 "failed reading '" + Blob.file_path() +
+                                     "': " + FileBuf.getError().message());
+      Resp.BlobData = (*FileBuf)->getBuffer().str();
+    } else {
+      Resp.BlobData = Blob.data();
+    }
+  }
+  for (const CASDataID &ID : Response.data().references())
+    Resp.Refs.emplace_back(ID.id());
+
+  return Resp;
+}
+
 namespace {
 
 template <typename ResponseT> struct AsyncClientCall {
@@ -90,19 +203,12 @@ public:
       return createStringError(inconvertibleErrorCode(),
                                "service channel shutdown");
 
+    auto Value = createGetValueResponse(call->Response);
+    if (!Value)
+      return Value.takeError();
     Response Resp;
     Resp.CallCtx = std::move(call->CallCtx);
-    if (call->Response.has_error())
-      return createStringError(inconvertibleErrorCode(),
-                               call->Response.error().description());
-    if (call->Response.has_value()) {
-      Resp.Value.emplace();
-      KeyValueDBClient::ValueTy &ClientValue = *Resp.Value;
-      const Value &V = call->Response.value();
-      for (const auto &Entry : V.entries()) {
-        ClientValue[Entry.first] = Entry.second;
-      }
-    }
+    Resp.Value = std::move(*Value);
     return Resp;
   }
 };
@@ -198,48 +304,12 @@ public:
 
     Response Resp;
     Resp.CallCtx = std::move(call->CallCtx);
-    switch (call->Response.outcome()) {
-    case CASLoadResponse_Outcome_OBJECT_NOT_FOUND:
-      Resp.KeyNotFound = true;
-      return Resp;
-    case CASLoadResponse_Outcome_ERROR:
-      return createStringError(inconvertibleErrorCode(),
-                               call->Response.error().description());
-    default:
-      break;
-    }
-    assert(call->Response.outcome() == CASLoadResponse_Outcome_SUCCESS);
-    const auto &Blob = call->Response.data().blob();
-    if (call->OutFilePath.has_value()) {
-      if (Blob.has_file_path()) {
-        if (std::error_code EC =
-                sys::fs::rename(Blob.file_path(), *call->OutFilePath))
-          return createStringError(EC, "failed rename '" + Blob.file_path() +
-                                           "' to '" + *call->OutFilePath +
-                                           "': " + EC.message());
-      } else {
-        std::error_code EC;
-        raw_fd_ostream OS(*call->OutFilePath, EC);
-        if (EC)
-          return createStringError(EC, "failed creating ''" +
-                                           *call->OutFilePath +
-                                           "': " + EC.message());
-        OS << Blob.data();
-        OS.close();
-      }
-    } else {
-      if (Blob.has_file_path()) {
-        ErrorOr<std::unique_ptr<MemoryBuffer>> FileBuf =
-            MemoryBuffer::getFile(Blob.file_path());
-        if (!FileBuf)
-          return createStringError(FileBuf.getError(),
-                                   "failed reading '" + Blob.file_path() +
-                                       "': " + FileBuf.getError().message());
-        Resp.BlobData = (*FileBuf)->getBuffer().str();
-      } else {
-        Resp.BlobData = Blob.data();
-      }
-    }
+
+    auto Value = createLoadResponse(call->Response, call->OutFilePath);
+    if (!Value)
+      return Value.takeError();
+    Resp.KeyNotFound = Value->KeyNotFound;
+    Resp.BlobData = std::move(Value->BlobData);
     return Resp;
   }
 };
@@ -343,51 +413,13 @@ public:
 
     Response Resp;
     Resp.CallCtx = std::move(call->CallCtx);
-    switch (call->Response.outcome()) {
-    case CASGetResponse_Outcome_OBJECT_NOT_FOUND:
-      Resp.KeyNotFound = true;
-      return Resp;
-    case CASGetResponse_Outcome_ERROR:
-      return createStringError(inconvertibleErrorCode(),
-                               call->Response.error().description());
-    default:
-      break;
-    }
-    assert(call->Response.outcome() == CASGetResponse_Outcome_SUCCESS);
-    const auto &Blob = call->Response.data().blob();
-    if (call->OutFilePath.has_value()) {
-      if (Blob.has_file_path()) {
-        if (std::error_code EC =
-                sys::fs::rename(Blob.file_path(), *call->OutFilePath))
-          return createStringError(EC, "failed rename '" + Blob.file_path() +
-                                           "' to '" + *call->OutFilePath +
-                                           "': " + EC.message());
-      } else {
-        std::error_code EC;
-        raw_fd_ostream OS(*call->OutFilePath, EC);
-        if (EC)
-          return createStringError(EC, "failed creating ''" +
-                                           *call->OutFilePath +
-                                           "': " + EC.message());
-        OS << Blob.data();
-        OS.close();
-      }
-    } else {
-      if (Blob.has_file_path()) {
-        ErrorOr<std::unique_ptr<MemoryBuffer>> FileBuf =
-            MemoryBuffer::getFile(Blob.file_path());
-        if (!FileBuf)
-          return createStringError(FileBuf.getError(),
-                                   "failed reading '" + Blob.file_path() +
-                                       "': " + FileBuf.getError().message());
-        Resp.BlobData = (*FileBuf)->getBuffer().str();
-      } else {
-        Resp.BlobData = Blob.data();
-      }
-    }
-    for (const CASDataID &ID : call->Response.data().references())
-      Resp.Refs.emplace_back(ID.id());
+    auto Value = createGetResponse(call->Response, call->OutFilePath);
+    if (!Value)
+      return Value.takeError();
 
+    Resp.KeyNotFound = Value->KeyNotFound;
+    Resp.BlobData = std::move(Value->BlobData);
+    Resp.Refs = std::move(Value->Refs);
     return Resp;
   }
 };
@@ -459,6 +491,40 @@ public:
 class KeyValueDBClientImpl : public KeyValueDBClient {
   std::unique_ptr<KeyValueDB::Stub> Stub;
 
+  Expected<Optional<KeyValueDBClient::ValueTy>>
+  getValueSyncImpl(std::string Key) override {
+    GetValueRequest Request;
+    grpc::ClientContext Context;
+    GetValueResponse Resp;
+    Request.set_key(Key);
+    grpc::Status Status = Stub->GetValue(&Context, Request, &Resp);
+    if (!Status.ok())
+      return errorFromGRPCStatus(Status);
+
+    return createGetValueResponse(Resp);
+  }
+
+  Error putValueSyncImpl(std::string Key,
+                         const KeyValueDBClient::ValueTy &Value) override {
+    PutValueRequest Request;
+    grpc::ClientContext Context;
+    PutValueResponse Resp;
+    Request.set_key(std::move(Key));
+    auto &PBMap = *Request.mutable_value()->mutable_entries();
+    for (const auto &Entry : Value) {
+      PBMap[Entry.first().str()] = Entry.second;
+    }
+    grpc::Status Status = Stub->PutValue(&Context, Request, &Resp);
+    if (!Status.ok())
+      return errorFromGRPCStatus(Status);
+
+    if (Resp.has_error())
+      return createStringError(inconvertibleErrorCode(),
+                               Resp.error().description());
+
+    return Error::success();
+  }
+
 public:
   KeyValueDBClientImpl(std::shared_ptr<grpc::Channel> Channel)
       : Stub(KeyValueDB::NewStub(std::move(Channel))) {
@@ -469,6 +535,91 @@ public:
 
 class CASDBClientImpl : public CASDBClient {
   std::unique_ptr<CASDBService::Stub> Stub;
+
+  Expected<CASDBClient::LoadResponse>
+  loadSyncImpl(std::string CASID, Optional<std::string> OutFilePath) override {
+    CASLoadRequest Request;
+    grpc::ClientContext Context;
+    CASLoadResponse Response;
+    Request.mutable_cas_id()->set_id(std::move(CASID));
+    Request.set_write_to_disk(OutFilePath.has_value());
+    grpc::Status Status = Stub->Load(&Context, Request, &Response);
+    if (!Status.ok())
+      return errorFromGRPCStatus(Status);
+    return createLoadResponse(Response, OutFilePath);
+  }
+
+  Expected<std::string> saveDataSyncImpl(std::string BlobData) override {
+    CASSaveRequest Request;
+    Request.mutable_data()->mutable_blob()->set_data(std::move(BlobData));
+    return casSaveSync(Request);
+  }
+
+  Expected<std::string> saveFileSyncImpl(std::string FilePath) override {
+    assert(!FilePath.empty());
+    CASSaveRequest Request;
+    Request.mutable_data()->mutable_blob()->set_file_path(std::move(FilePath));
+    return casSaveSync(Request);
+  }
+
+  Expected<std::string> casSaveSync(const CASSaveRequest &Request) {
+    grpc::ClientContext Context;
+    CASSaveResponse Response;
+    grpc::Status Status = Stub->Save(&Context, Request, &Response);
+    if (!Status.ok())
+      return errorFromGRPCStatus(Status);
+    if (Response.has_error())
+      return createStringError(inconvertibleErrorCode(),
+                               Response.error().description());
+    return Response.cas_id().id();
+  }
+
+  Expected<CASDBClient::GetResponse>
+  getSyncImpl(std::string CASID, Optional<std::string> OutFilePath) override {
+    CASGetRequest Request;
+    grpc::ClientContext Context;
+    CASGetResponse Response;
+    Request.mutable_cas_id()->set_id(std::move(CASID));
+    Request.set_write_to_disk(OutFilePath.has_value());
+    grpc::Status Status = Stub->Get(&Context, Request, &Response);
+    return createGetResponse(Response, OutFilePath);
+  }
+
+  Expected<std::string> putDataSyncImpl(std::string BlobData,
+                                        ArrayRef<std::string> Refs) override {
+    CASPutRequest Request;
+    Request.mutable_data()->mutable_blob()->set_data(std::move(BlobData));
+    for (auto &Ref : Refs) {
+      CASDataID *NewRef = Request.mutable_data()->add_references();
+      NewRef->set_id(Ref);
+    }
+    return casPutSync(Request);
+  }
+
+  Expected<std::string> putFileSyncImpl(std::string FilePath,
+                                        ArrayRef<std::string> Refs) override {
+    assert(!FilePath.empty());
+    CASPutRequest Request;
+    Request.mutable_data()->mutable_blob()->set_file_path(std::move(FilePath));
+    for (auto &Ref : Refs) {
+      CASDataID *NewRef = Request.mutable_data()->add_references();
+      NewRef->set_id(Ref);
+    }
+    return casPutSync(Request);
+  }
+
+  Expected<std::string> casPutSync(const CASPutRequest &Request) {
+    grpc::ClientContext Context;
+    CASPutResponse Response;
+    grpc::Status Status = Stub->Put(&Context, Request, &Response);
+    if (!Status.ok())
+      return errorFromGRPCStatus(Status);
+
+    if (Response.has_error())
+      return createStringError(inconvertibleErrorCode(),
+                               Response.error().description());
+    return Response.cas_id().id();
+  }
 
 public:
   CASDBClientImpl(std::shared_ptr<grpc::Channel> Channel)

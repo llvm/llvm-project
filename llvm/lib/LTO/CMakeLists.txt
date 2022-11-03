@@ -19,6 +19,7 @@ add_llvm_component_library(LLVMLTO
   BinaryFormat
   BitReader
   BitWriter
+  CAS
   CodeGen
   Core
   Extensions
@@ -31,6 +32,7 @@ add_llvm_component_library(LLVMLTO
   Object
   Passes
   Remarks
+  RemoteCachingService
   Scalar
   Support
   Target
