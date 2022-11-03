@@ -9146,3 +9146,56 @@ multiclass sve2p1_int_while_rr_pair<string mnemonic, bits<3> opc> {
  def _S : sve2p1_int_while_rr_pair<mnemonic, 0b10, opc, PP_s_mul_r>;
  def _D : sve2p1_int_while_rr_pair<mnemonic, 0b11, opc, PP_d_mul_r>;
 }
+
+
+class sve_mem_128b_gld_64_unscaled<string mnemonic>
+    : I<(outs Z_q:$Zt), (ins PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm),
+        mnemonic, "\t$Zt, $Pg/z, [$Zn, $Rm]",
+        "", []>, Sched<[]> {
+  bits<5> Zt;
+  bits<5> Zn;
+  bits<3> Pg;
+  bits<5> Rm;
+  let Inst{31-21} = 0b11000100000;
+  let Inst{20-16} = Rm;
+  let Inst{15-13} = 0b101;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zt;
+
+  let mayLoad = 1;
+}
+
+
+multiclass sve_mem_128b_gld_64_unscaled<string mnemonic> {
+  def NAME : sve_mem_128b_gld_64_unscaled<mnemonic>;
+
+  def : InstAlias<mnemonic # " $Zt, $Pg/z, [$Zn]",
+                  (!cast<Instruction>(NAME) Z_q:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, XZR), 1>;
+}
+
+class sve_mem_sst_128b_64_unscaled<string mnemonic>
+    : I<(outs ), (ins Z_q:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, GPR64:$Rm),
+        mnemonic, "\t$Zt, $Pg, [$Zn, $Rm]",
+        "", []>, Sched<[]> {
+  bits<5> Zt;
+  bits<5> Zn;
+  bits<3> Pg;
+  bits<5> Rm;
+  let Inst{31-21} = 0b11100100001;
+  let Inst{20-16} = Rm;
+  let Inst{15-13} = 0b001;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zt;
+
+  let mayStore = 1;
+}
+
+
+multiclass sve_mem_sst_128b_64_unscaled<string mnemonic> {
+  def NAME : sve_mem_sst_128b_64_unscaled<mnemonic>;
+
+  def : InstAlias<mnemonic # " $Zt, $Pg, [$Zn]",
+                  (!cast<Instruction>(NAME) Z_q:$Zt, PPR3bAny:$Pg, ZPR64:$Zn, XZR), 1>;
+}
