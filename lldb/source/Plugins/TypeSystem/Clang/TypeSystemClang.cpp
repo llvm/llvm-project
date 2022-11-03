@@ -9812,6 +9812,29 @@ TypeSystemClang::DeclContextGetTypeSystemClang(const CompilerDeclContext &dc) {
   return nullptr;
 }
 
+void TypeSystemClang::RequireCompleteType(CompilerType type) {
+  // Technically, enums can be incomplete too, but we don't handle those as they
+  // are emitted even under -flimit-debug-info.
+  if (!TypeSystemClang::IsCXXClassType(type))
+    return;
+
+  if (type.GetCompleteType())
+    return;
+
+  // No complete definition in this module.  Mark the class as complete to
+  // satisfy local ast invariants, but make a note of the fact that
+  // it is not _really_ complete so we can later search for a definition in a
+  // different module.
+  // Since we provide layout assistance, layouts of types containing this class
+  // will be correct even if we  are not able to find the definition elsewhere.
+  bool started = TypeSystemClang::StartTagDeclarationDefinition(type);
+  lldbassert(started && "Unable to start a class type definition.");
+  TypeSystemClang::CompleteTagDeclarationDefinition(type);
+  const clang::TagDecl *td = ClangUtil::GetAsTagDecl(type);
+  auto &ts = llvm::cast<TypeSystemClang>(*type.GetTypeSystem());
+  ts.GetMetadata(td)->SetIsForcefullyCompleted();
+}
+
 namespace {
 /// A specialized scratch AST used within ScratchTypeSystemClang.
 /// These are the ASTs backing the different IsolatedASTKinds. They behave
