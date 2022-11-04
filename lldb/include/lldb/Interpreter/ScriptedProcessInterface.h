@@ -24,7 +24,7 @@ public:
   CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) override {
-    return nullptr;
+    return {};
   }
 
   virtual Status Launch() { return Status("ScriptedProcess did not launch"); }
@@ -41,22 +41,22 @@ public:
     return {};
   }
 
-  virtual StructuredData::DictionarySP GetThreadsInfo() { return nullptr; }
+  virtual StructuredData::DictionarySP GetThreadsInfo() { return {}; }
 
   virtual StructuredData::DictionarySP GetThreadWithID(lldb::tid_t tid) {
-    return nullptr;
+    return {};
   }
 
   virtual StructuredData::DictionarySP GetRegistersForThread(lldb::tid_t tid) {
-    return nullptr;
+    return {};
   }
 
   virtual lldb::DataExtractorSP
   ReadMemoryAtAddress(lldb::addr_t address, size_t size, Status &error) {
-    return nullptr;
+    return {};
   }
 
-  virtual StructuredData::ArraySP GetLoadedImages() { return nullptr; }
+  virtual StructuredData::ArraySP GetLoadedImages() { return {}; }
 
   virtual lldb::pid_t GetProcessID() { return LLDB_INVALID_PROCESS_ID; }
 
@@ -66,12 +66,12 @@ public:
     return llvm::None;
   }
 
-  virtual StructuredData::DictionarySP GetMetadata() { return nullptr; }
+  virtual StructuredData::DictionarySP GetMetadata() { return {}; }
 
 protected:
   friend class ScriptedThread;
   virtual lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() {
-    return nullptr;
+    return {};
   }
 };
 
@@ -81,7 +81,7 @@ public:
   CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) override {
-    return nullptr;
+    return {};
   }
 
   virtual lldb::tid_t GetThreadID() { return LLDB_INVALID_THREAD_ID; }
@@ -92,17 +92,17 @@ public:
 
   virtual llvm::Optional<std::string> GetQueue() { return llvm::None; }
 
-  virtual StructuredData::DictionarySP GetStopReason() { return nullptr; }
+  virtual StructuredData::DictionarySP GetStopReason() { return {}; }
 
-  virtual StructuredData::ArraySP GetStackFrames() { return nullptr; }
+  virtual StructuredData::ArraySP GetStackFrames() { return {}; }
 
-  virtual StructuredData::DictionarySP GetRegisterInfo() { return nullptr; }
+  virtual StructuredData::DictionarySP GetRegisterInfo() { return {}; }
 
   virtual llvm::Optional<std::string> GetRegisterContext() {
     return llvm::None;
   }
 
-  virtual StructuredData::ArraySP GetExtendedInfo() { return nullptr; }
+  virtual StructuredData::ArraySP GetExtendedInfo() { return {}; }
 };
 } // namespace lldb_private
 
