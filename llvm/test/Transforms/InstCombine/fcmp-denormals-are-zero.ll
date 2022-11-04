@@ -7,17 +7,13 @@
 ; https://alive2.llvm.org/ce/z/fib8cf
 define void @denormal_input_preserve_sign_fcmp_olt_smallest_normalized(float %f32, double %f64, half %f16) #0 {
 ; CHECK-LABEL: @denormal_input_preserve_sign_fcmp_olt_smallest_normalized(
-; CHECK-NEXT:    [[F32_FABS:%.*]] = call float @llvm.fabs.f32(float [[F32:%.*]])
-; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp olt float [[F32_FABS]], 0x3810000000000000
+; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp oeq float [[F32:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF32]], ptr @var, align 4
-; CHECK-NEXT:    [[F64_FABS:%.*]] = call double @llvm.fabs.f64(double [[F64:%.*]])
-; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp olt double [[F64_FABS]], 0x10000000000000
+; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp oeq double [[F64:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF64]], ptr @var, align 4
-; CHECK-NEXT:    [[F16_FABS:%.*]] = call half @llvm.fabs.f16(half [[F16:%.*]])
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp olt half [[F16_FABS]], 0xH0400
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp oeq half [[F16:%.*]], 0xH0000
 ; CHECK-NEXT:    store volatile i1 [[CMPF16]], ptr @var, align 4
-; CHECK-NEXT:    [[F32_FABS_FLAGS:%.*]] = call nnan nsz float @llvm.fabs.f32(float [[F32]])
-; CHECK-NEXT:    [[CMPF32_FLAGS:%.*]] = fcmp olt float [[F32_FABS_FLAGS]], 0x3810000000000000
+; CHECK-NEXT:    [[CMPF32_FLAGS:%.*]] = fcmp oeq float [[F32]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF32_FLAGS]], ptr @var, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -44,14 +40,11 @@ define void @denormal_input_preserve_sign_fcmp_olt_smallest_normalized(float %f3
 ; https://alive2.llvm.org/ce/z/xmqBXx
 define void @denormal_input_preserve_sign_fcmp_uge_smallest_normalized(float %f32, double %f64, half %f16) #0 {
 ; CHECK-LABEL: @denormal_input_preserve_sign_fcmp_uge_smallest_normalized(
-; CHECK-NEXT:    [[F32_FABS:%.*]] = call float @llvm.fabs.f32(float [[F32:%.*]])
-; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp uge float [[F32_FABS]], 0x3810000000000000
+; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp une float [[F32:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF32]], ptr @var, align 4
-; CHECK-NEXT:    [[F64_FABS:%.*]] = call double @llvm.fabs.f64(double [[F64:%.*]])
-; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp uge double [[F64_FABS]], 0x10000000000000
+; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp une double [[F64:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF64]], ptr @var, align 4
-; CHECK-NEXT:    [[F16_FABS:%.*]] = call half @llvm.fabs.f16(half [[F16:%.*]])
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp uge half [[F16_FABS]], 0xH0400
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp une half [[F16:%.*]], 0xH0000
 ; CHECK-NEXT:    store volatile i1 [[CMPF16]], ptr @var, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -73,14 +66,11 @@ define void @denormal_input_preserve_sign_fcmp_uge_smallest_normalized(float %f3
 ; https://alive2.llvm.org/ce/z/ZucNzF
 define void @denormal_input_preserve_sign_fcmp_oge_smallest_normalized(float %f32, double %f64, half %f16) #0 {
 ; CHECK-LABEL: @denormal_input_preserve_sign_fcmp_oge_smallest_normalized(
-; CHECK-NEXT:    [[F32_FABS:%.*]] = call float @llvm.fabs.f32(float [[F32:%.*]])
-; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp oge float [[F32_FABS]], 0x3810000000000000
+; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp one float [[F32:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF32]], ptr @var, align 4
-; CHECK-NEXT:    [[F64_FABS:%.*]] = call double @llvm.fabs.f64(double [[F64:%.*]])
-; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp oge double [[F64_FABS]], 0x10000000000000
+; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp one double [[F64:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF64]], ptr @var, align 4
-; CHECK-NEXT:    [[F16_FABS:%.*]] = call half @llvm.fabs.f16(half [[F16:%.*]])
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp oge half [[F16_FABS]], 0xH0400
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp one half [[F16:%.*]], 0xH0000
 ; CHECK-NEXT:    store volatile i1 [[CMPF16]], ptr @var, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -102,14 +92,11 @@ define void @denormal_input_preserve_sign_fcmp_oge_smallest_normalized(float %f3
 ; https://alive2.llvm.org/ce/z/csAhZ2
 define void @denormal_input_preserve_sign_fcmp_ult_smallest_normalized(float %f32, double %f64, half %f16) #0 {
 ; CHECK-LABEL: @denormal_input_preserve_sign_fcmp_ult_smallest_normalized(
-; CHECK-NEXT:    [[F32_FABS:%.*]] = call float @llvm.fabs.f32(float [[F32:%.*]])
-; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp ult float [[F32_FABS]], 0x3810000000000000
+; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp ueq float [[F32:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF32]], ptr @var, align 4
-; CHECK-NEXT:    [[F64_FABS:%.*]] = call double @llvm.fabs.f64(double [[F64:%.*]])
-; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp ult double [[F64_FABS]], 0x10000000000000
+; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp ueq double [[F64:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF64]], ptr @var, align 4
-; CHECK-NEXT:    [[F16_FABS:%.*]] = call half @llvm.fabs.f16(half [[F16:%.*]])
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp ult half [[F16_FABS]], 0xH0400
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp ueq half [[F16:%.*]], 0xH0000
 ; CHECK-NEXT:    store volatile i1 [[CMPF16]], ptr @var, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -129,14 +116,11 @@ define void @denormal_input_preserve_sign_fcmp_ult_smallest_normalized(float %f3
 
 define void @denormal_input_preserve_sign_vector_fcmp_olt_smallest_normalized(<2 x float> %f32, <2 x double> %f64, <2 x half> %f16) #0 {
 ; CHECK-LABEL: @denormal_input_preserve_sign_vector_fcmp_olt_smallest_normalized(
-; CHECK-NEXT:    [[F32_FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[F32:%.*]])
-; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp olt <2 x float> [[F32_FABS]], <float 0x3810000000000000, float 0x3810000000000000>
+; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp oeq <2 x float> [[F32:%.*]], zeroinitializer
 ; CHECK-NEXT:    store volatile <2 x i1> [[CMPF32]], ptr @var, align 4
-; CHECK-NEXT:    [[F64_FABS:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[F64:%.*]])
-; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp olt <2 x double> [[F64_FABS]], <double 0x10000000000000, double 0x10000000000000>
+; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp oeq <2 x double> [[F64:%.*]], zeroinitializer
 ; CHECK-NEXT:    store volatile <2 x i1> [[CMPF64]], ptr @var, align 4
-; CHECK-NEXT:    [[F16_FABS:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[F16:%.*]])
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp olt <2 x half> [[F16_FABS]], <half 0xH0400, half 0xH0400>
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp oeq <2 x half> [[F16:%.*]], zeroinitializer
 ; CHECK-NEXT:    store volatile <2 x i1> [[CMPF16]], ptr @var, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -156,14 +140,11 @@ define void @denormal_input_preserve_sign_vector_fcmp_olt_smallest_normalized(<2
 
 define void @denormal_input_preserve_sign_vector_fcmp_uge_smallest_normalized(<2 x float> %f32, <2 x double> %f64, <2 x half> %f16) #0 {
 ; CHECK-LABEL: @denormal_input_preserve_sign_vector_fcmp_uge_smallest_normalized(
-; CHECK-NEXT:    [[F32_FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[F32:%.*]])
-; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp uge <2 x float> [[F32_FABS]], <float 0x3810000000000000, float 0x3810000000000000>
+; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp une <2 x float> [[F32:%.*]], zeroinitializer
 ; CHECK-NEXT:    store volatile <2 x i1> [[CMPF32]], ptr @var, align 4
-; CHECK-NEXT:    [[F64_FABS:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[F64:%.*]])
-; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp uge <2 x double> [[F64_FABS]], <double 0x10000000000000, double 0x10000000000000>
+; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp une <2 x double> [[F64:%.*]], zeroinitializer
 ; CHECK-NEXT:    store volatile <2 x i1> [[CMPF64]], ptr @var, align 4
-; CHECK-NEXT:    [[F16_FABS:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[F16:%.*]])
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp uge <2 x half> [[F16_FABS]], <half 0xH0400, half 0xH0400>
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp une <2 x half> [[F16:%.*]], zeroinitializer
 ; CHECK-NEXT:    store volatile <2 x i1> [[CMPF16]], ptr @var, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -183,14 +164,11 @@ define void @denormal_input_preserve_sign_vector_fcmp_uge_smallest_normalized(<2
 
 define void @denormal_input_preserve_sign_vector_fcmp_oge_smallest_normalized(<2 x float> %f32, <2 x double> %f64, <2 x half> %f16) #0 {
 ; CHECK-LABEL: @denormal_input_preserve_sign_vector_fcmp_oge_smallest_normalized(
-; CHECK-NEXT:    [[F32_FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[F32:%.*]])
-; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp oge <2 x float> [[F32_FABS]], <float 0x3810000000000000, float 0x3810000000000000>
+; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp one <2 x float> [[F32:%.*]], zeroinitializer
 ; CHECK-NEXT:    store volatile <2 x i1> [[CMPF32]], ptr @var, align 4
-; CHECK-NEXT:    [[F64_FABS:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[F64:%.*]])
-; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp oge <2 x double> [[F64_FABS]], <double 0x10000000000000, double 0x10000000000000>
+; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp one <2 x double> [[F64:%.*]], zeroinitializer
 ; CHECK-NEXT:    store volatile <2 x i1> [[CMPF64]], ptr @var, align 4
-; CHECK-NEXT:    [[F16_FABS:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[F16:%.*]])
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp oge <2 x half> [[F16_FABS]], <half 0xH0400, half 0xH0400>
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp one <2 x half> [[F16:%.*]], zeroinitializer
 ; CHECK-NEXT:    store volatile <2 x i1> [[CMPF16]], ptr @var, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -210,14 +188,11 @@ define void @denormal_input_preserve_sign_vector_fcmp_oge_smallest_normalized(<2
 
 define void @denormal_input_preserve_sign_vector_fcmp_ult_smallest_normalized(<2 x float> %f32, <2 x double> %f64, <2 x half> %f16) #0 {
 ; CHECK-LABEL: @denormal_input_preserve_sign_vector_fcmp_ult_smallest_normalized(
-; CHECK-NEXT:    [[F32_FABS:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[F32:%.*]])
-; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp ult <2 x float> [[F32_FABS]], <float 0x3810000000000000, float 0x3810000000000000>
+; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp ueq <2 x float> [[F32:%.*]], zeroinitializer
 ; CHECK-NEXT:    store volatile <2 x i1> [[CMPF32]], ptr @var, align 4
-; CHECK-NEXT:    [[F64_FABS:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[F64:%.*]])
-; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp ult <2 x double> [[F64_FABS]], <double 0x10000000000000, double 0x10000000000000>
+; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp ueq <2 x double> [[F64:%.*]], zeroinitializer
 ; CHECK-NEXT:    store volatile <2 x i1> [[CMPF64]], ptr @var, align 4
-; CHECK-NEXT:    [[F16_FABS:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[F16:%.*]])
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp ult <2 x half> [[F16_FABS]], <half 0xH0400, half 0xH0400>
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp ueq <2 x half> [[F16:%.*]], zeroinitializer
 ; CHECK-NEXT:    store volatile <2 x i1> [[CMPF16]], ptr @var, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -239,14 +214,11 @@ define void @denormal_input_preserve_sign_vector_fcmp_ult_smallest_normalized(<2
 ; https://alive2.llvm.org/ce/z/mpduXS
 define void @denormal_input_positive_zero_fcmp_olt_smallest_normalized(float %f32, double %f64, half %f16) #1 {
 ; CHECK-LABEL: @denormal_input_positive_zero_fcmp_olt_smallest_normalized(
-; CHECK-NEXT:    [[F32_FABS:%.*]] = call float @llvm.fabs.f32(float [[F32:%.*]])
-; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp olt float [[F32_FABS]], 0x3810000000000000
+; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp oeq float [[F32:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF32]], ptr @var, align 4
-; CHECK-NEXT:    [[F64_FABS:%.*]] = call double @llvm.fabs.f64(double [[F64:%.*]])
-; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp olt double [[F64_FABS]], 0x10000000000000
+; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp oeq double [[F64:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF64]], ptr @var, align 4
-; CHECK-NEXT:    [[F16_FABS:%.*]] = call half @llvm.fabs.f16(half [[F16:%.*]])
-; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp olt half [[F16_FABS]], 0xH0400
+; CHECK-NEXT:    [[CMPF16:%.*]] = fcmp oeq half [[F16:%.*]], 0xH0000
 ; CHECK-NEXT:    store volatile i1 [[CMPF16]], ptr @var, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -295,8 +267,7 @@ define void @denormal_input_ieee(float %f32, double %f64, half %f16) #2 {
 ; Only f32 case should fold.
 define void @denormal_input_preserve_sign_f32_only(float %f32, double %f64, half %f16) #3 {
 ; CHECK-LABEL: @denormal_input_preserve_sign_f32_only(
-; CHECK-NEXT:    [[F32_FABS:%.*]] = call float @llvm.fabs.f32(float [[F32:%.*]])
-; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp olt float [[F32_FABS]], 0x3810000000000000
+; CHECK-NEXT:    [[CMPF32:%.*]] = fcmp oeq float [[F32:%.*]], 0.000000e+00
 ; CHECK-NEXT:    store volatile i1 [[CMPF32]], ptr @var, align 4
 ; CHECK-NEXT:    [[F64_FABS:%.*]] = call double @llvm.fabs.f64(double [[F64:%.*]])
 ; CHECK-NEXT:    [[CMPF64:%.*]] = fcmp olt double [[F64_FABS]], 0x10000000000000
