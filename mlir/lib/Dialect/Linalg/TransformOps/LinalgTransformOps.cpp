@@ -931,7 +931,7 @@ transform::ScalarizeOp::applyToOne(linalg::LinalgOp target,
   if (failed(maybeTilingResult))
     return DiagnosedSilenceableFailure(reportUnknownTransformError(target));
 
-  results.push_back(maybeTilingResult->tiledOp);
+  results.append(maybeTilingResult->tiledOps);
   return DiagnosedSilenceableFailure(success());
 }
 
@@ -1251,7 +1251,7 @@ transform::TileOp::apply(TransformResults &transformResults,
       rewriter.replaceOp(linalgOp,
                          maybeTilingResult->loops.front()->getResults());
 
-    tiled.push_back(maybeTilingResult->tiledOp);
+    tiled.append(maybeTilingResult->tiledOps);
     for (const auto &en2 : llvm::enumerate(maybeTilingResult->loops))
       loops[en2.index()].push_back(en2.value());
   }
@@ -1609,7 +1609,7 @@ transform::TileToScfForOp::apply(TransformResults &transformResults,
 
     rewriter.replaceOp(tilingInterfaceOp, tilingResult->replacements);
 
-    tiled.push_back(tilingResult->tiledOp);
+    tiled.append(tilingResult->tiledOps);
     for (const auto &en2 : llvm::enumerate(tilingResult->loops))
       loops[en2.index()].push_back(en2.value());
   }
