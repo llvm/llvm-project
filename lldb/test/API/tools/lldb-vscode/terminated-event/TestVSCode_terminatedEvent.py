@@ -49,8 +49,6 @@ class TestVSCode_terminatedEvent(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertTrue(statistics['totalDebugInfoEnabled'] > 0)
         self.assertTrue(statistics['totalModuleCountHasDebugInfo'] > 0)
 
-        self.assertIsNotNone(statistics['memory'])
-
         # lldb-vscode debugs one target at a time
         target = json.loads(statistics['targets'])[0]
         self.assertTrue(target['totalBreakpointResolveTime'] > 0)
