@@ -1108,12 +1108,10 @@ void UnwrappedLineParser::parsePPDirective() {
     parsePPIf(/*IfDef=*/true);
     break;
   case tok::pp_else:
-    parsePPElse();
-    break;
   case tok::pp_elifdef:
   case tok::pp_elifndef:
   case tok::pp_elif:
-    parsePPElIf();
+    parsePPElse();
     break;
   case tok::pp_endif:
     parsePPEndIf();
@@ -1222,8 +1220,6 @@ void UnwrappedLineParser::parsePPElse() {
   parsePPUnknown();
   ++PPBranchLevel;
 }
-
-void UnwrappedLineParser::parsePPElIf() { parsePPElse(); }
 
 void UnwrappedLineParser::parsePPEndIf() {
   conditionalCompilationEnd();
