@@ -69,6 +69,9 @@ static StructuredData::ObjectSP ParseJSONValue(json::Value &value) {
   if (auto d = value.getAsNumber())
     return std::make_shared<StructuredData::Float>(*d);
 
+  if (auto n = value.getAsNull())
+    return std::make_shared<StructuredData::Null>();
+
   return StructuredData::ObjectSP();
 }
 
