@@ -507,6 +507,9 @@ void populateFunctionOpInterfaceTypeConversionPattern(
                                                    patterns, converter);
 }
 
+void populateAnyFunctionOpInterfaceTypeConversionPattern(
+    RewritePatternSet &patterns, TypeConverter &converter);
+
 //===----------------------------------------------------------------------===//
 // Conversion PatternRewriter
 //===----------------------------------------------------------------------===//
