@@ -104,6 +104,8 @@ enum CPUKind {
   CK_Tigerlake,
   CK_SapphireRapids,
   CK_Alderlake,
+  CK_Raptorlake,
+  CK_Meteorlake,
   CK_KNL,
   CK_KNM,
   CK_Lakemont,

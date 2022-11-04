@@ -705,6 +705,7 @@ X86 Support in Clang
   * Support intrinsic of ``_mm(256)_cvtneobf16_ps``.
   * Support intrinsic of ``_mm(256)_cvtneoph_ps``.
   * Support intrinsic of ``_mm(256)_cvtneps_avx_pbh``.
+- ``-march=raptorlake`` and ``-march=meteorlake`` are now supported.
 
 WebAssembly Support in Clang
 ----------------------------
