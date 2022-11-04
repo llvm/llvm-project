@@ -1364,7 +1364,7 @@ void SIRegisterInfo::buildSpillLoadStore(
     // TODO: Clobbering SCC is not necessary for scratch instructions in the
     // entry.
     if (RS) {
-      SOffset = RS->scavengeRegister(&AMDGPU::SGPR_32RegClass, MI, 0, false);
+      SOffset = RS->scavengeRegisterBackwards(AMDGPU::SGPR_32RegClass, MI, false, 0, false);
 
       // Piggy back on the liveness scan we just did see if SCC is dead.
       CanClobberSCC = !RS->isRegUsed(AMDGPU::SCC);
@@ -1385,7 +1385,7 @@ void SIRegisterInfo::buildSpillLoadStore(
       UseVGPROffset = true;
 
       if (RS) {
-        TmpOffsetVGPR = RS->scavengeRegister(&AMDGPU::VGPR_32RegClass, MI, 0);
+        TmpOffsetVGPR = RS->scavengeRegisterBackwards(AMDGPU::VGPR_32RegClass, MI, false, 0);
       } else {
         assert(LiveRegs);
         for (MCRegister Reg : AMDGPU::VGPR_32RegClass) {
@@ -2249,7 +2249,8 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         // Convert to a swizzled stack address by scaling by the wave size.
         // In an entry function/kernel the offset is already swizzled.
         bool IsSALU = isSGPRClass(TII->getOpRegClass(*MI, FIOperandNum));
-        bool LiveSCC = RS->isRegUsed(AMDGPU::SCC);
+        bool LiveSCC =
+            RS->isRegUsed(AMDGPU::SCC) && !MI->definesRegister(AMDGPU::SCC);
         const TargetRegisterClass *RC = IsSALU && !LiveSCC
                                             ? &AMDGPU::SReg_32RegClass
                                             : &AMDGPU::VGPR_32RegClass;
