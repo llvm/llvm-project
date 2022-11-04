@@ -13,9 +13,9 @@ build set up. To build an example, create a directory named `build` in the
 example's directory:
 
 ```bash
-$> cd <example directory>
-$> mkdir build
-$> cd build
+cd <example directory>
+mkdir build
+cd build
 ```
 
 Each example can be built to use the libc in either
@@ -59,7 +59,7 @@ have installed them, you have to inform CMake that we are linking against the
 full libc as follows:
 
 ```bash
-cmake ../ -G <GEN> -DLIBC_FULLBUILD=ON  \
+cmake ../ -G <GEN> -DLIBC_FULLBUILD=ON    \
   -DCMAKE_SYSROOT=<SYSROOT>               \
   -DCMAKE_C_COMPILER=<SYSROOT>/bin/clang  \
   -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
