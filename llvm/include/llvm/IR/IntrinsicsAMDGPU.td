@@ -1723,31 +1723,31 @@ def int_amdgcn_mulhi_u24 : Intrinsic<[llvm_i32_ty],
 
 let Properties = [SDNPMemOperand] in {
 
-  // T @llvm.amdgcn.s.mov.from.global(i32 immarg sgpr, i32 m0)
+  // T @llvm.amdgcn.s.mov.from.global(i16 immarg sgpr, i32 m0)
   //
   // T must be i32 or i64.
   def int_amdgcn_s_mov_from_global : Intrinsic<
-    [llvm_anyint_ty], [llvm_i8_ty, llvm_i32_ty],
+    [llvm_anyint_ty], [llvm_i16_ty, llvm_i32_ty],
     [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrReadMem,
      /* Default attributes except for NoSync: */
      IntrNoCallback, IntrNoFree, IntrWillReturn]
   >;
 
-  // void @llvm.amdgcn.s.mov.to.global(i32 immarg sgpr, T data, i32 m0)
+  // void @llvm.amdgcn.s.mov.to.global(i16 immarg sgpr, T data, i32 m0)
   //
   // T must be i32 or i64.
   def int_amdgcn_s_mov_to_global : Intrinsic<
-    [], [llvm_i8_ty, llvm_anyint_ty, llvm_i32_ty],
+    [], [llvm_i16_ty, llvm_anyint_ty, llvm_i32_ty],
     [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrWriteMem,
      /* Default attributes except for NoSync: */
      IntrNoCallback, IntrNoFree, IntrWillReturn]
   >;
 
-  // T @llvm.amdgcn.s.swap.to.global(i32 immarg sgpr, T data, i32 m0)
+  // T @llvm.amdgcn.s.swap.to.global(i16 immarg sgpr, T data, i32 m0)
   //
   // T must be i32.
   def int_amdgcn_s_swap_to_global : Intrinsic<
-    [llvm_anyint_ty], [llvm_i8_ty, LLVMMatchType<0>, llvm_i32_ty],
+    [llvm_anyint_ty], [llvm_i16_ty, LLVMMatchType<0>, llvm_i32_ty],
     [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly,
      /* Default attributes except for NoSync: */
      IntrNoCallback, IntrNoFree, IntrWillReturn]

@@ -9,7 +9,7 @@ define amdgpu_cs i32 @test32_constant_all() {
 ; CHECK-NEXT:    s_movk_i32 m0, 0x500
 ; CHECK-NEXT:    s_swap_to_global_b32 s102, s0
 ; CHECK-NEXT:    ; return to shader part epilog
-  %r = call i32 @llvm.amdgcn.s.swap.to.global.i32(i8 102, i32 0, i32 1280)
+  %r = call i32 @llvm.amdgcn.s.swap.to.global.i32(i16 102, i32 0, i32 1280)
   ret i32 %r
 }
 
@@ -19,7 +19,7 @@ define amdgpu_cs i32 @test32_uniform_all(i32 inreg %x, i32 inreg %m0) {
 ; CHECK-NEXT:    s_mov_b32 m0, s1
 ; CHECK-NEXT:    s_swap_to_global_b32 s9, s0
 ; CHECK-NEXT:    ; return to shader part epilog
-  %r = call i32 @llvm.amdgcn.s.swap.to.global.i32(i8 9, i32 %x, i32 %m0)
+  %r = call i32 @llvm.amdgcn.s.swap.to.global.i32(i16 9, i32 %x, i32 %m0)
   ret i32 %r
 }
 
@@ -41,8 +41,8 @@ define amdgpu_cs i32 @test32_divergent_all(i32 %x, i32 %m0) {
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GISEL-NEXT:    s_swap_to_global_b32 s9, s0
 ; GISEL-NEXT:    ; return to shader part epilog
-  %r = call i32 @llvm.amdgcn.s.swap.to.global.i32(i8 9, i32 %x, i32 %m0)
+  %r = call i32 @llvm.amdgcn.s.swap.to.global.i32(i16 9, i32 %x, i32 %m0)
   ret i32 %r
 }
 
-declare i32 @llvm.amdgcn.s.swap.to.global.i32(i8, i32, i32)
+declare i32 @llvm.amdgcn.s.swap.to.global.i32(i16, i32, i32)

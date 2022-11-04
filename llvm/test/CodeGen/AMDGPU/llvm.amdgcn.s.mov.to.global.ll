@@ -10,9 +10,9 @@ define amdgpu_cs void @test32_constant_all() {
 ; CHECK-NEXT:    s_mov_to_global_b32 s103, 1
 ; CHECK-NEXT:    s_mov_to_global_b32 s104, 0xfffff
 ; CHECK-NEXT:    s_endpgm
-  call void @llvm.amdgcn.s.mov.to.global.i32(i8 102, i32 0, i32 1280)
-  call void @llvm.amdgcn.s.mov.to.global.i32(i8 103, i32 1, i32 1280)
-  call void @llvm.amdgcn.s.mov.to.global.i32(i8 104, i32 1048575, i32 1280)
+  call void @llvm.amdgcn.s.mov.to.global.i32(i16 102, i32 0, i32 1280)
+  call void @llvm.amdgcn.s.mov.to.global.i32(i16 103, i32 1, i32 1280)
+  call void @llvm.amdgcn.s.mov.to.global.i32(i16 104, i32 1048575, i32 1280)
   ret void
 }
 
@@ -28,10 +28,10 @@ define amdgpu_cs void @test64_constant_all() {
 ; CHECK-NEXT:    s_mov_to_global_b64 s[16:17], s[0:1]
 ; CHECK-NEXT:    s_mov_to_global_b64 s[18:19], s[2:3]
 ; CHECK-NEXT:    s_endpgm
-  call void @llvm.amdgcn.s.mov.to.global.i64(i8 12, i64 0, i32 1280)
-  call void @llvm.amdgcn.s.mov.to.global.i64(i8 14, i64 1, i32 1280)
-  call void @llvm.amdgcn.s.mov.to.global.i64(i8 16, i64 1048575, i32 1280)
-  call void @llvm.amdgcn.s.mov.to.global.i64(i8 18, i64 4294967296, i32 1280)
+  call void @llvm.amdgcn.s.mov.to.global.i64(i16 12, i64 0, i32 1280)
+  call void @llvm.amdgcn.s.mov.to.global.i64(i16 14, i64 1, i32 1280)
+  call void @llvm.amdgcn.s.mov.to.global.i64(i16 16, i64 1048575, i32 1280)
+  call void @llvm.amdgcn.s.mov.to.global.i64(i16 18, i64 4294967296, i32 1280)
   ret void
 }
 
@@ -41,7 +41,7 @@ define amdgpu_cs void @test32_uniform_all(i32 inreg %m0, i32 inreg %x) {
 ; CHECK-NEXT:    s_mov_b32 m0, s0
 ; CHECK-NEXT:    s_mov_to_global_b32 s9, s1
 ; CHECK-NEXT:    s_endpgm
-  call void @llvm.amdgcn.s.mov.to.global.i32(i8 9, i32 %x, i32 %m0)
+  call void @llvm.amdgcn.s.mov.to.global.i32(i16 9, i32 %x, i32 %m0)
   ret void
 }
 
@@ -61,7 +61,7 @@ define amdgpu_cs void @test64_uniform_all(i32 inreg %m0, i64 inreg %x) {
 ; GISEL-NEXT:    s_mov_b32 m0, s0
 ; GISEL-NEXT:    s_mov_to_global_b64 s[8:9], s[4:5]
 ; GISEL-NEXT:    s_endpgm
-  call void @llvm.amdgcn.s.mov.to.global.i64(i8 8, i64 %x, i32 %m0)
+  call void @llvm.amdgcn.s.mov.to.global.i64(i16 8, i64 %x, i32 %m0)
   ret void
 }
 
@@ -83,7 +83,7 @@ define amdgpu_cs void @test32_divergent_all(i32 %m0, i32 %x) {
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GISEL-NEXT:    s_mov_to_global_b32 s9, s0
 ; GISEL-NEXT:    s_endpgm
-  call void @llvm.amdgcn.s.mov.to.global.i32(i8 9, i32 %x, i32 %m0)
+  call void @llvm.amdgcn.s.mov.to.global.i32(i16 9, i32 %x, i32 %m0)
   ret void
 }
 
@@ -107,9 +107,9 @@ define amdgpu_cs void @test64_divergent_all(i32 %m0, i64 %x) {
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GISEL-NEXT:    s_mov_to_global_b64 s[8:9], s[0:1]
 ; GISEL-NEXT:    s_endpgm
-  call void @llvm.amdgcn.s.mov.to.global.i64(i8 8, i64 %x, i32 %m0)
+  call void @llvm.amdgcn.s.mov.to.global.i64(i16 8, i64 %x, i32 %m0)
   ret void
 }
 
-declare void @llvm.amdgcn.s.mov.to.global.i32(i8, i32, i32)
-declare void @llvm.amdgcn.s.mov.to.global.i64(i8, i64, i32)
+declare void @llvm.amdgcn.s.mov.to.global.i32(i16, i32, i32)
+declare void @llvm.amdgcn.s.mov.to.global.i64(i16, i64, i32)

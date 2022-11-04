@@ -1088,12 +1088,12 @@ def DELAY_FLAG : Operand <i32> {
 
 // Global register references are represented as immediate operands but printed
 // and parsed like registers.
-def globalSReg32imm : Operand<i8> {
+def globalSReg32imm : Operand<i16> {
   let ParserMatchClass = GlobalSReg32ImmClass;
   let PrintMethod = "printGlobalSReg32ImmOperand";
 }
 
-def globalSReg64imm : Operand<i8> {
+def globalSReg64imm : Operand<i16> {
   let ParserMatchClass = GlobalSReg64ImmClass;
   let PrintMethod = "printGlobalSReg64ImmOperand";
 }

@@ -8,7 +8,7 @@ define amdgpu_cs i32 @test32_constant_all() {
 ; CHECK-NEXT:    s_movk_i32 m0, 0x500
 ; CHECK-NEXT:    s_mov_from_global_b32 s0, s104
 ; CHECK-NEXT:    ; return to shader part epilog
-  %a = call i32 @llvm.amdgcn.s.mov.from.global.i32(i8 104, i32 1280)
+  %a = call i32 @llvm.amdgcn.s.mov.from.global.i32(i16 104, i32 1280)
   ret i32 %a
 }
 
@@ -18,7 +18,7 @@ define amdgpu_cs i64 @test64_constant_all() {
 ; CHECK-NEXT:    s_movk_i32 m0, 0x500
 ; CHECK-NEXT:    s_mov_from_global_b64 s[0:1], s[104:105]
 ; CHECK-NEXT:    ; return to shader part epilog
-  %a = call i64 @llvm.amdgcn.s.mov.from.global.i64(i8 104, i32 1280)
+  %a = call i64 @llvm.amdgcn.s.mov.from.global.i64(i16 104, i32 1280)
   ret i64 %a
 }
 
@@ -28,7 +28,7 @@ define amdgpu_cs i32 @test32_uniform_m0(i32 inreg %m0) {
 ; CHECK-NEXT:    s_mov_b32 m0, s0
 ; CHECK-NEXT:    s_mov_from_global_b32 s0, s10
 ; CHECK-NEXT:    ; return to shader part epilog
-  %a = call i32 @llvm.amdgcn.s.mov.from.global.i32(i8 10, i32 %m0)
+  %a = call i32 @llvm.amdgcn.s.mov.from.global.i32(i16 10, i32 %m0)
   ret i32 %a
 }
 
@@ -48,7 +48,7 @@ define amdgpu_cs i64 @test64_divergent_m0(i32 %m0) {
 ; GISEL-NEXT:    v_readfirstlane_b32 m0, v0
 ; GISEL-NEXT:    s_mov_from_global_b64 s[0:1], s[10:11]
 ; GISEL-NEXT:    ; return to shader part epilog
-  %a = call i64 @llvm.amdgcn.s.mov.from.global.i64(i8 10, i32 %m0)
+  %a = call i64 @llvm.amdgcn.s.mov.from.global.i64(i16 10, i32 %m0)
   ret i64 %a
 }
 
@@ -65,13 +65,13 @@ define amdgpu_cs i32 @test_multiple_uses(i32 inreg %m0a, i32 inreg %m0b) {
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_xor_b32 s0, s0, s1
 ; CHECK-NEXT:    ; return to shader part epilog
-  %a = call i32 @llvm.amdgcn.s.mov.from.global.i32(i8 0, i32 %m0a)
-  %b = call i32 @llvm.amdgcn.s.mov.from.global.i32(i8 3, i32 %m0a)
-  %c = call i32 @llvm.amdgcn.s.mov.from.global.i32(i8 4, i32 %m0b)
+  %a = call i32 @llvm.amdgcn.s.mov.from.global.i32(i16 0, i32 %m0a)
+  %b = call i32 @llvm.amdgcn.s.mov.from.global.i32(i16 3, i32 %m0a)
+  %c = call i32 @llvm.amdgcn.s.mov.from.global.i32(i16 4, i32 %m0b)
   %r.0 = xor i32 %a, %b
   %r.1 = xor i32 %r.0, %c
   ret i32 %r.1
 }
 
-declare i32 @llvm.amdgcn.s.mov.from.global.i32(i8, i32)
-declare i64 @llvm.amdgcn.s.mov.from.global.i64(i8, i32)
+declare i32 @llvm.amdgcn.s.mov.from.global.i32(i16, i32)
+declare i64 @llvm.amdgcn.s.mov.from.global.i64(i16, i32)

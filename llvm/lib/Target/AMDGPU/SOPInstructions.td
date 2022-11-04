@@ -365,25 +365,25 @@ let SubtargetPredicate = isGFX12Plus, maybeAtomic = 1, Uses = [M0] in {
 let mayLoad = 1 in {
 def S_MOV_FROM_GLOBAL_B32 : SOP1_Pseudo <"s_mov_from_global_b32",
     (outs SReg_32:$sdst), (ins globalSReg32imm:$src0), "$sdst, $src0",
-    [(set i32:$sdst, (int_amdgcn_s_mov_from_global (i8 timm:$src0), M0))]>;
+    [(set i32:$sdst, (int_amdgcn_s_mov_from_global timm:$src0, M0))]>;
 def S_MOV_FROM_GLOBAL_B64 : SOP1_Pseudo <"s_mov_from_global_b64",
     (outs SReg_64:$sdst), (ins globalSReg64imm:$src0), "$sdst, $src0",
-    [(set i64:$sdst, (int_amdgcn_s_mov_from_global (i8 timm:$src0), M0))]>;
+    [(set i64:$sdst, (int_amdgcn_s_mov_from_global timm:$src0, M0))]>;
 } // End mayLoad = 1
 
 let mayStore = 1 in {
 def S_MOV_TO_GLOBAL_B32 : SOP1_Pseudo <"s_mov_to_global_b32", (outs),
     (ins globalSReg32imm:$sdst, SSrc_b32:$src0), "$sdst, $src0",
-    [(int_amdgcn_s_mov_to_global (i8 timm:$sdst), i32:$src0, M0)]>;
+    [(int_amdgcn_s_mov_to_global timm:$sdst, i32:$src0, M0)]>;
 def S_MOV_TO_GLOBAL_B64 : SOP1_Pseudo <"s_mov_to_global_b64", (outs),
     (ins globalSReg64imm:$sdst, SSrc_b64:$src0), "$sdst, $src0",
-    [(int_amdgcn_s_mov_to_global (i8 timm:$sdst), i64:$src0, M0)]>;
+    [(int_amdgcn_s_mov_to_global timm:$sdst, i64:$src0, M0)]>;
 } // End mayStore = 1
 
 def S_SWAP_TO_GLOBAL_B32 : SOP1_Pseudo <"s_swap_to_global_b32",
     (outs SReg_32:$src0), (ins globalSReg32imm:$sdst, SReg_32:$src0_tie),
     "$sdst, $src0",
-    [(set i32:$src0, (int_amdgcn_s_swap_to_global (i8 timm:$sdst),
+    [(set i32:$src0, (int_amdgcn_s_swap_to_global timm:$sdst,
                                                   i32:$src0_tie, M0))]> {
   let mayLoad = 1;
   let mayStore = 1;
