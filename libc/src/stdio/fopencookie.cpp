@@ -39,14 +39,18 @@ size_t read_func(File *f, void *data, size_t size) {
                                reinterpret_cast<char *>(data), size);
 }
 
-int seek_func(File *f, long offset, int whence) {
+long seek_func(File *f, long offset, int whence) {
   auto cookie_file = reinterpret_cast<CookieFile *>(f);
   if (cookie_file->ops.seek == nullptr) {
     errno = EINVAL;
     return -1;
   }
   off64_t offset64 = offset;
-  return cookie_file->ops.seek(cookie_file->cookie, &offset64, whence);
+  int result = cookie_file->ops.seek(cookie_file->cookie, &offset64, whence);
+  if (result == 0)
+    return offset64;
+  else
+    return -1;
 }
 
 int close_func(File *f) {
