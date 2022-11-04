@@ -10,6 +10,7 @@
 ! RUN:     -fconvert=little-endian \
 ! RUN:     -ffp-contract=fast \
 ! RUN:     -fno-honor-infinities \
+! RUN:     -fno-honor-nans \
 ! RUN:     -mllvm -print-before-all\
 ! RUN:     -P \
 ! RUN:   | FileCheck %s
@@ -22,5 +23,6 @@
 ! CHECK: "-flarge-sizes"
 ! CHECK: "-ffp-contract=fast"
 ! CHECK: "-menable-no-infs"
+! CHECK: "-menable-no-nans"
 ! CHECK: "-fconvert=little-endian"
 ! CHECK:  "-mllvm" "-print-before-all"
