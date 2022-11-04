@@ -138,6 +138,10 @@ public:
     return indexstore_format_version();
   }
 
+  static unsigned version() {
+    return indexstore_version();
+  }
+
   bool isValid() const { return obj; }
   bool isInvalid() const { return !isValid(); }
   explicit operator bool() const { return isValid(); }
