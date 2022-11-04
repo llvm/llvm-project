@@ -322,8 +322,8 @@ func.func @bar_select_rank(%arg : i32, %arg2 : i32) -> i32 {
 }
 
 // CHECK-LABEL: func @bar_select_type(
-// CHECK-SAME: [[VAL_101:%.*]]: !fir.box<!fir.type<name(param1:i32){fld:!fir.char<1>}>>) -> i32 {
-func.func @bar_select_type(%arg : !fir.box<!fir.type<name(param1:i32){fld:!fir.char<1>}>>) -> i32 {
+// CHECK-SAME: [[VAL_101:%.*]]: !fir.class<!fir.type<name(param1:i32){fld:!fir.char<1>}>>) -> i32 {
+func.func @bar_select_type(%arg : !fir.class<!fir.type<name(param1:i32){fld:!fir.char<1>}>>) -> i32 {
 
 // CHECK: [[VAL_102:%.*]] = arith.constant 1 : i32
 // CHECK: [[VAL_103:%.*]] = arith.constant 2 : i32
@@ -334,8 +334,8 @@ func.func @bar_select_type(%arg : !fir.box<!fir.type<name(param1:i32){fld:!fir.c
   %2 = arith.constant 3 : i32
   %3 = arith.constant 4 : i32
 
-// CHECK: fir.select_type [[VAL_101]] : !fir.box<!fir.type<name(param1:i32){fld:!fir.char<1>}>> [#fir.instance<!fir.int<4>>, ^bb1([[VAL_102]] : i32), #fir.instance<!fir.int<8>>, ^bb2([[VAL_104]] : i32), #fir.subsumed<!fir.int<2>>, ^bb3([[VAL_104]] : i32), #fir.instance<!fir.int<1>>, ^bb4([[VAL_103]] : i32), unit, ^bb5]
-  fir.select_type %arg : !fir.box<!fir.type<name(param1:i32){fld:!fir.char<1>}>> [ #fir.instance<!fir.int<4>>,^bb1(%0:i32), #fir.instance<!fir.int<8>>,^bb2(%2:i32), #fir.subsumed<!fir.int<2>>,^bb3(%2:i32), #fir.instance<!fir.int<1>>,^bb4(%1:i32), unit,^bb5 ]
+// CHECK: fir.select_type [[VAL_101]] : !fir.class<!fir.type<name(param1:i32){fld:!fir.char<1>}>> [#fir.type_is<!fir.int<4>>, ^bb1([[VAL_102]] : i32), #fir.type_is<!fir.int<8>>, ^bb2([[VAL_104]] : i32), #fir.class_is<!fir.int<2>>, ^bb3([[VAL_104]] : i32), #fir.type_is<!fir.int<1>>, ^bb4([[VAL_103]] : i32), unit, ^bb5]
+  fir.select_type %arg : !fir.class<!fir.type<name(param1:i32){fld:!fir.char<1>}>> [ #fir.type_is<!fir.int<4>>,^bb1(%0:i32), #fir.type_is<!fir.int<8>>,^bb2(%2:i32), #fir.class_is<!fir.int<2>>,^bb3(%2:i32), #fir.type_is<!fir.int<1>>,^bb4(%1:i32), unit,^bb5 ]
 
 // CHECK: ^bb1([[VAL_106:%.*]]: i32):
 // CHECK: return [[VAL_106]] : i32
