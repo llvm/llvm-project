@@ -831,18 +831,26 @@ bool LoopInterchangeLegality::currentLimitations() {
   }
 
   Inductions.clear();
-  if (!findInductionAndReductions(InnerLoop, Inductions, nullptr)) {
-    LLVM_DEBUG(
-        dbgs() << "Only inner loops with induction or reduction PHI nodes "
-               << "are supported currently.\n");
-    ORE->emit([&]() {
-      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedPHIInner",
-                                      InnerLoop->getStartLoc(),
-                                      InnerLoop->getHeader())
-             << "Only inner loops with induction or reduction PHI nodes can be"
-                " interchange currently.";
-    });
-    return true;
+  // For multi-level loop nests, make sure that all phi nodes for inner loops
+  // at all levels can be recognized as a induction or reduction phi. Bail out
+  // if a phi node at a certain nesting level cannot be properly recognized.
+  Loop *CurLevelLoop = OuterLoop;
+  while (!CurLevelLoop->getSubLoops().empty()) {
+    // We already made sure that the loop nest is tightly nested.
+    CurLevelLoop = CurLevelLoop->getSubLoops().front();
+    if (!findInductionAndReductions(CurLevelLoop, Inductions, nullptr)) {
+      LLVM_DEBUG(
+          dbgs() << "Only inner loops with induction or reduction PHI nodes "
+                << "are supported currently.\n");
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedPHIInner",
+                                        CurLevelLoop->getStartLoc(),
+                                        CurLevelLoop->getHeader())
+              << "Only inner loops with induction or reduction PHI nodes can be"
+                  " interchange currently.";
+      });
+      return true;
+    }
   }
 
   // TODO: Triangular loops are not handled for now.
