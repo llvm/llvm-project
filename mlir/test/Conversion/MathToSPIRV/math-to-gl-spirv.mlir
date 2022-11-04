@@ -148,7 +148,7 @@ func.func @powf_scalar(%lhs: f32, %rhs: f32) -> f32 {
 // CHECK-LABEL: @powf_vector
 func.func @powf_vector(%lhs: vector<4xf32>, %rhs: vector<4xf32>) -> vector<4xf32> {
   // CHECK: spirv.FOrdLessThan
-  // CHEKC: spirv.GL.FAbs
+  // CHECK: spirv.GL.FAbs
   // CHECK: spirv.GL.Pow %{{.*}}: vector<4xf32>
   // CHECK: spirv.FNegate
   // CHECK: spirv.Select
