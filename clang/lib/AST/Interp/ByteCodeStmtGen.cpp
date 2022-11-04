@@ -182,6 +182,12 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
     return visitBreakStmt(cast<BreakStmt>(S));
   case Stmt::ContinueStmtClass:
     return visitContinueStmt(cast<ContinueStmt>(S));
+  case Stmt::SwitchStmtClass:
+    return visitSwitchStmt(cast<SwitchStmt>(S));
+  case Stmt::CaseStmtClass:
+    return visitCaseStmt(cast<CaseStmt>(S));
+  case Stmt::DefaultStmtClass:
+    return visitDefaultStmt(cast<DefaultStmt>(S));
   case Stmt::NullStmtClass:
     return true;
   default: {
@@ -389,6 +395,84 @@ bool ByteCodeStmtGen<Emitter>::visitContinueStmt(const ContinueStmt *S) {
     return false;
 
   return this->jump(*ContinueLabel);
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
+  const Expr *Cond = S->getCond();
+  PrimType CondT = this->classifyPrim(Cond->getType());
+
+  LabelTy EndLabel = this->getLabel();
+  OptLabelTy DefaultLabel = std::nullopt;
+  unsigned CondVar = this->allocateLocalPrimitive(Cond, CondT, true, false);
+
+  if (const auto *CondInit = S->getInit())
+    if (!visitStmt(CondInit))
+      return false;
+
+  // Initialize condition variable.
+  if (!this->visit(Cond))
+    return false;
+  if (!this->emitSetLocal(CondT, CondVar, S))
+    return false;
+
+  CaseMap CaseLabels;
+  // Create labels and comparison ops for all case statements.
+  for (const SwitchCase *SC = S->getSwitchCaseList(); SC;
+       SC = SC->getNextSwitchCase()) {
+    if (const auto *CS = dyn_cast<CaseStmt>(SC)) {
+      // FIXME: Implement ranges.
+      if (CS->caseStmtIsGNURange())
+        return false;
+      CaseLabels[SC] = this->getLabel();
+
+      const Expr *Value = CS->getLHS();
+      PrimType ValueT = this->classifyPrim(Value->getType());
+
+      // Compare the case statment's value to the switch condition.
+      if (!this->emitGetLocal(CondT, CondVar, CS))
+        return false;
+      if (!this->visit(Value))
+        return false;
+
+      // Compare and jump to the case label.
+      if (!this->emitEQ(ValueT, S))
+        return false;
+      if (!this->jumpTrue(CaseLabels[CS]))
+        return false;
+    } else {
+      assert(!DefaultLabel);
+      DefaultLabel = this->getLabel();
+    }
+  }
+
+  // If none of the conditions above were true, fall through to the default
+  // statement or jump after the switch statement.
+  if (DefaultLabel) {
+    if (!this->jump(*DefaultLabel))
+      return false;
+  } else {
+    if (!this->jump(EndLabel))
+      return false;
+  }
+
+  SwitchScope<Emitter> SS(this, std::move(CaseLabels), EndLabel, DefaultLabel);
+  if (!this->visitStmt(S->getBody()))
+    return false;
+  this->emitLabel(EndLabel);
+  return true;
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitCaseStmt(const CaseStmt *S) {
+  this->emitLabel(CaseLabels[S]);
+  return this->visitStmt(S->getSubStmt());
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitDefaultStmt(const DefaultStmt *S) {
+  this->emitLabel(*DefaultLabel);
+  return this->visitStmt(S->getSubStmt());
 }
 
 namespace clang {
