@@ -48,23 +48,23 @@ body:             |
     ; GFX9-NEXT: $sgpr12 = S_ADD_U32 $sgpr12, $sgpr9, implicit-def $scc, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX9-NEXT: $sgpr13 = S_ADDC_U32 $sgpr13, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr12_sgpr13_sgpr14_sgpr15
     ; GFX9-NEXT: $vcc = IMPLICIT_DEF
-    ; GFX9-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
-    ; GFX9-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
-    ; GFX9-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GFX9-NEXT: $vgpr0 = V_WRITELANE_B32 $vcc_lo, 0, undef $vgpr0, implicit $vcc
-    ; GFX9-NEXT: $vgpr0 = V_WRITELANE_B32 $vcc_hi, 1, $vgpr0, implicit $vcc
-    ; GFX9-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr33, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
-    ; GFX9-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
-    ; GFX9-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
+    ; GFX9-NEXT: $sgpr4_sgpr5 = S_MOV_B64 $exec
+    ; GFX9-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr2
+    ; GFX9-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GFX9-NEXT: $vgpr2 = V_WRITELANE_B32 $vcc_lo, 0, undef $vgpr2, implicit $vcc
+    ; GFX9-NEXT: $vgpr2 = V_WRITELANE_B32 $vcc_hi, 1, $vgpr2, implicit $vcc
+    ; GFX9-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr33, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    ; GFX9-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GFX9-NEXT: $exec = S_MOV_B64 killed $sgpr4_sgpr5, implicit killed $vgpr2
     ; GFX9-NEXT: $vcc = IMPLICIT_DEF
-    ; GFX9-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
-    ; GFX9-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
-    ; GFX9-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GFX9-NEXT: $vgpr0 = V_WRITELANE_B32 $vcc_lo, 0, undef $vgpr0, implicit $vcc
-    ; GFX9-NEXT: $vgpr0 = V_WRITELANE_B32 $vcc_hi, 1, $vgpr0, implicit killed $vcc
-    ; GFX9-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr33, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
-    ; GFX9-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
-    ; GFX9-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
+    ; GFX9-NEXT: $sgpr2_sgpr3 = S_MOV_B64 $exec
+    ; GFX9-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr1
+    ; GFX9-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GFX9-NEXT: $vgpr1 = V_WRITELANE_B32 $vcc_lo, 0, undef $vgpr1, implicit $vcc
+    ; GFX9-NEXT: $vgpr1 = V_WRITELANE_B32 $vcc_hi, 1, $vgpr1, implicit killed $vcc
+    ; GFX9-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr33, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    ; GFX9-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GFX9-NEXT: $exec = S_MOV_B64 killed $sgpr2_sgpr3, implicit killed $vgpr1
     ; GFX9-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GFX9-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
     ; GFX9-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr12_sgpr13_sgpr14_sgpr15, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
@@ -84,23 +84,23 @@ body:             |
     ; GFX10-NEXT: $sgpr96 = S_ADD_U32 $sgpr96, $sgpr9, implicit-def $scc, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
     ; GFX10-NEXT: $sgpr97 = S_ADDC_U32 $sgpr97, 0, implicit-def dead $scc, implicit $scc, implicit-def $sgpr96_sgpr97_sgpr98_sgpr99
     ; GFX10-NEXT: $vcc = IMPLICIT_DEF
-    ; GFX10-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
-    ; GFX10-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
-    ; GFX10-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GFX10-NEXT: $vgpr0 = V_WRITELANE_B32 $vcc_lo, 0, undef $vgpr0, implicit $vcc
-    ; GFX10-NEXT: $vgpr0 = V_WRITELANE_B32 $vcc_hi, 1, $vgpr0, implicit $vcc
-    ; GFX10-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
-    ; GFX10-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
-    ; GFX10-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
+    ; GFX10-NEXT: $sgpr4_sgpr5 = S_MOV_B64 $exec
+    ; GFX10-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr2
+    ; GFX10-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GFX10-NEXT: $vgpr2 = V_WRITELANE_B32 $vcc_lo, 0, undef $vgpr2, implicit $vcc
+    ; GFX10-NEXT: $vgpr2 = V_WRITELANE_B32 $vcc_hi, 1, $vgpr2, implicit $vcc
+    ; GFX10-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    ; GFX10-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GFX10-NEXT: $exec = S_MOV_B64 killed $sgpr4_sgpr5, implicit killed $vgpr2
     ; GFX10-NEXT: $vcc = IMPLICIT_DEF
-    ; GFX10-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
-    ; GFX10-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
-    ; GFX10-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GFX10-NEXT: $vgpr0 = V_WRITELANE_B32 $vcc_lo, 0, undef $vgpr0, implicit $vcc
-    ; GFX10-NEXT: $vgpr0 = V_WRITELANE_B32 $vcc_hi, 1, $vgpr0, implicit killed $vcc
-    ; GFX10-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
-    ; GFX10-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
-    ; GFX10-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
+    ; GFX10-NEXT: $sgpr2_sgpr3 = S_MOV_B64 $exec
+    ; GFX10-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr1
+    ; GFX10-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GFX10-NEXT: $vgpr1 = V_WRITELANE_B32 $vcc_lo, 0, undef $vgpr1, implicit $vcc
+    ; GFX10-NEXT: $vgpr1 = V_WRITELANE_B32 $vcc_hi, 1, $vgpr1, implicit killed $vcc
+    ; GFX10-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 4, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    ; GFX10-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GFX10-NEXT: $exec = S_MOV_B64 killed $sgpr2_sgpr3, implicit killed $vgpr1
     ; GFX10-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GFX10-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
     ; GFX10-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr96_sgpr97_sgpr98_sgpr99, $sgpr33, 0, 0, 0, implicit $exec :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
@@ -114,23 +114,23 @@ body:             |
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: $sgpr33 = S_MOV_B32 0
     ; GFX11-NEXT: $vcc = IMPLICIT_DEF
-    ; GFX11-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
-    ; GFX11-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
-    ; GFX11-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GFX11-NEXT: $vgpr0 = V_WRITELANE_B32 $vcc_lo, 0, undef $vgpr0, implicit $vcc
-    ; GFX11-NEXT: $vgpr0 = V_WRITELANE_B32 $vcc_hi, 1, $vgpr0, implicit $vcc
-    ; GFX11-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
-    ; GFX11-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
-    ; GFX11-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
+    ; GFX11-NEXT: $sgpr4_sgpr5 = S_MOV_B64 $exec
+    ; GFX11-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr2
+    ; GFX11-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr2, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GFX11-NEXT: $vgpr2 = V_WRITELANE_B32 $vcc_lo, 0, undef $vgpr2, implicit $vcc
+    ; GFX11-NEXT: $vgpr2 = V_WRITELANE_B32 $vcc_hi, 1, $vgpr2, implicit $vcc
+    ; GFX11-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr2, $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+    ; GFX11-NEXT: $vgpr2 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GFX11-NEXT: $exec = S_MOV_B64 killed $sgpr4_sgpr5, implicit killed $vgpr2
     ; GFX11-NEXT: $vcc = IMPLICIT_DEF
-    ; GFX11-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
-    ; GFX11-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
-    ; GFX11-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
-    ; GFX11-NEXT: $vgpr0 = V_WRITELANE_B32 $vcc_lo, 0, undef $vgpr0, implicit $vcc
-    ; GFX11-NEXT: $vgpr0 = V_WRITELANE_B32 $vcc_hi, 1, $vgpr0, implicit killed $vcc
-    ; GFX11-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
-    ; GFX11-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
-    ; GFX11-NEXT: $exec = S_MOV_B64 killed $sgpr0_sgpr1, implicit killed $vgpr0
+    ; GFX11-NEXT: $sgpr2_sgpr3 = S_MOV_B64 $exec
+    ; GFX11-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr1
+    ; GFX11-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
+    ; GFX11-NEXT: $vgpr1 = V_WRITELANE_B32 $vcc_lo, 0, undef $vgpr1, implicit $vcc
+    ; GFX11-NEXT: $vgpr1 = V_WRITELANE_B32 $vcc_hi, 1, $vgpr1, implicit killed $vcc
+    ; GFX11-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.0, addrspace 5)
+    ; GFX11-NEXT: $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %fixed-stack.0, align 16, addrspace 5)
+    ; GFX11-NEXT: $exec = S_MOV_B64 killed $sgpr2_sgpr3, implicit killed $vgpr1
     ; GFX11-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $exec
     ; GFX11-NEXT: $exec = S_MOV_B64 3, implicit-def $vgpr0
     ; GFX11-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %fixed-stack.0, align 16, addrspace 5)
