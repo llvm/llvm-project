@@ -436,24 +436,6 @@ function(add_integration_test test_name)
       libc.utils.IntegrationTest.test)
   list(REMOVE_DUPLICATES fq_deps_list)
 
-  # We don't want memory functions to be dependencies on integration tests.
-  # Memory functions should be tested using unittests. The main reason
-  # however is that compiler codegen can emit calls to memory functions. So,
-  # we add them explicitly to the integration test libc.a (see below). Adding
-  # explicit deps on the memory functions can potentially cause duplicate
-  # symbol errors.
-  set(memory_funcs "bcmp;bzero;memcmp;memcpy;memmove;memset")
-  foreach(dep IN LISTS fq_deps_list)
-    get_target_property(name ${dep} ENTRYPOINT_NAME)
-    if(NOT name)
-      continue()
-    endif()
-    list(FIND memory_funcs ${name} loc)
-    if(${loc} GREATER_EQUAL 0)
-      message(FATAL_ERROR "Memory function ${name} cannot be a dependency "
-                          "for integration tests.")
-    endif()
-  endforeach()
   # TODO: Instead of gathering internal object files from entrypoints,
   # collect the object files with public names of entrypoints.
   get_object_files_for_test(
