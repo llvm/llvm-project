@@ -1,3 +1,6 @@
+// AIX reacts on opening directory differently than other systems.
+// UNSUPPORTED: aix
+
 // If response file does not exist, '@file; directive remains unexpanded in
 // command line.
 //
