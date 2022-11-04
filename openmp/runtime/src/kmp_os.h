@@ -456,7 +456,7 @@ enum kmp_mem_fence_type {
 
 // Synchronization primitives
 
-#if KMP_ASM_INTRINS && KMP_OS_WINDOWS
+#if KMP_ASM_INTRINS && KMP_OS_WINDOWS && !(KMP_ARCH_AARCH64 && defined(__GNUC__))
 
 #if KMP_MSVC_COMPAT && !KMP_COMPILER_CLANG
 #pragma intrinsic(InterlockedExchangeAdd)
