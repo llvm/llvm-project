@@ -327,6 +327,22 @@ TEST(CachingOnDiskFileSystemTest, BrokenSymlinkRealFSRecursiveIteration) {
                                             _ddd.path().str()));
 }
 
+TEST(CachingOnDiskFileSystemTest, Exists) {
+  TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  IntrusiveRefCntPtr<cas::CachingOnDiskFileSystem> FS =
+      cantFail(cas::createCachingOnDiskFileSystem(cas::createInMemoryCAS()));
+
+  TempFile File(TestDirectory.path("file"), "", "content");
+  TempLink Link("file", TestDirectory.path("symlink"));
+  TempLink BrokenLink("no_file", TestDirectory.path("broken_symlink"));
+
+  EXPECT_TRUE(FS->exists(TestDirectory.path()));
+  EXPECT_TRUE(FS->exists(File.path()));
+  EXPECT_FALSE(FS->exists(TestDirectory.path("no_file")));
+  EXPECT_TRUE(FS->exists(Link.path()));
+  EXPECT_FALSE(FS->exists(BrokenLink.path()));
+}
+
 TEST(CachingOnDiskFileSystemTest, TrackNewAccesses) {
   TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
   IntrusiveRefCntPtr<cas::CachingOnDiskFileSystem> FS =
@@ -441,6 +457,141 @@ TEST(CachingOnDiskFileSystemTest, TrackNewAccessesStack) {
     EXPECT_FALSE(TreeNode->lookup(sys::path::filename(Temps[2].path())));
     EXPECT_FALSE(TreeNode->lookup(sys::path::filename(Temps[3].path())));
   }
+}
+
+TEST(CachingOnDiskFileSystemTest, TrackNewAccessesExists) {
+  TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  IntrusiveRefCntPtr<cas::CachingOnDiskFileSystem> FS =
+      cantFail(cas::createCachingOnDiskFileSystem(cas::createInMemoryCAS()));
+  ASSERT_FALSE(FS->setCurrentWorkingDirectory(TestDirectory.path()));
+
+  TreePathPrefixMapper Remapper(FS);
+  ASSERT_THAT_ERROR(Remapper.add(MappedPrefix{TestDirectory.path(), "/"}),
+                    Succeeded());
+
+  SmallVector<TempFile> Temps;
+  for (size_t I = 0, E = 4; I != E; ++I)
+    Temps.emplace_back(TestDirectory.path(Twine(I).str()), "", "content");
+
+  auto ContentRef = cantFail(FS->getCAS().storeFromString({}, "content"));
+  auto EmptyRef = cantFail(FS->getCAS().storeFromString({}, ""));
+
+  // Add path only seen by exists (outside any scope)
+  EXPECT_TRUE(FS->exists(Temps[2].path()));
+
+  // Track exists and status (level 0)
+  FS->trackNewAccesses();
+  EXPECT_TRUE(FS->exists(Temps[0].path()));
+  EXPECT_TRUE(FS->status(Temps[1].path()));
+
+  // Track exists and status in reverse (level 1)
+  FS->trackNewAccesses();
+  EXPECT_TRUE(FS->exists(Temps[1].path()));
+  EXPECT_TRUE(FS->status(Temps[0].path()));
+
+  // Track multiple calls at the same tracking scope (level 2)
+  FS->trackNewAccesses();
+  EXPECT_TRUE(FS->status(Temps[0].path()));
+  EXPECT_TRUE(FS->exists(Temps[0].path()));
+  EXPECT_TRUE(FS->exists(Temps[1].path()));
+  EXPECT_TRUE(FS->status(Temps[1].path()));
+
+  // Add path only seen by exists (innermost scope)
+  EXPECT_TRUE(FS->exists(Temps[3].path()));
+
+  // Pop level 2 accesses.
+  {
+    Optional<cas::ObjectProxy> Tree;
+    ASSERT_THAT_ERROR(FS->createTreeFromNewAccesses(
+                            [&](const vfs::CachedDirectoryEntry &Entry) {
+                              return Remapper.map(Entry);
+                            })
+                          .moveInto(Tree),
+                      Succeeded());
+    llvm::cas::TreeSchema Schema(FS->getCAS());
+    Optional<llvm::cas::TreeProxy> TreeNode;
+    ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
+                      Succeeded());
+    auto Node0 = TreeNode->lookup(sys::path::filename(Temps[0].path()));
+    auto Node1 = TreeNode->lookup(sys::path::filename(Temps[1].path()));
+    ASSERT_TRUE(Node0);
+    // exists, status -> needs content
+    EXPECT_EQ(Node0->getRef(), ContentRef);
+    ASSERT_TRUE(Node1);
+    // status, exists -> needs content
+    EXPECT_EQ(Node1->getRef(), ContentRef);
+  }
+
+  // Pop level 1 accesses.
+  {
+    Optional<cas::ObjectProxy> Tree;
+    ASSERT_THAT_ERROR(FS->createTreeFromNewAccesses(
+                            [&](const vfs::CachedDirectoryEntry &Entry) {
+                              return Remapper.map(Entry);
+                            })
+                          .moveInto(Tree),
+                      Succeeded());
+    llvm::cas::TreeSchema Schema(FS->getCAS());
+    Optional<llvm::cas::TreeProxy> TreeNode;
+    ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
+                      Succeeded());
+    auto Node0 = TreeNode->lookup(sys::path::filename(Temps[0].path()));
+    auto Node1 = TreeNode->lookup(sys::path::filename(Temps[1].path()));
+    ASSERT_TRUE(Node0);
+    // status -> needs content
+    EXPECT_EQ(Node0->getRef(), ContentRef);
+    ASSERT_TRUE(Node1);
+    // exists -> no content, even though we previously needed it in level 0
+    EXPECT_EQ(Node1->getRef(), EmptyRef);
+  }
+
+  // Pop level 0 accesses.
+  {
+    Optional<cas::ObjectProxy> Tree;
+    ASSERT_THAT_ERROR(FS->createTreeFromNewAccesses(
+                            [&](const vfs::CachedDirectoryEntry &Entry) {
+                              return Remapper.map(Entry);
+                            })
+                          .moveInto(Tree),
+                      Succeeded());
+    llvm::cas::TreeSchema Schema(FS->getCAS());
+    Optional<llvm::cas::TreeProxy> TreeNode;
+    ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
+                      Succeeded());
+    auto Node0 = TreeNode->lookup(sys::path::filename(Temps[0].path()));
+    auto Node1 = TreeNode->lookup(sys::path::filename(Temps[1].path()));
+    ASSERT_TRUE(Node0);
+    // exists -> no content
+    EXPECT_EQ(Node0->getRef(), EmptyRef);
+    ASSERT_TRUE(Node1);
+    // status -> needs content
+    EXPECT_EQ(Node1->getRef(), ContentRef);
+  }
+
+  // Full tree, always contains contents.
+  Optional<cas::ObjectProxy> Tree;
+  ASSERT_THAT_ERROR(FS->createTreeFromAllAccesses().moveInto(Tree),
+                    Succeeded());
+  llvm::cas::TreeSchema Schema(FS->getCAS());
+  Optional<llvm::cas::TreeProxy> TreeNode;
+  ASSERT_THAT_ERROR(Schema.load(Tree->getRef()).moveInto(TreeNode),
+                    Succeeded());
+
+  unsigned FileCount = 0;
+  cantFail(Schema.walkFileTreeRecursively(
+      FS->getCAS(), *Tree,
+      [&](const cas::NamedTreeEntry &Entry, Optional<cas::TreeProxy>) {
+        if (Entry.isFile()) {
+          FileCount++;
+          EXPECT_EQ(Entry.getRef(), ContentRef)
+              << Entry.getName() << ": expected ref "
+              << FS->getCAS().getID(ContentRef).toString() << "; got "
+              << FS->getCAS().getID(Entry.getRef()).toString();
+        }
+        return Error::success();
+      }));
+
+  EXPECT_EQ(FileCount, 4u);
 }
 
 TEST(CachingOnDiskFileSystemTest, ExcludeFromTacking) {
