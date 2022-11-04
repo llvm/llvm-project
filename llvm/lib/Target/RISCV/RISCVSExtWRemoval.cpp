@@ -122,6 +122,9 @@ static bool isAllUsesReadW(const MachineInstr &OrigMI,
     case RISCV::FCVT_S_WU:
     case RISCV::FCVT_D_W:
     case RISCV::FCVT_D_WU:
+    case RISCV::SEXT_B:
+    case RISCV::SEXT_H:
+    case RISCV::ZEXT_H_RV64:
       continue;
 
     // these overwrite higher input bits, otherwise the lower word of output
@@ -167,8 +170,6 @@ static bool isAllUsesReadW(const MachineInstr &OrigMI,
     case RISCV::CLMUL:
     case RISCV::ORC_B:
     case RISCV::ORN:
-    case RISCV::SEXT_B:
-    case RISCV::SEXT_H:
     case RISCV::SH1ADD:
     case RISCV::SH1ADD_UW:
     case RISCV::SH2ADD:
@@ -176,7 +177,6 @@ static bool isAllUsesReadW(const MachineInstr &OrigMI,
     case RISCV::SH3ADD:
     case RISCV::SH3ADD_UW:
     case RISCV::XNOR:
-    case RISCV::ZEXT_H_RV64:
       addUses(*MI, Worklist, MRI);
       continue;
     default:
