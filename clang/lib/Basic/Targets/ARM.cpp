@@ -705,8 +705,11 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
   // For bare-metal none-eabi.
   if (getTriple().getOS() == llvm::Triple::UnknownOS &&
       (getTriple().getEnvironment() == llvm::Triple::EABI ||
-       getTriple().getEnvironment() == llvm::Triple::EABIHF))
+       getTriple().getEnvironment() == llvm::Triple::EABIHF)) {
     Builder.defineMacro("__ELF__");
+    if (Opts.CPlusPlus)
+      Builder.defineMacro("_GNU_SOURCE");
+  }
 
   // Target properties.
   Builder.defineMacro("__REGISTER_PREFIX__", "");
