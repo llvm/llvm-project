@@ -6,8 +6,7 @@
 //
 //===---------------------------------------------------------------------===//
 
-#if defined (__x86_64__)
-#if !defined(__APPLE__)
+#if defined (__x86_64__) && !defined(__APPLE__)
 
 #include "common.h"
 
@@ -136,7 +135,6 @@ static void hugifyForOldKernel(uint8_t *From, uint8_t *To) {
 
   __munmap(Mem, Size);
 }
-#endif
 
 extern "C" void __bolt_hugify_self_impl() {
   uint8_t *HotStart = (uint8_t *)&__hot_start;
