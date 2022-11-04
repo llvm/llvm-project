@@ -610,6 +610,9 @@ bool AtomicExpand::tryExpandAtomicRMW(AtomicRMWInst *AI) {
   }
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     return lowerAtomicRMWInst(AI);
+  case TargetLoweringBase::AtomicExpansionKind::Expand:
+    TLI->emitExpandAtomicRMW(AI);
+    return true;
   default:
     llvm_unreachable("Unhandled case in tryExpandAtomicRMW");
   }
