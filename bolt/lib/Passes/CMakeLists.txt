@@ -15,6 +15,7 @@ add_llvm_library(LLVMBOLTPasses
   FrameOptimizer.cpp
   HFSort.cpp
   HFSortPlus.cpp
+  Hugify.cpp
   IdenticalCodeFolding.cpp
   IndirectCallPromotion.cpp
   Inliner.cpp
