@@ -270,5 +270,35 @@ TEST(VerifierTest, AttributesWrongContext) {
   EXPECT_TRUE(verifyFunction(*F2));
 }
 
+TEST(VerifierTest, SwitchInst) {
+  LLVMContext C;
+  Module M("M", C);
+  IntegerType *Int32Ty = Type::getInt32Ty(C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), {Int32Ty, Int32Ty},
+                                        /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  BasicBlock *Default = BasicBlock::Create(C, "default", F);
+  BasicBlock *OnOne = BasicBlock::Create(C, "on_one", F);
+  BasicBlock *OnTwo = BasicBlock::Create(C, "on_two", F);
+
+  BasicBlock *Exit = BasicBlock::Create(C, "exit", F);
+
+  BranchInst::Create(Exit, Default);
+  BranchInst::Create(Exit, OnTwo);
+  BranchInst::Create(Exit, OnOne);
+  ReturnInst::Create(C, Exit);
+
+  Value *Cond = F->getArg(0);
+  SwitchInst *Switch = SwitchInst::Create(Cond, Default, 2, Entry);
+  Switch->addCase(ConstantInt::get(Int32Ty, 1), OnOne);
+  Switch->addCase(ConstantInt::get(Int32Ty, 2), OnTwo);
+
+  EXPECT_FALSE(verifyFunction(*F));
+  // set one case value to function argument.
+  Switch->setOperand(2, F->getArg(1));
+  EXPECT_TRUE(verifyFunction(*F));
+}
+
 } // end anonymous namespace
 } // end namespace llvm
