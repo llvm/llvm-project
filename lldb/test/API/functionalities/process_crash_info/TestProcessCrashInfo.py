@@ -37,7 +37,9 @@ class PlatformProcessCrashInfoTestCase(TestBase):
                     patterns=["Process .* launched: .*a.out"])
 
         self.expect('process status --verbose',
-                    patterns=["\"message\".*pointer being freed was not allocated"])
+                    patterns=["Extended Crash Information",
+                              "crash-info annotations",
+                              "pointer being freed was not allocated"])
 
 
     @skipIfAsan # The test process intentionally hits a memory bug.
