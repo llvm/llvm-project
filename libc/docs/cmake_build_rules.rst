@@ -1,5 +1,8 @@
-LLVM libc build rules
-=====================
+.. _cmake_build_rules:
+
+===========================
+The libc CMake build system
+===========================
 
 At the cost of verbosity, we want to keep the build system of LLVM libc
 as simple as possible. We also want to be highly modular with our build
