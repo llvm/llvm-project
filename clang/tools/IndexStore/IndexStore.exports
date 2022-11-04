@@ -4,6 +4,7 @@ indexstore_creation_options_dispose
 indexstore_error_get_description
 indexstore_error_dispose
 indexstore_format_version
+indexstore_version
 indexstore_store_create
 indexstore_store_create_with_options
 indexstore_store_dispose
