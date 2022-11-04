@@ -14,13 +14,6 @@ include "mlir/IR/PatternBase.td"
 include "mlir/Dialect/SPIRV/IR/SPIRVOps.td"
 
 //===----------------------------------------------------------------------===//
-// spirv.Bitcast
-//===----------------------------------------------------------------------===//
-
-def ConvertChainedBitcast : Pat<(SPIRV_BitcastOp (SPIRV_BitcastOp $operand)),
-                                (SPIRV_BitcastOp $operand)>;
-
-//===----------------------------------------------------------------------===//
 // spirv.LogicalNot
 //===----------------------------------------------------------------------===//
 
