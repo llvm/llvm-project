@@ -1,3 +1,6 @@
+.. _source_tree_layout:
+
+============================
 LLVM-libc Source Tree Layout
 ============================
 
