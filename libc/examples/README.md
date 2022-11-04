@@ -35,14 +35,14 @@ in which the static archive is installed with the option
 `LIBC_OVERLAY_ARCHIVE_DIR`:
 
 ```bash
-$> cmake ../ -G <GEN>  \
-   -DLIBC_OVERLAY_ARCHIVE_DIR=<dir in which libc is installed>
+cmake ../ -G <GEN>  \
+  -DLIBC_OVERLAY_ARCHIVE_DIR=<dir in which libc is installed>
 ```
 
 Next, if `Ninja` is used for `<GEN>`, you can build the example as follows:
 
 ```bash
-$> ninja <example name>
+ninja <example name>
 ```
 
 Building against a full libc
@@ -59,10 +59,10 @@ have installed them, you have to inform CMake that we are linking against the
 full libc as follows:
 
 ```bash
-$> cmake ../ -G <GEN> -DLIBC_FULLBUILD=ON  \
-   -DCMAKE_SYSROOT=<SYSROOT>               \
-   -DCMAKE_C_COMPILER=<SYSROOT>/bin/clang  \
-   -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
+cmake ../ -G <GEN> -DLIBC_FULLBUILD=ON  \
+  -DCMAKE_SYSROOT=<SYSROOT>               \
+  -DCMAKE_C_COMPILER=<SYSROOT>/bin/clang  \
+  -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY
 ```
 
 `<SYSROOT>` is the path to the sysroot directory you have set up while
@@ -75,5 +75,5 @@ the example as follows:
 
 
 ```bash
-$> ninja <example name>
+ninja <example name>
 ```
