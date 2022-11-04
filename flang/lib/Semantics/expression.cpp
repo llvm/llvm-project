@@ -2633,6 +2633,18 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
       if (!procRef) {
         analyzer.CheckForNullPointer(
             "in a non-pointer intrinsic assignment statement");
+        const Expr<SomeType> &lhs{analyzer.GetExpr(0)};
+        if (auto dyType{lhs.GetType()};
+            dyType && dyType->IsPolymorphic()) { // 10.2.1.2p1(1)
+          const Symbol *lastWhole0{UnwrapWholeSymbolOrComponentDataRef(lhs)};
+          const Symbol *lastWhole{
+              lastWhole0 ? &lastWhole0->GetUltimate() : nullptr};
+          if (!lastWhole || !IsAllocatable(*lastWhole)) {
+            Say("Left-hand side of assignment may not be polymorphic unless assignment is to an entire allocatable"_err_en_US);
+          } else if (evaluate::IsCoarray(*lastWhole)) {
+            Say("Left-hand side of assignment may not be polymorphic if it is a coarray"_err_en_US);
+          }
+        }
       }
       assignment.emplace(analyzer.MoveExpr(0), analyzer.MoveExpr(1));
       if (procRef) {
