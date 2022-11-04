@@ -241,12 +241,16 @@ public:
 
   bool
   checkCFProtectionReturnSupported(DiagnosticsEngine &Diags) const override {
-    return true;
+    if (CPU == llvm::X86::CK_None || CPU >= llvm::X86::CK_PentiumPro)
+      return true;
+    return TargetInfo::checkCFProtectionReturnSupported(Diags);
   };
 
   bool
   checkCFProtectionBranchSupported(DiagnosticsEngine &Diags) const override {
-    return true;
+    if (CPU == llvm::X86::CK_None || CPU >= llvm::X86::CK_PentiumPro)
+      return true;
+    return TargetInfo::checkCFProtectionBranchSupported(Diags);
   };
 
   virtual bool validateOperandSize(const llvm::StringMap<bool> &FeatureMap,
