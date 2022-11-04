@@ -816,6 +816,12 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Alderlake:
     case 0x97:
     case 0x9a:
+    // Raptorlake:
+    case 0xb7:
+    // Meteorlake:
+    case 0xb5:
+    case 0xaa:
+    case 0xac:
       CPU = "alderlake";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_ALDERLAKE;
