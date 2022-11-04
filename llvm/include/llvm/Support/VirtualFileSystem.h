@@ -653,16 +653,27 @@ class RedirectingFileSystemParser;
 /// \endverbatim
 ///
 /// The roots may be absolute or relative. If relative they will be made
-/// absolute against the current working directory.
+/// absolute against either current working directory or the directory where
+/// the Overlay YAML file is located, depending on the 'root-relative'
+/// configuration.
 ///
 /// All configuration options are optional.
 ///   'case-sensitive': <boolean, default=(true for Posix, false for Windows)>
 ///   'use-external-names': <boolean, default=true>
+///   'root-relative': <string, one of 'cwd' or 'overlay-dir', default='cwd'>
 ///   'overlay-relative': <boolean, default=false>
 ///   'fallthrough': <boolean, default=true, deprecated - use 'redirecting-with'
 ///                   instead>
 ///   'redirecting-with': <string, one of 'fallthrough', 'fallback', or
 ///                        'redirect-only', default='fallthrough'>
+///
+/// To clarify, 'root-relative' option will prepend the current working
+/// directory, or the overlay directory to the 'roots->name' field only if
+/// 'roots->name' is a relative path. On the other hand, when 'overlay-relative'
+/// is set to 'true', external paths will always be prepended with the overlay
+/// directory, even if external paths are not relative paths. The
+/// 'root-relative' option has no interaction with the 'overlay-relative'
+/// option.
 ///
 /// Virtual directories that list their contents are represented as
 /// \verbatim
@@ -745,6 +756,15 @@ public:
     /// Only lookup the redirected path, do not lookup the originally provided
     /// path.
     RedirectOnly
+  };
+
+  /// The type of relative path used by Roots.
+  enum class RootRelativeKind {
+    /// The roots are relative to the current working directory.
+    CWD,
+    /// The roots are relative to the directory where the Overlay YAML file
+    // locates.
+    OverlayDir
   };
 
   /// A single file or directory in the VFS.
@@ -892,6 +912,21 @@ private:
   ErrorOr<Status> getExternalStatus(const Twine &CanonicalPath,
                                     const Twine &OriginalPath) const;
 
+  /// Make \a Path an absolute path.
+  ///
+  /// Makes \a Path absolute using the \a WorkingDir if it is not already.
+  ///
+  /// /absolute/path   => /absolute/path
+  /// relative/../path => <WorkingDir>/relative/../path
+  ///
+  /// \param WorkingDir  A path that will be used as the base Dir if \a Path
+  ///                    is not already absolute.
+  /// \param Path A path that is modified to be an absolute path.
+  /// \returns success if \a path has been made absolute, otherwise a
+  ///          platform-specific error_code.
+  std::error_code makeAbsolute(StringRef WorkingDir,
+                               SmallVectorImpl<char> &Path) const;
+
   // In a RedirectingFileSystem, keys can be specified in Posix or Windows
   // style (or even a mixture of both), so this comparison helper allows
   // slashes (representing a root) to match backslashes (and vice versa).  Note
@@ -912,10 +947,11 @@ private:
   /// The file system to use for external references.
   IntrusiveRefCntPtr<FileSystem> ExternalFS;
 
-  /// If IsRelativeOverlay is set, this represents the directory
-  /// path that should be prefixed to each 'external-contents' entry
-  /// when reading from YAML files.
-  std::string ExternalContentsPrefixDir;
+  /// This represents the directory path that the YAML file is located.
+  /// This will be prefixed to each 'external-contents' if IsRelativeOverlay
+  /// is set. This will also be prefixed to each 'roots->name' if RootRelative
+  /// is set to RootRelativeKind::OverlayDir and the path is relative.
+  std::string OverlayFileDir;
 
   /// @name Configuration
   /// @{
@@ -925,7 +961,7 @@ private:
   /// Currently, case-insensitive matching only works correctly with ASCII.
   bool CaseSensitive = is_style_posix(sys::path::Style::native);
 
-  /// IsRelativeOverlay marks whether a ExternalContentsPrefixDir path must
+  /// IsRelativeOverlay marks whether a OverlayFileDir path must
   /// be prefixed in every 'external-contents' when reading from YAML files.
   bool IsRelativeOverlay = false;
 
@@ -936,6 +972,10 @@ private:
   /// Determines the lookups to perform, as well as their order. See
   /// \c RedirectKind for details.
   RedirectKind Redirection = RedirectKind::Fallthrough;
+
+  /// Determine the prefix directory if the roots are relative paths. See
+  /// \c RootRelativeKind for details.
+  RootRelativeKind RootRelative = RootRelativeKind::CWD;
   /// @}
 
   RedirectingFileSystem(IntrusiveRefCntPtr<FileSystem> ExternalFS);
@@ -986,9 +1026,9 @@ public:
 
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
 
-  void setExternalContentsPrefixDir(StringRef PrefixDir);
+  void setOverlayFileDir(StringRef PrefixDir);
 
-  StringRef getExternalContentsPrefixDir() const;
+  StringRef getOverlayFileDir() const;
 
   /// Sets the redirection kind to \c Fallthrough if true or \c RedirectOnly
   /// otherwise. Will removed in the future, use \c setRedirection instead.

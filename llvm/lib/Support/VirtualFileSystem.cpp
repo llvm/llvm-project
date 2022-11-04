@@ -1347,32 +1347,51 @@ std::error_code RedirectingFileSystem::makeAbsolute(SmallVectorImpl<char> &Path)
   if (llvm::sys::path::is_absolute(Path, llvm::sys::path::Style::posix) ||
       llvm::sys::path::is_absolute(Path,
                                    llvm::sys::path::Style::windows_backslash))
+    // This covers windows absolute path with forward slash as well, as the
+    // forward slashes are treated as path seperation in llvm::path
+    // regardless of what path::Style is used.
     return {};
 
   auto WorkingDir = getCurrentWorkingDirectory();
   if (!WorkingDir)
     return WorkingDir.getError();
 
+  return makeAbsolute(WorkingDir.get(), Path);
+}
+
+std::error_code
+RedirectingFileSystem::makeAbsolute(StringRef WorkingDir,
+                                    SmallVectorImpl<char> &Path) const {
   // We can't use sys::fs::make_absolute because that assumes the path style
   // is native and there is no way to override that.  Since we know WorkingDir
   // is absolute, we can use it to determine which style we actually have and
   // append Path ourselves.
+  if (!WorkingDir.empty() &&
+      !sys::path::is_absolute(WorkingDir, sys::path::Style::posix) &&
+      !sys::path::is_absolute(WorkingDir,
+                              sys::path::Style::windows_backslash)) {
+    return std::error_code();
+  }
   sys::path::Style style = sys::path::Style::windows_backslash;
-  if (sys::path::is_absolute(WorkingDir.get(), sys::path::Style::posix)) {
+  if (sys::path::is_absolute(WorkingDir, sys::path::Style::posix)) {
     style = sys::path::Style::posix;
   } else {
     // Distinguish between windows_backslash and windows_slash; getExistingStyle
     // returns posix for a path with windows_slash.
-    if (getExistingStyle(WorkingDir.get()) !=
-        sys::path::Style::windows_backslash)
+    if (getExistingStyle(WorkingDir) != sys::path::Style::windows_backslash)
       style = sys::path::Style::windows_slash;
   }
 
-  std::string Result = WorkingDir.get();
+  std::string Result = std::string(WorkingDir);
   StringRef Dir(Result);
   if (!Dir.endswith(sys::path::get_separator(style))) {
     Result += sys::path::get_separator(style);
   }
+  // backslashes '\' are legit path charactors under POSIX. Windows APIs
+  // like CreateFile accepts forward slashes '/' as path
+  // separator (even when mixed with backslashes). Therefore,
+  // `Path` should be directly appended to `WorkingDir` without converting
+  // path separator.
   Result.append(Path.data(), Path.size());
   Path.assign(Result.begin(), Result.end());
 
@@ -1479,12 +1498,12 @@ directory_iterator RedirectingFileSystem::dir_begin(const Twine &Dir,
   return Combined;
 }
 
-void RedirectingFileSystem::setExternalContentsPrefixDir(StringRef PrefixDir) {
-  ExternalContentsPrefixDir = PrefixDir.str();
+void RedirectingFileSystem::setOverlayFileDir(StringRef Dir) {
+  OverlayFileDir = Dir.str();
 }
 
-StringRef RedirectingFileSystem::getExternalContentsPrefixDir() const {
-  return ExternalContentsPrefixDir;
+StringRef RedirectingFileSystem::getOverlayFileDir() const {
+  return OverlayFileDir;
 }
 
 void RedirectingFileSystem::setFallthrough(bool Fallthrough) {
@@ -1615,6 +1634,20 @@ class llvm::vfs::RedirectingFileSystemParser {
       return RedirectingFileSystem::RedirectKind::Fallback;
     } else if (Value.equals_insensitive("redirect-only")) {
       return RedirectingFileSystem::RedirectKind::RedirectOnly;
+    }
+    return std::nullopt;
+  }
+
+  Optional<RedirectingFileSystem::RootRelativeKind>
+  parseRootRelativeKind(yaml::Node *N) {
+    SmallString<12> Storage;
+    StringRef Value;
+    if (!parseScalarString(N, Value, Storage))
+      return std::nullopt;
+    if (Value.equals_insensitive("cwd")) {
+      return RedirectingFileSystem::RootRelativeKind::CWD;
+    } else if (Value.equals_insensitive("overlay-dir")) {
+      return RedirectingFileSystem::RootRelativeKind::OverlayDir;
     }
     return std::nullopt;
   }
@@ -1826,7 +1859,7 @@ private:
 
         SmallString<256> FullPath;
         if (FS->IsRelativeOverlay) {
-          FullPath = FS->getExternalContentsPrefixDir();
+          FullPath = FS->getOverlayFileDir();
           assert(!FullPath.empty() &&
                  "External contents prefix directory must exist");
           llvm::sys::path::append(FullPath, Value);
@@ -1883,9 +1916,19 @@ private:
                                         sys::path::Style::windows_backslash)) {
         path_style = sys::path::Style::windows_backslash;
       } else {
-        // Relative VFS root entries are made absolute to the current working
-        // directory, then we can determine the path style from that.
-        auto EC = sys::fs::make_absolute(Name);
+        // Relative VFS root entries are made absolute to either the overlay
+        // directory, or the current working directory, then we can determine
+        // the path style from that.
+        std::error_code EC;
+        if (FS->RootRelative ==
+            RedirectingFileSystem::RootRelativeKind::OverlayDir) {
+          StringRef FullPath = FS->getOverlayFileDir();
+          assert(!FullPath.empty() && "Overlay file directory must exist");
+          EC = FS->makeAbsolute(FullPath, Name);
+          Name = canonicalize(Name);
+        } else {
+          EC = sys::fs::make_absolute(Name);
+        }
         if (EC) {
           assert(NameValueNode && "Name presence should be checked earlier");
           error(
@@ -1897,6 +1940,12 @@ private:
                          ? sys::path::Style::posix
                          : sys::path::Style::windows_backslash;
       }
+      // is::path::is_absolute(Name, sys::path::Style::windows_backslash) will
+      // return true even if `Name` is using forward slashes. Distinguish
+      // between windows_backslash and windows_slash.
+      if (path_style == sys::path::Style::windows_backslash &&
+          getExistingStyle(Name) != sys::path::Style::windows_backslash)
+        path_style = sys::path::Style::windows_slash;
     }
 
     // Remove trailing slash(es), being careful not to remove the root path
@@ -1960,6 +2009,7 @@ public:
         KeyStatusPair("version", true),
         KeyStatusPair("case-sensitive", false),
         KeyStatusPair("use-external-names", false),
+        KeyStatusPair("root-relative", false),
         KeyStatusPair("overlay-relative", false),
         KeyStatusPair("fallthrough", false),
         KeyStatusPair("redirecting-with", false),
@@ -2049,6 +2099,13 @@ public:
           error(I.getValue(), "expected valid redirect kind");
           return false;
         }
+      } else if (Key == "root-relative") {
+        if (auto Kind = parseRootRelativeKind(I.getValue())) {
+          FS->RootRelative = *Kind;
+        } else {
+          error(I.getValue(), "expected valid root-relative kind");
+          return false;
+        }
       } else {
         llvm_unreachable("key missing from Keys");
       }
@@ -2098,13 +2155,13 @@ RedirectingFileSystem::create(std::unique_ptr<MemoryBuffer> Buffer,
     // Example:
     //    -ivfsoverlay dummy.cache/vfs/vfs.yaml
     // yields:
-    //  FS->ExternalContentsPrefixDir => /<absolute_path_to>/dummy.cache/vfs
+    //  FS->OverlayFileDir => /<absolute_path_to>/dummy.cache/vfs
     //
     SmallString<256> OverlayAbsDir = sys::path::parent_path(YAMLFilePath);
     std::error_code EC = llvm::sys::fs::make_absolute(OverlayAbsDir);
     assert(!EC && "Overlay dir final path must be absolute");
     (void)EC;
-    FS->setExternalContentsPrefixDir(OverlayAbsDir);
+    FS->setOverlayFileDir(OverlayAbsDir);
   }
 
   if (!P.parse(Root, FS.get()))
