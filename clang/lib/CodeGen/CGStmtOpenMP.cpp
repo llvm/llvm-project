@@ -8176,12 +8176,14 @@ void CodeGenFunction::EmitOMPTargetUpdateDirective(
 
 /// A 'loop' construct is supposed to be a work distribution construct by
 /// default unless its binding region is the innermost enclosing parallel
-/// region. For now, we are defaulting to work sharing as an experiment to
-/// determine how best to implement 'loop' and its combined forms  especially
-/// as part of the 'target teams loop' directive). Note that this code is
-/// equivalent to how 'for' is implemented (when not using OpenMPIRBuilder).
+/// region, in which case it is a worksharing region. Because we currently
+/// have no way to know if this is true, for now emit them as inlined loops.
 void CodeGenFunction::EmitOMPGenericLoopDirective(
     const OMPLoopDirective &S) {
+#if 0
+  // TODO: A 'loop' construct is worksharing only if its binding region is
+  //       the innermost enclosing parallel region. Until we can determine
+  //       this, 'loop' should be emitted as inlined.
   bool HasLastprivates = false;
   auto &&CodeGen = [this, &S, &HasLastprivates]
                    (CodeGenFunction &CGF, PrePostActionTy &) {
@@ -8199,6 +8201,14 @@ void CodeGenFunction::EmitOMPGenericLoopDirective(
     CGM.getOpenMPRuntime().emitBarrierCall(*this, S.getBeginLoc(), OMPD_loop);
   // Check for outer lastprivate conditional update.
   checkForLastprivateConditionalUpdate(*this, S);
+#else
+  // Just inline the underlying statement for now.
+  auto &&CodeGen = [&S](CodeGenFunction &CGF, PrePostActionTy &Action) {
+    CGF.EmitStmt(cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
+  };
+  OMPLexicalScope Scope(*this, S, OMPD_unknown);
+  CGM.getOpenMPRuntime().emitInlinedDirective(*this, OMPD_loop, CodeGen);
+#endif
 }
 
 /// Equivalent to 'parallel for' except for handling of clauses that don't
