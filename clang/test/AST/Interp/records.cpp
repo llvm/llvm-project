@@ -131,6 +131,12 @@ constexpr C RVOAndParams(const C *c) {
   return C();
 }
 constexpr C RVOAndParamsResult = RVOAndParams(&c);
+
+/// Parameter and return value have different types.
+constexpr C RVOAndParams(int a) {
+  return C();
+}
+constexpr C RVOAndParamsResult2 = RVOAndParams(12);
 #endif
 
 class Bar { // expected-note {{definition of 'Bar' is not complete}} \

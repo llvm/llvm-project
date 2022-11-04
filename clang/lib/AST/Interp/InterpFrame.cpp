@@ -49,6 +49,9 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func, CodePtr RetPC)
   // If the fuction has a This pointer, that one is next.
   // Then follow the actual arguments (but those are handled
   // in getParamPointer()).
+  if (Func->hasRVO())
+    RVOPtr = stackRef<Pointer>(0);
+
   if (Func->hasThisPointer()) {
     if (Func->hasRVO())
       This = stackRef<Pointer>(sizeof(Pointer));
