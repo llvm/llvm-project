@@ -1,4 +1,4 @@
-//===--- QueryDriverDatabase.cpp ---------------------------------*- C++-*-===//
+//===--- SystemIncludeExtractor.cpp ------------------------------*- C++-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -344,7 +344,7 @@ public:
 
     llvm::SmallString<128> Driver(Cmd.CommandLine.front());
     if (llvm::any_of(Driver,
-                       [](char C) { return llvm::sys::path::is_separator(C); }))
+                     [](char C) { return llvm::sys::path::is_separator(C); }))
       // Driver is a not a single executable name but instead a path (either
       // relative or absolute).
       llvm::sys::fs::make_absolute(Cmd.Directory, Driver);
