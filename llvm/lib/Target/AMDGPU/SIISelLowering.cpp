@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -12866,6 +12867,19 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
       if (Ty->isDoubleTy() && Subtarget->hasGFX90AInsts())
         return ReportUnsafeHWInst(AtomicExpansionKind::None);
 
+      // If it is in flat address space, and the type is float, we will try to
+      // expand it, if the target supports global and lds atomic fadd. The
+      // reason we need that is, in the expansion, we emit the check of address
+      // space. If it is in global address space, we emit the global atomic
+      // fadd; if it is in shared address space, we emit the LDS atomic fadd.
+      if (AS == AMDGPUAS::FLAT_ADDRESS && Ty->isFloatTy() &&
+          Subtarget->hasLDSFPAtomicAdd()) {
+        if (RMW->use_empty() && Subtarget->hasAtomicFaddNoRtnInsts())
+          return AtomicExpansionKind::Expand;
+        if (!RMW->use_empty() && Subtarget->hasAtomicFaddRtnInsts())
+          return AtomicExpansionKind::Expand;
+      }
+
       return AtomicExpansionKind::CmpXChg;
     }
 
@@ -13065,4 +13079,141 @@ bool SITargetLowering::checkForPhysRegDependency(
     return true;
   }
   return false;
+}
+
+void SITargetLowering::emitExpandAtomicRMW(AtomicRMWInst *AI) const {
+  assert(Subtarget->hasAtomicFaddInsts() &&
+         "target should have atomic fadd instructions");
+  assert(AI->getType()->isFloatTy() &&
+         AI->getPointerAddressSpace() == AMDGPUAS::FLAT_ADDRESS &&
+         "generic atomicrmw expansion only supports FP32 operand in flat "
+         "address space");
+  assert(AI->getOperation() == AtomicRMWInst::FAdd &&
+         "only fadd is supported for now");
+
+  // Given: atomicrmw fadd float* %addr, float %val ordering
+  //
+  // With this expansion we produce the following code:
+  //   [...]
+  //   %int8ptr = bitcast float* %addr to i8*
+  //   br label %atomicrmw.check.shared
+  //
+  // atomicrmw.check.shared:
+  //   %is.shared = call i1 @llvm.amdgcn.is.shared(i8* %int8ptr)
+  //   br i1 %is.shared, label %atomicrmw.shared, label %atomicrmw.check.private
+  //
+  // atomicrmw.shared:
+  //   %cast.shared = addrspacecast float* %addr to float addrspace(3)*
+  //   %loaded.shared = atomicrmw fadd float addrspace(3)* %cast.shared,
+  //                                   float %val ordering
+  //   br label %atomicrmw.phi
+  //
+  // atomicrmw.check.private:
+  //   %is.private = call i1 @llvm.amdgcn.is.private(i8* %int8ptr)
+  //   br i1 %is.private, label %atomicrmw.private, label %atomicrmw.global
+  //
+  // atomicrmw.private:
+  //   %cast.private = addrspacecast float* %addr to float addrspace(5)*
+  //   %loaded.private = load float, float addrspace(5)* %cast.private
+  //   %val.new = fadd float %loaded.private, %val
+  //   store float %val.new, float addrspace(5)* %cast.private
+  //   br label %atomicrmw.phi
+  //
+  // atomicrmw.global:
+  //   %cast.global = addrspacecast float* %addr to float addrspace(1)*
+  //   %loaded.global = atomicrmw fadd float addrspace(1)* %cast.global,
+  //                                   float %val ordering
+  //   br label %atomicrmw.phi
+  //
+  // atomicrmw.phi:
+  //   %loaded.phi = phi float [ %loaded.shared, %atomicrmw.shared ],
+  //                           [ %loaded.private, %atomicrmw.private ],
+  //                           [ %loaded.global, %atomicrmw.global ]
+  //   br label %atomicrmw.end
+  //
+  // atomicrmw.end:
+  //    [...]
+
+  IRBuilder<> Builder(AI);
+  LLVMContext &Ctx = Builder.getContext();
+
+  BasicBlock *BB = Builder.GetInsertBlock();
+  Function *F = BB->getParent();
+  BasicBlock *ExitBB =
+      BB->splitBasicBlock(Builder.GetInsertPoint(), "atomicrmw.end");
+  BasicBlock *CheckSharedBB =
+      BasicBlock::Create(Ctx, "atomicrmw.check.shared", F, ExitBB);
+  BasicBlock *SharedBB = BasicBlock::Create(Ctx, "atomicrmw.shared", F, ExitBB);
+  BasicBlock *CheckPrivateBB =
+      BasicBlock::Create(Ctx, "atomicrmw.check.private", F, ExitBB);
+  BasicBlock *PrivateBB =
+      BasicBlock::Create(Ctx, "atomicrmw.private", F, ExitBB);
+  BasicBlock *GlobalBB = BasicBlock::Create(Ctx, "atomicrmw.global", F, ExitBB);
+  BasicBlock *PhiBB = BasicBlock::Create(Ctx, "atomicrmw.phi", F, ExitBB);
+
+  Value *Val = AI->getValOperand();
+  Type *ValTy = Val->getType();
+  Value *Addr = AI->getPointerOperand();
+  PointerType *PtrTy = cast<PointerType>(Addr->getType());
+
+  auto CreateNewAtomicRMW = [AI](IRBuilder<> &Builder, Value *Addr,
+                                 Value *Val) -> Value * {
+    AtomicRMWInst *OldVal =
+        Builder.CreateAtomicRMW(AI->getOperation(), Addr, Val, AI->getAlign(),
+                                AI->getOrdering(), AI->getSyncScopeID());
+    SmallVector<std::pair<unsigned, MDNode *>> MDs;
+    AI->getAllMetadata(MDs);
+    for (auto &P : MDs)
+      OldVal->setMetadata(P.first, P.second);
+    return OldVal;
+  };
+
+  std::prev(BB->end())->eraseFromParent();
+  Builder.SetInsertPoint(BB);
+  Value *Int8Ptr = Builder.CreateBitCast(Addr, Builder.getInt8PtrTy());
+  Builder.CreateBr(CheckSharedBB);
+
+  Builder.SetInsertPoint(CheckSharedBB);
+  CallInst *IsShared = Builder.CreateIntrinsic(Intrinsic::amdgcn_is_shared, {},
+                                               {Int8Ptr}, nullptr, "is.shared");
+  Builder.CreateCondBr(IsShared, SharedBB, CheckPrivateBB);
+
+  Builder.SetInsertPoint(SharedBB);
+  Value *CastToLocal = Builder.CreateAddrSpaceCast(
+      Addr,
+      PointerType::getWithSamePointeeType(PtrTy, AMDGPUAS::LOCAL_ADDRESS));
+  Value *LoadedShared = CreateNewAtomicRMW(Builder, CastToLocal, Val);
+  Builder.CreateBr(PhiBB);
+
+  Builder.SetInsertPoint(CheckPrivateBB);
+  CallInst *IsPrivate = Builder.CreateIntrinsic(
+      Intrinsic::amdgcn_is_private, {}, {Int8Ptr}, nullptr, "is.private");
+  Builder.CreateCondBr(IsPrivate, PrivateBB, GlobalBB);
+
+  Builder.SetInsertPoint(PrivateBB);
+  Value *CastToPrivate = Builder.CreateAddrSpaceCast(
+      Addr,
+      PointerType::getWithSamePointeeType(PtrTy, AMDGPUAS::PRIVATE_ADDRESS));
+  Value *LoadedPrivate =
+      Builder.CreateLoad(ValTy, CastToPrivate, "loaded.private");
+  Value *NewVal = Builder.CreateFAdd(LoadedPrivate, Val, "val.new");
+  Builder.CreateStore(NewVal, CastToPrivate);
+  Builder.CreateBr(PhiBB);
+
+  Builder.SetInsertPoint(GlobalBB);
+  Value *CastToGlobal = Builder.CreateAddrSpaceCast(
+      Addr,
+      PointerType::getWithSamePointeeType(PtrTy, AMDGPUAS::GLOBAL_ADDRESS));
+  Value *LoadedGlobal = CreateNewAtomicRMW(Builder, CastToGlobal, Val);
+  Builder.CreateBr(PhiBB);
+
+  Builder.SetInsertPoint(PhiBB);
+  PHINode *Loaded = Builder.CreatePHI(ValTy, 3, "loaded.phi");
+  Loaded->addIncoming(LoadedShared, SharedBB);
+  Loaded->addIncoming(LoadedPrivate, PrivateBB);
+  Loaded->addIncoming(LoadedGlobal, GlobalBB);
+  Builder.CreateBr(ExitBB);
+
+  AI->replaceAllUsesWith(Loaded);
+  AI->eraseFromParent();
 }
