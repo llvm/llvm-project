@@ -9221,14 +9221,8 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
       if (level == eDescriptionLevelVerbose)
         record_decl->dump(llvm_ostrm);
       else {
-        if (auto *cxx_record_decl =
-                llvm::dyn_cast<clang::CXXRecordDecl>(record_decl))
-          cxx_record_decl->print(llvm_ostrm,
-                                 getASTContext().getPrintingPolicy(),
-                                 s->GetIndentLevel());
-        else
-          record_decl->print(llvm_ostrm, getASTContext().getPrintingPolicy(),
-                             s->GetIndentLevel());
+        record_decl->print(llvm_ostrm, getASTContext().getPrintingPolicy(),
+                           s->GetIndentLevel());
       }
     } break;
 
