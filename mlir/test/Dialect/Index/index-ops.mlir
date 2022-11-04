@@ -27,6 +27,12 @@ func.func @binary_ops(%a: index, %b: index) {
   %10 = index.maxs %a, %b
   // CHECK-NEXT: index.maxu %[[A]], %[[B]]
   %11 = index.maxu %a, %b
+  // CHECK-NEXT: index.shl %[[A]], %[[B]]
+  %12 = index.shl %a, %b
+  // CHECK-NEXT: index.shrs %[[A]], %[[B]]
+  %13 = index.shrs %a, %b
+  // CHECK-NEXT: index.shru %[[A]], %[[B]]
+  %14 = index.shru %a, %b
   return
 }
 
