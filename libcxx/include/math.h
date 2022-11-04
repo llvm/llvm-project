@@ -316,6 +316,7 @@ extern "C++" {
 
 #    ifdef signbit
 #      undef signbit
+#    endif // signbit
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI typename std::enable_if<std::is_floating_point<_A1>::value, bool>::type
@@ -337,34 +338,11 @@ inline _LIBCPP_HIDE_FROM_ABI
   return false;
 }
 
-#    elif defined(_LIBCPP_MSVCRT)
-
-template <typename _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename std::enable_if<std::is_floating_point<_A1>::value, bool>::type
-signbit(_A1 __x) _NOEXCEPT {
-  return ::signbit(__x);
-}
-
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI
-    typename std::enable_if< std::is_integral<_A1>::value && std::is_signed<_A1>::value, bool>::type
-    signbit(_A1 __x) _NOEXCEPT {
-  return __x < 0;
-}
-
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI
-    typename std::enable_if< std::is_integral<_A1>::value && !std::is_signed<_A1>::value, bool>::type
-    signbit(_A1) _NOEXCEPT {
-  return false;
-}
-
-#    endif // signbit
-
 // fpclassify
 
 #    ifdef fpclassify
 #      undef fpclassify
+#    endif // fpclassify
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI typename std::enable_if<std::is_floating_point<_A1>::value, int>::type
@@ -377,22 +355,6 @@ inline _LIBCPP_HIDE_FROM_ABI typename std::enable_if<std::is_integral<_A1>::valu
 fpclassify(_A1 __x) _NOEXCEPT {
   return __x == 0 ? FP_ZERO : FP_NORMAL;
 }
-
-#    elif defined(_LIBCPP_MSVCRT)
-
-template <typename _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename std::enable_if<std::is_floating_point<_A1>::value, bool>::type
-fpclassify(_A1 __x) _NOEXCEPT {
-  return ::fpclassify(__x);
-}
-
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename std::enable_if<std::is_integral<_A1>::value, int>::type
-fpclassify(_A1 __x) _NOEXCEPT {
-  return __x == 0 ? FP_ZERO : FP_NORMAL;
-}
-
-#    endif // fpclassify
 
 // isfinite
 
