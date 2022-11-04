@@ -10,6 +10,8 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_BUILTIN_WRAPPERS_H
 #define LLVM_LIBC_SRC_SUPPORT_BUILTIN_WRAPPERS_H
 
+#include "src/__support/CPP/type_traits.h"
+
 namespace __llvm_libc {
 
 // The following overloads are matched based on what is accepted by
@@ -63,6 +65,60 @@ template <typename T> static inline int safe_clz(T val) {
 template <typename T> static inline int unsafe_clz(T val) {
   return __internal::clz(val);
 }
+
+// Add with carry
+template <typename T>
+inline constexpr cpp::enable_if_t<
+    cpp::is_integral_v<T> && cpp::is_unsigned_v<T>, T>
+add_with_carry(T a, T b, T carry_in, T &carry_out) {
+  T tmp = a + carry_in;
+  T sum = b + tmp;
+  carry_out = (sum < b) || (tmp < a);
+  return sum;
+}
+
+#if __has_builtin(__builtin_addc)
+// https://clang.llvm.org/docs/LanguageExtensions.html#multiprecision-arithmetic-builtins
+
+template <>
+inline unsigned char add_with_carry<unsigned char>(unsigned char a,
+                                                   unsigned char b,
+                                                   unsigned char carry_in,
+                                                   unsigned char &carry_out) {
+  return __builtin_addcb(a, b, carry_in, &carry_out);
+}
+
+template <>
+inline unsigned short
+add_with_carry<unsigned short>(unsigned short a, unsigned short b,
+                               unsigned short carry_in,
+                               unsigned short &carry_out) {
+  return __builtin_addcs(a, b, carry_in, &carry_out);
+}
+
+template <>
+inline unsigned int add_with_carry<unsigned int>(unsigned int a, unsigned int b,
+                                                 unsigned int carry_in,
+                                                 unsigned int &carry_out) {
+  return __builtin_addc(a, b, carry_in, &carry_out);
+}
+
+template <>
+inline unsigned long add_with_carry<unsigned long>(unsigned long a,
+                                                   unsigned long b,
+                                                   unsigned long carry_in,
+                                                   unsigned long &carry_out) {
+  return __builtin_addcl(a, b, carry_in, &carry_out);
+}
+
+template <>
+inline unsigned long long
+add_with_carry<unsigned long long>(unsigned long long a, unsigned long long b,
+                                   unsigned long long carry_in,
+                                   unsigned long long &carry_out) {
+  return __builtin_addcll(a, b, carry_in, &carry_out);
+}
+#endif // __has_builtin(__builtin_addc)
 
 } // namespace __llvm_libc
 
