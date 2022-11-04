@@ -517,3 +517,53 @@ func.func @transpose_memref(%input: memref<16x32x64xf32>,
   func.return
 }
 // CHECK-LABEL: func @transpose_memref
+
+// -----
+
+func.func @broadcast_static_sizes(%input: tensor<8x32xf32>,
+                            %init: tensor<8x16x32xf32>) -> tensor<8x16x32xf32> {
+  %bcast = linalg.broadcast
+      ins(%input:tensor<8x32xf32>)
+      outs(%init:tensor<8x16x32xf32>)
+      dimensions = [0, 2]
+  func.return %bcast : tensor<8x16x32xf32>
+}
+// CHECK-LABEL: func @broadcast_static_sizes
+//      CHECK:    linalg.broadcast
+// CHECK-NEXT:    ins
+// CHECK-NEXT:    outs
+// CHECK-NEXT:    dimensions
+
+// -----
+
+func.func @broadcast_with_dynamic_sizes(
+              %input: tensor<8x?xf32>, %init: tensor<8x16x?xf32>)
+              -> tensor<8x16x?xf32> {
+  %bcast = linalg.broadcast
+      ins(%input:tensor<8x?xf32>)
+      outs(%init:tensor<8x16x?xf32>)
+      dimensions = [0, 2]
+  func.return %bcast : tensor<8x16x?xf32>
+}
+// CHECK-LABEL: func @broadcast_with_dynamic_sizes
+//      CHECK:    linalg.broadcast
+// CHECK-NEXT:    ins
+// CHECK-NEXT:    outs
+// CHECK-NEXT:    dimensions
+
+// -----
+
+func.func @broadcast_memref(%input: memref<8x32xf32>,
+                            %init: memref<8x16x32xf32>) {
+  linalg.broadcast
+      ins(%input:memref<8x32xf32>)
+      outs(%init:memref<8x16x32xf32>)
+      dimensions = [0, 2]
+  func.return
+}
+
+// CHECK-LABEL: func @broadcast_memref
+//      CHECK:    linalg.broadcast
+// CHECK-NEXT:    ins
+// CHECK-NEXT:    outs
+// CHECK-NEXT:    dimensions
