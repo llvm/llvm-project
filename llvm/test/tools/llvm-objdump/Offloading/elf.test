@@ -3,15 +3,21 @@
 # RUN: llvm-objdump --offloading %t.bin | FileCheck %s --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 
 ## Check that we can dump an offloading binary inside of an ELF section.
-# RUN: yaml2obj %s -o %t.elf
-# RUN: llvm-objcopy --update-section .llvm.offloading=%t.bin %t.elf
-# RUN: llvm-objdump --offloading %t.elf | FileCheck %s --check-prefixes=CHECK,ELF --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+# RUN: yaml2obj %s -o %t -DTYPE=ET_EXEC
+# RUN: yaml2obj %s -o %t.so -DTYPE=ET_DYN
+# RUN: yaml2obj %s -o %t.o -DTYPE=ET_REL
+# RUN: llvm-objcopy --update-section .llvm.offloading=%t.bin %t
+# RUN: llvm-objcopy --update-section .llvm.offloading=%t.bin %t.so
+# RUN: llvm-objcopy --update-section .llvm.offloading=%t.bin %t.o
+# RUN: llvm-objdump --offloading %t | FileCheck %s --check-prefixes=CHECK,ELF --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+# RUN: llvm-objdump --offloading %t.so | FileCheck %s --check-prefixes=CHECK,ELF --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+# RUN: llvm-objdump --offloading %t.o | FileCheck %s --check-prefixes=CHECK,ELF --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 
 !ELF
 FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB
-  Type:            ET_EXEC
+  Type:            [[TYPE]]
 Sections:
   - Name:            .llvm.offloading
     Type:            SHT_LLVM_OFFLOADING

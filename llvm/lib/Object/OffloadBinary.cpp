@@ -41,6 +41,10 @@ Error extractOffloadFiles(MemoryBufferRef Contents,
     std::unique_ptr<MemoryBuffer> Buffer =
         MemoryBuffer::getMemBuffer(Contents.getBuffer().drop_front(Offset), "",
                                    /*RequiresNullTerminator*/ false);
+    if (!isAddrAligned(Align(OffloadBinary::getAlignment()),
+                       Buffer->getBufferStart()))
+      Buffer = MemoryBuffer::getMemBufferCopy(Buffer->getBuffer(),
+                                              Buffer->getBufferIdentifier());
     auto BinaryOrErr = OffloadBinary::create(*Buffer);
     if (!BinaryOrErr)
       return BinaryOrErr.takeError();
@@ -254,7 +258,9 @@ Error object::extractOffloadBinaries(MemoryBufferRef Buffer,
   switch (Type) {
   case file_magic::bitcode:
     return extractFromBitcode(Buffer, Binaries);
-  case file_magic::elf_relocatable: {
+  case file_magic::elf_relocatable:
+  case file_magic::elf_executable:
+  case file_magic::elf_shared_object: {
     Expected<std::unique_ptr<ObjectFile>> ObjFile =
         ObjectFile::createObjectFile(Buffer, Type);
     if (!ObjFile)
