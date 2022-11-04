@@ -140,6 +140,7 @@
 ! HELP-FC1-NEXT: -mmlir <value>         Additional arguments to forward to MLIR's option processing
 ! HELP-FC1-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! HELP-FC1-NEXT: -module-suffix <suffix> Use <suffix> as the suffix for module files (the default value is `.mod`)
+! HELP-FC1-NEXT: -mreassociate          Allow reassociation transformations for floating-point instructions
 ! HELP-FC1-NEXT: -mrelocation-model <value>
 ! HELP-FC1-NEXT:                        The relocation model to use
 ! HELP-FC1-NEXT: -nocpp                 Disable predefined and command line preprocessor macros

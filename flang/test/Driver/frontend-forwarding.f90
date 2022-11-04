@@ -13,6 +13,7 @@
 ! RUN:     -fno-honor-nans \
 ! RUN:     -fapprox-func \
 ! RUN:     -fno-signed-zeros \
+! RUN:     -fassociative-math \
 ! RUN:     -mllvm -print-before-all\
 ! RUN:     -P \
 ! RUN:   | FileCheck %s
@@ -28,5 +29,6 @@
 ! CHECK: "-menable-no-nans"
 ! CHECK: "-fapprox-func"
 ! CHECK: "-fno-signed-zeros"
+! CHECK: "-mreassociate"
 ! CHECK: "-fconvert=little-endian"
 ! CHECK:  "-mllvm" "-print-before-all"
