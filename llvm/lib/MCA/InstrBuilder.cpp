@@ -30,8 +30,9 @@ char RecycledInstErr::ID = 0;
 InstrBuilder::InstrBuilder(const llvm::MCSubtargetInfo &sti,
                            const llvm::MCInstrInfo &mcii,
                            const llvm::MCRegisterInfo &mri,
-                           const llvm::MCInstrAnalysis *mcia)
-    : STI(sti), MCII(mcii), MRI(mri), MCIA(mcia), FirstCallInst(true),
+                           const llvm::MCInstrAnalysis *mcia,
+                           const mca::InstrumentManager &im)
+    : STI(sti), MCII(mcii), MRI(mri), MCIA(mcia), IM(im), FirstCallInst(true),
       FirstReturnInst(true) {
   const MCSchedModel &SM = STI.getSchedModel();
   ProcResourceMasks.resize(SM.getNumProcResourceKinds());
@@ -509,7 +510,8 @@ Error InstrBuilder::verifyInstrDesc(const InstrDesc &ID,
 }
 
 Expected<const InstrDesc &>
-InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
+InstrBuilder::createInstrDescImpl(const MCInst &MCI,
+                                  const SmallVector<SharedInstrument> &IVec) {
   assert(STI.getSchedModel().hasInstrSchedModel() &&
          "Itineraries are not yet supported!");
 
@@ -519,7 +521,8 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   const MCSchedModel &SM = STI.getSchedModel();
 
   // Then obtain the scheduling class information from the instruction.
-  unsigned SchedClassID = MCDesc.getSchedClass();
+  // Allow InstrumentManager to override and use a different SchedClassID
+  unsigned SchedClassID = IM.getSchedClassID(MCII, MCI, IVec);
   bool IsVariant = SM.getSchedClassDesc(SchedClassID)->isVariant();
 
   // Try to solve variant scheduling classes.
@@ -586,30 +589,39 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   // Now add the new descriptor.
   bool IsVariadic = MCDesc.isVariadic();
   if ((ID->IsRecyclable = !IsVariadic && !IsVariant)) {
-    Descriptors[MCI.getOpcode()] = std::move(ID);
-    return *Descriptors[MCI.getOpcode()];
+    auto DKey = std::make_pair(MCI.getOpcode(), SchedClassID);
+    Descriptors[DKey] = std::move(ID);
+    return *Descriptors[DKey];
   }
 
-  VariantDescriptors[&MCI] = std::move(ID);
-  return *VariantDescriptors[&MCI];
+  auto VDKey = std::make_pair(&MCI, SchedClassID);
+  VariantDescriptors[VDKey] = std::move(ID);
+  return *VariantDescriptors[VDKey];
 }
 
-Expected<const InstrDesc &>
-InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI) {
-  if (Descriptors.find_as(MCI.getOpcode()) != Descriptors.end())
-    return *Descriptors[MCI.getOpcode()];
+Expected<const InstrDesc &> InstrBuilder::getOrCreateInstrDesc(
+    const MCInst &MCI, const SmallVector<SharedInstrument> &IVec) {
+  // Cache lookup using SchedClassID from Instrumentation
+  unsigned SchedClassID = IM.getSchedClassID(MCII, MCI, IVec);
 
-  if (VariantDescriptors.find(&MCI) != VariantDescriptors.end())
-    return *VariantDescriptors[&MCI];
+  auto DKey = std::make_pair(MCI.getOpcode(), SchedClassID);
+  if (Descriptors.find_as(DKey) != Descriptors.end())
+    return *Descriptors[DKey];
 
-  return createInstrDescImpl(MCI);
+  unsigned CPUID = STI.getSchedModel().getProcessorID();
+  SchedClassID = STI.resolveVariantSchedClass(SchedClassID, &MCI, &MCII, CPUID);
+  auto VDKey = std::make_pair(&MCI, SchedClassID);
+  if (VariantDescriptors.find(VDKey) != VariantDescriptors.end())
+    return *VariantDescriptors[VDKey];
+
+  return createInstrDescImpl(MCI, IVec);
 }
 
 STATISTIC(NumVariantInst, "Number of MCInsts that doesn't have static Desc");
 
-Expected<std::unique_ptr<Instruction>>
-InstrBuilder::createInstruction(const MCInst &MCI) {
-  Expected<const InstrDesc &> DescOrErr = getOrCreateInstrDesc(MCI);
+Expected<std::unique_ptr<Instruction>> InstrBuilder::createInstruction(
+    const MCInst &MCI, const SmallVector<SharedInstrument> &IVec) {
+  Expected<const InstrDesc &> DescOrErr = getOrCreateInstrDesc(MCI, IVec);
   if (!DescOrErr)
     return DescOrErr.takeError();
   const InstrDesc &D = *DescOrErr;
