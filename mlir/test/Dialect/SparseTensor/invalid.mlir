@@ -551,6 +551,51 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
 
 // -----
 
+#DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
+  // expected-error@+1 {{Unmatched element type between input tensor and block argument}}
+  sparse_tensor.foreach in %arg0 : tensor<2x4xf64, #DCSR> do {
+    ^bb0(%1: index, %2: index, %v: f32) :
+  }
+  return
+}
+
+// -----
+
+#DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> () {
+  // expected-error@+1 {{Mismatch in number of init arguments and results}}
+  sparse_tensor.foreach in %arg0 init(%arg1) : tensor<2x4xf64, #DCSR>, f32 do {
+    ^bb0(%1: index, %2: index, %v: f32, %r1 : i32) :
+  }
+  return
+}
+
+// -----
+
+#DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> () {
+  // expected-error@+1 {{Mismatch in types of init arguments and results}}
+  %1 = sparse_tensor.foreach in %arg0 init(%arg1) : tensor<2x4xf64, #DCSR>, f32 -> i32 do {
+    ^bb0(%1: index, %2: index, %v: f32, %r0 : f32) :
+  }
+  return
+}
+
+// -----
+
+#DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
+func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> () {
+  // expected-error@+1 {{Mismatch in types of yield values and results}}
+  %1 = sparse_tensor.foreach in %arg0 init(%arg1) : tensor<2x4xf64, #DCSR>, f32 -> f32 do {
+    ^bb0(%1: index, %2: index, %v: f32, %r0 : f32) :
+      sparse_tensor.yield %1 : index
+  }
+  return
+}
+
+// -----
+
 // TODO: a test case with empty xs doesn't work due to some parser issues.
 
 func.func @sparse_sort_x_type( %arg0: index, %arg1: memref<?xf32>) {

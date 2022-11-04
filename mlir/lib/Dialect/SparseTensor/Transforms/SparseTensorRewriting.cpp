@@ -357,7 +357,9 @@ public:
     auto cooBuffer =
         rewriter.create<AllocTensorOp>(loc, cooTp, dstDynSizes).getResult();
     rewriter.create<ForeachOp>(
-        loc, srcTensor, [&](OpBuilder &builder, Location loc, ValueRange args) {
+        loc, srcTensor, llvm::None,
+        [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
+            ValueRange reduc) {
           SmallVector<Value, 4> srcIndices;
           SmallVector<Value, 4> dstIndices;
           for (int64_t i = 0, e = srcTp.getRank(); i < e; i++) {
@@ -366,7 +368,7 @@ public:
           }
           translateIndicesArray(builder, loc, op.getReassociationIndices(),
                                 srcIndices, srcSizes, dstSizes, dstIndices);
-          builder.create<InsertOp>(loc, args.back(), cooBuffer, dstIndices);
+          builder.create<InsertOp>(loc, v, cooBuffer, dstIndices);
           builder.create<sparse_tensor::YieldOp>(loc);
         });
 
@@ -446,7 +448,9 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
       // Build a for op for each input tensor to append new values into the
       // output tensor.
       rewriter.create<ForeachOp>(
-          loc, input, [&](OpBuilder &builder, Location loc, ValueRange args) {
+          loc, input, llvm::None,
+          [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
+              ValueRange reduc) {
             SmallVector<Value, 4> indices;
             for (int64_t i = 0; i < rank; i++) {
               uint64_t dim =
@@ -457,7 +461,7 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
                 idx = builder.create<arith::AddIOp>(loc, idx, offset);
               indices.push_back(idx);
             }
-            builder.create<InsertOp>(loc, args.back(), cooBuffer, indices);
+            builder.create<InsertOp>(loc, v, cooBuffer, indices);
             builder.create<sparse_tensor::YieldOp>(loc);
           });
       // Accumulates the offset. Note that only static-shaped inputs are allowed
@@ -558,12 +562,13 @@ private:
     sizesForTensor(rewriter, sizes, loc, srcTp, src);
     Value dst = allocDenseTensor(rewriter, loc, dstTp, sizes);
 
-    rewriter.create<ForeachOp>(
-        loc, src, [&](OpBuilder &builder, Location loc, ValueRange args) {
-          builder.create<memref::StoreOp>(loc, args.back(), dst,
-                                          args.drop_back());
-          builder.create<sparse_tensor::YieldOp>(loc);
-        });
+    rewriter.create<ForeachOp>(loc, src, llvm::None,
+                               [&](OpBuilder &builder, Location loc,
+                                   ValueRange args, Value v, ValueRange reduc) {
+                                 builder.create<memref::StoreOp>(loc, v, dst,
+                                                                 args);
+                                 builder.create<sparse_tensor::YieldOp>(loc);
+                               });
 
     rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, dstTp, dst);
     return success();
@@ -598,13 +603,15 @@ private:
       tmpCoo =
           rewriter.create<AllocTensorOp>(loc, srcTp, dynSrcSizes).getResult();
       rewriter.create<ForeachOp>(
-          loc, src, [&](OpBuilder &builder, Location loc, ValueRange args) {
+          loc, src, llvm::None,
+          [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
+              ValueRange reduc) {
             SmallVector<Value, 4> indices;
             for (int64_t i = 0, e = srcTp.getRank(); i < e; i++) {
               uint64_t dim = toStoredDim(encSrc, i);
               indices.push_back(args[dim]);
             }
-            builder.create<InsertOp>(loc, args.back(), tmpCoo, indices);
+            builder.create<InsertOp>(loc, v, tmpCoo, indices);
             builder.create<sparse_tensor::YieldOp>(loc);
           });
       src = tmpCoo;
@@ -646,16 +653,18 @@ private:
     getDynamicSizes(dstTp, srcSizes, dynDstSizes);
     Value dst =
         rewriter.create<AllocTensorOp>(loc, dstTp, dynDstSizes).getResult();
-    rewriter.create<ForeachOp>(
-        loc, src, [&](OpBuilder &builder, Location loc, ValueRange args) {
-          SmallVector<Value, 4> indices;
-          for (int64_t i = 0, e = srcTp.getRank(); i < e; i++) {
-            uint64_t dim = toStoredDim(encDst, i);
-            indices.push_back(args[dim]);
-          }
-          builder.create<InsertOp>(loc, args.back(), dst, indices);
-          builder.create<sparse_tensor::YieldOp>(loc);
-        });
+    rewriter.create<ForeachOp>(loc, src, llvm::None,
+                               [&](OpBuilder &builder, Location loc,
+                                   ValueRange args, Value v, ValueRange reduc) {
+                                 SmallVector<Value, 4> indices;
+                                 for (int64_t i = 0, e = srcTp.getRank(); i < e;
+                                      i++) {
+                                   uint64_t dim = toStoredDim(encDst, i);
+                                   indices.push_back(args[dim]);
+                                 }
+                                 builder.create<InsertOp>(loc, v, dst, indices);
+                                 builder.create<sparse_tensor::YieldOp>(loc);
+                               });
 
     // Release the temporary COO if it is created.
     if (tmpCoo)
@@ -866,12 +875,14 @@ struct OutRewriter : public OpRewritePattern<OutOp> {
     ModuleOp module = op->getParentOfType<ModuleOp>();
     // For each element in the source tensor, output the element.
     rewriter.create<ForeachOp>(
-        loc, src, [&](OpBuilder &builder, Location loc, ValueRange args) {
+        loc, src, llvm::None,
+        [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
+            ValueRange reduc) {
           for (uint64_t i = 0; i < rank; i++) {
             rewriter.create<memref::StoreOp>(loc, args[i], indices,
                                              constantIndex(builder, loc, i));
           }
-          rewriter.create<memref::StoreOp>(loc, args.back(), value);
+          rewriter.create<memref::StoreOp>(loc, v, value);
           SmallVector<Value, 4> operands{writer, rankValue, indices, value};
           FlatSymbolRefAttr fn = getFunc(module, outNextFuncName, {}, operands,
                                          EmitCInterface::On);
