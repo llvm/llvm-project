@@ -249,7 +249,7 @@ public:
   Operation *lookupSymbolIn(Operation *symbolTableOp, StringAttr symbol);
   Operation *lookupSymbolIn(Operation *symbolTableOp, SymbolRefAttr name);
   template <typename T, typename NameT>
-  T lookupSymbolIn(Operation *symbolTableOp, NameT &&name) const {
+  T lookupSymbolIn(Operation *symbolTableOp, NameT &&name) {
     return dyn_cast_or_null<T>(
         lookupSymbolIn(symbolTableOp, std::forward<NameT>(name)));
   }
