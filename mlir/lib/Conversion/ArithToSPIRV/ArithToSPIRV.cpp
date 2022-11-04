@@ -1031,7 +1031,7 @@ struct ConvertArithToSPIRVPass
     auto target = SPIRVConversionTarget::get(targetAttr);
 
     SPIRVConversionOptions options;
-    options.emulateNon32BitScalarTypes = this->emulateNon32BitScalarTypes;
+    options.emulateLT32BitScalarTypes = this->emulateLT32BitScalarTypes;
     options.enableFastMathMode = this->enableFastMath;
     SPIRVTypeConverter typeConverter(targetAttr, options);
 

@@ -49,7 +49,15 @@ func.func @int_vector4_invalid(%arg0: vector<2xi16>) {
 
 // -----
 
-func.func @unsupported_constant_0() {
+func.func @unsupported_constant_i64_0() {
+  // expected-error @+1 {{failed to legalize operation 'arith.constant'}}
+  %0 = arith.constant 0 : i64
+  return
+}
+
+// -----
+
+func.func @unsupported_constant_i64_1() {
   // expected-error @+1 {{failed to legalize operation 'arith.constant'}}
   %0 = arith.constant 4294967296 : i64 // 2^32
   return
@@ -57,16 +65,68 @@ func.func @unsupported_constant_0() {
 
 // -----
 
-func.func @unsupported_constant_1() {
+func.func @unsupported_constant_vector_2xi64_0() {
   // expected-error @+1 {{failed to legalize operation 'arith.constant'}}
-  %1 = arith.constant -2147483649 : i64 // -2^31 - 1
+  %1 = arith.constant dense<0> : vector<2xi64>
   return
 }
 
 // -----
 
-func.func @unsupported_constant_2() {
+func.func @unsupported_constant_f64_0() {
   // expected-error @+1 {{failed to legalize operation 'arith.constant'}}
-  %2 = arith.constant -2147483649 : i64 // -2^31 - 1
+  %1 = arith.constant 0.0 : f64
   return
 }
+
+// -----
+
+func.func @unsupported_constant_vector_2xf64_0() {
+  // expected-error @+1 {{failed to legalize operation 'arith.constant'}}
+  %1 = arith.constant dense<0.0> : vector<2xf64>
+  return
+}
+
+// -----
+
+func.func @unsupported_constant_tensor_2xf64_0() {
+  // expected-error @+1 {{failed to legalize operation 'arith.constant'}}
+  %1 = arith.constant dense<0.0> : tensor<2xf64>
+  return
+}
+
+///===----------------------------------------------------------------------===//
+// Type emulation
+//===----------------------------------------------------------------------===//
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
+} {
+
+// Check that we do not emualte i64 by truncating to i32.
+func.func @unsupported_i64(%arg0: i64) {
+  // expected-error@+1 {{failed to legalize operation 'arith.addi'}}
+  %2 = arith.addi %arg0, %arg0: i64
+  return
+}
+
+} // end module
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
+} {
+
+// Check that we do not emualte f64 by truncating to i32.
+func.func @unsupported_f64(%arg0: f64) {
+  // expected-error@+1 {{failed to legalize operation 'arith.addf'}}
+  %2 = arith.addf %arg0, %arg0: f64
+  return
+}
+
+} // end module

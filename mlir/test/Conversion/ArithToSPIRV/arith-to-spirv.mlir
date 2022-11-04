@@ -513,7 +513,7 @@ func.func @constant_size1() {
 
 // -----
 
-// Check that constants are converted to 32-bit when no special capability.
+// Check that constants are widened to 32-bit when no special capability.
 module attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
 } {
@@ -533,50 +533,25 @@ func.func @constant_16bit() {
   return
 }
 
-// CHECK-LABEL: @constant_64bit
-func.func @constant_64bit() {
-  // CHECK: spirv.Constant 4 : i32
-  %0 = arith.constant 4 : i64
-  // CHECK: spirv.Constant 5.000000e+00 : f32
-  %1 = arith.constant 5.0 : f64
-  // CHECK: spirv.Constant dense<[2, 3]> : vector<2xi32>
-  %2 = arith.constant dense<[2, 3]> : vector<2xi64>
-  // CHECK: spirv.Constant dense<4.000000e+00> : tensor<5xf32> : !spirv.array<5 x f32>
-  %3 = arith.constant dense<4.0> : tensor<5xf64>
-  // CHECK: spirv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spirv.array<4 x f32>
-  %4 = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
-  return
-}
-
 // CHECK-LABEL: @constant_size1
 func.func @constant_size1() {
   // CHECK: spirv.Constant 4 : i32
-  %0 = arith.constant dense<4> : vector<1xi64>
+  %0 = arith.constant dense<4> : vector<1xi16>
   // CHECK: spirv.Constant 5.000000e+00 : f32
-  %1 = arith.constant dense<5.0> : tensor<1xf64>
+  %1 = arith.constant dense<5.0> : tensor<1xf16>
   return
 }
 
 // CHECK-LABEL: @corner_cases
 func.func @corner_cases() {
-  // CHECK: %{{.*}} = spirv.Constant -1 : i32
-  %0 = arith.constant 4294967295  : i64 // 2^32 - 1
-  // CHECK: %{{.*}} = spirv.Constant 2147483647 : i32
-  %1 = arith.constant 2147483647  : i64 // 2^31 - 1
-  // CHECK: %{{.*}} = spirv.Constant -2147483648 : i32
-  %2 = arith.constant 2147483648  : i64 // 2^31
-  // CHECK: %{{.*}} = spirv.Constant -2147483648 : i32
-  %3 = arith.constant -2147483648 : i64 // -2^31
-
-  // CHECK: %{{.*}} = spirv.Constant -1 : i32
-  %5 = arith.constant -1 : i64
+ // CHECK: %{{.*}} = spirv.Constant -1 : i32
+  %5 = arith.constant -1 : i16
   // CHECK: %{{.*}} = spirv.Constant -2 : i32
-  %6 = arith.constant -2 : i64
+  %6 = arith.constant -2 : i16
   // CHECK: %{{.*}} = spirv.Constant -1 : i32
   %7 = arith.constant -1 : index
   // CHECK: %{{.*}} = spirv.Constant -2 : i32
   %8 = arith.constant -2 : index
-
 
   // CHECK: spirv.Constant false
   %9 = arith.constant false
@@ -903,27 +878,11 @@ module attributes {
 } {
 
 // CHECK-LABEL: @fptrunc1
-// CHECK-SAME: %[[A:.*]]: f64
-func.func @fptrunc1(%arg0 : f64) -> f16 {
-  // CHECK: %[[ARG:.+]] = builtin.unrealized_conversion_cast %[[A]] : f64 to f32
-  // CHECK-NEXT: spirv.FConvert %[[ARG]] : f32 to f16
-  %0 = arith.truncf %arg0 : f64 to f16
-  return %0: f16
-}
-
-// CHECK-LABEL: @fptrunc2
 // CHECK-SAME: %[[ARG:.*]]: f32
-func.func @fptrunc2(%arg0: f32) -> f16 {
+func.func @fptrunc1(%arg0: f32) -> f16 {
   // CHECK-NEXT: spirv.FConvert %[[ARG]] : f32 to f16
   %0 = arith.truncf %arg0 : f32 to f16
   return %0: f16
-}
-
-// CHECK-LABEL: @sitofp
-func.func @sitofp(%arg0 : i64) -> f64 {
-  // CHECK: spirv.ConvertSToF %{{.*}} : i32 to f32
-  %0 = arith.sitofp %arg0 : i64 to f64
-  return %0: f64
 }
 
 } // end module
@@ -1209,11 +1168,9 @@ func.func @int_vector23(%arg0: vector<2xi8>, %arg1: vector<3xi16>) {
 }
 
 // CHECK-LABEL: @float_scalar
-func.func @float_scalar(%arg0: f16, %arg1: f64) {
+func.func @float_scalar(%arg0: f16) {
   // CHECK: spirv.FAdd %{{.*}}, %{{.*}}: f32
   %0 = arith.addf %arg0, %arg0: f16
-  // CHECK: spirv.FMul %{{.*}}, %{{.*}}: f32
-  %1 = arith.mulf %arg1, %arg1: f64
   return
 }
 
@@ -1513,74 +1470,6 @@ func.func @constant_64bit() {
 
 // -----
 
-// Check that constants are converted to 32-bit when no special capability.
-module attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
-} {
-
-// CHECK-LABEL: @constant_16bit
-func.func @constant_16bit() {
-  // CHECK: spirv.Constant 4 : i32
-  %0 = arith.constant 4 : i16
-  // CHECK: spirv.Constant 5.000000e+00 : f32
-  %1 = arith.constant 5.0 : f16
-  // CHECK: spirv.Constant dense<[2, 3]> : vector<2xi32>
-  %2 = arith.constant dense<[2, 3]> : vector<2xi16>
-  // CHECK: spirv.Constant dense<4.000000e+00> : tensor<5xf32> : !spirv.array<5 x f32>
-  %3 = arith.constant dense<4.0> : tensor<5xf16>
-  // CHECK: spirv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spirv.array<4 x f32>
-  %4 = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
-  return
-}
-
-// CHECK-LABEL: @constant_64bit
-func.func @constant_64bit() {
-  // CHECK: spirv.Constant 4 : i32
-  %0 = arith.constant 4 : i64
-  // CHECK: spirv.Constant 5.000000e+00 : f32
-  %1 = arith.constant 5.0 : f64
-  // CHECK: spirv.Constant dense<[2, 3]> : vector<2xi32>
-  %2 = arith.constant dense<[2, 3]> : vector<2xi64>
-  // CHECK: spirv.Constant dense<4.000000e+00> : tensor<5xf32> : !spirv.array<5 x f32>
-  %3 = arith.constant dense<4.0> : tensor<5xf64>
-  // CHECK: spirv.Constant dense<[1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00]> : tensor<4xf32> : !spirv.array<4 x f32>
-  %4 = arith.constant dense<[[1.0, 2.0], [3.0, 4.0]]> : tensor<2x2xf16>
-  return
-}
-
-// CHECK-LABEL: @corner_cases
-func.func @corner_cases() {
-  // CHECK: %{{.*}} = spirv.Constant -1 : i32
-  %0 = arith.constant 4294967295  : i64 // 2^32 - 1
-  // CHECK: %{{.*}} = spirv.Constant 2147483647 : i32
-  %1 = arith.constant 2147483647  : i64 // 2^31 - 1
-  // CHECK: %{{.*}} = spirv.Constant -2147483648 : i32
-  %2 = arith.constant 2147483648  : i64 // 2^31
-  // CHECK: %{{.*}} = spirv.Constant -2147483648 : i32
-  %3 = arith.constant -2147483648 : i64 // -2^31
-
-  // CHECK: %{{.*}} = spirv.Constant -1 : i32
-  %5 = arith.constant -1 : i64
-  // CHECK: %{{.*}} = spirv.Constant -2 : i32
-  %6 = arith.constant -2 : i64
-  // CHECK: %{{.*}} = spirv.Constant -1 : i32
-  %7 = arith.constant -1 : index
-  // CHECK: %{{.*}} = spirv.Constant -2 : i32
-  %8 = arith.constant -2 : index
-
-
-  // CHECK: spirv.Constant false
-  %9 = arith.constant false
-  // CHECK: spirv.Constant true
-  %10 = arith.constant true
-
-  return
-}
-
-} // end module
-
-// -----
-
 //===----------------------------------------------------------------------===//
 // std cast ops
 //===----------------------------------------------------------------------===//
@@ -1847,39 +1736,3 @@ func.func @fpext2(%arg0 : f32) -> f64 {
 }
 
 } // end module
-
-// -----
-
-// Checks that cast types will be adjusted when missing special capabilities for
-// certain non-32-bit scalar types.
-module attributes {
-  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Float16], []>, #spirv.resource_limits<>>
-} {
-
-// CHECK-LABEL: @fptrunc1
-// CHECK-SAME: %[[A:.*]]: f64
-func.func @fptrunc1(%arg0 : f64) -> f16 {
-  // CHECK: %[[ARG:.+]] = builtin.unrealized_conversion_cast %[[A]] : f64 to f32
-  // CHECK-NEXT: spirv.FConvert %[[ARG]] : f32 to f16
-  %0 = arith.truncf %arg0 : f64 to f16
-  return %0: f16
-}
-
-// CHECK-LABEL: @fptrunc2
-// CHECK-SAME: %[[ARG:.*]]: f32
-func.func @fptrunc2(%arg0: f32) -> f16 {
-  // CHECK-NEXT: spirv.FConvert %[[ARG]] : f32 to f16
-  %0 = arith.truncf %arg0 : f32 to f16
-  return %0: f16
-}
-
-// CHECK-LABEL: @sitofp
-func.func @sitofp(%arg0 : i64) -> f64 {
-  // CHECK: spirv.ConvertSToF %{{.*}} : i32 to f32
-  %0 = arith.sitofp %arg0 : i64 to f64
-  return %0: f64
-}
-
-} // end module
-
-// -----
