@@ -235,6 +235,25 @@ add_libc_unittest(
     libc.src.stdio.fwrite
 )
 
+add_libc_unittest(
+  ftell_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    ftell_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.stdio
+    libc.src.stdio.fclose
+    libc.src.stdio.fflush
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.fseek
+    libc.src.stdio.ftell
+    libc.src.stdio.fwrite
+    libc.src.stdio.setvbuf
+)
+
 add_subdirectory(printf_core)
 add_subdirectory(scanf_core)
 add_subdirectory(testdata)

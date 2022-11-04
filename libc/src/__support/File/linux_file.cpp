@@ -22,7 +22,7 @@ namespace {
 
 size_t write_func(File *, const void *, size_t);
 size_t read_func(File *, void *, size_t);
-int seek_func(File *, long, int);
+long seek_func(File *, long, int);
 int close_func(File *);
 int flush_func(File *);
 
@@ -71,10 +71,12 @@ size_t read_func(File *f, void *buf, size_t size) {
   return ret;
 }
 
-int seek_func(File *f, long offset, int whence) {
+long seek_func(File *f, long offset, int whence) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
+  long result;
 #ifdef SYS_lseek
   long ret = __llvm_libc::syscall_impl(SYS_lseek, lf->get_fd(), offset, whence);
+  result = ret;
 #elif defined(SYS__llseek)
   long result;
   long ret = __llvm_libc::syscall_impl(SYS__llseek, lf->get_fd(), offset >> 32,
@@ -87,7 +89,7 @@ int seek_func(File *f, long offset, int whence) {
     errno = -ret;
     return -1;
   }
-  return 0;
+  return result;
 }
 
 int close_func(File *f) {
@@ -162,6 +164,11 @@ File *openfile(const char *path, const char *mode) {
   LinuxFile::init(file, fd, buffer, File::DEFAULT_BUFFER_SIZE, _IOFBF, true,
                   modeflags);
   return file;
+}
+
+int get_fileno(File *f) {
+  auto *lf = reinterpret_cast<LinuxFile *>(f);
+  return lf->get_fd();
 }
 
 constexpr size_t STDIN_BUFFER_SIZE = 512;
