@@ -197,7 +197,7 @@ body:             |
     ; GCN-NEXT: [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[DEF]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: [[DEF3:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
-    ; GCN-NEXT: %6:vgpr_32 = nofpexcept V_FMAC_F32_e32 [[DEF1]], [[V_CVT_F32_U32_e64_]], [[COPY]], implicit $mode, implicit $mode, implicit $exec
+    ; GCN-NEXT: %6:vgpr_32 = nofpexcept V_FMAC_F32_e32 [[DEF1]], [[V_CVT_F32_U32_e64_]], [[COPY]], implicit $mode, implicit $exec
     %0:vgpr_32 = IMPLICIT_DEF
     %1:sreg_32 = IMPLICIT_DEF
     %2:sreg_32 = IMPLICIT_DEF
@@ -217,7 +217,7 @@ body:             |
     ; GCN-NEXT: [[V_CVT_F32_U32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_U32_e64 [[DEF]], 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: [[DEF3:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
-    ; GCN-NEXT: %6:vgpr_32 = nofpexcept V_FMAC_F16_e32 killed [[DEF1]], [[COPY]], [[V_CVT_F32_U32_e64_]], implicit $mode, implicit $mode, implicit $exec
+    ; GCN-NEXT: %6:vgpr_32 = nofpexcept V_FMAC_F16_e32 killed [[DEF1]], [[COPY]], [[V_CVT_F32_U32_e64_]], implicit $mode, implicit $exec
     %0:vgpr_32 = IMPLICIT_DEF
     %1:sreg_32 = IMPLICIT_DEF
     %2:sreg_32 = IMPLICIT_DEF

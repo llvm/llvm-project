@@ -608,6 +608,94 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
   }];
 }
 
+
+def TileReductionUsingScfOp : Op<Transform_Dialect, "structured.tile_reduction_using_scf",
+       [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+        TransformEachOpTrait, TransformOpInterface]> {
+  let description = [{
+    Indicates that the given `target` op should be transformed with the 
+    `tileReduction` transformation with the tile size provided as attribute.
+    
+    This transformation tiles the `target` along the reduction dimensions. It
+    creates a tensor initialized with the identity value. Then it creates nested
+    loops with a parallel version of `target` op inside. The parallel op
+    dimensions are less or equal to the tile size passed by user.
+    After the loop a merge operation is created to do a final reduction with the
+    partial reductions.
+    The initial tensor always uses the tile size dimension. This may overallocate
+    if the tile size is greater than the reduction dimension.
+
+    #### Return modes
+
+    This 3 returned handles point to:
+      - the fill op used to initialize the neutral element, 
+      - the parallel tiled op and 
+      - the result-combining op.
+
+    #### Example:
+    
+    ```
+      %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                              affine_map<(d0, d1) -> (d0)>],
+      iterator_types = ["parallel", "reduction"]}
+      ins(%arg0 : tensor<?x?xf32>)
+      outs(%out : tensor<?xf32>) {
+        ^bb0(%arg7: f32, %arg9: f32):
+        %1 = arith.addf %arg7, %arg9 : f32
+        linalg.yield %1 : f32
+      } -> tensor<?xf32>
+      return %red : tensor<?xf32>
+    ```
+  
+    is transformed into:
+    
+    ```
+      %0 = tensor.empty(%dim_1) : tensor<?x5xf32>
+      %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<?x5xf32>) -> tensor<?x5xf32>
+      %2 = scf.for %arg2 = %c0 to %dim_0 step %c5 iter_args(%arg3 = %1) -> (tensor<?x5xf32>) {
+        %extracted_slice = tensor.extract_slice %1[0, 0] [%dim, 5] [1, 1] : tensor<?x5xf32> to tensor<?x5xf32>
+        %extracted_slice_2 = tensor.extract_slice %arg0[0, %arg2] [%dim, 5] [1, 1] : tensor<?x?xf32> to tensor<?x5xf32>
+        %4 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, 
+                                              affine_map<(d0, d1) -> (d0, d1)>],
+        iterator_types = ["parallel", "parallel"]}
+        ins(%extracted_slice_2 : tensor<?x5xf32>)
+        outs(%extracted_slice : tensor<?x5xf32>) {
+        ^bb0(%in: f32, %out: f32):
+          %5 = arith.addf %in, %out : f32
+          linalg.yield %5 : f32
+        } -> tensor<?x5xf32>
+        %dim_3 = tensor.dim %1, %c0 : tensor<?x5xf32>
+        %inserted_slice = tensor.insert_slice %4 into %arg3[0, 0] [%dim_3, 5] [1, 1] : tensor<?x5xf32> into tensor<?x5xf32>
+        scf.yield %inserted_slice : tensor<?x5xf32>
+      }
+      %3 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                                            affine_map<(d0, d1) -> (d0)>],
+      iterator_types = ["parallel", "reduction"]}
+      ins(%2 : tensor<?x5xf32>)
+      outs(%arg1 : tensor<?xf32>) {
+      ^bb0(%in: f32, %out: f32):
+        %4 = arith.addf %in, %out : f32
+        linalg.yield %4 : f32
+      } -> tensor<?xf32>
+    ```
+  }];
+
+  let arguments = (ins PDL_Operation:$target,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$tile_sizes);
+  let results = (outs PDL_Operation:$fill_op,
+                      PDL_Operation:$split_linalg_op,
+                      PDL_Operation:$combining_linalg_op);
+
+  let assemblyFormat = "$target attr-dict";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::linalg::LinalgOp target, 
+        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 def TileOp : Op<Transform_Dialect, "structured.tile",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
         DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {

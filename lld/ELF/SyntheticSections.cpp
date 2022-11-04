@@ -3651,7 +3651,7 @@ size_t PPC64LongBranchTargetSection::getSize() const {
 void PPC64LongBranchTargetSection::writeTo(uint8_t *buf) {
   // If linking non-pic we have the final addresses of the targets and they get
   // written to the table directly. For pic the dynamic linker will allocate
-  // the section and fill it it.
+  // the section and fill it.
   if (config->isPic)
     return;
 

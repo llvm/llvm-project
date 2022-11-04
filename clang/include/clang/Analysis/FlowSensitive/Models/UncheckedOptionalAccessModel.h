@@ -54,9 +54,9 @@ public:
 
   void transfer(const CFGElement *Elt, NoopLattice &L, Environment &Env);
 
-  bool compareEquivalent(QualType Type, const Value &Val1,
-                         const Environment &Env1, const Value &Val2,
-                         const Environment &Env2) override;
+  ComparisonResult compare(QualType Type, const Value &Val1,
+                           const Environment &Env1, const Value &Val2,
+                           const Environment &Env2) override;
 
   bool merge(QualType Type, const Value &Val1, const Environment &Env1,
              const Value &Val2, const Environment &Env2, Value &MergedVal,

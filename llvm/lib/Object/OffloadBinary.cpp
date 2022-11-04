@@ -17,6 +17,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/IRObjectFile.h"
@@ -41,6 +42,10 @@ Error extractOffloadFiles(MemoryBufferRef Contents,
     std::unique_ptr<MemoryBuffer> Buffer =
         MemoryBuffer::getMemBuffer(Contents.getBuffer().drop_front(Offset), "",
                                    /*RequiresNullTerminator*/ false);
+    if (!isAddrAligned(Align(OffloadBinary::getAlignment()),
+                       Buffer->getBufferStart()))
+      Buffer = MemoryBuffer::getMemBufferCopy(Buffer->getBuffer(),
+                                              Buffer->getBufferIdentifier());
     auto BinaryOrErr = OffloadBinary::create(*Buffer);
     if (!BinaryOrErr)
       return BinaryOrErr.takeError();
@@ -62,11 +67,25 @@ Error extractOffloadFiles(MemoryBufferRef Contents,
 }
 
 // Extract offloading binaries from an Object file \p Obj.
-Error extractFromBinary(const ObjectFile &Obj,
+Error extractFromObject(const ObjectFile &Obj,
                         SmallVectorImpl<OffloadFile> &Binaries) {
-  for (ELFSectionRef Sec : Obj.sections()) {
-    if (Sec.getType() != ELF::SHT_LLVM_OFFLOADING)
+  assert((Obj.isELF() || Obj.isCOFF()) && "Invalid file type");
+
+  for (SectionRef Sec : Obj.sections()) {
+    // ELF files contain a section with the LLVM_OFFLOADING type.
+    if (Obj.isELF() &&
+        static_cast<ELFSectionRef>(Sec).getType() != ELF::SHT_LLVM_OFFLOADING)
       continue;
+
+    // COFF has no section types so we rely on the name of the section.
+    if (Obj.isCOFF()) {
+      Expected<StringRef> NameOrErr = Sec.getName();
+      if (!NameOrErr)
+        return NameOrErr.takeError();
+
+      if (!NameOrErr->equals(".llvm.offloading"))
+        continue;
+    }
 
     Expected<StringRef> Buffer = Sec.getContents();
     if (!Buffer)
@@ -254,12 +273,15 @@ Error object::extractOffloadBinaries(MemoryBufferRef Buffer,
   switch (Type) {
   case file_magic::bitcode:
     return extractFromBitcode(Buffer, Binaries);
-  case file_magic::elf_relocatable: {
+  case file_magic::elf_relocatable:
+  case file_magic::elf_executable:
+  case file_magic::elf_shared_object:
+  case file_magic::coff_object: {
     Expected<std::unique_ptr<ObjectFile>> ObjFile =
         ObjectFile::createObjectFile(Buffer, Type);
     if (!ObjFile)
       return ObjFile.takeError();
-    return extractFromBinary(*ObjFile->get(), Binaries);
+    return extractFromObject(*ObjFile->get(), Binaries);
   }
   case file_magic::archive: {
     Expected<std::unique_ptr<llvm::object::Archive>> LibFile =

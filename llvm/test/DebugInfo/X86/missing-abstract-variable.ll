@@ -1,10 +1,4 @@
-; RUN: %llc_dwarf -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
-
-; The formal parameter 'b' for Function 'x' when inlined within 'a' is lost on
-; powerpc64 (and on x86_64 at at least -O2). Presumably this is a SelectionDAG
-; issue.
-; FIXME: arm64 is an alias for aarch64 on macs, apparently?
-; XFAIL: powerpc64, aarch64, arm64, hexagon, riscv, sparc, loongarch
+; RUN: %llc_dwarf -mtriple x86_64-gnu-linux -O0 -filetype=obj < %s | llvm-dwarfdump -debug-info - | FileCheck %s
 
 ; Build from the following source with clang -O2.
 
