@@ -524,6 +524,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Tigerlake:
   case CK_SapphireRapids:
   case CK_Alderlake:
+  case CK_Raptorlake:
+  case CK_Meteorlake:
     // FIXME: Historically, we defined this legacy name, it would be nice to
     // remove it at some point. We've never exposed fine-grained names for
     // recent primary x86 CPUs, and we should keep it that way.
@@ -1194,6 +1196,7 @@ bool X86TargetInfo::validateCpuIs(StringRef FeatureStr) const {
 #define X86_VENDOR(ENUM, STRING) .Case(STRING, true)
 #define X86_CPU_TYPE_ALIAS(ENUM, ALIAS) .Case(ALIAS, true)
 #define X86_CPU_TYPE(ENUM, STR) .Case(STR, true)
+#define X86_CPU_SUBTYPE_ALIAS(ENUM, ALIAS) .Case(ALIAS, true)
 #define X86_CPU_SUBTYPE(ENUM, STR) .Case(STR, true)
 #include "llvm/Support/X86TargetParser.def"
       .Default(false);
@@ -1408,6 +1411,8 @@ Optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_Rocketlake:
     case CK_IcelakeServer:
     case CK_Alderlake:
+    case CK_Raptorlake:
+    case CK_Meteorlake:
     case CK_KNL:
     case CK_KNM:
     // K7
