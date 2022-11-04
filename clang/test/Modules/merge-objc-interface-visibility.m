@@ -4,7 +4,7 @@
 // RUN:            -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/modules.cache
 // RUN: %clang_cc1 -emit-llvm -o %t/test.bc -F%t/Frameworks %t/test.m -DHIDDEN_FIRST=0 \
 // RUN:            -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/modules.cache
-// UNSUPPORTED: -zos, -aix
+// UNSUPPORTED: -zos, target={{.*}}-aix{{.*}}
 
 // Test a case when Objective-C interface is imported both as hidden and as visible.
 

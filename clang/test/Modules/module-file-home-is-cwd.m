@@ -1,4 +1,4 @@
-// UNSUPPORTED: -zos, -aix
+// UNSUPPORTED: -zos, target={{.*}}-aix{{.*}}
 // RUN: cd %S
 // RUN: %clang_cc1 -x objective-c -fmodules -fno-implicit-modules \
 // RUN:     -fmodule-file-home-is-cwd -fmodule-name=libA -emit-module \
