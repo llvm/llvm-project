@@ -44,7 +44,8 @@ bool DINodeAttr::classof(Attribute attr) {
   return llvm::isa<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
                    DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
                    DILexicalBlockFileAttr, DILocalVariableAttr,
-                   DISubprogramAttr, DISubroutineTypeAttr>(attr);
+                   DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
+      attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -61,7 +62,8 @@ bool DIScopeAttr::classof(Attribute attr) {
 //===----------------------------------------------------------------------===//
 
 bool DITypeAttr::classof(Attribute attr) {
-  return llvm::isa<DIBasicTypeAttr, DISubroutineTypeAttr>(attr);
+  return llvm::isa<DIBasicTypeAttr, DICompositeTypeAttr, DIDerivedTypeAttr,
+                   DISubroutineTypeAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//

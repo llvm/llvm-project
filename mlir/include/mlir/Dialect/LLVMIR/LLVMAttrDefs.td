@@ -334,9 +334,9 @@ def LLVM_DISubrangeAttr : LLVM_Attr<"DISubrange", "di_subrange", /*traits=*/[],
                                     "DINodeAttr"> {
   let parameters = (ins
     "IntegerAttr":$count,
-    "IntegerAttr":$lowerBound,
-    "IntegerAttr":$upperBound,
-    "IntegerAttr":$stride
+    OptionalParameter<"IntegerAttr">:$lowerBound,
+    OptionalParameter<"IntegerAttr">:$upperBound,
+    OptionalParameter<"IntegerAttr">:$stride
   );
   let assemblyFormat = "`<` struct(params) `>`";
 }
