@@ -22,7 +22,7 @@ llvm::cl::list<std::string>
 } // anonymous namespace
 
 bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
-  OS << "#include \"type_traits.h\"\n";
+  OS << "#include \"src/__support/CPP/type_traits.h\"\n";
   llvm_libc::APIIndexer G(records);
   std::unordered_set<std::string> headerFileSet;
   for (const auto &entrypoint : EntrypointNamesOption) {
@@ -45,7 +45,7 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
 
   OS << '\n';
 
-  OS << "int main() {\n";
+  OS << "extern \"C\" int main() {\n";
   for (const auto &entrypoint : EntrypointNamesOption) {
     auto match = G.FunctionSpecMap.find(entrypoint);
     if (match == G.FunctionSpecMap.end()) {
