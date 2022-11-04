@@ -581,11 +581,20 @@ LogicalResult CompressOp::verify() {
 
 void ForeachOp::build(
     OpBuilder &builder, OperationState &result, Value tensor,
-    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
-  build(builder, result, tensor);
+    function_ref<void(OpBuilder &, Location, ValueRange, Value, ValueRange)>
+        bodyBuilder) {
+  build(builder, result, tensor, llvm::None, bodyBuilder);
+}
+
+void ForeachOp::build(
+    OpBuilder &builder, OperationState &result, Value tensor,
+    ValueRange initArgs,
+    function_ref<void(OpBuilder &, Location, ValueRange, Value, ValueRange)>
+        bodyBuilder) {
+  build(builder, result, initArgs.getTypes(), tensor, initArgs);
+  // Builds foreach body.
   if (!bodyBuilder)
     return;
-
   auto rtp = tensor.getType().cast<RankedTensorType>();
   int64_t rank = rtp.getRank();
 
@@ -594,23 +603,41 @@ void ForeachOp::build(
   std::fill_n(std::back_inserter(blockArgTypes), rank, builder.getIndexType());
   // Followed by one value.
   blockArgTypes.push_back(rtp.getElementType());
+  // Followed by reduction variable.
+  blockArgTypes.append(initArgs.getTypes().begin(), initArgs.getTypes().end());
 
   SmallVector<Location, 4> blockArgLocs;
-  std::fill_n(std::back_inserter(blockArgLocs), rank + 1, tensor.getLoc());
+  std::fill_n(std::back_inserter(blockArgLocs), blockArgTypes.size(),
+              tensor.getLoc());
 
   OpBuilder::InsertionGuard guard(builder);
   auto &region = *result.regions.front();
   Block *bodyBlock =
       builder.createBlock(&region, region.end(), blockArgTypes, blockArgLocs);
-  bodyBuilder(builder, result.location, bodyBlock->getArguments());
+  bodyBuilder(builder, result.location,
+              bodyBlock->getArguments().slice(0, rank),
+              bodyBlock->getArguments()[rank],
+              bodyBlock->getArguments().drop_front(rank + 1));
 }
 
 LogicalResult ForeachOp::verify() {
   auto t = getTensor().getType().cast<RankedTensorType>();
   auto args = getBody()->getArguments();
 
-  if (static_cast<size_t>(t.getRank()) + 1 != args.size())
+  if (static_cast<size_t>(t.getRank()) + 1 + getInitArgs().size() !=
+      args.size())
     return emitError("Unmatched number of arguments in the block");
+
+  if (getNumResults() != getInitArgs().size())
+    return emitError("Mismatch in number of init arguments and results");
+
+  if (getResultTypes() != getInitArgs().getTypes())
+    return emitError("Mismatch in types of init arguments and results");
+
+  auto yield = cast<YieldOp>(getBody()->getTerminator());
+  if (yield.getNumOperands() != getNumResults() ||
+      yield.getOperands().getTypes() != getResultTypes())
+    return emitError("Mismatch in types of yield values and results");
 
   for (int64_t i = 0, e = t.getRank(); i < e; i++)
     if (args[i].getType() != IndexType::get(getContext()))
@@ -618,7 +645,7 @@ LogicalResult ForeachOp::verify() {
           llvm::formatv("Expecting Index type for argument at index {0}", i));
 
   auto elemTp = t.getElementType();
-  auto valueTp = args.back().getType();
+  auto valueTp = args[t.getRank()].getType();
   if (elemTp != valueTp)
     emitError(llvm::formatv("Unmatched element type between input tensor and "
                             "block argument, expected:{0}, got: {1}",
