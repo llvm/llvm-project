@@ -485,12 +485,6 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
                                   llvm::StringRef debug_adaptor_path,
                                   llvm::StringRef comm_file);
 
-/// Create a "Terminated" JSON object that contains statistics
-///
-/// \return
-///     A body JSON object with debug info and breakpoint info
-llvm::json::Object CreateTerminatedEventObject();
-
 /// Convert a given JSON object to a string.
 std::string JSONToString(const llvm::json::Value &json);
 
