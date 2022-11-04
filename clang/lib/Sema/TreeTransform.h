@@ -3172,10 +3172,9 @@ public:
   /// By default, builds a new default-argument expression, which does not
   /// require any semantic analysis. Subclasses may override this routine to
   /// provide different behavior.
-  ExprResult RebuildCXXDefaultArgExpr(SourceLocation Loc, ParmVarDecl *Param,
-                                      Expr *RewrittenExpr) {
+  ExprResult RebuildCXXDefaultArgExpr(SourceLocation Loc, ParmVarDecl *Param) {
     return CXXDefaultArgExpr::Create(getSema().Context, Loc, Param,
-                                     RewrittenExpr, getSema().CurContext);
+                                     getSema().CurContext);
   }
 
   /// Build a new C++11 default-initialization expression.
@@ -3185,7 +3184,8 @@ public:
   /// routine to provide different behavior.
   ExprResult RebuildCXXDefaultInitExpr(SourceLocation Loc,
                                        FieldDecl *Field) {
-    return getSema().BuildCXXDefaultInitExpr(Loc, Field);
+    return CXXDefaultInitExpr::Create(getSema().Context, Loc, Field,
+                                      getSema().CurContext);
   }
 
   /// Build a new C++ zero-initialization expression.
@@ -12094,20 +12094,11 @@ TreeTransform<Derived>::TransformCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   if (!Param)
     return ExprError();
 
-  ExprResult InitRes;
-  if (E->hasRewrittenInit()) {
-    InitRes = getDerived().TransformExpr(E->getRewrittenExpr());
-    if (InitRes.isInvalid())
-      return ExprError();
-  }
-
   if (!getDerived().AlwaysRebuild() && Param == E->getParam() &&
-      E->getUsedContext() == SemaRef.CurContext &&
-      InitRes.get() == E->getRewrittenExpr())
+      E->getUsedContext() == SemaRef.CurContext)
     return E;
 
-  return getDerived().RebuildCXXDefaultArgExpr(E->getUsedLocation(), Param,
-                                               InitRes.get());
+  return getDerived().RebuildCXXDefaultArgExpr(E->getUsedLocation(), Param);
 }
 
 template<typename Derived>
