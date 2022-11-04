@@ -202,6 +202,17 @@ func.func @call_chararrayfunc() {
   // FUNC-BOX-NOT: fir.save_result
 }
 
+func.func private @rettcptr() -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> attributes {fir.bindc_name = "rettcptr"}
+
+// FUNC-REF-LABEL: func @_QPtest_return_cptr() {
+// FUNC-BOX-LABEL: func @_QPtest_return_cptr() {
+func.func @_QPtest_return_cptr() {
+  // FUNC-REF: [[VAL:.*]] = fir.call @rettcptr() : () -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+  // FUNC-BOX: [[VAL:.*]] = fir.call @rettcptr() : () -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+  %1 = fir.call @rettcptr() : () -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+  return
+}
+
 // ------------------------ Test fir.address_of rewrite ------------------------
 
 func.func private @takesfuncarray((i32) -> !fir.array<?xf32>)
