@@ -614,6 +614,16 @@ def StdC : StandardSpec<"stdc"> {
               [ArgSpec<ConstCharPtr>]
           >,
           FunctionSpec<
+              "setbuf",
+              RetValSpec<VoidType>,
+              [ArgSpec<FILERestrictedPtr>, ArgSpec<CharRestrictedPtr>]
+          >,
+          FunctionSpec<
+              "setvbuf",
+              RetValSpec<IntType>,
+              [ArgSpec<FILERestrictedPtr>, ArgSpec<CharRestrictedPtr>, ArgSpec<IntType>, ArgSpec<SizeTType>]
+          >,
+          FunctionSpec<
               "sprintf",
               RetValSpec<IntType>,
               [ArgSpec<CharRestrictedPtr>,
