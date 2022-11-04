@@ -26,38 +26,6 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
-/// Return the identity numeric value associated to the give op.
-static Attribute getNeutralElement(Operation *op) {
-  // Builder only used as helper for attribute creation.
-  OpBuilder b(op->getContext());
-  Type resultType = op->getResult(0).getType();
-  if (auto floatType = resultType.dyn_cast<FloatType>()) {
-    const llvm::fltSemantics &semantic = floatType.getFloatSemantics();
-    if (isa<arith::AddFOp>(op))
-      return b.getFloatAttr(resultType, llvm::APFloat::getZero(semantic));
-    if (isa<arith::MulFOp>(op))
-      return b.getFloatAttr(resultType, llvm::APFloat(semantic, 1));
-    if (isa<arith::MaxFOp>(op))
-      return b.getFloatAttr(resultType,
-                            llvm::APFloat::getLargest(semantic, true));
-    if (isa<arith::MinFOp>(op))
-      return b.getFloatAttr(resultType,
-                            llvm::APFloat::getLargest(semantic, true));
-    return Attribute();
-  }
-  if (isa<arith::AddIOp, arith::OrIOp, arith::XOrIOp>(op))
-    return b.getIntegerAttr(resultType, 0);
-  if (isa<arith::AndIOp>(op))
-    return b.getIntegerAttr(resultType, -1);
-  if (isa<arith::MaxSIOp>(op))
-    return b.getIntegerAttr(resultType, std::numeric_limits<int64_t>::min());
-  if (isa<arith::MinSIOp>(op))
-    return b.getIntegerAttr(resultType, std::numeric_limits<int64_t>::max());
-  if (isa<arith::MulIOp>(op))
-    return b.getIntegerAttr(resultType, 1);
-  return Attribute();
-}
-
 FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     PatternRewriter &b, LinalgOp op,
     const ControlSplitReductionFn &controlSplitReductionFn, bool useAlloc) {
@@ -88,8 +56,8 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     return b.notifyMatchFailure(op, "Cannot match the reduction pattern");
 
   Operation *reductionOp = combinerOps[0];
-  Attribute identity = getNeutralElement(reductionOp);
-  if (!identity)
+  Optional<Attribute> identity = getNeutralElement(reductionOp);
+  if (!identity.has_value())
     return b.notifyMatchFailure(op, "Unknown identity value for the reduction");
 
   Location loc = op->getLoc();
@@ -187,7 +155,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     emptyOrAllocTensor = b.create<tensor::EmptyOp>(
         loc, newOutputShape, op.getRegionOutputArgs()[0].getType());
   }
-  Value constantOp = b.create<arith::ConstantOp>(loc, identity);
+  Value constantOp = b.create<arith::ConstantOp>(loc, *identity);
   Value identityTensor =
       b.create<linalg::FillOp>(op->getLoc(), constantOp, emptyOrAllocTensor)
           .getResult(0);
@@ -309,10 +277,13 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   if (!matchReduction(op.getRegionOutputArgs(), 0, combinerOps))
     return b.notifyMatchFailure(op, "cannot match a reduction pattern");
 
-  SmallVector<Attribute> neutralElements = llvm::to_vector<4>(
-      llvm::map_range(combinerOps, [&](Operation *reductionOp) {
-        return getNeutralElement(reductionOp);
-      }));
+  SmallVector<Attribute> neutralElements;
+  for (Operation *reductionOp : combinerOps) {
+    Optional<Attribute> neutralElement = getNeutralElement(reductionOp);
+    if (!neutralElement.has_value())
+      return b.notifyMatchFailure(op, "cannot find neutral element.");
+    neutralElements.push_back(*neutralElement);
+  }
   if (!llvm::all_of(neutralElements, [](Attribute attr) { return attr; }))
     return b.notifyMatchFailure(op, "unknown reduction neutral");
 

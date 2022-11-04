@@ -1259,6 +1259,10 @@ Expected<SmallVector<OffloadFile>> getDeviceInput(const ArgList &Args) {
     if (std::error_code EC = BufferOrErr.getError())
       return createFileError(Filename, EC);
 
+    if (identify_magic((*BufferOrErr)->getBuffer()) ==
+        file_magic::elf_shared_object)
+      continue;
+
     bool IsLazy =
         identify_magic((*BufferOrErr)->getBuffer()) == file_magic::archive;
     if (Error Err = extractOffloadBinaries(

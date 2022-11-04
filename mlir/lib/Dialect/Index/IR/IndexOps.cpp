@@ -62,17 +62,19 @@ Operation *IndexDialect::materializeConstant(OpBuilder &b, Attribute value,
 /// the integer result, which in turn must satisfy the above property.
 static OpFoldResult foldBinaryOpUnchecked(
     ArrayRef<Attribute> operands,
-    function_ref<APInt(const APInt &, const APInt &)> calculate) {
+    function_ref<Optional<APInt>(const APInt &, const APInt &)> calculate) {
   assert(operands.size() == 2 && "binary operation expected 2 operands");
   auto lhs = dyn_cast_if_present<IntegerAttr>(operands[0]);
   auto rhs = dyn_cast_if_present<IntegerAttr>(operands[1]);
   if (!lhs || !rhs)
     return {};
 
-  APInt result = calculate(lhs.getValue(), rhs.getValue());
-  assert(result.trunc(32) ==
+  Optional<APInt> result = calculate(lhs.getValue(), rhs.getValue());
+  if (!result)
+    return {};
+  assert(result->trunc(32) ==
          calculate(lhs.getValue().trunc(32), rhs.getValue().trunc(32)));
-  return IntegerAttr::get(IndexType::get(lhs.getContext()), std::move(result));
+  return IntegerAttr::get(IndexType::get(lhs.getContext()), std::move(*result));
 }
 
 /// Fold an index operation only if the truncated 64-bit result matches the
@@ -282,6 +284,50 @@ OpFoldResult MaxUOp::fold(ArrayRef<Attribute> operands) {
   return foldBinaryOpChecked(operands, [](const APInt &lhs, const APInt &rhs) {
     return lhs.ugt(rhs) ? lhs : rhs;
   });
+}
+
+//===----------------------------------------------------------------------===//
+// ShlOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult ShlOp::fold(ArrayRef<Attribute> operands) {
+  return foldBinaryOpUnchecked(
+      operands, [](const APInt &lhs, const APInt &rhs) -> Optional<APInt> {
+        // We cannot fold if the RHS is greater than or equal to 32 because
+        // this would be UB in 32-bit systems but not on 64-bit systems. RHS is
+        // already treated as unsigned.
+        if (rhs.uge(32))
+          return {};
+        return lhs << rhs;
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// ShrSOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult ShrSOp::fold(ArrayRef<Attribute> operands) {
+  return foldBinaryOpChecked(
+      operands, [](const APInt &lhs, const APInt &rhs) -> Optional<APInt> {
+        // Don't fold if RHS is greater than or equal to 32.
+        if (rhs.uge(32))
+          return {};
+        return lhs.ashr(rhs);
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// ShrUOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult ShrUOp::fold(ArrayRef<Attribute> operands) {
+  return foldBinaryOpChecked(
+      operands, [](const APInt &lhs, const APInt &rhs) -> Optional<APInt> {
+        // Don't fold if RHS is greater than or equal to 32.
+        if (rhs.uge(32))
+          return {};
+        return lhs.lshr(rhs);
+      });
 }
 
 //===----------------------------------------------------------------------===//
