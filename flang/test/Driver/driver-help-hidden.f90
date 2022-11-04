@@ -48,6 +48,7 @@
 ! CHECK-NEXT: -fno-signed-zeros      Allow optimizations that ignore the sign of floating point zeros
 ! CHECK-NEXT: -fopenacc              Enable OpenACC
 ! CHECK-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
+! CHECK-NEXT: -freciprocal-math      Allow division operations to be reassociated
 ! CHECK-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
 ! CHECK-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! CHECK-NEXT: -help     Display available options
