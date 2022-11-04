@@ -2,6 +2,8 @@
 # RUN: opt -module-summary %p/Inputs/foo-mod.ll -o foo-mod.bc
 # RUN: opt -module-summary %p/Inputs/bar-mod.ll -o bar-mod.bc
 
+# REQUIRES: default_triple
+
 # RUN: llvm-lto -thinlto -o main-foo-bar main-mod.bc foo-mod.bc bar-mod.bc
 
 # RUN: LLJITWithThinLTOSummaries main-foo-bar.thinlto.bc 2>&1 | FileCheck %s

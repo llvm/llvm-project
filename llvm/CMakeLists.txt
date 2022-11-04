@@ -837,7 +837,10 @@ include(config-ix)
 if("${LLVM_HOST_TRIPLE}" MATCHES "^powerpc64-ibm-aix")
   string(REGEX REPLACE "^powerpc64" "powerpc" LLVM_DEFAULT_TARGET_TRIPLE_default "${LLVM_HOST_TRIPLE}")
 else()
-  set(LLVM_DEFAULT_TARGET_TRIPLE_default "${LLVM_HOST_TRIPLE}")
+  # Only set default triple when native target is enabled.
+  if (LLVM_NATIVE_TARGET)
+    set(LLVM_DEFAULT_TARGET_TRIPLE_default "${LLVM_HOST_TRIPLE}")
+  endif()
 endif()
 
 set(LLVM_DEFAULT_TARGET_TRIPLE "${LLVM_DEFAULT_TARGET_TRIPLE_default}" CACHE STRING
