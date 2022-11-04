@@ -19,13 +19,13 @@ target triple = "x86_64-unknown-linux-gnu"
 ;.
 define void @run() {
 ;
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@run
 ; TUNIT-SAME: () #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    unreachable
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@run
 ; CGSCC-SAME: () #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -40,7 +40,7 @@ entry:
 }
 
 define internal i8 @UseLongDoubleUnsafely(%union.u* byval(%union.u) align 16 %arg) {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@UseLongDoubleUnsafely
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -54,7 +54,7 @@ entry:
 }
 
 define internal x86_fp80 @UseLongDoubleSafely(%union.u* byval(%union.u) align 16 %arg) {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@UseLongDoubleSafely
 ; CGSCC-SAME: () #[[ATTR1]] {
 ; CGSCC-NEXT:    ret x86_fp80 undef
@@ -65,7 +65,7 @@ define internal x86_fp80 @UseLongDoubleSafely(%union.u* byval(%union.u) align 16
 }
 
 define internal i64 @AccessPaddingOfStruct(%struct.Foo* byval(%struct.Foo) %a) {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@AccessPaddingOfStruct
 ; CGSCC-SAME: () #[[ATTR1]] {
 ; CGSCC-NEXT:    ret i64 undef
@@ -76,7 +76,7 @@ define internal i64 @AccessPaddingOfStruct(%struct.Foo* byval(%struct.Foo) %a) {
 }
 
 define internal i64 @CaptureAStruct(%struct.Foo* byval(%struct.Foo) %a) {
-; CGSCC: Function Attrs: nofree norecurse noreturn nosync nounwind readnone
+; CGSCC: Function Attrs: nofree norecurse noreturn nosync nounwind memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@CaptureAStruct
 ; CGSCC-SAME: (i32 [[TMP0:%.*]], i64 [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -104,9 +104,9 @@ loop:
   br label %loop
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR2]] = { nofree norecurse noreturn nosync nounwind readnone }
+; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR2]] = { nofree norecurse noreturn nosync nounwind memory(none) }
 ;.

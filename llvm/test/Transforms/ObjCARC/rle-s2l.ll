@@ -135,4 +135,4 @@ define void @test7(i8** %p, i8* %n, i8** %q, i8* %m) {
 }
 
 ; CHECK: attributes #0 = { nounwind }
-; CHECK: attributes [[RO]] = { readonly }
+; CHECK: attributes [[RO]] = { memory(read) }

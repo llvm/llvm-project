@@ -50,7 +50,7 @@ define internal void @level1Kernel(i32 %C) {
 ; TUNIT-NEXT:    call void @level2Kernelb() #[[ATTR3]]
 ; TUNIT-NEXT:    br label [[IF_END]]
 ; TUNIT:       if.end:
-; TUNIT-NEXT:    call void @level2Kernelall_late() #[[ATTR5:[0-9]+]]
+; TUNIT-NEXT:    call void @level2Kernelall_late() #[[ATTR3]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: norecurse nosync nounwind
@@ -67,7 +67,7 @@ define internal void @level1Kernel(i32 %C) {
 ; CGSCC-NEXT:    call void @level2Kernelb() #[[ATTR4]]
 ; CGSCC-NEXT:    br label [[IF_END]]
 ; CGSCC:       if.end:
-; CGSCC-NEXT:    call void @level2Kernelall_late() #[[ATTR6:[0-9]+]]
+; CGSCC-NEXT:    call void @level2Kernelall_late() #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
@@ -89,7 +89,7 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 define internal void @level2Kernelall_early() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@level2Kernelall_early
 ; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -110,7 +110,7 @@ define internal void @level2Kernela() {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @ReachableKernel to i32*), align 4
 ; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, i32* @ReachableKernelAS0, align 4
-; TUNIT-NEXT:    call void @use(i32 noundef [[TMP0]], i32 noundef [[TMP1]], i32 noundef 42) #[[ATTR6:[0-9]+]]
+; TUNIT-NEXT:    call void @use(i32 noundef [[TMP0]], i32 noundef [[TMP1]], i32 noundef 42) #[[ATTR5:[0-9]+]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nosync nounwind
@@ -138,7 +138,7 @@ define internal void @level2Kernelb() {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @ReachableKernel to i32*), align 4
 ; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, i32* @ReachableKernelAS0, align 4
-; TUNIT-NEXT:    call void @use(i32 noundef [[TMP0]], i32 noundef [[TMP1]], i32 noundef 42) #[[ATTR6]]
+; TUNIT-NEXT:    call void @use(i32 noundef [[TMP0]], i32 noundef [[TMP1]], i32 noundef 42) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nosync nounwind
@@ -160,13 +160,13 @@ entry:
 }
 
 define internal void @level2Kernelall_late() {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@level2Kernelall_late
 ; TUNIT-SAME: () #[[ATTR2]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@level2Kernelall_late
 ; CGSCC-SAME: () #[[ATTR2]] {
 ; CGSCC-NEXT:  entry:
@@ -217,7 +217,7 @@ define internal void @level1(i32 %C) {
 ; TUNIT-NEXT:    call void @level2b() #[[ATTR3]]
 ; TUNIT-NEXT:    br label [[IF_END]]
 ; TUNIT:       if.end:
-; TUNIT-NEXT:    call void @level2all_late(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR5]]
+; TUNIT-NEXT:    call void @level2all_late(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR3]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: norecurse nosync nounwind
@@ -235,7 +235,7 @@ define internal void @level1(i32 %C) {
 ; CGSCC-NEXT:    call void @level2b(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR4]]
 ; CGSCC-NEXT:    br label [[IF_END]]
 ; CGSCC:       if.end:
-; CGSCC-NEXT:    call void @level2all_late(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR6]]
+; CGSCC-NEXT:    call void @level2all_late(i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[LOCAL]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:
@@ -258,14 +258,14 @@ if.end:                                           ; preds = %if.else, %if.then
 }
 
 define internal void @level2all_early(i32* %addr) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@level2all_early
 ; TUNIT-SAME: (i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR2]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    store i32 1, i32* addrspacecast (i32 addrspace(3)* @ReachableNonKernel to i32*), align 4
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@level2all_early
 ; CGSCC-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:  entry:
@@ -286,7 +286,7 @@ define internal void @level2a(i32* %addr) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @ReachableNonKernel to i32*), align 4
 ; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @UnreachableNonKernel to i32*), align 4
-; TUNIT-NEXT:    call void @use(i32 noundef [[TMP0]], i32 noundef [[TMP1]], i32 17) #[[ATTR6]]
+; TUNIT-NEXT:    call void @use(i32 noundef [[TMP0]], i32 noundef [[TMP1]], i32 17) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nosync nounwind
@@ -314,7 +314,7 @@ define internal void @level2b(i32* %addr) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @ReachableNonKernel to i32*), align 4
 ; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, i32* addrspacecast (i32 addrspace(3)* @UnreachableNonKernel to i32*), align 4
-; TUNIT-NEXT:    call void @use(i32 noundef [[TMP0]], i32 noundef [[TMP1]], i32 17) #[[ATTR6]]
+; TUNIT-NEXT:    call void @use(i32 noundef [[TMP0]], i32 noundef [[TMP1]], i32 17) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nosync nounwind
@@ -336,14 +336,14 @@ entry:
 }
 
 define internal void @level2all_late(i32* %addr) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; TUNIT-LABEL: define {{[^@]+}}@level2all_late
 ; TUNIT-SAME: (i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR2]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    store i32 1, i32* addrspacecast (i32 addrspace(3)* @UnreachableNonKernel to i32*), align 4
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(write)
 ; CGSCC-LABEL: define {{[^@]+}}@level2all_late
 ; CGSCC-SAME: (i32* noalias nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[ADDR:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:  entry:
@@ -362,17 +362,15 @@ declare dso_local void @use(i32, i32, i32) nosync norecurse nounwind
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { norecurse nosync nounwind "kernel" }
 ; TUNIT: attributes #[[ATTR1]] = { norecurse nosync nounwind }
-; TUNIT: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn writeonly }
+; TUNIT: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR3]] = { nosync nounwind }
-; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn writeonly }
-; TUNIT: attributes #[[ATTR5]] = { nosync nounwind writeonly }
-; TUNIT: attributes #[[ATTR6]] = { nounwind }
+; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR5]] = { nounwind }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { norecurse nosync nounwind "kernel" }
 ; CGSCC: attributes #[[ATTR1]] = { norecurse nosync nounwind }
-; CGSCC: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn writeonly }
+; CGSCC: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR3]] = { nosync nounwind }
 ; CGSCC: attributes #[[ATTR4]] = { nounwind }
-; CGSCC: attributes #[[ATTR5]] = { nounwind willreturn writeonly }
-; CGSCC: attributes #[[ATTR6]] = { nounwind writeonly }
+; CGSCC: attributes #[[ATTR5]] = { nounwind willreturn }
 ;.

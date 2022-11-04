@@ -3,7 +3,7 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
 define internal fastcc i32 @hash(i32* %ts, i32 %mod) nounwind {
-; CGSCC: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse noreturn nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@hash
 ; CGSCC-SAME: () #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -14,13 +14,13 @@ entry:
 }
 
 define void @encode(i32* %m, i32* %ts, i32* %new) nounwind {
-; TUNIT: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse noreturn nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@encode
 ; TUNIT-SAME: (i32* nocapture nofree readnone [[M:%.*]], i32* nocapture nofree readnone [[TS:%.*]], i32* nocapture nofree readnone [[NEW:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    unreachable
 ;
-; CGSCC: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree noreturn nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@encode
 ; CGSCC-SAME: (i32* nocapture nofree readnone [[M:%.*]], i32* nocapture nofree readnone [[TS:%.*]], i32* nocapture nofree readnone [[NEW:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -31,8 +31,8 @@ entry:
   unreachable
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR1]] = { nofree noreturn nosync nounwind readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR1]] = { nofree noreturn nosync nounwind willreturn memory(none) }
 ;.

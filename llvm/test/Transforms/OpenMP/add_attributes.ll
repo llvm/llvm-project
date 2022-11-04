@@ -1211,67 +1211,67 @@ attributes #0 = { noinline cold }
 ; CHECK: ; Function Attrs: cold convergent noinline nounwind
 ; CHECK-NEXT: declare void @__kmpc_barrier_simple_spmd(%struct.ident_t* nocapture nofree readonly, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn writeonly
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: write)
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_set_num_threads(i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn writeonly
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: write)
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_set_dynamic(i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn writeonly
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: write)
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_set_nested(i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn writeonly
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: write)
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_set_max_active_levels(i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn writeonly
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: write)
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_set_schedule(i32, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_num_threads()
 
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local void @use_int(i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_dynamic()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_nested()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_max_threads()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_thread_num()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_num_procs()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_in_parallel()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_in_final()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_active_level()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_level()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_ancestor_thread_num(i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_team_size(i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_thread_limit()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_max_active_levels()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_get_schedule(i32* nocapture writeonly, i32* nocapture writeonly)
 
 ; OPTIMISTIC-NOT: Function Attrs
@@ -1313,7 +1313,7 @@ attributes #0 = { noinline cold }
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local void @omp_init_nest_lock_with_hint(%struct.omp_nest_lock_t*, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare dso_local double @omp_get_wtime()
 
 ; OPTIMISTIC-NOT: Function Attrs
@@ -1340,7 +1340,7 @@ attributes #0 = { noinline cold }
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local i32 @omp_get_team_num()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_cancellation()
 
 ; OPTIMISTIC-NOT: Function Attrs
@@ -1370,25 +1370,25 @@ attributes #0 = { noinline cold }
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local i32 @omp_get_device_num()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_proc_bind()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_num_places()
 
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local i32 @omp_get_place_num_procs(i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_get_place_proc_ids(i32, i32* nocapture writeonly)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_place_num()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_partition_num_places()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local void @omp_get_partition_place_nums(i32*)
 
 ; OPTIMISTIC-NOT: Function Attrs
@@ -1433,10 +1433,10 @@ attributes #0 = { noinline cold }
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local i32 @omp_pause_resource_all(i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare dso_local i32 @omp_get_supported_active_levels()
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: read)
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_global_thread_num(%struct.ident_t* nocapture nofree readonly)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
@@ -1445,25 +1445,25 @@ attributes #0 = { noinline cold }
 ; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_omp_taskwait(%struct.ident_t* nocapture nofree readonly, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_omp_taskyield(%struct.ident_t* nocapture nofree readonly, i32, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_push_num_threads(%struct.ident_t* nocapture nofree readonly, i32, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_push_proc_bind(%struct.ident_t* nocapture nofree readonly, i32, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_serialized_parallel(%struct.ident_t* nocapture nofree readonly, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_end_serialized_parallel(%struct.ident_t* nocapture nofree readonly, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_master(%struct.ident_t* nocapture nofree readonly, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_end_master(%struct.ident_t* nocapture nofree readonly, i32)
 
 ; OPTIMISTIC: ; Function Attrs: convergent nounwind
@@ -1499,43 +1499,43 @@ attributes #0 = { noinline cold }
 ; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_end_ordered(%struct.ident_t* nocapture nofree readonly, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_for_static_init_4(%struct.ident_t* nocapture nofree readonly, i32, i32, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree, i32, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_for_static_init_4u(%struct.ident_t* nocapture nofree readonly, i32, i32, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree, i32, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_for_static_init_8(%struct.ident_t* nocapture nofree readonly, i32, i32, i32* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64, i64)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_for_static_init_8u(%struct.ident_t* nocapture nofree readonly, i32, i32, i32* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64, i64)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_for_static_fini(%struct.ident_t* nocapture nofree readonly, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_team_static_init_4(%struct.ident_t* nocapture nofree readonly, i32, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree, i32, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_team_static_init_4u(%struct.ident_t* nocapture nofree readonly, i32, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree, i32, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_team_static_init_8(%struct.ident_t* nocapture nofree readonly, i32, i32* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64, i64)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_team_static_init_8u(%struct.ident_t* nocapture nofree readonly, i32, i32* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64, i64)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dist_for_static_init_4(%struct.ident_t* nocapture nofree readonly, i32, i32, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree, i32, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dist_for_static_init_4u(%struct.ident_t* nocapture nofree readonly, i32, i32, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree, i32, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dist_for_static_init_8(%struct.ident_t* nocapture nofree readonly, i32, i32, i32* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64, i64)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dist_for_static_init_8u(%struct.ident_t* nocapture nofree readonly, i32, i32, i32* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64, i64)
 
 ; OPTIMISTIC: ; Function Attrs: convergent nounwind
@@ -1556,52 +1556,52 @@ attributes #0 = { noinline cold }
 ; OPTIMISTIC: ; Function Attrs: convergent nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_taskgroup(%struct.ident_t* nocapture nofree readonly, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dist_dispatch_init_4(%struct.ident_t* nocapture nofree readonly, i32, i32, i32* nocapture nofree, i32, i32, i32, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dist_dispatch_init_4u(%struct.ident_t* nocapture nofree readonly, i32, i32, i32* nocapture nofree, i32, i32, i32, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dist_dispatch_init_8(%struct.ident_t* nocapture nofree readonly, i32, i32, i32* nocapture nofree, i64, i64, i64, i64)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dist_dispatch_init_8u(%struct.ident_t* nocapture nofree readonly, i32, i32, i32* nocapture nofree, i64, i64, i64, i64)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dispatch_init_4(%struct.ident_t* nocapture nofree readonly, i32, i32, i32, i32, i32, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dispatch_init_4u(%struct.ident_t* nocapture nofree readonly, i32, i32, i32, i32, i32, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dispatch_init_8(%struct.ident_t* nocapture nofree readonly, i32, i32, i64, i64, i64, i64)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dispatch_init_8u(%struct.ident_t* nocapture nofree readonly, i32, i32, i64, i64, i64, i64)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_dispatch_next_4(%struct.ident_t* nocapture nofree readonly, i32, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_dispatch_next_4u(%struct.ident_t* nocapture nofree readonly, i32, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree, i32* nocapture nofree)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_dispatch_next_8(%struct.ident_t* nocapture nofree readonly, i32, i32* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_dispatch_next_8u(%struct.ident_t* nocapture nofree readonly, i32, i32* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree, i64* nocapture nofree)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dispatch_fini_4(%struct.ident_t* nocapture nofree readonly, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dispatch_fini_4u(%struct.ident_t* nocapture nofree readonly, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dispatch_fini_8(%struct.ident_t* nocapture nofree readonly, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_dispatch_fini_8u(%struct.ident_t* nocapture nofree readonly, i32)
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
@@ -1619,7 +1619,7 @@ attributes #0 = { noinline cold }
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare i32 @__kmpc_cancellationpoint(%struct.ident_t* nocapture nofree readonly, i32, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_push_num_teams(%struct.ident_t* nocapture nofree readonly, i32, i32, i32)
 
 ; OPTIMISTIC: ; Function Attrs: nounwind
@@ -1673,7 +1673,7 @@ attributes #0 = { noinline cold }
 ; OPTIMISTIC: ; Function Attrs: nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare void @__kmpc_destroy_allocator(i32, i8*)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind willreturn writeonly
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(inaccessiblemem: write)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_push_target_tripcount_mapper(%struct.ident_t*, i64, i64)
 
 ; OPTIMISTIC: ; Function Attrs: convergent nounwind

@@ -68,7 +68,7 @@ entry:
 declare !callback !0 dso_local i32 @pthread_create(i64*, %union.pthread_attr_t*, i8* (i8*)*, i8*)
 
 define internal i8* @foo(i8* %arg) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: (i8* noalias nocapture nofree readnone align 4294967296 [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -79,7 +79,7 @@ entry:
 }
 
 define internal i8* @bar(i8* %arg) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@bar
 ; CHECK-SAME: (i8* noalias nocapture nofree nonnull readnone align 8 dereferenceable(8) [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -90,7 +90,7 @@ entry:
 }
 
 define internal i8* @baz(i8* %arg) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@baz
 ; CHECK-SAME: (i8* noalias nofree noundef nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -101,7 +101,7 @@ entry:
 }
 
 define internal i8* @buz(i8* %arg) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@buz
 ; CHECK-SAME: (i8* noalias nofree noundef nonnull readnone returned align 8 dereferenceable(1) "no-capture-maybe-returned" [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -114,7 +114,7 @@ entry:
 !1 = !{i64 2, i64 3, i1 false}
 !0 = !{!1}
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!1}
 ; CHECK: [[META1:![0-9]+]] = !{i64 2, i64 3, i1 false}

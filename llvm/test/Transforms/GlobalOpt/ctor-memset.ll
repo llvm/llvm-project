@@ -115,5 +115,5 @@ define internal void @ctor8() {
 
 declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
 ;.

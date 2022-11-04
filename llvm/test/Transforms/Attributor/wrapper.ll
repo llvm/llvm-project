@@ -8,7 +8,7 @@
 ; CHECK: ret
 ;
 ; Check the original function, which is wrapped and becomes anonymous
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK: define internal noundef i32 @0()
 ; CHECK: ret i32 1
 define linkonce i32 @inner1() {
@@ -35,7 +35,7 @@ entry:
 ; CHECK: tail call i32 @1(i32 %a, i32 %b)
 ; CHECK: ret
 ;
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK: define internal i32 @1(i32 %a, i32 %b)
 ; CHECK: %c = add i32 %a, %b
 ; CHECK: ret i32 %c

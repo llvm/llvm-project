@@ -7,7 +7,7 @@
 ; Inlining should nuke the invoke (and any inlined calls) here even with
 ; argument promotion running along with it.
 define void @zot() personality i32 (...)* @wibble {
-; TUNIT: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse noreturn nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@zot
 ; TUNIT-SAME: () #[[ATTR0:[0-9]+]] personality i32 (...)* @wibble {
 ; TUNIT-NEXT:  bb:
@@ -18,7 +18,7 @@ define void @zot() personality i32 (...)* @wibble {
 ; TUNIT:       bb2:
 ; TUNIT-NEXT:    unreachable
 ;
-; CGSCC: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree noreturn nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@zot
 ; CGSCC-SAME: () #[[ATTR0:[0-9]+]] personality i32 (...)* @wibble {
 ; CGSCC-NEXT:  bb:
@@ -43,13 +43,13 @@ bb2:
 }
 
 define internal void @hoge() {
-; TUNIT: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse noreturn nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@hoge
 ; TUNIT-SAME: () #[[ATTR0]] {
 ; TUNIT-NEXT:  bb:
 ; TUNIT-NEXT:    unreachable
 ;
-; CGSCC: Function Attrs: nofree noreturn nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree noreturn nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@hoge
 ; CGSCC-SAME: () #[[ATTR0]] {
 ; CGSCC-NEXT:  bb:
@@ -62,7 +62,7 @@ bb:
 }
 
 define internal fastcc i8* @spam(i1 (i8*)* %arg) {
-; CGSCC: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse noreturn nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@spam
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  bb:
@@ -85,7 +85,7 @@ bb:
 }
 
 define internal i1 @barney(i8* %arg) {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@barney
 ; CGSCC-SAME: () #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:  bb:
@@ -96,13 +96,13 @@ bb:
 }
 
 define i32 @test_inf_promote_caller(i32 %arg) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@test_inf_promote_caller
 ; TUNIT-SAME: (i32 [[ARG:%.*]]) #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:  bb:
 ; TUNIT-NEXT:    ret i32 0
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test_inf_promote_caller
 ; CGSCC-SAME: (i32 [[ARG:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CGSCC-NEXT:  bb:
@@ -119,7 +119,7 @@ bb:
 }
 
 define internal i32 @test_inf_promote_callee(%S* %arg, %S* %arg1) {
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test_inf_promote_callee
 ; CGSCC-SAME: () #[[ATTR3]] {
 ; CGSCC-NEXT:  bb:
@@ -137,13 +137,13 @@ bb:
 
 declare i32 @wibble(...)
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
-; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; TUNIT: attributes #[[ATTR2]] = { noreturn nounwind readnone }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse noreturn nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR2]] = { noreturn nounwind }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree noreturn nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR1]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR3]] = { nofree nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR4]] = { noreturn nounwind readnone }
+; CGSCC: attributes #[[ATTR0]] = { nofree noreturn nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR1]] = { nofree norecurse noreturn nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR3]] = { nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR4]] = { noreturn nounwind }
 ;.

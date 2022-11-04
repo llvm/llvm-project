@@ -33,7 +33,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define i32* @external_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
-; TUNIT: Function Attrs: argmemonly nofree nosync nounwind
+; TUNIT: Function Attrs: nofree nosync nounwind memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@external_ret2_nrw
 ; TUNIT-SAME: (i32* nofree [[N0:%.*]], i32* nofree [[R0:%.*]], i32* nofree returned [[W0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
@@ -43,7 +43,7 @@ define i32* @external_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
 ; TUNIT-NEXT:    [[CALL3:%.*]] = call i32* @internal_ret1_rw(i32* nofree align 4 [[R0]], i32* nofree [[W0]]) #[[ATTR3]]
 ; TUNIT-NEXT:    ret i32* [[W0]]
 ;
-; CGSCC: Function Attrs: argmemonly nofree nosync nounwind
+; CGSCC: Function Attrs: nofree nosync nounwind memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@external_ret2_nrw
 ; CGSCC-SAME: (i32* nofree [[N0:%.*]], i32* nofree [[R0:%.*]], i32* nofree returned [[W0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -62,7 +62,7 @@ entry:
 }
 
 define internal i32* @internal_ret0_nw(i32* %n0, i32* %w0) {
-; TUNIT: Function Attrs: argmemonly nofree nosync nounwind
+; TUNIT: Function Attrs: nofree nosync nounwind memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@internal_ret0_nw
 ; TUNIT-SAME: (i32* nofree [[N0:%.*]], i32* nofree [[W0:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
@@ -87,7 +87,7 @@ define internal i32* @internal_ret0_nw(i32* %n0, i32* %w0) {
 ; TUNIT-NEXT:    [[RETVAL_0:%.*]] = phi i32* [ [[CALL5]], [[IF_END]] ], [ [[N0]], [[IF_THEN]] ]
 ; TUNIT-NEXT:    ret i32* [[RETVAL_0]]
 ;
-; CGSCC: Function Attrs: argmemonly nofree nosync nounwind
+; CGSCC: Function Attrs: nofree nosync nounwind memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@internal_ret0_nw
 ; CGSCC-SAME: (i32* nofree [[N0:%.*]], i32* nofree [[W0:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:  entry:
@@ -104,8 +104,8 @@ define internal i32* @internal_ret0_nw(i32* %n0, i32* %w0) {
 ; CGSCC-NEXT:    [[CALL:%.*]] = call i32* @internal_ret1_rrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R1]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[CALL1:%.*]] = call i32* @external_ret2_nrw(i32* nofree [[N0]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[CALL2:%.*]] = call i32* @external_ret2_nrw(i32* nofree [[N0]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R1]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
-; CGSCC-NEXT:    [[CALL3:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[R0]], i32* nofree nonnull writeonly align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
-; CGSCC-NEXT:    [[CALL4:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[R1]], i32* nofree nonnull writeonly align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
+; CGSCC-NEXT:    [[CALL3:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[R0]], i32* nofree nonnull writeonly align 4 dereferenceable(4) [[W0]]) #[[ATTR4:[0-9]+]]
+; CGSCC-NEXT:    [[CALL4:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[R1]], i32* nofree nonnull writeonly align 4 dereferenceable(4) [[W0]]) #[[ATTR4]]
 ; CGSCC-NEXT:    [[CALL5:%.*]] = call i32* @internal_ret0_nw(i32* nofree [[N0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
 ; CGSCC-NEXT:    br label [[RETURN]]
 ; CGSCC:       return:
@@ -139,7 +139,7 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 define internal i32* @internal_ret1_rrw(i32* %r0, i32* %r1, i32* %w0) {
-; TUNIT: Function Attrs: argmemonly nofree nosync nounwind
+; TUNIT: Function Attrs: nofree nosync nounwind memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@internal_ret1_rrw
 ; TUNIT-SAME: (i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0:%.*]], i32* nofree align 4 [[R1:%.*]], i32* nofree [[W0:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
@@ -167,7 +167,7 @@ define internal i32* @internal_ret1_rrw(i32* %r0, i32* %r1, i32* %w0) {
 ; TUNIT-NEXT:    [[RETVAL_0:%.*]] = phi i32* [ [[CALL8]], [[IF_END]] ], [ [[R1]], [[IF_THEN]] ]
 ; TUNIT-NEXT:    ret i32* undef
 ;
-; CGSCC: Function Attrs: argmemonly nofree nosync nounwind
+; CGSCC: Function Attrs: nofree nosync nounwind memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@internal_ret1_rrw
 ; CGSCC-SAME: (i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0:%.*]], i32* nofree align 4 [[R1:%.*]], i32* nofree [[W0:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:  entry:
@@ -187,8 +187,8 @@ define internal i32* @internal_ret1_rrw(i32* %r0, i32* %r1, i32* %w0) {
 ; CGSCC-NEXT:    [[CALL3:%.*]] = call i32* @internal_ret0_nw(i32* nofree nonnull align 4 dereferenceable(4) [[W0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[CALL4:%.*]] = call i32* @external_ret2_nrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[R1]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[CALL5:%.*]] = call i32* @external_ret2_nrw(i32* nofree nonnull align 4 dereferenceable(4) [[R1]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
-; CGSCC-NEXT:    [[CALL6:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[R1]], i32* nofree nonnull writeonly align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
-; CGSCC-NEXT:    [[CALL7:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree nonnull align 4 dereferenceable(4) [[R1]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[R0]], i32* nofree nonnull writeonly align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
+; CGSCC-NEXT:    [[CALL6:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[R1]], i32* nofree nonnull writeonly align 4 dereferenceable(4) [[W0]]) #[[ATTR4]]
+; CGSCC-NEXT:    [[CALL7:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree nonnull align 4 dereferenceable(4) [[R1]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[R0]], i32* nofree nonnull writeonly align 4 dereferenceable(4) [[W0]]) #[[ATTR4]]
 ; CGSCC-NEXT:    [[CALL8:%.*]] = call i32* @internal_ret0_nw(i32* nofree nonnull align 4 dereferenceable(4) [[R1]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
 ; CGSCC-NEXT:    br label [[RETURN]]
 ; CGSCC:       return:
@@ -225,7 +225,7 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 define i32* @external_sink_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
-; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@external_sink_ret2_nrw
 ; CHECK-SAME: (i32* nofree [[N0:%.*]], i32* nocapture nofree readonly [[R0:%.*]], i32* nofree returned writeonly "no-capture-maybe-returned" [[W0:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -257,7 +257,7 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 define internal i32* @internal_ret1_rw(i32* %r0, i32* %w0) {
-; TUNIT: Function Attrs: argmemonly nofree nosync nounwind
+; TUNIT: Function Attrs: nofree nosync nounwind memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@internal_ret1_rw
 ; TUNIT-SAME: (i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0:%.*]], i32* nofree [[W0:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
@@ -279,7 +279,7 @@ define internal i32* @internal_ret1_rw(i32* %r0, i32* %w0) {
 ; TUNIT-NEXT:    [[RETVAL_0:%.*]] = phi i32* [ [[CALL4]], [[IF_END]] ], [ [[W0]], [[IF_THEN]] ]
 ; TUNIT-NEXT:    ret i32* [[RETVAL_0]]
 ;
-; CGSCC: Function Attrs: argmemonly nofree nosync nounwind
+; CGSCC: Function Attrs: nofree nosync nounwind memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@internal_ret1_rw
 ; CGSCC-SAME: (i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0:%.*]], i32* nofree [[W0:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:  entry:
@@ -294,7 +294,7 @@ define internal i32* @internal_ret1_rw(i32* %r0, i32* %w0) {
 ; CGSCC-NEXT:    store i32 [[TMP1]], i32* [[W0]], align 4
 ; CGSCC-NEXT:    [[CALL1:%.*]] = call i32* @internal_ret0_nw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
 ; CGSCC-NEXT:    [[CALL2:%.*]] = call i32* @internal_ret0_nw(i32* nofree nonnull align 4 dereferenceable(4) [[W0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
-; CGSCC-NEXT:    [[CALL3:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[R0]], i32* nofree nonnull writeonly align 4 dereferenceable(4) [[W0]]) #[[ATTR3]]
+; CGSCC-NEXT:    [[CALL3:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[R0]], i32* nofree nonnull writeonly align 4 dereferenceable(4) [[W0]]) #[[ATTR4]]
 ; CGSCC-NEXT:    [[CALL4:%.*]] = call i32* @external_ret2_nrw(i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[R0]], i32* nofree nonnull align 4 dereferenceable(4) [[W0]]) #[[ATTR2]]
 ; CGSCC-NEXT:    br label [[RETURN]]
 ; CGSCC:       return:
@@ -325,7 +325,7 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 define i32* @external_source_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
-; TUNIT: Function Attrs: argmemonly nofree norecurse nosync nounwind
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@external_source_ret2_nrw
 ; TUNIT-SAME: (i32* nofree [[N0:%.*]], i32* nofree [[R0:%.*]], i32* nofree returned [[W0:%.*]]) #[[ATTR2:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
@@ -333,11 +333,11 @@ define i32* @external_source_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
 ; TUNIT-NEXT:    [[CALL1:%.*]] = call i32* @external_ret2_nrw(i32* nofree [[N0]], i32* nofree [[R0]], i32* nofree [[W0]]) #[[ATTR3]]
 ; TUNIT-NEXT:    ret i32* [[W0]]
 ;
-; CGSCC: Function Attrs: argmemonly nofree nosync nounwind
+; CGSCC: Function Attrs: nofree nosync nounwind memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@external_source_ret2_nrw
 ; CGSCC-SAME: (i32* nofree [[N0:%.*]], i32* nofree [[R0:%.*]], i32* nofree [[W0:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree readonly [[R0]], i32* nofree writeonly [[W0]]) #[[ATTR4:[0-9]+]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32* @external_sink_ret2_nrw(i32* nofree [[N0]], i32* nocapture nofree readonly [[R0]], i32* nofree writeonly [[W0]]) #[[ATTR5:[0-9]+]]
 ; CGSCC-NEXT:    [[CALL1:%.*]] = call i32* @external_ret2_nrw(i32* nofree [[N0]], i32* nofree [[R0]], i32* nofree [[W0]]) #[[ATTR3]]
 ; CGSCC-NEXT:    ret i32* [[CALL1]]
 ;
@@ -350,15 +350,16 @@ entry:
 ; Verify that we see only expected attribute sets, the above lines only check
 ; for a subset relation.
 ;.
-; TUNIT: attributes #[[ATTR0]] = { argmemonly nofree nosync nounwind }
-; TUNIT: attributes #[[ATTR1]] = { argmemonly nofree norecurse nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR2]] = { argmemonly nofree norecurse nosync nounwind }
+; TUNIT: attributes #[[ATTR0]] = { nofree nosync nounwind memory(argmem: readwrite) }
+; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
+; TUNIT: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR3]] = { nofree nosync nounwind }
 ; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { argmemonly nofree nosync nounwind }
-; CGSCC: attributes #[[ATTR1]] = { argmemonly nofree norecurse nosync nounwind willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind }
 ; CGSCC: attributes #[[ATTR3]] = { nounwind }
-; CGSCC: attributes #[[ATTR4]] = { nounwind willreturn }
+; CGSCC: attributes #[[ATTR4]] = { nounwind memory(readwrite) }
+; CGSCC: attributes #[[ATTR5]] = { nounwind willreturn }
 ;.

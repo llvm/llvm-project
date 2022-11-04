@@ -135,7 +135,7 @@ define void @unused_arg_caller() {
 ; CHECK_DISABLED-NEXT:    call void @unused_arg(i8 noundef 0)
 ; CHECK_DISABLED-NEXT:    ret void
 ;
-; CHECK_ENABLED: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK_ENABLED: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK_ENABLED-LABEL: define {{[^@]+}}@unused_arg_caller
 ; CHECK_ENABLED-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK_ENABLED-NEXT:    unreachable
@@ -164,7 +164,7 @@ define linkonce_odr hidden void @__clang_call_terminate() {
 ;.
 ; CHECK_DISABLED: attributes #[[ATTR0]] = { norecurse }
 ;.
-; CHECK_ENABLED: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CHECK_ENABLED: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ; CHECK_ENABLED: attributes #[[ATTR1]] = { norecurse }
-; CHECK_ENABLED: attributes #[[ATTR2:[0-9]+]] = { nounwind readnone }
+; CHECK_ENABLED: attributes #[[ATTR2:[0-9]+]] = { nounwind }
 ;.

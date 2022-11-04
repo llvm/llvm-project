@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=function-attrs -S | FileCheck %s
 
 define void @nouses-argworn-funrn(ptr writeonly %.aaa) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@nouses-argworn-funrn
 ; CHECK-SAME: (ptr nocapture readnone [[DOTAAA:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  nouses-argworn-funrn_entry:
@@ -13,7 +13,7 @@ nouses-argworn-funrn_entry:
 }
 
 define void @nouses-argworn-funro(ptr writeonly %.aaa, ptr %.bbb) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind readonly willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: define {{[^@]+}}@nouses-argworn-funro
 ; CHECK-SAME: (ptr nocapture readnone [[DOTAAA:%.*]], ptr nocapture readonly [[DOTBBB:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  nouses-argworn-funro_entry:
@@ -30,7 +30,7 @@ nouses-argworn-funro_entry:
 @d-ccc = internal global %_type_of_d-ccc <{ ptr null, i8 1, i8 13, i8 0, i8 -127 }>, align 8
 
 define void @nouses-argworn-funwo(ptr writeonly %.aaa) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn writeonly
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none)
 ; CHECK-LABEL: define {{[^@]+}}@nouses-argworn-funwo
 ; CHECK-SAME: (ptr nocapture readnone [[DOTAAA:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  nouses-argworn-funwo_entry:
@@ -43,7 +43,7 @@ nouses-argworn-funwo_entry:
 }
 
 define void @test_store(ptr %p) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind willreturn writeonly
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@test_store
 ; CHECK-SAME: (ptr nocapture writeonly [[P:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    store i8 0, ptr [[P]], align 1
@@ -55,7 +55,7 @@ define void @test_store(ptr %p) {
 
 @G = external global ptr
 define i8 @test_store_capture(ptr %p) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: read, inaccessiblemem: none)
 ; CHECK-LABEL: define {{[^@]+}}@test_store_capture
 ; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    store ptr [[P]], ptr @G, align 8
@@ -70,7 +70,7 @@ define i8 @test_store_capture(ptr %p) {
 }
 
 define void @test_addressing(ptr %p) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind willreturn writeonly
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@test_addressing
 ; CHECK-SAME: (ptr nocapture writeonly [[P:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[P]], i64 8
@@ -83,7 +83,7 @@ define void @test_addressing(ptr %p) {
 }
 
 define void @test_readwrite(ptr %p) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@test_readwrite
 ; CHECK-SAME: (ptr nocapture [[P:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[P]], align 1
@@ -96,7 +96,7 @@ define void @test_readwrite(ptr %p) {
 }
 
 define void @test_volatile(ptr %p) {
-; CHECK: Function Attrs: inaccessiblemem_or_argmemonly nofree norecurse nounwind
+; CHECK: Function Attrs: nofree norecurse nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@test_volatile
 ; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    store volatile i8 0, ptr [[P]], align 1
@@ -107,7 +107,7 @@ define void @test_volatile(ptr %p) {
 }
 
 define void @test_atomicrmw(ptr %p) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@test_atomicrmw
 ; CHECK-SAME: (ptr nocapture [[P:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[P]], i8 0 seq_cst, align 1
@@ -134,7 +134,7 @@ declare void @direct2_callee(ptr %p) writeonly
 
 ; writeonly w/o nocapture is not enough
 define void @direct2(ptr %p) {
-; CHECK: Function Attrs: writeonly
+; CHECK: Function Attrs: memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@direct2
 ; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR8:[0-9]+]] {
 ; CHECK-NEXT:    call void @direct2_callee(ptr [[P]])
@@ -146,9 +146,9 @@ define void @direct2(ptr %p) {
 }
 
 define void @direct2b(ptr %p) {
-; CHECK: Function Attrs: writeonly
+; CHECK: Function Attrs: memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@direct2b
-; CHECK-SAME: (ptr nocapture writeonly [[P:%.*]]) #[[ATTR8]] {
+; CHECK-SAME: (ptr nocapture [[P:%.*]]) #[[ATTR8]] {
 ; CHECK-NEXT:    call void @direct2_callee(ptr nocapture [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -209,9 +209,9 @@ define void @fptr_test2(ptr %p, ptr %f) {
 }
 
 define void @fptr_test3(ptr %p, ptr %f) {
-; CHECK: Function Attrs: writeonly
+; CHECK: Function Attrs: memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@fptr_test3
-; CHECK-SAME: (ptr nocapture writeonly [[P:%.*]], ptr nocapture readonly [[F:%.*]]) #[[ATTR8]] {
+; CHECK-SAME: (ptr nocapture [[P:%.*]], ptr nocapture readonly [[F:%.*]]) #[[ATTR8]] {
 ; CHECK-NEXT:    call void [[F]](ptr nocapture [[P]]) #[[ATTR8]]
 ; CHECK-NEXT:    ret void
 ;
