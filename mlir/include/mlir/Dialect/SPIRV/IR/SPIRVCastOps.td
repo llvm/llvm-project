@@ -88,7 +88,7 @@ def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [Pure]> {
   let assemblyFormat = [{
     $operand attr-dict `:` type($operand) `to` type($result)
   }];
-  let hasCanonicalizer = 1;
+  let hasFolder = 1;
 }
 
 // -----
