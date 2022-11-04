@@ -148,6 +148,7 @@ Changes to the X86 Backend
 * Support ISA of ``AVX-IFMA``.
 * Support ISA of ``AVX-VNNI-INT8``.
 * Support ISA of ``AVX-NE-CONVERT``.
+* ``-mcpu=raptorlake`` and ``-mcpu=meteorlake`` are now supported.
 
 Changes to the OCaml bindings
 -----------------------------

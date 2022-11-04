@@ -391,20 +391,20 @@ define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    fmov s0, w10
 ; CHECK-NEXT:    ubfx x12, x9, #12, #20
 ; CHECK-NEXT:    lsr x15, x9, #31
-; CHECK-NEXT:    bfi w13, w11, #16, #8
-; CHECK-NEXT:    lsr x11, x9, #50
+; CHECK-NEXT:    orr w11, w13, w11, lsl #16
+; CHECK-NEXT:    lsr x13, x9, #50
 ; CHECK-NEXT:    mov.s v0[1], w14
 ; CHECK-NEXT:    fmov s1, w12
 ; CHECK-NEXT:    lsr x12, x10, #38
-; CHECK-NEXT:    bfi w11, w13, #14, #18
+; CHECK-NEXT:    orr w13, w13, w11, lsl #14
 ; CHECK-NEXT:    lsr x10, x10, #57
-; CHECK-NEXT:    bfi w10, w9, #7, #25
-; CHECK-NEXT:    lsr w9, w13, #5
+; CHECK-NEXT:    orr w9, w10, w9, lsl #7
+; CHECK-NEXT:    lsr w10, w11, #5
 ; CHECK-NEXT:    mov.s v1[1], w15
 ; CHECK-NEXT:    mov.s v0[2], w12
-; CHECK-NEXT:    mov.s v1[2], w11
-; CHECK-NEXT:    mov.s v0[3], w10
-; CHECK-NEXT:    mov.s v1[3], w9
+; CHECK-NEXT:    mov.s v1[2], w13
+; CHECK-NEXT:    mov.s v0[3], w9
+; CHECK-NEXT:    mov.s v1[3], w10
 ; CHECK-NEXT:    uzp1.8h v0, v0, v1
 ; CHECK-NEXT:    xtn.8b v0, v0
 ; CHECK-NEXT:    str d0, [x1, x8, lsl #3]
@@ -420,21 +420,21 @@ define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:  .LBB5_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-BE-NEXT:    ldp x10, x9, [x0]
-; CHECK-BE-NEXT:    ldrh w15, [x0, #16]
-; CHECK-BE-NEXT:    lsr x12, x10, #40
+; CHECK-BE-NEXT:    ldrh w11, [x0, #16]
 ; CHECK-BE-NEXT:    lsr x13, x10, #45
-; CHECK-BE-NEXT:    lsr x11, x9, #40
+; CHECK-BE-NEXT:    lsr x15, x10, #40
+; CHECK-BE-NEXT:    lsr x12, x9, #40
 ; CHECK-BE-NEXT:    ubfx x14, x9, #33, #7
 ; CHECK-BE-NEXT:    ubfx x16, x10, #26, #14
-; CHECK-BE-NEXT:    bfi w16, w12, #14, #18
-; CHECK-BE-NEXT:    ubfx x12, x9, #14, #18
-; CHECK-BE-NEXT:    bfi w14, w11, #7, #24
-; CHECK-BE-NEXT:    ldrb w11, [x0, #18]
+; CHECK-BE-NEXT:    orr w12, w14, w12, lsl #7
+; CHECK-BE-NEXT:    ldrb w14, [x0, #18]
+; CHECK-BE-NEXT:    orr w15, w16, w15, lsl #14
 ; CHECK-BE-NEXT:    fmov s0, w13
 ; CHECK-BE-NEXT:    add x0, x0, #32
-; CHECK-BE-NEXT:    fmov s1, w14
-; CHECK-BE-NEXT:    bfi w11, w15, #8, #16
-; CHECK-BE-NEXT:    mov v0.s[1], w16
+; CHECK-BE-NEXT:    fmov s1, w12
+; CHECK-BE-NEXT:    ubfx x12, x9, #14, #18
+; CHECK-BE-NEXT:    orr w11, w14, w11, lsl #8
+; CHECK-BE-NEXT:    mov v0.s[1], w15
 ; CHECK-BE-NEXT:    mov v1.s[1], w12
 ; CHECK-BE-NEXT:    extr x12, x10, x9, #40
 ; CHECK-BE-NEXT:    lsl x9, x9, #24

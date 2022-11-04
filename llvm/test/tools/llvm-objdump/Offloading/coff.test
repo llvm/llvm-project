@@ -1,26 +1,23 @@
-## Check that we can dump an offloading binary directly.
 # RUN: yaml2obj %S/Inputs/binary.yaml -o %t.bin
-# RUN: llvm-objdump --offloading %t.bin | FileCheck %s --match-full-lines --strict-whitespace --implicit-check-not={{.}}
+# RUN: yaml2obj %s -o %t.coff
+# RUN: llvm-objcopy --add-section .llvm.offloading=%t.bin %t.coff
+# RUN: llvm-objdump --offloading %t.coff | FileCheck %s --match-full-lines --strict-whitespace --implicit-check-not={{.}}
 
-## Check that we can dump an offloading binary inside of an ELF section.
-# RUN: yaml2obj %s -o %t.elf
-# RUN: llvm-objcopy --update-section .llvm.offloading=%t.bin %t.elf
-# RUN: llvm-objdump --offloading %t.elf | FileCheck %s --check-prefixes=CHECK,ELF --match-full-lines --strict-whitespace --implicit-check-not={{.}}
-
-!ELF
-FileHeader:
-  Class:           ELFCLASS64
-  Data:            ELFDATA2LSB
-  Type:            ET_EXEC
-Sections:
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: []
+sections:
+  - Name:            .rdata
+    Characteristics: []
   - Name:            .llvm.offloading
-    Type:            SHT_LLVM_OFFLOADING
-    Flags:           [ SHF_EXCLUDE ]
-    AddressAlign:    0x0000000000000008
+    Characteristics: [ IMAGE_SCN_LNK_REMOVE, IMAGE_SCN_MEM_DISCARDABLE ]
+    Alignment:       8
+symbols:
 
-#        ELF:{{.*}}file format elf64-unknown
-#  ELF-EMPTY:
-#      CHECK:OFFLOADING IMAGE [0]:
+#      CHECK:{{.*}}file format coff-x86-64
+# CHECK-EMPTY:
+# CHECK-NEXT:OFFLOADING IMAGE [0]:
 # CHECK-NEXT:kind            llvm ir
 # CHECK-NEXT:arch            gfx908
 # CHECK-NEXT:triple          amdgcn-amd-amdhsa

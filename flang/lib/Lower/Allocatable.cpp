@@ -482,6 +482,10 @@ private:
     if (!typeSpec)
       typeSpec = &alloc.type;
 
+    // Do not generate calls for non derived-type type spec.
+    if (!typeSpec->AsDerived())
+      return;
+
     assert(typeSpec && "type spec missing for polymorphic allocation");
     std::string typeName =
         Fortran::lower::mangle::mangleName(typeSpec->derivedTypeSpec());

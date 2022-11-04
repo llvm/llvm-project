@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::arith;
@@ -1444,6 +1445,16 @@ static Attribute getBoolAttribute(Type type, MLIRContext *ctx, bool value) {
   return DenseElementsAttr::get(shapedType, boolAttr);
 }
 
+static Optional<int64_t> getIntegerWidth(Type t) {
+  if (auto intType = t.dyn_cast<IntegerType>()) {
+    return intType.getWidth();
+  }
+  if (auto vectorIntType = t.dyn_cast<VectorType>()) {
+    return vectorIntType.getElementType().cast<IntegerType>().getWidth();
+  }
+  return llvm::None;
+}
+
 OpFoldResult arith::CmpIOp::fold(ArrayRef<Attribute> operands) {
   assert(operands.size() == 2 && "cmpi takes two operands");
 
@@ -1456,13 +1467,17 @@ OpFoldResult arith::CmpIOp::fold(ArrayRef<Attribute> operands) {
   if (matchPattern(getRhs(), m_Zero())) {
     if (auto extOp = getLhs().getDefiningOp<ExtSIOp>()) {
       // extsi(%x : i1 -> iN) != 0  ->  %x
-      if (extOp.getOperand().getType().cast<IntegerType>().getWidth() == 1 &&
+      Optional<int64_t> integerWidth =
+          getIntegerWidth(extOp.getOperand().getType());
+      if (integerWidth && integerWidth.value() == 1 &&
           getPredicate() == arith::CmpIPredicate::ne)
         return extOp.getOperand();
     }
     if (auto extOp = getLhs().getDefiningOp<ExtUIOp>()) {
       // extui(%x : i1 -> iN) != 0  ->  %x
-      if (extOp.getOperand().getType().cast<IntegerType>().getWidth() == 1 &&
+      Optional<int64_t> integerWidth =
+          getIntegerWidth(extOp.getOperand().getType());
+      if (integerWidth && integerWidth.value() == 1 &&
           getPredicate() == arith::CmpIPredicate::ne)
         return extOp.getOperand();
     }
