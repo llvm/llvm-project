@@ -1148,6 +1148,12 @@ inline bool This(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+inline bool RVOPtr(InterpState &S, CodePtr OpPC) {
+  assert(S.Current->getFunction()->hasRVO());
+  S.Stk.push<Pointer>(S.Current->getRVOPtr());
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Shr, Shl
 //===----------------------------------------------------------------------===//

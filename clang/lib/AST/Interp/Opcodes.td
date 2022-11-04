@@ -269,6 +269,9 @@ def GetPtrThisVirtBase : Opcode {
 // [] -> [Pointer]
 def This : Opcode;
 
+// [] -> [Pointer]
+def RVOPtr : Opcode;
+
 // [Pointer] -> [Pointer]
 def NarrowPtr : Opcode;
 // [Pointer] -> [Pointer]
