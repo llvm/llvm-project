@@ -588,12 +588,18 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
+  if (E->containsErrors())
+    return false;
+
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true);
   return this->Visit(E);
 }
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visit(const Expr *E) {
+  if (E->containsErrors())
+    return false;
+
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/false);
   return this->Visit(E);
 }
@@ -1156,6 +1162,7 @@ bool ByteCodeExprGen<Emitter>::visitExpr(const Expr *Exp) {
 /// We need to evaluate the initializer and return its value.
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
+  assert(!VD->isInvalidDecl() && "Trying to constant evaluate an invalid decl");
   std::optional<PrimType> VarT = classify(VD->getType());
 
   // Create and initialize the variable.
