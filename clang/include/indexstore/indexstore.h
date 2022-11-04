@@ -128,6 +128,8 @@ typedef struct {
 INDEXSTORE_PUBLIC unsigned
 indexstore_format_version(void);
 
+INDEXSTORE_PUBLIC unsigned indexstore_version(void);
+
 typedef void *indexstore_t;
 typedef void *indexstore_creation_options_t;
 

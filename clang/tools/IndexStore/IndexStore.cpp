@@ -101,6 +101,10 @@ indexstore_format_version(void) {
   return IndexDataStore::getFormatVersion();
 }
 
+unsigned indexstore_version(void) {
+  return INDEXSTORE_VERSION;
+}
+
 indexstore_creation_options_t
 indexstore_creation_options_create(void) {
   return new IndexStoreCreationOptions();
