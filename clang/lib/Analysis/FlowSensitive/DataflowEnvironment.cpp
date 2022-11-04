@@ -295,8 +295,8 @@ bool Environment::equivalentTo(const Environment &Other,
     assert(It->second != nullptr);
 
     if (!areEquivalentValues(*Val, *It->second) &&
-        !Model.compareEquivalent(Loc->getType(), *Val, *this, *It->second,
-                                 Other))
+        Model.compare(Loc->getType(), *Val, *this, *It->second, Other) !=
+            ComparisonResult::Same)
       return false;
   }
 
