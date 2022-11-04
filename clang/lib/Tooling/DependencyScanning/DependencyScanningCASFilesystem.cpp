@@ -299,6 +299,13 @@ DependencyScanningCASFilesystem::status(const Twine &Path) {
   return Result.Entry->Status;
 }
 
+bool DependencyScanningCASFilesystem::exists(const Twine &Path) {
+  // Existence check does not require caching the result at the dependency
+  // scanning level. The CachingOnDiskFileSystem tracks the exists call, which
+  // ensures it is included in any resulting CASFileSystem.
+  return getCachingFS().exists(Path);
+}
+
 IntrusiveRefCntPtr<llvm::cas::ThreadSafeFileSystem>
 DependencyScanningCASFilesystem::createThreadSafeProxyFS() {
   llvm::report_fatal_error("not implemented");
