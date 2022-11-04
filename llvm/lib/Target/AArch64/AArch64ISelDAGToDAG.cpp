@@ -2803,11 +2803,10 @@ static bool tryBitfieldInsertOpFromOrAndImm(SDNode *N, SelectionDAG *CurDAG) {
   return true;
 }
 
-static bool isWorthFoldingIntoOrrWithLeftShift(SDValue Dst,
-                                               SelectionDAG *CurDAG,
-                                               SDValue &LeftShiftedOperand,
-                                               uint64_t &LeftShiftAmount) {
-  // Avoid folding Dst into ORR-with-left-shift if Dst has other uses than ORR.
+static bool isWorthFoldingIntoOrrWithShift(SDValue Dst, SelectionDAG *CurDAG,
+                                           SDValue &ShiftedOperand,
+                                           uint64_t &ShiftAmount) {
+  // Avoid folding Dst into ORR-with-shift if Dst has other uses than ORR.
   if (!Dst.hasOneUse())
     return false;
 
@@ -2852,23 +2851,32 @@ static bool isWorthFoldingIntoOrrWithLeftShift(SDValue Dst,
                                       VT),
             CurDAG->getTargetConstant(
                 SrlImm + NumTrailingZeroInShiftedMask + MaskWidth - 1, DL, VT));
-        LeftShiftedOperand = SDValue(UBFMNode, 0);
-        LeftShiftAmount = NumTrailingZeroInShiftedMask;
+        ShiftedOperand = SDValue(UBFMNode, 0);
+        ShiftAmount = NumTrailingZeroInShiftedMask;
         return true;
       }
     }
-  } else if (isOpcWithIntImmediate(Dst.getNode(), ISD::SHL, ShlImm)) {
-    LeftShiftedOperand = Dst.getOperand(0);
-    LeftShiftAmount = ShlImm;
+    return false;
+  }
+
+  if (isOpcWithIntImmediate(Dst.getNode(), ISD::SHL, ShlImm)) {
+    ShiftedOperand = Dst.getOperand(0);
+    ShiftAmount = ShlImm;
     return true;
   }
-  // FIXME: Extend the implementation to optimize if Dst is an SRL node.
+
+  uint64_t SrlImm;
+  if (isOpcWithIntImmediate(Dst.getNode(), ISD::SRL, SrlImm)) {
+    ShiftedOperand = Dst.getOperand(0);
+    ShiftAmount = AArch64_AM::getShifterImm(AArch64_AM::LSR, SrlImm);
+    return true;
+  }
   return false;
 }
 
-static bool tryOrrWithLeftShift(SDNode *N, SDValue OrOpd0, SDValue OrOpd1,
-                                SDValue Src, SDValue Dst, SelectionDAG *CurDAG,
-                                const bool BiggerPattern) {
+static bool tryOrrWithShift(SDNode *N, SDValue OrOpd0, SDValue OrOpd1,
+                            SDValue Src, SDValue Dst, SelectionDAG *CurDAG,
+                            const bool BiggerPattern) {
   EVT VT = N->getValueType(0);
   assert((VT == MVT::i32 || VT == MVT::i64) &&
          "Expect result type to be i32 or i64 since N is combinable to BFM");
@@ -2890,13 +2898,13 @@ static bool tryOrrWithLeftShift(SDNode *N, SDValue OrOpd0, SDValue OrOpd1,
       // one node (from Rd), ORR is better since it has higher throughput and
       // smaller latency than BFM on many AArch64 processors (and for the rest
       // ORR is at least as good as BFM).
-      SDValue LeftShiftedOperand;
-      uint64_t LeftShiftAmount;
-      if (isWorthFoldingIntoOrrWithLeftShift(Dst, CurDAG, LeftShiftedOperand,
-                                             LeftShiftAmount)) {
+      SDValue ShiftedOperand;
+      uint64_t ShiftAmount;
+      if (isWorthFoldingIntoOrrWithShift(Dst, CurDAG, ShiftedOperand,
+                                         ShiftAmount)) {
         unsigned OrrOpc = (VT == MVT::i32) ? AArch64::ORRWrs : AArch64::ORRXrs;
-        SDValue Ops[] = {OrOpd0, LeftShiftedOperand,
-                         CurDAG->getTargetConstant(LeftShiftAmount, DL, VT)};
+        SDValue Ops[] = {OrOpd0, ShiftedOperand,
+                         CurDAG->getTargetConstant(ShiftAmount, DL, VT)};
         CurDAG->SelectNodeTo(N, OrrOpc, VT, Ops);
         return true;
       }
@@ -2907,7 +2915,6 @@ static bool tryOrrWithLeftShift(SDNode *N, SDValue OrOpd0, SDValue OrOpd1,
   assert((!BiggerPattern) && "BiggerPattern should be handled above");
 
   uint64_t ShlImm;
-  // FIXME: Extend the implementation if OrOpd0 is an SRL node.
   if (isOpcWithIntImmediate(OrOpd0.getNode(), ISD::SHL, ShlImm) &&
       OrOpd0.getOperand(0) == Src && OrOpd0.hasOneUse()) {
     unsigned OrrOpc = (VT == MVT::i32) ? AArch64::ORRWrs : AArch64::ORRXrs;
@@ -3022,11 +3029,9 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
       Dst = OrOpd1Val;
 
     // Before selecting ISD::OR node to AArch64::BFM, see if an AArch64::ORR
-    // with left-shifted operand is more efficient.
-    // FIXME: Extend this to compare AArch64::BFM and AArch64::ORR with
-    // right-shifted operand as well.
-    if (tryOrrWithLeftShift(N, OrOpd0Val, OrOpd1Val, Src, Dst, CurDAG,
-                            BiggerPattern))
+    // with shifted operand is more efficient.
+    if (tryOrrWithShift(N, OrOpd0Val, OrOpd1Val, Src, Dst, CurDAG,
+                        BiggerPattern))
       return true;
 
     // both parts match
