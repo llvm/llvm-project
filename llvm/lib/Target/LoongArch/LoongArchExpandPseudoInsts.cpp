@@ -241,7 +241,7 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSGD(
 
 } // end namespace
 
-INITIALIZE_PASS(LoongArchPreRAExpandPseudo, "LoongArch-prera-expand-pseudo",
+INITIALIZE_PASS(LoongArchPreRAExpandPseudo, "loongarch-prera-expand-pseudo",
                 LOONGARCH_PRERA_EXPAND_PSEUDO_NAME, false, false)
 
 namespace llvm {
