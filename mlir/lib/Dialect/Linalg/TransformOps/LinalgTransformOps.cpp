@@ -1095,6 +1095,33 @@ transform::SplitReductionOp::applyToOne(linalg::LinalgOp target,
 }
 
 //===----------------------------------------------------------------------===//
+// SplitReductionOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::TileReductionUsingScfOp::applyToOne(
+    linalg::LinalgOp target, SmallVectorImpl<Operation *> &results,
+    transform::TransformState &state) {
+  SimpleRewriter rewriter(getContext());
+  rewriter.setInsertionPoint(target);
+  SmallVector<int64_t> tileSizes = extractFromI64ArrayAttr(getTileSizes());
+  SmallVector<OpFoldResult> sizes;
+  for (int64_t size : tileSizes) {
+    sizes.push_back(rewriter.getIndexAttr(size));
+  }
+
+  FailureOr<scf::SCFReductionTilingResult> result = scf::tileReductionUsingScf(
+      rewriter, cast<PartialReductionOpInterface>(target.getOperation()),
+      sizes);
+
+  if (failed(result))
+    return DiagnosedSilenceableFailure(reportUnknownTransformError(target));
+  results.push_back(result->initialOp);
+  results.push_back(result->parallelTiledOp);
+  results.push_back(result->mergeOp);
+  return DiagnosedSilenceableFailure(success());
+}
+
+//===----------------------------------------------------------------------===//
 // TileOp
 //===----------------------------------------------------------------------===//
 
