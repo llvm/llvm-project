@@ -29,6 +29,7 @@ public:
   EntryKind getKind() const { return Kind; }
   bool isRegular() const { return Kind == Regular; }
   bool isExecutable() const { return Kind == Executable; }
+  bool isFile() const { return isRegular() || isExecutable(); }
   bool isSymlink() const { return Kind == Symlink; }
   bool isTree() const { return Kind == Tree; }
 
