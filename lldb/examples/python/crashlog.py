@@ -645,7 +645,7 @@ class TextCrashLogParser(CrashLogParser):
                              r'(.+?)\s+'               # img_name
                              r'(?:' +version+ r'\s+)?' # img_version
                              r'(0x[0-9a-fA-F]{4,})'    # addr (4 chars or more)
-                             r' +(.*)'                 # offs
+                             r'(?: +(.*))?'            # offs
                             )
     null_frame_regex = re.compile(r'^\d+\s+\?\?\?\s+0{4,} +')
     image_regex_uuid = re.compile(r'(0x[0-9a-fA-F]+)'          # img_lo
