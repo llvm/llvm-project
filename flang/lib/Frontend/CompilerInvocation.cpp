@@ -708,6 +708,12 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
     opts.NoHonorNaNs = true;
   }
 
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::driver::options::OPT_fapprox_func)) {
+    diags.Report(diagUnimplemented) << a->getOption().getName();
+    opts.ApproxFunc = true;
+  }
+
   return true;
 }
 

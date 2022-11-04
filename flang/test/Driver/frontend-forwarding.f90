@@ -11,6 +11,7 @@
 ! RUN:     -ffp-contract=fast \
 ! RUN:     -fno-honor-infinities \
 ! RUN:     -fno-honor-nans \
+! RUN:     -fapprox-func \
 ! RUN:     -mllvm -print-before-all\
 ! RUN:     -P \
 ! RUN:   | FileCheck %s
@@ -24,5 +25,6 @@
 ! CHECK: "-ffp-contract=fast"
 ! CHECK: "-menable-no-infs"
 ! CHECK: "-menable-no-nans"
+! CHECK: "-fapprox-func"
 ! CHECK: "-fconvert=little-endian"
 ! CHECK:  "-mllvm" "-print-before-all"
