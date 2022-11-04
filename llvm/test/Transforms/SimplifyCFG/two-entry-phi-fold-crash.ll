@@ -8,16 +8,11 @@ define i32 @wibble(i8* %arg, i8** %arg1) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[BORG:%.*]] = phi i32 [ 0, [[BB:%.*]] ], [ [[BORG]], [[BB8:%.*]] ]
-; CHECK-NEXT:    [[BORG3:%.*]] = phi i32 [ 8, [[BB]] ], [ [[BORG10:%.*]], [[BB8]] ]
+; CHECK-NEXT:    [[BORG:%.*]] = phi i32 [ 0, [[BB:%.*]] ], [ [[BORG]], [[BB2]] ]
+; CHECK-NEXT:    [[BORG3:%.*]] = phi i32 [ 8, [[BB]] ], [ [[SPEC_SELECT:%.*]], [[BB2]] ]
 ; CHECK-NEXT:    [[BORG4:%.*]] = tail call i32 @blam(i8* [[ARG:%.*]], i32 [[BORG]])
 ; CHECK-NEXT:    [[BORG5:%.*]] = icmp eq i32 [[BORG4]], 0
-; CHECK-NEXT:    br i1 [[BORG5]], label [[BB8]], label [[BB6:%.*]]
-; CHECK:       bb6:
-; CHECK-NEXT:    [[BORG7:%.*]] = load i8*, i8** [[ARG1:%.*]], align 4
-; CHECK-NEXT:    br label [[BB8]]
-; CHECK:       bb8:
-; CHECK-NEXT:    [[BORG10]] = phi i32 [ [[BORG4]], [[BB6]] ], [ [[BORG3]], [[BB2]] ]
+; CHECK-NEXT:    [[SPEC_SELECT]] = select i1 [[BORG5]], i32 [[BORG3]], i32 [[BORG4]]
 ; CHECK-NEXT:    [[BORG11:%.*]] = icmp ult i32 [[BORG]], 2
 ; CHECK-NEXT:    br i1 [[BORG11]], label [[BB2]], label [[BB12:%.*]]
 ; CHECK:       bb12:
