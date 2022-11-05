@@ -1245,9 +1245,9 @@ def BWWriteResGroup107 : SchedWriteRes<[BWPort1,BWPort5,BWPort23]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[BWWriteResGroup107], (instrs CVTPD2PSrm,
-                                          CVTPD2DQrm,
-                                          CVTTPD2DQrm)>;
+def: InstRW<[BWWriteResGroup107], (instrs CVTPD2PSrm, VCVTPD2PSrm,
+                                          CVTPD2DQrm, VCVTPD2DQrm,
+                                          CVTTPD2DQrm, VCVTTPD2DQrm)>;
 def: InstRW<[BWWriteResGroup107], (instregex "MMX_CVT(T?)PD2PIrm",
                                              "(V?)CVTSD2SSrm")>;
 
