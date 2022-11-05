@@ -41,5 +41,14 @@ declare i64 @llvm.amdgcn.atomic.inc.i64.p1i64(i64 addrspace(1)* nocapture, i64, 
 declare i32 @llvm.amdgcn.atomic.dec.i32.p1i32(i32 addrspace(1)* nocapture, i32, i32, i32, i1) #1
 declare i64 @llvm.amdgcn.atomic.dec.i64.p1i64(i64 addrspace(1)* nocapture, i64, i32, i32, i1) #1
 
+; CHECK: DIVERGENT: %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* %ptr, i32 %val)
+define amdgpu_kernel void @test_atomic_csub_i32(i32 addrspace(1)* %ptr, i32 %val) #0 {
+  %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* %ptr, i32 %val)
+  store i32 %ret, i32 addrspace(1)* %ptr, align 4
+  ret void
+}
+
+declare i32 @llvm.amdgcn.global.atomic.csub.p1i32(i32 addrspace(1)* nocapture, i32) #1
+
 attributes #0 = { nounwind }
-attributes #1 = { nounwind argmemonly }
+attributes #1 = { argmemonly nounwind willreturn }
