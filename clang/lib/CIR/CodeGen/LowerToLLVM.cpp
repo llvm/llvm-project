@@ -126,6 +126,10 @@ public:
           mlir::MemRefType::get(arraytype.getSize(), arraytype.getEltType());
     } else if (type.isa<mlir::IntegerType>() || type.isa<mlir::FloatType>()) {
       memreftype = mlir::MemRefType::get({}, op.getAllocaType());
+    } else if (type.isa<mlir::cir::PointerType>()) {
+      auto ptrType = type.cast<mlir::cir::PointerType>();
+      auto innerMemref = mlir::MemRefType::get({-1}, ptrType.getPointee());
+      memreftype = mlir::MemRefType::get({}, innerMemref);
     } else {
       llvm_unreachable("type to be allocated not supported yet");
     }
