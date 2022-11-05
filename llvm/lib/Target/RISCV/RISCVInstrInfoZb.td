@@ -242,6 +242,16 @@ def non_imm12 : PatLeaf<(XLenVT GPR:$a), [{
   return !C || !isInt<12>(C->getSExtValue());
 }]>;
 
+def Shifted32OnesMask : PatLeaf<(imm), [{
+  uint64_t Imm = N->getZExtValue();
+  if (!isShiftedMask_64(Imm))
+    return false;
+
+  unsigned TrailingZeros = countTrailingZeros(Imm);
+  return TrailingZeros > 0 && TrailingZeros < 32 &&
+         Imm == UINT64_C(0xFFFFFFFF) << TrailingZeros;
+}], TrailingZeros>;
+
 def sh1add_op : ComplexPattern<XLenVT, 1, "selectSH1ADDOp", [], [], 6>;
 def sh2add_op : ComplexPattern<XLenVT, 1, "selectSH2ADDOp", [], [], 6>;
 def sh3add_op : ComplexPattern<XLenVT, 1, "selectSH3ADDOp", [], [], 6>;
@@ -731,6 +741,12 @@ def : Pat<(mul_const_oneuse GPR:$r, (XLenVT 81)),
 let Predicates = [HasStdExtZba, IsRV64] in {
 def : Pat<(i64 (shl (and GPR:$rs1, 0xFFFFFFFF), uimm5:$shamt)),
           (SLLI_UW GPR:$rs1, uimm5:$shamt)>;
+// Match a shifted 0xffffffff mask. Use SRLI to clear the LSBs and SLLI_UW to
+// mask and shift.
+def : Pat<(i64 (and GPR:$rs1, Shifted32OnesMask:$mask)),
+          (SLLI_UW (SRLI GPR:$rs1, Shifted32OnesMask:$mask),
+                   Shifted32OnesMask:$mask)>;
+
 def : Pat<(i64 (add (and GPR:$rs1, 0xFFFFFFFF), non_imm12:$rs2)),
           (ADD_UW GPR:$rs1, GPR:$rs2)>;
 def : Pat<(i64 (and GPR:$rs, 0xFFFFFFFF)), (ADD_UW GPR:$rs, X0)>;
