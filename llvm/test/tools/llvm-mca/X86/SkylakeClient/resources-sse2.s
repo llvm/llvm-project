@@ -689,7 +689,7 @@ xorpd       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     40.00  110.92 78.92  63.50  63.50  14.00  96.92  2.25   5.00
+# CHECK-NEXT:  -     40.00  111.25 79.25  63.50  63.50  14.00  96.25  2.25   5.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -716,7 +716,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -     1.00    -      -     cvtpd2dq	(%rax), %xmm2
 # CHECK-NEXT:  -      -     0.33   0.33    -      -      -     1.33    -      -     cvtpd2pi	%xmm0, %mm2
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -     1.00    -      -     cvtpd2pi	(%rax), %mm2
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     1.33    -      -     cvtpd2ps	%xmm0, %xmm2
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -     1.00    -      -     cvtpd2ps	%xmm0, %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -     1.00    -      -     cvtpd2ps	(%rax), %xmm2
 # CHECK-NEXT:  -      -     1.00    -      -      -      -     1.00    -      -     cvtpi2pd	%mm0, %xmm2
 # CHECK-NEXT:  -      -     1.00    -     0.50   0.50    -     1.00    -      -     cvtpi2pd	(%rax), %xmm2
@@ -728,7 +728,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  -      -     1.50   0.50    -      -      -      -      -      -     cvtsd2si	%xmm0, %rcx
 # CHECK-NEXT:  -      -     1.50   0.50   0.50   0.50    -      -      -      -     cvtsd2si	(%rax), %ecx
 # CHECK-NEXT:  -      -     1.50   0.50   0.50   0.50    -      -      -      -     cvtsd2si	(%rax), %rcx
-# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     1.33    -      -     cvtsd2ss	%xmm0, %xmm2
+# CHECK-NEXT:  -      -     0.50   0.50    -      -      -     1.00    -      -     cvtsd2ss	%xmm0, %xmm2
 # CHECK-NEXT:  -      -     0.50   0.50   0.50   0.50    -     1.00    -      -     cvtsd2ss	(%rax), %xmm2
 # CHECK-NEXT:  -      -     0.33   0.33    -      -      -     1.33    -      -     cvtsi2sd	%ecx, %xmm2
 # CHECK-NEXT:  -      -     0.33   0.33    -      -      -     1.33    -      -     cvtsi2sd	%rcx, %xmm2
