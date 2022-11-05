@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -amdgpu-scalar-ir-passes=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}select_undef_lhs:
 ; GCN: s_waitcnt
@@ -6,8 +6,7 @@
 ; GCN-NOT: v_cndmask
 ; GCN-NEXT: s_setpc_b64
 define float @select_undef_lhs(float %val, i1 %cond) {
-  %undef = call float @llvm.amdgcn.rcp.f32(float undef)
-  %sel = select i1 %cond, float %undef, float %val
+  %sel = select i1 %cond, float undef, float %val
   ret float %sel
 }
 
@@ -17,8 +16,7 @@ define float @select_undef_lhs(float %val, i1 %cond) {
 ; GCN-NOT: v_cndmask
 ; GCN-NEXT: s_setpc_b64
 define float @select_undef_rhs(float %val, i1 %cond) {
-  %undef = call float @llvm.amdgcn.rcp.f32(float undef)
-  %sel = select i1 %cond, float %val, float %undef
+  %sel = select i1 %cond, float %val, float undef
   ret float %sel
 }
 
