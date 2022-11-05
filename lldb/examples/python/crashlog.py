@@ -1104,7 +1104,7 @@ def load_crashlog_in_scripted_process(debugger, crash_log_file, options, result)
         raise InteractiveCrashLogException("couldn't import crashlog scripted process module")
 
     structured_data = lldb.SBStructuredData()
-    structured_data.SetFromJSON(json.dumps({ "crashlog_path" : crashlog_path,
+    structured_data.SetFromJSON(json.dumps({ "file_path" : crashlog_path,
                                              "load_all_images": options.load_all_images }))
     launch_info = lldb.SBLaunchInfo(None)
     launch_info.SetProcessPluginName("ScriptedProcess")
