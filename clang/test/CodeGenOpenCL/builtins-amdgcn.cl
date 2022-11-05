@@ -810,6 +810,26 @@ kernel void test_s_setreg(uint val) {
   __builtin_amdgcn_s_setreg(8193, val);
 }
 
+// CHECK-LABEL test_atomic_inc_dec(
+void test_atomic_inc_dec(local uint *lptr, global uint *gptr, uint val) {
+  uint res;
+
+  // CHECK: atomicrmw uinc_wrap ptr addrspace(3) %lptr, i32 %val syncscope("workgroup") seq_cst, align 4
+  res = __builtin_amdgcn_atomic_inc32(lptr, val, __ATOMIC_SEQ_CST, "workgroup");
+
+  // CHECK: atomicrmw udec_wrap ptr addrspace(3) %lptr, i32 %val syncscope("workgroup") seq_cst, align 4
+  res = __builtin_amdgcn_atomic_dec32(lptr, val, __ATOMIC_SEQ_CST, "workgroup");
+
+  // CHECK: atomicrmw uinc_wrap ptr addrspace(1) %gptr, i32 %val syncscope("agent") seq_cst, align 4
+  res = __builtin_amdgcn_atomic_inc32(gptr, val, __ATOMIC_SEQ_CST, "agent");
+
+  // CHECK: atomicrmw udec_wrap ptr addrspace(1) %gptr, i32 %val seq_cst, align 4
+  res = __builtin_amdgcn_atomic_dec32(gptr, val, __ATOMIC_SEQ_CST, "");
+
+  // CHECK: atomicrmw volatile udec_wrap ptr addrspace(1) %gptr, i32 %val seq_cst, align 4
+  res = __builtin_amdgcn_atomic_dec32((volatile global uint*)gptr, val, __ATOMIC_SEQ_CST, "");
+}
+
 // CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}
 // CHECK-DAG: [[$WS_RANGE]] = !{i16 1, i16 1025}
 // CHECK-DAG: attributes #[[$NOUNWIND_READONLY]] = { mustprogress nocallback nofree nosync nounwind willreturn memory(read) }
