@@ -1047,6 +1047,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsFunctionAnnotations) {
   EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_Unknown);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsFunctionDeclarationNames) {
+  auto Tokens = annotate("void f [[noreturn]] ();");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
+
+  Tokens = annotate("void f [[noreturn]] () {}");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_FunctionDeclarationName);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   auto Annotate = [this](llvm::StringRef Code) {
     return annotate(Code, getLLVMStyle(FormatStyle::LK_Verilog));
