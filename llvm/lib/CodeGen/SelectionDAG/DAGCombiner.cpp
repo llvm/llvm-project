@@ -10436,48 +10436,49 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
 
   // Use a target hook because some targets may prefer to transform in the
   // other direction.
-  if (shouldConvertSelectOfConstantsToMath(Cond, VT, TLI)) {
-    // For any constants that differ by 1, we can transform the select into
-    // an extend and add.
-    const APInt &C1Val = C1->getAPIntValue();
-    const APInt &C2Val = C2->getAPIntValue();
+  if (!shouldConvertSelectOfConstantsToMath(Cond, VT, TLI))
+    return SDValue();
 
-    // select Cond, C1, C1-1 --> add (zext Cond), C1-1
-    if (C1Val - 1 == C2Val) {
-      Cond = DAG.getZExtOrTrunc(Cond, DL, VT);
-      return DAG.getNode(ISD::ADD, DL, VT, Cond, N2);
-    }
+  // For any constants that differ by 1, we can transform the select into
+  // an extend and add.
+  const APInt &C1Val = C1->getAPIntValue();
+  const APInt &C2Val = C2->getAPIntValue();
 
-    // select Cond, C1, C1+1 --> add (sext Cond), C1+1
-    if (C1Val + 1 == C2Val) {
-      Cond = DAG.getSExtOrTrunc(Cond, DL, VT);
-      return DAG.getNode(ISD::ADD, DL, VT, Cond, N2);
-    }
-
-    // select Cond, Pow2, 0 --> (zext Cond) << log2(Pow2)
-    if (C1Val.isPowerOf2() && C2Val.isZero()) {
-      Cond = DAG.getZExtOrTrunc(Cond, DL, VT);
-      SDValue ShAmtC =
-          DAG.getShiftAmountConstant(C1Val.exactLogBase2(), VT, DL);
-      return DAG.getNode(ISD::SHL, DL, VT, Cond, ShAmtC);
-    }
-
-    // select Cond, -1, C --> or (sext Cond), C
-    if (C1->isAllOnes()) {
-      Cond = DAG.getSExtOrTrunc(Cond, DL, VT);
-      return DAG.getNode(ISD::OR, DL, VT, Cond, N2);
-    }
-
-    // select Cond, C, -1 --> or (sext (not Cond)), C
-    if (C2->isAllOnes()) {
-      SDValue NotCond = DAG.getNOT(DL, Cond, MVT::i1);
-      NotCond = DAG.getSExtOrTrunc(NotCond, DL, VT);
-      return DAG.getNode(ISD::OR, DL, VT, NotCond, N1);
-    }
-
-    if (SDValue V = foldSelectOfConstantsUsingSra(N, DAG))
-      return V;
+  // select Cond, C1, C1-1 --> add (zext Cond), C1-1
+  if (C1Val - 1 == C2Val) {
+    Cond = DAG.getZExtOrTrunc(Cond, DL, VT);
+    return DAG.getNode(ISD::ADD, DL, VT, Cond, N2);
   }
+
+  // select Cond, C1, C1+1 --> add (sext Cond), C1+1
+  if (C1Val + 1 == C2Val) {
+    Cond = DAG.getSExtOrTrunc(Cond, DL, VT);
+    return DAG.getNode(ISD::ADD, DL, VT, Cond, N2);
+  }
+
+  // select Cond, Pow2, 0 --> (zext Cond) << log2(Pow2)
+  if (C1Val.isPowerOf2() && C2Val.isZero()) {
+    Cond = DAG.getZExtOrTrunc(Cond, DL, VT);
+    SDValue ShAmtC =
+        DAG.getShiftAmountConstant(C1Val.exactLogBase2(), VT, DL);
+    return DAG.getNode(ISD::SHL, DL, VT, Cond, ShAmtC);
+  }
+
+  // select Cond, -1, C --> or (sext Cond), C
+  if (C1->isAllOnes()) {
+    Cond = DAG.getSExtOrTrunc(Cond, DL, VT);
+    return DAG.getNode(ISD::OR, DL, VT, Cond, N2);
+  }
+
+  // select Cond, C, -1 --> or (sext (not Cond)), C
+  if (C2->isAllOnes()) {
+    SDValue NotCond = DAG.getNOT(DL, Cond, MVT::i1);
+    NotCond = DAG.getSExtOrTrunc(NotCond, DL, VT);
+    return DAG.getNode(ISD::OR, DL, VT, NotCond, N1);
+  }
+
+  if (SDValue V = foldSelectOfConstantsUsingSra(N, DAG))
+    return V;
 
   return SDValue();
 }
