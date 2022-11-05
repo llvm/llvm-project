@@ -200,18 +200,37 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::FuncOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    auto fn = rewriter.replaceOpWithNewOp<mlir::func::FuncOp>(
-        op, op.getName(), op.getFunctionType());
-    auto &srcRegion = op.getBody();
-    auto &dstRegion = fn.getBody();
 
+    auto fnType = op.getFunctionType();
     mlir::TypeConverter::SignatureConversion signatureConversion(
-        op.front().getNumArguments());
+        fnType.getNumInputs());
 
-    rewriter.inlineRegionBefore(srcRegion, dstRegion, fn.end());
+    for (const auto &argType : enumerate(fnType.getInputs())) {
+      auto convertedType = typeConverter->convertType(argType.value());
+      if (!convertedType)
+        return mlir::failure();
+      signatureConversion.addInputs(argType.index(), convertedType);
+    }
+
+    mlir::Type resultType;
+    if (fnType.getNumResults() == 1) {
+      resultType = getTypeConverter()->convertType(fnType.getResult(0));
+      if (!resultType)
+        return mlir::failure();
+    }
+
+    auto fn = rewriter.create<mlir::func::FuncOp>(
+        op.getLoc(), op.getName(),
+        rewriter.getFunctionType(signatureConversion.getConvertedTypes(),
+                                 resultType ? mlir::TypeRange(resultType)
+                                            : mlir::TypeRange()));
+
+    rewriter.inlineRegionBefore(op.getBody(), fn.getBody(), fn.end());
     if (failed(rewriter.convertRegionTypes(&fn.getBody(), *typeConverter,
                                            &signatureConversion)))
       return mlir::failure();
+
+    rewriter.eraseOp(op);
 
     return mlir::LogicalResult::success();
   }
