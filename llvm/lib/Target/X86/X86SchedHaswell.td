@@ -1428,9 +1428,9 @@ def HWWriteResGroup78 : SchedWriteRes<[HWPort1,HWPort5,HWPort23]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[HWWriteResGroup78], (instrs CVTPD2PSrm,
-                                         CVTPD2DQrm,
-                                         CVTTPD2DQrm,
+def: InstRW<[HWWriteResGroup78], (instrs CVTPD2PSrm, VCVTPD2PSrm,
+                                         CVTPD2DQrm, VCVTPD2DQrm,
+                                         CVTTPD2DQrm, VCVTTPD2DQrm,
                                          MMX_CVTPD2PIrm,
                                          MMX_CVTTPD2PIrm)>;
 
