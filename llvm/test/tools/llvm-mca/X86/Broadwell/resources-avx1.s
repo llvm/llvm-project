@@ -1129,7 +1129,7 @@ vzeroupper
 # CHECK-NEXT:  2      4     1.00                        vcvtpd2ps	%xmm0, %xmm2
 # CHECK-NEXT:  3      9     1.00    *                   vcvtpd2psx	(%rax), %xmm2
 # CHECK-NEXT:  2      6     1.00                        vcvtpd2ps	%ymm0, %xmm2
-# CHECK-NEXT:  2      8     1.00    *                   vcvtpd2psy	(%rax), %xmm2
+# CHECK-NEXT:  3      12    1.00    *                   vcvtpd2psy	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        vcvtps2dq	%xmm0, %xmm2
 # CHECK-NEXT:  2      8     1.00    *                   vcvtps2dq	(%rax), %xmm2
 # CHECK-NEXT:  1      3     1.00                        vcvtps2dq	%ymm0, %ymm2
@@ -1736,7 +1736,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     257.00 215.25 235.25 176.17 176.17 38.00  429.25 2.25   12.67
+# CHECK-NEXT:  -     257.00 215.25 235.25 176.17 176.17 38.00  430.25 2.25   12.67
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -1839,7 +1839,7 @@ vzeroupper
 # CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00    -      -     vcvtpd2ps	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -     1.00    -      -     vcvtpd2psx	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -     1.00    -      -     vcvtpd2ps	%ymm0, %xmm2
-# CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     vcvtpd2psy	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -     1.00    -      -     vcvtpd2psy	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     vcvtps2dq	%xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     1.00   0.50   0.50    -      -      -      -     vcvtps2dq	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -      -      -     vcvtps2dq	%ymm0, %ymm2
