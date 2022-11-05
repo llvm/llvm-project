@@ -38,7 +38,7 @@ TEST(StructuredDataTest, GetDescriptionEmpty) {
 
   StreamString S;
   object_sp->GetDescription(S);
-  EXPECT_EQ(0, S.GetSize());
+  EXPECT_EQ(0u, S.GetSize());
 }
 
 TEST(StructuredDataTest, GetDescriptionBasic) {
