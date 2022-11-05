@@ -78,15 +78,16 @@ struct ConvertCIRToFuncPass
   virtual StringRef getArgument() const override { return "cir-to-func"; }
 };
 
-class CIRReturnLowering : public mlir::OpRewritePattern<mlir::cir::ReturnOp> {
+class CIRReturnLowering
+    : public mlir::OpConversionPattern<mlir::cir::ReturnOp> {
 public:
-  using OpRewritePattern<mlir::cir::ReturnOp>::OpRewritePattern;
+  using OpConversionPattern<mlir::cir::ReturnOp>::OpConversionPattern;
 
   mlir::LogicalResult
-  matchAndRewrite(mlir::cir::ReturnOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<mlir::func::ReturnOp>(op, op->getResultTypes(),
-                                                      op->getOperands());
+  matchAndRewrite(mlir::cir::ReturnOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.replaceOpWithNewOp<mlir::func::ReturnOp>(op,
+                                                      adaptor.getOperands());
     return mlir::LogicalResult::success();
   }
 };
