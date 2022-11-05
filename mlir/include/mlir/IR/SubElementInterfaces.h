@@ -196,7 +196,7 @@ struct AttrTypeSubElementHandler<
   static void walk(const std::tuple<Ts...> &param,
                    AttrTypeSubElementWalker &walker) {
     std::apply(
-        [&](auto &&...params) {
+        [&](const Ts &...params) {
           (AttrTypeSubElementHandler<Ts>::walk(params, walker), ...);
         },
         param);
