@@ -904,8 +904,13 @@ private:
           [&](const parser::SelectRankCaseStmt &) { eval.isNewBlock = true; },
           [&](const parser::SelectTypeStmt &s) {
             insertConstructName(s, parentConstruct);
+            lastConstructStmtEvaluation = &eval;
           },
-          [&](const parser::TypeGuardStmt &) { eval.isNewBlock = true; },
+          [&](const parser::TypeGuardStmt &) {
+            eval.isNewBlock = true;
+            lastConstructStmtEvaluation->controlSuccessor = &eval;
+            lastConstructStmtEvaluation = &eval;
+          },
 
           // Constructs - set (unstructured) construct exit targets
           [&](const parser::AssociateConstruct &) { setConstructExit(eval); },
