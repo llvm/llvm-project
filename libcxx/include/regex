@@ -773,6 +773,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
+#include <cstring>
 #include <deque>
 #include <stdexcept>
 #include <string>
@@ -6858,8 +6859,12 @@ _LIBCPP_END_NAMESPACE_STD
 _LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <atomic>
 #  include <concepts>
+#  include <iosfwd>
 #  include <iterator>
+#  include <new>
+#  include <typeinfo>
 #  include <utility>
 #endif
 
