@@ -473,10 +473,10 @@ defm : ICXWriteResPair<WriteCvtSS2SD,  [ICXPort1], 3>;
 defm : ICXWriteResPair<WriteCvtPS2PD,  [ICXPort1], 3>;
 defm : ICXWriteResPair<WriteCvtPS2PDY, [ICXPort5,ICXPort01], 3, [1,1], 2>;
 defm : ICXWriteResPair<WriteCvtPS2PDZ, [ICXPort05], 3, [2], 2>;
-defm : ICXWriteResPair<WriteCvtSD2SS,  [ICXPort1], 3>;
-defm : ICXWriteResPair<WriteCvtPD2PS,  [ICXPort1], 3>;
-defm : ICXWriteResPair<WriteCvtPD2PSY, [ICXPort5,ICXPort01], 3, [1,1], 2>;
-defm : ICXWriteResPair<WriteCvtPD2PSZ, [ICXPort05], 3, [2], 2>;
+defm : ICXWriteResPair<WriteCvtSD2SS,  [ICXPort5,ICXPort01], 5, [1,1], 2, 5>;
+defm : ICXWriteResPair<WriteCvtPD2PS,  [ICXPort5,ICXPort01], 5, [1,1], 2, 6>;
+defm : ICXWriteResPair<WriteCvtPD2PSY, [ICXPort5,ICXPort01], 7, [1,1], 2, 7>;
+defm : ICXWriteResPair<WriteCvtPD2PSZ, [ICXPort5,ICXPort0],  7, [1,1], 2, 7>;
 
 defm : X86WriteRes<WriteCvtPH2PS,     [ICXPort5,ICXPort01],  5, [1,1], 2>;
 defm : X86WriteRes<WriteCvtPH2PSY,    [ICXPort5,ICXPort01],  7, [1,1], 2>;
@@ -1085,15 +1085,12 @@ def: InstRW<[ICXWriteResGroup61], (instregex "MMX_CVT(T?)PD2PIrr",
                                              "VCVTDQ2PDZ128rr",
                                              "VCVTPD2DQZ128rr",
                                              "(V?)CVT(T?)PD2DQrr",
-                                             "VCVTPD2PSZ128rr",
-                                             "(V?)CVTPD2PSrr",
                                              "VCVTPD2UDQZ128rr",
                                              "VCVTPS2PDZ128rr",
                                              "(V?)CVTPS2PDrr",
                                              "VCVTPS2QQZ128rr",
                                              "VCVTPS2UQQZ128rr",
                                              "VCVTQQ2PSZ128rr",
-                                             "(V?)CVTSD2SS(Z?)rr",
                                              "(V?)CVTSI(64)?2SDrr",
                                              "VCVTSI2SSZrr",
                                              "(V?)CVTSI2SSrr",
@@ -1336,7 +1333,6 @@ def ICXWriteResGroup93 : SchedWriteRes<[ICXPort5,ICXPort015]> {
 }
 def: InstRW<[ICXWriteResGroup93], (instregex "VCVTDQ2PDZ256rr",
                                              "VCVTPD2DQ(Y|Z256)rr",
-                                             "VCVTPD2PS(Y|Z256)rr",
                                              "VCVTPD2UDQZ256rr",
                                              "VCVTPS2PD(Y|Z256)rr",
                                              "VCVTPS2QQZ256rr",
@@ -1356,7 +1352,6 @@ def ICXWriteResGroup93z : SchedWriteRes<[ICXPort5,ICXPort05]> {
 }
 def: InstRW<[ICXWriteResGroup93z], (instrs VCVTDQ2PDZrr,
                                            VCVTPD2DQZrr,
-                                           VCVTPD2PSZrr,
                                            VCVTPD2UDQZrr,
                                            VCVTPS2PDZrr,
                                            VCVTPS2QQZrr,
@@ -1870,13 +1865,6 @@ def: InstRW<[ICXWriteResGroup151], (instregex "VEXPANDPDZ128rm(b?)",
                                               "VPEXPANDDZ128rm(b?)",
                                               "VPEXPANDQZ128rm(b?)")>;
 
-def ICXWriteResGroup153 : SchedWriteRes<[ICXPort5,ICXPort23,ICXPort015]> {
-  let Latency = 10;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,1,1];
-}
-def: InstRW<[ICXWriteResGroup153], (instregex "(V?)CVTSD2SSrm")>;
-
 def ICXWriteResGroup154 : SchedWriteRes<[ICXPort5,ICXPort01,ICXPort23]> {
   let Latency = 10;
   let NumMicroOps = 4;
@@ -1933,13 +1921,6 @@ def: InstRW<[ICXWriteResGroup162], (instregex "FICOM(P?)(16|32)m",
                                               "VPEXPANDD(Z|Z256)rm(b?)",
                                               "VPEXPANDQ(Z|Z256)rm(b?)")>;
 
-def ICXWriteResGroup163 : SchedWriteRes<[ICXPort23,ICXPort015]> {
-  let Latency = 11;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,2];
-}
-def: InstRW<[ICXWriteResGroup163], (instregex "VCVTSD2SSZrm")>;
-
 def ICXWriteResGroup164 : SchedWriteRes<[ICXPort0,ICXPort5,ICXPort23]> {
   let Latency = 11;
   let NumMicroOps = 3;
@@ -1952,8 +1933,7 @@ def ICXWriteResGroup166 : SchedWriteRes<[ICXPort5,ICXPort23,ICXPort015]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[ICXWriteResGroup166], (instrs CVTPD2PSrm,
-                                           CVTPD2DQrm,
+def: InstRW<[ICXWriteResGroup166], (instrs CVTPD2DQrm,
                                            CVTTPD2DQrm,
                                            MMX_CVTPD2PIrm,
                                            MMX_CVTTPD2PIrm)>;
@@ -2068,7 +2048,6 @@ def ICXWriteResGroup188 : SchedWriteRes<[ICXPort5,ICXPort23,ICXPort015]> {
   let ResourceCycles = [1,1,1];
 }
 def: InstRW<[ICXWriteResGroup188], (instregex "VCVTPD2DQZrm(b?)",
-                                              "VCVTPD2PSZrm(b?)",
                                               "VCVTPD2UDQZrm(b?)",
                                               "VCVTQQ2PSZrm(b?)",
                                               "VCVTTPD2DQZrm(b?)",
