@@ -36,22 +36,22 @@ static_assert(std::convertible_to<decltype(binary_pred(1, 2)), bool>);
 // (in, ...)
 template <class Func, std::ranges::range Input, class... Args>
 constexpr void test(Func&& func, Input& in, Args&&... args) {
-  func(in.begin(), in.end(), std::forward<Args>(args)...);
-  func(in, std::forward<Args>(args)...);
+  (void)func(in.begin(), in.end(), std::forward<Args>(args)...);
+  (void)func(in, std::forward<Args>(args)...);
 }
 
 // (in1, in2, ...)
 template <class Func, std::ranges::range Input, class... Args>
 constexpr void test(Func&& func, Input& in1, Input& in2, Args&&... args) {
-  func(in1.begin(), in1.end(), in2.begin(), in2.end(), std::forward<Args>(args)...);
-  func(in1, in2, std::forward<Args>(args)...);
+  (void)func(in1.begin(), in1.end(), in2.begin(), in2.end(), std::forward<Args>(args)...);
+  (void)func(in1, in2, std::forward<Args>(args)...);
 }
 
 // (in, mid, ...)
 template <class Func, std::ranges::range Input, class... Args>
 constexpr void test_mid(Func&& func, Input& in, std::ranges::iterator_t<Input> mid, Args&&... args) {
-  func(in.begin(), mid, in.end(), std::forward<Args>(args)...);
-  func(in, mid, std::forward<Args>(args)...);
+  (void)func(in.begin(), mid, in.end(), std::forward<Args>(args)...);
+  (void)func(in, mid, std::forward<Args>(args)...);
 }
 
 constexpr bool test_all() {
@@ -83,17 +83,17 @@ constexpr bool test_all() {
   test(std::ranges::binary_search, in, x, binary_pred);
 
   // min
-  std::ranges::min(1, 2, binary_pred);
-  std::ranges::min(std::initializer_list<int>{1, 2}, binary_pred);
-  std::ranges::min(in, binary_pred);
+  (void)std::ranges::min(1, 2, binary_pred);
+  (void)std::ranges::min(std::initializer_list<int>{1, 2}, binary_pred);
+  (void)std::ranges::min(in, binary_pred);
   // max
-  std::ranges::max(1, 2, binary_pred);
-  std::ranges::max(std::initializer_list<int>{1, 2}, binary_pred);
-  std::ranges::max(in, binary_pred);
+  (void)std::ranges::max(1, 2, binary_pred);
+  (void)std::ranges::max(std::initializer_list<int>{1, 2}, binary_pred);
+  (void)std::ranges::max(in, binary_pred);
   // minmax
-  std::ranges::minmax(1, 2, binary_pred);
-  std::ranges::minmax(std::initializer_list<int>{1, 2}, binary_pred);
-  std::ranges::minmax(in, binary_pred);
+  (void)std::ranges::minmax(1, 2, binary_pred);
+  (void)std::ranges::minmax(std::initializer_list<int>{1, 2}, binary_pred);
+  (void)std::ranges::minmax(in, binary_pred);
 
   test(std::ranges::min_element, in, binary_pred);
   test(std::ranges::max_element, in, binary_pred);
@@ -108,7 +108,7 @@ constexpr bool test_all() {
   test(std::ranges::includes, in, in2, binary_pred);
   test(std::ranges::is_heap, in, binary_pred);
   test(std::ranges::is_heap_until, in, binary_pred);
-  std::ranges::clamp(2, 1, 3, binary_pred);
+  (void)std::ranges::clamp(2, 1, 3, binary_pred);
   test(std::ranges::is_permutation, in, in2, binary_pred);
   test(std::ranges::copy_if, in, out, unary_pred);
   test(std::ranges::remove_copy_if, in, out, unary_pred);

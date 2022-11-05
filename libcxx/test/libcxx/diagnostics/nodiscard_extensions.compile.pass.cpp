@@ -7,10 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // Test that entities declared [[nodiscard]] as at extension by libc++, are
-// declared as such when _LIBCPP_DISABLE_NODISCARD_EXT is specified.
-
-// This test intentionally leaks memory, so it is unsupported under ASAN.
-// UNSUPPORTED: asan
+// not declared as such when _LIBCPP_DISABLE_NODISCARD_EXT is specified.
 
 // All entities to which libc++ applies [[nodiscard]] as an extension should
 // be tested here and in nodiscard_extensions.verify.cpp. They should also
@@ -71,7 +68,7 @@ void test_algorithms() {
   std::find_if_not(std::begin(arr), std::end(arr), P());
   std::find_if(std::begin(arr), std::end(arr), P());
   std::find(std::begin(arr), std::end(arr), 1);
-  std::get_temporary_buffer<int>(1); // intentional memory leak.
+  std::get_temporary_buffer<int>(1);
   std::includes(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr));
   std::includes(std::begin(arr), std::end(arr), std::begin(arr), std::end(arr),
                 std::greater<int>());

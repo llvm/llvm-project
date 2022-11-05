@@ -33,7 +33,7 @@ struct __fn {
   template <class _Type,
             class _Proj = identity,
             indirect_strict_weak_order<projected<const _Type*, _Proj>> _Comp = ranges::less>
-  _LIBCPP_HIDE_FROM_ABI constexpr
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
   const _Type& operator()(const _Type& __value,
                           const _Type& __low,
                           const _Type& __high,
