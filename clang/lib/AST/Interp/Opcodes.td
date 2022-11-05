@@ -164,6 +164,12 @@ def Call : Opcode {
   let ChangesPC = 1;
 }
 
+def CallBI : Opcode {
+  let Args = [ArgFunction];
+  let Types = [];
+  let ChangesPC = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Frame management
 //===----------------------------------------------------------------------===//
