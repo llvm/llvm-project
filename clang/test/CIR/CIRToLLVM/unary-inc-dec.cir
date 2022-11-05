@@ -9,7 +9,7 @@ module {
     %2 = cir.cst(2 : i32) : i32
     cir.store %2, %0 : i32, cir.ptr <i32>
     cir.store %2, %1 : i32, cir.ptr <i32>
-    
+
     %3 = cir.load %0 : cir.ptr <i32>, i32
     %4 = cir.unary(inc, %3) : i32, i32
     cir.store %4, %0 : i32, cir.ptr <i32>
