@@ -514,6 +514,17 @@ void populateCIRToMemRefConversionPatterns(mlir::RewritePatternSet &patterns) {
                CIRCmpOpLowering, CIRBrOpLowering>(patterns.getContext());
 }
 
+mlir::TypeConverter prepareTypeConverter() {
+  mlir::TypeConverter converter;
+  converter.addConversion([&](mlir::cir::PointerType type) -> mlir::Type {
+    return mlir::MemRefType::get({-1}, type.getPointee());
+  });
+  converter.addConversion(
+      [&](mlir::IntegerType type) -> mlir::Type { return type; });
+
+  return converter;
+}
+
 void ConvertCIRToLLVMPass::runOnOperation() {
   mlir::LLVMConversionTarget target(getContext());
   target.addLegalOp<mlir::ModuleOp>();
@@ -572,9 +583,9 @@ void ConvertCIRToFuncPass::runOnOperation() {
                       mlir::cir::CallOp>();
 
   mlir::RewritePatternSet patterns(&getContext());
-  mlir::TypeConverter converter;
-  patterns.add<CIRFuncLowering>(converter, patterns.getContext());
+  auto converter = prepareTypeConverter();
   patterns.add<CIRReturnLowering, CIRCallLowering>(patterns.getContext());
+  patterns.add<CIRFuncLowering>(converter, patterns.getContext());
 
   auto module = getOperation();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
