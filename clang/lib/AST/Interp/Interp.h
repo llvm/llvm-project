@@ -140,6 +140,8 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
 /// Interpreter entry point.
 bool Interpret(InterpState &S, APValue &Result);
 
+bool InterpretBuiltin(InterpState &S, CodePtr PC, unsigned BuiltinID);
+
 enum class ArithOp { Add, Sub };
 
 //===----------------------------------------------------------------------===//
@@ -1316,6 +1318,20 @@ inline bool Call(InterpState &S, CodePtr &PC, const Function *Func) {
 
   // Interpreting the function failed somehow. Reset to
   // previous state.
+  S.Current = FrameBefore;
+  return false;
+}
+
+inline bool CallBI(InterpState &S, CodePtr &PC, const Function *Func) {
+  auto NewFrame = std::make_unique<InterpFrame>(S, Func, PC);
+
+  InterpFrame *FrameBefore = S.Current;
+  S.Current = NewFrame.get();
+
+  if (InterpretBuiltin(S, PC, Func->getBuiltinID())) {
+    NewFrame.release();
+    return true;
+  }
   S.Current = FrameBefore;
   return false;
 }

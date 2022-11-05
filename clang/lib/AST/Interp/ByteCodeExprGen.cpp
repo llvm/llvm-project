@@ -1241,8 +1241,34 @@ bool ByteCodeExprGen<Emitter>::visitVarDecl(const VarDecl *VD) {
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitBuiltinCallExpr(const CallExpr *E) {
+  const Function *Func = getFunction(E->getDirectCallee());
+  if (!Func)
+    return false;
+
+  // Put arguments on the stack.
+  for (const auto *Arg : E->arguments()) {
+    if (!this->visit(Arg))
+      return false;
+  }
+
+  if (!this->emitCallBI(Func, E))
+    return false;
+
+  if (DiscardResult) {
+    QualType ReturnType = E->getCallReturnType(Ctx.getASTContext());
+    PrimType T = classifyPrim(ReturnType);
+
+    return this->emitPop(T, E);
+  }
+
+  return true;
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
-  assert(!E->getBuiltinCallee() && "Builtin functions aren't supported yet");
+  if (E->getBuiltinCallee())
+    return VisitBuiltinCallExpr(E);
 
   const Decl *Callee = E->getCalleeDecl();
   if (const auto *FuncDecl = dyn_cast_or_null<FunctionDecl>(Callee)) {
@@ -1276,9 +1302,9 @@ bool ByteCodeExprGen<Emitter>::VisitCallExpr(const CallExpr *E) {
         return false;
     }
 
-    // In any case call the function. The return value will end up on the stack and
-    // if the function has RVO, we already have the pointer on the stack to write
-    // the result into.
+    // In any case call the function. The return value will end up on the stack
+    // and if the function has RVO, we already have the pointer on the stack to
+    // write the result into.
     if (!this->emitCall(Func, E))
       return false;
 
