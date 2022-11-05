@@ -110,3 +110,31 @@ inner:
 }
 
 declare i16 @bar()
+
+define void @pr58751(i16 %a, ptr %dst) {
+entry:
+  %c.1 = icmp eq i16 %a, 0
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i16 [ %a, %entry ], [ %outer.iv.next, %outer.latch ]
+  br label %inner.header
+
+inner.header:
+  %inner.iv = phi i16 [ %outer.iv, %outer.header ], [ %inner.iv.next, %inner.latch ]
+  br i1 %c.1, label %outer.latch, label %inner.latch
+
+inner.latch:
+  %inner.iv.next = add nsw i16 %inner.iv, 1
+  store i16 %inner.iv.next, ptr %dst, align 1
+  %c.2 = icmp eq i16 %inner.iv.next, 0
+  br i1 %c.2, label %exit, label %inner.header
+
+outer.latch:
+  %outer.iv.next = add nsw i16 %outer.iv, 1
+  br label %outer.header
+
+exit:
+  ret void
+}
+
