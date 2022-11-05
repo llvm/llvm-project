@@ -1010,6 +1010,34 @@ bool ByteCodeExprGen<Emitter>::visitArrayInitializer(const Expr *Initializer) {
         return false;
     }
     return true;
+  } else if (const auto *SL = dyn_cast<StringLiteral>(Initializer)) {
+    const ConstantArrayType *CAT =
+        Ctx.getASTContext().getAsConstantArrayType(SL->getType());
+    assert(CAT && "a string literal that's not a constant array?");
+
+    // If the initializer string is too long, a diagnostic has already been
+    // emitted. Read only the array length from the string literal.
+    unsigned N =
+        std::min(unsigned(CAT->getSize().getZExtValue()), SL->getLength());
+    size_t CharWidth = SL->getCharByteWidth();
+
+    for (unsigned I = 0; I != N; ++I) {
+      uint32_t CodeUnit = SL->getCodeUnit(I);
+
+      if (CharWidth == 1) {
+        this->emitConstSint8(CodeUnit, SL);
+        this->emitInitElemSint8(I, SL);
+      } else if (CharWidth == 2) {
+        this->emitConstUint16(CodeUnit, SL);
+        this->emitInitElemUint16(I, SL);
+      } else if (CharWidth == 4) {
+        this->emitConstUint32(CodeUnit, SL);
+        this->emitInitElemUint32(I, SL);
+      } else {
+        llvm_unreachable("unsupported character width");
+      }
+    }
+    return true;
   }
 
   assert(false && "Unknown expression for array initialization");
