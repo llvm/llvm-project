@@ -68,16 +68,7 @@ stages there is no ABI stability in any form.
    :maxdepth: 1
    :caption: Development
 
-   build_system
-   clang_tidy_checks
-   entrypoints
-   fuzzing
-   ground_truth_specification
-   header_generation
-   implementation_standard
-   api_test
-   mechanics_of_public_api
-   source_layout
+   developer_guides
    porting
    contributing
 

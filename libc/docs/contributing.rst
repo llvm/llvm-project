@@ -42,7 +42,7 @@ a list of open projects that one can start with:
    to a fast random number generator with a large range.
 
 #. **Update the clang-tidy lint rules and use them in the build and/or CI** -
-   Currently, the :ref:`clangtidy_rules` have gone stale and are mostly unused
+   Currently, the :ref:`clang_tidy_checks` have gone stale and are mostly unused
    by the developers and on the CI builders. This project is about updating
    them and reintegrating them back with the build and running them on the
    CI builders.
