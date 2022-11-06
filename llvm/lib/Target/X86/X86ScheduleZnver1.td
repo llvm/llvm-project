@@ -523,10 +523,6 @@ def : SchedAlias<WriteSTMXCSR, ZnWriteMicrocoded>;
 // r16,m.
 def : InstRW<[WriteALULd, ReadAfterLd], (instrs MOV16rm)>;
 
-// MOVSX, MOVZX.
-// r,m.
-def : InstRW<[WriteLoad], (instregex "MOV(S|Z)X32rm(8|16)")>;
-
 // XCHG.
 // r,m.
 def ZnWriteXCHGrm : SchedWriteRes<[ZnAGU, ZnALU]> {
