@@ -155,6 +155,7 @@ def ConvertAsyncToLLVM : Pass<"convert-async-to-llvm", "ModuleOp"> {
     "arith::ArithDialect",
     "async::AsyncDialect",
     "LLVM::LLVMDialect",
+    "func::FuncDialect",
   ];
 }
 
