@@ -537,6 +537,8 @@ join:
   ret i16 %conv4
 }
 
+; negative test - but this could be transformed to eliminate a use of 't'
+
 define i64 @and_trunc_extra_use1(i64 %x, i32 %y) {
 ; CHECK-LABEL: @and_trunc_extra_use1(
 ; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[X:%.*]] to i32
@@ -551,6 +553,8 @@ define i64 @and_trunc_extra_use1(i64 %x, i32 %y) {
   %z = zext i32 %a to i64
   ret i64 %z
 }
+
+; negative test - but this could be transformed to eliminate a use of 't'
 
 define i64 @and_trunc_extra_use1_commute(i64 %x, i32 %p) {
 ; CHECK-LABEL: @and_trunc_extra_use1_commute(
@@ -569,6 +573,8 @@ define i64 @and_trunc_extra_use1_commute(i64 %x, i32 %p) {
   ret i64 %z
 }
 
+; negative test - avoid creating an extra instruction
+
 define i64 @and_trunc_extra_use2(i64 %x, i32 %y) {
 ; CHECK-LABEL: @and_trunc_extra_use2(
 ; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[X:%.*]] to i32
@@ -584,12 +590,14 @@ define i64 @and_trunc_extra_use2(i64 %x, i32 %y) {
   ret i64 %z
 }
 
+; With constant mask, we duplicate it as a wider constant.
+
 define i64 @and_trunc_extra_use2_constant(i64 %x) {
 ; CHECK-LABEL: @and_trunc_extra_use2_constant(
 ; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[T]], 42
 ; CHECK-NEXT:    call void @use32(i32 [[A]])
-; CHECK-NEXT:    [[Z:%.*]] = zext i32 [[A]] to i64
+; CHECK-NEXT:    [[Z:%.*]] = and i64 [[X]], 42
 ; CHECK-NEXT:    ret i64 [[Z]]
 ;
   %t = trunc i64 %x to i32
@@ -599,13 +607,15 @@ define i64 @and_trunc_extra_use2_constant(i64 %x) {
   ret i64 %z
 }
 
+; Works with arbitrary vectors and verify that the constant is zext.
+
 define <2 x i17> @and_trunc_extra_use3_constant_vec(<2 x i17> %x) {
 ; CHECK-LABEL: @and_trunc_extra_use3_constant_vec(
 ; CHECK-NEXT:    [[T:%.*]] = trunc <2 x i17> [[X:%.*]] to <2 x i9>
 ; CHECK-NEXT:    call void @use_vec(<2 x i9> [[T]])
 ; CHECK-NEXT:    [[A:%.*]] = and <2 x i9> [[T]], <i9 42, i9 -3>
 ; CHECK-NEXT:    call void @use_vec(<2 x i9> [[A]])
-; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i9> [[A]] to <2 x i17>
+; CHECK-NEXT:    [[Z:%.*]] = and <2 x i17> [[X]], <i17 42, i17 509>
 ; CHECK-NEXT:    ret <2 x i17> [[Z]]
 ;
   %t = trunc <2 x i17> %x to <2 x i9>
@@ -615,6 +625,8 @@ define <2 x i17> @and_trunc_extra_use3_constant_vec(<2 x i17> %x) {
   %z = zext <2 x i9> %a to <2 x i17>
   ret <2 x i17> %z
 }
+
+; negative test - would require another cast
 
 define i64 @and_trunc_extra_use1_wider_src(i65 %x, i32 %y) {
 ; CHECK-LABEL: @and_trunc_extra_use1_wider_src(
