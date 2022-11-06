@@ -168,7 +168,7 @@ defm : X86WriteRes<WriteSHDmrcl,[AtomPort01], 4, [4], 1>;
 // Loads, stores, and moves, not folded with other operations.
 ////////////////////////////////////////////////////////////////////////////////
 
-def : WriteRes<WriteLoad,    [AtomPort0]> { let Latency = 3; }
+def : WriteRes<WriteLoad,    [AtomPort0]>;
 def : WriteRes<WriteStore,   [AtomPort0]>;
 def : WriteRes<WriteStoreNT, [AtomPort0]>;
 def : WriteRes<WriteMove,    [AtomPort01]>;
