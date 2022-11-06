@@ -5104,6 +5104,25 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   unsigned PICLevel;
   bool IsPIE;
   std::tie(RelocationModel, PICLevel, IsPIE) = ParsePICArgs(TC, Args);
+  Arg *LastPICDataRelArg =
+      Args.getLastArg(options::OPT_mno_pic_data_is_text_relative,
+                      options::OPT_mpic_data_is_text_relative);
+  bool NoPICDataIsTextRelative = false;
+  if (LastPICDataRelArg) {
+    if (LastPICDataRelArg->getOption().matches(
+            options::OPT_mno_pic_data_is_text_relative)) {
+      NoPICDataIsTextRelative = true;
+      if (!PICLevel)
+        D.Diag(diag::err_drv_argument_only_allowed_with)
+            << "-mno-pic-data-is-text-relative"
+            << "-fpic/-fpie";
+    }
+    if (!Triple.isSystemZ())
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << (NoPICDataIsTextRelative ? "-mno-pic-data-is-text-relative"
+                                      : "-mpic-data-is-text-relative")
+          << RawTriple.str();
+  }
 
   bool IsROPI = RelocationModel == llvm::Reloc::ROPI ||
                 RelocationModel == llvm::Reloc::ROPI_RWPI;
@@ -5132,6 +5151,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(PICLevel == 1 ? "1" : "2");
     if (IsPIE)
       CmdArgs.push_back("-pic-is-pie");
+    if (NoPICDataIsTextRelative)
+      CmdArgs.push_back("-mcmodel=medium");
   }
 
   if (RelocationModel == llvm::Reloc::ROPI ||
