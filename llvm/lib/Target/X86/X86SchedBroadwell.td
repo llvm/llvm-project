@@ -908,8 +908,6 @@ def BWWriteResGroup49 : SchedWriteRes<[BWPort23]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[BWWriteResGroup49], (instregex "MOVSX(16|32|64)rm(8|16|32)",
-                                            "MOVZX(16|32|64)rm(8|16)")>;
 def: InstRW<[BWWriteResGroup49], (instrs VBROADCASTSSrm,
                                          VMOVDDUPrm, MOVDDUPrm,
                                          VMOVSHDUPrm, MOVSHDUPrm,
