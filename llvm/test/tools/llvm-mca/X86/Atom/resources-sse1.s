@@ -282,10 +282,10 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      3     3.00                        pmovmskb	%mm0, %ecx
 # CHECK-NEXT:  1      4     1.00                        pmulhuw	%mm0, %mm2
 # CHECK-NEXT:  1      4     1.00    *                   pmulhuw	(%rax), %mm2
-# CHECK-NEXT:  1      1     1.00    *      *            prefetcht0	(%rax)
-# CHECK-NEXT:  1      1     1.00    *      *            prefetcht1	(%rax)
-# CHECK-NEXT:  1      1     1.00    *      *            prefetcht2	(%rax)
-# CHECK-NEXT:  1      1     1.00    *      *            prefetchnta	(%rax)
+# CHECK-NEXT:  1      3     1.00    *      *            prefetcht0	(%rax)
+# CHECK-NEXT:  1      3     1.00    *      *            prefetcht1	(%rax)
+# CHECK-NEXT:  1      3     1.00    *      *            prefetcht2	(%rax)
+# CHECK-NEXT:  1      3     1.00    *      *            prefetchnta	(%rax)
 # CHECK-NEXT:  1      4     1.00                        psadbw	%mm0, %mm2
 # CHECK-NEXT:  1      4     1.00    *                   psadbw	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        pshufw	$1, %mm0, %mm2
