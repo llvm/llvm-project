@@ -415,7 +415,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00    *                   andnpd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.50                        andpd	%xmm0, %xmm2
 # CHECK-NEXT:  1      1     1.00    *                   andpd	(%rax), %xmm2
-# CHECK-NEXT:  1      1     1.00    *      *      U     clflush	(%rax)
+# CHECK-NEXT:  1      3     1.00    *      *      U     clflush	(%rax)
 # CHECK-NEXT:  3      6     5.00                        cmpeqpd	%xmm0, %xmm2
 # CHECK-NEXT:  4      7     6.00    *                   cmpeqpd	(%rax), %xmm2
 # CHECK-NEXT:  1      5     1.00                        cmpeqsd	%xmm0, %xmm2
