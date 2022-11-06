@@ -70,3 +70,57 @@ exit:
   %res = add i32 %c.ext, %or
   ret i32 %res
 }
+
+define i8 @l(i32 %inc, i1 %tobool.not.i) {
+; CHECK-LABEL: @l(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
+; CHECK:       outer.header:
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    [[C_05_I:%.*]] = phi i32 [ [[INC_I:%.*]], [[INNER]] ], [ 0, [[OUTER_HEADER]] ]
+; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[C_05_I]], 1
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ugt i32 [[C_05_I]], 0
+; CHECK-NEXT:    [[OR_COND_I:%.*]] = select i1 [[CMP_I]], i1 true, i1 [[TOBOOL_NOT_I:%.*]]
+; CHECK-NEXT:    br i1 [[OR_COND_I]], label [[OUTER_LATCH:%.*]], label [[INNER]]
+; CHECK:       outer.latch:
+; CHECK-NEXT:    [[C_05_I_LCSSA:%.*]] = phi i32 [ [[C_05_I]], [[INNER]] ]
+; CHECK-NEXT:    [[LCSSA:%.*]] = phi i32 [ 0, [[INNER]] ]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 1, [[INC:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[AND]] to i8
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C_05_I_LCSSA]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i8 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[TMP2]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[OUTER_HEADER]], label [[IF_THEN:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    ret i8 0
+;
+entry:
+  br label %outer.header
+
+outer.header:                                         ; preds = %h.exit, %entry
+  %outer.iv = phi i16 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  %and = and i32 1, %inc
+  %conv = sext i16 %outer.iv to i32
+  br label %inner
+
+inner:                                     ; preds = %while.body.i, %for.cond
+  %c.05.i = phi i32 [ %inc.i, %inner ], [ 0, %outer.header ]
+  %i.addr.04.i = phi i32 [ 0, %inner ], [ %conv, %outer.header ]
+  %inc.i = add nsw i32 %c.05.i, 1
+  %cmp.i = icmp sgt i32 %c.05.i, 0
+  %or.cond.i = select i1 %cmp.i, i1 true, i1 %tobool.not.i
+  br i1 %or.cond.i, label %outer.latch, label %inner
+
+outer.latch:                                           ; preds = %while.body.i
+  %lcssa = phi i32 [ 0, %inner ]
+  %0 = trunc i32 %and to i8
+  %1 = trunc i32 %c.05.i to i8
+  %2 = sub i8 %0, %1
+  %tobool.not = icmp eq i8 %2, 0
+  %outer.iv.next = add i16 %outer.iv, 1
+  br i1 %tobool.not, label %outer.header, label %if.then
+
+if.then:                                          ; preds = %h.exit
+  ret i8 0
+}

@@ -1281,7 +1281,7 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
 
     MadeAnyChanges = true;
     ToMove->moveBefore(*ExitBlock, InsertPt);
-    SE->forgetBlockAndLoopDispositions(ToMove);
+    SE->forgetValue(ToMove);
     if (Done) break;
     InsertPt = ToMove->getIterator();
   }
