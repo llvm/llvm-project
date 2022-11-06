@@ -2835,6 +2835,8 @@ createSymbols(
 
 // Returns a newly-created .gdb_index section.
 template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
+  llvm::TimeTraceScope timeScope("Create gdb index");
+
   // Collect InputFiles with .debug_info. See the comment in
   // LLDDwarfObj<ELFT>::LLDDwarfObj. If we do lightweight parsing in the future,
   // note that isec->data() may uncompress the full content, which should be
