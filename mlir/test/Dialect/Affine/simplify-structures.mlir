@@ -557,3 +557,13 @@ func.func @semiaffine_modulo(%arg0: index) -> index {
   // CHECK: affine.apply #[[$MAP]]()[%{{.*}}]
   return %a : index
 }
+
+// -----
+
+// CHECK-DAG: #[[$MAP:.*]] = affine_map<()[s0, s1, s2] -> (s2 mod 2 + (s1 floordiv 2) * 2 + ((s2 floordiv 2) * s0) * 2)>
+// CHECK-LABEL: func @semiaffine_modulo_dim
+func.func @semiaffine_modulo_dim(%arg0: index, %arg1: index, %arg2: index) -> index {
+  %a = affine.apply affine_map<(d0)[s0, s1] -> (((d0 floordiv 2) * s0 + s1 floordiv 2) * 2 + d0 mod 2)> (%arg0)[%arg1, %arg2]
+  //CHECK: affine.apply #[[$MAP]]()[%{{.*}}, %{{.*}}, %{{.*}}]
+  return %a : index
+}
