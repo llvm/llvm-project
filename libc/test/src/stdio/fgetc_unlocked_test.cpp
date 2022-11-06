@@ -6,14 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/clearerr.h"
 #include "src/stdio/fclose.h"
 #include "src/stdio/feof.h"
+#include "src/stdio/feof_unlocked.h"
 #include "src/stdio/ferror.h"
-#include "src/stdio/fgetc.h"
+#include "src/stdio/ferror_unlocked.h"
+#include "src/stdio/fgetc_unlocked.h"
+#include "src/stdio/flockfile.h"
 #include "src/stdio/fopen.h"
+#include "src/stdio/funlockfile.h"
 #include "src/stdio/fwrite.h"
-#include "src/stdio/getc.h"
+#include "src/stdio/getc_unlocked.h"
 #include "utils/UnitTest/Test.h"
 
 #include <errno.h>
@@ -40,23 +43,25 @@ public:
     file = __llvm_libc::fopen(filename, "r");
     ASSERT_FALSE(file == nullptr);
 
+    __llvm_libc::flockfile(file);
     for (size_t i = 0; i < WRITE_SIZE; ++i) {
       int c = func(file);
       ASSERT_EQ(c, int('1' + i));
     }
     // Reading more should return EOF but not set error.
     ASSERT_EQ(func(file), EOF);
-    ASSERT_NE(__llvm_libc::feof(file), 0);
-    ASSERT_EQ(__llvm_libc::ferror(file), 0);
+    ASSERT_NE(__llvm_libc::feof_unlocked(file), 0);
+    ASSERT_EQ(__llvm_libc::ferror_unlocked(file), 0);
 
+    __llvm_libc::funlockfile(file);
     ASSERT_EQ(0, __llvm_libc::fclose(file));
   }
 };
 
-TEST_F(LlvmLibcGetcTest, WriteAndReadCharactersWithFgetc) {
-  test_with_func(&__llvm_libc::fgetc, "testdata/fgetc.test");
+TEST_F(LlvmLibcGetcTest, WriteAndReadCharactersWithFgetcUnlocked) {
+  test_with_func(&__llvm_libc::fgetc_unlocked, "testdata/fgetc_unlocked.test");
 }
 
-TEST_F(LlvmLibcGetcTest, WriteAndReadCharactersWithGetc) {
-  test_with_func(&__llvm_libc::getc, "testdata/getc.test");
+TEST_F(LlvmLibcGetcTest, WriteAndReadCharactersWithGetcUnlocked) {
+  test_with_func(&__llvm_libc::getc_unlocked, "testdata/getc_unlocked.test");
 }
