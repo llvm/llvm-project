@@ -154,6 +154,8 @@ private:
 MCTargetStreamer *
 createAArch64ObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
 
+MCTargetStreamer *createAArch64NullTargetStreamer(MCStreamer &S);
+
 } // end namespace llvm
 
 #endif

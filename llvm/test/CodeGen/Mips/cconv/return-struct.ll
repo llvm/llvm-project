@@ -175,12 +175,12 @@ define inreg {i48} @ret_struct_3xi16() nounwind {
 ; N32-BE:       # %bb.0: # %entry
 ; N32-BE-NEXT:    lui $1, %hi(struct_3xi16)
 ; N32-BE-NEXT:    lw $2, %lo(struct_3xi16)($1)
-; N32-BE-NEXT:    dsll $2, $2, 16
+; N32-BE-NEXT:    dsll $2, $2, 32
 ; N32-BE-NEXT:    addiu $1, $1, %lo(struct_3xi16)
 ; N32-BE-NEXT:    lhu $1, 4($1)
-; N32-BE-NEXT:    or $1, $1, $2
+; N32-BE-NEXT:    dsll $1, $1, 16
 ; N32-BE-NEXT:    jr $ra
-; N32-BE-NEXT:    dsll $2, $1, 16
+; N32-BE-NEXT:    or $2, $2, $1
 ;
 ; N32-LE-LABEL: ret_struct_3xi16:
 ; N32-LE:       # %bb.0: # %entry
@@ -200,12 +200,12 @@ define inreg {i48} @ret_struct_3xi16() nounwind {
 ; N64-BE-NEXT:    daddiu $1, $1, %hi(struct_3xi16)
 ; N64-BE-NEXT:    dsll $1, $1, 16
 ; N64-BE-NEXT:    lw $2, %lo(struct_3xi16)($1)
-; N64-BE-NEXT:    dsll $2, $2, 16
+; N64-BE-NEXT:    dsll $2, $2, 32
 ; N64-BE-NEXT:    daddiu $1, $1, %lo(struct_3xi16)
 ; N64-BE-NEXT:    lhu $1, 4($1)
-; N64-BE-NEXT:    or $1, $1, $2
+; N64-BE-NEXT:    dsll $1, $1, 16
 ; N64-BE-NEXT:    jr $ra
-; N64-BE-NEXT:    dsll $2, $1, 16
+; N64-BE-NEXT:    or $2, $2, $1
 ;
 ; N64-LE-LABEL: ret_struct_3xi16:
 ; N64-LE:       # %bb.0: # %entry

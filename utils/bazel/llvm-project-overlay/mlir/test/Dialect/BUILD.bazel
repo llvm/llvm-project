@@ -11,6 +11,7 @@ package(default_visibility = ["//visibility:public"])
         data = [
             "//llvm:llvm-symbolizer",
             "//mlir:mlir-opt",
+            "//mlir:mlir-translate",
             "//mlir/test:lit_data",
         ],
     )

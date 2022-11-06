@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -498,13 +499,17 @@ public:
   using OpRewritePattern<PushBackOp>::OpRewritePattern;
   LogicalResult matchAndRewrite(PushBackOp op,
                                 PatternRewriter &rewriter) const override {
-    // Rewrite push_back(buffer, value) to:
-    // if (size(buffer) >= capacity(buffer))
-    //    new_capacity = capacity(buffer)*2
+    // Rewrite push_back(buffer, value, n) to:
+    // new_size = size(buffer) + n
+    // if (new_size > capacity(buffer))
+    //    while new_size > new_capacity
+    //      new_capacity = new_capacity*2
     //    new_buffer = realloc(buffer, new_capacity)
     // buffer = new_buffer
-    // store(buffer, value)
-    // size(buffer)++
+    // subBuffer = subviewof(buffer)
+    // linalg.fill subBuffer value
+    //
+    // size(buffer) += n
     //
     // The capacity check is skipped when the attribute inbounds is presented.
     Location loc = op->getLoc();
@@ -516,18 +521,50 @@ public:
     Value size = rewriter.create<memref::LoadOp>(loc, bufferSizes, idx);
     Value value = op.getValue();
 
+    Value n = op.getN() ? op.getN() : constantIndex(rewriter, loc, 1);
+    Value newSize = rewriter.create<arith::AddIOp>(loc, size, n);
+    auto nValue = dyn_cast_or_null<arith::ConstantIndexOp>(n.getDefiningOp());
+    bool nIsOne = (nValue && nValue.value() == 1);
+
     if (!op.getInbounds()) {
       Value cond = rewriter.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::uge, size, capacity);
+          loc, arith::CmpIPredicate::ugt, newSize, capacity);
 
+      Value c2 = constantIndex(rewriter, loc, 2);
       auto bufferType =
           MemRefType::get({ShapedType::kDynamicSize}, value.getType());
       scf::IfOp ifOp = rewriter.create<scf::IfOp>(loc, bufferType, cond,
                                                   /*else=*/true);
       // True branch.
       rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      Value c2 = constantIndex(rewriter, loc, 2);
-      capacity = rewriter.create<arith::MulIOp>(loc, capacity, c2);
+      if (nIsOne) {
+        capacity = rewriter.create<arith::MulIOp>(loc, capacity, c2);
+      } else {
+        // Use a do-while loop to calculate the new capacity as follows:
+        //   do { new_capacity *= 2 } while (size > new_capacity)
+        scf::WhileOp whileOp =
+            rewriter.create<scf::WhileOp>(loc, capacity.getType(), capacity);
+
+        // The before-region of the WhileOp.
+        Block *before = rewriter.createBlock(&whileOp.getBefore(), {},
+                                             {capacity.getType()}, {loc});
+        rewriter.setInsertionPointToEnd(before);
+
+        capacity =
+            rewriter.create<arith::MulIOp>(loc, before->getArgument(0), c2);
+        cond = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ugt,
+                                              newSize, capacity);
+        rewriter.create<scf::ConditionOp>(loc, cond, ValueRange{capacity});
+        // The after-region of the WhileOp.
+        Block *after = rewriter.createBlock(&whileOp.getAfter(), {},
+                                            {capacity.getType()}, {loc});
+        rewriter.setInsertionPointToEnd(after);
+        rewriter.create<scf::YieldOp>(loc, after->getArguments());
+
+        rewriter.setInsertionPointAfter(whileOp);
+        capacity = whileOp.getResult(0);
+      }
+
       Value newBuffer =
           rewriter.create<memref::ReallocOp>(loc, bufferType, buffer, capacity);
       rewriter.create<scf::YieldOp>(loc, newBuffer);
@@ -542,13 +579,17 @@ public:
     }
 
     // Add the value to the end of the buffer.
-    rewriter.create<memref::StoreOp>(loc, value, buffer, size);
+    if (nIsOne) {
+      rewriter.create<memref::StoreOp>(loc, value, buffer, size);
+    } else {
+      Value subBuffer = rewriter.create<memref::SubViewOp>(
+          loc, buffer, /*offset=*/ValueRange{size}, /*size=*/ValueRange{n},
+          /*step=*/ValueRange{constantIndex(rewriter, loc, 1)});
+      rewriter.create<linalg::FillOp>(loc, value, subBuffer);
+    }
 
-    // Increment the size of the buffer by 1.
-    Value c1 = constantIndex(rewriter, loc, 1);
-    size = rewriter.create<arith::AddIOp>(loc, size, c1);
-    rewriter.create<memref::StoreOp>(loc, size, bufferSizes, idx);
-
+    // Update the buffer size.
+    rewriter.create<memref::StoreOp>(loc, newSize, bufferSizes, idx);
     rewriter.replaceOp(op, buffer);
     return success();
   }

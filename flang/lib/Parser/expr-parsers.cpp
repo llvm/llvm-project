@@ -10,7 +10,6 @@
 
 #include "expr-parsers.h"
 #include "basic-parsers.h"
-#include "debug-parser.h"
 #include "misc-parsers.h"
 #include "stmt-parser.h"
 #include "token-parsers.h"
@@ -496,8 +495,8 @@ TYPE_CONTEXT_PARSER("ELSEWHERE statement"_en_US,
 
 // R1049 end-where-stmt -> ENDWHERE [where-construct-name]
 TYPE_CONTEXT_PARSER("END WHERE statement"_en_US,
-    construct<EndWhereStmt>(
-        recovery("END WHERE" >> maybe(name), endStmtErrorRecovery)))
+    construct<EndWhereStmt>(recovery(
+        "END WHERE" >> maybe(name), namedConstructEndStmtErrorRecovery)))
 
 // R1050 forall-construct ->
 //         forall-construct-stmt [forall-body-construct]... end-forall-stmt
@@ -527,8 +526,8 @@ TYPE_PARSER(construct<ForallAssignmentStmt>(assignmentStmt) ||
 
 // R1054 end-forall-stmt -> END FORALL [forall-construct-name]
 TYPE_CONTEXT_PARSER("END FORALL statement"_en_US,
-    construct<EndForallStmt>(
-        recovery("END FORALL" >> maybe(name), endStmtErrorRecovery)))
+    construct<EndForallStmt>(recovery(
+        "END FORALL" >> maybe(name), namedConstructEndStmtErrorRecovery)))
 
 // R1055 forall-stmt -> FORALL concurrent-header forall-assignment-stmt
 TYPE_CONTEXT_PARSER("FORALL statement"_en_US,

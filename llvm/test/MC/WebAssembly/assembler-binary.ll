@@ -1,7 +1,7 @@
-; RUN: llc -filetype=asm -asm-verbose=false %s -o %t.s
+; RUN: llc -mcpu=mvp -filetype=asm -asm-verbose=false %s -o %t.s
 ; RUN: FileCheck -check-prefix=ASM -input-file %t.s %s
 ; RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=asm %t.s -o - | FileCheck -check-prefix=ASM %s
-; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -mcpu=mvp -filetype=obj %s -o - | obj2yaml | FileCheck %s
 ; RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj %t.s -o - | obj2yaml | FileCheck %s
 
 ; This specifically tests that we can generate a binary from the assembler

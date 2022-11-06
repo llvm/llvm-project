@@ -43,14 +43,14 @@ define void @bar1() nounwind {
 ; MIPS32-EB-NEXT:    addu $gp, $2, $25
 ; MIPS32-EB-NEXT:    lw $1, %got(s2)($gp)
 ; MIPS32-EB-NEXT:    lbu $2, 3($1)
+; MIPS32-EB-NEXT:    sll $2, $2, 16
 ; MIPS32-EB-NEXT:    lbu $1, 2($1)
-; MIPS32-EB-NEXT:    sll $1, $1, 8
-; MIPS32-EB-NEXT:    or $1, $1, $2
+; MIPS32-EB-NEXT:    sll $1, $1, 24
 ; MIPS32-EB-NEXT:    lw $25, %call16(foo2)($gp)
 ; MIPS32-EB-NEXT:    .reloc ($tmp0), R_MIPS_JALR, foo2
 ; MIPS32-EB-NEXT:  $tmp0:
 ; MIPS32-EB-NEXT:    jalr $25
-; MIPS32-EB-NEXT:    sll $4, $1, 16
+; MIPS32-EB-NEXT:    or $4, $1, $2
 ; MIPS32-EB-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MIPS32-EB-NEXT:    jr $ra
 ; MIPS32-EB-NEXT:    addiu $sp, $sp, 24
@@ -130,12 +130,12 @@ define void @bar2() nounwind {
 ; MIPS32-EB-NEXT:    addu $gp, $2, $25
 ; MIPS32-EB-NEXT:    lw $1, %got(s4)($gp)
 ; MIPS32-EB-NEXT:    lwl $4, 0($1)
-; MIPS32-EB-NEXT:    lwr $4, 3($1)
 ; MIPS32-EB-NEXT:    lbu $2, 5($1)
-; MIPS32-EB-NEXT:    lbu $3, 4($1)
-; MIPS32-EB-NEXT:    sll $3, $3, 8
-; MIPS32-EB-NEXT:    or $2, $3, $2
+; MIPS32-EB-NEXT:    lwr $4, 3($1)
 ; MIPS32-EB-NEXT:    sll $2, $2, 16
+; MIPS32-EB-NEXT:    lbu $3, 4($1)
+; MIPS32-EB-NEXT:    sll $3, $3, 24
+; MIPS32-EB-NEXT:    or $2, $3, $2
 ; MIPS32-EB-NEXT:    lbu $1, 6($1)
 ; MIPS32-EB-NEXT:    sll $1, $1, 8
 ; MIPS32-EB-NEXT:    lw $25, %call16(foo4)($gp)

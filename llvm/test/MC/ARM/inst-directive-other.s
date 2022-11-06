@@ -1,15 +1,15 @@
 // RUN: llvm-mc %s -triple=armv7-apple-darwin -filetype=asm -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ASM
 // RUN: llvm-mc %s -triple=armv7-apple-darwin -filetype=obj -o - \
-// RUN:   | llvm-objdump --triple=thumbv7 -d - | FileCheck %s --check-prefixes=CHECK-OBJ-CODE
+// RUN:   | llvm-objdump --no-print-imm-hex --triple=thumbv7 -d - | FileCheck %s --check-prefixes=CHECK-OBJ-CODE
 // RUN: llvm-mc %s -triple=thumbv7-win32-gnu -filetype=asm -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ASM
 // RUN: llvm-mc %s -triple=thumbv7-win32-gnu -filetype=obj -o - \
-// RUN:   | llvm-objdump -d - | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-CODE
+// RUN:   | llvm-objdump --no-print-imm-hex -d - | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-CODE
 // RUN: llvm-mc %s -triple=armv7-linux-gnueabi -filetype=asm -o - \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ASM
 // RUN: llvm-mc %s -triple=armv7-linux-gnueabi -filetype=obj -o - \
-// RUN:   | llvm-objdump -d --triple=thumbv7 - | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-DATA
+// RUN:   | llvm-objdump --no-print-imm-hex -d --triple=thumbv7 - | FileCheck %s --check-prefixes=CHECK-OBJ,CHECK-OBJ-DATA
 
     .text
 

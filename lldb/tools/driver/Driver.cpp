@@ -788,6 +788,10 @@ int main(int argc, char const *argv[]) {
                        << '\n';
     return 1;
   }
+
+  // Setup LLDB signal handlers once the debugger has been initialized.
+  SBDebugger::PrintDiagnosticsOnError();
+
   SBHostOS::ThreadCreated("<lldb.driver.main-thread>");
 
   signal(SIGINT, sigint_handler);

@@ -1,0 +1,41 @@
+# RUN: llvm-mc --disassemble %s -triple powerpc64-unknown-linux-gnu \
+# RUN:   -mcpu=future | FileCheck %s
+
+# RUN: llvm-mc --disassemble %s -triple powerpc64-unknown-aix-gnu \
+# RUN:   -mcpu=future | FileCheck %s
+
+# RUN: llvm-mc --disassemble %s -triple powerpc-unknown-aix-gnu \
+# RUN:   -mcpu=future | FileCheck %s
+
+#CHECK: dmxxextfdmr512 1, 2, 34, 0
+0xf0 0x82 0x17 0x12
+
+#CHECK: dmxxextfdmr512 1, 2, 34, 1
+0xf0 0x83 0x17 0x12
+
+#CHECK: dmxxextfdmr256 3, 8, 0
+0xf1 0x80 0x47 0x90
+
+#CHECK: dmxxextfdmr256 3, 8, 3
+0xf1 0x81 0x4f 0x90
+
+#CHECK: dmxxinstfdmr512 1, 2, 34, 0
+0xf0 0x82 0x17 0x52
+
+#CHECK: dmxxinstfdmr512 1, 2, 34, 1
+0xf0 0x83 0x17 0x52
+
+#CHECK: dmxxinstfdmr256 3, 8, 0
+0xf1 0x80 0x47 0x94
+
+#CHECK: dmxxinstfdmr256 3, 8, 3
+0xf1 0x81 0x4f 0x94
+
+#CHECK: dmsetdmrz 3
+0x7d 0x82 0x01 0x62
+
+#CHECK: dmmr 4, 5
+0x7e 0x06 0xa1 0x62
+
+#CHECK: dmxor 6, 7
+0x7f 0x07 0xe1 0x62

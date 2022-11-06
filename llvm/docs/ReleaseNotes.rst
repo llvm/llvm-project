@@ -81,6 +81,8 @@ Changes to TableGen
 Changes to the AArch64 Backend
 ------------------------------
 
+* Added support for the Cortex-A715 CPU.
+
 Changes to the AMDGPU Backend
 -----------------------------
 
@@ -138,13 +140,15 @@ Changes to the Windows Target
 
 Changes to the X86 Backend
 --------------------------
-* Support ISA of ``AVX-IFMA``.
 
 * Add support for the ``RDMSRLIST and WRMSRLIST`` instructions.
 * Add support for the ``WRMSRNS`` instruction.
 * Support ISA of ``AMX-FP16`` which contains ``tdpfp16ps`` instruction.
 * Support ISA of ``CMPCCXADD``.
+* Support ISA of ``AVX-IFMA``.
 * Support ISA of ``AVX-VNNI-INT8``.
+* Support ISA of ``AVX-NE-CONVERT``.
+* ``-mcpu=raptorlake`` and ``-mcpu=meteorlake`` are now supported.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -199,6 +203,9 @@ Changes to the LLVM tools
   parsed in the same way, since each object no longer has a unique key. Tools
   that consume ``llvm-readobj``'s JSON output should update their parsers
   accordingly.
+
+* ``llvm-objdump`` now uses ``--print-imm-hex`` by default, which brings its
+  default behavior closer in line with ``objdump``.
 
 Changes to LLDB
 ---------------------------------

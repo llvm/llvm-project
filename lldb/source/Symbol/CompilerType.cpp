@@ -154,12 +154,6 @@ bool CompilerType::IsIntegerOrEnumerationType(bool &is_signed) const {
   return IsIntegerType(is_signed) || IsEnumerationType(is_signed);
 }
 
-bool CompilerType::IsBooleanType() const {
-  if (IsValid())
-    return m_type_system->IsBooleanType(m_type);
-  return false;
-}
-
 bool CompilerType::IsPointerType(CompilerType *pointee_type) const {
   if (IsValid()) {
     return m_type_system->IsPointerType(m_type, pointee_type);
@@ -280,9 +274,9 @@ size_t CompilerType::GetPointerByteSize() const {
   return 0;
 }
 
-ConstString CompilerType::GetTypeName() const {
+ConstString CompilerType::GetTypeName(bool BaseOnly) const {
   if (IsValid()) {
-    return m_type_system->GetTypeName(m_type);
+    return m_type_system->GetTypeName(m_type, BaseOnly);
   }
   return ConstString("<invalid>");
 }

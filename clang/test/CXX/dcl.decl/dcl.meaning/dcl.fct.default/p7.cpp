@@ -27,5 +27,7 @@ void h() {
   struct S { int i; };
   auto [x] = S();
 
-  extern void h7(int = x); // FIXME: reject
+  extern void h7(int = x);
+  // expected-error@-1 {{default argument references local variable 'x' of enclosing function}}
+
 }

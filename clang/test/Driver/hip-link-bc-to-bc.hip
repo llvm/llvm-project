@@ -1,4 +1,6 @@
-// REQUIRES: clang-driver, x86-registered-target, amdgpu-registered-target
+// REQUIRES: x86-registered-target, amdgpu-registered-target
+// See issue #58711
+// XFAIL: *
 
 // Check that clang unbundles the two bitcodes and links via llvm-link
 // RUN: rm -rf %t && mkdir %t

@@ -572,15 +572,15 @@ for.body:                                         ; preds = %for.body, %entry
 ; void load_gap_reverse(struct pair *P1, struct pair *P2, int X) {
 ;   for (int i = 1023; i >= 0; i--) {
 ;     int a = X + i;
-;     int b = A[i].y - i;
-;     B[i].x = a;
+;     int b = B[i].y - i;
+;     A[i].x = a;
 ;     B[i].y = b;
 ;   }
 ; }
 
 
 %pair = type { i64, i64 }
-define void @load_gap_reverse(%pair* noalias nocapture readonly %P1, %pair* noalias nocapture readonly %P2, i64 %X) {
+define void @load_gap_reverse(%pair* noalias nocapture %P1, %pair* noalias nocapture %P2, i64 %X) {
 ; CHECK-LABEL: @load_gap_reverse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]

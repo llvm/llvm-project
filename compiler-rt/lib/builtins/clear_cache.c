@@ -91,6 +91,8 @@ void __clear_cache(void *start, void *end) {
 #else
   compilerrt_abort();
 #endif
+#elif defined(__linux__) && defined(__loongarch__)
+  __asm__ volatile("ibar 0");
 #elif defined(__linux__) && defined(__mips__)
   const uintptr_t start_int = (uintptr_t)start;
   const uintptr_t end_int = (uintptr_t)end;

@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %s -o %t
 # RUN: echo '.globl zero; zero = 0' | llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd -o %t2.o
 # RUN: ld.lld %t %t2.o -o %t2
-# RUN: llvm-objdump -d %t2 | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t2 | FileCheck %s
 
 .section .R_AARCH64_ADR_PREL_LO21,"ax",@progbits
 .globl _start

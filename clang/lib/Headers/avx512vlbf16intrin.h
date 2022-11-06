@@ -160,12 +160,8 @@ _mm256_maskz_cvtne2ps_pbh(__mmask16 __U, __m256 __A, __m256 __B) {
 ///    A 128-bit vector of [4 x float].
 /// \returns A 128-bit vector of [8 x bfloat] whose lower 64 bits come from
 ///    conversion of __A, and higher 64 bits are 0.
-static __inline__ __m128bh __DEFAULT_FN_ATTRS128
-_mm_cvtneps_pbh(__m128 __A) {
-  return (__m128bh)__builtin_ia32_cvtneps2bf16_128_mask((__v4sf) __A,
-                                                  (__v8bf)_mm_undefined_si128(),
-                                                  (__mmask8)-1);
-}
+#define _mm_cvtneps_pbh(A)                                                     \
+  ((__m128bh)__builtin_ia32_vcvtneps2bf16128((__v4sf)(A)))
 
 /// Convert Packed Single Data to Packed BF16 Data.
 ///
@@ -218,12 +214,8 @@ _mm_maskz_cvtneps_pbh(__mmask8 __U, __m128 __A) {
 /// \param __A
 ///    A 256-bit vector of [8 x float].
 /// \returns A 128-bit vector of [8 x bfloat] comes from conversion of __A.
-static __inline__ __m128bh __DEFAULT_FN_ATTRS256
-_mm256_cvtneps_pbh(__m256 __A) {
-  return (__m128bh)__builtin_ia32_cvtneps2bf16_256_mask((__v8sf)__A,
-                                                  (__v8bf)_mm_undefined_si128(),
-                                                  (__mmask8)-1);
-}
+#define _mm256_cvtneps_pbh(A)                                                  \
+  ((__m128bh)__builtin_ia32_vcvtneps2bf16256((__v8sf)(A)))
 
 /// Convert Packed Single Data to Packed BF16 Data.
 ///

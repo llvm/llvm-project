@@ -1450,3 +1450,8 @@
 
 // THUMB-MINGW:#define __ARM_DWARF_EH__ 1
 
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=thumbv6m-none-unknown-eabi < /dev/null | FileCheck -match-full-lines -check-prefix Thumbv6m-elf %s
+// Thumbv6m-elf: #define __ELF__ 1
+
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=thumbv6m-none-unknown-eabi < /dev/null | FileCheck -match-full-lines -check-prefix Thumbv6m-cxx %s
+// Thumbv6m-cxx: #define _GNU_SOURCE 1

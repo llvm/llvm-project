@@ -111,12 +111,16 @@ subroutine s10
   x = cos(0.)
   do concurrent(i=1:2) &
     !ERROR: 'bad1' may not appear in a locality-spec because it is not definable
+    !BECAUSE: 'bad1' is not a variable
     local(bad1) &
     !ERROR: 'bad2' may not appear in a locality-spec because it is not definable
+    !BECAUSE: 'bad2' is not a variable
     local(bad2) &
     !ERROR: 'bad3' may not appear in a locality-spec because it is not definable
+    !BECAUSE: 'bad3' is not a variable
     local(bad3) &
     !ERROR: 'cos' may not appear in a locality-spec because it is not definable
+    !BECAUSE: 'cos' is not a variable
     local(cos)
   end do
   do concurrent(i=1:2) &

@@ -525,6 +525,10 @@ static_library("builtins") {
       "hexagon/umodsi3.S",
     ]
   }
+  if (current_cpu == "loongarch" || current_cpu == "loongarch64") {
+    sources -= [ "fp_mode.c" ]
+    sources += [ "loongarch/fp_mode.c" ]
+  }
 
   if (current_cpu == "ppc64") {
     sources += [

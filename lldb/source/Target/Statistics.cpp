@@ -75,6 +75,17 @@ json::Value ModuleStats::ToJSON() const {
       symfile_ids.emplace_back(symfile_id);
     module.try_emplace("symbolFileModuleIdentifiers", std::move(symfile_ids));
   }
+
+  if (!type_system_stats.empty()) {
+    json::Array type_systems;
+    for (const auto &entry : type_system_stats) {
+      json::Object obj;
+      obj.try_emplace(entry.first().str(), entry.second);
+      type_systems.emplace_back(std::move(obj));
+    }
+    module.try_emplace("typeSystemInfo", std::move(type_systems));
+  }
+
   return module;
 }
 
@@ -256,6 +267,11 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
     debug_parse_time += module_stat.debug_parse_time;
     debug_index_time += module_stat.debug_index_time;
     debug_info_size += module_stat.debug_info_size;
+    module->ForEachTypeSystem([&](TypeSystem *ts) {
+      if (auto stats = ts->ReportStatistics())
+        module_stat.type_system_stats.insert({ts->GetPluginName(), *stats});
+      return true;
+    });
     json_modules.emplace_back(module_stat.ToJSON());
   }
 

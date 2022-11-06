@@ -5,7 +5,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
 # RUN: %lld -o %t %t.o
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s
 # CHECK: leaq [[#]](%rip), %rax  ## {{.*}} <_foo>
 
 .globl _main, _foo

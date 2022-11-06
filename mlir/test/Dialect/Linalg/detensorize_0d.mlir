@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -allow-unregistered-dialect -pass-pipeline="func.func(linalg-detensorize{aggressive-mode})" | FileCheck %s
+// RUN: mlir-opt %s -allow-unregistered-dialect -pass-pipeline="builtin.module(func.func(linalg-detensorize{aggressive-mode}))" | FileCheck %s
 
 #map = affine_map<() -> ()>
 

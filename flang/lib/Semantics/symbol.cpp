@@ -136,6 +136,9 @@ void EntityDetails::set_type(const DeclTypeSpec &type) {
 void AssocEntityDetails::set_rank(int rank) { rank_ = rank; }
 void EntityDetails::ReplaceType(const DeclTypeSpec &type) { type_ = &type; }
 
+ObjectEntityDetails::ObjectEntityDetails(EntityDetails &&d)
+    : EntityDetails(d) {}
+
 void ObjectEntityDetails::set_shape(const ArraySpec &shape) {
   CHECK(shape_.empty());
   for (const auto &shapeSpec : shape) {
@@ -180,6 +183,7 @@ void GenericDetails::set_derivedType(Symbol &derivedType) {
   CHECK(!derivedType_);
   derivedType_ = &derivedType;
 }
+void GenericDetails::clear_derivedType() { derivedType_ = nullptr; }
 void GenericDetails::AddUse(const Symbol &use) {
   CHECK(use.has<UseDetails>());
   uses_.push_back(use);
@@ -361,9 +365,6 @@ bool Symbol::IsFromModFile() const {
   return test(Flag::ModFile) ||
       (!owner_->IsTopLevel() && owner_->symbol()->IsFromModFile());
 }
-
-ObjectEntityDetails::ObjectEntityDetails(EntityDetails &&d)
-    : EntityDetails(d) {}
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const EntityDetails &x) {
   DumpBool(os, "dummy", x.isDummy());
@@ -714,7 +715,8 @@ bool GenericKind::Is(GenericKind::OtherKind x) const {
   return y && *y == x;
 }
 
-bool SymbolOffsetCompare::operator()(const SymbolRef &x, const SymbolRef &y) const {
+bool SymbolOffsetCompare::operator()(
+    const SymbolRef &x, const SymbolRef &y) const {
   const Symbol *xCommon{FindCommonBlockContaining(*x)};
   const Symbol *yCommon{FindCommonBlockContaining(*y)};
   if (xCommon) {

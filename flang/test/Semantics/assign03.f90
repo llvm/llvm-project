@@ -17,7 +17,8 @@ contains
     type(t), allocatable :: a(:)
     type(t), allocatable :: b[:]
     a(1)%p => s
-    !ERROR: Procedure pointer may not be a coindexed object
+    !ERROR: The left-hand side of a pointer assignment is not definable
+    !BECAUSE: Procedure pointer 'p' may not be a coindexed object
     b[1]%p => s
   end
   ! C1028
@@ -100,8 +101,10 @@ contains
 
     !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_impure2': incompatible dummy argument #1: incompatible dummy data object intents
     p_impure => f_impure2
-    !ERROR: Procedure pointer 'p_pure' associated with incompatible procedure designator 'f_pure2': function results have incompatible types: INTEGER(4) vs REAL(4)
+    !ERROR: Function pointer 'p_pure' associated with incompatible function designator 'f_pure2': function results have incompatible types: INTEGER(4) vs REAL(4)
     p_pure => f_pure2
+    !ERROR: Function pointer 'p_pure' associated with incompatible function designator 'ccos': function results have incompatible types: INTEGER(4) vs COMPLEX(4)
+    p_pure => ccos
     !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_elemental2': incompatible procedure attributes: Elemental
     p_impure => f_elemental2
 
@@ -313,5 +316,12 @@ contains
     !Ok - don't emit an error about incompatible Subroutine attribute
     ptr => s_external
     call ptr
+  end subroutine
+
+  subroutine s14
+    procedure(real), pointer :: ptr
+    sf(x) = x + 1.
+    !ERROR: Statement function 'sf' may not be the target of a pointer assignment
+    ptr => sf
   end subroutine
 end

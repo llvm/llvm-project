@@ -75,7 +75,7 @@ __m512bh test_mm512_mask_cvtne2ps2bf16(__m512bh C, __mmask32 U, __m512 A, __m512
 
 __m128bh test_mm_cvtneps2bf16(__m128 A) {
   // CHECK-LABEL: @test_mm_cvtneps2bf16
-  // CHECK: @llvm.x86.avx512bf16.mask.cvtneps2bf16.128
+  // CHECK: @llvm.x86.vcvtneps2bf16128
   // CHECK: ret <8 x bfloat> %{{.*}}
   return _mm_cvtneps_pbh(A);
 }
@@ -96,7 +96,7 @@ __m128bh test_mm_maskz_cvtneps2bf16(__m128 A, __mmask8 U) {
 
 __m128bh test_mm256_cvtneps2bf16(__m256 A) {
   // CHECK-LABEL: @test_mm256_cvtneps2bf16
-  // CHECK: @llvm.x86.avx512bf16.cvtneps2bf16.256
+  // CHECK: @llvm.x86.vcvtneps2bf16256
   // CHECK: ret <8 x bfloat> %{{.*}}
   return _mm256_cvtneps_pbh(A);
 }

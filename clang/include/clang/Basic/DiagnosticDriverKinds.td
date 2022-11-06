@@ -110,6 +110,9 @@ def warn_drv_unsupported_option_for_offload_arch_req_feature : Warning<
 def warn_drv_unsupported_option_for_target : Warning<
   "ignoring '%0' option as it is not currently supported for target '%1'">,
   InGroup<OptionIgnored>;
+def warn_drv_unsupported_option_for_flang : Warning<
+  "the argument '%0' is not supported for option '%1'. Mapping to '%1%2'">,
+  InGroup<OptionIgnored>;
 
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
@@ -214,14 +217,14 @@ def err_drv_malformed_sanitizer_coverage_ignorelist : Error<
   "malformed sanitizer coverage ignorelist: '%0'">;
 def err_drv_duplicate_config : Error<
   "no more than one option '--config' is allowed">;
-def err_drv_config_file_not_exist : Error<
-  "configuration file '%0' does not exist">;
+def err_drv_cannot_open_config_file : Error<
+  "configuration file '%0' cannot be opened: %1">;
 def err_drv_config_file_not_found : Error<
   "configuration file '%0' cannot be found">;
 def note_drv_config_file_searched_in : Note<
   "was searched for in the directory: %0">;
 def err_drv_cannot_read_config_file : Error<
-  "cannot read configuration file '%0'">;
+  "cannot read configuration file '%0': %1">;
 def err_drv_nested_config_file: Error<
   "option '--config' is not allowed inside configuration file">;
 def err_drv_arg_requires_bitcode_input: Error<

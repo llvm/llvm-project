@@ -6296,6 +6296,15 @@ void __kmp_env_initialize(char const *string) {
           __kmp_affinity_top_method = affinity_top_method_all;
         }
       }
+    } else {
+      // If affinity is disabled, then still need to assign topology method
+      // to attempt machine detection and affinity types
+      if (__kmp_affinity_top_method == affinity_top_method_default)
+        __kmp_affinity_top_method = affinity_top_method_all;
+      if (__kmp_affinity.type == affinity_default)
+        __kmp_affinity.type = affinity_disabled;
+      if (__kmp_hh_affinity.type == affinity_default)
+        __kmp_hh_affinity.type = affinity_disabled;
     }
 
 #ifdef KMP_DEBUG

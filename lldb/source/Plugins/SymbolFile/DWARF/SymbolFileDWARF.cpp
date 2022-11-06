@@ -2389,6 +2389,24 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
       ResolveFunction(die, include_inlines, sc_list);
     return true;
   });
+  // With -gsimple-template-names, a templated type's DW_AT_name will not
+  // contain the template parameters. Try again stripping '<' and anything
+  // after, filtering out entries with template parameters that don't match.
+  {
+    const llvm::StringRef name_ref = name.GetStringRef();
+    auto it = name_ref.find('<');
+    if (it != llvm::StringRef::npos) {
+      const llvm::StringRef name_no_template_params = name_ref.slice(0, it);
+
+      Module::LookupInfo no_tp_lookup_info(lookup_info);
+      no_tp_lookup_info.SetLookupName(ConstString(name_no_template_params));
+      m_index->GetFunctions(no_tp_lookup_info, *this, parent_decl_ctx, [&](DWARFDIE die) {
+        if (resolved_dies.insert(die.GetDIE()).second)
+          ResolveFunction(die, include_inlines, sc_list);
+        return true;
+      });
+    }
+  }
 
   // Return the number of variable that were appended to the list
   const uint32_t num_matches = sc_list.GetSize() - original_size;
@@ -2491,6 +2509,45 @@ void SymbolFileDWARF::FindTypes(
     types.InsertUnique(matching_type->shared_from_this());
     return types.GetSize() < max_matches;
   });
+
+  // With -gsimple-template-names, a templated type's DW_AT_name will not
+  // contain the template parameters. Try again stripping '<' and anything
+  // after, filtering out entries with template parameters that don't match.
+  if (types.GetSize() < max_matches) {
+    const llvm::StringRef name_ref = name.GetStringRef();
+    auto it = name_ref.find('<');
+    if (it != llvm::StringRef::npos) {
+      const llvm::StringRef name_no_template_params = name_ref.slice(0, it);
+      const llvm::StringRef template_params = name_ref.slice(it, name_ref.size());
+      m_index->GetTypes(ConstString(name_no_template_params), [&](DWARFDIE die) {
+        if (!DIEInDeclContext(parent_decl_ctx, die))
+          return true; // The containing decl contexts don't match
+
+        const llvm::StringRef base_name = GetTypeForDIE(die)->GetBaseName().AsCString();
+        auto it = base_name.find('<');
+        // If the candidate qualified name doesn't have '<', it doesn't have
+        // template params to compare.
+        if (it == llvm::StringRef::npos)
+          return true;
+
+        // Filter out non-matching instantiations by comparing template params.
+        const llvm::StringRef base_name_template_params =
+            base_name.slice(it, base_name.size());
+
+        if (template_params != base_name_template_params)
+          return true;
+
+        Type *matching_type = ResolveType(die, true, true);
+        if (!matching_type)
+          return true;
+
+        // We found a type pointer, now find the shared pointer form our type
+        // list.
+        types.InsertUnique(matching_type->shared_from_this());
+        return types.GetSize() < max_matches;
+      });
+    }
+  }
 
   // Next search through the reachable Clang modules. This only applies for
   // DWARF objects compiled with -gmodules that haven't been processed by

@@ -559,6 +559,22 @@ defm SMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"smops", 0b001>;
 
 defm UMOPA_MPPZZ_HtoS : sme2_int_mopx_tile<"umopa", 0b100>;
 defm UMOPS_MPPZZ_HtoS : sme2_int_mopx_tile<"umops", 0b101>;
+
+def ZERO_T : sme2_zero_zt<"zero", 0b0001>;
+
+def LDR_TX : sme2_spill_fill_vector<"ldr", 0b01111100>;
+def STR_TX : sme2_spill_fill_vector<"str", 0b11111100>;
+
+def MOVT_XTI : sme2_movt_zt_to_scalar<"movt", 0b0011111>;
+def MOVT_TIX : sme2_movt_scalar_to_zt<"movt", 0b0011111>;
+
+defm LUTI2_ZTZI  : sme2_luti2_vector_index<"luti2">;
+defm LUTI2_2ZTZI : sme2_luti2_vector_vg2_index<"luti2">;
+defm LUTI2_4ZTZI : sme2_luti2_vector_vg4_index<"luti2">;
+
+defm LUTI4_ZTZI  : sme2_luti4_vector_index<"luti4">;
+defm LUTI4_2ZTZI : sme2_luti4_vector_vg2_index<"luti4">;
+defm LUTI4_4ZTZI : sme2_luti4_vector_vg4_index<"luti4">;
 }
 
 let Predicates = [HasSME2, HasSMEI16I64] in {

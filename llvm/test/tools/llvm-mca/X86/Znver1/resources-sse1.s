@@ -264,20 +264,20 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      10    0.50    *                   mulss	(%rax), %xmm2
 # CHECK-NEXT:  1      1     0.25                        orps	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   orps	(%rax), %xmm2
-# CHECK-NEXT:  1      1     0.25                        pavgb	%mm0, %mm2
+# CHECK-NEXT:  1      1     0.33                        pavgb	%mm0, %mm2
 # CHECK-NEXT:  1      8     0.50    *                   pavgb	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.25                        pavgw	%mm0, %mm2
+# CHECK-NEXT:  1      1     0.33                        pavgw	%mm0, %mm2
 # CHECK-NEXT:  1      8     0.50    *                   pavgw	(%rax), %mm2
 # CHECK-NEXT:  1      2     2.00                        pextrw	$1, %mm0, %ecx
 # CHECK-NEXT:  1      1     0.25                        pinsrw	$1, %eax, %mm2
 # CHECK-NEXT:  1      8     0.50    *                   pinsrw	$1, (%rax), %mm2
-# CHECK-NEXT:  1      1     0.25                        pmaxsw	%mm0, %mm2
+# CHECK-NEXT:  1      1     0.33                        pmaxsw	%mm0, %mm2
 # CHECK-NEXT:  1      8     0.50    *                   pmaxsw	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.25                        pmaxub	%mm0, %mm2
+# CHECK-NEXT:  1      1     0.33                        pmaxub	%mm0, %mm2
 # CHECK-NEXT:  1      8     0.50    *                   pmaxub	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.25                        pminsw	%mm0, %mm2
+# CHECK-NEXT:  1      1     0.33                        pminsw	%mm0, %mm2
 # CHECK-NEXT:  1      8     0.50    *                   pminsw	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.25                        pminub	%mm0, %mm2
+# CHECK-NEXT:  1      1     0.33                        pminub	%mm0, %mm2
 # CHECK-NEXT:  1      8     0.50    *                   pminub	(%rax), %mm2
 # CHECK-NEXT:  1      1     1.00                        pmovmskb	%mm0, %ecx
 # CHECK-NEXT:  1      4     1.00                        pmulhuw	%mm0, %mm2
@@ -288,7 +288,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      8     0.50    *      *            prefetchnta	(%rax)
 # CHECK-NEXT:  1      3     1.00                        psadbw	%mm0, %mm2
 # CHECK-NEXT:  1      10    1.00    *                   psadbw	(%rax), %mm2
-# CHECK-NEXT:  1      1     0.25                        pshufw	$1, %mm0, %mm2
+# CHECK-NEXT:  1      1     0.50                        pshufw	$1, %mm0, %mm2
 # CHECK-NEXT:  1      8     0.50    *                   pshufw	$1, (%rax), %mm2
 # CHECK-NEXT:  1      5     0.50                        rcpps	%xmm0, %xmm2
 # CHECK-NEXT:  1      12    0.50    *                   rcpps	(%rax), %xmm2
@@ -335,7 +335,7 @@ xorps       (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]
-# CHECK-NEXT: 32.50  32.50   -      -      -      -      -     24.50  30.50  28.50  60.50   -
+# CHECK-NEXT: 32.50  32.50   -      -      -      -      -     25.00  32.00  26.00  61.00   -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   Instructions:
@@ -409,21 +409,21 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.50   0.50    -      -      -     mulss	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     orps	%xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.25   0.25   0.25   0.25    -     orps	(%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     pavgb	%mm0, %mm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.25   0.25   0.25   0.25    -     pavgb	(%rax), %mm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     pavgw	%mm0, %mm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.25   0.25   0.25   0.25    -     pavgw	(%rax), %mm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33    -     0.33    -     pavgb	%mm0, %mm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.33   0.33    -     0.33    -     pavgb	(%rax), %mm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33    -     0.33    -     pavgw	%mm0, %mm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.33   0.33    -     0.33    -     pavgw	(%rax), %mm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   2.50    -      -     pextrw	$1, %mm0, %ecx
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     pinsrw	$1, %eax, %mm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.25   0.25   0.25   0.25    -     pinsrw	$1, (%rax), %mm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     pmaxsw	%mm0, %mm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.25   0.25   0.25   0.25    -     pmaxsw	(%rax), %mm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     pmaxub	%mm0, %mm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.25   0.25   0.25   0.25    -     pmaxub	(%rax), %mm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     pminsw	%mm0, %mm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.25   0.25   0.25   0.25    -     pminsw	(%rax), %mm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     pminub	%mm0, %mm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.25   0.25   0.25   0.25    -     pminub	(%rax), %mm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33    -     0.33    -     pmaxsw	%mm0, %mm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.33   0.33    -     0.33    -     pmaxsw	(%rax), %mm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33    -     0.33    -     pmaxub	%mm0, %mm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.33   0.33    -     0.33    -     pmaxub	(%rax), %mm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33    -     0.33    -     pminsw	%mm0, %mm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.33   0.33    -     0.33    -     pminsw	(%rax), %mm2
+# CHECK-NEXT:  -      -      -      -      -      -      -     0.33   0.33    -     0.33    -     pminub	%mm0, %mm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.33   0.33    -     0.33    -     pminub	(%rax), %mm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -     pmovmskb	%mm0, %ecx
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     pmulhuw	%mm0, %mm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -      -      -      -     pmulhuw	(%rax), %mm2
@@ -433,8 +433,8 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -      -      -     prefetchnta	(%rax)
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -      -      -     psadbw	%mm0, %mm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     1.00    -      -      -      -     psadbw	(%rax), %mm2
-# CHECK-NEXT:  -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -     pshufw	$1, %mm0, %mm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.25   0.25   0.25   0.25    -     pshufw	$1, (%rax), %mm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -     pshufw	$1, %mm0, %mm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     0.50   0.50    -      -     pshufw	$1, (%rax), %mm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -     rcpps	%xmm0, %xmm2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -      -     0.50   0.50    -      -      -     rcpps	(%rax), %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     0.50   0.50    -      -      -     rcpss	%xmm0, %xmm2

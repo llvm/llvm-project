@@ -283,6 +283,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ungetc
+  SRCS
+    ungetc.cpp
+  HDRS
+    ungetc.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
   fopencookie
   SRCS
     fopencookie.cpp
@@ -324,6 +336,32 @@ add_entrypoint_object(
   HDRS
     stderr.h
   DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  setbuf
+  SRCS
+    setbuf.cpp
+  HDRS
+    setbuf.h
+  DEPENDS
+    libc.include.errno
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  setvbuf
+  SRCS
+    setvbuf.cpp
+  HDRS
+    setvbuf.h
+  DEPENDS
+    libc.include.errno
     libc.include.stdio
     libc.src.__support.File.file
     libc.src.__support.File.platform_file

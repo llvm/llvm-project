@@ -52,6 +52,7 @@ private:
 class DiagnosticEventData : public EventData {
 public:
   enum class Type {
+    Info,
     Warning,
     Error,
   };

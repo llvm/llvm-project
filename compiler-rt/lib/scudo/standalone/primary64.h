@@ -369,7 +369,7 @@ private:
   }
 
   static uptr compactPtrGroup(CompactPtrT CompactPtr) {
-    return CompactPtr >> (GroupSizeLog - CompactPtrScale);
+    return static_cast<uptr>(CompactPtr) >> (GroupSizeLog - CompactPtrScale);
   }
   static uptr batchGroupBase(uptr Base, uptr GroupId) {
     return (GroupId << GroupSizeLog) + Base;
@@ -731,10 +731,10 @@ private:
       // used. Therefore, while calculating the used group size, we should
       // exclude that part to get the correct size.
       const uptr BatchGroupBeg =
-          Max(batchGroupBase(BG.GroupId, CompactPtrBase), Region->RegionBeg);
+          Max(batchGroupBase(CompactPtrBase, BG.GroupId), Region->RegionBeg);
       DCHECK_GE(AllocatedUserEnd, BatchGroupBeg);
       const uptr BatchGroupEnd =
-          batchGroupBase(BG.GroupId, CompactPtrBase) + GroupSize;
+          batchGroupBase(CompactPtrBase, BG.GroupId) + GroupSize;
       const uptr AllocatedGroupSize = AllocatedUserEnd >= BatchGroupEnd
                                           ? BatchGroupEnd - BatchGroupBeg
                                           : AllocatedUserEnd - BatchGroupBeg;

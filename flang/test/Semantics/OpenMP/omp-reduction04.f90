@@ -7,6 +7,7 @@ program omp_Reduction
   common /c/ a, b
 
   !ERROR: Variable 'k' on the REDUCTION clause is not definable
+  !BECAUSE: 'k' is not a variable
   !$omp parallel do reduction(+:k)
   do i = 1, 10
     l = k + 1
@@ -14,6 +15,7 @@ program omp_Reduction
   !$omp end parallel do
 
   !ERROR: Variable 'c' on the REDUCTION clause is not definable
+  !BECAUSE: 'c' is not a variable
   !$omp parallel do reduction(*:/c/)
   do i = 1, 10
     l = k + 1

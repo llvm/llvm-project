@@ -432,6 +432,9 @@ public:
   /// values in order to be included in misexpect diagnostics.
   Optional<uint32_t> DiagnosticsMisExpectTolerance = 0;
 
+  /// The name of a file to use with \c .secure_log_unique directives.
+  std::string AsSecureLogFile;
+
 public:
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)
