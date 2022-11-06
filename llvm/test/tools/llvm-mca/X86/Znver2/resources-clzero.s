@@ -12,7 +12,7 @@ clzero
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      4     0.33                  U     clzero
+# CHECK-NEXT:  1      8     0.33                  U     clzero
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - Zn2AGU0
