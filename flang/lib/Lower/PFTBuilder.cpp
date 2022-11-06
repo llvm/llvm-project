@@ -900,8 +900,13 @@ private:
           },
           [&](const parser::SelectRankStmt &s) {
             insertConstructName(s, parentConstruct);
+            lastConstructStmtEvaluation = &eval;
           },
-          [&](const parser::SelectRankCaseStmt &) { eval.isNewBlock = true; },
+          [&](const parser::SelectRankCaseStmt &) {
+            eval.isNewBlock = true;
+            lastConstructStmtEvaluation->controlSuccessor = &eval;
+            lastConstructStmtEvaluation = &eval;
+          },
           [&](const parser::SelectTypeStmt &s) {
             insertConstructName(s, parentConstruct);
             lastConstructStmtEvaluation = &eval;
