@@ -1202,16 +1202,16 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      5     0.33    *                   movzbw	(%rax), %di
 # CHECK-NEXT:  1      1     0.25                        movsbl	%al, %edi
 # CHECK-NEXT:  1      1     0.25                        movzbl	%al, %edi
-# CHECK-NEXT:  1      8     0.33    *                   movsbl	(%rax), %edi
-# CHECK-NEXT:  1      8     0.33    *                   movzbl	(%rax), %edi
+# CHECK-NEXT:  1      4     0.33    *                   movsbl	(%rax), %edi
+# CHECK-NEXT:  1      4     0.33    *                   movzbl	(%rax), %edi
 # CHECK-NEXT:  1      1     0.25                        movsbq	%al, %rdi
 # CHECK-NEXT:  1      1     0.25                        movzbq	%al, %rdi
 # CHECK-NEXT:  2      5     0.33    *                   movsbq	(%rax), %rdi
 # CHECK-NEXT:  2      5     0.33    *                   movzbq	(%rax), %rdi
 # CHECK-NEXT:  1      1     0.25                        movswl	%ax, %edi
 # CHECK-NEXT:  1      1     0.25                        movzwl	%ax, %edi
-# CHECK-NEXT:  1      8     0.33    *                   movswl	(%rax), %edi
-# CHECK-NEXT:  1      8     0.33    *                   movzwl	(%rax), %edi
+# CHECK-NEXT:  1      4     0.33    *                   movswl	(%rax), %edi
+# CHECK-NEXT:  1      4     0.33    *                   movzwl	(%rax), %edi
 # CHECK-NEXT:  1      1     0.25                        movswq	%ax, %rdi
 # CHECK-NEXT:  1      1     0.25                        movzwq	%ax, %rdi
 # CHECK-NEXT:  2      5     0.33    *                   movswq	(%rax), %rdi
