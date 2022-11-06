@@ -1852,7 +1852,7 @@ LogicalResult BroadcastOp::verify() {
   auto inputShape = inputType.getShape();
   auto initShape = initType.getShape();
 
-  if (inputRank != dimensionsRef.size())
+  if ((size_t)inputRank != dimensionsRef.size())
     return emitOpError()
            << "input rank does match the number of dimensions. expected: "
            << inputRank << ", got: " << dimensionsRef.size();
