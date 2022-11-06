@@ -736,14 +736,6 @@ def SBWriteResGroup29_2 : SchedWriteRes<[SBPort5,SBPort015]> {
 }
 def: InstRW<[SBWriteResGroup29_2], (instrs PAUSE)>;
 
-def SBWriteResGroup31 : SchedWriteRes<[SBPort23]> {
-  let Latency = 5;
-  let NumMicroOps = 1;
-  let ResourceCycles = [1];
-}
-def: InstRW<[SBWriteResGroup31], (instregex "MOVSX(16|32|64)rm(8|16|32)",
-                                            "MOVZX(16|32|64)rm(8|16)")>;
-
 def SBWriteResGroup76 : SchedWriteRes<[SBPort05]> {
   let Latency = 5;
   let NumMicroOps = 8;

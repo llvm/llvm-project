@@ -1071,9 +1071,7 @@ def ICXWriteResGroup58 : SchedWriteRes<[ICXPort23]> {
   let NumMicroOps = 1;
   let ResourceCycles = [1];
 }
-def: InstRW<[ICXWriteResGroup58], (instregex "MOVSX(16|32|64)rm(8|16|32)",
-                                             "MOVZX(16|32|64)rm(8|16)",
-                                             "(V?)MOVDDUPrm")>;  // TODO: Should this be ICXWriteResGroup71?
+def: InstRW<[ICXWriteResGroup58], (instregex "(V?)MOVDDUPrm")>;  // TODO: Should this be ICXWriteResGroup71?
 
 def ICXWriteResGroup61 : SchedWriteRes<[ICXPort5,ICXPort015]> {
   let Latency = 5;

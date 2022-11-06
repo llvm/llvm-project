@@ -1048,14 +1048,6 @@ def SKXWriteResGroup57 : SchedWriteRes<[SKXPort1,SKXPort6,SKXPort0156]> {
 }
 def: InstRW<[SKXWriteResGroup57], (instregex "LAR(16|32|64)rr")>;
 
-def SKXWriteResGroup58 : SchedWriteRes<[SKXPort23]> {
-  let Latency = 5;
-  let NumMicroOps = 1;
-  let ResourceCycles = [1];
-}
-def: InstRW<[SKXWriteResGroup58], (instregex "MOVSX(16|32|64)rm(8|16|32)",
-                                             "MOVZX(16|32|64)rm(8|16)")>;
-
 def SKXWriteResGroup61 : SchedWriteRes<[SKXPort5,SKXPort015]> {
   let Latency = 5;
   let NumMicroOps = 2;
