@@ -174,8 +174,8 @@ private:
   std::optional<ActualArgument> AnalyzeExpr(const parser::Expr &);
   MaybeExpr AnalyzeExprOrWholeAssumedSizeArray(const parser::Expr &);
   bool AreConformable() const;
-  const Symbol *FindBoundOp(
-      parser::CharBlock, int passIndex, const Symbol *&definedOp);
+  const Symbol *FindBoundOp(parser::CharBlock, int passIndex,
+      const Symbol *&definedOp, bool isSubroutine);
   void AddAssignmentConversion(
       const DynamicType &lhsType, const DynamicType &rhsType);
   bool OkLogicalIntegerAssignment(TypeCategory lhs, TypeCategory rhs);
@@ -2078,7 +2078,8 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
             // re-resolve the name to the specific binding
             sc.component.symbol = const_cast<Symbol *>(sym);
           } else {
-            EmitGenericResolutionError(*sc.component.symbol, pair.second);
+            EmitGenericResolutionError(
+                *sc.component.symbol, pair.second, isSubroutine);
             return std::nullopt;
           }
         }
@@ -2223,6 +2224,9 @@ std::pair<const Symbol *, bool> ExpressionAnalyzer::ResolveGeneric(
           return IsBareNullPointer(iter->UnwrapExpr());
         }) != actuals.end()};
     for (const Symbol &specific : details->specificProcs()) {
+      if (isSubroutine != !IsFunction(specific)) {
+        continue;
+      }
       if (!ResolveForward(specific)) {
         continue;
       }
@@ -2327,12 +2331,14 @@ const Symbol &ExpressionAnalyzer::AccessSpecific(
 }
 
 void ExpressionAnalyzer::EmitGenericResolutionError(
-    const Symbol &symbol, bool dueToNullActuals) {
+    const Symbol &symbol, bool dueToNullActuals, bool isSubroutine) {
   Say(dueToNullActuals
           ? "One or more NULL() actual arguments to the generic procedure '%s' requires a MOLD= for disambiguation"_err_en_US
           : semantics::IsGenericDefinedOp(symbol)
           ? "No specific procedure of generic operator '%s' matches the actual arguments"_err_en_US
-          : "No specific procedure of generic '%s' matches the actual arguments"_err_en_US,
+          : isSubroutine
+          ? "No specific subroutine of generic '%s' matches the actual arguments"_err_en_US
+          : "No specific function of generic '%s' matches the actual arguments"_err_en_US,
       symbol.name());
 }
 
@@ -2395,7 +2401,7 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
           std::move(specificCall->arguments)};
     } else {
       if (isGenericInterface) {
-        EmitGenericResolutionError(*symbol, dueToNullActual);
+        EmitGenericResolutionError(*symbol, dueToNullActual, isSubroutine);
       }
       return std::nullopt;
     }
@@ -3654,8 +3660,8 @@ MaybeExpr ArgumentAnalyzer::TryDefinedOp(const char *opr,
       }
     }
     for (std::size_t passIndex{0}; passIndex < actuals_.size(); ++passIndex) {
-      if (const Symbol *symbol{
-              FindBoundOp(oprName, passIndex, *definedOpSymbolPtr)}) {
+      if (const Symbol *
+          symbol{FindBoundOp(oprName, passIndex, *definedOpSymbolPtr, false)}) {
         if (MaybeExpr result{TryBoundOp(*symbol, passIndex)}) {
           return result;
         }
@@ -3773,15 +3779,16 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc() {
     if (pair.first) {
       proc = pair.first;
     } else {
-      context_.EmitGenericResolutionError(*symbol, pair.second);
+      context_.EmitGenericResolutionError(*symbol, pair.second, true);
     }
   }
   int passedObjectIndex{-1};
   const Symbol *definedOpSymbol{nullptr};
   for (std::size_t i{0}; i < actuals_.size(); ++i) {
-    if (const Symbol *specific{FindBoundOp(oprName, i, definedOpSymbol)}) {
-      if (const Symbol *resolution{
-              GetBindingResolution(GetType(i), *specific)}) {
+    if (const Symbol *
+        specific{FindBoundOp(oprName, i, definedOpSymbol, true)}) {
+      if (const Symbol *
+          resolution{GetBindingResolution(GetType(i), *specific)}) {
         proc = resolution;
       } else {
         proc = specific;
@@ -3863,8 +3870,8 @@ bool ArgumentAnalyzer::AreConformable() const {
 }
 
 // Look for a type-bound operator in the type of arg number passIndex.
-const Symbol *ArgumentAnalyzer::FindBoundOp(
-    parser::CharBlock oprName, int passIndex, const Symbol *&definedOp) {
+const Symbol *ArgumentAnalyzer::FindBoundOp(parser::CharBlock oprName,
+    int passIndex, const Symbol *&definedOp, bool isSubroutine) {
   const auto *type{GetDerivedTypeSpec(GetType(passIndex))};
   if (!type || !type->scope()) {
     return nullptr;
@@ -3878,9 +3885,10 @@ const Symbol *ArgumentAnalyzer::FindBoundOp(
       [&](const Symbol &proc, ActualArguments &) {
         return passIndex == GetPassIndex(proc);
       }};
-  auto pair{context_.ResolveGeneric(*symbol, actuals_, adjustment, false)};
+  auto pair{
+      context_.ResolveGeneric(*symbol, actuals_, adjustment, isSubroutine)};
   if (!pair.first) {
-    context_.EmitGenericResolutionError(*symbol, pair.second);
+    context_.EmitGenericResolutionError(*symbol, pair.second, isSubroutine);
   }
   return pair.first;
 }
