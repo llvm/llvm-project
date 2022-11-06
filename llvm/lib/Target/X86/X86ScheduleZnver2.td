@@ -176,7 +176,7 @@ def : WriteRes<WriteRMW, [Zn2AGU]>;
 def : WriteRes<WriteStore,   [Zn2AGU]>;
 def : WriteRes<WriteStoreNT, [Zn2AGU]>;
 def : WriteRes<WriteMove,    [Zn2ALU]>;
-def : WriteRes<WriteLoad,    [Zn2AGU]> { let Latency = 4; }
+def : WriteRes<WriteLoad,    [Zn2AGU]> { let Latency = 8; }
 
 // Model the effect of clobbering the read-write mask operand of the GATHER operation.
 // Does not cost anything by itself, only has latency, matching that of the WriteLoad,
