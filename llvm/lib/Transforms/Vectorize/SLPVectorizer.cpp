@@ -290,15 +290,17 @@ static Optional<unsigned> getInsertIndex(const Value *InsertInst,
                                          unsigned Offset = 0) {
   int Index = Offset;
   if (const auto *IE = dyn_cast<InsertElementInst>(InsertInst)) {
-    if (const auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2))) {
-      auto *VT = cast<FixedVectorType>(IE->getType());
-      if (CI->getValue().uge(VT->getNumElements()))
-        return None;
-      Index *= VT->getNumElements();
-      Index += CI->getZExtValue();
-      return Index;
-    }
-    return None;
+    const auto *VT = dyn_cast<FixedVectorType>(IE->getType());
+    if (!VT)
+      return None;
+    const auto *CI = dyn_cast<ConstantInt>(IE->getOperand(2));
+    if (!CI)
+      return None;
+    if (CI->getValue().uge(VT->getNumElements()))
+      return None;
+    Index *= VT->getNumElements();
+    Index += CI->getZExtValue();
+    return Index;
   }
 
   const auto *IV = cast<InsertValueInst>(InsertInst);
