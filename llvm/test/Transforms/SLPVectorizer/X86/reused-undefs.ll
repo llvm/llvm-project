@@ -6,12 +6,12 @@ define i32 @main(i32 %0) {
 ; CHECK-NEXT:  for.cond.preheader:
 ; CHECK-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[FOR_INC_PREHEADER:%.*]]
 ; CHECK:       for.inc.preheader:
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 poison, i32 undef>, i32 [[TMP0:%.*]], i32 6
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 poison, i32 poison>, i32 [[TMP0:%.*]], i32 6
 ; CHECK-NEXT:    br i1 false, label [[FOR_END]], label [[L1_PREHEADER:%.*]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[DOTPR:%.*]] = phi i32 [ 0, [[FOR_INC_PREHEADER]] ], [ 0, [[FOR_COND_PREHEADER:%.*]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> poison, i32 [[DOTPR]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP2]], <8 x i32> poison, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 0, i32 0, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    br label [[L1_PREHEADER]]
 ; CHECK:       L1.preheader:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <8 x i32> [ [[SHUFFLE]], [[FOR_END]] ], [ [[TMP1]], [[FOR_INC_PREHEADER]] ]

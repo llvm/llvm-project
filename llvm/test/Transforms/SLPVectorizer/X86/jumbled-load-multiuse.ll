@@ -9,11 +9,10 @@ define i32 @fn1() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, <4 x i32>* bitcast ([4 x i32]* @b to <4 x i32>*), align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[TMP0]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> <i32 8, i32 poison, i32 ptrtoint (i32 ()* @fn1 to i32), i32 poison>, <4 x i32> [[TMP0]], <4 x i32> <i32 0, i32 5, i32 2, i32 undef>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
-; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[SHUFFLE]], <4 x i32> <i32 0, i32 6, i32 0, i32 0>
-; CHECK-NEXT:    [[SHUFFLE1:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
-; CHECK-NEXT:    store <4 x i32> [[SHUFFLE1]], <4 x i32>* bitcast ([4 x i32]* @a to <4 x i32>*), align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> <i32 8, i32 poison, i32 ptrtoint (i32 ()* @fn1 to i32), i32 ptrtoint (i32 ()* @fn1 to i32)>, <4 x i32> [[TMP0]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP1]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 6, i32 0, i32 0>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
+; CHECK-NEXT:    store <4 x i32> [[SHUFFLE]], <4 x i32>* bitcast ([4 x i32]* @a to <4 x i32>*), align 4
 ; CHECK-NEXT:    ret i32 0
 ;
   entry:

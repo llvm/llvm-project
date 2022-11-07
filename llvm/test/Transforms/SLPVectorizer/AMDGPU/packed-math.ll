@@ -115,10 +115,10 @@ define amdgpu_kernel void @mul_scalar_v2f16(half addrspace(3)* %a, half %scalar,
 ; GCN-NEXT:    [[TMP1:%.*]] = bitcast half addrspace(3)* [[A:%.*]] to <2 x half> addrspace(3)*
 ; GCN-NEXT:    [[TMP2:%.*]] = load <2 x half>, <2 x half> addrspace(3)* [[TMP1]], align 2
 ; GCN-NEXT:    [[TMP3:%.*]] = insertelement <2 x half> poison, half [[SCALAR:%.*]], i32 0
-; GCN-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x half> [[TMP3]], <2 x half> poison, <2 x i32> zeroinitializer
-; GCN-NEXT:    [[TMP4:%.*]] = fmul <2 x half> [[TMP2]], [[SHUFFLE]]
-; GCN-NEXT:    [[TMP5:%.*]] = bitcast half addrspace(3)* [[C:%.*]] to <2 x half> addrspace(3)*
-; GCN-NEXT:    store <2 x half> [[TMP4]], <2 x half> addrspace(3)* [[TMP5]], align 2
+; GCN-NEXT:    [[TMP4:%.*]] = insertelement <2 x half> [[TMP3]], half [[SCALAR]], i32 1
+; GCN-NEXT:    [[TMP5:%.*]] = fmul <2 x half> [[TMP2]], [[TMP4]]
+; GCN-NEXT:    [[TMP6:%.*]] = bitcast half addrspace(3)* [[C:%.*]] to <2 x half> addrspace(3)*
+; GCN-NEXT:    store <2 x half> [[TMP5]], <2 x half> addrspace(3)* [[TMP6]], align 2
 ; GCN-NEXT:    ret void
 ;
   %i0 = load half, half addrspace(3)* %a, align 2
