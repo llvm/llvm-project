@@ -675,12 +675,6 @@ public:
   const RecordMap<MacroDefinitionRecord> &getMacros() const { return Macros; }
   const RecordMap<TypedefRecord> &getTypedefs() const { return Typedefs; }
 
-  /// Get the APIRecord associated with the USR if it's defined in the
-  /// current product.
-  ///
-  /// \returns a APIRecord pointer to the stored symbol record if it exists.
-  APIRecord *getSymbolForUSR(StringRef USR) const;
-
   /// Generate and store the USR of declaration \p D.
   ///
   /// Note: The USR string is stored in and owned by Allocator.

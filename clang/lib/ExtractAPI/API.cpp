@@ -197,39 +197,6 @@ TypedefRecord *APISet::addTypedef(StringRef Name, StringRef USR,
                            Comment, Declaration, SubHeading, UnderlyingType);
 }
 
-template <class RecordMap>
-static APIRecord *getSymbolInRecordMapForUSR(StringRef USR,
-                                             const RecordMap &Records) {
-  auto It = Records.find(USR);
-  return (It != Records.end() ? It->second.get() : nullptr);
-}
-
-APIRecord *APISet::getSymbolForUSR(StringRef USR) const {
-  if (USR.empty())
-    return nullptr;
-  if (auto *Record = getSymbolInRecordMapForUSR(USR, ObjCProtocols))
-    return Record;
-  if (auto *Record = getSymbolInRecordMapForUSR(USR, ObjCInterfaces))
-    return Record;
-  if (auto *Record = getSymbolInRecordMapForUSR(USR, ObjCCategories))
-    return Record;
-  if (auto *Record = getSymbolInRecordMapForUSR(USR, ObjCCategories))
-    return Record;
-  if (auto *Record = getSymbolInRecordMapForUSR(USR, Structs))
-    return Record;
-  if (auto *Record = getSymbolInRecordMapForUSR(USR, Enums))
-    return Record;
-  if (auto *Record = getSymbolInRecordMapForUSR(USR, Typedefs))
-    return Record;
-  if (auto *Record = getSymbolInRecordMapForUSR(USR, GlobalFunctions))
-    return Record;
-  if (auto *Record = getSymbolInRecordMapForUSR(USR, GlobalVariables))
-    return Record;
-  if (auto *Record = getSymbolInRecordMapForUSR(USR, Macros))
-    return Record;
-  return nullptr;
-}
-
 StringRef APISet::recordUSR(const Decl *D) {
   SmallString<128> USR;
   index::generateUSRForDecl(D, USR);
