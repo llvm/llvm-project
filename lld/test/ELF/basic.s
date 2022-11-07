@@ -6,7 +6,7 @@
 # RUN:   | FileCheck %s
 # RUN: ld.lld %t -o /dev/null
 
-# exits with return code 42 on linux
+## exits with return code 42 on linux
 .globl _start
 _start:
   mov $60, %rax
@@ -201,19 +201,19 @@ _start:
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-# Test for the response file (POSIX quoting style)
+## Test for the response file (POSIX quoting style)
 # RUN: echo " -o %t2" > %t.responsefile
 # RUN: ld.lld %t --rsp-quoting=posix @%t.responsefile
 # RUN: llvm-readobj --file-headers --sections -l --symbols %t2 \
 # RUN:   | FileCheck %s
 
-# Test for the response file (Windows quoting style)
+## Test for the response file (Windows quoting style)
 # RUN: echo " c:\blah\foo" > %t.responsefile
 # RUN: not ld.lld --rsp-quoting=windows %t @%t.responsefile 2>&1 | FileCheck \
 # RUN:   %s --check-prefix=WINRSP
 # WINRSP: cannot open c:\blah\foo
 
-# Test for the response file (invalid quoting style)
+## Test for the response file (invalid quoting style)
 # RUN: not ld.lld --rsp-quoting=patatino %t 2>&1 | FileCheck %s \
 # RUN:   --check-prefix=INVRSP
 # INVRSP: invalid response file quoting: patatino
