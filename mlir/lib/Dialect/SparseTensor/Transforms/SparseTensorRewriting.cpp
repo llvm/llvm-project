@@ -356,8 +356,8 @@ public:
     RankedTensorType cooTp = getUnorderedCOOFromType(dstTp);
     auto cooBuffer =
         rewriter.create<AllocTensorOp>(loc, cooTp, dstDynSizes).getResult();
-    ForeachOp foreachOp = rewriter.create<ForeachOp>(
-        loc, srcTensor, cooBuffer,
+    rewriter.create<ForeachOp>(
+        loc, srcTensor, llvm::None,
         [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
             ValueRange reduc) {
           SmallVector<Value, 4> srcIndices;
@@ -368,11 +368,11 @@ public:
           }
           translateIndicesArray(builder, loc, op.getReassociationIndices(),
                                 srcIndices, srcSizes, dstSizes, dstIndices);
-          auto t = builder.create<InsertOp>(loc, v, reduc.front(), dstIndices);
-          builder.create<sparse_tensor::YieldOp>(loc, t);
+          builder.create<InsertOp>(loc, v, cooBuffer, dstIndices);
+          builder.create<sparse_tensor::YieldOp>(loc);
         });
-    auto t = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
-    rewriter.replaceOpWithNewOp<ConvertOp>(op, dstTp, t);
+
+    rewriter.replaceOpWithNewOp<ConvertOp>(op, dstTp, cooBuffer);
     return success();
   }
 };
@@ -442,14 +442,13 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
         rewriter.create<AllocTensorOp>(loc, cooTp, ValueRange()).getResult();
 
     Value offset = constantIndex(rewriter, loc, 0);
-    ForeachOp foreachOp;
     for (Value input : op.getInputs()) {
       // Builds the indexing map.
 
       // Build a for op for each input tensor to append new values into the
       // output tensor.
-      foreachOp = rewriter.create<ForeachOp>(
-          loc, input, cooBuffer,
+      rewriter.create<ForeachOp>(
+          loc, input, llvm::None,
           [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
               ValueRange reduc) {
             SmallVector<Value, 4> indices;
@@ -462,8 +461,8 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
                 idx = builder.create<arith::AddIOp>(loc, idx, offset);
               indices.push_back(idx);
             }
-            auto t = builder.create<InsertOp>(loc, v, reduc.front(), indices);
-            builder.create<sparse_tensor::YieldOp>(loc, t);
+            builder.create<InsertOp>(loc, v, cooBuffer, indices);
+            builder.create<sparse_tensor::YieldOp>(loc);
           });
       // Accumulates the offset. Note that only static-shaped inputs are allowed
       // by concatenate op verifier, which saves us from computing the offset
@@ -472,10 +471,7 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
       assert(!ShapedType::isDynamic(d));
       offset = rewriter.create<arith::AddIOp>(loc, offset,
                                               constantIndex(rewriter, loc, d));
-      cooBuffer = foreachOp.getResult(0);
     }
-
-    cooBuffer = rewriter.create<LoadOp>(loc, cooBuffer, true);
     rewriter.replaceOpWithNewOp<ConvertOp>(op, rtp, cooBuffer);
     return success();
   }
@@ -606,8 +602,8 @@ private:
       srcTp = getUnorderedCOOFromType(srcTp);
       tmpCoo =
           rewriter.create<AllocTensorOp>(loc, srcTp, dynSrcSizes).getResult();
-      auto foreachOp = rewriter.create<ForeachOp>(
-          loc, src, tmpCoo,
+      rewriter.create<ForeachOp>(
+          loc, src, llvm::None,
           [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
               ValueRange reduc) {
             SmallVector<Value, 4> indices;
@@ -615,10 +611,10 @@ private:
               uint64_t dim = toStoredDim(encSrc, i);
               indices.push_back(args[dim]);
             }
-            auto t = builder.create<InsertOp>(loc, v, reduc.front(), indices);
-            builder.create<sparse_tensor::YieldOp>(loc, t);
+            builder.create<InsertOp>(loc, v, tmpCoo, indices);
+            builder.create<sparse_tensor::YieldOp>(loc);
           });
-      src = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
+      src = tmpCoo;
     }
 
     // Sort the COO tensor so that its elements are ordered via increasing
@@ -657,31 +653,29 @@ private:
     getDynamicSizes(dstTp, srcSizes, dynDstSizes);
     Value dst =
         rewriter.create<AllocTensorOp>(loc, dstTp, dynDstSizes).getResult();
-    auto foreachOp = rewriter.create<ForeachOp>(
-        loc, src, dst,
-        [&](OpBuilder &builder, Location loc, ValueRange args, Value v,
-            ValueRange reduc) {
-          SmallVector<Value, 4> indices;
-          for (int64_t i = 0, e = srcTp.getRank(); i < e; i++) {
-            uint64_t dim = toStoredDim(encDst, i);
-            indices.push_back(args[dim]);
-          }
-          auto t = builder.create<InsertOp>(loc, v, reduc.front(), indices);
-          builder.create<sparse_tensor::YieldOp>(loc, t);
-        });
+    rewriter.create<ForeachOp>(loc, src, llvm::None,
+                               [&](OpBuilder &builder, Location loc,
+                                   ValueRange args, Value v, ValueRange reduc) {
+                                 SmallVector<Value, 4> indices;
+                                 for (int64_t i = 0, e = srcTp.getRank(); i < e;
+                                      i++) {
+                                   uint64_t dim = toStoredDim(encDst, i);
+                                   indices.push_back(args[dim]);
+                                 }
+                                 builder.create<InsertOp>(loc, v, dst, indices);
+                                 builder.create<sparse_tensor::YieldOp>(loc);
+                               });
 
-    // Release the temporary COO if it is created. Note that tmpCoo is
-    // invalidated due to foreach and updated to src.
+    // Release the temporary COO if it is created.
     if (tmpCoo)
-      rewriter.create<DeallocTensorOp>(loc, src);
+      rewriter.create<DeallocTensorOp>(loc, tmpCoo);
 
     // Directly replace op with dst results in bufferization error message
     // "sparse tensor allocation should not escape function".
     // As such, we insert a trivial tensor convert which will be removed by
     // codegen.
     rewriter.setInsertionPointAfter(op);
-    auto t = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
-    rewriter.replaceOpWithNewOp<ConvertOp>(op, dstTp, t);
+    rewriter.replaceOpWithNewOp<ConvertOp>(op, dstTp, dst);
     return success();
   }
 };
@@ -700,8 +694,6 @@ public:
     int64_t rank = rtp.getRank();
     auto enc = getSparseTensorEncoding(rtp);
 
-    SmallVector<Value> reduc = op.getInitArgs();
-
     // 1. Generates loop for the sparse input.
     SparseTensorLoopEmitter loopEmitter(ValueRange{input});
     loopEmitter.initializeLoopEmit(rewriter, loc);
@@ -709,9 +701,7 @@ public:
       // TODO: provide utility function for loop sequences that only contains
       // one for loop?
       loopEmitter.enterNewLoopSeq(rewriter, loc, 0, static_cast<size_t>(i));
-      // Note that reduc will be taken care of by loop emitter and get updated
-      // in place.
-      loopEmitter.enterLoopOverTensorAtDim(rewriter, loc, 0, i, reduc);
+      loopEmitter.enterLoopOverTensorAtDim(rewriter, loc, 0, i);
     }
 
     SmallVector<Value, 4> coords;
@@ -726,7 +716,15 @@ public:
                     : rewriter.create<memref::LoadOp>(loc, vals, coords);
 
     // 2. Inline the block in the foreach operator.
+    Block::iterator inlinePos = rewriter.getInsertionPoint();
     Block *srcBlock = op.getBody();
+    // Remove sparse_tensor.yield.
+    rewriter.eraseOp(srcBlock->getTerminator());
+
+    for (int64_t i = 0; i < rank; i++) {
+      loopEmitter.exitCurrentLoop(rewriter, loc);
+      loopEmitter.exitCurrentLoopSeq();
+    }
 
     SmallVector<Value, 4> args;
     // Remap coordinates.
@@ -736,33 +734,11 @@ public:
     }
     // Remap value.
     args.push_back(val);
-    // Remap reduction variables.
-    args.append(reduc);
-
-    // Remove sparse_tensor.yield.
-    SmallVector<Value> reducValue = srcBlock->getTerminator()->getOperands();
-    rewriter.eraseOp(srcBlock->getTerminator());
 
     // Inline body.
-    if (!reducValue.empty()) {
-      rewriter.mergeBlocks(srcBlock, rewriter.getBlock(), args);
-    } else {
-      // This is annoying, since scf.for inserts a implicit yield op when
-      // there is no reduction variable upon creation, in this case we need to
-      // merge the block *before* the yield op.
-      rewriter.mergeBlockBefore(srcBlock, &*rewriter.getInsertionPoint(), args);
-    }
-
-    for (int64_t i = 0; i < rank; i++) {
-      // Link the reduction chain. Note that loop emitter update the reducValue
-      // in place.
-      loopEmitter.exitCurrentLoop(rewriter, loc, reducValue);
-      loopEmitter.exitCurrentLoopSeq();
-    }
-
-    // Replace the foreach operator with the value returned by the outtermost
-    // for loop.
-    rewriter.replaceOp(op, reducValue);
+    rewriter.mergeBlockBefore(srcBlock, &*inlinePos, args);
+    // delete the foreach operator.
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -825,8 +801,7 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
                     .getResult(0);
     Type eltTp = dstTp.getElementType();
     Value value = genAllocaScalar(rewriter, loc, eltTp);
-    scf::ForOp forOp = rewriter.create<scf::ForOp>(loc, c0, nnz, c1,
-                                                   ArrayRef<Value>(cooBuffer));
+    scf::ForOp forOp = rewriter.create<scf::ForOp>(loc, c0, nnz, c1);
     rewriter.setInsertionPointToStart(forOp.getBody());
 
     SmallString<18> getNextFuncName{"getSparseTensorReaderNext",
@@ -841,17 +816,13 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
           loc, indices, constantIndex(rewriter, loc, i)));
     }
     Value v = rewriter.create<memref::LoadOp>(loc, value);
-    auto t = rewriter.create<InsertOp>(loc, v, forOp.getRegionIterArg(0),
-                                       indicesArray);
-    rewriter.create<scf::YieldOp>(loc, ArrayRef<Value>(t));
+    rewriter.create<InsertOp>(loc, v, cooBuffer, indicesArray);
     rewriter.setInsertionPointAfter(forOp);
-    // Link SSA chain.
-    cooBuffer = forOp.getResult(0);
 
     // Release the sparse tensor reader.
     createFuncCall(rewriter, loc, "delSparseTensorReader", {}, {reader},
                    EmitCInterface::Off);
-    cooBuffer = rewriter.create<LoadOp>(loc, cooBuffer, true);
+
     Value newOp = rewriter.replaceOpWithNewOp<ConvertOp>(op, dstTp, cooBuffer);
 
     // Release the unordered COO tensor buffer.
