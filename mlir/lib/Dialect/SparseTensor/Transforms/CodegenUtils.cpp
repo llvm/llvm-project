@@ -219,12 +219,9 @@ Operation *SparseTensorLoopEmitter::enterLoopOverTensorAtDim(
     OpBuilder &builder, Location loc, size_t tid, size_t dim,
     MutableArrayRef<Value> reduc, bool isParallel, ArrayRef<size_t> extraTids,
     ArrayRef<size_t> extraDims) {
-
   assert(dimTypes[tid].size() > dim);
   // We can not re-enter the same level.
   assert(!coord[tid][dim]);
-  // TODO: support multiple return on parallel for?
-  assert(!isParallel || reduc.empty() <= 1);
 
   Value step = constantIndex(builder, loc, 1);
   auto dimType = dimTypes[tid][dim];
@@ -235,38 +232,11 @@ Operation *SparseTensorLoopEmitter::enterLoopOverTensorAtDim(
   Value lo = isSparseInput ? pidxs[tid][dim]      // current offset
                            : loopSeqStack.back(); // univeral tid
   Value hi = highs[tid][dim];
-  Operation *loop = nullptr;
-  Value iv;
-  if (isParallel) {
-    scf::ParallelOp parOp =
-        builder.create<scf::ParallelOp>(loc, lo, hi, step, reduc);
-    builder.setInsertionPointToStart(parOp.getBody());
-    assert(parOp.getNumReductions() == reduc.size());
-    iv = parOp.getInductionVars()[0];
 
-    // In-place update on the reduction variable vector.
-    // Note that the init vals is not the actual reduction variables but instead
-    // used as a `special handle` to (temporarily) represent them. The
-    // expression on init vals will be moved into scf.reduce and replaced with
-    // the block arguments when exiting the loop (see exitForLoop). This is
-    // needed as we can not build the actual reduction block and get the actual
-    // reduction varaible before users fill parallel loop body.
-    for (int i = 0, e = reduc.size(); i < e; i++)
-      reduc[i] = parOp.getInitVals()[i];
-    loop = parOp;
-  } else {
-    scf::ForOp forOp = builder.create<scf::ForOp>(loc, lo, hi, step, reduc);
-    builder.setInsertionPointToStart(forOp.getBody());
-    iv = forOp.getInductionVar();
-
-    // In-place update on the reduction variable vector.
-    assert(forOp.getNumRegionIterArgs() == reduc.size());
-    for (int i = 0, e = reduc.size(); i < e; i++)
-      reduc[i] = forOp.getRegionIterArg(i);
-    loop = forOp;
-  }
-  assert(loop && iv);
-
+  scf::ForOp forOp = builder.create<scf::ForOp>(loc, lo, hi, step, reduc);
+  builder.setInsertionPointToStart(forOp.getBody());
+  Value iv = forOp.getInductionVar();
+  assert(iv);
   if (isSparseInput) {
     pidxs[tid][dim] = iv;
     // Generating a load on the indices array yields the coordinate.
@@ -283,12 +253,16 @@ Operation *SparseTensorLoopEmitter::enterLoopOverTensorAtDim(
 
   // NOTE: we can also prepares for next dim here in advance
   // Push the loop into stack
-  loopStack.emplace_back(ArrayRef<size_t>(tid), ArrayRef<size_t>(dim), loop,
+  loopStack.emplace_back(ArrayRef<size_t>(tid), ArrayRef<size_t>(dim), forOp,
                          coord[tid][dim]);
   // Emit extra locals.
   emitExtraLocalsForTensorsAtDenseDims(builder, loc, extraTids, extraDims);
 
-  return loop;
+  // In-place update on the reduction variable vector.
+  assert(forOp.getNumRegionIterArgs() == reduc.size());
+  for (int i = 0, e = reduc.size(); i < e; i++)
+    reduc[i] = forOp.getRegionIterArg(i);
+  return forOp;
 }
 
 Operation *SparseTensorLoopEmitter::enterCoIterationOverTensorsAtDims(
@@ -460,73 +434,17 @@ void SparseTensorLoopEmitter::emitExtraLocalsForTensorsAtDenseDims(
   }
 }
 
-void SparseTensorLoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
-                                          MutableArrayRef<Value> reduc) {
+SmallVector<Value, 2>
+SparseTensorLoopEmitter::exitForLoop(OpBuilder &builder, Location loc,
+                                     ArrayRef<Value> reduc) {
   LoopLevelInfo &loopInfo = loopStack.back();
   auto &dims = loopStack.back().dims;
   auto &tids = loopStack.back().tids;
-  auto forOp = llvm::dyn_cast<scf::ForOp>(loopInfo.loop);
-  if (forOp) {
-    if (!reduc.empty()) {
-      assert(reduc.size() == forOp.getNumResults());
-      rewriter.setInsertionPointToEnd(forOp.getBody());
-      rewriter.create<scf::YieldOp>(loc, reduc);
-    }
-    // Exit the loop.
-    rewriter.setInsertionPointAfter(forOp);
-    // In-place update reduction variables.
-    for (unsigned i = 0, e = forOp.getResults().size(); i < e; i++)
-      reduc[i] = forOp.getResult(i);
-  } else {
-    auto parOp = llvm::cast<scf::ParallelOp>(loopInfo.loop);
-    if (!reduc.empty()) {
-      assert(reduc.size() == parOp.getInitVals().size() && reduc.size() == 1);
-      Operation *redExp = reduc.front().getDefiningOp();
-      // Reduction expression should have no use.
-      assert(redExp->getUses().empty());
-      // This must be a binary operation.
-      // NOTE: This is users' responsibilty to ensure the operation are
-      // commutative.
-      assert(redExp->getNumOperands() == 2 && redExp->getNumResults() == 1);
-
-      Value redVal = parOp.getInitVals().front();
-      Value curVal;
-      if (redExp->getOperand(0) == redVal)
-        curVal = redExp->getOperand(1);
-      else if (redExp->getOperand(1) == redVal)
-        curVal = redExp->getOperand(0);
-      // One of the operands must be the init value (which is also the
-      // previous reduction value).
-      assert(curVal);
-      // The reduction expression should be the only user of the reduction val
-      // inside the parallel for.
-      unsigned numUsers = 0;
-      for (Operation *op : redVal.getUsers()) {
-        if (op->getParentOp() == parOp)
-          numUsers++;
-      }
-      assert(numUsers == 1);
-      (void)numUsers; // to silence unused variable warning in release build
-
-      rewriter.setInsertionPointAfter(redExp);
-      auto redOp = rewriter.create<scf::ReduceOp>(loc, curVal);
-      // Attach to the reduction op.
-      Block *redBlock = &redOp.getRegion().getBlocks().front();
-      rewriter.setInsertionPointToEnd(redBlock);
-      Operation *newRed = rewriter.clone(*redExp);
-      // Replaces arguments of the reduction expression by using the block
-      // arguments from scf.reduce.
-      rewriter.updateRootInPlace(
-          newRed, [&]() { newRed->setOperands(redBlock->getArguments()); });
-      // Erases the out-dated reduction expression.
-      rewriter.eraseOp(redExp);
-      rewriter.setInsertionPointToEnd(redBlock);
-      rewriter.create<scf::ReduceReturnOp>(loc, newRed->getResult(0));
-    }
-    rewriter.setInsertionPointAfter(parOp);
-    // In-place update reduction variables.
-    for (unsigned i = 0, e = parOp.getResults().size(); i < e; i++)
-      reduc[i] = parOp.getResult(i);
+  auto forOp = llvm::cast<scf::ForOp>(loopInfo.loop);
+  if (!reduc.empty()) {
+    assert(reduc.size() == forOp.getNumResults());
+    builder.setInsertionPointToEnd(forOp.getBody());
+    builder.create<scf::YieldOp>(loc, reduc);
   }
 
   // Finished iterating a tensor, clean up
@@ -540,10 +458,14 @@ void SparseTensorLoopEmitter::exitForLoop(RewriterBase &rewriter, Location loc,
     if (!isDenseDLT(dimTypes[tid][dim]))
       highs[tid][dim] = Value();
   }
+  // exit the loop
+  builder.setInsertionPointAfter(forOp);
+  return forOp.getResults();
 }
 
-void SparseTensorLoopEmitter::exitCoIterationLoop(
-    OpBuilder &builder, Location loc, MutableArrayRef<Value> reduc) {
+SmallVector<Value, 2>
+SparseTensorLoopEmitter::exitCoiterationLoop(OpBuilder &builder, Location loc,
+                                             ArrayRef<Value> reduc) {
   auto whileOp = llvm::cast<scf::WhileOp>(loopStack.back().loop);
   auto &dims = loopStack.back().dims;
   auto &tids = loopStack.back().tids;
@@ -577,10 +499,10 @@ void SparseTensorLoopEmitter::exitCoIterationLoop(
   }
 
   // Reduction value from users.
-  for (unsigned i = 0, e = reduc.size(); i < e; i++) {
-    operands.push_back(reduc[i]);
-    // In place update reduction variable.
-    reduc[i] = whileOp->getResult(o++);
+  SmallVector<Value, 2> ret;
+  for (auto red : reduc) {
+    operands.push_back(red);
+    ret.push_back(whileOp->getResult(o++));
   }
 
   // An (optional) universal index.
@@ -595,24 +517,26 @@ void SparseTensorLoopEmitter::exitCoIterationLoop(
   assert(o == operands.size());
   builder.create<scf::YieldOp>(loc, operands);
   builder.setInsertionPointAfter(whileOp);
+  return ret;
 }
 
-void SparseTensorLoopEmitter::exitCurrentLoop(RewriterBase &rewriter,
-                                              Location loc,
-                                              MutableArrayRef<Value> reduc) {
+SmallVector<Value, 2>
+SparseTensorLoopEmitter::exitCurrentLoop(OpBuilder &builder, Location loc,
+                                         ArrayRef<Value> reduc) {
   // Clean up the values, it would help use to discover potential bug at a
   // earlier stage (instead of silently using a wrong value).
   LoopLevelInfo &loopInfo = loopStack.back();
   assert(loopInfo.tids.size() == loopInfo.dims.size());
   SmallVector<Value, 2> red;
   if (llvm::isa<scf::WhileOp>(loopInfo.loop)) {
-    exitCoIterationLoop(rewriter, loc, reduc);
+    red = exitCoiterationLoop(builder, loc, reduc);
   } else {
-    exitForLoop(rewriter, loc, reduc);
+    red = exitForLoop(builder, loc, reduc);
   }
 
   assert(loopStack.size() == loopSeqStack.size());
   loopStack.pop_back();
+  return red;
 }
 
 //===----------------------------------------------------------------------===//
