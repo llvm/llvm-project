@@ -484,3 +484,18 @@ func.func @sparse_sort_stable(%arg0: index, %arg1: memref<10xi8>, %arg2: memref<
   sparse_tensor.sort stable %arg0, %arg1, %arg2 jointly %arg3 : memref<10xi8>, memref<20xi8> jointly memref<10xf64>
   return %arg1, %arg2, %arg3 : memref<10xi8>, memref<20xi8>, memref<10xf64>
 }
+
+// -----
+
+func.func @sparse_sort_coo(%arg0: index, %arg1: memref<?xindex>) -> (memref<?xindex>) {
+  sparse_tensor.sort_coo %arg0, %arg1 { nx=2 : index, ny=1 : index}: memref<?xindex>
+  return %arg1 : memref<?xindex>
+}
+
+// -----
+
+func.func @sparse_sort_coo_stable(%arg0: index, %arg1: memref<?xi64>, %arg2: memref<?xf32>) -> (memref<?xi64>, memref<?xf32>) {
+  sparse_tensor.sort_coo stable %arg0, %arg1 jointly %arg2 { nx=2 : index, ny=1 : index}: memref<?xi64> jointly memref<?xf32>
+  return %arg1, %arg2 : memref<?xi64>, memref<?xf32>
+}
+
