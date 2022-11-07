@@ -98,6 +98,7 @@ set(MLIR_TEST_DEPENDS
   mlir-pdll-lsp-server
   mlir-opt
   mlir-pdll
+  mlir-query
   mlir-reduce
   mlir-tblgen
   mlir-translate
