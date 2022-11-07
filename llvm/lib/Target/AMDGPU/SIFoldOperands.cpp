@@ -645,8 +645,8 @@ void SIFoldOperands::foldOperand(
 
     const unsigned Opc = UseMI->getOpcode();
     if (TII->isFLATScratch(*UseMI) &&
-        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr) != -1 &&
-        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::saddr) == -1) {
+        AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vaddr) &&
+        !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::saddr)) {
       unsigned NewOpc = AMDGPU::getFlatScratchInstSSfromSV(Opc);
       UseMI->setDesc(TII->get(NewOpc));
     }
