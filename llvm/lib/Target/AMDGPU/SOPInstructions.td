@@ -858,13 +858,6 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
 
       def S_MIN_F16 : SOP2_F16_Inst<"s_min_f16", fminnum_like>;
       def S_MAX_F16 : SOP2_F16_Inst<"s_max_f16", fmaxnum_like>;
-
-      let SubtargetPredicate = isGFX12Plus in {
-        def S_MINIMUM_F32 : SOP2_F32_Inst<"s_minimum_f32", fminimum>;
-        def S_MAXIMUM_F32 : SOP2_F32_Inst<"s_maximum_f32", fmaximum>;
-        def S_MINIMUM_F16 : SOP2_F16_Inst<"s_minimum_f16", fminimum>;
-        def S_MAXIMUM_F16 : SOP2_F16_Inst<"s_maximum_f16", fmaximum>;
-      }
     } // End isCommutable = 1
 
     let FPDPRounding = 1 in
@@ -900,6 +893,15 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
     // isCommutable = 1, AddedComplexity = 20
 } // End SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
   // Uses = [MODE], SchedRW = [WriteSFPU]
+
+// On GFX12 MIN/MAX instructions do not read MODE register.
+let SubtargetPredicate = isGFX12Plus, mayRaiseFPException = 1, isCommutable = 1,
+    isReMaterializable = 1, SchedRW = [WriteSFPU] in {
+  def S_MINIMUM_F32 : SOP2_F32_Inst<"s_minimum_f32", fminimum>;
+  def S_MAXIMUM_F32 : SOP2_F32_Inst<"s_maximum_f32", fmaximum>;
+  def S_MINIMUM_F16 : SOP2_F16_Inst<"s_minimum_f16", fminimum>;
+  def S_MAXIMUM_F16 : SOP2_F16_Inst<"s_maximum_f16", fmaximum>;
+}
 
 //===----------------------------------------------------------------------===//
 // SOPK Instructions
