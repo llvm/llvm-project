@@ -33,6 +33,9 @@ ELF Improvements
   (`D133548 <https://reviews.llvm.org/D133548>`_)
 * ``--no-warnings``/``-w`` is now available to suppress warnings.
   (`D136569 <https://reviews.llvm.org/D136569>`_)
+* ``--no-undefined-version`` is now the default; symbols named in version
+  scripts that have no matching symbol in the output will be reported. Use
+  ``--undefined-version`` to revert to the old behavior.
 
 Breaking changes
 ----------------
