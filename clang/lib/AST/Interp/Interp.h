@@ -735,12 +735,12 @@ bool InitThisFieldActive(InterpState &S, CodePtr OpPC, uint32_t I) {
 }
 
 /// 1) Pops the value from the stack
-/// 2) Pops a pointer from the stack
+/// 2) Peeks a pointer from the stack
 /// 3) Pushes the value to field I of the pointer on the stack
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitField(InterpState &S, CodePtr OpPC, uint32_t I) {
   const T &Value = S.Stk.pop<T>();
-  const Pointer &Field = S.Stk.pop<Pointer>().atField(I);
+  const Pointer &Field = S.Stk.peek<Pointer>().atField(I);
   Field.deref<T>() = Value;
   Field.activate();
   Field.initialize();

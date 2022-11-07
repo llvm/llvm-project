@@ -936,6 +936,9 @@ bool ByteCodeExprGen<Emitter>::visitRecordInitializer(const Expr *Initializer) {
 
         if (!this->emitInitField(*T, FieldToInit->Offset, Initializer))
           return false;
+
+        if (!this->emitPopPtr(Initializer))
+          return false;
       } else {
         // Non-primitive case. Get a pointer to the field-to-initialize
         // on the stack and recurse into visitInitializer().
