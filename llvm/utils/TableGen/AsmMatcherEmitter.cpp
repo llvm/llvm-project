@@ -3686,8 +3686,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "            break;\n";
     OS << "          }\n";
     OS << "        } else {\n";
-    OS << "          DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"but formal operand not required\\n\");\n";
-    OS << "          break;\n";
+    OS << "          DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"but formal "
+          "operand not required\\n\");\n";
     OS << "        }\n";
     OS << "        continue;\n";
   } else {
