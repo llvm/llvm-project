@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/DebugInfo.h"
+#include "LLVMContextImpl.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
@@ -37,6 +38,7 @@
 #include <utility>
 
 using namespace llvm;
+using namespace llvm::at;
 using namespace llvm::dwarf;
 
 static cl::opt<bool>
@@ -1631,4 +1633,71 @@ LLVMMetadataKind LLVMGetMetadataKind(LLVMMetadataRef Metadata) {
   default:
     return (LLVMMetadataKind)LLVMGenericDINodeMetadataKind;
   }
+}
+
+AssignmentInstRange at::getAssignmentInsts(DIAssignID *ID) {
+  assert(ID && "Expected non-null ID");
+  LLVMContext &Ctx = ID->getContext();
+  auto &Map = Ctx.pImpl->AssignmentIDToInstrs;
+
+  auto MapIt = Map.find(ID);
+  if (MapIt == Map.end())
+    return make_range(nullptr, nullptr);
+
+  return make_range(MapIt->second.begin(), MapIt->second.end());
+}
+
+AssignmentMarkerRange at::getAssignmentMarkers(DIAssignID *ID) {
+  assert(ID && "Expected non-null ID");
+  LLVMContext &Ctx = ID->getContext();
+
+  auto *IDAsValue = MetadataAsValue::getIfExists(Ctx, ID);
+
+  // The ID is only used wrapped in MetadataAsValue(ID), so lets check that
+  // one of those already exists first.
+  if (!IDAsValue)
+    return make_range(Value::user_iterator(), Value::user_iterator());
+
+  return make_range(IDAsValue->user_begin(), IDAsValue->user_end());
+}
+
+void at::deleteAssignmentMarkers(const Instruction *Inst) {
+  auto Range = getAssignmentMarkers(Inst);
+  if (Range.empty())
+    return;
+  SmallVector<DbgAssignIntrinsic *> ToDelete(Range.begin(), Range.end());
+  for (auto *DAI : ToDelete)
+    DAI->eraseFromParent();
+}
+
+void at::RAUW(DIAssignID *Old, DIAssignID *New) {
+  // Replace MetadataAsValue uses.
+  if (auto *OldIDAsValue =
+          MetadataAsValue::getIfExists(Old->getContext(), Old)) {
+    auto *NewIDAsValue = MetadataAsValue::get(Old->getContext(), New);
+    OldIDAsValue->replaceAllUsesWith(NewIDAsValue);
+  }
+
+  // Replace attachments.
+  AssignmentInstRange InstRange = getAssignmentInsts(Old);
+  // Use intermediate storage for the instruction ptrs because the
+  // getAssignmentInsts range iterators will be invalidated by adding and
+  // removing DIAssignID attachments.
+  SmallVector<Instruction *> InstVec(InstRange.begin(), InstRange.end());
+  for (auto *I : InstVec)
+    I->setMetadata(LLVMContext::MD_DIAssignID, New);
+}
+
+void at::deleteAll(Function *F) {
+  SmallVector<DbgAssignIntrinsic *, 12> ToDelete;
+  for (BasicBlock &BB : *F) {
+    for (Instruction &I : BB) {
+      if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(&I))
+        ToDelete.push_back(DAI);
+      else
+        I.setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+    }
+  }
+  for (auto *DAI : ToDelete)
+    DAI->eraseFromParent();
 }
