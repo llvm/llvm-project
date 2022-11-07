@@ -29,6 +29,9 @@ std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass();
 /// Create a pass that only lowers a subset of `CIR` memref-like operations to
 /// MemRef specific versions.
 std::unique_ptr<mlir::Pass> createConvertCIRToMemRefPass();
+
+/// Create a pass that fully lowers CIR to the MLIR in-tree dialects.
+std::unique_ptr<mlir::Pass> createConvertCIRToMLIRPass();
 } // end namespace cir
 
 #endif // CLANG_CIR_PASSES_H

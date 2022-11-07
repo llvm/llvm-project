@@ -92,6 +92,19 @@ public:
   }
 };
 
+struct ConvertCIRToMLIRPass
+    : public mlir::PassWrapper<ConvertCIRToMLIRPass,
+                               mlir::OperationPass<mlir::ModuleOp>> {
+  void getDependentDialects(mlir::DialectRegistry &registry) const override {
+    registry.insert<mlir::BuiltinDialect, mlir::func::FuncDialect,
+                    mlir::affine::AffineDialect, mlir::memref::MemRefDialect,
+                    mlir::arith::ArithDialect>();
+  }
+  void runOnOperation() final;
+
+  virtual StringRef getArgument() const override { return "cir-to-mlir"; }
+};
+
 class CIRCallLowering : public mlir::OpRewritePattern<mlir::cir::CallOp> {
 public:
   using OpRewritePattern<mlir::cir::CallOp>::OpRewritePattern;
@@ -537,6 +550,15 @@ void populateCIRToMemRefConversionPatterns(mlir::RewritePatternSet &patterns) {
                CIRCmpOpLowering, CIRBrOpLowering>(patterns.getContext());
 }
 
+void populateCIRToMLIRConversionPatterns(mlir::RewritePatternSet &patterns,
+                                         mlir::TypeConverter &converter) {
+  patterns.add<CIRAllocaLowering, CIRLoadLowering, CIRStoreLowering,
+               CIRConstantLowering, CIRUnaryOpLowering, CIRBinOpLowering,
+               CIRCmpOpLowering, CIRBrOpLowering, CIRCallLowering,
+               CIRReturnLowering>(patterns.getContext());
+  patterns.add<CIRFuncLowering>(converter, patterns.getContext());
+}
+
 mlir::TypeConverter prepareTypeConverter() {
   mlir::TypeConverter converter;
   converter.addConversion([&](mlir::cir::PointerType type) -> mlir::Type {
@@ -546,6 +568,26 @@ mlir::TypeConverter prepareTypeConverter() {
       [&](mlir::IntegerType type) -> mlir::Type { return type; });
 
   return converter;
+}
+
+void ConvertCIRToMLIRPass::runOnOperation() {
+  auto module = getOperation();
+
+  auto converter = prepareTypeConverter();
+
+  mlir::RewritePatternSet patterns(&getContext());
+
+  populateCIRToMLIRConversionPatterns(patterns, converter);
+
+  mlir::ConversionTarget target(getContext());
+  target.addLegalOp<mlir::ModuleOp>();
+  target.addLegalDialect<mlir::affine::AffineDialect, mlir::arith::ArithDialect,
+                         mlir::memref::MemRefDialect, mlir::func::FuncDialect,
+                         mlir::scf::SCFDialect, mlir::cf::ControlFlowDialect>();
+  target.addIllegalDialect<mlir::cir::CIRDialect>();
+
+  if (failed(applyPartialConversion(module, target, std::move(patterns))))
+    signalPassFailure();
 }
 
 void ConvertCIRToLLVMPass::runOnOperation() {
@@ -655,6 +697,29 @@ std::unique_ptr<mlir::Pass> createConvertCIRToMemRefPass() {
 
 std::unique_ptr<mlir::Pass> createConvertCIRToFuncPass() {
   return std::make_unique<ConvertCIRToFuncPass>();
+}
+
+std::unique_ptr<mlir::Pass> createConvertCIRToMLIRPass() {
+  return std::make_unique<ConvertCIRToMLIRPass>();
+}
+
+mlir::ModuleOp lowerFromCIRToMLIR(mlir::ModuleOp theModule,
+                                  std::unique_ptr<mlir::MLIRContext> mlirCtx,
+                                  LLVMContext &llvmCtx) {
+  mlir::PassManager pm(mlirCtx.get());
+
+  pm.addPass(createConvertCIRToMLIRPass());
+
+  auto result = !mlir::failed(pm.run(theModule));
+  if (!result)
+    report_fatal_error(
+        "The pass manager failed to lower CIR to LLVMIR dialect!");
+
+  // Now that we ran all the lowering passes, verify the final output.
+  if (theModule.verify().failed())
+    report_fatal_error("Verification of the final LLVMIR dialect failed!");
+
+  return theModule;
 }
 
 } // namespace cir
