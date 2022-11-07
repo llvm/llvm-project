@@ -23,7 +23,7 @@ TEST(LlvmLibcScanfStringReaderTest, SimpleRead) {
   __llvm_libc::scanf_core::StringReader str_reader(str);
   __llvm_libc::scanf_core::Reader reader(&str_reader);
 
-  for (size_t i = 0; i < sizeof(str); ++i) {
+  for (size_t i = 0; i < sizeof("abc"); ++i) {
     ASSERT_EQ(str[i], reader.getc());
   }
 }
@@ -60,7 +60,7 @@ TEST(LlvmLibcScanfStringReaderTest, ReadAndReverse) {
   }
 
   // Check the whole string.
-  for (size_t i = 0; i < sizeof(str); ++i) {
+  for (size_t i = 0; i < sizeof("abcDEF123"); ++i) {
     ASSERT_EQ(str[i], reader.getc());
   }
 }
