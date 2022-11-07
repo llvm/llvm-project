@@ -108,12 +108,6 @@ namespace llvm {
 
     SmallVector<Instruction*, 64> InstsWithTBAATag;
 
-    /// DIAssignID metadata does not support temporary RAUW so we cannot use
-    /// the normal metadata forward reference resolution method. Instead,
-    /// non-temporary DIAssignID are attached to instructions (recorded here)
-    /// then replaced later.
-    DenseMap<MDNode *, SmallVector<Instruction *, 2>> TempDIAssignIDAttachments;
-
     // Type resolution handling data structures.  The location is set when we
     // have processed a use of the type but not a definition yet.
     StringMap<std::pair<Type*, LocTy> > NamedTypes;

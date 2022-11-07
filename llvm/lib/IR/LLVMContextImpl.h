@@ -1499,11 +1499,6 @@ public:
   /// Collection of metadata used in this context.
   DenseMap<const Value *, MDAttachments> ValueMetadata;
 
-  /// Map DIAssignID -> Instructions with that attachment.
-  /// Managed by Instruction via Instruction::updateDIAssignIDMapping.
-  /// Query using the at:: functions defined in DebugInfo.h.
-  DenseMap<DIAssignID *, SmallVector<Instruction *, 1>> AssignmentIDToInstrs;
-
   /// Collection of per-GlobalObject sections used in this context.
   DenseMap<const GlobalObject *, StringRef> GlobalObjectSections;
 

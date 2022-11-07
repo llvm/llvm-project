@@ -68,7 +68,6 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -4558,10 +4557,6 @@ void Verifier::visitDIAssignIDMetadata(Instruction &I, MDNode *MD) {
       CheckDI(isa<DbgAssignIntrinsic>(User),
               "!DIAssignID should only be used by llvm.dbg.assign intrinsics",
               MD, User);
-      // All of the dbg.assign intrinsics should be in the same function as I.
-      if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(User))
-        CheckDI(DAI->getFunction() == I.getFunction(),
-                "dbg.assign not in same function as inst", DAI, &I);
     }
   }
 }
@@ -6022,10 +6017,6 @@ void Verifier::visitDbgIntrinsic(StringRef Kind, DbgVariableIntrinsic &DII) {
     CheckDI(isa<DIExpression>(DAI->getRawAddressExpression()),
             "invalid llvm.dbg.assign intrinsic address expression", &DII,
             DAI->getRawAddressExpression());
-    // All of the linked instructions should be in the same function as DII.
-    for (Instruction *I : at::getAssignmentInsts(DAI))
-      CheckDI(DAI->getFunction() == I->getFunction(),
-              "inst not in same function as dbg.assign", I, DAI);
   }
 
   // Ignore broken !dbg attachments; they're checked elsewhere.
