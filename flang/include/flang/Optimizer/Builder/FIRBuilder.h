@@ -35,13 +35,22 @@ class BoxValue;
 
 /// Extends the MLIR OpBuilder to provide methods for building common FIR
 /// patterns.
-class FirOpBuilder : public mlir::OpBuilder {
+class FirOpBuilder : public mlir::OpBuilder, public mlir::OpBuilder::Listener {
 public:
   explicit FirOpBuilder(mlir::Operation *op, const fir::KindMapping &kindMap)
-      : OpBuilder{op}, kindMap{kindMap} {}
+      : OpBuilder{op, /*listener=*/this}, kindMap{kindMap} {}
   explicit FirOpBuilder(mlir::OpBuilder &builder,
                         const fir::KindMapping &kindMap)
-      : OpBuilder{builder}, kindMap{kindMap} {}
+      : OpBuilder{builder}, kindMap{kindMap} {
+    setListener(this);
+  }
+
+  // The listener self-reference has to be updated in case of copy-construction.
+  FirOpBuilder(const FirOpBuilder &other)
+      : OpBuilder{other}, kindMap{other.kindMap}, fastMathFlags{
+                                                      other.fastMathFlags} {
+    setListener(this);
+  }
 
   /// Get the current Region of the insertion point.
   mlir::Region &getRegion() { return *getBlock()->getParent(); }
@@ -393,11 +402,31 @@ public:
                                    mlir::Value ub, mlir::Value step,
                                    mlir::Type type);
 
+  /// Set default FastMathFlags value for all operations
+  /// supporting mlir::arith::FastMathAttr that will be created
+  /// by this builder.
+  void setFastMathFlags(mlir::arith::FastMathFlags flags) {
+    fastMathFlags = flags;
+  }
+
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
 
 private:
+  /// Set attributes (e.g. FastMathAttr) to \p op operation
+  /// based on the current attributes setting.
+  void setCommonAttributes(mlir::Operation *op) const;
+
+  /// FirOpBuilder hook for creating new operation.
+  void notifyOperationInserted(mlir::Operation *op) override {
+    setCommonAttributes(op);
+  }
+
   const KindMapping &kindMap;
+
+  /// FastMathFlags that need to be set for operations that support
+  /// mlir::arith::FastMathAttr.
+  mlir::arith::FastMathFlags fastMathFlags{};
 };
 
 } // namespace fir
