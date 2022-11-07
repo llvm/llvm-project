@@ -234,9 +234,9 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   case BO_Div:
     return Discard(this->emitDiv(*T, BO));
   case BO_Assign:
-    if (!this->emitStore(*T, BO))
-      return false;
-    return DiscardResult ? this->emitPopPtr(BO) : true;
+    if (DiscardResult)
+      return this->emitStorePop(*T, BO);
+    return this->emitStore(*T, BO);
   case BO_And:
     return Discard(this->emitBitAnd(*T, BO));
   case BO_Or:
