@@ -275,13 +275,9 @@ void PPCCTRLoops::expandNormalLoops(MachineLoop *ML, MachineInstr *Start,
     // merge the two-predecessor loop header with its successor. If the
     // successor happens to be a header of nest loop, then we will have a header
     // which has more than 2 predecessors.
-    assert(std::find(ML->getHeader()->predecessors().begin(),
-                     ML->getHeader()->predecessors().end(),
-                     Exiting) != ML->getHeader()->predecessors().end() &&
+    assert(llvm::is_contained(ML->getHeader()->predecessors(), Exiting) &&
            "Loop latch is not loop header predecessor!");
-    assert(std::find(ML->getHeader()->predecessors().begin(),
-                     ML->getHeader()->predecessors().end(),
-                     Preheader) != ML->getHeader()->predecessors().end() &&
+    assert(llvm::is_contained(ML->getHeader()->predecessors(), Preheader) &&
            "Loop preheader is not loop header predecessor!");
 
     PHIMIB.addReg(ADDIDef).addMBB(Exiting);
