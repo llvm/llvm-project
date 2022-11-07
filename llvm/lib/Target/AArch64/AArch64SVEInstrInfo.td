@@ -3762,4 +3762,7 @@ defm FMINQV   : sve2p1_fp_reduction_q<0b111, "fminqv">;
 
 defm DUPQ_ZZI : sve2p1_dupq<"dupq">;
 def EXTQ_ZZI : sve2p1_extq<"extq">;
+
+defm PMOV_PZI : sve2p1_vector_to_pred<"pmov">;
+defm PMOV_ZIP : sve2p1_pred_to_vector<"pmov">;
 } // End HasSVE2p1_or_HasSME2p1
