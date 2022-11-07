@@ -116,7 +116,6 @@ func.func @sparse_convert_complex(%arg0: tensor<100xcomplex<f64>>) -> tensor<100
 //      CHECK-RWT:        %[[V:.*]] = tensor.extract %[[A]]{{\[}}%[[FI]], %[[FJ]]] : tensor<2x4xf64>
 //      CHECK-RWT:        %[[NZ:.*]] = arith.cmpf une, %[[V]], %[[F0]] : f64
 //      CHECK-RWT:        scf.if %[[NZ]] {
-//                          // FIXME: the SSA chain is broken here!
 //      CHECK-RWT:          %{{.*}} = sparse_tensor.insert %[[V]] into %[[COO]]{{\[}}%[[FI]], %[[FJ]]]
 //      CHECK-RWT:        }
 //      CHECK-RWT:      }
@@ -127,13 +126,11 @@ func.func @sparse_convert_complex(%arg0: tensor<100xcomplex<f64>>) -> tensor<100
 //      CHECK-RWT:    %[[V2:.*]] = sparse_tensor.values %[[COO]]
 //      CHECK-RWT:    sparse_tensor.sort %[[NNZ]], %[[I0]], %[[I1]] jointly %[[V2]]
 //      CHECK-RWT:    %[[DST:.*]] = bufferization.alloc_tensor()
-//      CHECK-RWT:    %[[NEW_T:.*]] = sparse_tensor.foreach in %[[COO]] init(%[[DST]])
-//      CHECK-RWT:    ^bb0(%[[FI0:.*]]: index, %[[FI1:.*]]: index, %[[FV:.*]]: f64, %[[R0:.*]]: tensor
-//      CHECK-RWT:      %[[RET:.*]] = sparse_tensor.insert %[[FV]] into %[[R0]]{{\[}}%[[FI0]], %[[FI1]]]
-//      CHECK-RWT:      sparse_tensor.yield %[[RET]]
+//      CHECK-RWT:    sparse_tensor.foreach in %[[COO]]
+//      CHECK-RWT:    ^bb0(%[[FI0:.*]]: index, %[[FI1:.*]]: index, %[[FV:.*]]: f64):
+//      CHECK-RWT:      sparse_tensor.insert %[[FV]] into %[[DST]]{{\[}}%[[FI0]], %[[FI1]]]
 //      CHECK-RWT:    }
-//      CHECK-RWT:    %[[NT:.*]] = sparse_tensor.load %[[NEW_T]] hasInserts
-//      CHECK-RWT:    %[[R:.*]] = sparse_tensor.convert %[[NT]]
+//      CHECK-RWT:    %[[R:.*]] = sparse_tensor.convert %[[DST]]
 //      CHECK-RWT:    bufferization.dealloc_tensor %[[COO]]
 //      CHECK-RWT:    return %[[R]] : tensor<2x4xf64, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ] }>>
 func.func @sparse_convert_2d(%arg0: tensor<2x4xf64>) -> tensor<2x4xf64, #CSR> {
@@ -182,7 +179,6 @@ func.func @sparse_convert_2d(%arg0: tensor<2x4xf64>) -> tensor<2x4xf64, #CSR> {
 //       CHECK-RWT:    %[[I1r:.*]] = tensor.extract %[[SI]]{{\[}}%[[FI]], %[[C1]]] : tensor<2x2xi64>
 //       CHECK-RWT:    %[[I1:.*]] = arith.index_cast %[[I1r]] : i64 to index
 //       CHECK-RWT:    %[[V:.*]] = tensor.extract %[[SV]]{{\[}}%[[FI]]] : tensor<2xf32>
-//                     // FIXME: the SSA chain is broken here!
 //       CHECK-RWT:    sparse_tensor.insert %[[V]] into %[[COO]]{{\[}}%[[I0]], %[[I1]]]
 //       CHECK-RWT:  }
 //       CHECK-RWT:  %[[TI0:.*]] = sparse_tensor.indices %[[COO]] {dimension = 0 : index}
@@ -191,13 +187,11 @@ func.func @sparse_convert_2d(%arg0: tensor<2x4xf64>) -> tensor<2x4xf64, #CSR> {
 //       CHECK-RWT:  %[[TV:.*]] = sparse_tensor.values %[[COO]]
 //       CHECK-RWT:  sparse_tensor.sort %[[NNZ]], %[[TI0]], %[[TI1]] jointly %[[TV]]
 //       CHECK-RWT:  %[[DST:.*]] = bufferization.alloc_tensor()
-//       CHECK-RWT:  %[[RET:.*]] = sparse_tensor.foreach in %[[COO]] init(%[[DST]])
-//       CHECK-RWT:  ^bb0(%[[F2I0:.*]]: index, %[[F2I1:.*]]: index, %[[F2V:.*]]: f32, %[[R0:.*]]: tensor
-//       CHECK-RWT:    %[[NEW_T:.*]] = sparse_tensor.insert %[[F2V]] into %[[R0]]{{\[}}%[[F2I0]], %[[F2I1]]]
-//       CHECK-RWT:    sparse_tensor.yield %[[NEW_T]]
+//       CHECK-RWT:  sparse_tensor.foreach in %[[COO]]
+//       CHECK-RWT:  ^bb0(%[[F2I0:.*]]: index, %[[F2I1:.*]]: index, %[[F2V:.*]]: f32):
+//       CHECK-RWT:    sparse_tensor.insert %[[F2V]] into %[[DST]]{{\[}}%[[F2I0]], %[[F2I1]]]
 //       CHECK-RWT:  }
-//       CHECK-RWT:  %[[T:.*]] = sparse_tensor.load %[[RET]] hasInserts
-//       CHECK-RWT:  %[[R:.*]] = sparse_tensor.convert %[[T]]
+//       CHECK-RWT:  %[[R:.*]] = sparse_tensor.convert %[[DST]]
 //       CHECK-RWT:  bufferization.dealloc_tensor %[[COO]]
 //       CHECK-RWT:  return %[[R]] : tensor<8x7xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ] }>>
 func.func @sparse_constant() -> tensor<8x7xf32, #CSR>{
