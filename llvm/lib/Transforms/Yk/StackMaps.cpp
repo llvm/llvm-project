@@ -73,6 +73,12 @@ public:
       for (Value *A : L)
         Args.push_back(A);
 
+      if (isa<CallInst>(I)) {
+        // Insert the stackmap call after (not before) the call instruction, so
+        // the offset of the stackmap entry will record the instruction after
+        // the call, which is where we want to continue after deoptimisation.
+        Bldr.SetInsertPoint(I->getNextNonDebugInstruction());
+      }
       Bldr.CreateCall(SMFunc->getFunctionType(), SMFunc,
                       ArrayRef<Value *>(Args));
       Count++;
