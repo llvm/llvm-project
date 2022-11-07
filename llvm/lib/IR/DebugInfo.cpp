@@ -32,6 +32,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cassert>
@@ -1713,3 +1714,237 @@ void at::deleteAll(Function *F) {
   for (auto *DAI : ToDelete)
     DAI->eraseFromParent();
 }
+
+/// Collect constant properies (base, size, offset) of \p StoreDest.
+/// Return None if any properties are not constants.
+static Optional<AssignmentInfo> getAssignmentInfoImpl(const DataLayout &DL,
+                                                      const Value *StoreDest,
+                                                      uint64_t SizeInBits) {
+  APInt GEPOffset(DL.getIndexTypeSizeInBits(StoreDest->getType()), 0);
+  const Value *Base = StoreDest->stripAndAccumulateConstantOffsets(
+      DL, GEPOffset, /*AllowNonInbounds*/ true);
+  uint64_t OffsetInBytes = GEPOffset.getLimitedValue();
+  // Check for overflow.
+  if (OffsetInBytes == UINT64_MAX)
+    return None;
+  if (const auto *Alloca = dyn_cast<AllocaInst>(Base))
+    return AssignmentInfo(DL, Alloca, OffsetInBytes * 8, SizeInBits);
+  return None;
+}
+
+Optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
+                                               const MemIntrinsic *I) {
+  const Value *StoreDest = I->getRawDest();
+  // Assume 8 bit bytes.
+  auto *ConstLengthInBytes = dyn_cast<ConstantInt>(I->getLength());
+  if (!ConstLengthInBytes)
+    // We can't use a non-const size, bail.
+    return None;
+  uint64_t SizeInBits = 8 * ConstLengthInBytes->getZExtValue();
+  return getAssignmentInfoImpl(DL, StoreDest, SizeInBits);
+}
+
+Optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
+                                               const StoreInst *SI) {
+  const Value *StoreDest = SI->getPointerOperand();
+  uint64_t SizeInBits = DL.getTypeSizeInBits(SI->getValueOperand()->getType());
+  return getAssignmentInfoImpl(DL, StoreDest, SizeInBits);
+}
+
+Optional<AssignmentInfo> at::getAssignmentInfo(const DataLayout &DL,
+                                               const AllocaInst *AI) {
+  uint64_t SizeInBits = DL.getTypeSizeInBits(AI->getAllocatedType());
+  return getAssignmentInfoImpl(DL, AI, SizeInBits);
+}
+
+static CallInst *emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
+                               Instruction &StoreLikeInst,
+                               const VarRecord &VarRec, DIBuilder &DIB) {
+  auto *ID = StoreLikeInst.getMetadata(LLVMContext::MD_DIAssignID);
+  assert(ID && "Store instruction must have DIAssignID metadata");
+
+  DIExpression *Expr = DIExpression::get(StoreLikeInst.getContext(), None);
+  if (!Info.StoreToWholeAlloca) {
+    auto R = DIExpression::createFragmentExpression(Expr, Info.OffsetInBits,
+                                                    Info.SizeInBits);
+    assert(R.has_value() && "failed to create fragment expression");
+    Expr = R.value();
+  }
+  DIExpression *AddrExpr = DIExpression::get(StoreLikeInst.getContext(), None);
+  return DIB.insertDbgAssign(&StoreLikeInst, Val, VarRec.Var, Expr, Dest,
+                             AddrExpr, VarRec.DL);
+}
+
+#undef DEBUG_TYPE // Silence redefinition warning (from ConstantsContext.h).
+#define DEBUG_TYPE "assignment-tracking"
+
+void at::trackAssignments(Function::iterator Start, Function::iterator End,
+                          const StorageToVarsMap &Vars, const DataLayout &DL,
+                          bool DebugPrints) {
+  // Early-exit if there are no interesting variables.
+  if (Vars.empty())
+    return;
+
+  auto &Ctx = Start->getContext();
+  auto &Module = *Start->getModule();
+
+  // Undef type doesn't matter, so long as it isn't void. Let's just use i1.
+  auto *Undef = UndefValue::get(Type::getInt1Ty(Ctx));
+  DIBuilder DIB(Module, /*AllowUnresolved*/ false);
+
+  // Scan the instructions looking for stores to local variables' storage.
+  LLVM_DEBUG(errs() << "# Scanning instructions\n");
+  for (auto BBI = Start; BBI != End; ++BBI) {
+    for (Instruction &I : *BBI) {
+
+      Optional<AssignmentInfo> Info = None;
+      Value *ValueComponent = nullptr;
+      Value *DestComponent = nullptr;
+      if (auto *AI = dyn_cast<AllocaInst>(&I)) {
+        // We want to track the variable's stack home from its alloca's
+        // position onwards so we treat it as an assignment (where the stored
+        // value is Undef).
+        Info = getAssignmentInfo(DL, AI);
+        ValueComponent = Undef;
+        DestComponent = AI;
+      } else if (auto *SI = dyn_cast<StoreInst>(&I)) {
+        Info = getAssignmentInfo(DL, SI);
+        ValueComponent = SI->getValueOperand();
+        DestComponent = SI->getPointerOperand();
+      } else if (auto *MI = dyn_cast<MemTransferInst>(&I)) {
+        Info = getAssignmentInfo(DL, MI);
+        // May not be able to represent this value easily.
+        ValueComponent = Undef;
+        DestComponent = MI->getOperand(0);
+      } else if (auto *MI = dyn_cast<MemSetInst>(&I)) {
+        Info = getAssignmentInfo(DL, MI);
+        // If we're zero-initing we can state the assigned value is zero,
+        // otherwise use undef.
+        auto *ConstValue = dyn_cast<ConstantInt>(MI->getOperand(1));
+        if (ConstValue && ConstValue->isZero())
+          ValueComponent = ConstValue;
+        else
+          ValueComponent = Undef;
+        DestComponent = MI->getOperand(0);
+      } else {
+        // Not a store-like instruction.
+        continue;
+      }
+
+      assert(ValueComponent && DestComponent);
+      LLVM_DEBUG(errs() << "SCAN: Found store-like: " << I << "\n");
+
+      // Check if getAssignmentInfo failed to understand this store.
+      if (!Info.has_value()) {
+        LLVM_DEBUG(
+            errs()
+            << " | SKIP: Untrackable store (e.g. through non-const gep)\n");
+        continue;
+      }
+      LLVM_DEBUG(errs() << " | BASE: " << *Info->Base << "\n");
+
+      //  Check if the store destination is a local variable with debug info.
+      auto LocalIt = Vars.find(Info->Base);
+      if (LocalIt == Vars.end()) {
+        LLVM_DEBUG(
+            errs()
+            << " | SKIP: Base address not associated with local variable\n");
+        continue;
+      }
+
+      DIAssignID *ID =
+          cast_or_null<DIAssignID>(I.getMetadata(LLVMContext::MD_DIAssignID));
+      if (!ID) {
+        ID = DIAssignID::getDistinct(Ctx);
+        I.setMetadata(LLVMContext::MD_DIAssignID, ID);
+      }
+
+      for (const VarRecord &R : LocalIt->second) {
+        auto *Assign =
+            emitDbgAssign(*Info, ValueComponent, DestComponent, I, R, DIB);
+        (void)Assign;
+        LLVM_DEBUG(errs() << " > INSERT: " << *Assign << "\n");
+      }
+    }
+  }
+}
+
+void AssignmentTrackingPass::runOnFunction(Function &F) {
+  // Collect a map of {backing storage : dbg.declares} (currently "backing
+  // storage" is limited to Allocas). We'll use this to find dbg.declares to
+  // delete after running `trackAssignments`.
+  DenseMap<const AllocaInst *, SmallPtrSet<DbgDeclareInst *, 2>> DbgDeclares;
+  // Create another similar map of {storage : variables} that we'll pass to
+  // trackAssignments.
+  StorageToVarsMap Vars;
+  for (auto &BB : F) {
+    for (auto &I : BB) {
+      DbgDeclareInst *DDI = dyn_cast<DbgDeclareInst>(&I);
+      if (!DDI)
+        continue;
+      // FIXME: trackAssignments doesn't let you specify any modifiers to the
+      // variable (e.g. fragment) or location (e.g. offset), so we have to
+      // leave dbg.declares with non-empty expressions in place.
+      if (DDI->getExpression()->getNumElements() != 0)
+        continue;
+      if (AllocaInst *Alloca =
+              dyn_cast<AllocaInst>(DDI->getAddress()->stripPointerCasts())) {
+        DbgDeclares[Alloca].insert(DDI);
+        Vars[Alloca].insert(VarRecord(DDI));
+      }
+    }
+  }
+
+  auto DL = std::make_unique<DataLayout>(F.getParent());
+  // FIXME: Locals can be backed by caller allocas (sret, byval).
+  // Note: trackAssignments doesn't respect dbg.declare's IR positions (as it
+  // doesn't "understand" dbg.declares). However, this doesn't appear to break
+  // any rules given this description of dbg.declare from
+  // llvm/docs/SourceLevelDebugging.rst:
+  //
+  //   It is not control-dependent, meaning that if a call to llvm.dbg.declare
+  //   exists and has a valid location argument, that address is considered to
+  //   be the true home of the variable across its entire lifetime.
+  trackAssignments(F.begin(), F.end(), Vars, *DL);
+
+  // Delete dbg.declares for variables now tracked with assignment tracking.
+  for (auto &P : DbgDeclares) {
+    const AllocaInst *Alloca = P.first;
+    auto Markers = at::getAssignmentMarkers(Alloca);
+    for (DbgDeclareInst *DDI : P.second) {
+      // Assert that the alloca that DDI uses is now linked to a dbg.assign
+      // describing the same variable (i.e. check that this dbg.declare
+      // has been replaced by a dbg.assign).
+      assert(std::find_if(Markers.begin(), Markers.end(),
+                          [DDI](DbgAssignIntrinsic *DAI) {
+                            return DebugVariable(DAI) == DebugVariable(DDI);
+                          }) != Markers.end());
+      // Delete DDI because the variable location is now tracked using
+      // assignment tracking.
+      DDI->eraseFromParent();
+    }
+  }
+}
+
+PreservedAnalyses AssignmentTrackingPass::run(Function &F,
+                                              FunctionAnalysisManager &AM) {
+  runOnFunction(F);
+  // Q: Can we return a less conservative set than just CFGAnalyses? Can we
+  // return PreservedAnalyses::all()?
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+PreservedAnalyses AssignmentTrackingPass::run(Module &M,
+                                              ModuleAnalysisManager &AM) {
+  for (auto &F : M)
+    runOnFunction(F);
+  // Q: Can we return a less conservative set than just CFGAnalyses? Can we
+  // return PreservedAnalyses::all()?
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
+#undef DEBUG_TYPE

@@ -18,10 +18,13 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
@@ -225,7 +228,74 @@ void RAUW(DIAssignID *Old, DIAssignID *New);
 /// Remove all Assignment Tracking related intrinsics and metadata from \p F.
 void deleteAll(Function *F);
 
+/// Helper struct for trackAssignments, below. We don't use the similar
+/// DebugVariable class because trackAssignments doesn't (yet?) understand
+/// partial variables (fragment info) as input and want to make that clear and
+/// explicit using types. In addition, eventually we will want to understand
+/// expressions that modify the base address too, which a DebugVariable doesn't
+/// capture.
+struct VarRecord {
+  DILocalVariable *Var;
+  DILocation *DL;
+
+  VarRecord(DbgVariableIntrinsic *DVI)
+      : Var(DVI->getVariable()), DL(getDebugValueLoc(DVI)) {}
+  VarRecord(DILocalVariable *Var, DILocation *DL) : Var(Var), DL(DL) {}
+  friend bool operator<(const VarRecord &LHS, const VarRecord &RHS) {
+    return std::tie(LHS.Var, LHS.DL) < std::tie(RHS.Var, RHS.DL);
+  }
+  friend bool operator==(const VarRecord &LHS, const VarRecord &RHS) {
+    return std::tie(LHS.Var, LHS.DL) == std::tie(RHS.Var, RHS.DL);
+  }
+};
+
+/// Map of backing storage to a set of variables that are stored to it.
+/// TODO: Backing storage shouldn't be limited to allocas only. Some local
+/// variables have their storage allocated by the calling function (addresses
+/// passed in with sret & byval parameters).
+using StorageToVarsMap = DenseMap<const AllocaInst *, SmallSet<VarRecord, 2>>;
+
+/// Track assignments to \p Vars between \p Start and \p End.
+
+void trackAssignments(Function::iterator Start, Function::iterator End,
+                      const StorageToVarsMap &Vars, const DataLayout &DL,
+                      bool DebugPrints = false);
+
+/// Describes properties of a store that has a static size and offset into a
+/// some base storage. Used by the getAssignmentInfo functions.
+struct AssignmentInfo {
+  AllocaInst const *Base;  ///< Base storage.
+  uint64_t OffsetInBits;   ///< Offset into Base.
+  uint64_t SizeInBits;     ///< Number of bits stored.
+  bool StoreToWholeAlloca; ///< SizeInBits equals the size of the base storage.
+
+  AssignmentInfo(const DataLayout &DL, AllocaInst const *Base,
+                 uint64_t OffsetInBits, uint64_t SizeInBits)
+      : Base(Base), OffsetInBits(OffsetInBits), SizeInBits(SizeInBits),
+        StoreToWholeAlloca(
+            OffsetInBits == 0 &&
+            SizeInBits == DL.getTypeSizeInBits(Base->getAllocatedType())) {}
+};
+
+Optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
+                                           const MemIntrinsic *I);
+Optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
+                                           const StoreInst *SI);
+Optional<AssignmentInfo> getAssignmentInfo(const DataLayout &DL,
+                                           const AllocaInst *AI);
+
 } // end namespace at
+
+/// Convert @llvm.dbg.declare intrinsics into sets of @llvm.dbg.assign
+/// intrinsics by treating stores to the dbg.declare'd address as assignments
+/// to the variable. Not all kinds of variables are supported yet; those will
+/// be left with their dbg.declare intrinsics.
+class AssignmentTrackingPass : public PassInfoMixin<AssignmentTrackingPass> {
+public:
+  void runOnFunction(Function &F);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
 
 /// Return true if assignment tracking is enabled.
 bool getEnableAssignmentTracking();
