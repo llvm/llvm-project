@@ -506,7 +506,7 @@ TEST(AssignmentTrackingTest, Utils) {
   // 4. Check that deleting works and applies only to the target function.
   at::deleteAll(&Fun1);
   // There should now only be the alloca and ret in fun1.
-  EXPECT_EQ(Fun1.begin()->size(), 2);
+  EXPECT_EQ(Fun1.begin()->size(), 2u);
   // fun2's alloca should have the same DIAssignID and remain linked to its
   // llvm.dbg.assign.
   EXPECT_EQ(Fun2ID, cast_or_null<DIAssignID>(
