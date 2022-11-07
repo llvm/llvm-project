@@ -1673,15 +1673,6 @@ AssignmentMarkerRange at::getAssignmentMarkers(DIAssignID *ID) {
   return make_range(IDAsValue->user_begin(), IDAsValue->user_end());
 }
 
-void at::deleteAssignmentMarkers(const Instruction *Inst) {
-  auto Range = getAssignmentMarkers(Inst);
-  if (Range.empty())
-    return;
-  SmallVector<DbgAssignIntrinsic *> ToDelete(Range.begin(), Range.end());
-  for (auto *DAI : ToDelete)
-    DAI->eraseFromParent();
-}
-
 void at::RAUW(DIAssignID *Old, DIAssignID *New) {
   // Replace MetadataAsValue uses.
   if (auto *OldIDAsValue =
