@@ -1269,7 +1269,7 @@ vzeroupper
 # CHECK-NEXT:  1      1     1.00                        vmovd	%xmm0, %ecx
 # CHECK-NEXT:  2      1     1.00           *            vmovd	%xmm0, (%rax)
 # CHECK-NEXT:  1      1     1.00                        vmovddup	%xmm0, %xmm2
-# CHECK-NEXT:  1      5     0.50    *                   vmovddup	(%rax), %xmm2
+# CHECK-NEXT:  1      6     0.50    *                   vmovddup	(%rax), %xmm2
 # CHECK-NEXT:  1      1     1.00                        vmovddup	%ymm0, %ymm2
 # CHECK-NEXT:  1      7     0.50    *                   vmovddup	(%rax), %ymm2
 # CHECK-NEXT:  1      1     0.33                        vmovdqa	%xmm0, %xmm2
