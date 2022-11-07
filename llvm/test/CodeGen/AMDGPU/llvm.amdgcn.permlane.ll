@@ -27,9 +27,8 @@ define amdgpu_kernel void @v_permlane16_b32_vii(i32 addrspace(1)* %out, i32 %src
 ; GCN-LABEL: {{^}}v_permlane16_b32_vll:
 ; FIXME-GFX10PLUS: It is allowed to have both immediates as literals
 ; GFX10PLUS-DAG: s_movk_i32 [[SRC1:s[0-9]+]], 0x1234
-; GFX10PLUS-DAG: s_mov_b32 [[SRC2:s[0-9]+]], 0xc1d1
 ; GFX10PLUS-NOT: v_readfirstlane_b32
-; GFX10PLUS: v_permlane16_b32 v{{[0-9]+}}, v{{[0-9]+}}, [[SRC1]], [[SRC2]]{{$}}
+; GFX10PLUS: v_permlane16_b32 v{{[0-9]+}}, v{{[0-9]+}}, [[SRC1]], 0xc1d1{{$}}
 define amdgpu_kernel void @v_permlane16_b32_vll(i32 addrspace(1)* %out, i32 %src0) #1 {
   %v = call i32 @llvm.amdgcn.permlane16(i32 %src0, i32 %src0, i32 4660, i32 49617, i1 0, i1 0)
   store i32 %v, i32 addrspace(1)* %out
@@ -124,9 +123,8 @@ define amdgpu_kernel void @v_permlanex16_b32_vii(i32 addrspace(1)* %out, i32 %sr
 ; GCN-LABEL: {{^}}v_permlanex16_b32_vll:
 ; FIXME-GFX10PLUS: It is allowed to have both immediates as literals
 ; GFX10PLUS-DAG: s_movk_i32 [[SRC1:s[0-9]+]], 0x1234
-; GFX10PLUS-DAG: s_mov_b32 [[SRC2:s[0-9]+]], 0xc1d1
 ; GFX10PLUS-NOT: v_readfirstlane_b32
-; GFX10PLUS: v_permlanex16_b32 v{{[0-9]+}}, v{{[0-9]+}}, [[SRC1]], [[SRC2]]{{$}}
+; GFX10PLUS: v_permlanex16_b32 v{{[0-9]+}}, v{{[0-9]+}}, [[SRC1]], 0xc1d1{{$}}
 define amdgpu_kernel void @v_permlanex16_b32_vll(i32 addrspace(1)* %out, i32 %src0) #1 {
   %v = call i32 @llvm.amdgcn.permlanex16(i32 %src0, i32 %src0, i32 4660, i32 49617, i1 0, i1 0)
   store i32 %v, i32 addrspace(1)* %out
