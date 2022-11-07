@@ -518,6 +518,45 @@ def SparseTensor_SortOp : SparseTensor_Op<"sort", [AttrSizedOperandSegments]>,
   let hasVerifier = 1;
 }
 
+def SparseTensor_SortCooOp : SparseTensor_Op<"sort_coo">,
+    Arguments<(ins Index:$n, StridedMemRefRankOf<[AnyInteger, Index], [1]>:$xy,
+               Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys,
+               OptionalAttr<IndexAttr>:$nx, OptionalAttr<IndexAttr>:$ny,
+               UnitAttr:$stable)>  {
+  let summary = "Sorts the arrays in xs and ys lexicographically on the "
+                "integral values found in the xs list";
+  let description = [{
+    Sparse_tensor.sort_coo is similar to sparse_tensor.sort, except that all the
+    `xs` values and some `ys` values are put in the linear buffer `xy`. The
+    optional index attribute `nx` provides the number of `xs` values in `xy`.
+    When `ns` is not explicitly specified, its value is 1. The optional index
+    attribute `ny` provides the number of `ys` values in `xy`. When `ny` is not
+    explicitly specified, its value is 0. This instruction supports the TACO
+    COO style storage format for better sorting performance.
+
+    The buffer xy should have a dimension not less than n * (nx + ny) while the
+    buffers in `ys` should have a dimension not less than `n`. The behavior of
+    the operator is undefined if this condition is not met.
+
+    Example:
+
+    ```mlir
+    sparse_tensor.sort_coo %n, %x { nx = 2 : index}
+      : memref<?xindex>
+    ```
+
+    ```mlir
+    sparse_tensor.sort %n, %xy jointly %y1 { nx = 2 : index, ny = 2 : index}
+      : memref<?xi64> jointly memref<?xf32>
+    ```
+  }];
+
+  let assemblyFormat = "(`stable` $stable^)? $n"
+                       "`,`$xy (`jointly` $ys^)? attr-dict"
+                       "`:` type($xy) (`jointly` type($ys)^)?";
+  let hasVerifier = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Sparse Tensor Syntax Operations.
 //===----------------------------------------------------------------------===//
