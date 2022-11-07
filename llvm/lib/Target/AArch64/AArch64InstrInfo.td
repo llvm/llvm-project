@@ -146,6 +146,8 @@ def HasSMEI16I64     : Predicate<"Subtarget->hasSMEI16I64()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEI16I64), "sme-i16i64">;
 def HasSME2          : Predicate<"Subtarget->hasSME2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2), "sme2">;
+def HasSME2p1        : Predicate<"Subtarget->hasSME2p1()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSME2p1), "sme2p1">;
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVEorSME
@@ -158,10 +160,13 @@ def HasSVE2orSME
                 "sve2 or sme">;
 def HasSVE2p1_or_HasSME
     : Predicate<"Subtarget->hasSVE2p1() || Subtarget->hasSME()">,
-                 AssemblerPredicate<(any_of FeatureSME, FeatureSVE2p1), "sme or sve2p1">;
+                 AssemblerPredicateWithAll<(any_of FeatureSME, FeatureSVE2p1), "sme or sve2p1">;
 def HasSVE2p1_or_HasSME2
     : Predicate<"Subtarget->hasSVE2p1() || Subtarget->hasSME2()">,
-                 AssemblerPredicate<(any_of FeatureSME2, FeatureSVE2p1), "sme2 or sve2p1">;
+                 AssemblerPredicateWithAll<(any_of FeatureSME2, FeatureSVE2p1), "sme2 or sve2p1">;
+def HasSVE2p1_or_HasSME2p1
+    : Predicate<"Subtarget->hasSVE2p1() || Subtarget->hasSME2p1()">,
+                 AssemblerPredicateWithAll<(any_of FeatureSME2p1, FeatureSVE2p1), "sme2p1 or sve2p1">;
 // A subset of NEON instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasNEONorSME
