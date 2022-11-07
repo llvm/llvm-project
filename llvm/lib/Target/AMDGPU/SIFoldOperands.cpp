@@ -111,6 +111,8 @@ public:
   bool tryFoldCndMask(MachineInstr &MI) const;
   bool tryFoldZeroHighBits(MachineInstr &MI) const;
   bool foldInstOperand(MachineInstr &MI, MachineOperand &OpToFold) const;
+  bool tryFoldFoldableCopy(MachineInstr &MI,
+                           MachineOperand *&CurrentKnownM0Val) const;
 
   const MachineOperand *isClamp(const MachineInstr &MI) const;
   bool tryFoldClamp(MachineInstr &MI);
@@ -1292,6 +1294,73 @@ bool SIFoldOperands::foldInstOperand(MachineInstr &MI,
   return true;
 }
 
+bool SIFoldOperands::tryFoldFoldableCopy(
+    MachineInstr &MI, MachineOperand *&CurrentKnownM0Val) const {
+  // Specially track simple redefs of m0 to the same value in a block, so we
+  // can erase the later ones.
+  if (MI.getOperand(0).getReg() == AMDGPU::M0) {
+    MachineOperand &NewM0Val = MI.getOperand(1);
+    if (CurrentKnownM0Val && CurrentKnownM0Val->isIdenticalTo(NewM0Val)) {
+      MI.eraseFromParent();
+      return true;
+    }
+
+    // We aren't tracking other physical registers
+    CurrentKnownM0Val = (NewM0Val.isReg() && NewM0Val.getReg().isPhysical())
+                            ? nullptr
+                            : &NewM0Val;
+    return false;
+  }
+
+  MachineOperand &OpToFold = MI.getOperand(1);
+  bool FoldingImm = OpToFold.isImm() || OpToFold.isFI() || OpToFold.isGlobal();
+
+  // FIXME: We could also be folding things like TargetIndexes.
+  if (!FoldingImm && !OpToFold.isReg())
+    return false;
+
+  if (OpToFold.isReg() && !OpToFold.getReg().isVirtual())
+    return false;
+
+  // Prevent folding operands backwards in the function. For example,
+  // the COPY opcode must not be replaced by 1 in this example:
+  //
+  //    %3 = COPY %vgpr0; VGPR_32:%3
+  //    ...
+  //    %vgpr0 = V_MOV_B32_e32 1, implicit %exec
+  if (!MI.getOperand(0).getReg().isVirtual())
+    return false;
+
+  bool Changed = foldInstOperand(MI, OpToFold);
+
+  // If we managed to fold all uses of this copy then we might as well
+  // delete it now.
+  // The only reason we need to follow chains of copies here is that
+  // tryFoldRegSequence looks forward through copies before folding a
+  // REG_SEQUENCE into its eventual users.
+  auto *InstToErase = &MI;
+  while (MRI->use_nodbg_empty(InstToErase->getOperand(0).getReg())) {
+    auto &SrcOp = InstToErase->getOperand(1);
+    auto SrcReg = SrcOp.isReg() ? SrcOp.getReg() : Register();
+    InstToErase->eraseFromParent();
+    Changed = true;
+    InstToErase = nullptr;
+    if (!SrcReg || SrcReg.isPhysical())
+      break;
+    InstToErase = MRI->getVRegDef(SrcReg);
+    if (!InstToErase || !TII->isFoldableCopy(*InstToErase))
+      break;
+  }
+
+  if (InstToErase && InstToErase->isRegSequence() &&
+      MRI->use_nodbg_empty(InstToErase->getOperand(0).getReg())) {
+    InstToErase->eraseFromParent();
+    Changed = true;
+  }
+
+  return Changed;
+}
+
 // Clamp patterns are canonically selected to v_max_* instructions, so only
 // handle them.
 const MachineOperand *SIFoldOperands::isClamp(const MachineInstr &MI) const {
@@ -1746,82 +1815,22 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
         continue;
       }
 
-      if (!TII->isFoldableCopy(MI)) {
-        // Saw an unknown clobber of m0, so we no longer know what it is.
-        if (CurrentKnownM0Val && MI.modifiesRegister(AMDGPU::M0, TRI))
-          CurrentKnownM0Val = nullptr;
-
-        // TODO: Omod might be OK if there is NSZ only on the source
-        // instruction, and not the omod multiply.
-        if (IsIEEEMode || (!HasNSZ && !MI.getFlag(MachineInstr::FmNsz)) ||
-            !tryFoldOMod(MI))
-          Changed |= tryFoldClamp(MI);
-
+      if (TII->isFoldableCopy(MI)) {
+        Changed |= tryFoldFoldableCopy(MI, CurrentKnownM0Val);
         continue;
       }
 
-      // Specially track simple redefs of m0 to the same value in a block, so we
-      // can erase the later ones.
-      if (MI.getOperand(0).getReg() == AMDGPU::M0) {
-        MachineOperand &NewM0Val = MI.getOperand(1);
-        if (CurrentKnownM0Val && CurrentKnownM0Val->isIdenticalTo(NewM0Val)) {
-          MI.eraseFromParent();
-          Changed = true;
-          continue;
-        }
+      // Saw an unknown clobber of m0, so we no longer know what it is.
+      if (CurrentKnownM0Val && MI.modifiesRegister(AMDGPU::M0, TRI))
+        CurrentKnownM0Val = nullptr;
 
-        // We aren't tracking other physical registers
-        CurrentKnownM0Val = (NewM0Val.isReg() && NewM0Val.getReg().isPhysical()) ?
-          nullptr : &NewM0Val;
-        continue;
-      }
-
-      MachineOperand &OpToFold = MI.getOperand(1);
-      bool FoldingImm =
-          OpToFold.isImm() || OpToFold.isFI() || OpToFold.isGlobal();
-
-      // FIXME: We could also be folding things like TargetIndexes.
-      if (!FoldingImm && !OpToFold.isReg())
-        continue;
-
-      if (OpToFold.isReg() && !OpToFold.getReg().isVirtual())
-        continue;
-
-      // Prevent folding operands backwards in the function. For example,
-      // the COPY opcode must not be replaced by 1 in this example:
-      //
-      //    %3 = COPY %vgpr0; VGPR_32:%3
-      //    ...
-      //    %vgpr0 = V_MOV_B32_e32 1, implicit %exec
-      if (!MI.getOperand(0).getReg().isVirtual())
-        continue;
-
-      Changed |= foldInstOperand(MI, OpToFold);
-
-      // If we managed to fold all uses of this copy then we might as well
-      // delete it now.
-      // The only reason we need to follow chains of copies here is that
-      // tryFoldRegSequence looks forward through copies before folding a
-      // REG_SEQUENCE into its eventual users.
-      auto *InstToErase = &MI;
-      while (MRI->use_nodbg_empty(InstToErase->getOperand(0).getReg())) {
-        auto &SrcOp = InstToErase->getOperand(1);
-        auto SrcReg = SrcOp.isReg() ? SrcOp.getReg() : Register();
-        InstToErase->eraseFromParent();
-        Changed = true;
-        InstToErase = nullptr;
-        if (!SrcReg || SrcReg.isPhysical())
-          break;
-        InstToErase = MRI->getVRegDef(SrcReg);
-        if (!InstToErase || !TII->isFoldableCopy(*InstToErase))
-          break;
-      }
-      if (InstToErase && InstToErase->isRegSequence() &&
-          MRI->use_nodbg_empty(InstToErase->getOperand(0).getReg())) {
-        InstToErase->eraseFromParent();
-        Changed = true;
-      }
+      // TODO: Omod might be OK if there is NSZ only on the source
+      // instruction, and not the omod multiply.
+      if (IsIEEEMode || (!HasNSZ && !MI.getFlag(MachineInstr::FmNsz)) ||
+          !tryFoldOMod(MI))
+        Changed |= tryFoldClamp(MI);
     }
   }
+
   return Changed;
 }
