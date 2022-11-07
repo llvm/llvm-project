@@ -114,6 +114,42 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fgetc_unlocked
+  SRCS
+    fgetc_unlocked.cpp
+  HDRS
+    fgetc_unlocked.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  getc
+  SRCS
+    getc.cpp
+  HDRS
+    getc.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  getc_unlocked
+  SRCS
+    getc_unlocked.cpp
+  HDRS
+    getc_unlocked.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
   fgets
   SRCS
     fgets.cpp
