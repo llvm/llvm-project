@@ -112,8 +112,6 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
   return true;
 }
 
-template <typename T> inline bool IsTrue(const T &V) { return !V.isZero(); }
-
 /// Interpreter entry point.
 bool Interpret(InterpState &S, APValue &Result);
 
