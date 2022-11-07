@@ -410,6 +410,34 @@ static Value getCustomRedId(Operation *op) {
 // Sparse compiler synthesis methods (statements and expressions).
 //===----------------------------------------------------------------------===//
 
+/// Generates loop boundary statements (entering/exiting loops). The function
+/// passes and updates the reduction value.
+static Optional<Operation *> genLoopBoundary(
+    CodeGen &codegen, Merger &merger,
+    function_ref<Optional<Operation *>(MutableArrayRef<Value> reduc)>
+        callback) {
+  SmallVector<Value, 4> reduc;
+  if (codegen.redVal)
+    reduc.push_back(codegen.redVal);
+  if (codegen.expValues)
+    reduc.push_back(codegen.expCount);
+  if (codegen.insChain)
+    reduc.push_back(codegen.insChain);
+
+  auto r = callback(reduc);
+
+  // Callback should do in-place update on reduction value vector.
+  unsigned i = 0;
+  if (codegen.redVal)
+    updateReduc(merger, codegen, reduc[i++]);
+  if (codegen.expValues)
+    codegen.expCount = reduc[i++];
+  if (codegen.insChain)
+    codegen.insChain = reduc[i];
+
+  return r;
+}
+
 /// Local bufferization of all dense and sparse data structures.
 static void genBuffers(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                        linalg::GenericOp op) {
@@ -869,23 +897,25 @@ static void genExpansion(Merger &merger, CodeGen &codegen, OpBuilder &builder,
 /// Returns parallelization strategy. Any implicit loop in the Linalg
 /// operation that is marked "parallel" is a candidate. Whether it is actually
 /// converted to a parallel operation depends on the requested strategy.
-static bool isParallelFor(CodeGen &codegen, bool isOuter, bool isReduction,
-                          bool isSparse) {
+static bool isParallelFor(CodeGen &codegen, bool isOuter, bool isSparse) {
   // Reject parallelization of sparse output.
   if (codegen.sparseOut)
+    return false;
+  // Parallel loops on tensor expansion can cause data races.
+  if (codegen.expCount)
     return false;
   // Inspect strategy.
   switch (codegen.options.parallelizationStrategy) {
   case SparseParallelizationStrategy::kNone:
     return false;
   case SparseParallelizationStrategy::kDenseOuterLoop:
-    return isOuter && !isSparse && !isReduction;
+    return isOuter && !isSparse;
   case SparseParallelizationStrategy::kAnyStorageOuterLoop:
-    return isOuter && !isReduction;
+    return isOuter;
   case SparseParallelizationStrategy::kDenseAnyLoop:
-    return !isSparse && !isReduction;
+    return !isSparse;
   case SparseParallelizationStrategy::kAnyStorageAnyLoop:
-    return !isReduction;
+    return true;
   }
   llvm_unreachable("unexpected parallelization strategy");
 }
@@ -898,33 +928,16 @@ static Operation *genFor(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                          ArrayRef<size_t> extraDims) {
   Location loc = op.getLoc();
   auto iteratorTypes = op.getIteratorTypesArray();
-  bool isReduction = linalg::isReductionIterator(iteratorTypes[idx]);
   bool isSparse = isCompressedDLT(merger.getDimLevelType(tid, idx)) ||
                   isSingletonDLT(merger.getDimLevelType(tid, idx));
-  bool isParallel = isParallelFor(codegen, isOuter, isReduction, isSparse);
-  assert(!isParallel);
+  bool isParallel = isParallelFor(codegen, isOuter, isSparse);
 
-  // Emit a sequential for loop.
-  SmallVector<Value, 4> operands;
-  if (codegen.redVal)
-    operands.push_back(codegen.redVal);
-  if (codegen.expValues)
-    operands.push_back(codegen.expCount);
-  if (codegen.insChain)
-    operands.push_back(codegen.insChain);
-
-  Operation *loop = codegen.loopEmitter.enterLoopOverTensorAtDim(
-      builder, loc, tid, dim, operands, isParallel, extraTids, extraDims);
-
-  unsigned o = 0;
-  if (codegen.redVal)
-    updateReduc(merger, codegen, operands[o++]);
-  if (codegen.expValues)
-    codegen.expCount = operands[o++];
-  if (codegen.insChain)
-    codegen.insChain = operands[o++];
-  assert(o == operands.size());
-
+  Operation *loop =
+      genLoopBoundary(codegen, merger, [&](MutableArrayRef<Value> reduc) {
+        return codegen.loopEmitter.enterLoopOverTensorAtDim(
+            builder, loc, tid, dim, reduc, isParallel, extraTids, extraDims);
+      }).value();
+  assert(loop);
   return loop;
 }
 
@@ -934,29 +947,15 @@ static Operation *genWhile(Merger &merger, CodeGen &codegen, OpBuilder &builder,
                            ArrayRef<size_t> condTids, ArrayRef<size_t> condDims,
                            ArrayRef<size_t> extraTids,
                            ArrayRef<size_t> extraDims) {
-  SmallVector<Value, 4> operands;
 
-  // Construct the while-loop with a parameter for each index.
-  if (codegen.redVal)
-    operands.push_back(codegen.redVal);
-  if (codegen.expValues)
-    operands.push_back(codegen.expCount);
-  if (codegen.insChain)
-    operands.push_back(codegen.insChain);
-
-  Operation *loop = codegen.loopEmitter.enterCoIterationOverTensorsAtDims(
-      builder, op.getLoc(), condTids, condDims, needsUniv, operands, extraTids,
-      extraDims);
-
-  unsigned o = 0;
-  if (codegen.redVal)
-    updateReduc(merger, codegen, operands[o++]);
-  if (codegen.expValues)
-    codegen.expCount = operands[o++];
-  if (codegen.insChain)
-    codegen.insChain = operands[o++];
-  assert(o == operands.size());
-
+  Operation *loop =
+      genLoopBoundary(codegen, merger, [&](MutableArrayRef<Value> reduc) {
+        // Construct the while-loop with a parameter for each index.
+        return codegen.loopEmitter.enterCoIterationOverTensorsAtDims(
+            builder, op.getLoc(), condTids, condDims, needsUniv, reduc,
+            extraTids, extraDims);
+      }).value();
+  assert(loop);
   return loop;
 }
 
@@ -1186,37 +1185,21 @@ static Operation *startLoop(Merger &merger, CodeGen &codegen,
 }
 
 /// Ends a single loop in current sequence. Returns new values for needsUniv.
-static bool endLoop(Merger &merger, CodeGen &codegen, OpBuilder &builder,
+static bool endLoop(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
                     linalg::GenericOp op, Operation *loop, unsigned idx,
                     unsigned li, bool needsUniv) {
   // End a while-loop.
   if (auto whileOp = dyn_cast<scf::WhileOp>(loop)) {
-    finalizeWhileOp(merger, codegen, builder, op, idx, needsUniv,
+    finalizeWhileOp(merger, codegen, rewriter, op, idx, needsUniv,
                     merger.lat(li).bits, whileOp);
   } else {
     needsUniv = false;
   }
 
-  SmallVector<Value, 2> reduc;
-  if (codegen.redVal)
-    reduc.push_back(codegen.redVal);
-  if (codegen.expValues)
-    reduc.push_back(codegen.expCount);
-  if (codegen.insChain)
-    reduc.push_back(codegen.insChain);
-
-  auto loopRet =
-      codegen.loopEmitter.exitCurrentLoop(builder, op.getLoc(), reduc);
-  assert(reduc.size() == loopRet.size());
-
-  unsigned o = 0;
-  if (codegen.redVal)
-    updateReduc(merger, codegen, loopRet[o++]);
-  if (codegen.expValues)
-    codegen.expCount = loopRet[o++];
-  if (codegen.insChain)
-    codegen.insChain = loopRet[o++];
-  assert(o == loopRet.size());
+  genLoopBoundary(codegen, merger, [&](MutableArrayRef<Value> reduc) {
+    codegen.loopEmitter.exitCurrentLoop(rewriter, op.getLoc(), reduc);
+    return llvm::None;
+  });
 
   return needsUniv;
 }
