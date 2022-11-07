@@ -2198,6 +2198,7 @@ Value *llvm::simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q) {
   return ::simplifyAndInst(Op0, Op1, Q, RecursionLimit);
 }
 
+// TODO: Many of these folds could use LogicalAnd/LogicalOr.
 static Value *simplifyOrLogic(Value *X, Value *Y) {
   assert(X->getType() == Y->getType() && "Expected same type for 'or' ops");
   Type *Ty = X->getType();
@@ -2261,6 +2262,14 @@ static Value *simplifyOrLogic(Value *X, Value *Y) {
             m_c_And(m_CombineAnd(m_Value(NotA), m_NotForbidUndef(m_Value(A))),
                     m_Value(B))) &&
       match(Y, m_Not(m_c_Or(m_Specific(A), m_Specific(B)))))
+    return NotA;
+  // The same is true of Logical And
+  // TODO: This could share the logic of the version above if there was a
+  // version of LogicalAnd that allowed more than just i1 types.
+  if (match(X, m_c_LogicalAnd(
+                   m_CombineAnd(m_Value(NotA), m_NotForbidUndef(m_Value(A))),
+                   m_Value(B))) &&
+      match(Y, m_Not(m_c_LogicalOr(m_Specific(A), m_Specific(B)))))
     return NotA;
 
   // ~(A ^ B) | (A & B) --> ~(A ^ B)
