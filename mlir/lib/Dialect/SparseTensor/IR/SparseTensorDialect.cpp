@@ -714,7 +714,7 @@ LogicalResult SortCooOp::verify() {
   auto checkDim = [&](Value v, uint64_t min, const char *message) {
     MemRefType tp = v.getType().cast<MemRefType>();
     int64_t dim = tp.getShape()[0];
-    if (dim != ShapedType::kDynamicSize && dim < min) {
+    if (dim != ShapedType::kDynamicSize && dim < (int64_t)min) {
       emitError(llvm::formatv("{0} got {1} < {2}", message, dim, min));
     }
   };
