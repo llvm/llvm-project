@@ -398,13 +398,6 @@ TEST(AssignmentTrackingTest, Utils) {
       ret void, !dbg !19
     }
 
-    define dso_local void @fun3() !dbg !21 {
-    entry:
-      %local = alloca i32, align 4, !DIAssignID !24
-      call void @llvm.dbg.assign(metadata i32 undef, metadata !22, metadata !DIExpression(), metadata !24, metadata i32* undef, metadata !DIExpression()), !dbg !23
-      ret void
-    }
-
     declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
 
     !llvm.dbg.cu = !{!0}
@@ -432,10 +425,6 @@ TEST(AssignmentTrackingTest, Utils) {
     !18 = !DILocalVariable(name: "local2", scope: !17, file: !1, line: 2, type: !11)
     !19 = !DILocation(line: 4, column: 1, scope: !17)
     !20 = distinct !DIAssignID()
-    !21 = distinct !DISubprogram(name: "fun3", scope: !1, file: !1, line: 1, type: !8, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
-    !22 = !DILocalVariable(name: "local4", scope: !21, file: !1, line: 2, type: !11)
-    !23 = !DILocation(line: 4, column: 1, scope: !21)
-    !24 = distinct !DIAssignID()
     )");
 
   // Check the test IR isn't malformed.
@@ -494,16 +483,7 @@ TEST(AssignmentTrackingTest, Utils) {
   ASSERT_TRUE(std::distance(Fun2Insts.begin(), Fun2Insts.end()) == 1);
   EXPECT_EQ(*Fun2Insts.begin(), &Fun2Alloca);
 
-  // 3. Check that deleting dbg.assigns from a specific instruction works.
-  Instruction &Fun3Alloca =
-      *M->getFunction("fun3")->getEntryBlock().getFirstNonPHIOrDbg();
-  auto Fun3Markers = at::getAssignmentMarkers(&Fun3Alloca);
-  ASSERT_TRUE(std::distance(Fun3Markers.begin(), Fun3Markers.end()) == 1);
-  at::deleteAssignmentMarkers(&Fun3Alloca);
-  Fun3Markers = at::getAssignmentMarkers(&Fun3Alloca);
-  EXPECT_EQ(Fun3Markers.empty(), true);
-
-  // 4. Check that deleting works and applies only to the target function.
+  // 3. Check that deleting works and applies only to the target function.
   at::deleteAll(&Fun1);
   // There should now only be the alloca and ret in fun1.
   EXPECT_EQ(Fun1.begin()->size(), 2u);
