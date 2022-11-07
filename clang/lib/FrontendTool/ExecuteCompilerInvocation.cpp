@@ -51,7 +51,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   auto Act = CI.getFrontendOpts().ProgramAction;
 
   auto EmitsCIR = Act == EmitCIR || Act == EmitCIROnly;
-  auto IsImplementedCIROutput = EmitsCIR || Act == EmitLLVM || Act == EmitObj;
+  auto IsImplementedCIROutput =
+      EmitsCIR || Act == EmitLLVM || Act == EmitObj || Act == EmitAssembly;
 
   if (UseCIR && !IsImplementedCIROutput)
     llvm::report_fatal_error("-fenable currently only works with "
@@ -69,7 +70,12 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
     return std::make_unique<DumpCompilerOptionsAction>();
   case DumpRawTokens:          return std::make_unique<DumpRawTokensAction>();
   case DumpTokens:             return std::make_unique<DumpTokensAction>();
-  case EmitAssembly:           return std::make_unique<EmitAssemblyAction>();
+  case EmitAssembly:
+#if CLANG_ENABLE_CIR
+    if (UseCIR)
+      return std::make_unique<::cir::EmitAssemblyAction>();
+#endif
+    return std::make_unique<EmitAssemblyAction>();
   case EmitBC:                 return std::make_unique<EmitBCAction>();
 #if CLANG_ENABLE_CIR
   case EmitCIR:                return std::make_unique<::cir::EmitCIRAction>();

@@ -248,9 +248,18 @@ public:
                         nullptr, std::move(outputStream));
       break;
     }
-    case CIRGenAction::OutputType::EmitAssembly:
-      assert(false && "Not yet implemented");
+    case CIRGenAction::OutputType::EmitAssembly: {
+      llvm::LLVMContext llvmCtx;
+      auto llvmModule =
+          lowerFromCIRToLLVMIR(mlirMod, std::move(mlirCtx), llvmCtx);
+
+      llvmModule->setTargetTriple(targetOptions.Triple);
+      emitBackendOutput(compilerInstance, codeGenOptions,
+                        C.getTargetInfo().getDataLayoutString(),
+                        llvmModule.get(), BackendAction::Backend_EmitAssembly,
+                        nullptr, std::move(outputStream));
       break;
+    }
     case CIRGenAction::OutputType::None:
       break;
     }
