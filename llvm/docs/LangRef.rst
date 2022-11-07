@@ -886,8 +886,9 @@ Syntax::
               [, partition "name"]
 
 The linkage must be one of ``private``, ``internal``, ``linkonce``, ``weak``,
-``linkonce_odr``, ``weak_odr``, ``external``. Note that some system linkers
-might not correctly handle dropping a weak symbol that is aliased.
+``linkonce_odr``, ``weak_odr``, ``external``, ``available_externally``. Note
+that some system linkers might not correctly handle dropping a weak symbol that
+is aliased.
 
 Aliases that are not ``unnamed_addr`` are guaranteed to have the same address as
 the aliasee expression. ``unnamed_addr`` ones are only guaranteed to point
@@ -906,8 +907,10 @@ some can only be checked when producing an object file:
   intermediate alias being overridden cannot be represented in an
   object file.
 
-* No global value in the expression can be a declaration, since that
-  would require a relocation, which is not possible.
+* If the alias has the ``available_externally`` linkage, the aliasee must be an
+  ``available_externally`` global value; otherwise the aliasee can be an
+  expression but no global value in the expression can be a declaration, since
+  that would require a relocation, which is not possible.
 
 * If either the alias or the aliasee may be replaced by a symbol outside the
   module at link time or runtime, any optimization cannot replace the alias with
