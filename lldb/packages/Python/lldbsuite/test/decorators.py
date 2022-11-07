@@ -80,7 +80,9 @@ def _match_decorator_property(expected, actual):
     if isinstance(expected, no_match):
         return not _match_decorator_property(expected.item, actual)
 
-    if isinstance(expected, (re.Pattern, str)):
+    # Python 3.6 doesn't declare a `re.Pattern` type, get the dynamic type.
+    pattern_type = type(re.compile(''))
+    if isinstance(expected, (pattern_type, str)):
         return re.search(expected, actual) is not None
 
     if hasattr(expected, "__iter__"):
