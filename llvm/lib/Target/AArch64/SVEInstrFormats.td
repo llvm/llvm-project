@@ -2105,19 +2105,18 @@ class sve_fp_3op_p_zds_a<bits<2> sz, bits<2> opc, string asm, ZPRRegOp zprty>
 
   let Constraints = "$Zda = $_Zda";
   let ElementSize = zprty.ElementSize;
+  let DestructiveInstType = DestructiveTernaryCommWithRev;
 }
 
 multiclass sve_fp_3op_p_zds_a<bits<2> opc, string asm, string Ps,
                               SDPatternOperator op, string revname,
                               bit isReverseInstr=0> {
-  let DestructiveInstType = DestructiveTernaryCommWithRev in {
   def _H : sve_fp_3op_p_zds_a<0b01, opc, asm, ZPR16>,
            SVEPseudo2Instr<Ps # _H, 1>, SVEInstr2Rev<NAME # _H, revname # _H, isReverseInstr>;
   def _S : sve_fp_3op_p_zds_a<0b10, opc, asm, ZPR32>,
            SVEPseudo2Instr<Ps # _S, 1>, SVEInstr2Rev<NAME # _S, revname # _S, isReverseInstr>;
   def _D : sve_fp_3op_p_zds_a<0b11, opc, asm, ZPR64>,
            SVEPseudo2Instr<Ps # _D, 1>, SVEInstr2Rev<NAME # _D, revname # _D, isReverseInstr>;
-  }
 
   def : SVE_4_Op_Pat<nxv8f16, op, nxv8i1, nxv8f16, nxv8f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
   def : SVE_4_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, nxv4f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
@@ -2173,7 +2172,7 @@ multiclass sve_fp_3op_p_zds_zx {
 // SVE Floating Point Multiply-Add - Indexed Group
 //===----------------------------------------------------------------------===//
 
-class sve_fp_fma_by_indexed_elem<bits<2> sz, bit opc, string asm,
+class sve_fp_fma_by_indexed_elem<bits<2> sz, bits<2> opc, string asm,
                                  ZPRRegOp zprty1,
                                  ZPRRegOp zprty2, Operand itype>
 : I<(outs zprty1:$Zda), (ins zprty1:$_Zda, zprty1:$Zn, zprty2:$Zm, itype:$iop),
@@ -2183,8 +2182,8 @@ class sve_fp_fma_by_indexed_elem<bits<2> sz, bit opc, string asm,
   let Inst{31-24} = 0b01100100;
   let Inst{23-22} = sz;
   let Inst{21}    = 0b1;
-  let Inst{15-11} = 0;
-  let Inst{10}    = opc;
+  let Inst{15-12} = 0b0000;
+  let Inst{11-10} = opc;
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zda;
 
@@ -2193,7 +2192,18 @@ class sve_fp_fma_by_indexed_elem<bits<2> sz, bit opc, string asm,
   let ElementSize = ElementSizeNone;
 }
 
-multiclass sve_fp_fma_by_indexed_elem<bit opc, string asm,
+multiclass sve2p1_fp_bfma_by_indexed_elem<string asm, bits<2> opc> {
+  def NAME : sve_fp_fma_by_indexed_elem<{0, ?}, opc, asm, ZPR16, ZPR3b16,
+                                         VectorIndexH32b> {
+    bits<3> Zm;
+    bits<3> iop;
+    let Inst{22} = iop{2};
+    let Inst{20-19} = iop{1-0};
+    let Inst{18-16} = Zm;
+  }
+}
+
+multiclass sve_fp_fma_by_indexed_elem<bits<2> opc, string asm,
                                       SDPatternOperator op> {
   def _H : sve_fp_fma_by_indexed_elem<{0, ?}, opc, asm, ZPR16, ZPR3b16, VectorIndexH32b> {
     bits<3> Zm;
@@ -2228,8 +2238,8 @@ multiclass sve_fp_fma_by_indexed_elem<bit opc, string asm,
 // SVE Floating Point Multiply - Indexed Group
 //===----------------------------------------------------------------------===//
 
-class sve_fp_fmul_by_indexed_elem<bits<2> sz, string asm, ZPRRegOp zprty,
-                                      ZPRRegOp zprty2, Operand itype>
+class sve_fp_fmul_by_indexed_elem<bits<2> sz, bit o2, string asm, ZPRRegOp zprty,
+                                  ZPRRegOp zprty2, Operand itype>
 : I<(outs zprty:$Zd), (ins zprty:$Zn, zprty2:$Zm, itype:$iop),
   asm, "\t$Zd, $Zn, $Zm$iop", "", []>, Sched<[]> {
   bits<5> Zd;
@@ -2237,26 +2247,38 @@ class sve_fp_fmul_by_indexed_elem<bits<2> sz, string asm, ZPRRegOp zprty,
   let Inst{31-24} = 0b01100100;
   let Inst{23-22} = sz;
   let Inst{21}    = 0b1;
-  let Inst{15-10} = 0b001000;
+  let Inst{15-12} = 0b0010;
+  let Inst{11}    = o2;
+  let Inst{10}    = 0b0;
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zd;
 }
 
-multiclass sve_fp_fmul_by_indexed_elem<string asm, SDPatternOperator op> {
-  def _H : sve_fp_fmul_by_indexed_elem<{0, ?}, asm, ZPR16, ZPR3b16, VectorIndexH32b> {
+multiclass sve2p1_fp_bfmul_by_indexed_elem<string asm> {
+  def NAME : sve_fp_fmul_by_indexed_elem<{0, ?}, 0b1, asm, ZPR16, ZPR3b16, VectorIndexH32b> {
     bits<3> Zm;
     bits<3> iop;
     let Inst{22} = iop{2};
     let Inst{20-19} = iop{1-0};
     let Inst{18-16} = Zm;
   }
-  def _S : sve_fp_fmul_by_indexed_elem<0b10, asm, ZPR32, ZPR3b32, VectorIndexS32b> {
+}
+
+multiclass sve_fp_fmul_by_indexed_elem<string asm, SDPatternOperator op> {
+  def _H : sve_fp_fmul_by_indexed_elem<{0, ?}, 0b0, asm, ZPR16, ZPR3b16, VectorIndexH32b> {
+    bits<3> Zm;
+    bits<3> iop;
+    let Inst{22} = iop{2};
+    let Inst{20-19} = iop{1-0};
+    let Inst{18-16} = Zm;
+  }
+  def _S : sve_fp_fmul_by_indexed_elem<0b10, 0b0, asm, ZPR32, ZPR3b32, VectorIndexS32b> {
     bits<3> Zm;
     bits<2> iop;
     let Inst{20-19} = iop;
     let Inst{18-16} = Zm;
   }
-  def _D : sve_fp_fmul_by_indexed_elem<0b11, asm, ZPR64, ZPR4b64, VectorIndexD32b> {
+  def _D : sve_fp_fmul_by_indexed_elem<0b11, 0b0, asm, ZPR64, ZPR4b64, VectorIndexD32b> {
     bits<4> Zm;
     bit iop;
     let Inst{20} = iop;
