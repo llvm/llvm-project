@@ -1373,7 +1373,7 @@ LogicalResult PerformConcurrentlyOp::verify() {
     // Verify that inserts are into out block arguments.
     Value dest = cast<tensor::ParallelInsertSliceOp>(op).getDest();
     ArrayRef<BlockArgument> regionOutArgs = foreachThreadOp.getRegionOutArgs();
-    if (llvm::find(regionOutArgs, dest) == regionOutArgs.end())
+    if (!llvm::is_contained(regionOutArgs, dest))
       return op.emitOpError("may only insert into an output block argument");
   }
   return success();
