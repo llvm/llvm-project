@@ -94,11 +94,13 @@ func.func @sparse_convert_1d_ss(%arg0: tensor<?xf32, #SparseVector64>) -> tensor
 //      CHECK-RWT:  %[[V:.*]] = sparse_tensor.values %[[A]]
 //      CHECK-RWT:  sparse_tensor.sort %[[NNZ]], %[[I0]] jointly %[[V]]
 //      CHECK-RWT:  %[[DST:.*]] = bufferization.alloc_tensor(%[[D]])
-//      CHECK-RWT:  sparse_tensor.foreach in %[[A]]
-//      CHECK-RWT:  ^bb0(%[[FI2:.*]]: index, %[[FV2:.*]]: f32):
-//      CHECK-RWT:    sparse_tensor.insert %[[FV2]] into %[[DST]]{{\[}}%[[FI2]]]
+//      CHECK-RWT:  %[[RET:.*]] = sparse_tensor.foreach in %[[A]] init(%[[DST]])
+//      CHECK-RWT:  ^bb0(%[[FI2:.*]]: index, %[[FV2:.*]]: f32, %[[T:.*]]: tensor<?xf32,
+//      CHECK-RWT:    %[[I:.*]] = sparse_tensor.insert %[[FV2]] into %[[T]]{{\[}}%[[FI2]]]
+//      CHECK-RWT:    sparse_tensor.yield %[[I]]
 //      CHECK-RWT:  }
-//      CHECK-RWT:  %[[R:.*]] = sparse_tensor.convert %[[DST]]
+//      CHECK-RWT:  %[[T:.*]] = sparse_tensor.load %[[RET]] hasInserts
+//      CHECK-RWT:  %[[R:.*]] = sparse_tensor.convert %[[T]]
 //      CHECK-RWT:  return %[[R]] : tensor<?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ], pointerBitWidth = 32, indexBitWidth = 32 }>>
 func.func @sparse_convert(%arg0: tensor<?xf32, #SparseVector64>) -> tensor<?xf32, #SparseVector32> {
   %0 = sparse_tensor.convert %arg0 : tensor<?xf32, #SparseVector64> to tensor<?xf32, #SparseVector32>
