@@ -380,8 +380,8 @@ public:
       ArrayRef<size_t> dims, bool needsUniv, MutableArrayRef<Value> reduc = {},
       ArrayRef<size_t> extraTids = {}, ArrayRef<size_t> extraDims = {});
 
-  void exitCurrentLoop(RewriterBase &rewriter, Location loc,
-                       MutableArrayRef<Value> reduc = {});
+  SmallVector<Value, 2> exitCurrentLoop(OpBuilder &builder, Location loc,
+                                        ArrayRef<Value> reduc = {});
 
   /// Returns the array of coordinate for all the loop generated till now.
   void getCoordinateArray(SmallVectorImpl<Value> &coords) const {
@@ -452,35 +452,17 @@ private:
                                             ArrayRef<size_t> dims);
 
   /// Exits a for loop, returns the reduction results, e.g.,
-  /// For sequential for loops:
   /// %ret = for () {
   ///   ...
-  ///   %val = addi %args, %c
   ///   yield %val
   /// }
-  /// For parallel loops, the following generated code by users:
-  /// %ret = parallel () init(%args) {
-  ///   ...
-  ///   %val = op %args, %c
-  /// }
-  /// will be transformed into
-  /// %ret = parallel () init(%args) {
-  ///   ...
-  ///   scf.reduce(%c) bb0(%0, %1){
-  ///     %val = op %0, %1
-  ///     scf.reduce.return %val
-  ///   }
-  /// }
-  /// NOTE: only one instruction will be moved into reduce block, transformation
-  /// will fail if multiple instructions are used to compute the reduction
-  /// value.
-  /// Return %ret to user, while %val is provided by users (`reduc`).
-  void exitForLoop(RewriterBase &rewriter, Location loc,
-                   MutableArrayRef<Value> reduc);
+  /// Return %ret to user, while %val is provided by users (`reduc`)
+  SmallVector<Value, 2> exitForLoop(OpBuilder &builder, Location loc,
+                                    ArrayRef<Value> reduc);
 
   /// Exits a while loop, returns the reduction results.
-  void exitCoIterationLoop(OpBuilder &builder, Location loc,
-                           MutableArrayRef<Value> reduc);
+  SmallVector<Value, 2> exitCoiterationLoop(OpBuilder &builder, Location loc,
+                                            ArrayRef<Value> reduc);
 
   // Whether the loop emitter needs to treat the last tensor as the output
   // tensor.

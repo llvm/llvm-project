@@ -4,16 +4,6 @@
 // RUN:  -e entry -entry-point-result=void  \
 // RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
-//
-// Do the same run, but now with parallelization.
-//
-// RUN: mlir-opt %s \
-// RUN:   --sparse-compiler="parallelization-strategy=any-storage-any-loop" | \
-// RUN: TENSOR0="%mlir_src_dir/test/Integration/data/wide.mtx" \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
 
 !Filename = !llvm.ptr<i8>
 
