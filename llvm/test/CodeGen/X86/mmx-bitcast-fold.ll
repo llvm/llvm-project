@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=x86_64-- -early-cse -earlycse-debug-hash < %s -S | FileCheck %s
+; RUN: opt -mtriple=x86_64-- -passes=early-cse -earlycse-debug-hash < %s -S | FileCheck %s
 
 ; CHECK: @foo(x86_mmx bitcast (double 0.000000e+00 to x86_mmx))
 
