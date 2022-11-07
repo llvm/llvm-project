@@ -9,7 +9,7 @@ define void @fextr(i16* %ptr) {
 ; CHECK-NEXT:    br label [[T:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i16, i16* [[PTR:%.*]], i64 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i16> [[LD]], <8 x i16> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i16> [[LD]], <8 x i16> poison, <8 x i32> <i32 0, i32 undef, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP0:%.*]] = add <8 x i16> [[LD]], [[SHUFFLE]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16* [[P0]] to <8 x i16>*
 ; CHECK-NEXT:    store <8 x i16> [[TMP0]], <8 x i16>* [[TMP1]], align 2

@@ -769,11 +769,11 @@ define float @extra_args(float* nocapture readonly %x, i32 %a, i32 %b) {
 ; THRESHOLD-NEXT:    [[TMP2:%.*]] = call fast float @llvm.vector.reduce.fadd.v8f32(float -0.000000e+00, <8 x float> [[TMP1]])
 ; THRESHOLD-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> <float poison, float 3.000000e+00>, float [[TMP2]], i32 0
 ; THRESHOLD-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> poison, float [[CONV]], i32 0
-; THRESHOLD-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <2 x i32> zeroinitializer
-; THRESHOLD-NEXT:    [[TMP5:%.*]] = fadd fast <2 x float> [[TMP3]], [[SHUFFLE]]
-; THRESHOLD-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP5]], i32 0
-; THRESHOLD-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP5]], i32 1
-; THRESHOLD-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[TMP6]], [[TMP7]]
+; THRESHOLD-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[TMP4]], float [[CONV]], i32 1
+; THRESHOLD-NEXT:    [[TMP6:%.*]] = fadd fast <2 x float> [[TMP3]], [[TMP5]]
+; THRESHOLD-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP6]], i32 0
+; THRESHOLD-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP6]], i32 1
+; THRESHOLD-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[TMP7]], [[TMP8]]
 ; THRESHOLD-NEXT:    ret float [[OP_RDX2]]
 ;
   entry:
@@ -897,11 +897,11 @@ define float @extra_args_no_replace(float* nocapture readonly %x, i32 %a, i32 %b
 ; THRESHOLD-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
 ; THRESHOLD-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[CONVC]], i32 1
 ; THRESHOLD-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[CONV]], i32 0
-; THRESHOLD-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP5]], <2 x float> poison, <2 x i32> zeroinitializer
-; THRESHOLD-NEXT:    [[TMP6:%.*]] = fadd fast <2 x float> [[TMP4]], [[SHUFFLE]]
-; THRESHOLD-NEXT:    [[TMP7:%.*]] = extractelement <2 x float> [[TMP6]], i32 0
-; THRESHOLD-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP6]], i32 1
-; THRESHOLD-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[TMP7]], [[TMP8]]
+; THRESHOLD-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[CONV]], i32 1
+; THRESHOLD-NEXT:    [[TMP7:%.*]] = fadd fast <2 x float> [[TMP4]], [[TMP6]]
+; THRESHOLD-NEXT:    [[TMP8:%.*]] = extractelement <2 x float> [[TMP7]], i32 0
+; THRESHOLD-NEXT:    [[TMP9:%.*]] = extractelement <2 x float> [[TMP7]], i32 1
+; THRESHOLD-NEXT:    [[OP_RDX2:%.*]] = fadd fast float [[TMP8]], [[TMP9]]
 ; THRESHOLD-NEXT:    [[OP_RDX3:%.*]] = fadd fast float [[OP_RDX2]], 3.000000e+00
 ; THRESHOLD-NEXT:    ret float [[OP_RDX3]]
 ;

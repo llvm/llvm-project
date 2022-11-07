@@ -9,17 +9,17 @@ define { i64, i64 } @patatino(double %arg) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, <2 x double>* bitcast ([6 x double]* @global to <2 x double>*), align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, <2 x double>* bitcast (double* getelementptr inbounds ([6 x double], [6 x double]* @global, i64 0, i64 2) to <2 x double>*), align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[ARG:%.*]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP1]], [[SHUFFLE]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP0]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x double>, <2 x double>* bitcast (double* getelementptr inbounds ([6 x double], [6 x double]* @global, i64 0, i64 4) to <2 x double>*), align 16
-; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = fptosi <2 x double> [[TMP6]] to <2 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = sext <2 x i32> [[TMP7]] to <2 x i64>
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP8]], i32 0
-; CHECK-NEXT:    [[T16:%.*]] = insertvalue { i64, i64 } undef, i64 [[TMP9]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP8]], i32 1
-; CHECK-NEXT:    [[T17:%.*]] = insertvalue { i64, i64 } [[T16]], i64 [[TMP10]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[ARG]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP0]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, <2 x double>* bitcast (double* getelementptr inbounds ([6 x double], [6 x double]* @global, i64 0, i64 4) to <2 x double>*), align 16
+; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fptosi <2 x double> [[TMP7]] to <2 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <2 x i32> [[TMP8]] to <2 x i64>
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP9]], i32 0
+; CHECK-NEXT:    [[T16:%.*]] = insertvalue { i64, i64 } undef, i64 [[TMP10]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[TMP9]], i32 1
+; CHECK-NEXT:    [[T17:%.*]] = insertvalue { i64, i64 } [[T16]], i64 [[TMP11]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[T17]]
 ;
 bb:

@@ -11,12 +11,12 @@ define i32 @fn1() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64*, i64** @a, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64*> poison, i64* [[TMP0]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i64*> [[TMP1]], <2 x i64*> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, <2 x i64*> [[SHUFFLE]], <2 x i64> <i64 11, i64 56>
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint <2 x i64*> [[TMP2]] to <2 x i64>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64*> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64* [[TMP4]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP3]], <2 x i64>* [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64*> [[TMP1]], i64* [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, <2 x i64*> [[TMP2]], <2 x i64> <i64 11, i64 56>
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x i64*> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64*> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64* [[TMP5]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[TMP6]], align 8
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:
@@ -94,15 +94,15 @@ define void @externally_used_ptrs() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64*, i64** @a, align 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64*> poison, i64* [[TMP0]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i64*> [[TMP1]], <2 x i64*> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, <2 x i64*> [[SHUFFLE]], <2 x i64> <i64 56, i64 11>
-; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint <2 x i64*> [[TMP2]] to <2 x i64>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64*> [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64* [[TMP4]] to <2 x i64>*
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x i64>, <2 x i64>* [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i64> [[TMP3]], [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i64* [[TMP4]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP7]], <2 x i64>* [[TMP8]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i64*> [[TMP1]], i64* [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, <2 x i64*> [[TMP2]], <2 x i64> <i64 56, i64 11>
+; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint <2 x i64*> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64*> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64* [[TMP5]] to <2 x i64>*
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i64>, <2 x i64>* [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = add <2 x i64> [[TMP4]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i64* [[TMP5]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP8]], <2 x i64>* [[TMP9]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
