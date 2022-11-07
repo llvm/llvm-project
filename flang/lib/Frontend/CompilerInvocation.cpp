@@ -944,8 +944,18 @@ void CompilerInvocation::setSemanticsOpts(
 /// Set \p loweringOptions controlling lowering behavior based
 /// on the \p optimizationLevel.
 void CompilerInvocation::setLoweringOptions() {
-  const auto &codegenOpts = getCodeGenOpts();
+  const CodeGenOptions &codegenOpts = getCodeGenOpts();
 
   // Lower TRANSPOSE as a runtime call under -O0.
   loweringOpts.setOptimizeTranspose(codegenOpts.OptimizationLevel > 0);
+
+  const LangOptions &langOptions = getLangOpts();
+  Fortran::common::MathOptionsBase &mathOpts = loweringOpts.getMathOptions();
+  // TODO: when LangOptions are finalized, we can represent
+  //       the math related options using Fortran::commmon::MathOptionsBase,
+  //       so that we can just copy it into LoweringOptions.
+  mathOpts
+      .setFPContractEnabled(langOptions.getFPContractMode() ==
+                            LangOptions::FPM_Fast)
+      .setNoHonorInfs(langOptions.NoHonorInfs);
 }
