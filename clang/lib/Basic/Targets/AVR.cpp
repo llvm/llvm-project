@@ -29,11 +29,13 @@ struct LLVM_LIBRARY_VISIBILITY MCUInfo {
 
 // NOTE: This list has been synchronized with gcc-avr 5.4.0 and avr-libc 2.0.0.
 static MCUInfo AVRMcus[] = {
+    {"avr1", NULL, 0, false},
     {"at90s1200", "__AVR_AT90S1200__", 0, false},
     {"attiny11", "__AVR_ATtiny11__", 0, false},
     {"attiny12", "__AVR_ATtiny12__", 0, false},
     {"attiny15", "__AVR_ATtiny15__", 0, false},
     {"attiny28", "__AVR_ATtiny28__", 0, false},
+    {"avr2", NULL, 1, false},
     {"at90s2313", "__AVR_AT90S2313__", 1, false},
     {"at90s2323", "__AVR_AT90S2323__", 1, false},
     {"at90s2333", "__AVR_AT90S2333__", 1, false},
@@ -47,6 +49,7 @@ static MCUInfo AVRMcus[] = {
     {"at90s8515", "__AVR_AT90S8515__", 1, false},
     {"at90c8534", "__AVR_AT90c8534__", 1, false},
     {"at90s8535", "__AVR_AT90S8535__", 1, false},
+    {"avr25", NULL, 1, false},
     {"ata5272", "__AVR_ATA5272__", 1, false},
     {"ata6616c", "__AVR_ATA6616c__", 1, false},
     {"attiny13", "__AVR_ATtiny13__", 1, false},
@@ -76,10 +79,13 @@ static MCUInfo AVRMcus[] = {
     {"attiny48", "__AVR_ATtiny48__", 1, false},
     {"attiny88", "__AVR_ATtiny88__", 1, false},
     {"attiny828", "__AVR_ATtiny828__", 1, false},
+    {"avr3", NULL, 1, false},
     {"at43usb355", "__AVR_AT43USB355__", 1, false},
     {"at76c711", "__AVR_AT76C711__", 1, false},
+    {"avr31", NULL, 1, false},
     {"atmega103", "__AVR_ATmega103__", 1, false},
     {"at43usb320", "__AVR_AT43USB320__", 1, false},
+    {"avr35", NULL, 1, false},
     {"attiny167", "__AVR_ATtiny167__", 1, false},
     {"at90usb82", "__AVR_AT90USB82__", 1, false},
     {"at90usb162", "__AVR_AT90USB162__", 1, false},
@@ -90,6 +96,7 @@ static MCUInfo AVRMcus[] = {
     {"atmega16u2", "__AVR_ATmega16U2__", 1, false},
     {"atmega32u2", "__AVR_ATmega32U2__", 1, false},
     {"attiny1634", "__AVR_ATtiny1634__", 1, false},
+    {"avr4", NULL, 1, false},
     {"atmega8", "__AVR_ATmega8__", 1, false},
     {"ata6289", "__AVR_ATA6289__", 1, false},
     {"atmega8a", "__AVR_ATmega8A__", 1, false},
@@ -115,6 +122,7 @@ static MCUInfo AVRMcus[] = {
     {"at90pwm3", "__AVR_AT90PWM3__", 1, false},
     {"at90pwm3b", "__AVR_AT90PWM3B__", 1, false},
     {"at90pwm81", "__AVR_AT90PWM81__", 1, false},
+    {"avr5", NULL, 1, false},
     {"ata5702m322", "__AVR_ATA5702M322__", 1, false},
     {"ata5782", "__AVR_ATA5782__", 1, false},
     {"ata5790", "__AVR_ATA5790__", 1, false},
@@ -221,6 +229,7 @@ static MCUInfo AVRMcus[] = {
     {"at90scr100", "__AVR_AT90SCR100__", 1, false},
     {"at94k", "__AVR_AT94K__", 1, false},
     {"m3000", "__AVR_AT000__", 1, false},
+    {"avr51", NULL, 2, false},
     {"atmega128", "__AVR_ATmega128__", 2, false},
     {"atmega128a", "__AVR_ATmega128A__", 2, false},
     {"atmega1280", "__AVR_ATmega1280__", 2, false},
@@ -233,10 +242,12 @@ static MCUInfo AVRMcus[] = {
     {"at90can128", "__AVR_AT90CAN128__", 2, false},
     {"at90usb1286", "__AVR_AT90USB1286__", 2, false},
     {"at90usb1287", "__AVR_AT90USB1287__", 2, false},
+    {"avr6", NULL, 4, false},
     {"atmega2560", "__AVR_ATmega2560__", 4, false},
     {"atmega2561", "__AVR_ATmega2561__", 4, false},
     {"atmega256rfr2", "__AVR_ATmega256RFR2__", 4, false},
     {"atmega2564rfr2", "__AVR_ATmega2564RFR2__", 4, false},
+    {"avrxmega2", NULL, 1, false},
     {"atxmega16a4", "__AVR_ATxmega16A4__", 1, false},
     {"atxmega16a4u", "__AVR_ATxmega16A4U__", 1, false},
     {"atxmega16c4", "__AVR_ATxmega16C4__", 1, false},
@@ -250,6 +261,7 @@ static MCUInfo AVRMcus[] = {
     {"atxmega32e5", "__AVR_ATxmega32E5__", 1, false},
     {"atxmega16e5", "__AVR_ATxmega16E5__", 1, false},
     {"atxmega8e5", "__AVR_ATxmega8E5__", 1, false},
+    {"avrxmega4", NULL, 1, false},
     {"atxmega64a3", "__AVR_ATxmega64A3__", 1, false},
     {"atxmega64a3u", "__AVR_ATxmega64A3U__", 1, false},
     {"atxmega64a4u", "__AVR_ATxmega64A4U__", 1, false},
@@ -258,8 +270,10 @@ static MCUInfo AVRMcus[] = {
     {"atxmega64c3", "__AVR_ATxmega64C3__", 1, false},
     {"atxmega64d3", "__AVR_ATxmega64D3__", 1, false},
     {"atxmega64d4", "__AVR_ATxmega64D4__", 1, false},
+    {"avrxmega5", NULL, 1, false},
     {"atxmega64a1", "__AVR_ATxmega64A1__", 1, false},
     {"atxmega64a1u", "__AVR_ATxmega64A1U__", 1, false},
+    {"avrxmega6", NULL, 6, false},
     {"atxmega128a3", "__AVR_ATxmega128A3__", 2, false},
     {"atxmega128a3u", "__AVR_ATxmega128A3U__", 2, false},
     {"atxmega128b1", "__AVR_ATxmega128B1__", 2, false},
@@ -279,9 +293,11 @@ static MCUInfo AVRMcus[] = {
     {"atxmega256d3", "__AVR_ATxmega256D3__", 4, false},
     {"atxmega384c3", "__AVR_ATxmega384C3__", 6, false},
     {"atxmega384d3", "__AVR_ATxmega384D3__", 6, false},
+    {"avrxmega7", NULL, 2, false},
     {"atxmega128a1", "__AVR_ATxmega128A1__", 2, false},
     {"atxmega128a1u", "__AVR_ATxmega128A1U__", 2, false},
     {"atxmega128a4u", "__AVR_ATxmega128A4U__", 2, false},
+    {"avrtiny", NULL, 0, true},
     {"attiny4", "__AVR_ATtiny4__", 0, true},
     {"attiny5", "__AVR_ATtiny5__", 0, true},
     {"attiny9", "__AVR_ATtiny9__", 0, true},
@@ -290,6 +306,7 @@ static MCUInfo AVRMcus[] = {
     {"attiny40", "__AVR_ATtiny40__", 0, true},
     {"attiny102", "__AVR_ATtiny102__", 0, true},
     {"attiny104", "__AVR_ATtiny104__", 0, true},
+    {"avrxmega3", NULL, 1, false},
     {"attiny202", "__AVR_ATtiny202__", 1, false},
     {"attiny402", "__AVR_ATtiny402__", 1, false},
     {"attiny204", "__AVR_ATtiny204__", 1, false},
@@ -331,40 +348,25 @@ static MCUInfo AVRMcus[] = {
 } // namespace targets
 } // namespace clang
 
-static constexpr llvm::StringLiteral ValidFamilyNames[] = {
-    "avr1",      "avr2",      "avr25",     "avr3",      "avr31",
-    "avr35",     "avr4",      "avr5",      "avr51",     "avr6",
-    "avrxmega1", "avrxmega2", "avrxmega3", "avrxmega4", "avrxmega5",
-    "avrxmega6", "avrxmega7", "avrtiny"};
-
 bool AVRTargetInfo::isValidCPUName(StringRef Name) const {
-  bool IsFamily = llvm::is_contained(ValidFamilyNames, Name);
-
-  bool IsMCU = llvm::any_of(
+  return llvm::any_of(
       AVRMcus, [&](const MCUInfo &Info) { return Info.Name == Name; });
-  return IsFamily || IsMCU;
 }
 
 void AVRTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
-  Values.append(std::begin(ValidFamilyNames), std::end(ValidFamilyNames));
   for (const MCUInfo &Info : AVRMcus)
     Values.push_back(Info.Name);
 }
 
 bool AVRTargetInfo::setCPU(const std::string &Name) {
-  // Set the ABI and CPU fields if parameter Name is a family name.
-  if (llvm::is_contained(ValidFamilyNames, Name)) {
-    CPU = Name;
-    ABI = Name == "avrtiny" ? "avrtiny" : "avr";
-    return true;
-  }
-
-  // Set the ABI field if parameter Name is a device name.
+  // Set the ABI field based on the device or family name.
   auto It = llvm::find_if(
       AVRMcus, [&](const MCUInfo &Info) { return Info.Name == Name; });
   if (It != std::end(AVRMcus)) {
     CPU = Name;
     ABI = It->IsTiny ? "avrtiny" : "avr";
+    DefineName = It->DefineName;
+    NumFlashBanks = It->NumFlashBanks;
     return true;
   }
 
@@ -382,24 +384,19 @@ void AVRTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (ABI == "avrtiny")
     Builder.defineMacro("__AVR_TINY__", "1");
 
-  if (!this->CPU.empty()) {
-    auto It = llvm::find_if(
-        AVRMcus, [&](const MCUInfo &Info) { return Info.Name == this->CPU; });
+  if (DefineName.size() != 0)
+      Builder.defineMacro(DefineName);
 
-    if (It != std::end(AVRMcus)) {
-      Builder.defineMacro(It->DefineName);
-      if (It->NumFlashBanks >= 1)
-        Builder.defineMacro("__flash", "__attribute__((address_space(1)))");
-      if (It->NumFlashBanks >= 2)
-        Builder.defineMacro("__flash1", "__attribute__((address_space(2)))");
-      if (It->NumFlashBanks >= 3)
-        Builder.defineMacro("__flash2", "__attribute__((address_space(3)))");
-      if (It->NumFlashBanks >= 4)
-        Builder.defineMacro("__flash3", "__attribute__((address_space(4)))");
-      if (It->NumFlashBanks >= 5)
-        Builder.defineMacro("__flash4", "__attribute__((address_space(5)))");
-      if (It->NumFlashBanks >= 6)
-        Builder.defineMacro("__flash5", "__attribute__((address_space(6)))");
-    }
-  }
+  if (NumFlashBanks >= 1)
+    Builder.defineMacro("__flash", "__attribute__((address_space(1)))");
+  if (NumFlashBanks >= 2)
+    Builder.defineMacro("__flash1", "__attribute__((address_space(2)))");
+  if (NumFlashBanks >= 3)
+    Builder.defineMacro("__flash2", "__attribute__((address_space(3)))");
+  if (NumFlashBanks >= 4)
+    Builder.defineMacro("__flash3", "__attribute__((address_space(4)))");
+  if (NumFlashBanks >= 5)
+    Builder.defineMacro("__flash4", "__attribute__((address_space(5)))");
+  if (NumFlashBanks >= 6)
+    Builder.defineMacro("__flash5", "__attribute__((address_space(6)))");
 }
