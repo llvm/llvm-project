@@ -49,6 +49,10 @@ void findDbgUsers(SmallVectorImpl<DbgVariableIntrinsic *> &DbgInsts, Value *V);
 /// Find subprogram that is enclosing this scope.
 DISubprogram *getDISubprogram(const MDNode *Scope);
 
+/// Produce a DebugLoc to use for each dbg.declare that is promoted to a
+/// dbg.value.
+DebugLoc getDebugValueLoc(DbgVariableIntrinsic *DII);
+
 /// Strip debug info in the module if it exists.
 ///
 /// To do this, we remove all calls to the debugger intrinsics and any named
