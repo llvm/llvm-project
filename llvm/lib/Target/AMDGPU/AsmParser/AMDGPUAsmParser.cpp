@@ -3507,7 +3507,7 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(
     return true;
 
   // Check special imm operands (used by madmk, etc)
-  if (AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::imm) != -1) {
+  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::imm)) {
     ++NumLiterals;
     LiteralSize = 4;
   }
@@ -7897,7 +7897,7 @@ void AMDGPUAsmParser::cvtMIMG(MCInst &Inst, const OperandVector &Operands,
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyR128A16);
   if (IsGFX10Plus)
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyA16);
-  if (AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::tfe) != -1)
+  if (AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::tfe))
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyTFE);
   addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyLWE);
   if (!IsGFX10Plus)
@@ -8205,9 +8205,9 @@ void cvtVOP3DstOpSelOnly(MCInst &Inst) {
   const int Ops[] = { AMDGPU::OpName::src0,
                       AMDGPU::OpName::src1,
                       AMDGPU::OpName::src2 };
-  for (SrcNum = 0;
-       SrcNum < 3 && AMDGPU::getNamedOperandIdx(Opc, Ops[SrcNum]) != -1;
-       ++SrcNum);
+  for (SrcNum = 0; SrcNum < 3 && AMDGPU::hasNamedOperand(Opc, Ops[SrcNum]);
+       ++SrcNum)
+    ;
   assert(SrcNum > 0);
 
   unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
@@ -8268,17 +8268,17 @@ void AMDGPUAsmParser::cvtVOP3Interp(MCInst &Inst, const OperandVector &Operands)
     }
   }
 
-  if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::high) != -1) {
-    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyHigh);
-  }
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::high))
+    addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                          AMDGPUOperand::ImmTyHigh);
 
-  if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::clamp) != -1) {
-    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyClampSI);
-  }
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp))
+    addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                          AMDGPUOperand::ImmTyClampSI);
 
-  if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::omod) != -1) {
-    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOModSI);
-  }
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::omod))
+    addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                          AMDGPUOperand::ImmTyOModSI);
 }
 
 void AMDGPUAsmParser::cvtVINTERP(MCInst &Inst, const OperandVector &Operands)
@@ -8351,7 +8351,7 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
 
-  if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers) != -1) {
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src0_modifiers)) {
     // This instruction has src modifiers
     for (unsigned E = Operands.size(); I != E; ++I) {
       AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
@@ -8377,13 +8377,13 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
     }
   }
 
-  if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::clamp) != -1) {
-    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyClampSI);
-  }
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp))
+    addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                          AMDGPUOperand::ImmTyClampSI);
 
-  if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::omod) != -1) {
-    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOModSI);
-  }
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::omod))
+    addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                          AMDGPUOperand::ImmTyOModSI);
 
   // Special case v_mac_{f16, f32} and v_fmac_{f16, f32} (gfx906/gfx10+):
   // it has src2 register operand that is tied to dst operand
@@ -8427,7 +8427,7 @@ void AMDGPUAsmParser::cvtVOP3P(MCInst &Inst, const OperandVector &Operands,
     Inst.addOperand(Inst.getOperand(0));
   }
 
-  if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst_in) != -1) {
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vdst_in)) {
     assert(!IsPacked);
     Inst.addOperand(Inst.getOperand(0));
   }
@@ -8885,7 +8885,7 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
   unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
   bool HasModifiers =
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers) != -1;
+      AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src0_modifiers);
 
   // MAC instructions are special because they have 'old'
   // operand which is not tied to dst (but assumed to be).
@@ -8943,17 +8943,17 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
       llvm_unreachable("unhandled operand type");
     }
   }
-  if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::clamp) != -1) {
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp))
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyClampSI);
-  }
-  if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::omod) != -1) {
+
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::omod))
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOModSI);
-  }
+
   if (Desc.TSFlags & SIInstrFlags::VOP3P)
     cvtVOP3P(Inst, Operands, OptionalIdx);
   else if (Desc.TSFlags & SIInstrFlags::VOP3)
     cvtVOP3OpSel(Inst, Operands, OptionalIdx);
-  else if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel) != -1) {
+  else if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::op_sel)) {
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOpSel);
   }
 
@@ -8966,9 +8966,10 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppRowMask, 0xf);
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppBankMask, 0xf);
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppBoundCtrl);
-    if (AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::fi) != -1) {
-      addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppFi);
-    }
+
+    if (AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::fi))
+      addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                            AMDGPUOperand::ImmTyDppFi);
   }
 }
 
@@ -8977,7 +8978,7 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
 
   unsigned Opc = Inst.getOpcode();
   bool HasModifiers =
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers) != -1;
+      AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src0_modifiers);
   unsigned I = 1;
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
   for (unsigned J = 0; J < Desc.getNumDefs(); ++J) {
@@ -9038,7 +9039,7 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands, bool I
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppRowMask, 0xf);
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppBankMask, 0xf);
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppBoundCtrl);
-    if (AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::fi) != -1) {
+    if (AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::fi)) {
       addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyDppFi);
     }
   }
@@ -9180,41 +9181,38 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
     SkippedVcc = false;
   }
 
-  if (Inst.getOpcode() != AMDGPU::V_NOP_sdwa_gfx10 &&
-      Inst.getOpcode() != AMDGPU::V_NOP_sdwa_gfx9 &&
-      Inst.getOpcode() != AMDGPU::V_NOP_sdwa_vi) {
+  const unsigned Opc = Inst.getOpcode();
+  if (Opc != AMDGPU::V_NOP_sdwa_gfx10 && Opc != AMDGPU::V_NOP_sdwa_gfx9 &&
+      Opc != AMDGPU::V_NOP_sdwa_vi) {
     // v_nop_sdwa_sdwa_vi/gfx9 has no optional sdwa arguments
     switch (BasicInstType) {
     case SIInstrFlags::VOP1:
-      if (AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
-                                     AMDGPU::OpName::clamp) != -1) {
+      if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp))
         addOptionalImmOperand(Inst, Operands, OptionalIdx,
                               AMDGPUOperand::ImmTyClampSI, 0);
-      }
-      if (AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
-                                     AMDGPU::OpName::omod) != -1) {
+
+      if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::omod))
         addOptionalImmOperand(Inst, Operands, OptionalIdx,
                               AMDGPUOperand::ImmTyOModSI, 0);
-      }
-      if (AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
-                                     AMDGPU::OpName::dst_sel) != -1) {
+
+      if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::dst_sel))
         addOptionalImmOperand(Inst, Operands, OptionalIdx,
                               AMDGPUOperand::ImmTySdwaDstSel, SdwaSel::DWORD);
-      }
-      if (AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
-                                     AMDGPU::OpName::dst_unused) != -1) {
+
+      if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::dst_unused))
         addOptionalImmOperand(Inst, Operands, OptionalIdx,
                               AMDGPUOperand::ImmTySdwaDstUnused,
                               DstUnused::UNUSED_PRESERVE);
-      }
+
       addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaSrc0Sel, SdwaSel::DWORD);
       break;
 
     case SIInstrFlags::VOP2:
       addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyClampSI, 0);
-      if (AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::omod) != -1) {
+
+      if (AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::omod))
         addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOModSI, 0);
-      }
+
       addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaDstSel, SdwaSel::DWORD);
       addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaDstUnused, DstUnused::UNUSED_PRESERVE);
       addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaSrc0Sel, SdwaSel::DWORD);
@@ -9222,7 +9220,7 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
       break;
 
     case SIInstrFlags::VOPC:
-      if (AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::clamp) != -1)
+      if (AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::clamp))
         addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyClampSI, 0);
       addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaSrc0Sel, SdwaSel::DWORD);
       addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaSrc1Sel, SdwaSel::DWORD);
