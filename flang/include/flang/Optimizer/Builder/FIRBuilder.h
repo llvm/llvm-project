@@ -16,6 +16,7 @@
 #ifndef FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 #define FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H
 
+#include "flang/Common/MathOptionsBase.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/KindMapping.h"
@@ -408,6 +409,10 @@ public:
   void setFastMathFlags(mlir::arith::FastMathFlags flags) {
     fastMathFlags = flags;
   }
+
+  /// Set default FastMathFlags value from the passed MathOptionsBase
+  /// config.
+  void setFastMathFlags(Fortran::common::MathOptionsBase options);
 
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();

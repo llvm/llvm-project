@@ -15,6 +15,8 @@
 #ifndef FLANG_LOWER_LOWERINGOPTIONS_H
 #define FLANG_LOWER_LOWERINGOPTIONS_H
 
+#include "flang/Common/MathOptionsBase.h"
+
 namespace Fortran::lower {
 
 class LoweringOptionsBase {
@@ -42,6 +44,16 @@ public:
 #include "flang/Lower/LoweringOptions.def"
 
   LoweringOptions();
+
+  const Fortran::common::MathOptionsBase &getMathOptions() const {
+    return MathOptions;
+  }
+
+  Fortran::common::MathOptionsBase &getMathOptions() { return MathOptions; }
+
+private:
+  /// Options for handling/optimizing mathematical computations.
+  Fortran::common::MathOptionsBase MathOptions;
 };
 
 } // namespace Fortran::lower
