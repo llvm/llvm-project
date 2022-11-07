@@ -411,26 +411,6 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>) -> () {
   return
 }
 
-// -----
-
-#DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
-
-// CHECK-LABEL: func @sparse_tensor_foreach(
-//  CHECK-SAME:   %[[A0:.*]]: tensor<2x4xf64, #sparse_tensor.encoding<{{{.*}}}>>, 
-//  CHECK-SAME:   %[[A1:.*]]: f32
-//  CHECK-NEXT:   %[[RET:.*]] = sparse_tensor.foreach in %[[A0]] init(%[[A1]])
-//  CHECK-NEXT:    ^bb0(%[[TMP_1:.*]]: index, %[[TMP_2:.*]]: index, %[[TMP_v:.*]]: f64, %[[TMP_r:.*]]: f32)
-//       CHECK:      sparse_tensor.yield %[[TMP_r]] : f32
-//       CHECK:  }
-func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> () {
-  %ret = sparse_tensor.foreach in %arg0 init(%arg1): tensor<2x4xf64, #DCSR>, f32 -> f32
-  do {
-    ^bb0(%1: index, %2: index, %v: f64, %r: f32) : 
-      sparse_tensor.yield %r : f32
-  }
-  return
-}
-
 // ----
 
 // CHECK-LABEL: func @sparse_sort_1d0v(

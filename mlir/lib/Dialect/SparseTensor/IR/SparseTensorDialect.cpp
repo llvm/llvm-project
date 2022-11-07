@@ -581,20 +581,11 @@ LogicalResult CompressOp::verify() {
 
 void ForeachOp::build(
     OpBuilder &builder, OperationState &result, Value tensor,
-    function_ref<void(OpBuilder &, Location, ValueRange, Value, ValueRange)>
-        bodyBuilder) {
-  build(builder, result, tensor, llvm::None, bodyBuilder);
-}
-
-void ForeachOp::build(
-    OpBuilder &builder, OperationState &result, Value tensor,
-    ValueRange initArgs,
-    function_ref<void(OpBuilder &, Location, ValueRange, Value, ValueRange)>
-        bodyBuilder) {
-  build(builder, result, initArgs.getTypes(), tensor, initArgs);
-  // Builds foreach body.
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
+  build(builder, result, tensor);
   if (!bodyBuilder)
     return;
+
   auto rtp = tensor.getType().cast<RankedTensorType>();
   int64_t rank = rtp.getRank();
 
@@ -611,30 +602,15 @@ void ForeachOp::build(
   auto &region = *result.regions.front();
   Block *bodyBlock =
       builder.createBlock(&region, region.end(), blockArgTypes, blockArgLocs);
-  bodyBuilder(builder, result.location,
-              bodyBlock->getArguments().slice(0, rank),
-              bodyBlock->getArguments()[rank],
-              bodyBlock->getArguments().drop_front(rank + 1));
+  bodyBuilder(builder, result.location, bodyBlock->getArguments());
 }
 
 LogicalResult ForeachOp::verify() {
   auto t = getTensor().getType().cast<RankedTensorType>();
   auto args = getBody()->getArguments();
 
-  if (static_cast<size_t>(t.getRank()) + 1 + getInitArgs().size() !=
-      args.size())
+  if (static_cast<size_t>(t.getRank()) + 1 != args.size())
     return emitError("Unmatched number of arguments in the block");
-
-  if (getNumResults() != getInitArgs().size())
-    return emitError("Mismatch in number of init arguments and results");
-
-  if (getResultTypes() != getInitArgs().getTypes())
-    return emitError("Mismatch in types of init arguments and results");
-
-  auto yield = cast<YieldOp>(getBody()->getTerminator());
-  if (yield.getNumOperands() != getNumResults() ||
-      yield.getOperands().getTypes() != getResultTypes())
-    return emitError("Mismatch in types of yield values and results");
 
   for (int64_t i = 0, e = t.getRank(); i < e; i++)
     if (args[i].getType() != IndexType::get(getContext()))
@@ -642,7 +618,7 @@ LogicalResult ForeachOp::verify() {
           llvm::formatv("Expecting Index type for argument at index {0}", i));
 
   auto elemTp = t.getElementType();
-  auto valueTp = args[t.getRank()].getType();
+  auto valueTp = args.back().getType();
   if (elemTp != valueTp)
     emitError(llvm::formatv("Unmatched element type between input tensor and "
                             "block argument, expected:{0}, got: {1}",
