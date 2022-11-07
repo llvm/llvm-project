@@ -138,18 +138,6 @@ DISubprogram *llvm::getDISubprogram(const MDNode *Scope) {
   return nullptr;
 }
 
-DebugLoc llvm::getDebugValueLoc(DbgVariableIntrinsic *DII) {
-  // Original dbg.declare must have a location.
-  const DebugLoc &DeclareLoc = DII->getDebugLoc();
-  MDNode *Scope = DeclareLoc.getScope();
-  DILocation *InlinedAt = DeclareLoc.getInlinedAt();
-  // Because no machine insts can come from debug intrinsics, only the scope
-  // and inlinedAt is significant. Zero line numbers are used in case this
-  // DebugLoc leaks into any adjacent instructions. Produce an unknown location
-  // with the correct scope / inlinedAt fields.
-  return DILocation::get(DII->getContext(), 0, 0, Scope, InlinedAt);
-}
-
 //===----------------------------------------------------------------------===//
 // DebugInfoFinder implementations.
 //===----------------------------------------------------------------------===//
