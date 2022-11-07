@@ -94,19 +94,19 @@ define i1 @fcmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[B]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[MUL]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = fdiv <2 x double> [[TMP4]], [[SHUFFLE]]
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP6]], i32 1
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[TMP7]], 0x3EB0C6F7A0B5ED8D
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP6]], i32 0
-; CHECK-NEXT:    [[CMP4:%.*]] = fcmp olt double [[TMP8]], 0x3EB0C6F7A0B5ED8D
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[MUL]], i32 1
+; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP7]], i32 1
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt double [[TMP8]], 0x3EB0C6F7A0B5ED8D
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP7]], i32 0
+; CHECK-NEXT:    [[CMP4:%.*]] = fcmp olt double [[TMP9]], 0x3EB0C6F7A0B5ED8D
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP]], [[CMP4]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[CLEANUP:%.*]], label [[LOR_LHS_FALSE:%.*]]
 ; CHECK:       lor.lhs.false:
-; CHECK-NEXT:    [[TMP9:%.*]] = fcmp ule <2 x double> [[TMP6]], <double 1.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP9]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP9]], i32 1
-; CHECK-NEXT:    [[NOT_OR_COND9:%.*]] = or i1 [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fcmp ule <2 x double> [[TMP7]], <double 1.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP10]], i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP10]], i32 1
+; CHECK-NEXT:    [[NOT_OR_COND9:%.*]] = or i1 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    ret i1 [[NOT_OR_COND9]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    ret i1 false
@@ -143,12 +143,12 @@ define i1 @fcmp_lt(double %a, double %b, double %c) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[B]], i32 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x double> [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[MUL]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = fdiv <2 x double> [[TMP5]], [[SHUFFLE]]
-; CHECK-NEXT:    [[TMP8:%.*]] = fcmp uge <2 x double> [[TMP7]], <double 0x3EB0C6F7A0B5ED8D, double 0x3EB0C6F7A0B5ED8D>
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i1> [[TMP8]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP8]], i32 1
-; CHECK-NEXT:    [[NOT_OR_COND:%.*]] = or i1 [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[MUL]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = fdiv <2 x double> [[TMP5]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = fcmp uge <2 x double> [[TMP8]], <double 0x3EB0C6F7A0B5ED8D, double 0x3EB0C6F7A0B5ED8D>
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i1> [[TMP9]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i1> [[TMP9]], i32 1
+; CHECK-NEXT:    [[NOT_OR_COND:%.*]] = or i1 [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    ret i1 [[NOT_OR_COND]]
 ;
   %fneg = fneg double %b

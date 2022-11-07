@@ -8,7 +8,7 @@ define void @foo() {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float 6.553500e+04, undef
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> <float poison, float poison, float undef, float undef>, float [[SUB]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> poison, float [[SUB]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[CONV]], i32 1
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:

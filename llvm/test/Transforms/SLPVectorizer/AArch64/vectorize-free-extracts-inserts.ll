@@ -60,11 +60,11 @@ define void @extracts_first_2_lanes_different_vectors(<2 x double>* %ptr.1, <4 x
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V1_LANE_0]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V3_LANE_1]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[V2_LANE_2]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP1]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[V2_LANE_2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_0]])
 ; CHECK-NEXT:    call void @use(double [[V3_LANE_1]])
-; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP4]], <2 x double>* [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -102,12 +102,12 @@ define void @noop_extract_second_2_lanes(<4 x double>* %ptr.1, <4 x double>* %pt
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V1_LANE_2]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V1_LANE_3]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[V2_LANE_2]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP1]], [[SHUFFLE]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[V2_LANE_2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_2]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_3]])
-; CHECK-NEXT:    store <4 x double> [[TMP4]], <4 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    store <4 x double> [[TMP5]], <4 x double>* [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -139,14 +139,14 @@ define void @extract_reverse_order(<2 x double>* %ptr.1, <4 x double>* %ptr.2) {
 ; CHECK-NEXT:    [[V_2:%.*]] = load <4 x double>, <4 x double>* [[PTR_2:%.*]], align 16
 ; CHECK-NEXT:    [[V2_LANE_2:%.*]] = extractelement <4 x double> [[V_2]], i32 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V2_LANE_2]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> [[V_1]], [[SHUFFLE]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[V_1]], i32 0
-; CHECK-NEXT:    call void @use(double [[TMP3]])
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[V_1]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V2_LANE_2]], i32 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[V_1]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[V_1]], i32 0
 ; CHECK-NEXT:    call void @use(double [[TMP4]])
-; CHECK-NEXT:    store <2 x double> [[TMP2]], <2 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[V_1]], i32 1
+; CHECK-NEXT:    call void @use(double [[TMP5]])
+; CHECK-NEXT:    store <2 x double> [[TMP3]], <2 x double>* [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -182,12 +182,12 @@ define void @extract_lanes_1_and_2(<4 x double>* %ptr.1, <4 x double>* %ptr.2) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V1_LANE_1]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V1_LANE_2]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[V2_LANE_2]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP1]], [[SHUFFLE]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[V2_LANE_2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_1]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_2]])
-; CHECK-NEXT:    store <4 x double> [[TMP4]], <4 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    store <4 x double> [[TMP5]], <4 x double>* [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -288,15 +288,15 @@ define void @extracts_jumbled_4_lanes(<9 x double>* %ptr.1, <4 x double>* %ptr.2
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> [[TMP2]], double [[V1_LANE_3]], i32 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> poison, double [[V2_LANE_2]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> [[TMP4]], double [[V2_LANE_1]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> [[TMP5]], double [[V2_LANE_0]], i32 3
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <4 x double> [[TMP6]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 3>
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <4 x double> [[TMP3]], [[SHUFFLE]]
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> poison, <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> [[TMP5]], double [[V2_LANE_2]], i32 2
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x double> [[TMP6]], double [[V2_LANE_0]], i32 3
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <4 x double> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP8]], <4 x double> poison, <9 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_0]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_1]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_2]])
 ; CHECK-NEXT:    call void @use(double [[V1_LANE_3]])
-; CHECK-NEXT:    store <9 x double> [[TMP8]], <9 x double>* [[PTR_1]], align 8
+; CHECK-NEXT:    store <9 x double> [[TMP9]], <9 x double>* [[PTR_1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 bb:
