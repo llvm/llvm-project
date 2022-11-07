@@ -218,6 +218,12 @@ _start:
 # RUN:   --check-prefix=INVRSP
 # INVRSP: invalid response file quoting: patatino
 
+## Test erroring on a recursive response file, but only once.
+# RUN: echo @%t.responsefile > %t.responsefile
+# RUN: not ld.lld %t @%t.responsefile 2>&1 | FileCheck %s --check-prefix=RECRSP
+# RECRSP: recursive expansion of: '{{.*}}.responsefile'
+# RECRSP-NOT: recursive expansion of
+
 # RUN: not ld.lld %t.foo -o /dev/null 2>&1 | \
 # RUN:  FileCheck -DMSG=%errc_ENOENT --check-prefix=MISSING %s
 # MISSING: cannot open {{.*}}.foo: [[MSG]]

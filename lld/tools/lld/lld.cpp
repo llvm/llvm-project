@@ -89,7 +89,9 @@ static bool isPETarget(std::vector<const char *> &v) {
   SmallVector<const char *, 256> expandedArgs(v.data(), v.data() + v.size());
   BumpPtrAllocator a;
   StringSaver saver(a);
-  cl::ExpandResponseFiles(saver, getDefaultQuotingStyle(), expandedArgs);
+  cl::ExpansionContext ECtx(saver.getAllocator(), getDefaultQuotingStyle());
+  if (Error Err = ECtx.expandResponseFiles(expandedArgs))
+    die(toString(std::move(Err)));
   for (auto it = expandedArgs.begin(); it + 1 != expandedArgs.end(); ++it) {
     if (StringRef(*it) != "-m")
       continue;
