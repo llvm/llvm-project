@@ -11,9 +11,11 @@
 # RUN: echo '#!/bin/sh' >> %t.dir/bin/my_driver.sh
 # RUN: echo '[ "$0" = "%t.dir/bin/my_driver.sh" ] || exit' >> %t.dir/bin/my_driver.sh
 # RUN: echo 'args="$*"' >> %t.dir/bin/my_driver.sh
+# Check that clangd preserves certain flags like `-nostdinc` from
+# original invocation in compile_commands.json.
 # RUN: echo '[ -z "${args##*"-nostdinc"*}" ] || exit' >> %t.dir/bin/my_driver.sh
 # RUN: echo '[ -z "${args##*"-isysroot=/isysroot"*}" ] || exit' >> %t.dir/bin/my_driver.sh
-# RUN: echo 'echo " $* " | grep " --sysroot /my/sysroot/path " || exit' >> %t.dir/bin/my_driver.sh
+# RUN: echo '[ -z "${args##*"--sysroot /my/sysroot/path"*}" ] || exit' >> %t.dir/bin/my_driver.sh
 # RUN: echo 'echo line to ignore >&2' >> %t.dir/bin/my_driver.sh
 # RUN: echo 'printf "Target: arm-linux-gnueabihf\r\n" >&2' >> %t.dir/bin/my_driver.sh
 # RUN: echo 'printf "#include <...> search starts here:\r\n" >&2' >> %t.dir/bin/my_driver.sh
