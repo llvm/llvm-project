@@ -242,6 +242,11 @@ end
   compilers, so it is not supported.
 * f18 doesn't impose a limit on the number of continuation lines
   allowed for a single statement.
+* When a type-bound procedure declaration statement has neither interface
+  nor attributes, the "::" before the bindings is optional, even
+  if a binding has renaming with "=> proc".
+  The colons are not necessary for an unambiguous parse, C768
+  notwithstanding.
 
 ### Extensions supported when enabled by options
 
