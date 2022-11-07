@@ -29,7 +29,14 @@ class CIRGenerator;
 
 class CIRGenAction : public clang::ASTFrontendAction {
 public:
-  enum class OutputType { EmitAssembly, EmitCIR, EmitLLVM, EmitObj, None };
+  enum class OutputType {
+    EmitAssembly,
+    EmitCIR,
+    EmitLLVM,
+    EmitMLIR,
+    EmitObj,
+    None
+  };
 
 private:
   friend class CIRGenConsumer;
@@ -75,6 +82,13 @@ class EmitCIROnlyAction : public CIRGenAction {
 
 public:
   EmitCIROnlyAction(mlir::MLIRContext *mlirCtx = nullptr);
+};
+
+class EmitMLIRAction : public CIRGenAction {
+  virtual void anchor();
+
+public:
+  EmitMLIRAction(mlir::MLIRContext *mlirCtx = nullptr);
 };
 
 class EmitLLVMAction : public CIRGenAction {

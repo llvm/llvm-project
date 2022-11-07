@@ -26,6 +26,7 @@
 #include "clang/CIR/CIRToCIRPasses.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/LowerToLLVM.h"
+#include "clang/CIR/Passes.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -223,22 +224,31 @@ public:
         mlirMod->print(*outputStream, flags);
       }
       break;
-    case CIRGenAction::OutputType::EmitLLVM: {
-      llvm::LLVMContext llvmCtx;
-      auto llvmModule =
-          lowerFromCIRToLLVMIR(mlirMod, std::move(mlirCtx), llvmCtx);
-      if (outputStream)
-        llvmModule->print(*outputStream, nullptr);
+    case CIRGenAction::OutputType::EmitMLIR: {
+      auto loweredMlirModule = lowerFromCIRToMLIR(mlirMod, mlirCtx.get());
+      assert(outputStream && "Why are we here without an output stream?");
+      // FIXME: we cannot roundtrip prettyForm=true right now.
+      mlir::OpPrintingFlags flags;
+      flags.enableDebugInfo(/*prettyForm=*/false);
+      loweredMlirModule->print(*outputStream, flags);
       break;
     }
-    case CIRGenAction::OutputType::EmitObj: {
-      // TODO: Don't duplicate this from above
+    case CIRGenAction::OutputType::EmitLLVM: {
       llvm::LLVMContext llvmCtx;
       auto llvmModule =
           lowerFromCIRToLLVMIR(mlirMod, std::move(mlirCtx), llvmCtx);
 
       llvmModule->setTargetTriple(targetOptions.Triple);
+      if (outputStream)
+        llvmModule->print(*outputStream, nullptr);
+      break;
+    }
+    case CIRGenAction::OutputType::EmitObj: {
+      llvm::LLVMContext llvmCtx;
+      auto llvmModule =
+          lowerFromCIRToLLVMIR(mlirMod, std::move(mlirCtx), llvmCtx);
 
+      llvmModule->setTargetTriple(targetOptions.Triple);
       EmitBackendOutput(diagnosticsEngine, headerSearchOptions, codeGenOptions,
                         targetOptions, langOptions,
                         C.getTargetInfo().getDataLayoutString(),
@@ -316,6 +326,8 @@ getOutputStream(CompilerInstance &ci, StringRef inFile,
     return ci.createDefaultOutputFile(false, inFile, "s");
   case CIRGenAction::OutputType::EmitCIR:
     return ci.createDefaultOutputFile(false, inFile, "cir");
+  case CIRGenAction::OutputType::EmitMLIR:
+    return ci.createDefaultOutputFile(false, inFile, "mlir");
   case CIRGenAction::OutputType::EmitLLVM:
     return ci.createDefaultOutputFile(false, inFile, "llvm");
   case CIRGenAction::OutputType::EmitObj:
@@ -409,6 +421,10 @@ EmitCIRAction::EmitCIRAction(mlir::MLIRContext *_MLIRContext)
 void EmitCIROnlyAction::anchor() {}
 EmitCIROnlyAction::EmitCIROnlyAction(mlir::MLIRContext *_MLIRContext)
     : CIRGenAction(OutputType::None, _MLIRContext) {}
+
+void EmitMLIRAction::anchor() {}
+EmitMLIRAction::EmitMLIRAction(mlir::MLIRContext *_MLIRContext)
+    : CIRGenAction(OutputType::EmitMLIR, _MLIRContext) {}
 
 void EmitLLVMAction::anchor() {}
 EmitLLVMAction::EmitLLVMAction(mlir::MLIRContext *_MLIRContext)
