@@ -532,13 +532,17 @@ static Value *getAvailableLoadStore(Instruction *Inst, const Value *Ptr,
     if (IsLoadCSE)
       *IsLoadCSE = false;
 
-    // Make sure the read bytes are contained in the memset.
-    TypeSize LoadSize = DL.getTypeSizeInBits(AccessTy);
-    if (LoadSize.isScalable() ||
-        (Len->getValue() * 8).ult(LoadSize.getFixedSize()))
+    TypeSize LoadTypeSize = DL.getTypeSizeInBits(AccessTy);
+    if (LoadTypeSize.isScalable())
       return nullptr;
 
-    APInt Splat = APInt::getSplat(LoadSize.getFixedSize(), Val->getValue());
+    // Make sure the read bytes are contained in the memset.
+    uint64_t LoadSize = LoadTypeSize.getFixedSize();
+    if ((Len->getValue() * 8).ult(LoadSize))
+      return nullptr;
+
+    APInt Splat = LoadSize >= 8 ? APInt::getSplat(LoadSize, Val->getValue())
+                                : Val->getValue().trunc(LoadSize);
     ConstantInt *SplatC = ConstantInt::get(MSI->getContext(), Splat);
     if (CastInst::isBitOrNoopPointerCastable(SplatC->getType(), AccessTy, DL))
       return SplatC;
