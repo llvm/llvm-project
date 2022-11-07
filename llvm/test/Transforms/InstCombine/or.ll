@@ -1561,3 +1561,24 @@ define i32 @mul_common_bits(i32 %p) {
   %r = or i32 %m, %x
   ret i32 %r
 }
+
+define <4 x i1> @and_or_not_or_logical_vec(<4 x i32> %ap, <4 x i32> %bp) {
+; CHECK-LABEL: @and_or_not_or_logical_vec(
+; CHECK-NEXT:    [[A:%.*]] = icmp eq <4 x i32> [[AP:%.*]], zeroinitializer
+; CHECK-NEXT:    [[B:%.*]] = icmp eq <4 x i32> [[BP:%.*]], zeroinitializer
+; CHECK-NEXT:    [[V:%.*]] = xor <4 x i1> [[A]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[X:%.*]] = select <4 x i1> [[B]], <4 x i1> [[V]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[W:%.*]] = or <4 x i1> [[B]], [[A]]
+; CHECK-NEXT:    [[Y:%.*]] = xor <4 x i1> [[W]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[Z:%.*]] = or <4 x i1> [[X]], [[Y]]
+; CHECK-NEXT:    ret <4 x i1> [[Z]]
+;
+  %A = icmp eq <4 x i32> %ap, zeroinitializer
+  %B = icmp eq <4 x i32> %bp, zeroinitializer
+  %V = xor <4 x i1> %A, <i1 true, i1 true, i1 true, i1 true>
+  %X = select <4 x i1> %B, <4 x i1> %V, <4 x i1> zeroinitializer
+  %W = or <4 x i1> %B, %A
+  %Y = xor <4 x i1> %W, <i1 true, i1 true, i1 true, i1 true>
+  %Z = or <4 x i1> %X, %Y
+  ret <4 x i1> %Z
+}
