@@ -8214,6 +8214,9 @@ def err_typecheck_convert_incompatible_function_pointer : Error<
 def ext_typecheck_convert_incompatible_function_pointer : ExtWarn<
   err_typecheck_convert_incompatible_function_pointer.Text>,
   InGroup<IncompatibleFunctionPointerTypes>, DefaultError;
+def warn_typecheck_convert_incompatible_function_pointer_strict : Warning<
+  err_typecheck_convert_incompatible_function_pointer.Text>,
+  InGroup<DiagGroup<"incompatible-function-pointer-types-strict">>, DefaultIgnore;
 def ext_typecheck_convert_discards_qualifiers : ExtWarn<
   "%select{%diff{assigning to $ from $|assigning to different types}0,1"
   "|%diff{passing $ to parameter of type $|"
