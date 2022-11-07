@@ -229,16 +229,14 @@ private:
                       DerefKind AK, llvm::function_ref<bool(PrimType)> Direct,
                       llvm::function_ref<bool(PrimType)> Indirect);
 
-  /// Emits an APInt constant.
-  bool emitConst(PrimType T, const llvm::APInt &Value, const Expr *E);
+  /// Emits an APSInt constant.
+  bool emitConst(const APSInt &Value, const Expr *E);
+  bool emitConst(const APInt &Value, const Expr *E) {
+    return emitConst(static_cast<APSInt>(Value), E);
+  }
 
   /// Emits an integer constant.
-  template <typename T> bool emitConst(const Expr *E, T Value) {
-    QualType Ty = E->getType();
-    APInt WrappedValue(getIntWidth(Ty), static_cast<uint64_t>(Value),
-                       std::is_signed<T>::value);
-    return emitConst(*Ctx.classify(Ty), WrappedValue, E);
-  }
+  template <typename T> bool emitConst(T Value, const Expr *E);
 
   /// Emits the initialized pointer.
   bool emitInitFn() {

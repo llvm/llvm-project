@@ -160,9 +160,7 @@ bool ByteCodeExprGen<Emitter>::VisitIntegerLiteral(const IntegerLiteral *LE) {
   if (DiscardResult)
     return true;
 
-  if (Optional<PrimType> T = classify(LE->getType()))
-    return emitConst(*T, LE->getValue(), LE);
-  return this->bail(LE);
+  return this->emitConst(LE->getValue(), LE);
 }
 
 template <class Emitter>
@@ -380,7 +378,7 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       Size = Ctx.getASTContext().getTypeSizeInChars(ArgType);
     }
 
-    return this->emitConst(E, Size.getQuantity());
+    return this->emitConst(Size.getQuantity(), E);
   }
 
   return false;
@@ -420,9 +418,7 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitIndexExpr(
   // stand-alone, e.g. via EvaluateAsInt().
   if (!ArrayIndex)
     return false;
-  QualType IndexType = E->getType();
-  APInt Value(getIntWidth(IndexType), *ArrayIndex);
-  return this->emitConst(classifyPrim(IndexType), Value, E);
+  return this->emitConst(*ArrayIndex, E);
 }
 
 template <class Emitter>
@@ -470,7 +466,7 @@ bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCharacterLiteral(
     const CharacterLiteral *E) {
-  return this->emitConst(E, E->getValue());
+  return this->emitConst(E->getValue(), E);
 }
 
 template <class Emitter>
@@ -715,32 +711,39 @@ bool ByteCodeExprGen<Emitter>::dereferenceVar(
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::emitConst(PrimType T, const APInt &Value,
-                                         const Expr *E) {
-  switch (T) {
+template <typename T>
+bool ByteCodeExprGen<Emitter>::emitConst(T Value, const Expr *E) {
+  switch (classifyPrim(E->getType())) {
   case PT_Sint8:
-    return this->emitConstSint8(Value.getSExtValue(), E);
+    return this->emitConstSint8(Value, E);
   case PT_Uint8:
-    return this->emitConstUint8(Value.getZExtValue(), E);
+    return this->emitConstUint8(Value, E);
   case PT_Sint16:
-    return this->emitConstSint16(Value.getSExtValue(), E);
+    return this->emitConstSint16(Value, E);
   case PT_Uint16:
-    return this->emitConstUint16(Value.getZExtValue(), E);
+    return this->emitConstUint16(Value, E);
   case PT_Sint32:
-    return this->emitConstSint32(Value.getSExtValue(), E);
+    return this->emitConstSint32(Value, E);
   case PT_Uint32:
-    return this->emitConstUint32(Value.getZExtValue(), E);
+    return this->emitConstUint32(Value, E);
   case PT_Sint64:
-    return this->emitConstSint64(Value.getSExtValue(), E);
+    return this->emitConstSint64(Value, E);
   case PT_Uint64:
-    return this->emitConstUint64(Value.getZExtValue(), E);
+    return this->emitConstUint64(Value, E);
   case PT_Bool:
-    return this->emitConstBool(Value.getBoolValue(), E);
+    return this->emitConstBool(Value, E);
   case PT_Ptr:
     llvm_unreachable("Invalid integral type");
     break;
   }
   llvm_unreachable("unknown primitive type");
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::emitConst(const APSInt &Value, const Expr *E) {
+  if (Value.isSigned())
+    return this->emitConst(Value.getSExtValue(), E);
+  return this->emitConst(Value.getZExtValue(), E);
 }
 
 template <class Emitter>
@@ -1198,7 +1201,7 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return this->emitIncPop(*T, E);
 
     this->emitLoad(*T, E);
-    this->emitConst(E, 1);
+    this->emitConst(1, E);
     this->emitAdd(*T, E);
     return this->emitStore(*T, E);
   }
@@ -1211,7 +1214,7 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return this->emitDecPop(*T, E);
 
     this->emitLoad(*T, E);
-    this->emitConst(E, 1);
+    this->emitConst(1, E);
     this->emitSub(*T, E);
     return this->emitStore(*T, E);
   }
@@ -1284,9 +1287,7 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
       return this->emitGetPtrParam(It->second, E);
     }
   } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(Decl)) {
-    PrimType T = *classify(ECD->getType());
-
-    return this->emitConst(T, ECD->getInitVal(), E);
+    return this->emitConst(ECD->getInitVal(), E);
   }
 
   return false;
