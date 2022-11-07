@@ -69,6 +69,9 @@ private:
   getSkipAdviceIfUnreachableCallsite(CallBase &CB);
   void print(raw_ostream &OS) const override;
 
+  // Using std::map to benefit from its iterator / reference non-invalidating
+  // semantics, which make it easy to use `getCachedFPI` results from multiple
+  // calls without needing to copy to avoid invalidation effects.
   mutable std::map<const Function *, FunctionPropertiesInfo> FPICache;
 
   LazyCallGraph &CG;
