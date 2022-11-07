@@ -603,12 +603,9 @@ void ForeachOp::build(
   std::fill_n(std::back_inserter(blockArgTypes), rank, builder.getIndexType());
   // Followed by one value.
   blockArgTypes.push_back(rtp.getElementType());
-  // Followed by reduction variable.
-  blockArgTypes.append(initArgs.getTypes().begin(), initArgs.getTypes().end());
 
   SmallVector<Location, 4> blockArgLocs;
-  std::fill_n(std::back_inserter(blockArgLocs), blockArgTypes.size(),
-              tensor.getLoc());
+  std::fill_n(std::back_inserter(blockArgLocs), rank + 1, tensor.getLoc());
 
   OpBuilder::InsertionGuard guard(builder);
   auto &region = *result.regions.front();
