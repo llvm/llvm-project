@@ -2164,8 +2164,8 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
         return nullptr;
       ExpoF = &ExpoI;
 
-      Sqrt = getSqrtCall(Base, Pow->getCalledFunction()->getAttributes(),
-                         Pow->doesNotAccessMemory(), M, B, TLI);
+      Sqrt = getSqrtCall(Base, AttributeList(), Pow->doesNotAccessMemory(), M,
+                         B, TLI);
       if (!Sqrt)
         return nullptr;
     }
