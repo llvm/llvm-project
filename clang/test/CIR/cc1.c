@@ -1,3 +1,5 @@
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-mlir %s -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s -check-prefix=MLIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-obj %s -o %t.o
@@ -6,8 +8,13 @@
 
 void foo() {}
 
+//      MLIR: func.func @foo() {
+// MLIR-NEXT:   return
+// MLIR-NEXT: }
+
 //      LLVM: define void @foo()
 // LLVM-NEXT:   ret void,
 // LLVM-NEXT: }
 
 // OBJ: 0: c3 retq
+
