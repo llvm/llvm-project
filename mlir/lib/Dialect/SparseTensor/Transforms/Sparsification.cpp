@@ -56,7 +56,7 @@ struct CodeGen {
   CodeGen(SparsificationOptions o, ValueRange tensors, unsigned numTensors,
           unsigned numLoops, OpOperand *op, unsigned nest,
           std::vector<unsigned> &ts)
-      : options(o), loopEmitter(tensors, /*isLastOutput=*/true,
+      : options(o), loopEmitter(tensors, /*hasOutput=*/true,
                                 /*isSparseOut=*/op != nullptr),
         sparseOut(op), outerParNest(nest), topSort(ts) {
     if (op)
