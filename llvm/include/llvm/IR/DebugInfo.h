@@ -212,6 +212,9 @@ inline AssignmentMarkerRange getAssignmentMarkers(const Instruction *Inst) {
     return make_range(Value::user_iterator(), Value::user_iterator());
 }
 
+/// Delete the llvm.dbg.assign intrinsics linked to \p Inst.
+void deleteAssignmentMarkers(const Instruction *Inst);
+
 /// Replace all uses (and attachments) of \p Old with \p New.
 void RAUW(DIAssignID *Old, DIAssignID *New);
 
