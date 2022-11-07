@@ -239,8 +239,12 @@ public:
           lowerFromCIRToLLVMIR(mlirMod, std::move(mlirCtx), llvmCtx);
 
       llvmModule->setTargetTriple(targetOptions.Triple);
-      if (outputStream)
-        llvmModule->print(*outputStream, nullptr);
+
+      EmitBackendOutput(diagnosticsEngine, headerSearchOptions, codeGenOptions,
+                        targetOptions, langOptions,
+                        C.getTargetInfo().getDataLayoutString(),
+                        llvmModule.get(), BackendAction::Backend_EmitLL,
+                        nullptr, std::move(outputStream));
       break;
     }
     case CIRGenAction::OutputType::EmitObj: {
