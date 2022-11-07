@@ -16732,7 +16732,7 @@ static bool UsefulToPrintExpr(const Expr *E) {
     return false;
 
   // -5 is also simple to understand.
-  if (const auto *UnaryOp = dyn_cast_or_null<UnaryOperator>(E))
+  if (const auto *UnaryOp = dyn_cast<UnaryOperator>(E))
     return UsefulToPrintExpr(UnaryOp->getSubExpr());
 
   // Ignore nested binary operators. This could be a FIXME for improvements
@@ -16746,7 +16746,7 @@ static bool UsefulToPrintExpr(const Expr *E) {
 /// Try to print more useful information about a failed static_assert
 /// with expression \E
 void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
-  if (const auto *Op = dyn_cast_or_null<BinaryOperator>(E)) {
+  if (const auto *Op = dyn_cast<BinaryOperator>(E)) {
     const Expr *LHS = Op->getLHS()->IgnoreParenImpCasts();
     const Expr *RHS = Op->getRHS()->IgnoreParenImpCasts();
 
