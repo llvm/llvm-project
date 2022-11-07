@@ -175,6 +175,7 @@ protected:
   std::string CPU;
   StringRef ABI;
   StringRef DefineName;
+  StringRef Arch;
   int NumFlashBanks;
 };
 
