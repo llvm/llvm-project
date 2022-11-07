@@ -5810,6 +5810,38 @@ multiclass sve_mem_est_si<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
                   (!cast<Instruction>(NAME) VecList:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
 }
 
+
+// SVE store multiple structures (quadwords, scalar plus immediate)
+class sve_mem_128b_est_si<bits<2> nregs, RegisterOperand VecList,
+                          string asm, Operand immtype>
+    : I<(outs), (ins VecList:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, immtype:$imm4),
+        asm, "\t$Zt, $Pg, [$Rn, $imm4, mul vl]",
+        "", []>, Sched<[]> {
+  bits<5> Zt;
+  bits<5> Rn;
+  bits<3> Pg;
+  bits<4> imm4;
+  let Inst{31-24} = 0b11100100;
+  let Inst{23-22} = nregs;
+  let Inst{21-20} = 0b00;
+  let Inst{19-16} = imm4;
+  let Inst{15-13} = 0b000;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zt;
+
+  let mayStore = 1;
+}
+
+multiclass sve_mem_128b_est_si<bits<2> nregs, RegisterOperand VecList,
+                               string asm, Operand immtype> {
+  def NAME : sve_mem_128b_est_si<nregs, VecList, asm, immtype>;
+
+  def : InstAlias<asm # "\t$Zt, $Pg, [$Rn]",
+                  (!cast<Instruction>(NAME) VecList:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
+}
+
+
 class sve_mem_est_ss<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
                      string asm, RegisterOperand gprty>
 : I<(outs), (ins VecList:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm),
@@ -5831,6 +5863,30 @@ class sve_mem_est_ss<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
 
   let mayStore = 1;
 }
+
+
+// SVE store multiple structures (quadwords, scalar plus scalar)
+class sve_mem_128b_est_ss<bits<2> nregs, RegisterOperand VecList,
+                          string asm, RegisterOperand gprty>
+    : I<(outs), (ins VecList:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm),
+        asm, "\t$Zt, $Pg, [$Rn, $Rm]",
+        "", []>, Sched<[]> {
+  bits<5> Zt;
+  bits<5> Rn;
+  bits<3> Pg;
+  bits<5> Rm;
+  let Inst{31-24} = 0b11100100;
+  let Inst{23-22} = nregs;
+  let Inst{21}    = 0b1;
+  let Inst{20-16} = Rm;
+  let Inst{15-13} = 0b000;
+  let Inst{12-10} = Pg;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Zt;
+
+  let mayStore = 1;
+}
+
 
 class sve_mem_cst_ss_base<bits<4> dtype, string asm,
                           RegisterOperand listty, RegisterOperand gprty>
@@ -7060,7 +7116,7 @@ multiclass sve_mem_cldnf_si<bits<4> dtype, string asm, RegisterOperand listty,
                             ZPRRegOp zprty>
 : sve_mem_cld_si_base<dtype, 1, asm, listty, zprty>;
 
-class sve_mem_eld_si<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
+class sve_mem_eld_si<bits<2> sz, bits<3> nregs, RegisterOperand VecList,
                      string asm, Operand immtype>
 : I<(outs VecList:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, immtype:$imm4),
   asm, "\t$Zt, $Pg/z, [$Rn, $imm4, mul vl]",
@@ -7072,8 +7128,8 @@ class sve_mem_eld_si<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
   bits<4> imm4;
   let Inst{31-25} = 0b1010010;
   let Inst{24-23} = sz;
-  let Inst{22-21} = nregs;
-  let Inst{20}    = 0;
+  let Inst{22-21} = nregs{1-0};
+  let Inst{20}    = nregs{2};
   let Inst{19-16} = imm4;
   let Inst{15-13} = 0b111;
   let Inst{12-10} = Pg;
@@ -7083,7 +7139,7 @@ class sve_mem_eld_si<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
   let mayLoad = 1;
 }
 
-multiclass sve_mem_eld_si<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
+multiclass sve_mem_eld_si<bits<2> sz, bits<3> nregs, RegisterOperand VecList,
                           string asm, Operand immtype> {
   def NAME : sve_mem_eld_si<sz, nregs, VecList, asm, immtype>;
 
@@ -7091,7 +7147,8 @@ multiclass sve_mem_eld_si<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
                   (!cast<Instruction>(NAME) VecList:$Zt, PPR3bAny:$Pg, GPR64sp:$Rn, 0), 1>;
 }
 
-class sve_mem_eld_ss<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
+
+class sve_mem_eld_ss<bits<2> sz, bits<3> nregs, RegisterOperand VecList,
                      string asm, RegisterOperand gprty>
 : I<(outs VecList:$Zt), (ins PPR3bAny:$Pg, GPR64sp:$Rn, gprty:$Rm),
   asm, "\t$Zt, $Pg/z, [$Rn, $Rm]",
@@ -7103,9 +7160,11 @@ class sve_mem_eld_ss<bits<2> sz, bits<2> nregs, RegisterOperand VecList,
   bits<5> Zt;
   let Inst{31-25} = 0b1010010;
   let Inst{24-23} = sz;
-  let Inst{22-21} = nregs;
+  let Inst{22-21} = nregs{1-0};
   let Inst{20-16} = Rm;
-  let Inst{15-13} = 0b110;
+  let Inst{15}    = 0b1;
+  let Inst{14}    = nregs{2};
+  let Inst{13}    = 0b0;
   let Inst{12-10} = Pg;
   let Inst{9-5}   = Rn;
   let Inst{4-0}   = Zt;
