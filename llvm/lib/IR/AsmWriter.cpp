@@ -1865,6 +1865,12 @@ static void writeDILocation(raw_ostream &Out, const DILocation *DL,
   Out << ")";
 }
 
+static void writeDIAssignID(raw_ostream &Out, const DIAssignID *DL,
+                            AsmWriterContext &WriterCtx) {
+  Out << "!DIAssignID()";
+  MDFieldPrinter Printer(Out, WriterCtx);
+}
+
 static void writeDISubrange(raw_ostream &Out, const DISubrange *N,
                             AsmWriterContext &WriterCtx) {
   Out << "!DISubrange(";
