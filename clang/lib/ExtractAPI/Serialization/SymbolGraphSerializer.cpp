@@ -559,7 +559,10 @@ void SymbolGraphSerializer::serializeRelationship(RelationshipKind Kind,
   Object Relationship;
   Relationship["source"] = Source.USR;
   Relationship["target"] = Target.USR;
-  Relationship["targetFallback"] = Target.Name;
+  // Emit a fallback if the target is not a symbol that will be part of this
+  // symbol graph.
+  if (API.getSymbolForUSR(Target.USR) == nullptr)
+    Relationship["targetFallback"] = Target.Name;
   Relationship["kind"] = getRelationshipString(Kind);
 
   Relationships.emplace_back(std::move(Relationship));
