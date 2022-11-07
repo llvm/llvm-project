@@ -454,6 +454,60 @@ define <2 x i4> @and_or_not_or_commute7(<2 x i4> %A, <2 x i4> %B) {
   ret <2 x i4> %r
 }
 
+; (~A & B) | ~(A | B) --> ~A with logical and
+define i1 @and_or_not_or_logical(i1 %A, i1 %B) {
+; CHECK-LABEL: @and_or_not_or_logical(
+; CHECK-NEXT:    [[V:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[X:%.*]] = select i1 [[V]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[W:%.*]] = or i1 [[B]], [[A]]
+; CHECK-NEXT:    [[Y:%.*]] = xor i1 [[W]], true
+; CHECK-NEXT:    [[Z:%.*]] = or i1 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %V = xor i1 %A, true
+  %X = select i1 %V, i1 %B, i1 false
+  %W = or i1 %B, %A
+  %Y = xor i1 %W, true
+  %Z = or i1 %X, %Y
+  ret i1 %Z
+}
+
+; (~B & A) | ~(A | B) --> ~A with logical and
+define i1 @and_or_not_or_logical_rev(i1 %A, i1 %B) {
+; CHECK-LABEL: @and_or_not_or_logical_rev(
+; CHECK-NEXT:    [[V:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[X:%.*]] = select i1 [[B:%.*]], i1 [[V]], i1 false
+; CHECK-NEXT:    [[W:%.*]] = or i1 [[B]], [[A]]
+; CHECK-NEXT:    [[Y:%.*]] = xor i1 [[W]], true
+; CHECK-NEXT:    [[Z:%.*]] = or i1 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %V = xor i1 %A, true
+  %X = select i1 %B, i1 %V, i1 false
+  %W = or i1 %B, %A
+  %Y = xor i1 %W, true
+  %Z = or i1 %X, %Y
+  ret i1 %Z
+}
+
+; (~A & B) | ~(A | B) --> ~A with logical And and logical Or
+define i1 @and_or_not_logical_or_logical_rev(i1 %A, i1 %B) {
+; CHECK-LABEL: @and_or_not_logical_or_logical_rev(
+; CHECK-NEXT:    [[V:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[X:%.*]] = select i1 [[B:%.*]], i1 [[V]], i1 false
+; CHECK-NEXT:    [[W:%.*]] = select i1 [[B]], i1 true, i1 [[A]]
+; CHECK-NEXT:    [[Y:%.*]] = xor i1 [[W]], true
+; CHECK-NEXT:    [[Z:%.*]] = or i1 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+  %V = xor i1 %A, true
+  %X = select i1 %B, i1 %V, i1 false
+  %W = select i1 %B, i1 true, i1 %A
+  %Y = xor i1 %W, true
+  %Z = or i1 %X, %Y
+  ret i1 %Z
+}
+
 ; negative test - It is not safe to propagate an undef element from the 'not' op.
 
 define <2 x i4> @and_or_not_or_commute7_undef_elt(<2 x i4> %A, <2 x i4> %B) {
