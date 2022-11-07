@@ -25,6 +25,7 @@ THE SOFTWARE.
 
 #include "hipBin_base.h"
 #include "hipBin_util.h"
+#include <iostream>
 #include <vector>
 #include <string>
 #include <unordered_set>
@@ -296,7 +297,7 @@ string HipBinAmd::getCompilerVersion() {
       }
     }
   } else {
-    cout << "Hip Clang Compiler not found" << endl;
+    std::cerr << "Hip Clang Compiler not found" << endl;
   }
   return complierVersion;
 }
@@ -379,7 +380,7 @@ bool HipBinAmd::detectPlatform() {
         var.hipPlatformEnv_ == "hcc") {
       detected = true;
       if (var.hipPlatformEnv_ == "hcc")
-        cout <<
+        std::cerr <<
         "Warning: HIP_PLATFORM=hcc is deprecated."<<
         "Please use HIP_PLATFORM=amd." << endl;
     }
@@ -425,7 +426,7 @@ void HipBinAmd::checkHipconfig() {
   cout << endl << "Check system installation: " << endl;
   cout << "check hipconfig in PATH..." << endl;
   if (system("which hipconfig > /dev/null 2>&1") != 0) {
-    cout << "FAIL " << endl;
+    std::cerr << "FAIL " << endl;
   } else {
     cout << "good" << endl;
   }
@@ -436,7 +437,7 @@ void HipBinAmd::checkHipconfig() {
   cout << "check LD_LIBRARY_PATH (" << ldLibraryPath <<
           ") contains HSA_PATH (" << hsaPath << ")..." << endl;
   if (ldLibraryPath.find(hsaPath) == string::npos) {
-    cout << "FAIL" << endl;
+    std::cerr << "FAIL" << endl;
   } else {
     cout << "good" << endl;
   }
@@ -619,8 +620,8 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
       string pattern = "^" + targetOpt + ".*";
       if (hipBinUtilPtr_->stringRegexMatch(arg, pattern))  {
         if (targetOpt == "--amdgpu-target=") {
-          cout << "Warning: The --amdgpu-target option has been deprecated and will be removed in the future."
-               << "  Use --offload-arch instead.\n";  
+          std::cerr << "Warning: The --amdgpu-target option has been deprecated and will be removed in the future."
+                    << "  Use --offload-arch instead.\n";  
         }
         // If targets string is not empty,
         // add a comma before adding new target option value.
@@ -669,8 +670,8 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
     }
     if (hipBinUtilPtr_->substringPresent(
         arg, "--amdhsa-code-object-version=")) {
-      cout << "Warning: The --amdhsa-code-object-version option has been deprecated and will be removed in the future."
-           << "  Use -mllvm -mcode-object-version instead.\n";
+      std::cerr << "Warning: The --amdhsa-code-object-version option has been deprecated and will be removed in the future."
+                << "  Use -mllvm -mcode-object-version instead.\n";
       arg = hipBinUtilPtr_->replaceStr(
             arg, "--amdhsa-code-object-version=", "");
       hsacoVersion = arg;
@@ -689,7 +690,7 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
       string file = split_arg.at(1);
       ifstream in(file);
       if (!in.is_open()) {
-        cout << "unable to open file for reading: " << file << endl;
+        std::cerr << "unable to open file for reading: " << file << endl;
         exit(-1);
       }
       string new_arg;
@@ -698,7 +699,7 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
       new_file /=  "response_file";
       ofstream out(new_file);
       if (!out.is_open()) {
-        cout << "unable to open file for writing: " <<
+        std::cerr << "unable to open file for writing: " <<
                  new_file.string() << endl;
         exit(-1);
       }
@@ -884,10 +885,10 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
         if (hipBinUtilPtr_->stringRegexMatch(arg, "^--hipcc.*")) {
           swallowArg = 1;
           if (arg == "--hipcc-func-supp") {
-            cout << "Warning: The --hipcc-func-supp option has been deprecated and will be removed in the future.\n";
+            std::cerr << "Warning: The --hipcc-func-supp option has been deprecated and will be removed in the future.\n";
             funcSupp = 1;
           } else if (arg == "--hipcc-no-func-supp") {
-            cout << "Warning: The --hipcc-no-func-supp option has been deprecated and will be removed in the future.\n";
+            std::cerr << "Warning: The --hipcc-no-func-supp option has been deprecated and will be removed in the future.\n";
             funcSupp = 0;
           }
         } else {
@@ -981,7 +982,7 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
           // does not check if the device supports the feature or not
           // e.g. vega10 does not support sramecc
           if (knownFeatures.find(procAndFeatures.at(i)) == knownFeatures.end()) {
-            cout <<  "Warning: The Feature: "<< procAndFeatures.at(i) <<
+            std::cerr <<  "Warning: The Feature: "<< procAndFeatures.at(i) <<
                      " is unknown. Correct compilation is not guaranteed.\n";
           }
       }
@@ -1006,8 +1007,8 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
   // rocm_agent_enumerator failed! Throw an error and die if linking is required
   if (default_amdgpu_target == 1 && compileOnly == 0) {
     // TODO(agunashe) exit from function
-    cout <<  "No valid AMD GPU target was either specified or found."
-        << "Please specify a valid target using --offload-arch=<target>.\n";
+    std::cerr <<  "No valid AMD GPU target was either specified or found."
+              << "Please specify a valid target using --offload-arch=<target>.\n";
   }
   HCC_EXTRA_LIBRARIES ="\n";  // TODO(agunashe) write to env
 
@@ -1119,7 +1120,7 @@ void HipBinAmd::executeHipCCCmd(vector<string> argv) {
     string cmdOut = sysOut.out;
     int CMD_EXIT_CODE = sysOut.exitCode;
     if (CMD_EXIT_CODE !=0) {
-      cout <<  "failed to execute:"  << CMD << std::endl;
+      std::cerr <<  "failed to execute:"  << CMD << std::endl;
     }
     exit(CMD_EXIT_CODE);
   }  // end of runCmd section

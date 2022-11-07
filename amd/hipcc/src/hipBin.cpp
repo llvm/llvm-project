@@ -23,6 +23,7 @@ THE SOFTWARE.
 #include "hipBin_util.h"
 #include "hipBin_amd.h"
 #include "hipBin_nvidia.h"
+#include <iostream>
 #include <vector>
 #include <string>
 
@@ -75,7 +76,7 @@ HipBin::HipBin() {
   }
   // if no device is detected, then it is defaulted to AMD
   if (!platformDetected) {
-    cout << "Device not supported - Defaulting to AMD" << endl;
+    std::cerr << "Device not supported - Defaulting to AMD" << endl;
     // populates the struct with AMD info
     const PlatformInfo& platformInfo = hipBinAMDPtr_->getPlatformInfo();
     platformVec_.push_back(platformInfo);
@@ -109,7 +110,7 @@ void HipBin::executeHipBin(string filename, int argc, char* argv[]) {
   } else if (hipBinUtilPtr_->substringPresent(filename, "hipcc")) {
     executeHipCC(argc, argv);
   } else {
-    cout << "Command " << filename
+    std::cerr << "Command " << filename
     << " not supported. Name the exe as hipconfig"
     << " or hipcc and then try again ..." << endl;
     exit(-1);

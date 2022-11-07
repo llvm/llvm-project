@@ -213,7 +213,7 @@ string HipBinUtil::getSelfPath() const {
       fs::path exePath(path);
       path = exePath.parent_path().string();
     } else {
-      cout << "readlink: Error reading the exe path" << endl;
+      std::cerr << "readlink: Error reading the exe path" << endl;
       perror("readlink");
       exit(-1);
     }
@@ -297,10 +297,10 @@ void HipBinUtil::deleteTempFiles() {
   for (unsigned int i = 0; i < tmpFiles_.size(); i++) {
     try {
       if (!fs::remove(tmpFiles_.at(i)))
-        cout << "Error deleting temp name: "<< tmpFiles_.at(i) <<endl;
+        std::cerr << "Error deleting temp name: "<< tmpFiles_.at(i) <<endl;
     }
     catch(...) {
-      cout << "Error deleting temp name: "<< tmpFiles_.at(i) <<endl;
+      std::cerr << "Error deleting temp name: "<< tmpFiles_.at(i) <<endl;
     }
   }
 }
@@ -332,7 +332,7 @@ SystemCmdOut HipBinUtil::exec(const char* cmd,
         result += buffer;
       }
     } catch (...) {
-      cout << "Error while executing the command: " << cmd << endl;
+      std::cerr << "Error while executing the command: " << cmd << endl;
     }
     #if defined(_WIN32) || defined(_WIN64)
       sysOut.exitCode = _pclose(pipe);

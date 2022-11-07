@@ -24,6 +24,7 @@ THE SOFTWARE.
 
 
 #include "hipBin_util.h"
+#include <iostream>
 #include <vector>
 #include <string>
 

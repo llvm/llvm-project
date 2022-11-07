@@ -25,6 +25,7 @@ THE SOFTWARE.
 
 #include "hipBin_base.h"
 #include "hipBin_util.h"
+#include <iostream>
 #include <vector>
 #include <string>
 
@@ -88,7 +89,7 @@ bool HipBinNvidia::detectPlatform() {
     if (var.hipPlatformEnv_ == "nvidia" || var.hipPlatformEnv_ == "nvcc") {
       detected = true;
       if (var.hipPlatformEnv_ == "nvcc")
-        cout << "Warning: HIP_PLATFORM=nvcc is deprecated."
+        std::cerr << "Warning: HIP_PLATFORM=nvcc is deprecated."
              << "Please use HIP_PLATFORM=nvidia." << endl;
     }
   }
@@ -126,7 +127,7 @@ void HipBinNvidia::checkHipconfig() {
   cout << endl << "Check system installation: " << endl;
   cout << "check hipconfig in PATH..." << endl;
   if (system("which hipconfig > /dev/null 2>&1") != 0) {
-    cout << "FAIL " << endl;
+    std::cerr << "FAIL " << endl;
   } else {
     cout << "good" << endl;
   }
