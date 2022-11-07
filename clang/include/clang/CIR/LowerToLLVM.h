@@ -33,6 +33,9 @@ std::unique_ptr<llvm::Module>
 lowerFromCIRToLLVMIR(mlir::ModuleOp theModule,
                      std::unique_ptr<mlir::MLIRContext> mlirCtx,
                      llvm::LLVMContext &llvmCtx);
+
+mlir::ModuleOp lowerFromCIRToMLIR(mlir::ModuleOp theModule,
+                                  mlir::MLIRContext *mlirCtx);
 } // namespace cir
 
 #endif // CLANG_CIR_LOWERTOLLVM_H_

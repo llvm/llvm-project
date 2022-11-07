@@ -3038,10 +3038,13 @@ defm clangir : BoolFOption<"clangir",
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Use the AST -> LLVM pipeline to compile">,
   BothFlags<[], [ClangOption, CC1Option], "">>;
-def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
-  Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
+def emit_cir : Flag<["-"], "emit-cir">, Visibility<[CC1Option]>,
+  Group<Action_Group>,
+  HelpText<"Build ASTs and then lower to ClangIR, emit the .cir file">;
 def emit_cir_only : Flag<["-"], "emit-cir-only">,
   HelpText<"Build ASTs and convert to CIR, discarding output">;
+def emit_mlir : Flag<["-"], "emit-mlir">, Visibility<[CC1Option]>, Group<Action_Group>,
+  HelpText<"Build ASTs and then lower through ClangIR to MLIR, emit the .milr file">;
 defm cir_warnings : BoolFOption<"cir-warnings",
   LangOpts<"CIRWarnings">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use">,
@@ -7079,7 +7082,7 @@ defm analyzed_objects_for_unparse : OptOutFC1FFlag<"analyzed-objects-for-unparse
 
 def emit_fir : Flag<["-"], "emit-fir">, Group<Action_Group>,
   HelpText<"Build the parse tree, then lower it to FIR">;
-def emit_mlir : Flag<["-"], "emit-mlir">, Alias<emit_fir>;
+// def emit_mlir : Flag<["-"], "emit-mlir">, Alias<emit_fir>;
 
 def emit_hlfir : Flag<["-"], "emit-hlfir">, Group<Action_Group>,
   HelpText<"Build the parse tree, then lower it to HLFIR">;

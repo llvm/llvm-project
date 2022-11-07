@@ -704,9 +704,8 @@ std::unique_ptr<mlir::Pass> createConvertCIRToMLIRPass() {
 }
 
 mlir::ModuleOp lowerFromCIRToMLIR(mlir::ModuleOp theModule,
-                                  std::unique_ptr<mlir::MLIRContext> mlirCtx,
-                                  LLVMContext &llvmCtx) {
-  mlir::PassManager pm(mlirCtx.get());
+                                  mlir::MLIRContext *mlirCtx) {
+  mlir::PassManager pm(mlirCtx);
 
   pm.addPass(createConvertCIRToMLIRPass());
 
