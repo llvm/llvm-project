@@ -315,24 +315,20 @@ llvm::Regex convertGlobsToRegex(llvm::ArrayRef<std::string> Globs) {
 /// Extracts system includes from a trusted driver by parsing the output of
 /// include search path and appends them to the commands coming from underlying
 /// compilation database.
-class QueryDriverDatabase : public DelegatingCDB {
+class SystemIncludeExtractor {
 public:
-  QueryDriverDatabase(llvm::ArrayRef<std::string> QueryDriverGlobs,
-                      std::unique_ptr<GlobalCompilationDatabase> Base)
-      : DelegatingCDB(std::move(Base)),
-        QueryDriverRegex(convertGlobsToRegex(QueryDriverGlobs)) {}
+  SystemIncludeExtractor(llvm::ArrayRef<std::string> QueryDriverGlobs)
+      : QueryDriverRegex(convertGlobsToRegex(QueryDriverGlobs)) {}
 
-  llvm::Optional<tooling::CompileCommand>
-  getCompileCommand(PathRef File) const override {
-    auto Cmd = DelegatingCDB::getCompileCommand(File);
-    if (!Cmd || Cmd->CommandLine.empty())
-      return Cmd;
+  void operator()(tooling::CompileCommand &Cmd, llvm::StringRef File) const {
+    if (Cmd.CommandLine.empty())
+      return;
 
     llvm::StringRef Lang;
-    for (size_t I = 0, E = Cmd->CommandLine.size(); I < E; ++I) {
-      llvm::StringRef Arg = Cmd->CommandLine[I];
+    for (size_t I = 0, E = Cmd.CommandLine.size(); I < E; ++I) {
+      llvm::StringRef Arg = Cmd.CommandLine[I];
       if (Arg == "-x" && I + 1 < E)
-        Lang = Cmd->CommandLine[I + 1];
+        Lang = Cmd.CommandLine[I + 1];
       else if (Arg.startswith("-x"))
         Lang = Arg.drop_front(2).trim();
     }
@@ -341,26 +337,25 @@ public:
       auto Type = driver::types::lookupTypeForExtension(Ext);
       if (Type == driver::types::TY_INVALID) {
         elog("System include extraction: invalid file type for {0}", Ext);
-        return Cmd;
+        return;
       }
       Lang = driver::types::getTypeName(Type);
     }
 
-    llvm::SmallString<128> Driver(Cmd->CommandLine.front());
+    llvm::SmallString<128> Driver(Cmd.CommandLine.front());
     if (llvm::any_of(Driver,
                        [](char C) { return llvm::sys::path::is_separator(C); }))
       // Driver is a not a single executable name but instead a path (either
       // relative or absolute).
-      llvm::sys::fs::make_absolute(Cmd->Directory, Driver);
+      llvm::sys::fs::make_absolute(Cmd.Directory, Driver);
 
     if (auto Info =
             QueriedDrivers.get(/*Key=*/(Driver + ":" + Lang).str(), [&] {
               return extractSystemIncludesAndTarget(
-                  Driver, Lang, Cmd->CommandLine, QueryDriverRegex);
+                  Driver, Lang, Cmd.CommandLine, QueryDriverRegex);
             })) {
-      setTarget(addSystemIncludes(*Cmd, Info->SystemIncludes), Info->Target);
+      setTarget(addSystemIncludes(Cmd, Info->SystemIncludes), Info->Target);
     }
-    return Cmd;
   }
 
 private:
@@ -370,14 +365,11 @@ private:
 };
 } // namespace
 
-std::unique_ptr<GlobalCompilationDatabase>
-getQueryDriverDatabase(llvm::ArrayRef<std::string> QueryDriverGlobs,
-                       std::unique_ptr<GlobalCompilationDatabase> Base) {
-  assert(Base && "Null base to SystemIncludeExtractor");
+SystemIncludeExtractorFn
+getSystemIncludeExtractor(llvm::ArrayRef<std::string> QueryDriverGlobs) {
   if (QueryDriverGlobs.empty())
-    return Base;
-  return std::make_unique<QueryDriverDatabase>(QueryDriverGlobs,
-                                               std::move(Base));
+    return nullptr;
+  return SystemIncludeExtractor(QueryDriverGlobs);
 }
 
 } // namespace clangd

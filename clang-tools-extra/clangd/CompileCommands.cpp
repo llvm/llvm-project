@@ -301,6 +301,17 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   for (auto &Edit : Config::current().CompileFlags.Edits)
     Edit(Cmd);
 
+  // The system include extractor needs to run:
+  //  - AFTER transferCompileCommand(), because the -x flag it adds may be
+  //    necessary for the system include extractor to identify the file type
+  //  - AFTER applying CompileFlags.Edits, because the name of the compiler
+  //    that needs to be invoked may come from the CompileFlags->Compiler key
+  //  - BEFORE resolveDriver() because that can mess up the driver path,
+  //    e.g. changing gcc to /path/to/clang/bin/gcc
+  if (SystemIncludeExtractor) {
+    SystemIncludeExtractor(Command, File);
+  }
+
   // Check whether the flag exists, either as -flag or -flag=*
   auto Has = [&](llvm::StringRef Flag) {
     for (llvm::StringRef Arg : Cmd) {

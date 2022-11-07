@@ -32,6 +32,7 @@ struct CommandMangler {
   llvm::Optional<std::string> ResourceDir;
   // Root for searching for standard library (passed to -isysroot).
   llvm::Optional<std::string> Sysroot;
+  SystemIncludeExtractorFn SystemIncludeExtractor;
 
   // A command-mangler that doesn't know anything about the system.
   // This is hermetic for unit-tests, but won't work well in production.
