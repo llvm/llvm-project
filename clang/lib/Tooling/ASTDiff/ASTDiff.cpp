@@ -117,13 +117,11 @@ public:
   Impl(SyntaxTree *Parent, Stmt *N, ASTContext &AST);
   template <class T>
   Impl(SyntaxTree *Parent,
-       std::enable_if_t<std::is_base_of<Stmt, T>::value, T> *Node,
-       ASTContext &AST)
+       std::enable_if_t<std::is_base_of_v<Stmt, T>, T> *Node, ASTContext &AST)
       : Impl(Parent, dyn_cast<Stmt>(Node), AST) {}
   template <class T>
   Impl(SyntaxTree *Parent,
-       std::enable_if_t<std::is_base_of<Decl, T>::value, T> *Node,
-       ASTContext &AST)
+       std::enable_if_t<std::is_base_of_v<Decl, T>, T> *Node, ASTContext &AST)
       : Impl(Parent, dyn_cast<Decl>(Node), AST) {}
 
   SyntaxTree *Parent;
