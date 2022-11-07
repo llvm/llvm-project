@@ -927,6 +927,7 @@ SwiftASTContext::SwiftASTContext(std::string description,
   // to avoid crashing due to module recovery issues.
   swift::LangOptions &lang_opts = m_compiler_invocation_ap->getLangOptions();
   lang_opts.AllowDeserializingImplementationOnly = true;
+  lang_opts.DebuggerSupport = true;
 }
 
 SwiftASTContext::~SwiftASTContext() {
@@ -1487,7 +1488,6 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   // This is a module AST context, mark it as such.
   swift_ast_sp->m_is_scratch_context = false;
   swift_ast_sp->m_module = &module;
-  swift_ast_sp->GetLanguageOptions().DebuggerSupport = true;
   swift_ast_sp->GetLanguageOptions().EnableAccessControl = false;
   swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
 
