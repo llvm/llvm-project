@@ -9309,3 +9309,57 @@ multiclass sve2p1_fp_reduction_q<bits<3> opc, string mnemonic> {
   def _S : sve2p1_fp_reduction_q<0b10, opc, mnemonic, ZPR32, "4s">;
   def _D : sve2p1_fp_reduction_q<0b11, opc, mnemonic, ZPR64, "2d">;
 }
+
+
+// SVE Permute Vector - Quadwords (DUPQ)
+class sve2p1_dupq<bits<5> ind_tsz, string mnemonic, ZPRRegOp zprty, Operand itype>
+    : I<(outs zprty:$Zd), (ins zprty:$Zn, itype:$index),
+        mnemonic, "\t$Zd, $Zn$index",
+        "", []>, Sched<[]> {
+  bits<5> Zd;
+  bits<5> Zn;
+  let Inst{31-21} = 0b00000101001;
+  let Inst{20-16} = ind_tsz;
+  let Inst{15-10} = 0b001001;
+  let Inst{9-5} = Zn;
+  let Inst{4-0} = Zd;
+}
+
+multiclass sve2p1_dupq<string mnemonic> {
+  def _B : sve2p1_dupq<{?, ?, ?, ?, 1}, mnemonic, ZPR8, VectorIndexB32b> {
+    bits<4> index;
+    let Inst{20-17} = index;
+  }
+  def _H : sve2p1_dupq<{?, ?, ?, 1, 0}, mnemonic, ZPR16, VectorIndexH32b> {
+    bits<3> index;
+    let Inst{20-18} = index;
+  }
+  def _S : sve2p1_dupq<{?, ?, 1, 0, 0}, mnemonic, ZPR32, VectorIndexS32b> {
+    bits<2> index;
+    let Inst{20-19} = index;
+  }
+  def _D : sve2p1_dupq<{?, 1, 0, 0, 0}, mnemonic, ZPR64, VectorIndexD32b> {
+    bits<1> index;
+    let Inst{20} = index;
+  }
+}
+
+
+// SVE Permute Vector - Quadwords (EXTQ)
+class sve2p1_extq<string mnemonic>
+    : I<(outs ZPR8:$Zdn), (ins ZPR8:$_Zdn, ZPR8:$Zm, imm0_15:$imm4),
+        mnemonic, "\t$Zdn, $_Zdn, $Zm, $imm4",
+        "", []>, Sched<[]> {
+  bits<5> Zdn;
+  bits<5> Zm;
+  bits<4> imm4;
+  let Inst{31-20} = 0b000001010110;
+  let Inst{19-16} = imm4;
+  let Inst{15-10} = 0b001001;
+  let Inst{9-5} = Zm;
+  let Inst{4-0} = Zdn;
+
+  let Constraints = "$Zdn = $_Zdn";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize = ZPR8.ElementSize;
+}
