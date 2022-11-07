@@ -2884,6 +2884,7 @@ private:
     mlir::func::FuncOp func = callee.addEntryBlockAndMapArguments();
     builder = new fir::FirOpBuilder(func, bridge.getKindMap());
     assert(builder && "FirOpBuilder did not instantiate");
+    builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
     builder->setInsertionPointToStart(&func.front());
     func.setVisibility(mlir::SymbolTable::Visibility::Public);
 
@@ -3087,6 +3088,8 @@ private:
         mlir::FunctionType::get(context, llvm::None, llvm::None));
     func.addEntryBlock();
     builder = new fir::FirOpBuilder(func, bridge.getKindMap());
+    assert(builder && "FirOpBuilder did not instantiate");
+    builder->setFastMathFlags(bridge.getLoweringOptions().getMathOptions());
     createGlobals();
     if (mlir::Region *region = func.getCallableRegion())
       region->dropAllReferences();

@@ -583,6 +583,18 @@ void fir::FirOpBuilder::setCommonAttributes(mlir::Operation *op) const {
                                       op->getContext(), fastMathFlags));
 }
 
+void fir::FirOpBuilder::setFastMathFlags(
+    Fortran::common::MathOptionsBase options) {
+  mlir::arith::FastMathFlags arithFMF{};
+  if (options.getFPContractEnabled()) {
+    arithFMF = arithFMF | mlir::arith::FastMathFlags::contract;
+  }
+  if (options.getNoHonorInfs()) {
+    arithFMF = arithFMF | mlir::arith::FastMathFlags::ninf;
+  }
+  setFastMathFlags(arithFMF);
+}
+
 //===--------------------------------------------------------------------===//
 // ExtendedValue inquiry helper implementation
 //===--------------------------------------------------------------------===//
