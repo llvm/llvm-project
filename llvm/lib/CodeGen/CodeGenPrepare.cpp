@@ -287,7 +287,7 @@ using SetOfInstrs = SmallPtrSet<Instruction *, 16>;
 using TypeIsSExt = PointerIntPair<Type *, 2, ExtType>;
 using InstrToOrigTy = DenseMap<Instruction *, TypeIsSExt>;
 using SExts = SmallVector<Instruction *, 16>;
-using ValueToSExts = DenseMap<Value *, SExts>;
+using ValueToSExts = MapVector<Value *, SExts>;
 
 class TypePromotionTransaction;
 

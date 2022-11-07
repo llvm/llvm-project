@@ -1252,6 +1252,9 @@
 {'is_defined': True, 'name': '_ZNSt3__132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__134__construct_barrier_algorithm_baseERl', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__13cinE', 'size': 168, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD0Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD1Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__13pmr15memory_resourceD2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__13pmr19new_delete_resourceEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__13pmr20get_default_resourceEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__13pmr20null_memory_resourceEv', 'type': 'FUNC'}
@@ -1984,6 +1987,7 @@
 {'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IDiEE', 'size': 96, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IDsEE', 'size': 96, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__120__codecvt_utf8_utf16IwEE', 'size': 96, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTVNSt3__13pmr15memory_resourceE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__13pmr25monotonic_buffer_resourceE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__13pmr26__null_memory_resource_impE', 'size': 56, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__13pmr26synchronized_pool_resourceE', 'size': 56, 'type': 'OBJECT'}

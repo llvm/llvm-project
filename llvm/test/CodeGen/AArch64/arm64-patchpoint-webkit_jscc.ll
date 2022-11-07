@@ -1,7 +1,7 @@
 ; RUN: llc -mtriple=arm64-apple-darwin -enable-misched=0 -mcpu=cyclone < %s | FileCheck %s
 ; RUN: llc -mtriple=arm64-apple-darwin -enable-misched=0 -mcpu=cyclone -fast-isel < %s | FileCheck %s --check-prefix=FAST
 ; RUN: llc -mtriple=arm64-apple-darwin -enable-misched=0 -mcpu=cyclone -filetype=obj -o %t %s
-; RUN: llvm-objdump --triple=arm64-apple-darwin -d %t | FileCheck %s --check-prefix=CHECK-ENCODING
+; RUN: llvm-objdump --no-print-imm-hex --triple=arm64-apple-darwin -d %t | FileCheck %s --check-prefix=CHECK-ENCODING
 
 ; CHECK-ENCODING-NOT: <unknown>
 ; CHECK-ENCODING: mov x16, #281470681743360

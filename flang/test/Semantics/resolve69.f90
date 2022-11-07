@@ -16,13 +16,13 @@ subroutine s1()
   character(nonConstVal) :: colonString1
   character(len=20, kind=constVal + 1) :: constKindString
   character(len=:, kind=constVal + 1), pointer :: constKindString1
-!ERROR: The type parameter LEN cannot be deferred without the POINTER or ALLOCATABLE attribute
+!ERROR: 'constkindstring2' has a type CHARACTER(KIND=2,LEN=:) with a deferred type parameter but is neither an allocatable or a pointer
   character(len=:, kind=constVal + 1) :: constKindString2
 !ERROR: Must be a constant value
   character(len=20, kind=nonConstVal) :: nonConstKindString
-!ERROR: The type parameter LEN cannot be deferred without the POINTER or ALLOCATABLE attribute
+!ERROR: 'deferredstring' has a type CHARACTER(KIND=1,LEN=:) with a deferred type parameter but is neither an allocatable or a pointer
   character(len=:) :: deferredString
-!ERROR: The type parameter LEN cannot be deferred without the POINTER or ALLOCATABLE attribute
+!ERROR: 'colonstring2' has a type CHARACTER(KIND=1,LEN=:) with a deferred type parameter but is neither an allocatable or a pointer
   character(:) :: colonString2
   !OK because of the allocatable attribute
   character(:), allocatable :: colonString3
@@ -47,14 +47,34 @@ subroutine s1()
 
 !ERROR: Invalid specification expression: reference to local entity 'nonconstval'
   type (derived(3, nonConstVal)) :: nonConstDerivedLen
-!ERROR: The value of type parameter 'typelen' cannot be deferred without the POINTER or ALLOCATABLE attribute
+!ERROR: 'colonderivedlen' has a type derived(typekind=3_4,typelen=:) with a deferred type parameter but is neither an allocatable or a pointer
   type (derived(3, :)) :: colonDerivedLen
-!ERROR: The value of type parameter 'typekind' cannot be deferred without the POINTER or ALLOCATABLE attribute
-!ERROR: The value of type parameter 'typelen' cannot be deferred without the POINTER or ALLOCATABLE attribute
+!ERROR: 'colonderivedlen1' has a type derived(typekind=:,typelen=:) with a deferred type parameter but is neither an allocatable or a pointer
   type (derived( :, :)) :: colonDerivedLen1
   type (derived( :, :)), pointer :: colonDerivedLen2
   type (derived(4, :)), pointer :: colonDerivedLen3
 end subroutine s1
+
+!C702
+!ERROR: 'f1' has a type CHARACTER(KIND=1,LEN=:) with a deferred type parameter but is neither an allocatable or a pointer
+character(:) function f1
+end function
+
+function f2
+!ERROR: 'f2' has a type CHARACTER(KIND=1,LEN=:) with a deferred type parameter but is neither an allocatable or a pointer
+  character(:) f2
+end function
+
+function f3() result(res)
+!ERROR: 'res' has a type CHARACTER(KIND=1,LEN=:) with a deferred type parameter but is neither an allocatable or a pointer
+  character(:) res
+end function
+
+!ERROR: 'f4' has a type CHARACTER(KIND=1,LEN=:) with a deferred type parameter but is neither an allocatable or a pointer
+function f4
+  implicit character(:)(f)
+end function
+
 Program d5
   Type string(maxlen)
     Integer,Kind :: maxlen

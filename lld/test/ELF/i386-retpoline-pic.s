@@ -4,7 +4,7 @@
 // RUN: ld.lld -shared -soname=t2.so %t2.o -o %t2.so
 
 // RUN: ld.lld %t1.o %t2.so -o %t.exe -z retpolineplt -pie
-// RUN: llvm-objdump -d -s --no-show-raw-insn %t.exe | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d -s --no-show-raw-insn %t.exe | FileCheck %s
 
 // CHECK:      Contents of section .got.plt:
 // CHECK-NEXT: 32b0 40220000 00000000 00000000 11120000

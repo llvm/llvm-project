@@ -3030,7 +3030,7 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   RawClangAST = InputArgs.hasArg(OBJDUMP_raw_clang_ast);
   Relocations = InputArgs.hasArg(OBJDUMP_reloc);
   PrintImmHex =
-      InputArgs.hasFlag(OBJDUMP_print_imm_hex, OBJDUMP_no_print_imm_hex, false);
+      InputArgs.hasFlag(OBJDUMP_print_imm_hex, OBJDUMP_no_print_imm_hex, true);
   PrivateHeaders = InputArgs.hasArg(OBJDUMP_private_headers);
   FilterSections = InputArgs.getAllArgValues(OBJDUMP_section_EQ);
   SectionHeaders = InputArgs.hasArg(OBJDUMP_section_headers);

@@ -24,8 +24,8 @@
 #define INTERNAL_SYSCALL_CLOBBERS "memory"
 
 static uptr __internal_syscall(u64 nr) {
-  register u64 a7 asm("a7") = nr;
-  register u64 a0 asm("a0");
+  register u64 a7 asm("$a7") = nr;
+  register u64 a0 asm("$a0");
   __asm__ volatile("syscall 0\n\t"
                    : "=r"(a0)
                    : "r"(a7)
@@ -35,8 +35,8 @@ static uptr __internal_syscall(u64 nr) {
 #define __internal_syscall0(n) (__internal_syscall)(n)
 
 static uptr __internal_syscall(u64 nr, u64 arg1) {
-  register u64 a7 asm("a7") = nr;
-  register u64 a0 asm("a0") = arg1;
+  register u64 a7 asm("$a7") = nr;
+  register u64 a0 asm("$a0") = arg1;
   __asm__ volatile("syscall 0\n\t"
                    : "+r"(a0)
                    : "r"(a7)
@@ -46,9 +46,9 @@ static uptr __internal_syscall(u64 nr, u64 arg1) {
 #define __internal_syscall1(n, a1) (__internal_syscall)(n, (u64)(a1))
 
 static uptr __internal_syscall(u64 nr, u64 arg1, long arg2) {
-  register u64 a7 asm("a7") = nr;
-  register u64 a0 asm("a0") = arg1;
-  register u64 a1 asm("a1") = arg2;
+  register u64 a7 asm("$a7") = nr;
+  register u64 a0 asm("$a0") = arg1;
+  register u64 a1 asm("$a1") = arg2;
   __asm__ volatile("syscall 0\n\t"
                    : "+r"(a0)
                    : "r"(a7), "r"(a1)
@@ -59,10 +59,10 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2) {
   (__internal_syscall)(n, (u64)(a1), (long)(a2))
 
 static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3) {
-  register u64 a7 asm("a7") = nr;
-  register u64 a0 asm("a0") = arg1;
-  register u64 a1 asm("a1") = arg2;
-  register u64 a2 asm("a2") = arg3;
+  register u64 a7 asm("$a7") = nr;
+  register u64 a0 asm("$a0") = arg1;
+  register u64 a1 asm("$a1") = arg2;
+  register u64 a2 asm("$a2") = arg3;
   __asm__ volatile("syscall 0\n\t"
                    : "+r"(a0)
                    : "r"(a7), "r"(a1), "r"(a2)
@@ -74,11 +74,11 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3) {
 
 static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3,
                                u64 arg4) {
-  register u64 a7 asm("a7") = nr;
-  register u64 a0 asm("a0") = arg1;
-  register u64 a1 asm("a1") = arg2;
-  register u64 a2 asm("a2") = arg3;
-  register u64 a3 asm("a3") = arg4;
+  register u64 a7 asm("$a7") = nr;
+  register u64 a0 asm("$a0") = arg1;
+  register u64 a1 asm("$a1") = arg2;
+  register u64 a2 asm("$a2") = arg3;
+  register u64 a3 asm("$a3") = arg4;
   __asm__ volatile("syscall 0\n\t"
                    : "+r"(a0)
                    : "r"(a7), "r"(a1), "r"(a2), "r"(a3)
@@ -90,12 +90,12 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3,
 
 static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3, u64 arg4,
                                long arg5) {
-  register u64 a7 asm("a7") = nr;
-  register u64 a0 asm("a0") = arg1;
-  register u64 a1 asm("a1") = arg2;
-  register u64 a2 asm("a2") = arg3;
-  register u64 a3 asm("a3") = arg4;
-  register u64 a4 asm("a4") = arg5;
+  register u64 a7 asm("$a7") = nr;
+  register u64 a0 asm("$a0") = arg1;
+  register u64 a1 asm("$a1") = arg2;
+  register u64 a2 asm("$a2") = arg3;
+  register u64 a3 asm("$a3") = arg4;
+  register u64 a4 asm("$a4") = arg5;
   __asm__ volatile("syscall 0\n\t"
                    : "+r"(a0)
                    : "r"(a7), "r"(a1), "r"(a2), "r"(a3), "r"(a4)
@@ -108,13 +108,13 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3, u64 arg4,
 
 static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3, u64 arg4,
                                long arg5, long arg6) {
-  register u64 a7 asm("a7") = nr;
-  register u64 a0 asm("a0") = arg1;
-  register u64 a1 asm("a1") = arg2;
-  register u64 a2 asm("a2") = arg3;
-  register u64 a3 asm("a3") = arg4;
-  register u64 a4 asm("a4") = arg5;
-  register u64 a5 asm("a5") = arg6;
+  register u64 a7 asm("$a7") = nr;
+  register u64 a0 asm("$a0") = arg1;
+  register u64 a1 asm("$a1") = arg2;
+  register u64 a2 asm("$a2") = arg3;
+  register u64 a3 asm("$a3") = arg4;
+  register u64 a4 asm("$a4") = arg5;
+  register u64 a5 asm("$a5") = arg6;
   __asm__ volatile("syscall 0\n\t"
                    : "+r"(a0)
                    : "r"(a7), "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a5)
@@ -127,14 +127,14 @@ static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3, u64 arg4,
 
 static uptr __internal_syscall(u64 nr, u64 arg1, long arg2, long arg3, u64 arg4,
                                long arg5, long arg6, long arg7) {
-  register u64 a7 asm("a7") = nr;
-  register u64 a0 asm("a0") = arg1;
-  register u64 a1 asm("a1") = arg2;
-  register u64 a2 asm("a2") = arg3;
-  register u64 a3 asm("a3") = arg4;
-  register u64 a4 asm("a4") = arg5;
-  register u64 a5 asm("a5") = arg6;
-  register u64 a6 asm("a6") = arg7;
+  register u64 a7 asm("$a7") = nr;
+  register u64 a0 asm("$a0") = arg1;
+  register u64 a1 asm("$a1") = arg2;
+  register u64 a2 asm("$a2") = arg3;
+  register u64 a3 asm("$a3") = arg4;
+  register u64 a4 asm("$a4") = arg5;
+  register u64 a5 asm("$a5") = arg6;
+  register u64 a6 asm("$a6") = arg7;
   __asm__ volatile("syscall 0\n\t"
                    : "+r"(a0)
                    : "r"(a7), "r"(a1), "r"(a2), "r"(a3), "r"(a4), "r"(a5),

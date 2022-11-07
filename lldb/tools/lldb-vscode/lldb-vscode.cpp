@@ -204,7 +204,7 @@ void SendTerminatedEvent() {
     g_vsc.sent_terminated_event = true;
     g_vsc.RunTerminateCommands();
     // Send a "terminated" event
-    llvm::json::Object event(CreateEventObject("terminated"));
+    llvm::json::Object event(CreateTerminatedEventObject());
     g_vsc.SendJSON(llvm::json::Value(std::move(event)));
   }
 }
@@ -2949,7 +2949,7 @@ void request_variables(const llvm::json::Object &request) {
       const uint32_t addr_size = g_vsc.target.GetProcess().GetAddressByteSize();
       lldb::SBValue reg_set = g_vsc.variables.registers.GetValueAtIndex(0);
       const uint32_t num_regs = reg_set.GetNumChildren();
-      for (uint32_t reg_idx=0; reg_idx<num_regs; ++reg_idx) {
+      for (uint32_t reg_idx = 0; reg_idx < num_regs; ++reg_idx) {
         lldb::SBValue reg = reg_set.GetChildAtIndex(reg_idx);
         const lldb::Format format = reg.GetFormat();
         if (format == lldb::eFormatDefault || format == lldb::eFormatHex) {

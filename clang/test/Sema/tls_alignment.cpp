@@ -58,27 +58,34 @@ int baz ()
            bar5.some_data[5];
 }
 
-
-// Verify alignment check where a dependent type is involved.
-// The check is (correctly) not performed on "t", but the check still is
-// performed on the structure as a whole once it has been instantiated.
-
 template<class T> struct templated_tls {
     static __thread T t;
     T other_t __attribute__(( aligned(64) ));
 };
-__thread templated_tls<int> blah; // expected-error{{alignment (64) of thread-local variable}}
+ __thread templated_tls<int> blah; // expected-error{{alignment (64) of thread-local variable}}
 
-int blag() {
-    return blah.other_t * 2;
-}
-
-
-// Verify alignment check where the alignment is a template parameter.
-// The check is only performed during instantiation.
 template <int N>
 struct S {
+  struct alignas(64) B {};
+  struct alignas(N) C {};
+  static inline void f() {
+    thread_local B b; // expected-error{{alignment (64) of thread-local variable}}
+    thread_local C c; // expected-error{{alignment (64) of thread-local variable}}
+  }
+  template<int J> static inline thread_local int b alignas(J) = J; // expected-error{{alignment (64) of thread-local variable}}
   static int __thread __attribute__((aligned(N))) x; // expected-error{{alignment (64) of thread-local variable}}
 };
 
-S<64> s_instance; // expected-note{{in instantiation of template class 'S<64>' requested here}}
+int blag() {
+    // Verify alignment check where the alignment is a template parameter.
+    // The check is only performed during instantiation.
+    S<64> s_instance; // expected-note{{in instantiation of template class 'S<64>' requested here}}
+
+    // Verify alignment for dependent local variables.
+    S<64>::f(); // expected-note{{in instantiation of member function 'S<64>::f' requested here}}
+
+    // Verify alignment check where a dependent type is involved.
+    // The check is (correctly) not performed on "t", but the check still is
+    // performed on the structure as a whole once it has been instantiated.
+    return blah.other_t * 2 + S<64>::b<64>; // expected-note{{in instantiation of static data member 'S<64>::b' requested here}}
+}

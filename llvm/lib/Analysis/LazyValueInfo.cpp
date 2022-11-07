@@ -1859,9 +1859,27 @@ LazyValueInfo::Tristate LazyValueInfo::getPredicateAt(unsigned P, Value *LHS,
     return getPredicateAt(CmpInst::getSwappedPredicate(Pred), RHS, C, CxtI,
                           UseBlockValue);
 
-  // Got two non-Constant values. While we could handle them somewhat,
-  // by getting their constant ranges, and applying ConstantRange::icmp(),
-  // so far it did not appear to be profitable.
+  // Got two non-Constant values. Try to determine the comparison results based
+  // on the block values of the two operands, e.g. because they have
+  // non-overlapping ranges.
+  if (UseBlockValue) {
+    Module *M = CxtI->getModule();
+    ValueLatticeElement L =
+        getImpl(PImpl, AC, M).getValueInBlock(LHS, CxtI->getParent(), CxtI);
+    if (L.isOverdefined())
+      return LazyValueInfo::Unknown;
+
+    ValueLatticeElement R =
+        getImpl(PImpl, AC, M).getValueInBlock(RHS, CxtI->getParent(), CxtI);
+    Type *Ty = CmpInst::makeCmpResultType(LHS->getType());
+    if (Constant *Res = L.getCompare((CmpInst::Predicate)P, Ty, R,
+                                     M->getDataLayout())) {
+      if (Res->isNullValue())
+        return LazyValueInfo::False;
+      if (Res->isOneValue())
+        return LazyValueInfo::True;
+    }
+  }
   return LazyValueInfo::Unknown;
 }
 

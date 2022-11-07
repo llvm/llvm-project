@@ -562,7 +562,7 @@ void LVBinaryReader::processLines(LVLines *DebugLines,
       size_t Index = 0;
       dbgs() << "\nSectionIndex: " << format_decimal(SectionIndex, 3)
              << " Scope DIE: " << hexValue(Scope->getOffset()) << "\n"
-             << format("Process instructions lines: %d\n",
+             << format("Process instruction lines: %d\n",
                        InstructionLines.size());
       for (const LVLine *Line : InstructionLines)
         dbgs() << format_decimal(++Index, 5) << ": "
@@ -640,8 +640,6 @@ void LVBinaryReader::processLines(LVLines *DebugLines,
   if (DebugLines->empty()) {
     if (const LVScopes *Scopes = CompileUnit->getScopes())
       for (LVScope *Scope : *Scopes) {
-        if (Scope->getIsArtificial())
-          continue;
         LVLines *Lines = ScopeInstructions.find(Scope);
         if (Lines) {
 
@@ -649,14 +647,20 @@ void LVBinaryReader::processLines(LVLines *DebugLines,
             size_t Index = 0;
             dbgs() << "\nSectionIndex: " << format_decimal(SectionIndex, 3)
                    << " Scope DIE: " << hexValue(Scope->getOffset()) << "\n"
-                   << format("Instructions lines: %d\n", Lines->size());
+                   << format("Instruction lines: %d\n", Lines->size());
             for (const LVLine *Line : *Lines)
               dbgs() << format_decimal(++Index, 5) << ": "
                      << hexValue(Line->getOffset()) << ", (" << Line->getName()
                      << ")\n";
           });
 
-          DebugLines->append(*Lines);
+          if (Scope->getIsArtificial()) {
+            // Add the instruction lines to their artificial scope.
+            for (LVLine *Line : *Lines)
+              Scope->addElement(Line);
+          } else {
+            DebugLines->append(*Lines);
+          }
           Lines->clear();
         }
       }

@@ -948,13 +948,14 @@ computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
   SmallVector<OpFoldResult> subShapeSizes =
       computeTileSizes(builder, loc, tileSizes, sizeBounds);
 
-  assert(static_cast<int64_t>(valuesToTile.size()) ==
+  assert(static_cast<int64_t>(valuesToTile.size()) <=
              linalgOp->getNumOperands() &&
-         "expected one value to tile for every operand");
+         "more value to tile than operands.");
   SmallVector<Optional<SliceParameters>> allSliceParams;
   allSliceParams.reserve(valuesToTile.size());
-  for (OpOperand &opOperand : linalgOp->getOpOperands()) {
-    Value shapedOp = valuesToTile[opOperand.getOperandNumber()];
+  for (auto [opOperand, val] :
+       llvm::zip(linalgOp->getOpOperands(), valuesToTile)) {
+    Value shapedOp = val;
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: for operand " << shapedOp);
     AffineMap map = linalgOp.getMatchingIndexingMap(&opOperand);
     // Use `opOperand` as is if it is not tiled and not an output tensor. Having
@@ -1057,6 +1058,38 @@ getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes) {
   if (!curr.empty() && !reassociation.empty())
     reassociation.back().append(curr.begin(), curr.end());
   return reassociation;
+}
+
+/// Return the identity numeric value associated to the give op.
+Optional<Attribute> getNeutralElement(Operation *op) {
+  // Builder only used as helper for attribute creation.
+  OpBuilder b(op->getContext());
+  Type resultType = op->getResult(0).getType();
+  if (auto floatType = resultType.dyn_cast<FloatType>()) {
+    const llvm::fltSemantics &semantic = floatType.getFloatSemantics();
+    if (isa<arith::AddFOp>(op))
+      return b.getFloatAttr(resultType, llvm::APFloat::getZero(semantic));
+    if (isa<arith::MulFOp>(op))
+      return b.getFloatAttr(resultType, llvm::APFloat(semantic, 1));
+    if (isa<arith::MaxFOp>(op))
+      return b.getFloatAttr(resultType,
+                            llvm::APFloat::getLargest(semantic, true));
+    if (isa<arith::MinFOp>(op))
+      return b.getFloatAttr(resultType,
+                            llvm::APFloat::getLargest(semantic, true));
+    return Attribute();
+  }
+  if (isa<arith::AddIOp, arith::OrIOp, arith::XOrIOp>(op))
+    return b.getIntegerAttr(resultType, 0);
+  if (isa<arith::AndIOp>(op))
+    return b.getIntegerAttr(resultType, -1);
+  if (isa<arith::MaxSIOp>(op))
+    return b.getIntegerAttr(resultType, std::numeric_limits<int64_t>::min());
+  if (isa<arith::MinSIOp>(op))
+    return b.getIntegerAttr(resultType, std::numeric_limits<int64_t>::max());
+  if (isa<arith::MulIOp>(op))
+    return b.getIntegerAttr(resultType, 1);
+  return llvm::None;
 }
 
 } // namespace linalg

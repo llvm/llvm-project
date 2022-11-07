@@ -337,6 +337,11 @@
 // AVX-VNNIINT8: "-target-feature" "+avxvnniint8"
 // NO-AVX-VNNIINT8: "-target-feature" "-avxvnniint8"
 
+// RUN: %clang --target=i386 -mavxneconvert %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVXNECONVERT %s
+// RUN: %clang --target=i386 -mno-avxneconvert %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AVXNECONVERT %s
+// AVXNECONVERT: "-target-feature" "+avxneconvert"
+// NO-AVXNECONVERT: "-target-feature" "-avxneconvert"
+
 // RUN: %clang --target=i386 -march=i386 -mcrc32 %s -### 2>&1 | FileCheck -check-prefix=CRC32 %s
 // RUN: %clang --target=i386 -march=i386 -mno-crc32 %s -### 2>&1 | FileCheck -check-prefix=NO-CRC32 %s
 // CRC32: "-target-feature" "+crc32"

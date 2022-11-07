@@ -1,5 +1,5 @@
 ; RUN: llc -march=mipsel -filetype=obj --disable-machine-licm -mattr=micromips < %s -o - \
-; RUN:   | llvm-objdump --no-show-raw-insn -d - | FileCheck %s --check-prefix=MICROMIPS
+; RUN:   | llvm-objdump --no-print-imm-hex --no-show-raw-insn -d - | FileCheck %s --check-prefix=MICROMIPS
 
 ; Use llvm-objdump to check wheter the encodings of microMIPS atomic instructions are correct.
 ; While emitting assembly files directly when in microMIPS mode, it is possible to emit a mips32r2

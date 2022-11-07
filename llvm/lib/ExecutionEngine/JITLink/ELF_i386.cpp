@@ -22,8 +22,7 @@
 using namespace llvm;
 using namespace llvm::jitlink;
 
-namespace llvm {
-namespace jitlink {
+namespace llvm::jitlink {
 
 class ELFJITLinker_i386 : public JITLinker<ELFJITLinker_i386> {
   friend class JITLinker<ELFJITLinker_i386>;
@@ -35,15 +34,7 @@ public:
 
 private:
   Error applyFixup(LinkGraph &G, Block &B, const Edge &E) const {
-    using namespace i386;
-    using namespace llvm::support;
-
-    switch (E.getKind()) {
-    case i386::None: {
-      break;
-    }
-    }
-    return Error::success();
+    return i386::applyFixup(G, B, E);
   }
 };
 
@@ -55,6 +46,16 @@ private:
     switch (Type) {
     case ELF::R_386_NONE:
       return EdgeKind_i386::None;
+    case ELF::R_386_32:
+      return EdgeKind_i386::Pointer32;
+    case ELF::R_386_PC32:
+      return EdgeKind_i386::PCRel32;
+    case ELF::R_386_16:
+      return EdgeKind_i386::Pointer16;
+    case ELF::R_386_PC16:
+      return EdgeKind_i386::PCRel16;
+    case ELF::R_386_GOTPC:
+      return EdgeKind_i386::Delta32FromGOT;
     }
 
     return make_error<JITLinkError>("Unsupported i386 relocation:" +
@@ -63,6 +64,64 @@ private:
 
   Error addRelocations() override {
     LLVM_DEBUG(dbgs() << "Adding relocations\n");
+    using Base = ELFLinkGraphBuilder<ELFT>;
+    using Self = ELFLinkGraphBuilder_i386;
+
+    for (const auto &RelSect : Base::Sections) {
+      // Validate the section to read relocation entries from.
+      if (RelSect.sh_type == ELF::SHT_RELA)
+        return make_error<StringError>(
+            "No SHT_RELA in valid i386 ELF object files",
+            inconvertibleErrorCode());
+
+      if (Error Err = Base::forEachRelRelocation(RelSect, this,
+                                                 &Self::addSingleRelocation))
+        return Err;
+    }
+
+    return Error::success();
+  }
+
+  Error addSingleRelocation(const typename ELFT::Rel &Rel,
+                            const typename ELFT::Shdr &FixupSection,
+                            Block &BlockToFix) {
+    using Base = ELFLinkGraphBuilder<ELFT>;
+
+    uint32_t SymbolIndex = Rel.getSymbol(false);
+    auto ObjSymbol = Base::Obj.getRelocationSymbol(Rel, Base::SymTabSec);
+    if (!ObjSymbol)
+      return ObjSymbol.takeError();
+
+    Symbol *GraphSymbol = Base::getGraphSymbol(SymbolIndex);
+    if (!GraphSymbol)
+      return make_error<StringError>(
+          formatv("Could not find symbol at given index, did you add it to "
+                  "JITSymbolTable? index: {0}, shndx: {1} Size of table: {2}",
+                  SymbolIndex, (*ObjSymbol)->st_shndx,
+                  Base::GraphSymbols.size()),
+          inconvertibleErrorCode());
+
+    Expected<i386::EdgeKind_i386> Kind = getRelocationKind(Rel.getType(false));
+    if (!Kind)
+      return Kind.takeError();
+
+    // TODO: To be removed when GOT relative relocations are supported.
+    if (*Kind == i386::EdgeKind_i386::Delta32FromGOT)
+      return Error::success();
+
+    int64_t Addend = 0;
+
+    auto FixupAddress = orc::ExecutorAddr(FixupSection.sh_addr) + Rel.r_offset;
+    Edge::OffsetT Offset = FixupAddress - BlockToFix.getAddress();
+    Edge GE(*Kind, Offset, *GraphSymbol, Addend);
+    LLVM_DEBUG({
+      dbgs() << "    ";
+      printEdge(dbgs(), BlockToFix, GE, i386::getEdgeKindName(*Kind));
+      dbgs() << "\n";
+    });
+
+    BlockToFix.addEdge(std::move(GE));
+
     return Error::success();
   }
 
@@ -110,5 +169,4 @@ void link_ELF_i386(std::unique_ptr<LinkGraph> G,
   ELFJITLinker_i386::link(std::move(Ctx), std::move(G), std::move(Config));
 }
 
-} // namespace jitlink
-} // namespace llvm
+} // namespace llvm::jitlink

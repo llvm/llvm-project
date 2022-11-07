@@ -211,6 +211,11 @@ Attribute Attribute::getWithUWTableKind(LLVMContext &Context,
   return get(Context, UWTable, uint64_t(Kind));
 }
 
+Attribute Attribute::getWithMemoryEffects(LLVMContext &Context,
+                                          MemoryEffects ME) {
+  return get(Context, Memory, ME.toIntValue());
+}
+
 Attribute
 Attribute::getWithAllocSizeArgs(LLVMContext &Context, unsigned ElemSizeArg,
                                 const Optional<unsigned> &NumElemsArg) {
@@ -831,6 +836,10 @@ AllocFnKind AttributeSet::getAllocKind() const {
   return SetNode ? SetNode->getAllocKind() : AllocFnKind::Unknown;
 }
 
+MemoryEffects AttributeSet::getMemoryEffects() const {
+  return SetNode ? SetNode->getMemoryEffects() : MemoryEffects::unknown();
+}
+
 std::string AttributeSet::getAsString(bool InAttrGrp) const {
   return SetNode ? SetNode->getAsString(InAttrGrp) : "";
 }
@@ -1007,6 +1016,12 @@ AllocFnKind AttributeSetNode::getAllocKind() const {
   if (auto A = findEnumAttribute(Attribute::AllocKind))
     return A->getAllocKind();
   return AllocFnKind::Unknown;
+}
+
+MemoryEffects AttributeSetNode::getMemoryEffects() const {
+  if (auto A = findEnumAttribute(Attribute::Memory))
+    return A->getMemoryEffects();
+  return MemoryEffects::unknown();
 }
 
 std::string AttributeSetNode::getAsString(bool InAttrGrp) const {
@@ -1559,6 +1574,10 @@ UWTableKind AttributeList::getUWTableKind() const {
 
 AllocFnKind AttributeList::getAllocKind() const {
   return getFnAttrs().getAllocKind();
+}
+
+MemoryEffects AttributeList::getMemoryEffects() const {
+  return getFnAttrs().getMemoryEffects();
 }
 
 std::string AttributeList::getAsString(unsigned Index, bool InAttrGrp) const {

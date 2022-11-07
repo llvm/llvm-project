@@ -189,24 +189,30 @@ public:
   void removeInstruction(Instruction *I);
 };
 
-/// Reduced version of MemoryLocation that only stores a pointer and size.
-/// Used for caching AATags independent BasicAA results.
+/// Cache key for BasicAA results. It only includes the pointer and size from
+/// MemoryLocation, as BasicAA is AATags independent. Additionally, it includes
+/// the value of MayBeCrossIteration, which may affect BasicAA results.
 struct AACacheLoc {
-  const Value *Ptr;
+  using PtrTy = PointerIntPair<const Value *, 1, bool>;
+  PtrTy Ptr;
   LocationSize Size;
+
+  AACacheLoc(PtrTy Ptr, LocationSize Size) : Ptr(Ptr), Size(Size) {}
+  AACacheLoc(const Value *Ptr, LocationSize Size, bool MayBeCrossIteration)
+      : Ptr(Ptr, MayBeCrossIteration), Size(Size) {}
 };
 
 template <> struct DenseMapInfo<AACacheLoc> {
   static inline AACacheLoc getEmptyKey() {
-    return {DenseMapInfo<const Value *>::getEmptyKey(),
+    return {DenseMapInfo<AACacheLoc::PtrTy>::getEmptyKey(),
             DenseMapInfo<LocationSize>::getEmptyKey()};
   }
   static inline AACacheLoc getTombstoneKey() {
-    return {DenseMapInfo<const Value *>::getTombstoneKey(),
+    return {DenseMapInfo<AACacheLoc::PtrTy>::getTombstoneKey(),
             DenseMapInfo<LocationSize>::getTombstoneKey()};
   }
   static unsigned getHashValue(const AACacheLoc &Val) {
-    return DenseMapInfo<const Value *>::getHashValue(Val.Ptr) ^
+    return DenseMapInfo<AACacheLoc::PtrTy>::getHashValue(Val.Ptr) ^
            DenseMapInfo<LocationSize>::getHashValue(Val.Size);
   }
   static bool isEqual(const AACacheLoc &LHS, const AACacheLoc &RHS) {
@@ -257,15 +263,6 @@ public:
   SmallVector<AAQueryInfo::LocPair, 4> AssumptionBasedResults;
 
   AAQueryInfo(AAResults &AAR, CaptureInfo *CI) : AAR(AAR), CI(CI) {}
-
-  /// Create a new AAQueryInfo based on this one, but with the cache cleared.
-  /// This is used for recursive queries across phis, where cache results may
-  /// not be valid.
-  AAQueryInfo withEmptyCache() {
-    AAQueryInfo NewAAQI(AAR, CI);
-    NewAAQI.Depth = Depth;
-    return NewAAQI;
-  }
 };
 
 /// AAQueryInfo that uses SimpleCaptureInfo.
@@ -362,7 +359,9 @@ public:
 
   /// Checks whether the given location points to constant memory, or if
   /// \p OrLocal is true whether it points to a local alloca.
-  bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal = false);
+  bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal = false) {
+    return isNoModRef(getModRefInfoMask(Loc, OrLocal));
+  }
 
   /// A convenience wrapper around the primary \c pointsToConstantMemory
   /// interface.
@@ -374,6 +373,22 @@ public:
   //===--------------------------------------------------------------------===//
   /// \name Simple mod/ref information
   /// @{
+
+  /// Returns a bitmask that should be unconditionally applied to the ModRef
+  /// info of a memory location. This allows us to eliminate Mod and/or Ref
+  /// from the ModRef info based on the knowledge that the memory location
+  /// points to constant and/or locally-invariant memory.
+  ///
+  /// If IgnoreLocals is true, then this method returns NoModRef for memory
+  /// that points to a local alloca.
+  ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
+                               bool IgnoreLocals = false);
+
+  /// A convenience wrapper around the primary \c getModRefInfoMask
+  /// interface.
+  ModRefInfo getModRefInfoMask(const Value *P, bool IgnoreLocals = false) {
+    return getModRefInfoMask(MemoryLocation::getBeforeOrAfter(P), IgnoreLocals);
+  }
 
   /// Get the ModRef info associated with a pointer argument of a call. The
   /// result's bits are set to indicate the allowed aliasing ModRef kinds. Note
@@ -444,97 +459,6 @@ public:
     return getMemoryEffects(F).onlyReadsMemory();
   }
 
-  /// getModRefInfo (for call sites) - Return information about whether
-  /// a particular call site modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc);
-
-  /// getModRefInfo (for call sites) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const CallBase *Call, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(Call, MemoryLocation(P, Size));
-  }
-
-  /// getModRefInfo (for loads) - Return information about whether
-  /// a particular load modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const LoadInst *L, const MemoryLocation &Loc);
-
-  /// getModRefInfo (for loads) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const LoadInst *L, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(L, MemoryLocation(P, Size));
-  }
-
-  /// getModRefInfo (for stores) - Return information about whether
-  /// a particular store modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const StoreInst *S, const MemoryLocation &Loc);
-
-  /// getModRefInfo (for stores) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const StoreInst *S, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(S, MemoryLocation(P, Size));
-  }
-
-  /// getModRefInfo (for fences) - Return information about whether
-  /// a particular store modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const FenceInst *S, const MemoryLocation &Loc);
-
-  /// getModRefInfo (for fences) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const FenceInst *S, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(S, MemoryLocation(P, Size));
-  }
-
-  /// getModRefInfo (for cmpxchges) - Return information about whether
-  /// a particular cmpxchg modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const AtomicCmpXchgInst *CX,
-                           const MemoryLocation &Loc);
-
-  /// getModRefInfo (for cmpxchges) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const AtomicCmpXchgInst *CX, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(CX, MemoryLocation(P, Size));
-  }
-
-  /// getModRefInfo (for atomicrmws) - Return information about whether
-  /// a particular atomicrmw modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const AtomicRMWInst *RMW, const MemoryLocation &Loc);
-
-  /// getModRefInfo (for atomicrmws) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const AtomicRMWInst *RMW, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(RMW, MemoryLocation(P, Size));
-  }
-
-  /// getModRefInfo (for va_args) - Return information about whether
-  /// a particular va_arg modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const VAArgInst *I, const MemoryLocation &Loc);
-
-  /// getModRefInfo (for va_args) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const VAArgInst *I, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(I, MemoryLocation(P, Size));
-  }
-
-  /// getModRefInfo (for catchpads) - Return information about whether
-  /// a particular catchpad modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const CatchPadInst *I, const MemoryLocation &Loc);
-
-  /// getModRefInfo (for catchpads) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const CatchPadInst *I, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(I, MemoryLocation(P, Size));
-  }
-
-  /// getModRefInfo (for catchrets) - Return information about whether
-  /// a particular catchret modifies or reads the specified memory location.
-  ModRefInfo getModRefInfo(const CatchReturnInst *I, const MemoryLocation &Loc);
-
-  /// getModRefInfo (for catchrets) - A convenience wrapper.
-  ModRefInfo getModRefInfo(const CatchReturnInst *I, const Value *P,
-                           LocationSize Size) {
-    return getModRefInfo(I, MemoryLocation(P, Size));
-  }
-
   /// Check whether or not an instruction may read or write the optionally
   /// specified memory location.
   ///
@@ -559,12 +483,7 @@ public:
 
   /// Return information about whether a call and an instruction may refer to
   /// the same memory locations.
-  ModRefInfo getModRefInfo(Instruction *I, const CallBase *Call);
-
-  /// Return information about whether two call sites may refer to the same set
-  /// of memory locations. See the AA documentation for details:
-  ///   http://llvm.org/docs/AliasAnalysis.html#ModRefInfo
-  ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2);
+  ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call);
 
   /// Return information about whether a particular call site modifies
   /// or reads the specified memory location \p MemLoc before instruction \p I
@@ -617,7 +536,9 @@ public:
                     AAQueryInfo &AAQI);
   bool pointsToConstantMemory(const MemoryLocation &Loc, AAQueryInfo &AAQI,
                               bool OrLocal = false);
-  ModRefInfo getModRefInfo(Instruction *I, const CallBase *Call2,
+  ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
+                               bool IgnoreLocals = false);
+  ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call2,
                            AAQueryInfo &AAQIP);
   ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
                            AAQueryInfo &AAQI);
@@ -684,17 +605,15 @@ public:
   bool pointsToConstantMemory(const MemoryLocation &Loc, bool OrLocal = false) {
     return AA.pointsToConstantMemory(Loc, AAQI, OrLocal);
   }
-  ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc) {
-    return AA.getModRefInfo(Call, Loc, AAQI);
-  }
-  ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2) {
-    return AA.getModRefInfo(Call1, Call2, AAQI);
+  ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
+                               bool IgnoreLocals = false) {
+    return AA.getModRefInfoMask(Loc, AAQI, IgnoreLocals);
   }
   ModRefInfo getModRefInfo(const Instruction *I,
                            const Optional<MemoryLocation> &OptLoc) {
     return AA.getModRefInfo(I, OptLoc, AAQI);
   }
-  ModRefInfo getModRefInfo(Instruction *I, const CallBase *Call2) {
+  ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call2) {
     return AA.getModRefInfo(I, Call2, AAQI);
   }
   ModRefInfo getArgModRefInfo(const CallBase *Call, unsigned ArgIdx) {
@@ -746,15 +665,18 @@ public:
   virtual AliasResult alias(const MemoryLocation &LocA,
                             const MemoryLocation &LocB, AAQueryInfo &AAQI) = 0;
 
-  /// Checks whether the given location points to constant memory, or if
-  /// \p OrLocal is true whether it points to a local alloca.
-  virtual bool pointsToConstantMemory(const MemoryLocation &Loc,
-                                      AAQueryInfo &AAQI, bool OrLocal) = 0;
-
   /// @}
   //===--------------------------------------------------------------------===//
   /// \name Simple mod/ref information
   /// @{
+
+  /// Returns a bitmask that should be unconditionally applied to the ModRef
+  /// info of a memory location. This allows us to eliminate Mod and/or Ref from
+  /// the ModRef info based on the knowledge that the memory location points to
+  /// constant and/or locally-invariant memory.
+  virtual ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
+                                       AAQueryInfo &AAQI,
+                                       bool IgnoreLocals) = 0;
 
   /// Get the ModRef info associated with a pointer argument of a callsite. The
   /// result's bits are set to indicate the allowed aliasing ModRef kinds. Note
@@ -804,9 +726,9 @@ public:
     return Result.alias(LocA, LocB, AAQI);
   }
 
-  bool pointsToConstantMemory(const MemoryLocation &Loc, AAQueryInfo &AAQI,
-                              bool OrLocal) override {
-    return Result.pointsToConstantMemory(Loc, AAQI, OrLocal);
+  ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
+                               bool IgnoreLocals) override {
+    return Result.getModRefInfoMask(Loc, AAQI, IgnoreLocals);
   }
 
   ModRefInfo getArgModRefInfo(const CallBase *Call, unsigned ArgIdx) override {
@@ -859,9 +781,9 @@ public:
     return AliasResult::MayAlias;
   }
 
-  bool pointsToConstantMemory(const MemoryLocation &Loc, AAQueryInfo &AAQI,
-                              bool OrLocal) {
-    return false;
+  ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
+                               bool IgnoreLocals) {
+    return ModRefInfo::ModRef;
   }
 
   ModRefInfo getArgModRefInfo(const CallBase *Call, unsigned ArgIdx) {

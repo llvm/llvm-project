@@ -326,9 +326,10 @@ exit:
 declare void @readnone_param(ptr nocapture readnone %p)
 declare void @readonly_param(ptr nocapture readonly %p)
 
+; FIXME: While this can't be readnone, this could be readonly.
 define void @op_bundle_readnone_deopt(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@op_bundle_readnone_deopt
-; CHECK-SAME: (ptr nocapture readnone [[P:%.*]]) {
+; CHECK-SAME: (ptr nocapture [[P:%.*]]) {
 ; CHECK-NEXT:    call void @readnone_param(ptr [[P]]) [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ;
@@ -338,7 +339,7 @@ define void @op_bundle_readnone_deopt(ptr %p) {
 
 define void @op_bundle_readnone_unknown(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@op_bundle_readnone_unknown
-; CHECK-SAME: (ptr nocapture readnone [[P:%.*]]) {
+; CHECK-SAME: (ptr nocapture [[P:%.*]]) {
 ; CHECK-NEXT:    call void @readnone_param(ptr [[P]]) [ "unknown"() ]
 ; CHECK-NEXT:    ret void
 ;
@@ -358,7 +359,7 @@ define void @op_bundle_readonly_deopt(ptr %p) {
 
 define void @op_bundle_readonly_unknown(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@op_bundle_readonly_unknown
-; CHECK-SAME: (ptr nocapture readonly [[P:%.*]]) {
+; CHECK-SAME: (ptr nocapture [[P:%.*]]) {
 ; CHECK-NEXT:    call void @readonly_param(ptr [[P]]) [ "unknown"() ]
 ; CHECK-NEXT:    ret void
 ;

@@ -6,13 +6,13 @@ define void @intrinsics() {
 
 ; CHECK-LABEL:  llvm.func @fmuladd_test
 define void @fmuladd_test(float %0, float %1, <8 x float> %2, i8* %3) {
-  ; CHECK: "llvm.intr.fmuladd"(%{{.*}}, %{{.*}}, %{{.*}}) : (f32, f32, f32) -> f32
+  ; CHECK: llvm.intr.fmuladd(%{{.*}}, %{{.*}}, %{{.*}}) : (f32, f32, f32) -> f32
   %5 = call float @llvm.fmuladd.f32(float %0, float %1, float %0)
-  ; CHECK: "llvm.intr.fmuladd"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  ; CHECK: llvm.intr.fmuladd(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>, vector<8xf32>) -> vector<8xf32>
   %6 = call <8 x float> @llvm.fmuladd.v8f32(<8 x float> %2, <8 x float> %2, <8 x float> %2)
-  ; CHECK: "llvm.intr.fma"(%{{.*}}, %{{.*}}, %{{.*}}) : (f32, f32, f32) -> f32
+  ; CHECK: llvm.intr.fma(%{{.*}}, %{{.*}}, %{{.*}}) : (f32, f32, f32) -> f32
   %7 = call float @llvm.fma.f32(float %0, float %1, float %0)
-  ; CHECK: "llvm.intr.fma"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  ; CHECK: llvm.intr.fma(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>, vector<8xf32>) -> vector<8xf32>
   %8 = call <8 x float> @llvm.fma.v8f32(<8 x float> %2, <8 x float> %2, <8 x float> %2)
   ; CHECK: "llvm.intr.prefetch"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.ptr<i8>, i32, i32, i32) -> ()
   call void @llvm.prefetch.p0i8(i8* %3, i32 0, i32 3, i32 1)
@@ -21,111 +21,111 @@ define void @fmuladd_test(float %0, float %1, <8 x float> %2, i8* %3) {
 
 ; CHECK-LABEL:  llvm.func @exp_test
 define void @exp_test(float %0, <8 x float> %1) {
-  ; CHECK: "llvm.intr.exp"(%{{.*}}) : (f32) -> f32
+  ; CHECK: llvm.intr.exp(%{{.*}}) : (f32) -> f32
   %3 = call float @llvm.exp.f32(float %0)
-  ; CHECK: "llvm.intr.exp"(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  ; CHECK: llvm.intr.exp(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
   %4 = call <8 x float> @llvm.exp.v8f32(<8 x float> %1)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @exp2_test
 define void @exp2_test(float %0, <8 x float> %1) {
-  ; CHECK:  "llvm.intr.exp2"(%{{.*}}) : (f32) -> f32
+  ; CHECK:  llvm.intr.exp2(%{{.*}}) : (f32) -> f32
   %3 = call float @llvm.exp2.f32(float %0)
-  ; CHECK:  "llvm.intr.exp2"(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  ; CHECK:  llvm.intr.exp2(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
   %4 = call <8 x float> @llvm.exp2.v8f32(<8 x float> %1)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @log_test
 define void @log_test(float %0, <8 x float> %1) {
-  ; CHECK:  "llvm.intr.log"(%{{.*}}) : (f32) -> f32
+  ; CHECK:  llvm.intr.log(%{{.*}}) : (f32) -> f32
   %3 = call float @llvm.log.f32(float %0)
-  ; CHECK:  "llvm.intr.log"(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  ; CHECK:  llvm.intr.log(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
   %4 = call <8 x float> @llvm.log.v8f32(<8 x float> %1)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @log10_test
 define void @log10_test(float %0, <8 x float> %1) {
-  ; CHECK:  "llvm.intr.log10"(%{{.*}}) : (f32) -> f32
+  ; CHECK:  llvm.intr.log10(%{{.*}}) : (f32) -> f32
   %3 = call float @llvm.log10.f32(float %0)
-  ; CHECK:  "llvm.intr.log10"(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  ; CHECK:  llvm.intr.log10(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
   %4 = call <8 x float> @llvm.log10.v8f32(<8 x float> %1)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @log2_test
 define void @log2_test(float %0, <8 x float> %1)  {
-  ; CHECK:  "llvm.intr.log2"(%{{.*}}) : (f32) -> f32
+  ; CHECK:  llvm.intr.log2(%{{.*}}) : (f32) -> f32
   %3 = call float @llvm.log2.f32(float %0)
-  ; CHECK: "llvm.intr.log2"(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  ; CHECK: llvm.intr.log2(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
   %4 = call <8 x float> @llvm.log2.v8f32(<8 x float> %1)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @fabs_test
 define void @fabs_test(float %0, <8 x float> %1) {
-  ; CHECK: "llvm.intr.fabs"(%{{.*}}) : (f32) -> f32
+  ; CHECK: llvm.intr.fabs(%{{.*}}) : (f32) -> f32
   %3 = call float @llvm.fabs.f32(float %0)
-  ; CHECK: "llvm.intr.fabs"(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  ; CHECK: llvm.intr.fabs(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
   %4 = call <8 x float> @llvm.fabs.v8f32(<8 x float> %1)
   ret void
 }
 ; CHECK-LABEL:  llvm.func @sqrt_test
 define void @sqrt_test(float %0, <8 x float> %1) {
-  ; CHECK: "llvm.intr.sqrt"(%{{.*}}) : (f32) -> f32
+  ; CHECK: llvm.intr.sqrt(%{{.*}}) : (f32) -> f32
   %3 = call float @llvm.sqrt.f32(float %0)
-  ; CHECK: "llvm.intr.sqrt"(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  ; CHECK: llvm.intr.sqrt(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
   %4 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> %1)
   ret void
 }
 ; CHECK-LABEL:  llvm.func @ceil_test
 define void @ceil_test(float %0, <8 x float> %1) {
-  ; CHECK: "llvm.intr.ceil"(%{{.*}}) : (f32) -> f32
+  ; CHECK: llvm.intr.ceil(%{{.*}}) : (f32) -> f32
   %3 = call float @llvm.ceil.f32(float %0)
-  ; CHECK: "llvm.intr.ceil"(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  ; CHECK: llvm.intr.ceil(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
   %4 = call <8 x float> @llvm.ceil.v8f32(<8 x float> %1)
   ret void
 }
 ; CHECK-LABEL:  llvm.func @floor_test
 define void @floor_test(float %0, <8 x float> %1) {
-  ; CHECK: "llvm.intr.floor"(%{{.*}}) : (f32) -> f32
+  ; CHECK: llvm.intr.floor(%{{.*}}) : (f32) -> f32
   %3 = call float @llvm.floor.f32(float %0)
-  ; CHECK: "llvm.intr.floor"(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  ; CHECK: llvm.intr.floor(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
   %4 = call <8 x float> @llvm.floor.v8f32(<8 x float> %1)
   ret void
 }
 ; CHECK-LABEL:  llvm.func @cos_test
 define void @cos_test(float %0, <8 x float> %1) {
-  ; CHECK: "llvm.intr.cos"(%{{.*}}) : (f32) -> f32
+  ; CHECK: llvm.intr.cos(%{{.*}}) : (f32) -> f32
   %3 = call float @llvm.cos.f32(float %0)
-  ; CHECK: "llvm.intr.cos"(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
+  ; CHECK: llvm.intr.cos(%{{.*}}) : (vector<8xf32>) -> vector<8xf32>
   %4 = call <8 x float> @llvm.cos.v8f32(<8 x float> %1)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @copysign_test
 define void @copysign_test(float %0, float %1, <8 x float> %2, <8 x float> %3) {
-  ; CHECK:  "llvm.intr.copysign"(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  ; CHECK:  llvm.intr.copysign(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
   %5 = call float @llvm.copysign.f32(float %0, float %1)
-  ; CHECK:  "llvm.intr.copysign"(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  ; CHECK:  llvm.intr.copysign(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
   %6 = call <8 x float> @llvm.copysign.v8f32(<8 x float> %2, <8 x float> %3)
   ret void
 }
 ; CHECK-LABEL:  llvm.func @pow_test
 define void @pow_test(float %0, float %1, <8 x float> %2, <8 x float> %3) {
-  ; CHECK:  "llvm.intr.pow"(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  ; CHECK:  llvm.intr.pow(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
   %5 = call float @llvm.pow.f32(float %0, float %1)
-  ; CHECK:  "llvm.intr.pow"(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  ; CHECK:  llvm.intr.pow(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
   %6 = call <8 x float> @llvm.pow.v8f32(<8 x float> %2, <8 x float> %3)
   ret void
 }
 ; CHECK-LABEL:  llvm.func @bitreverse_test
 define void @bitreverse_test(i32 %0, <8 x i32> %1) {
-  ; CHECK:   "llvm.intr.bitreverse"(%{{.*}}) : (i32) -> i32
+  ; CHECK:   llvm.intr.bitreverse(%{{.*}}) : (i32) -> i32
   %3 = call i32 @llvm.bitreverse.i32(i32 %0)
-  ; CHECK:   "llvm.intr.bitreverse"(%{{.*}}) : (vector<8xi32>) -> vector<8xi32>
+  ; CHECK:   llvm.intr.bitreverse(%{{.*}}) : (vector<8xi32>) -> vector<8xi32>
   %4 = call <8 x i32> @llvm.bitreverse.v8i32(<8 x i32> %1)
   ret void
 }
@@ -152,81 +152,81 @@ define void @cttz_test(i32 %0, <8 x i32> %1) {
 
 ; CHECK-LABEL:  llvm.func @ctpop_test
 define void @ctpop_test(i32 %0, <8 x i32> %1) {
-  ; CHECK:   "llvm.intr.ctpop"(%{{.*}}) : (i32) -> i32
+  ; CHECK:   llvm.intr.ctpop(%{{.*}}) : (i32) -> i32
   %3 = call i32 @llvm.ctpop.i32(i32 %0)
-  ; CHECK:   "llvm.intr.ctpop"(%{{.*}}) : (vector<8xi32>) -> vector<8xi32>
+  ; CHECK:   llvm.intr.ctpop(%{{.*}}) : (vector<8xi32>) -> vector<8xi32>
   %4 = call <8 x i32> @llvm.ctpop.v8i32(<8 x i32> %1)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @maximum_test
 define void @maximum_test(float %0, float %1, <8 x float> %2, <8 x float> %3) {
-  ; CHECK:   "llvm.intr.maximum"(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  ; CHECK:   llvm.intr.maximum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
   %5 = call float @llvm.maximum.f32(float %0, float %1)
-  ; CHECK:   "llvm.intr.maximum"(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  ; CHECK:   llvm.intr.maximum(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
   %6 = call <8 x float> @llvm.maximum.v8f32(<8 x float> %2, <8 x float> %3)
   ret void
 }
 
 ; CHECK-LABEL:    llvm.func @minimum_test
 define void @minimum_test(float %0, float %1, <8 x float> %2, <8 x float> %3) {
-  ; CHECK:   "llvm.intr.minimum"(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  ; CHECK:   llvm.intr.minimum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
   %5 = call float @llvm.minimum.f32(float %0, float %1)
-  ; CHECK:   "llvm.intr.minimum"(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  ; CHECK:   llvm.intr.minimum(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
   %6 = call <8 x float> @llvm.minimum.v8f32(<8 x float> %2, <8 x float> %3)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @maxnum_test
 define void @maxnum_test(float %0, float %1, <8 x float> %2, <8 x float> %3) {
-  ; CHECK:   "llvm.intr.maxnum"(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  ; CHECK:   llvm.intr.maxnum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
   %5 = call float @llvm.maxnum.f32(float %0, float %1)
-  ; CHECK:   "llvm.intr.maxnum"(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  ; CHECK:   llvm.intr.maxnum(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
   %6 = call <8 x float> @llvm.maxnum.v8f32(<8 x float> %2, <8 x float> %3)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @minnum_test
 define void @minnum_test(float %0, float %1, <8 x float> %2, <8 x float> %3) {
-  ; CHECK:   "llvm.intr.minnum"(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  ; CHECK:   llvm.intr.minnum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
   %5 = call float @llvm.minnum.f32(float %0, float %1)
-  ; CHECK:   "llvm.intr.minnum"(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  ; CHECK:   llvm.intr.minnum(%{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
   %6 = call <8 x float> @llvm.minnum.v8f32(<8 x float> %2, <8 x float> %3)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @smax_test
 define void @smax_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
-  ; CHECK:  "llvm.intr.smax"(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  ; CHECK:  llvm.intr.smax(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
   %5 = call i32 @llvm.smax.i32(i32 %0, i32 %1)
-  ; CHECK:  "llvm.intr.smax"(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  ; CHECK:  llvm.intr.smax(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
   %6 = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %2, <8 x i32> %3)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @smin_test
 define void @smin_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
-  ; CHECK:   "llvm.intr.smin"(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  ; CHECK:   llvm.intr.smin(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
   %5 = call i32 @llvm.smin.i32(i32 %0, i32 %1)
-  ; CHECK:   "llvm.intr.smin"(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  ; CHECK:   llvm.intr.smin(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
   %6 = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %2, <8 x i32> %3)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @umax_test
 define void @umax_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
-  ; CHECK:   "llvm.intr.umax"(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  ; CHECK:   llvm.intr.umax(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
   %5 = call i32 @llvm.umax.i32(i32 %0, i32 %1)
-  ; CHECK:   "llvm.intr.umax"(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  ; CHECK:   llvm.intr.umax(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
   %6 = call <8 x i32> @llvm.umax.v8i32(<8 x i32> %2, <8 x i32> %3)
   ret void
 }
 
 ; CHECK-LABEL:  llvm.func @umin_test
 define void @umin_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
-  ; CHECK:   "llvm.intr.umin"(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
+  ; CHECK:   llvm.intr.umin(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
   %5 = call i32 @llvm.umin.i32(i32 %0, i32 %1)
-  ; CHECK:   "llvm.intr.umin"(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  ; CHECK:   llvm.intr.umin(%{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
   %6 = call <8 x i32> @llvm.umin.v8i32(<8 x i32> %2, <8 x i32> %3)
   ret void
 }

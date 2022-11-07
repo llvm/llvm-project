@@ -145,7 +145,7 @@ namespace {
                          DenseMap<MachineDomTreeNode*, unsigned> &OpenChildren);
     bool PerformCSE(MachineDomTreeNode *Node);
 
-    bool isPRECandidate(MachineInstr *MI);
+    bool isPRECandidate(MachineInstr *MI, SmallSet<MCRegister, 8> &PhysRefs);
     bool ProcessBlockPRE(MachineDominatorTree *MDT, MachineBasicBlock *MBB);
     bool PerformSimplePRE(MachineDominatorTree *DT);
     /// Heuristics to see if it's profitable to move common computations of MBB
@@ -798,7 +798,8 @@ bool MachineCSE::PerformCSE(MachineDomTreeNode *Node) {
 // We use stronger checks for PRE candidate rather than for CSE ones to embrace
 // checks inside ProcessBlockCSE(), not only inside isCSECandidate(). This helps
 // to exclude instrs created by PRE that won't be CSEed later.
-bool MachineCSE::isPRECandidate(MachineInstr *MI) {
+bool MachineCSE::isPRECandidate(MachineInstr *MI,
+                                SmallSet<MCRegister, 8> &PhysRefs) {
   if (!isCSECandidate(MI) ||
       MI->isNotDuplicable() ||
       MI->mayLoad() ||
@@ -807,13 +808,14 @@ bool MachineCSE::isPRECandidate(MachineInstr *MI) {
       MI->getNumExplicitDefs() != 1)
     return false;
 
-  for (const auto &def : MI->defs())
-    if (!Register::isVirtualRegister(def.getReg()))
-      return false;
-
-  for (const auto &use : MI->uses())
-    if (use.isReg() && !Register::isVirtualRegister(use.getReg()))
-      return false;
+  for (const MachineOperand &MO : MI->operands()) {
+    if (MO.isReg() && !Register::isVirtualRegister(MO.getReg())) {
+      if (MO.isDef())
+        return false;
+      else
+        PhysRefs.insert(MO.getReg());
+    }
+  }
 
   return true;
 }
@@ -822,7 +824,8 @@ bool MachineCSE::ProcessBlockPRE(MachineDominatorTree *DT,
                                  MachineBasicBlock *MBB) {
   bool Changed = false;
   for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {
-    if (!isPRECandidate(&MI))
+    SmallSet<MCRegister, 8> PhysRefs;
+    if (!isPRECandidate(&MI, PhysRefs))
       continue;
 
     if (!PREMap.count(&MI)) {
@@ -856,6 +859,15 @@ bool MachineCSE::ProcessBlockPRE(MachineDominatorTree *DT,
         // subset of `isConvergent` instructions which do fall into this
         // extended definition.
         if (MI.isConvergent() && CMBB != MBB)
+          continue;
+
+        // If this instruction uses physical registers then we can only do PRE
+        // if it's using the value that is live at the place we're hoisting to.
+        bool NonLocal;
+        PhysDefVector PhysDefs;
+        if (!PhysRefs.empty() &&
+            !PhysRegDefsReach(&*(CMBB->getFirstTerminator()), &MI, PhysRefs,
+                              PhysDefs, NonLocal))
           continue;
 
         assert(MI.getOperand(0).isDef() &&

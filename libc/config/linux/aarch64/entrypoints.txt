@@ -206,6 +206,7 @@ set(TARGET_LIBM_ENTRYPOINTS
 
     # math.h entrypoints
     libc.src.math.acosf
+    libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.atanf
     libc.src.math.atanhf    
@@ -279,6 +280,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nextafter
     libc.src.math.nextafterf
     libc.src.math.nextafterl
+    libc.src.math.pow
     libc.src.math.remainderf
     libc.src.math.remainder
     libc.src.math.remainderl
@@ -432,6 +434,11 @@ if(LLVM_LIBC_FULL_BUILD)
     # unistd.h entrypoints
     libc.src.unistd.environ
     libc.src.unistd.execv
+    libc.src.unistd.getopt
+    libc.src.unistd.optarg
+    libc.src.unistd.optind
+    libc.src.unistd.optopt
+    libc.src.unistd.opterr
 
     # sys/select.h entrypoints
     libc.src.sys.select.select

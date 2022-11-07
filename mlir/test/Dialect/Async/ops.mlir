@@ -136,3 +136,34 @@ func.func @create_group_and_await_all(%arg0: !async.token,
   %3 = arith.addi %1, %2 : index
   return %3 : index
 }
+
+// CHECK-LABEL: @async_func_return_token
+async.func @async_func_return_token() -> !async.token {
+  // CHECK: return
+  return
+}
+
+// CHECK-LABEL: @async_func_return_value
+async.func @async_func_return_value() -> !async.value<i32> {
+  %0 = arith.constant 42 : i32
+  // CHECK: return %[[value:.*]] : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @async_func_return_optional_token
+async.func @async_func_return_optional_token() -> (!async.token, !async.value<i32>) {
+  %0 = arith.constant 42 : i32
+  // CHECK: return %[[value:.*]] : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: @async_call
+func.func @async_call() {
+  // CHECK: async.call @async_func_return_token
+  // CHECK: async.call @async_func_return_value
+  // CHECK: async.call @async_func_return_optional_token
+  %0 = async.call @async_func_return_token() : () -> !async.token
+  %1 = async.call @async_func_return_value() : () -> !async.value<i32>
+  %2, %3 = async.call @async_func_return_optional_token() : () -> (!async.token, !async.value<i32>)
+  return
+}

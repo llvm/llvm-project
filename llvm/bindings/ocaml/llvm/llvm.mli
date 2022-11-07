@@ -1044,9 +1044,11 @@ val const_vector : llvalue array -> llvalue
     or [None] if this is not a string constant. *)
 val string_of_const : llvalue -> string option
 
-(** [const_element c] returns a constant for a specified index's element.
-    See the method ConstantDataSequential::getElementAsConstant. *)
-val const_element : llvalue -> int -> llvalue
+(** [aggregate_element c idx] returns [Some elt] where [elt] is the element of
+    constant aggregate [c] at the specified index [idx], or [None] if [idx] is
+    out of range or it's not possible to determine the element.
+    See the method [llvm::Constant::getAggregateElement]. *)
+val aggregate_element : llvalue -> int -> llvalue option
 
 
 (** {7 Constant expressions} *)
@@ -1169,10 +1171,10 @@ val const_ashr : llvalue -> llvalue -> llvalue
     See the method [llvm::ConstantExpr::getGetElementPtr]. *)
 val const_gep : lltype -> llvalue -> llvalue array -> llvalue
 
-(** [const_in_bounds_gep pc indices] returns the constant [getElementPtr] of [pc]
-    with the constant integers indices from the array [indices].
+(** [const_in_bounds_gep ty pc indices] returns the constant [getElementPtr] of
+    [pc] with the constant integers indices from the array [indices].
     See the method [llvm::ConstantExpr::getInBoundsGetElementPtr]. *)
-val const_in_bounds_gep : llvalue -> llvalue array -> llvalue
+val const_in_bounds_gep : lltype -> llvalue -> llvalue array -> llvalue
 
 (** [const_trunc c ty] returns the constant truncation of integer constant [c]
     to the smaller integer type [ty].

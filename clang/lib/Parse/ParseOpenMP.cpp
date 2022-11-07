@@ -2310,6 +2310,7 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
   case OMPD_unroll:
   case OMPD_task:
   case OMPD_taskyield:
+  case OMPD_error:
   case OMPD_barrier:
   case OMPD_taskwait:
   case OMPD_taskgroup:
@@ -2410,8 +2411,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenMPDeclarativeDirectiveWithExtDecl(
 ///         annot_pragma_openmp 'parallel' | 'simd' | 'for' | 'sections' |
 ///         'section' | 'single' | 'master' | 'critical' [ '(' <name> ')' ] |
 ///         'parallel for' | 'parallel sections' | 'parallel master' | 'task' |
-///         'taskyield' | 'barrier' | 'taskwait' | 'flush' | 'ordered' |
-///         'atomic' | 'for simd' | 'parallel for simd' | 'target' | 'target
+///         'taskyield' | 'barrier' | 'taskwait' | 'flush' | 'ordered' | 'error'
+///         | 'atomic' | 'for simd' | 'parallel for simd' | 'target' | 'target
 ///         data' | 'taskgroup' | 'teams' | 'taskloop' | 'taskloop simd' |
 ///         'master taskloop' | 'master taskloop simd' | 'parallel master
 ///         taskloop' | 'parallel master taskloop simd' | 'distribute' | 'target
@@ -2697,6 +2698,7 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
   case OMPD_depobj:
   case OMPD_scan:
   case OMPD_taskyield:
+  case OMPD_error:
   case OMPD_barrier:
   case OMPD_taskwait:
   case OMPD_cancellation_point:

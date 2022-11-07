@@ -1,5 +1,5 @@
 # RUN: llvm-mc %s -triple=i686-pc-win32 -filetype=obj -o %t.obj
-# RUN: llvm-objdump -d %t.obj | FileCheck %s --check-prefix=ASM
+# RUN: llvm-objdump --no-print-imm-hex -d %t.obj | FileCheck %s --check-prefix=ASM
 # RUN: llvm-pdbutil dump -il -symbols %t.obj | FileCheck %s --check-prefix=CODEVIEW
 
 # Original source, slightly modified with an extra .cv_loc directive (at EXTRA

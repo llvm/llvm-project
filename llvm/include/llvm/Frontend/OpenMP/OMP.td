@@ -526,6 +526,7 @@ def OMP_Critical : Directive<"critical"> {
 }
 def OMP_TaskYield : Directive<"taskyield"> {}
 def OMP_Barrier : Directive<"barrier"> {}
+def OMP_Error : Directive<"error"> {}
 def OMP_TaskWait : Directive<"taskwait"> {
   let allowedClauses = [
     VersionedClause<OMPC_Depend, 50>

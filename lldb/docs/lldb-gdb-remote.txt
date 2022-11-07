@@ -2136,3 +2136,20 @@ Example packet:
     { "port": 5432 },
     { "socket_name": "foo" }
 ]
+
+//----------------------------------------------------------------------
+// "QSetDetachOnError"
+//
+// BRIEF
+//  Sets what the server should do when the communication channel with LLDB
+//  goes down. Either kill the inferior process (0) or remove breakpoints and
+//  detach (1).
+//
+// PRIORITY TO IMPLEMENT
+//  Low. Only required if the target wants to keep the inferior process alive
+//  when the communication channel goes down.
+//----------------------------------------------------------------------
+
+The data in this packet is a single a character, which should be '0' if the
+inferior process should be killed, or '1' if the server should remove all
+breakpoints and detach from the inferior.

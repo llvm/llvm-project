@@ -109,6 +109,10 @@ public:
                  const allocator_type& a = allocator_type());                                   // constexpr since C++20
     basic_string(const basic_string& str, size_type pos, size_type n,
                  const Allocator& a = Allocator());                                             // constexpr since C++20
+    constexpr basic_string(
+        basic_string&& str, size_type pos, const Allocator& a = Allocator());                   // since C++23
+    constexpr basic_string(
+        basic_string&& str, size_type pos, size_type n, const Allocator& a = Allocator());      // since C++23
     template<class T>
         basic_string(const T& t, size_type pos, size_type n, const Allocator& a = Allocator()); // C++17, constexpr since C++20
     template <class T>
@@ -261,8 +265,9 @@ public:
     basic_string& replace(const_iterator i1, const_iterator i2, initializer_list<value_type>);  // constexpr since C++20
 
     size_type copy(value_type* s, size_type n, size_type pos = 0) const;                        // constexpr since C++20
-    basic_string substr(size_type pos = 0, size_type n = npos) const;                           // constexpr since C++20
-
+    basic_string substr(size_type pos = 0, size_type n = npos) const;                           // constexpr in C++20, removed in C++23
+    basic_string substr(size_type pos = 0, size_type n = npos) const&;                          // since C++23
+    constexpr basic_string substr(size_type pos = 0, size_type n = npos) &&;                    // since C++23
     void swap(basic_string& str)
         noexcept(allocator_traits<allocator_type>::propagate_on_container_swap::value ||
                  allocator_traits<allocator_type>::is_always_equal::value);                     // C++17, constexpr since C++20
@@ -539,6 +544,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__format/enable_insertable.h>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
+#include <__fwd/string.h>
 #include <__ios/fpos.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
@@ -565,7 +571,6 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <cstdio>  // EOF
 #include <cstdlib>
 #include <cstring>
-#include <iosfwd>
 #include <limits>
 #include <stdexcept>
 #include <string_view>
@@ -646,23 +651,10 @@ struct __can_be_converted_to_string_view : public _BoolConstant<
      !is_convertible<const _Tp&, const _CharT*>::value
     > {};
 
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
-typedef basic_string<char8_t> u8string;
-#endif
-typedef basic_string<char16_t> u16string;
-typedef basic_string<char32_t> u32string;
-
 struct __uninitialized_size_tag {};
 
 template<class _CharT, class _Traits, class _Allocator>
-class
-    _LIBCPP_TEMPLATE_VIS
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
-    _LIBCPP_PREFERRED_NAME(u8string)
-#endif
-    _LIBCPP_PREFERRED_NAME(u16string)
-    _LIBCPP_PREFERRED_NAME(u32string)
-    basic_string
+class basic_string
 {
 public:
     typedef basic_string                                 __self;
@@ -909,6 +901,36 @@ public:
     __init(__n, __c);
     std::__debug_db_insert_c(this);
   }
+
+#if _LIBCPP_STD_VER > 20
+  _LIBCPP_HIDE_FROM_ABI constexpr
+  basic_string(basic_string&& __str, size_type __pos, const _Allocator& __alloc = _Allocator())
+      : basic_string(std::move(__str), __pos, npos, __alloc) {}
+
+  _LIBCPP_HIDE_FROM_ABI constexpr
+  basic_string(basic_string&& __str, size_type __pos, size_type __n, const _Allocator& __alloc = _Allocator())
+      : __r_(__default_init_tag(), __alloc) {
+    if (__pos > __str.size())
+      __throw_out_of_range();
+
+    auto __len = std::min<size_type>(__n, __str.size() - __pos);
+    if (__alloc_traits::is_always_equal::value || __alloc == __str.__alloc()) {
+      __r_.first() = __str.__r_.first();
+      __str.__default_init();
+
+      _Traits::move(data(), data() + __pos, __len);
+      __set_size(__len);
+      _Traits::assign(data()[__len], value_type());
+    } else {
+      // Perform a copy because the allocators are not compatible.
+      __init(__str.data() + __pos, __len);
+    }
+
+    std::__debug_db_insert_c(this);
+    if (__is_long())
+      std::__debug_db_swap(this, &__str);
+  }
+#endif
 
   template <class = __enable_if_t<__is_allocator<_Allocator>::value, nullptr_t> >
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(size_type __n, _CharT __c, const _Allocator& __a);
@@ -1337,8 +1359,24 @@ public:
 #endif // _LIBCPP_CXX03_LANG
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type copy(value_type* __s, size_type __n, size_type __pos = 0) const;
+
+    // TODO: Maybe don't pass in the allocator. See https://llvm.org/PR57190
+#if _LIBCPP_STD_VER <= 20
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
-    basic_string substr(size_type __pos = 0, size_type __n = npos) const;
+    basic_string substr(size_type __pos = 0, size_type __n = npos) const {
+      return basic_string(*this, __pos, __n, __alloc());
+    }
+#else
+    _LIBCPP_HIDE_FROM_ABI constexpr
+    basic_string substr(size_type __pos = 0, size_type __n = npos) const& {
+      return basic_string(*this, __pos, __n, __alloc());
+    }
+
+    _LIBCPP_HIDE_FROM_ABI constexpr
+    basic_string substr(size_type __pos = 0, size_type __n = npos) && {
+      return basic_string(std::move(*this), __pos, __n, __alloc());
+    }
+#endif
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     void swap(basic_string& __str)
@@ -3487,14 +3525,6 @@ basic_string<_CharT, _Traits, _Allocator>::copy(value_type* __s, size_type __n, 
 
 template <class _CharT, class _Traits, class _Allocator>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX20
-basic_string<_CharT, _Traits, _Allocator>
-basic_string<_CharT, _Traits, _Allocator>::substr(size_type __pos, size_type __n) const
-{
-    return basic_string(*this, __pos, __n, __alloc());
-}
-
-template <class _CharT, class _Traits, class _Allocator>
-inline _LIBCPP_CONSTEXPR_SINCE_CXX20
 void
 basic_string<_CharT, _Traits, _Allocator>::swap(basic_string& __str)
 #if _LIBCPP_STD_VER >= 14
@@ -4673,20 +4703,6 @@ inline constexpr bool __format::__enable_insertable<std::basic_string<wchar_t>> 
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
-
-#if _LIBCPP_STD_VER > 14
-_LIBCPP_BEGIN_NAMESPACE_STD
-namespace pmr {
-template <class _CharT, class _TraitsT = std::char_traits<_CharT>>
-using basic_string = std::basic_string<_CharT, _TraitsT, polymorphic_allocator<_CharT>>;
-
-using string    = basic_string<char>;
-using u16string = basic_string<char16_t>;
-using u32string = basic_string<char32_t>;
-using wstring   = basic_string<wchar_t>;
-} // namespace pmr
-_LIBCPP_END_NAMESPACE_STD
-#endif
 
 _LIBCPP_POP_MACROS
 

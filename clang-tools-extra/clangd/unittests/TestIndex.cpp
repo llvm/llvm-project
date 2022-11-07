@@ -69,6 +69,10 @@ Symbol enm(llvm::StringRef Name) {
   return sym(Name, index::SymbolKind::Enum, "@E@\\0");
 }
 
+Symbol enmConstant(llvm::StringRef Name) {
+  return sym(Name, index::SymbolKind::EnumConstant, "@\\0");
+}
+
 Symbol var(llvm::StringRef Name) {
   return sym(Name, index::SymbolKind::Variable, "@\\0");
 }

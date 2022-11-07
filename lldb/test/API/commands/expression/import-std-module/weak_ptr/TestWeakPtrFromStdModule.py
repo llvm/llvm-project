@@ -24,9 +24,9 @@ class TestSharedPtr(TestBase):
                          result_type="std::weak_ptr<int>",
                          result_summary="3 strong=1 weak=2",
                          result_children=[ValueCheck(name="__ptr_")])
-        self.expect_expr("*w.lock()", result_type="int", result_value="3")
-        self.expect_expr("*w.lock() = 5", result_type="int", result_value="5")
-        self.expect_expr("*w.lock()", result_type="int", result_value="5")
+        self.expect_expr("*w.lock()", result_type="element_type", result_value="3")
+        self.expect_expr("*w.lock() = 5", result_type="element_type", result_value="5")
+        self.expect_expr("*w.lock()", result_type="element_type", result_value="5")
         self.expect_expr("w.use_count()", result_type="long", result_value="1")
         self.expect("expr w.reset()")
         self.expect_expr("w.use_count()", result_type="long", result_value="0")

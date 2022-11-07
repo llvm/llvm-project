@@ -90,7 +90,7 @@ void Randomize(span<char> Buffer) {
     current = GetRandomChar();
 }
 
-TEST(LlvmLibcMemmoveTest, Thorough) {
+TEST(LlvmLibcMemmoveTest, SizeSweep) {
   using LargeBuffer = array<char, 3 * kMaxSize>;
   LargeBuffer GroundTruth;
   Randomize(GroundTruth);

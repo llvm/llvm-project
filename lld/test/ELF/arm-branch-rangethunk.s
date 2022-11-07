@@ -2,10 +2,10 @@
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/far-arm-abs.s -o %tfar
 // RUN: ld.lld  %t %tfar -o %t2
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=armv7a-none-linux-gnueabi %t2 | FileCheck --check-prefix=SHORT %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv7a-none-linux-gnueabi %t2 | FileCheck --check-prefix=SHORT %s
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/far-long-arm-abs.s -o %tfarlong
 // RUN: ld.lld  %t %tfarlong -o %t3
-// RUN: llvm-objdump -d --no-show-raw-insn --triple=armv7a-none-linux-gnueabi %t3 | FileCheck --check-prefix=LONG %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn --triple=armv7a-none-linux-gnueabi %t3 | FileCheck --check-prefix=LONG %s
  .syntax unified
  .section .text, "ax",%progbits
  .globl _start

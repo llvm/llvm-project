@@ -237,6 +237,12 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
       return Discard(this->emitBitAnd(*T, BO));
     case BO_Or:
       return Discard(this->emitBitOr(*T, BO));
+    case BO_Shl:
+      return Discard(this->emitShl(*LT, *RT, BO));
+    case BO_Shr:
+      return Discard(this->emitShr(*LT, *RT, BO));
+    case BO_Xor:
+      return Discard(this->emitBitXor(*T, BO));
     case BO_LAnd:
     case BO_LOr:
     default:
@@ -412,6 +418,63 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCharacterLiteral(
     const CharacterLiteral *E) {
   return this->emitConst(E, E->getValue());
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
+    const CompoundAssignOperator *E) {
+  const Expr *LHS = E->getLHS();
+  const Expr *RHS = E->getRHS();
+  Optional<PrimType> LT = classify(E->getLHS()->getType());
+  Optional<PrimType> RT = classify(E->getRHS()->getType());
+
+  if (!LT || !RT)
+    return false;
+
+  assert(!E->getType()->isPointerType() &&
+         "Support pointer arithmethic in compound assignment operators");
+
+  // Get LHS pointer, load its value and get RHS value.
+  if (!visit(LHS))
+    return false;
+  if (!this->emitLoad(*LT, E))
+    return false;
+  if (!visit(RHS))
+    return false;
+
+  // Perform operation.
+  switch (E->getOpcode()) {
+  case BO_AddAssign:
+    if (!this->emitAdd(*LT, E))
+      return false;
+    break;
+  case BO_SubAssign:
+    if (!this->emitSub(*LT, E))
+      return false;
+    break;
+
+  case BO_MulAssign:
+  case BO_DivAssign:
+  case BO_RemAssign:
+  case BO_ShlAssign:
+    if (!this->emitShl(*LT, *RT, E))
+      return false;
+    break;
+  case BO_ShrAssign:
+    if (!this->emitShr(*LT, *RT, E))
+      return false;
+    break;
+  case BO_AndAssign:
+  case BO_XorAssign:
+  case BO_OrAssign:
+  default:
+    llvm_unreachable("Unimplemented compound assign operator");
+  }
+
+  // And store the result in LHS.
+  if (DiscardResult)
+    return this->emitStorePop(*LT, E);
+  return this->emitStore(*LT, E);
 }
 
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {

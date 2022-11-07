@@ -2946,10 +2946,9 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; LE-P10-O0-NEXT:    std r0, 16(r1)
 ; LE-P10-O0-NEXT:    hashst r0, -8(r1)
 ; LE-P10-O0-NEXT:    stdu r1, -64(r1)
-; LE-P10-O0-NEXT:    mr r4, r3
+; LE-P10-O0-NEXT:    mr. r4, r3
 ; LE-P10-O0-NEXT:    std r4, 40(r1) # 8-byte Folded Spill
 ; LE-P10-O0-NEXT:    li r3, 0
-; LE-P10-O0-NEXT:    cmpdi r4, 0
 ; LE-P10-O0-NEXT:    stw r3, 48(r1) # 4-byte Folded Spill
 ; LE-P10-O0-NEXT:    beq cr0, .LBB2_2
 ; LE-P10-O0-NEXT:  # %bb.1: # %if.end
@@ -2979,10 +2978,9 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; LE-P9-O0-NEXT:    std r0, 16(r1)
 ; LE-P9-O0-NEXT:    hashst r0, -8(r1)
 ; LE-P9-O0-NEXT:    stdu r1, -128(r1)
-; LE-P9-O0-NEXT:    mr r4, r3
+; LE-P9-O0-NEXT:    mr. r4, r3
 ; LE-P9-O0-NEXT:    std r4, 104(r1) # 8-byte Folded Spill
 ; LE-P9-O0-NEXT:    li r3, 0
-; LE-P9-O0-NEXT:    cmpdi r4, 0
 ; LE-P9-O0-NEXT:    stw r3, 112(r1) # 4-byte Folded Spill
 ; LE-P9-O0-NEXT:    beq cr0, .LBB2_2
 ; LE-P9-O0-NEXT:  # %bb.1: # %if.end
@@ -3012,10 +3010,9 @@ define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; LE-P8-O0-NEXT:    std r0, 16(r1)
 ; LE-P8-O0-NEXT:    hashst r0, -8(r1)
 ; LE-P8-O0-NEXT:    stdu r1, -128(r1)
-; LE-P8-O0-NEXT:    mr r4, r3
+; LE-P8-O0-NEXT:    mr. r4, r3
 ; LE-P8-O0-NEXT:    std r4, 104(r1) # 8-byte Folded Spill
 ; LE-P8-O0-NEXT:    li r3, 0
-; LE-P8-O0-NEXT:    cmpdi r4, 0
 ; LE-P8-O0-NEXT:    stw r3, 112(r1) # 4-byte Folded Spill
 ; LE-P8-O0-NEXT:    beq cr0, .LBB2_2
 ; LE-P8-O0-NEXT:  # %bb.1: # %if.end

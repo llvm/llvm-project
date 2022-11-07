@@ -1,4 +1,4 @@
-;RUN: llc -march=hexagon -filetype=obj < %s -o - | llvm-objdump --mcpu=hexagonv60 --mattr=+hvx -d - | FileCheck %s
+;RUN: llc -march=hexagon -filetype=obj < %s -o - | llvm-objdump --no-print-imm-hex --mcpu=hexagonv60 --mattr=+hvx -d - | FileCheck %s
 
 ; Should not crash! and map to vxor
 

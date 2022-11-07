@@ -2,7 +2,7 @@
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 // RUN: ld.lld %t.o -shared -o %t.so
 // RUN: llvm-readelf -S %t.so | FileCheck %s -check-prefix=SECTION
-// RUN: llvm-objdump -d %t.so | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d %t.so | FileCheck %s
 
 // SECTION: .got.plt PROGBITS 00000000000032f0 0002f0 000018
 

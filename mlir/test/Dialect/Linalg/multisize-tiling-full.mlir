@@ -1,4 +1,4 @@
-// RUN: mlir-opt --test-transform-dialect-interpreter --canonicalize %s | FileCheck %s
+// RUN: mlir-opt --test-transform-dialect-interpreter --scf-for-loop-canonicalization --canonicalize %s | FileCheck %s
 
 // This implements a 2D multisize tiling with target sizes [3, 10].
 transform.sequence failures(propagate) {

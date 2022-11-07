@@ -6,6 +6,9 @@
 // RUN: mlir-opt %s --sparse-tensor-conversion="s2s-strategy=0" \
 // RUN:    --canonicalize --cse | FileCheck %s -check-prefixes=CHECK-AUTO,CHECK
 
+// RUN: mlir-opt %s --sparse-tensor-rewrite="enable-runtime-library=false enable-foreach=false" \
+// RUN: --canonicalize --cse | FileCheck %s --check-prefix=CHECK-RWT
+
 #SparseVector64 = #sparse_tensor.encoding<{
   dimLevelType = ["compressed"],
   pointerBitWidth = 64,
@@ -79,6 +82,24 @@ func.func @sparse_convert_1d_ss(%arg0: tensor<?xf32, #SparseVector64>) -> tensor
 //   CHECK-AUTO-DAG: %[[Z:.*]] = memref.cast %[[R]] : memref<1xindex> to memref<?xindex>
 //       CHECK-AUTO: %[[T:.*]] = call @newSparseTensor(%[[X]], %[[Y]], %[[Z]], %{{.*}}, %{{.*}}, %{{.*}}, %[[SparseToSparse]], %[[A]])
 //       CHECK-AUTO: return %[[T]] : !llvm.ptr<i8>
+
+// CHECK-RWT-LABEL: func.func @sparse_convert(
+//  CHECK-RWT-SAME: %[[A:.*]]: tensor<?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ], pointerBitWidth = 64, indexBitWidth = 64 }>>)
+//  CHECK-RWT-DAG:  %[[C0:.*]] = arith.constant 0 : index
+//  CHECK-RWT-DAG:  %[[C1:.*]] = arith.constant 1 : index
+//      CHECK-RWT:  %[[D:.*]] = tensor.dim %[[A]], %[[C0]]
+//      CHECK-RWT:  %[[I0:.*]] = sparse_tensor.indices %[[A]] {dimension = 0 : index}
+//      CHECK-RWT:  %[[NNZr:.*]] = memref.load %[[I0]]{{\[}}%[[C1]]] : memref<?xi64>
+//      CHECK-RWT:  %[[NNZ:.*]] = arith.index_cast %[[NNZr]] : i64 to index
+//      CHECK-RWT:  %[[V:.*]] = sparse_tensor.values %[[A]]
+//      CHECK-RWT:  sparse_tensor.sort %[[NNZ]], %[[I0]] jointly %[[V]]
+//      CHECK-RWT:  %[[DST:.*]] = bufferization.alloc_tensor(%[[D]])
+//      CHECK-RWT:  sparse_tensor.foreach in %[[A]]
+//      CHECK-RWT:  ^bb0(%[[FI2:.*]]: index, %[[FV2:.*]]: f32):
+//      CHECK-RWT:    sparse_tensor.insert %[[FV2]] into %[[DST]]{{\[}}%[[FI2]]]
+//      CHECK-RWT:  }
+//      CHECK-RWT:  %[[R:.*]] = sparse_tensor.convert %[[DST]]
+//      CHECK-RWT:  return %[[R]] : tensor<?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ], pointerBitWidth = 32, indexBitWidth = 32 }>>
 func.func @sparse_convert(%arg0: tensor<?xf32, #SparseVector64>) -> tensor<?xf32, #SparseVector32> {
   %0 = sparse_tensor.convert %arg0 : tensor<?xf32, #SparseVector64> to tensor<?xf32, #SparseVector32>
   return %0 : tensor<?xf32, #SparseVector32>

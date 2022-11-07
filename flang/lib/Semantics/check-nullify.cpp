@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-nullify.h"
-#include "assignment.h"
+#include "definable.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
@@ -19,37 +19,32 @@ namespace Fortran::semantics {
 void NullifyChecker::Leave(const parser::NullifyStmt &nullifyStmt) {
   CHECK(context_.location());
   const Scope &scope{context_.FindScope(*context_.location())};
-  const Scope *pure{FindPureProcedureContaining(scope)};
-  parser::ContextualMessages messages{
-      *context_.location(), &context_.messages()};
   for (const parser::PointerObject &pointerObject : nullifyStmt.v) {
     common::visit(
         common::visitors{
             [&](const parser::Name &name) {
-              const Symbol *symbol{name.symbol};
-              if (context_.HasError(symbol)) {
-                // already reported an error
-              } else if (!IsVariableName(*symbol) &&
-                  !IsProcedurePointer(*symbol)) {
-                messages.Say(name.source,
-                    "name in NULLIFY statement must be a variable or procedure pointer"_err_en_US);
-              } else if (!IsPointer(*symbol)) { // C951
-                messages.Say(name.source,
-                    "name in NULLIFY statement must have the POINTER attribute"_err_en_US);
-              } else if (pure) {
-                CheckDefinabilityInPureScope(messages, *symbol, scope, *pure);
+              if (name.symbol) {
+                if (auto whyNot{WhyNotDefinable(name.source, scope,
+                        DefinabilityFlags{DefinabilityFlag::PointerDefinition},
+                        *name.symbol)}) {
+                  context_.messages()
+                      .Say(name.source,
+                          "'%s' may not appear in NULLIFY"_err_en_US,
+                          name.source)
+                      .Attach(std::move(*whyNot));
+                }
               }
             },
             [&](const parser::StructureComponent &structureComponent) {
+              const auto &component{structureComponent.component};
+              SourceName at{component.source};
               if (const auto *checkedExpr{GetExpr(context_, pointerObject)}) {
-                if (!IsPointer(*structureComponent.component.symbol)) { // C951
-                  messages.Say(structureComponent.component.source,
-                      "component in NULLIFY statement must have the POINTER attribute"_err_en_US);
-                } else if (pure) {
-                  if (const Symbol * symbol{GetFirstSymbol(*checkedExpr)}) {
-                    CheckDefinabilityInPureScope(
-                        messages, *symbol, scope, *pure);
-                  }
+                if (auto whyNot{WhyNotDefinable(at, scope,
+                        DefinabilityFlags{DefinabilityFlag::PointerDefinition},
+                        *checkedExpr)}) {
+                  context_.messages()
+                      .Say(at, "'%s' may not appear in NULLIFY"_err_en_US, at)
+                      .Attach(std::move(*whyNot));
                 }
               }
             },

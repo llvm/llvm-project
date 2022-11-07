@@ -49,4 +49,13 @@ module polymorphic_test
 ! CHECK: %[[BOX2:.*]] = fir.embox %[[DT2]] : (!fir.ref<!fir.type<_QMpolymorphic_testTp2{a:i32,b:i32,c:f32}>>) -> !fir.class<!fir.type<_QMpolymorphic_testTp2{a:i32,b:i32,c:f32}>>
 ! CHECK: %[[CLASS2:.*]] = fir.convert %[[BOX2]] : (!fir.class<!fir.type<_QMpolymorphic_testTp2{a:i32,b:i32,c:f32}>>) -> !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>> 
 ! CHECK: fir.call @_QMpolymorphic_testPprint(%[[CLASS2]]) : (!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> ()
+
+  subroutine test_allocate_unlimited_polymorphic_non_derived()
+    class(*), pointer :: u
+    allocate(integer::u)
+  end subroutine
+
+! CHECK-LABEL: test_allocate_unlimited_polymorphic_non_derived
+! CHECK-NOT: _FortranAPointerNullifyDerived
+! CHECK: fir.call @_FortranAPointerAllocate
 end module

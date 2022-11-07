@@ -12,6 +12,7 @@ unittest("FormatTests") {
   ]
   sources = [
     "BracesInserterTest.cpp",
+    "BracesRemoverTest.cpp",
     "CleanupTest.cpp",
     "DefinitionBlockSeparatorTest.cpp",
     "FormatTest.cpp",

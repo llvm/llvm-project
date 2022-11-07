@@ -9,7 +9,7 @@
 ## field.
 
 # RUN: ld.lld %tno.o %t3.o --shared -o %tno.so
-# RUN: llvm-objdump -d --mattr=+v8.3a --no-show-raw-insn %tno.so | FileCheck --check-prefix=NOPAC %s
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.3a --no-show-raw-insn %tno.so | FileCheck --check-prefix=NOPAC %s
 # RUN: llvm-readelf -x .got.plt %tno.so | FileCheck --check-prefix SOGOTPLT %s
 # RUN: llvm-readelf --dynamic-table %tno.so | FileCheck --check-prefix NOPACDYN %s
 
@@ -41,7 +41,7 @@
 
 # RUN: ld.lld %t1.o %t3.o --shared --soname=t.so -o %t.so
 # RUN: llvm-readelf -n %t.so | FileCheck --check-prefix PACPROP %s
-# RUN: llvm-objdump -d --mattr=+v8.3a --no-show-raw-insn %t.so | FileCheck --check-prefix PACSO %s
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.3a --no-show-raw-insn %t.so | FileCheck --check-prefix PACSO %s
 # RUN: llvm-readelf -x .got.plt %t.so | FileCheck --check-prefix SOGOTPLT2 %s
 # RUN: llvm-readelf --dynamic-table %t.so |  FileCheck --check-prefix PACDYN %s
 
@@ -84,7 +84,7 @@
 # RUN: ld.lld %t.o %t2.o -z pac-plt %t.so -o %tpacplt.exe
 # RUN: llvm-readelf -n %tpacplt.exe | FileCheck --check-prefix=PACPROP %s
 # RUN: llvm-readelf --dynamic-table %tpacplt.exe | FileCheck --check-prefix PACDYN2 %s
-# RUN: llvm-objdump -d --mattr=+v8.3a --no-show-raw-insn %tpacplt.exe | FileCheck --check-prefix PACPLT %s
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.3a --no-show-raw-insn %tpacplt.exe | FileCheck --check-prefix PACPLT %s
 
 # PACPLT: Disassembly of section .text:
 # PACPLT: 0000000000210370 <func1>:

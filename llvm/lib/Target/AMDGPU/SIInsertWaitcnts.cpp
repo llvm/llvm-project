@@ -216,7 +216,7 @@ public:
   }
 
   // Mapping from event to counter.
-  InstCounterType eventCounter(WaitEventType E) {
+  InstCounterType eventCounter(WaitEventType E) const {
     for (auto T : inst_counter_types()) {
       if (WaitEventMaskForInst[T] & (1 << E))
         return T;
@@ -471,7 +471,7 @@ public:
   bool applyPreexistingWaitcnt(WaitcntBrackets &ScoreBrackets,
                                MachineInstr &OldWaitcntInstr,
                                AMDGPU::Waitcnt &Wait,
-                               MachineBasicBlock::instr_iterator It);
+                               MachineBasicBlock::instr_iterator It) const;
 };
 
 } // end anonymous namespace
@@ -850,7 +850,7 @@ FunctionPass *llvm::createSIInsertWaitcntsPass() {
 /// preexisting waitcnt are required for correctness.
 bool SIInsertWaitcnts::applyPreexistingWaitcnt(
     WaitcntBrackets &ScoreBrackets, MachineInstr &OldWaitcntInstr,
-    AMDGPU::Waitcnt &Wait, MachineBasicBlock::instr_iterator It) {
+    AMDGPU::Waitcnt &Wait, MachineBasicBlock::instr_iterator It) const {
   bool Modified = false;
   MachineInstr *WaitcntInstr = nullptr;
   MachineInstr *WaitcntVsCntInstr = nullptr;

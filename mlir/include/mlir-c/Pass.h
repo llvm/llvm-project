@@ -123,10 +123,12 @@ MLIR_CAPI_EXPORTED void mlirPrintPassPipeline(MlirOpPassManager passManager,
                                               MlirStringCallback callback,
                                               void *userData);
 
-/// Parse a textual MLIR pass pipeline and add it to the provided OpPassManager.
-
+/// Parse a textual MLIR pass pipeline and assign it to the provided
+/// OpPassManager. If parsing fails an error message is reported using the
+/// provided callback.
 MLIR_CAPI_EXPORTED MlirLogicalResult
-mlirParsePassPipeline(MlirOpPassManager passManager, MlirStringRef pipeline);
+mlirParsePassPipeline(MlirOpPassManager passManager, MlirStringRef pipeline,
+                      MlirStringCallback callback, void *userData);
 
 //===----------------------------------------------------------------------===//
 // External Pass API.

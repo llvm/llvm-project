@@ -538,7 +538,6 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
       RPTracker.advanceToNext();
       RPTracker.advance(MBB->end());
     }
-    RPTracker.reset(*OnlySucc->begin(), &RPTracker.getLiveRegs());
     RPTracker.advanceBeforeNext();
     MBBLiveIns[OnlySucc] = RPTracker.moveLiveRegs();
   }

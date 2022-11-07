@@ -594,7 +594,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
   }
 
   // Use a map to unique and a vector to guarantee deterministic ordering.
-  llvm::SmallDenseSet<std::pair<DIVariable *, DIExpression *>, 4> DeadDebugSet;
+  llvm::SmallDenseSet<DebugVariable, 4> DeadDebugSet;
   llvm::SmallVector<DbgVariableIntrinsic *, 4> DeadDebugInst;
 
   if (ExitBlock) {
@@ -623,11 +623,8 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
         auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I);
         if (!DVI)
           continue;
-        auto Key =
-            DeadDebugSet.find({DVI->getVariable(), DVI->getExpression()});
-        if (Key != DeadDebugSet.end())
+        if (!DeadDebugSet.insert(DebugVariable(DVI)).second)
           continue;
-        DeadDebugSet.insert({DVI->getVariable(), DVI->getExpression()});
         DeadDebugInst.push_back(DVI);
       }
 

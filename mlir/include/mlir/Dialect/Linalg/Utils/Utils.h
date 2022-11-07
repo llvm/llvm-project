@@ -137,6 +137,10 @@ GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to);
 Optional<SmallVector<ReassociationIndices>>
 getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes);
 
+/// Return the identity numeric value associated to the give op. Return
+/// llvm::None if there is no known neutral element.
+Optional<Attribute> getNeutralElement(Operation *op);
+
 //===----------------------------------------------------------------------===//
 // Fusion / Tiling utilities
 //===----------------------------------------------------------------------===//

@@ -2178,15 +2178,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  if (!Subtarget.useSoftFloat() && Subtarget.hasBF16()) {
+  if (!Subtarget.useSoftFloat() &&
+      (Subtarget.hasAVXNECONVERT() || Subtarget.hasBF16())) {
     addRegisterClass(MVT::v8bf16, &X86::VR128XRegClass);
     addRegisterClass(MVT::v16bf16, &X86::VR256XRegClass);
-    addRegisterClass(MVT::v32bf16, &X86::VR512RegClass);
     // We set the type action of bf16 to TypeSoftPromoteHalf, but we don't
     // provide the method to promote BUILD_VECTOR. Set the operation action
     // Custom to do the customization later.
     setOperationAction(ISD::BUILD_VECTOR, MVT::bf16, Custom);
-    for (auto VT : { MVT::v8bf16, MVT::v16bf16, MVT::v32bf16 }) {
+    for (auto VT : {MVT::v8bf16, MVT::v16bf16}) {
       setF16Action(VT, Expand);
       setOperationAction(ISD::FADD, VT, Expand);
       setOperationAction(ISD::FSUB, VT, Expand);
@@ -2195,6 +2195,16 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
     }
     addLegalFPImmediate(APFloat::getZero(APFloat::BFloat()));
+  }
+
+  if (!Subtarget.useSoftFloat() && Subtarget.hasBF16()) {
+    addRegisterClass(MVT::v32bf16, &X86::VR512RegClass);
+    setF16Action(MVT::v32bf16, Expand);
+    setOperationAction(ISD::FADD, MVT::v32bf16, Expand);
+    setOperationAction(ISD::FSUB, MVT::v32bf16, Expand);
+    setOperationAction(ISD::FMUL, MVT::v32bf16, Expand);
+    setOperationAction(ISD::FDIV, MVT::v32bf16, Expand);
+    setOperationAction(ISD::BUILD_VECTOR, MVT::v32bf16, Custom);
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasVLX()) {
@@ -54683,6 +54693,18 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         return DAG.getNode(Op0.getOpcode(), DL, VT,
                            ConcatSubOperand(SrcVT, Ops, 0),
                            ConcatSubOperand(SrcVT, Ops, 1));
+      }
+      break;
+    case X86ISD::GF2P8AFFINEQB:
+      if (!IsSplat &&
+          (VT.is256BitVector() ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
+          llvm::all_of(Ops, [Op0](SDValue Op) {
+            return Op0.getOperand(2) == Op.getOperand(2);
+          })) {
+        return DAG.getNode(Op0.getOpcode(), DL, VT,
+                           ConcatSubOperand(VT, Ops, 0),
+                           ConcatSubOperand(VT, Ops, 1), Op0.getOperand(2));
       }
       break;
     case X86ISD::HADD:

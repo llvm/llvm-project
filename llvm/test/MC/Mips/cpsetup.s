@@ -1,5 +1,5 @@
 # RUN: llvm-mc -triple mips-unknown-linux -target-abi o32 -filetype=obj -o - %s | \
-# RUN:   llvm-objdump -d -r -z - | FileCheck --check-prefixes=ALL,O32 %s
+# RUN:   llvm-objdump --no-print-imm-hex -d -r -z - | FileCheck --check-prefixes=ALL,O32 %s
 
 # RUN: llvm-mc -triple mips-unknown-linux -target-abi o32 %s | \
 # RUN:   FileCheck -check-prefixes=ASM,ASM-O32 %s
@@ -7,14 +7,14 @@
 # FIXME: Now we check .cpsetup expansion for `-mno-shared` case only.
 #        We also need to implement/check the `-mshared` case.
 # RUN: llvm-mc -triple mips64-unknown-linux -target-abi n32 -filetype=obj -o - %s | \
-# RUN:   llvm-objdump -d -r -z - | \
+# RUN:   llvm-objdump --no-print-imm-hex -d -r -z - | \
 # RUN:   FileCheck -check-prefixes=ALL,NXX,N32 %s
 
 # RUN: llvm-mc -triple mips64-unknown-linux -target-abi n32 %s | \
 # RUN:   FileCheck -check-prefixes=ASM,ASM-N32 %s
 
 # RUN: llvm-mc -triple mips64-unknown-linux %s -filetype=obj -o - | \
-# RUN:   llvm-objdump -d -r -z - | \
+# RUN:   llvm-objdump --no-print-imm-hex -d -r -z - | \
 # RUN:   FileCheck -check-prefixes=ALL,NXX,N64 %s
 
 # RUN: llvm-mc -triple mips64-unknown-linux %s | \

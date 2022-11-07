@@ -6,6 +6,7 @@
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
+; CHECK-LABEL: _func:
 define void @func(i32 %argc, i8** %argv) nounwind {
 entry:
 	%argc.addr = alloca i32		; <i32*> [#uses=1]
@@ -161,8 +162,8 @@ entry:
 	store i32 %12, i32* %old
 	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
-  ; CHECK: cmp
   ; CHECK: strex
+  ; CHECK: cmp
   ; CHECK-T1: bl ___sync_fetch_and_umax_4
   ; CHECK-T1-M0: bl ___atomic_compare_exchange_4
   ; CHECK-BAREMETAL: cmp
@@ -171,8 +172,8 @@ entry:
 	store i32 %13, i32* %old
 	call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; CHECK: ldrex
-  ; CHECK: cmp
   ; CHECK: strex
+  ; CHECK: cmp
   ; CHECK-T1: bl ___sync_fetch_and_umax_4
   ; CHECK-T1-M0: bl ___atomic_compare_exchange_4
   ; CHECK-BAREMETAL: cmp
@@ -183,14 +184,15 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: _func2:
 define void @func2() nounwind {
 entry:
   %val = alloca i16
   %old = alloca i16
   store i16 31, i16* %val
   ; CHECK: ldrex
-  ; CHECK: cmp
   ; CHECK: strex
+  ; CHECK: cmp
   ; CHECK-T1: bl ___sync_fetch_and_umin_2
   ; CHECK-T1-M0: bl ___atomic_compare_exchange_2
   ; CHECK-BAREMETAL: cmp
@@ -199,8 +201,8 @@ entry:
   store i16 %0, i16* %old
   %uneg = sub i16 0, 1
   ; CHECK: ldrex
-  ; CHECK: cmp
   ; CHECK: strex
+  ; CHECK: cmp
   ; CHECK-T1: bl ___sync_fetch_and_umin_2
   ; CHECK-T1-M0: bl ___atomic_compare_exchange_2
   ; CHECK-BAREMETAL: cmp
@@ -217,8 +219,8 @@ entry:
   %2 = atomicrmw umax i16* %val, i16 1 monotonic
   store i16 %2, i16* %old
   ; CHECK: ldrex
-  ; CHECK: cmp
   ; CHECK: strex
+  ; CHECK: cmp
   ; CHECK-T1: bl ___sync_fetch_and_umax_2
   ; CHECK-T1-M0: bl ___atomic_compare_exchange_2
   ; CHECK-BAREMETAL: cmp
@@ -228,14 +230,15 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: _func3:
 define void @func3() nounwind {
 entry:
   %val = alloca i8
   %old = alloca i8
   store i8 31, i8* %val
   ; CHECK: ldrex
-  ; CHECK: cmp
   ; CHECK: strex
+  ; CHECK: cmp
   ; CHECK-T1: bl ___sync_fetch_and_umin_1
   ; CHECK-T1-M0: bl ___atomic_compare_exchange_1
   ; CHECK-BAREMETAL: cmp
@@ -243,8 +246,8 @@ entry:
   %0 = atomicrmw umin i8* %val, i8 16 monotonic
   store i8 %0, i8* %old
   ; CHECK: ldrex
-  ; CHECK: cmp
   ; CHECK: strex
+  ; CHECK: cmp
   ; CHECK-T1: bl ___sync_fetch_and_umin_1
   ; CHECK-T1-M0: bl ___atomic_compare_exchange_1
   ; CHECK-BAREMETAL: cmp
@@ -253,8 +256,8 @@ entry:
   %1 = atomicrmw umin i8* %val, i8 %uneg monotonic
   store i8 %1, i8* %old
   ; CHECK: ldrex
-  ; CHECK: cmp
   ; CHECK: strex
+  ; CHECK: cmp
   ; CHECK-T1: bl ___sync_fetch_and_umax_1
   ; CHECK-T1-M0: bl ___atomic_compare_exchange_1
   ; CHECK-BAREMETAL: cmp
@@ -262,8 +265,8 @@ entry:
   %2 = atomicrmw umax i8* %val, i8 1 monotonic
   store i8 %2, i8* %old
   ; CHECK: ldrex
-  ; CHECK: cmp
   ; CHECK: strex
+  ; CHECK: cmp
   ; CHECK-T1: bl ___sync_fetch_and_umax_1
   ; CHECK-T1-M0: bl ___atomic_compare_exchange_1
   ; CHECK-BAREMETAL: cmp
@@ -273,7 +276,7 @@ entry:
   ret void
 }
 
-; CHECK: func4
+; CHECK-LABEL: _func4:
 ; This function should not need to use callee-saved registers.
 ; rdar://problem/12203728
 ; CHECK-NOT: r4

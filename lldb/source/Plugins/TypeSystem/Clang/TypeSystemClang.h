@@ -592,8 +592,6 @@ public:
   bool IsEnumerationType(lldb::opaque_compiler_type_t type,
                          bool &is_signed) override;
 
-  bool IsBooleanType(lldb::opaque_compiler_type_t type) override;
-
   bool IsScopedEnumerationType(lldb::opaque_compiler_type_t type) override;
 
   static bool IsObjCClassType(const CompilerType &type);
@@ -645,7 +643,8 @@ public:
 
   // Accessors
 
-  ConstString GetTypeName(lldb::opaque_compiler_type_t type) override;
+  ConstString GetTypeName(lldb::opaque_compiler_type_t type,
+                          bool BaseOnly) override;
 
   ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type) override;
 
@@ -861,8 +860,6 @@ public:
   ///                   variable type.
   static void SetIntegerInitializerForVariable(clang::VarDecl *var,
                                                const llvm::APInt &init_value);
-
-  static void SetBoolInitializerForVariable(clang::VarDecl *var, bool value);
 
   /// Initializes a variable with a floating point value.
   /// \param var The variable to initialize. Must not already have an
