@@ -107,8 +107,7 @@ public:
     if (Opts.ResourceDir)
       Mangler.ResourceDir = *Opts.ResourceDir;
     auto CDB = std::make_unique<OverlayCDB>(
-        BaseCDB.get(), std::vector<std::string>{},
-        tooling::ArgumentsAdjuster(std::move(Mangler)));
+        BaseCDB.get(), std::vector<std::string>{}, std::move(Mangler));
 
     if (auto TrueCmd = CDB->getCompileCommand(File)) {
       Cmd = std::move(*TrueCmd);
