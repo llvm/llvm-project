@@ -20,8 +20,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 
-#include <utility>
 #include <optional>
+#include <utility>
 
 namespace py = pybind11;
 using namespace mlir;
@@ -1057,6 +1057,19 @@ PyOperationRef PyOperation::createDetached(PyMlirContextRef contextRef,
                                           std::move(parentKeepAlive));
   created->attached = false;
   return created;
+}
+
+PyOperationRef PyOperation::parse(PyMlirContextRef contextRef,
+                                  const std::string &sourceStr,
+                                  const std::string &sourceName) {
+  MlirOperation op =
+      mlirOperationCreateParse(contextRef->get(), toMlirStringRef(sourceStr),
+                               toMlirStringRef(sourceName));
+  // TODO: Include error diagnostic messages in the exception message
+  if (mlirOperationIsNull(op))
+    throw py::value_error(
+        "Unable to parse operation assembly (see diagnostics)");
+  return PyOperation::createDetached(std::move(contextRef), op);
 }
 
 void PyOperation::checkValid() const {
@@ -2769,6 +2782,17 @@ void mlir::python::populateIRCore(py::module &m) {
                   py::arg("successors") = py::none(), py::arg("regions") = 0,
                   py::arg("loc") = py::none(), py::arg("ip") = py::none(),
                   kOperationCreateDocstring)
+      .def_static(
+          "parse",
+          [](const std::string &sourceStr, const std::string &sourceName,
+             DefaultingPyMlirContext context) {
+            return PyOperation::parse(context->getRef(), sourceStr, sourceName)
+                ->createOpView();
+          },
+          py::arg("source"), py::kw_only(), py::arg("source_name") = "",
+          py::arg("context") = py::none(),
+          "Parses an operation. Supports both text assembly format and binary "
+          "bytecode format.")
       .def_property_readonly("parent",
                              [](PyOperation &self) -> py::object {
                                auto parent = self.getParentOperation();
@@ -2820,6 +2844,30 @@ void mlir::python::populateIRCore(py::module &m) {
       py::arg("successors") = py::none(), py::arg("regions") = py::none(),
       py::arg("loc") = py::none(), py::arg("ip") = py::none(),
       "Builds a specific, generated OpView based on class level attributes.");
+  opViewClass.attr("parse") = classmethod(
+      [](const py::object &cls, const std::string &sourceStr,
+         const std::string &sourceName, DefaultingPyMlirContext context) {
+        PyOperationRef parsed =
+            PyOperation::parse(context->getRef(), sourceStr, sourceName);
+
+        // Check if the expected operation was parsed, and cast to to the
+        // appropriate `OpView` subclass if successful.
+        // NOTE: This accesses attributes that have been automatically added to
+        // `OpView` subclasses, and is not intended to be used on `OpView`
+        // directly.
+        std::string clsOpName =
+            py::cast<std::string>(cls.attr("OPERATION_NAME"));
+        MlirStringRef parsedOpName =
+            mlirIdentifierStr(mlirOperationGetName(*parsed.get()));
+        if (!mlirStringRefEqual(parsedOpName, toMlirStringRef(clsOpName)))
+          throw py::value_error(
+              "Expected a '" + clsOpName + "' op, got: '" +
+              std::string(parsedOpName.data, parsedOpName.length) + "'");
+        return cls.attr("_Raw")(parsed.getObject());
+      },
+      py::arg("cls"), py::arg("source"), py::kw_only(),
+      py::arg("source_name") = "", py::arg("context") = py::none(),
+      "Parses a specific, generated OpView based on class level attributes");
 
   //----------------------------------------------------------------------------
   // Mapping of PyRegion.
