@@ -401,8 +401,8 @@ struct MockPassInstrumentationCallbacks {
 
 template <typename IRUnitT>
 using ExtraMockPassHandle =
-    std::conditional_t<std::is_same_v<IRUnitT, Loop>, MockPassHandle<LoopNest>,
-                       MockPassHandle<IRUnitT>>;
+    std::conditional_t<std::is_same<IRUnitT, Loop>::value,
+                       MockPassHandle<LoopNest>, MockPassHandle<IRUnitT>>;
 
 template <typename PassManagerT> class PassBuilderCallbacksTest;
 
