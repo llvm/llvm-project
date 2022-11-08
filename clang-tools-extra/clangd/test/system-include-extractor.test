@@ -63,7 +63,7 @@
 # CHECK:   "method": "textDocument/publishDiagnostics",
 # CHECK-NEXT:   "params": {
 # CHECK-NEXT:     "diagnostics": [],
-# CHECK-NEXT:     "uri": "file://INPUT_DIR/the-file.cpp",
+# CHECK-NEXT:     "uri": "file://{{.*}}/the-file.cpp",
 ---
 {"jsonrpc":"2.0","id":10000,"method":"shutdown"}
 ---
