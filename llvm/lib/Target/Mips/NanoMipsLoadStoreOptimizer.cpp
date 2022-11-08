@@ -22,6 +22,18 @@ using namespace llvm;
 
 #define NM_LOAD_STORE_OPT_NAME "nanoMIPS load/store optimization pass"
 
+static cl::opt<bool>
+DisableNMSaveRestore("disable-nm-save-restore", cl::Hidden, cl::init(false),
+                     cl::desc("Disable NanoMips save/restore optimizations"));
+
+static cl::opt<bool>
+DisableNMLoadStoreMultiple("disable-nm-lwm-swm", cl::Hidden, cl::init(false),
+                           cl::desc("Disable NanoMips load/store multiple optimizations"));
+
+static cl::opt<bool>
+DisableNMPCRelOpt("disable-nm-pcrel-opt", cl::Hidden, cl::init(false),
+                  cl::desc("Disable NanoMips PC-relative addressing optimization"));
+
 namespace {
 struct NMLoadStoreOpt : public MachineFunctionPass {
   struct LSIns {
@@ -74,11 +86,16 @@ bool NMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   for (MachineFunction::iterator MFI = Fn.begin(), E = Fn.end(); MFI != E;
        ++MFI) {
     MachineBasicBlock &MBB = *MFI;
-    Modified |= generateSaveOrRestore(MBB, /*IsRestore=*/false);
-    Modified |= generateSaveOrRestore(MBB, /*IsRestore=*/true);
-    Modified |= generateLoadStoreMultiple(MBB, /*IsLoad=*/false);
-    Modified |= generateLoadStoreMultiple(MBB, /*IsLoad=*/true);
-    Modified |= generatePCRelative(MBB);
+    if (!DisableNMSaveRestore) {
+      Modified |= generateSaveOrRestore(MBB, /*IsRestore=*/false);
+      Modified |= generateSaveOrRestore(MBB, /*IsRestore=*/true);
+    }
+    if (!DisableNMLoadStoreMultiple) {
+      Modified |= generateLoadStoreMultiple(MBB, /*IsLoad=*/false);
+      Modified |= generateLoadStoreMultiple(MBB, /*IsLoad=*/true);
+    }
+    if (!DisableNMPCRelOpt)
+      Modified |= generatePCRelative(MBB);
   }
 
   return Modified;
