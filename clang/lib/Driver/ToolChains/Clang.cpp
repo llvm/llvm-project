@@ -5806,6 +5806,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
 
   Args.AddLastArg(CmdArgs, options::OPT_fclang_abi_compat_EQ);
 
+  if (getLastProfileSampleUseArg(Args) &&
+      Args.hasArg(options::OPT_fsample_profile_use_profi)) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-sample-profile-use-profi");
+  }
+
   // Add runtime flag for PS4/PS5 when PGO, coverage, or sanitizers are enabled.
   if (RawTriple.isPS() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
