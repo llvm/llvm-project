@@ -215,7 +215,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
     Defs = [LR8, X2], Uses = [CTR8, RM], RST = 2 in {
   def BCTRL8_LDinto_toc :
     XLForm_2_ext_and_DSForm_1<19, 528, 20, 0, 1, 58, 0, (outs),
-                              (ins memrix:$src),
+                              (ins (memrix $D, $RA):$src),
                               "bctrl\n\tld 2, $src", IIC_BrB,
                               [(PPCbctrl_load_toc iaddrX4:$src)]>,
     Requires<[In64BitMode]>;
@@ -225,7 +225,7 @@ let isCall = 1, PPC970_Unit = 7, isCodeGenOnly = 1,
     Defs = [LR8, X2, RM], Uses = [CTR8, RM], RST = 2 in {
   def BCTRL8_LDinto_toc_RM :
     XLForm_2_ext_and_DSForm_1<19, 528, 20, 0, 1, 58, 0, (outs),
-                              (ins memrix:$src),
+                              (ins (memrix $D, $RA):$src),
                               "bctrl\n\tld 2, $src", IIC_BrB,
                               [(PPCbctrl_load_toc_rm iaddrX4:$src)]>,
     Requires<[In64BitMode]>;
@@ -1245,11 +1245,11 @@ def : InstAlias<"mtspefscr $Rx", (MTSPR8 512, g8rc:$Rx)>;
 // Sign extending loads.
 let PPC970_Unit = 2 in {
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in
-def LHA8: DForm_1<42, (outs g8rc:$RST), (ins memri:$addr),
+def LHA8: DForm_1<42, (outs g8rc:$RST), (ins (memri $D, $RA):$addr),
                   "lha $RST, $addr", IIC_LdStLHA,
                   [(set i64:$RST, (sextloadi16 DForm:$addr))]>,
                   PPC970_DGroup_Cracked, SExt32To64;
-def LWA  : DSForm_1<58, 2, (outs g8rc:$RST), (ins memrix:$addr),
+def LWA  : DSForm_1<58, 2, (outs g8rc:$RST), (ins (memrix $D, $RA):$addr),
                     "lwa $RST, $addr", IIC_LdStLWA,
                     [(set i64:$RST,
                           (sextloadi32 DSForm:$addr))]>, isPPC64,
@@ -1265,7 +1265,7 @@ def LWAX : XForm_1_memOp<31, 341, (outs g8rc:$RST), (ins (memrr $RA, $RB):$addr)
                         PPC970_DGroup_Cracked, SExt32To64;
 // For fast-isel:
 let isCodeGenOnly = 1, mayLoad = 1, hasSideEffects = 0 in {
-def LWA_32  : DSForm_1<58, 2, (outs gprc:$RST), (ins memrix:$addr),
+def LWA_32  : DSForm_1<58, 2, (outs gprc:$RST), (ins (memrix $D, $RA):$addr),
                       "lwa $RST, $addr", IIC_LdStLWA, []>, isPPC64,
                       PPC970_DGroup_Cracked, SExt32To64;
 def LWAX_32 : XForm_1_memOp<31, 341, (outs gprc:$RST), (ins (memrr $RA, $RB):$addr),
@@ -1277,7 +1277,7 @@ def LWAX_32 : XForm_1_memOp<31, 341, (outs gprc:$RST), (ins (memrr $RA, $RB):$ad
 let mayLoad = 1, hasSideEffects = 0 in {
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in
 def LHAU8 : DForm_1<43, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
-                    (ins memri:$addr),
+                    (ins (memri $D, $RA):$addr),
                     "lhau $RST, $addr", IIC_LdStLHAU,
                     []>, RegConstraint<"$addr.reg = $ea_result">,
                     NoEncode<"$ea_result">;
@@ -1300,15 +1300,15 @@ def LWAUX : XForm_1_memOp<31, 373, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 // Zero extending loads.
 let PPC970_Unit = 2 in {
-def LBZ8 : DForm_1<34, (outs g8rc:$RST), (ins memri:$addr),
+def LBZ8 : DForm_1<34, (outs g8rc:$RST), (ins (memri $D, $RA):$addr),
                   "lbz $RST, $addr", IIC_LdStLoad,
                   [(set i64:$RST, (zextloadi8 DForm:$addr))]>, ZExt32To64,
                   SExt32To64;
-def LHZ8 : DForm_1<40, (outs g8rc:$RST), (ins memri:$addr),
+def LHZ8 : DForm_1<40, (outs g8rc:$RST), (ins (memri $D, $RA):$addr),
                   "lhz $RST, $addr", IIC_LdStLoad,
                   [(set i64:$RST, (zextloadi16 DForm:$addr))]>, ZExt32To64,
                   SExt32To64;
-def LWZ8 : DForm_1<32, (outs g8rc:$RST), (ins memri:$addr),
+def LWZ8 : DForm_1<32, (outs g8rc:$RST), (ins (memri $D, $RA):$addr),
                   "lwz $RST, $addr", IIC_LdStLoad,
                   [(set i64:$RST, (zextloadi32 DForm:$addr))]>, isPPC64,
                   ZExt32To64;
@@ -1330,17 +1330,17 @@ def LWZX8 : XForm_1_memOp<31,  23, (outs g8rc:$RST), (ins (memrr $RA, $RB):$addr
 // Update forms.
 let mayLoad = 1, hasSideEffects = 0 in {
 def LBZU8 : DForm_1<35, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
-                    (ins memri:$addr),
+                    (ins (memri $D, $RA):$addr),
                     "lbzu $RST, $addr", IIC_LdStLoadUpd,
                     []>, RegConstraint<"$addr.reg = $ea_result">,
                     NoEncode<"$ea_result">;
 def LHZU8 : DForm_1<41, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
-                    (ins memri:$addr),
+                    (ins (memri $D, $RA):$addr),
                     "lhzu $RST, $addr", IIC_LdStLoadUpd,
                     []>, RegConstraint<"$addr.reg = $ea_result">,
                     NoEncode<"$ea_result">;
 def LWZU8 : DForm_1<33, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
-                    (ins memri:$addr),
+                    (ins (memri $D, $RA):$addr),
                     "lwzu $RST, $addr", IIC_LdStLoadUpd,
                     []>, RegConstraint<"$addr.reg = $ea_result">,
                     NoEncode<"$ea_result">;
@@ -1367,7 +1367,7 @@ def LWZUX8 : XForm_1_memOp<31, 55, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
 
 // Full 8-byte loads.
 let PPC970_Unit = 2 in {
-def LD   : DSForm_1<58, 0, (outs g8rc:$RST), (ins memrix:$addr),
+def LD   : DSForm_1<58, 0, (outs g8rc:$RST), (ins (memrix $D, $RA):$addr),
                     "ld $RST, $addr", IIC_LdStLD,
                     [(set i64:$RST, (load DSForm:$addr))]>, isPPC64;
 // The following four definitions are selected for small code model only.
@@ -1409,7 +1409,7 @@ def LWBRX8 : XForm_1_memOp<31,  534, (outs g8rc:$RST), (ins (memrr $RA, $RB):$ad
 
 let mayLoad = 1, hasSideEffects = 0 in {
 def LDU  : DSForm_1<58, 1, (outs g8rc:$RST, ptr_rc_nor0:$ea_result),
-                    (ins memrix:$addr),
+                    (ins (memrix $D, $RA):$addr),
                     "ldu $RST, $addr", IIC_LdStLDU,
                     []>, RegConstraint<"$addr.reg = $ea_result">, isPPC64,
                     NoEncode<"$ea_result">;
@@ -1427,7 +1427,7 @@ let mayLoad = 1, hasNoSchedulingInfo = 1 in {
 // TODO: Add scheduling info.
 def LQ   : DQForm_RTp5_RA17_MEM<56, 0,
                                 (outs g8prc:$RTp),
-                                (ins memrix16:$addr),
+                                (ins (memrix16 $DQ, $RA):$addr),
                                 "lq $RTp, $addr", IIC_LdStLQ,
                                 []>,
                                 RegConstraint<"@earlyclobber $RTp">,
@@ -1604,13 +1604,13 @@ def PADDIdtprel : PPCEmitTimePseudo<(outs g8rc:$rD), (ins g8rc_nox0:$reg, s16imm
 let PPC970_Unit = 2 in {
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 // Truncating stores.                       
-def STB8 : DForm_1<38, (outs), (ins g8rc:$RST, memri:$addr),
+def STB8 : DForm_1<38, (outs), (ins g8rc:$RST, (memri $D, $RA):$addr),
                    "stb $RST, $addr", IIC_LdStStore,
                    [(truncstorei8 i64:$RST, DForm:$addr)]>;
-def STH8 : DForm_1<44, (outs), (ins g8rc:$RST, memri:$addr),
+def STH8 : DForm_1<44, (outs), (ins g8rc:$RST, (memri $D, $RA):$addr),
                    "sth $RST, $addr", IIC_LdStStore,
                    [(truncstorei16 i64:$RST, DForm:$addr)]>;
-def STW8 : DForm_1<36, (outs), (ins g8rc:$RST, memri:$addr),
+def STW8 : DForm_1<36, (outs), (ins g8rc:$RST, (memri $D, $RA):$addr),
                    "stw $RST, $addr", IIC_LdStStore,
                    [(truncstorei32 i64:$RST, DForm:$addr)]>;
 def STBX8 : XForm_8_memOp<31, 215, (outs), (ins g8rc:$RST, (memrr $RA, $RB):$addr),
@@ -1628,7 +1628,7 @@ def STWX8 : XForm_8_memOp<31, 151, (outs), (ins g8rc:$RST, (memrr $RA, $RB):$add
 } // Interpretation64Bit
 
 // Normal 8-byte stores.
-def STD  : DSForm_1<62, 0, (outs), (ins g8rc:$RST, memrix:$addr),
+def STD  : DSForm_1<62, 0, (outs), (ins g8rc:$RST, (memrix $D, $RA):$addr),
                     "std $RST, $addr", IIC_LdStSTD,
                     [(store i64:$RST, DSForm:$addr)]>, isPPC64;
 def STDX  : XForm_8_memOp<31, 149, (outs), (ins g8rc:$RST, (memrr $RA, $RB):$addr),
@@ -1646,7 +1646,7 @@ def STDBRX: XForm_8_memOp<31, 660, (outs), (ins g8rc:$RST, (memrr $RA, $RB):$add
 let mayStore = 1, hasNoSchedulingInfo = 1 in {
 // Normal 16-byte stores.
 // TODO: Add scheduling info.
-def STQ : DSForm_1<62, 2, (outs), (ins g8prc:$RST, memrix:$addr),
+def STQ : DSForm_1<62, 2, (outs), (ins g8prc:$RST, (memrix $D, $RA):$addr),
                    "stq $RST, $addr", IIC_LdStSTQ,
                    []>, isPPC64;
 
@@ -1674,13 +1674,13 @@ def : Pat<(int_ppc_atomic_store_i128 i64:$lo, i64:$hi, ForceXForm:$dst),
 // Stores with Update (pre-inc).
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
-def STBU8 : DForm_1<39, (outs ptr_rc_nor0:$ea_res), (ins g8rc:$RST, memri:$addr),
+def STBU8 : DForm_1<39, (outs ptr_rc_nor0:$ea_res), (ins g8rc:$RST, (memri $D, $RA):$addr),
                    "stbu $RST, $addr", IIC_LdStSTU, []>,
                    RegConstraint<"$addr.reg = $ea_res">, NoEncode<"$ea_res">;
-def STHU8 : DForm_1<45, (outs ptr_rc_nor0:$ea_res), (ins g8rc:$RST, memri:$addr),
+def STHU8 : DForm_1<45, (outs ptr_rc_nor0:$ea_res), (ins g8rc:$RST, (memri $D, $RA):$addr),
                    "sthu $RST, $addr", IIC_LdStSTU, []>,
                    RegConstraint<"$addr.reg = $ea_res">, NoEncode<"$ea_res">;
-def STWU8 : DForm_1<37, (outs ptr_rc_nor0:$ea_res), (ins g8rc:$RST, memri:$addr),
+def STWU8 : DForm_1<37, (outs ptr_rc_nor0:$ea_res), (ins g8rc:$RST, (memri $D, $RA):$addr),
                    "stwu $RST, $addr", IIC_LdStSTU, []>,
                    RegConstraint<"$addr.reg = $ea_res">, NoEncode<"$ea_res">;
 
@@ -1705,7 +1705,7 @@ def STWUX8: XForm_8_memOp<31, 183, (outs ptr_rc_nor0:$ea_res),
 } // Interpretation64Bit
 
 def STDU : DSForm_1<62, 1, (outs ptr_rc_nor0:$ea_res),
-                   (ins g8rc:$RST, memrix:$addr),
+                   (ins g8rc:$RST, (memrix $D, $RA):$addr),
                    "stdu $RST, $addr", IIC_LdStSTU, []>,
                    RegConstraint<"$addr.reg = $ea_res">, NoEncode<"$ea_res">,
                    isPPC64;
@@ -1781,11 +1781,11 @@ defm FCTIWUZ : XForm_26r<63, 143, (outs f8rc:$RST), (ins f8rc:$RB),
 // and the value of the stack pointer.
 let mayStore = 1, Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 def HASHST8 : XForm_XD6_RA5_RB5<31, 722, (outs),
-                                (ins g8rc:$RB, memrihash:$D_RA_XD),
-                                "hashst $RB, $D_RA_XD", IIC_IntGeneral, []>;
+                                (ins g8rc:$RB, (memrihash $D, $RA):$addr),
+                                "hashst $RB, $addr", IIC_IntGeneral, []>;
 def HASHSTP8 : XForm_XD6_RA5_RB5<31, 658, (outs),
-                                 (ins g8rc:$RB, memrihash:$D_RA_XD),
-                                 "hashstp $RB, $D_RA_XD", IIC_IntGeneral, []>;
+                                 (ins g8rc:$RB, (memrihash $D, $RA):$addr),
+                                 "hashstp $RB, $addr", IIC_IntGeneral, []>;
 }
 
 // These instructions check a hash computed from the value of the link register
@@ -1795,11 +1795,11 @@ def HASHSTP8 : XForm_XD6_RA5_RB5<31, 658, (outs),
 let mayLoad = 1, hasSideEffects = 1,
     Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 def HASHCHK8 : XForm_XD6_RA5_RB5<31, 754, (outs),
-                                 (ins g8rc:$RB, memrihash:$D_RA_XD),
-                                 "hashchk $RB, $D_RA_XD", IIC_IntGeneral, []>;
+                                 (ins g8rc:$RB, (memrihash $D, $RA):$addr),
+                                 "hashchk $RB, $addr", IIC_IntGeneral, []>;
 def HASHCHKP8 : XForm_XD6_RA5_RB5<31, 690, (outs),
-                                  (ins g8rc:$RB, memrihash:$D_RA_XD),
-                                  "hashchkp $RB, $D_RA_XD", IIC_IntGeneral, []>;
+                                  (ins g8rc:$RB, (memrihash $D, $RA):$addr),
+                                  "hashchkp $RB, $addr", IIC_IntGeneral, []>;
 }
 
 let Interpretation64Bit = 1, isCodeGenOnly = 1, hasSideEffects = 1 in

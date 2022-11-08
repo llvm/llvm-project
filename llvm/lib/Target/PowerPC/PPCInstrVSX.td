@@ -1666,13 +1666,13 @@ let Predicates = [HasVSX, HasP9Vector] in {
   // PPCRegisterInfo::PPCRegisterInfo and maybe save yourself some debugging.
   let mayLoad = 1, mayStore = 0 in {
   // Load Vector
-  def LXV : DQ_RD6_RS5_DQ12<61, 1, (outs vsrc:$XT), (ins memrix16:$addr),
+  def LXV : DQ_RD6_RS5_DQ12<61, 1, (outs vsrc:$XT), (ins (memrix16 $DQ, $RA):$addr),
                             "lxv $XT, $addr", IIC_LdStLFD, []>;
   // Load DWord
-  def LXSD  : DSForm_1<57, 2, (outs vfrc:$RST), (ins memrix:$addr),
+  def LXSD  : DSForm_1<57, 2, (outs vfrc:$RST), (ins (memrix $D, $RA):$addr),
                        "lxsd $RST, $addr", IIC_LdStLFD, []>;
   // Load SP from src, convert it to DP, and place in dword[0]
-  def LXSSP : DSForm_1<57, 3, (outs vfrc:$RST), (ins memrix:$addr),
+  def LXSSP : DSForm_1<57, 3, (outs vfrc:$RST), (ins (memrix $D, $RA):$addr),
                        "lxssp $RST, $addr", IIC_LdStLFD, []>;
 
   // Load as Integer Byte/Halfword & Zero Indexed
@@ -1704,13 +1704,13 @@ let Predicates = [HasVSX, HasP9Vector] in {
   // PPCRegisterInfo::PPCRegisterInfo and maybe save yourself some debugging.
   let mayStore = 1, mayLoad = 0 in {
   // Store Vector
-  def STXV : DQ_RD6_RS5_DQ12<61, 5, (outs), (ins vsrc:$XT, memrix16:$addr),
+  def STXV : DQ_RD6_RS5_DQ12<61, 5, (outs), (ins vsrc:$XT, (memrix16 $DQ, $RA):$addr),
                              "stxv $XT, $addr", IIC_LdStSTFD, []>;
   // Store DWord
-  def STXSD  : DSForm_1<61, 2, (outs), (ins vfrc:$RST, memrix:$addr),
+  def STXSD  : DSForm_1<61, 2, (outs), (ins vfrc:$RST, (memrix $D, $RA):$addr),
                         "stxsd $RST, $addr", IIC_LdStSTFD, []>;
   // Convert DP of dword[0] to SP, and Store to dst
-  def STXSSP : DSForm_1<61, 3, (outs), (ins vfrc:$RST, memrix:$addr),
+  def STXSSP : DSForm_1<61, 3, (outs), (ins vfrc:$RST, (memrix $D, $RA):$addr),
                         "stxssp $RST, $addr", IIC_LdStSTFD, []>;
 
   // Store as Integer Byte/Halfword Indexed
