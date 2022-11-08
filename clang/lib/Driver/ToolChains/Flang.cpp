@@ -104,7 +104,7 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
       // Clang's "fast-honor-pragmas" option is not supported because it is
       // non-standard
       D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << Val;
+          << A->getSpelling() << Val;
   }
 
   for (const Arg *A : Args) {

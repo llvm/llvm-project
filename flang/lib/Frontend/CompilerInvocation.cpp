@@ -688,7 +688,7 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
       fpContractMode = LangOptions::FPM_Fast;
     else {
       diags.Report(clang::diag::err_drv_unsupported_option_argument)
-          << a->getOption().getName() << val;
+          << a->getSpelling() << val;
       return false;
     }
 

@@ -25,4 +25,4 @@
 // GUARD_NOCHECKS-NOT: "--no-guard-cf"
 
 // RUN: %clang --target=x86_64-w64-windows-gnu -### %s -mguard=xxx 2>&1 | FileCheck -check-prefix=GUARD_UNKNOWN %s
-// GUARD_UNKNOWN: error: unsupported argument 'xxx' to option '--mguard='
+// GUARD_UNKNOWN: error: unsupported argument 'xxx' to option '-mguard='
