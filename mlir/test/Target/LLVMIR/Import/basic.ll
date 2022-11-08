@@ -176,13 +176,6 @@ if.end:
 }
 ; CHECK-DBG: } loc(#[[UNKNOWNLOC]])
 
-; CHECK-LABEL: llvm.func @f3() -> !llvm.ptr<i32>
-define i32* @f3() {
-; CHECK: %[[c:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<f64>
-; CHECK: %[[b:[0-9]+]] = llvm.bitcast %[[c]] : !llvm.ptr<f64> to !llvm.ptr<i32>
-; CHECK: llvm.return %[[b]] : !llvm.ptr<i32>
-  ret i32* bitcast (double* @g2 to i32*)
-}
 
 ; CHECK-LABEL: llvm.func @f6(%arg0: !llvm.ptr<func<void (i16)>>)
 define void @f6(void (i16) *%fn) {
@@ -190,61 +183,6 @@ define void @f6(void (i16) *%fn) {
 ; CHECK: llvm.call %arg0(%[[c]])
   call void %fn(i16 0)
   ret void
-}
-
-; Testing rest of the floating point constant kinds.
-; CHECK-LABEL: llvm.func @FPConstant(%arg0: f16, %arg1: bf16, %arg2: f128, %arg3: f80)
-define void @FPConstant(half %a, bfloat %b, fp128 %c, x86_fp80 %d) {
-  ; CHECK: %[[C0:.+]] = llvm.mlir.constant(1.000000e+00 : f16) : f16
-  ; CHECK: %[[C1:.+]] = llvm.mlir.constant(1.000000e+00 : bf16) : bf16
-  ; CHECK: %[[C2:.+]] = llvm.mlir.constant(0.000000e+00 : f128) : f128
-  ; CHECK: %[[C3:.+]] = llvm.mlir.constant(7.000000e+00 : f80) : f80
-
-  ; CHECK: llvm.fadd %[[C0]], %arg0  : f16
-  %1 = fadd half 1.0, %a
-  ; CHECK: llvm.fadd %[[C1]], %arg1  : bf16
-  %2 = fadd bfloat 1.0, %b
-  ; CHECK: llvm.fadd %[[C2]], %arg2  : f128
-  %3 = fadd fp128 0xL00000000000000000000000000000000, %c
-  ; CHECK: llvm.fadd %[[C3]], %arg3  : f80
-  %4 = fadd x86_fp80 0xK4001E000000000000000, %d
-  ret void
-}
-
-;
-; Functions as constants.
-;
-
-; Calling the function that has not been defined yet.
-; CHECK-LABEL: @precaller
-define i32 @precaller() {
-  %1 = alloca i32 ()*
-  ; CHECK: %[[func:.*]] = llvm.mlir.addressof @callee : !llvm.ptr<func<i32 ()>>
-  ; CHECK: llvm.store %[[func]], %[[loc:.*]]
-  store i32 ()* @callee, i32 ()** %1
-  ; CHECK: %[[indir:.*]] = llvm.load %[[loc]]
-  %2 = load i32 ()*, i32 ()** %1
-  ; CHECK: llvm.call %[[indir]]()
-  %3 = call i32 %2()
-  ret i32 %3
-}
-
-define i32 @callee() {
-  ret i32 42
-}
-
-; Calling the function that has been defined.
-; CHECK-LABEL: @postcaller
-define i32 @postcaller() {
-  %1 = alloca i32 ()*
-  ; CHECK: %[[func:.*]] = llvm.mlir.addressof @callee : !llvm.ptr<func<i32 ()>>
-  ; CHECK: llvm.store %[[func]], %[[loc:.*]]
-  store i32 ()* @callee, i32 ()** %1
-  ; CHECK: %[[indir:.*]] = llvm.load %[[loc]]
-  %2 = load i32 ()*, i32 ()** %1
-  ; CHECK: llvm.call %[[indir]]()
-  %3 = call i32 %2()
-  ret i32 %3
 }
 
 @_ZTIi = external dso_local constant i8*
