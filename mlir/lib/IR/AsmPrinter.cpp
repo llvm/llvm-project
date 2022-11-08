@@ -2197,11 +2197,9 @@ void AsmPrinter::Impl::printAttributeImpl(Attribute attr,
     stridedLayoutAttr.print(os);
   } else if (auto denseArrayAttr = attr.dyn_cast<DenseArrayAttr>()) {
     os << "array<";
-    if (typeElision != AttrTypeElision::Must)
-      printType(denseArrayAttr.getType().getElementType());
+    printType(denseArrayAttr.getElementType());
     if (!denseArrayAttr.empty()) {
-      if (typeElision != AttrTypeElision::Must)
-        os << ": ";
+      os << ": ";
       printDenseArrayAttr(denseArrayAttr);
     }
     os << ">";
