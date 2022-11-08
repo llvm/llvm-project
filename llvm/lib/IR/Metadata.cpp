@@ -1425,37 +1425,6 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   }
 }
 
-void Instruction::updateDIAssignIDMapping(DIAssignID *ID) {
-  auto &IDToInstrs = getContext().pImpl->AssignmentIDToInstrs;
-  if (const DIAssignID *CurrentID =
-          cast_or_null<DIAssignID>(getMetadata(LLVMContext::MD_DIAssignID))) {
-    // Nothing to do if the ID isn't changing.
-    if (ID == CurrentID)
-      return;
-
-    // Unmap this instruction from its current ID.
-    auto InstrsIt = IDToInstrs.find(CurrentID);
-    assert(InstrsIt != IDToInstrs.end() &&
-           "Expect existing attachment to be mapped");
-
-    auto &InstVec = InstrsIt->second;
-    auto *InstIt = std::find(InstVec.begin(), InstVec.end(), this);
-    assert(InstIt != InstVec.end() &&
-           "Expect instruction to be mapped to attachment");
-    // The vector contains a ptr to this. If this is the only element in the
-    // vector, remove the ID:vector entry, otherwise just remove the
-    // instruction from the vector.
-    if (InstVec.size() == 1)
-      IDToInstrs.erase(InstrsIt);
-    else
-      InstVec.erase(InstIt);
-  }
-
-  // Map this instruction to the new ID.
-  if (ID)
-    IDToInstrs[ID].push_back(this);
-}
-
 void Instruction::setMetadata(unsigned KindID, MDNode *Node) {
   if (!Node && !hasMetadata())
     return;
@@ -1464,16 +1433,6 @@ void Instruction::setMetadata(unsigned KindID, MDNode *Node) {
   if (KindID == LLVMContext::MD_dbg) {
     DbgLoc = DebugLoc(Node);
     return;
-  }
-
-  // Update DIAssignID to Instruction(s) mapping.
-  if (KindID == LLVMContext::MD_DIAssignID) {
-    // The DIAssignID tracking infrastructure doesn't support RAUWing temporary
-    // nodes with DIAssignIDs. The cast_or_null below would also catch this, but
-    // having a dedicated assert helps make this obvious.
-    assert((!Node || !Node->isTemporary()) &&
-           "Temporary DIAssignIDs are invalid");
-    updateDIAssignIDMapping(cast_or_null<DIAssignID>(Node));
   }
 
   Value::setMetadata(KindID, Node);
