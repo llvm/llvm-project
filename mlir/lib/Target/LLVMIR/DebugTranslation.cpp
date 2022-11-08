@@ -231,10 +231,6 @@ const llvm::DILocation *
 DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope) {
   if (!debugEmissionIsEnabled)
     return nullptr;
-
-  // Check for a scope encoded with the location.
-  if (auto scopedLoc = loc->findInstanceOf<FusedLocWith<LLVM::DIScopeAttr>>())
-    scope = cast<llvm::DILocalScope>(translate(scopedLoc.getMetadata()));
   return translateLoc(loc, scope, /*inlinedAt=*/nullptr);
 }
 
@@ -267,6 +263,11 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
 
   } else if (auto fusedLoc = loc.dyn_cast<FusedLoc>()) {
     ArrayRef<Location> locations = fusedLoc.getLocations();
+
+    // Check for a scope encoded with the location.
+    if (auto scopedAttr =
+            fusedLoc.getMetadata().dyn_cast_or_null<LLVM::DIScopeAttr>())
+      scope = cast<llvm::DILocalScope>(translate(scopedAttr));
 
     // For fused locations, merge each of the nodes.
     llvmLoc = translateLoc(locations.front(), scope, inlinedAt);
