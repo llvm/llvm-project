@@ -419,6 +419,7 @@ multiclass LoadA<string OpcStr, bits<6> Op3Val, bits<6> LoadAOp3Val,
 // The LDSTUB instruction is supported for asm only.
 // It is unlikely that general-purpose code could make use of it.
 // CAS is preferred for sparc v9.
+let DecoderMethod = "DecodeFIXMEInstruction" in {
 def LDSTUBrr : F3_1<3, 0b001101, (outs IntRegs:$rd), (ins (MEMrr $rs1, $rs2):$addr),
                     "ldstub [$addr], $rd", []>;
 def LDSTUBri : F3_2<3, 0b001101, (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):$addr),
@@ -426,6 +427,7 @@ def LDSTUBri : F3_2<3, 0b001101, (outs IntRegs:$rd), (ins (MEMri $rs1, $simm13):
 def LDSTUBArr : F3_1_asi<3, 0b011101, (outs IntRegs:$rd),
                          (ins (MEMrr $rs1, $rs2):$addr, i8imm:$asi),
                          "ldstuba [$addr] $asi, $rd", []>;
+}
 
 // Store multiclass - Define both Reg+Reg/Reg+Imm patterns in one shot.
 multiclass Store<string OpcStr, bits<6> Op3Val, SDPatternOperator OpNode,
@@ -1195,7 +1197,7 @@ let rd = 0 in
                   "unimp $imm22", []>;
 
 // Section B.32 - Flush Instruction Memory
-let rd = 0 in {
+let DecoderMethod = "DecodeFIXMEInstruction", rd = 0 in {
   def FLUSHrr : F3_1<2, 0b111011, (outs), (ins (MEMrr $rs1, $rs2):$addr),
                        "flush $addr", []>;
   def FLUSHri : F3_2<2, 0b111011, (outs), (ins (MEMri $rs1, $simm13):$addr),
@@ -1759,7 +1761,7 @@ let hasSideEffects = 1 in {
 }
 
 // Section A.42 - Prefetch Data
-let Predicates = [HasV9] in {
+let DecoderMethod = "DecodeFIXMEInstruction", Predicates = [HasV9] in {
   def PREFETCHr : F3_1<3, 0b101101,
                    (outs), (ins (MEMrr $rs1, $rs2):$addr, shift_imm5:$rd),
                    "prefetch [$addr], $rd", []>;
