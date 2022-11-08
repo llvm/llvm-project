@@ -15,7 +15,9 @@
 # CHECK-NEXT: Idx  Name          Size           VMA               Type
 # CHECK-NEXT: 0    __text        {{[0-9a-f]+}}  [[#%x,TEXT:]]     TEXT
 # CHECK-NEXT: 1    __cstring     {{[0-9a-f]+}}  [[#%x,CSTR:]]     DATA
-# CHECK-NEXT: 2    __common      {{[0-9a-f]+}}  [[#%x,BSS:]]      BSS
+# CHECK-NEXT: 2    __unwind_info {{[0-9a-f]+}}  [[#%x,UNWIND:]]   DATA
+# CHECK-NEXT: 3    __eh_frame    {{[0-9a-f]+}}  [[#%x,EH_FRAME:]] DATA
+# CHECK-NEXT: 4    __common      {{[0-9a-f]+}}  [[#%x,BSS:]]      BSS
 
 # CHECK:      SYMBOL TABLE:
 # CHECK-DAG:  [[#%x,MAIN:]]    g     F __TEXT,__text _main
@@ -34,10 +36,12 @@
 # CHECK-NEXT: [  3] {{.*}}{{/|\\}}map-file.s.tmp/c-string-literal.o
 
 # CHECK-NEXT: # Sections:
-# CHECK-NEXT: # Address       Size              Segment  Section
-# CHECK-NEXT: 0x[[#%X,TEXT]]  0x{{[0-9A-F]+}}   __TEXT   __text
-# CHECK-NEXT: 0x[[#%X,CSTR]]  0x{{[0-9A-F]+}}   __TEXT   __cstring
-# CHECK-NEXT: 0x[[#%X,BSS]]   0x{{[0-9A-F]+}}   __DATA   __common
+# CHECK-NEXT: # Address           Size              Segment  Section
+# CHECK-NEXT: 0x[[#%X,TEXT]]      0x{{[0-9A-F]+}}   __TEXT   __text
+# CHECK-NEXT: 0x[[#%X,CSTR]]      0x{{[0-9A-F]+}}   __TEXT   __cstring
+# CHECK-NEXT: 0x[[#%X,UNWIND]]    0x{{[0-9A-F]+}}   __TEXT   __unwind_info
+# CHECK-NEXT: 0x[[#%X,EH_FRAME]]  0x{{[0-9A-F]+}}   __TEXT   __eh_frame
+# CHECK-NEXT: 0x[[#%X,BSS]]       0x{{[0-9A-F]+}}   __DATA   __common
 
 # CHECK-NEXT: # Symbols:
 # CHECK-NEXT: # Address                Size        File   Name
@@ -48,6 +52,7 @@
 # CHECK-DAG:  0x[[#%X,HIITSME]]        0x0000000F  [  3]  literal string: Hello, it's me
 # CHECK-DAG:  0x[[#%X,HIITSME + 0xf]]  0x0000000E  [  3]  literal string: Hello world!\n
 # CHECK-DAG:  0x[[#%X,NUMBER]]         0x00000001  [  1]  _number
+# CHECK-DAG:  0x[[#%X,UNWIND]]         0x0000103C  [  0]  compact unwind info
 
 # MAPFILE: "name":"Total Write map file"
 
@@ -89,7 +94,10 @@ __ZTIN3foo3bar4MethE:
 .globl _main, _bar
 
 _main:
+.cfi_startproc
+.cfi_def_cfa_offset 16
   ret
+.cfi_endproc
 
 _bar:
   nop
