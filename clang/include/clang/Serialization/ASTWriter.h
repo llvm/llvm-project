@@ -736,7 +736,7 @@ public:
   bool hasChain() const { return Chain; }
   ASTReader *getChain() const { return Chain; }
 
-  bool isWritingNamedModules() const {
+  bool isWritingStdCXXNamedModules() const {
     return WritingModule && WritingModule->isModulePurview();
   }
 
