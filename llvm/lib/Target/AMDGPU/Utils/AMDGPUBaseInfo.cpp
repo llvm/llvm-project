@@ -430,7 +430,7 @@ unsigned getVOPDOpcode(unsigned Opc) {
 }
 
 bool isVOPD(unsigned Opc) {
-  return AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0X) != -1;
+  return AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src0X);
 }
 
 bool isTrue16Inst(unsigned Opc) {

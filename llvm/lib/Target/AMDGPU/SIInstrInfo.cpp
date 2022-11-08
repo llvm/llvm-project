@@ -213,8 +213,8 @@ bool SIInstrInfo::areLoadsFromSameBasePtr(SDNode *Load0, SDNode *Load1,
 
   if (isSMRD(Opc0) && isSMRD(Opc1)) {
     // Skip time and cache invalidation instructions.
-    if (AMDGPU::getNamedOperandIdx(Opc0, AMDGPU::OpName::sbase) == -1 ||
-        AMDGPU::getNamedOperandIdx(Opc1, AMDGPU::OpName::sbase) == -1)
+    if (!AMDGPU::hasNamedOperand(Opc0, AMDGPU::OpName::sbase) ||
+        !AMDGPU::hasNamedOperand(Opc1, AMDGPU::OpName::sbase))
       return false;
 
     unsigned NumOps = getNumOperandsNoGlue(Load0);
@@ -3797,8 +3797,7 @@ bool SIInstrInfo::hasModifiers(unsigned Opcode) const {
   // The src0_modifier operand is present on all instructions
   // that have modifiers.
 
-  return AMDGPU::getNamedOperandIdx(Opcode,
-                                    AMDGPU::OpName::src0_modifiers) != -1;
+  return AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src0_modifiers);
 }
 
 bool SIInstrInfo::hasModifiersSet(const MachineInstr &MI,
@@ -3891,10 +3890,10 @@ MachineInstr *SIInstrInfo::buildShrunkInst(MachineInstr &MI,
 
   // Add the dst operand if the 32-bit encoding also has an explicit $vdst.
   // For VOPC instructions, this is replaced by an implicit def of vcc.
-  if (AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::vdst) != -1) {
+  if (AMDGPU::hasNamedOperand(Op32, AMDGPU::OpName::vdst)) {
     // dst
     Inst32.add(MI.getOperand(0));
-  } else if (AMDGPU::getNamedOperandIdx(Op32, AMDGPU::OpName::sdst) != -1) {
+  } else if (AMDGPU::hasNamedOperand(Op32, AMDGPU::OpName::sdst)) {
     // VOPCX instructions won't be writing to an explicit dst, so this should
     // not fail for these instructions.
     assert(((MI.getOperand(0).getReg() == AMDGPU::VCC) ||
@@ -4852,9 +4851,8 @@ const TargetRegisterClass *SIInstrInfo::getRegClass(const MCInstrDesc &TID,
         (TID.TSFlags & SIInstrFlags::DS) ? AMDGPU::OpName::data0
                                          : AMDGPU::OpName::vdata);
     if (DataIdx != -1) {
-      IsAllocatable = VDstIdx != -1 ||
-                      AMDGPU::getNamedOperandIdx(TID.Opcode,
-                                                 AMDGPU::OpName::data1) != -1;
+      IsAllocatable = VDstIdx != -1 || AMDGPU::hasNamedOperand(
+                                           TID.Opcode, AMDGPU::OpName::data1);
     }
   }
   return adjustAllocatableRegClass(ST, RI, MF.getRegInfo(), TID, RegClass,
