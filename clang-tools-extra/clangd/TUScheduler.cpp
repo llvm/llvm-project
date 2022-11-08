@@ -245,7 +245,7 @@ private:
 /// threads, remove()s mostly from the main thread, and get() from ASTWorker.
 /// Writes are rare and reads are cheap, so we don't expect much contention.
 class TUScheduler::HeaderIncluderCache {
-  // We should be be a little careful how we store the include graph of open
+  // We should be a little careful how we store the include graph of open
   // files, as each can have a large number of transitive headers.
   // This representation is O(unique transitive source files).
   llvm::BumpPtrAllocator Arena;
