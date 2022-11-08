@@ -117,22 +117,22 @@ void spirv::AccessChainOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 OpFoldResult spirv::BitcastOp::fold(ArrayRef<Attribute> /*operands*/) {
-  Value arg = getOperand();
-  if (getType() == arg.getType())
-    return arg;
+  Value curInput = getOperand();
+  if (getType() == curInput.getType())
+    return curInput;
 
   // Look through nested bitcasts.
-  if (auto bitcast = arg.getDefiningOp<spirv::BitcastOp>()) {
-    Value nestedArg = bitcast.getOperand();
-    if (nestedArg.getType() == getType())
-      return nestedArg;
+  if (auto prevCast = curInput.getDefiningOp<spirv::BitcastOp>()) {
+    Value prevInput = prevCast.getOperand();
+    if (prevInput.getType() == getType())
+      return prevInput;
 
-    getOperandMutable().assign(nestedArg);
+    getOperandMutable().assign(prevInput);
     return getResult();
   }
 
   // TODO(kuhar): Consider constant-folding the operand attribute.
-  return getResult();
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
