@@ -274,8 +274,7 @@ public:
   ///
   /// This operation assumes that the input argument list outlives it.
   /// This takes the list as a pointer to avoid looking like a copy
-  /// constructor, since this really really isn't safe to use that
-  /// way.
+  /// constructor, since this really isn't safe to use that way.
   explicit TemplateArgumentList(const TemplateArgumentList *Other)
       : Arguments(Other->data()), NumArguments(Other->size()) {}
 

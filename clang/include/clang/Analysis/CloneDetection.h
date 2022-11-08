@@ -260,7 +260,7 @@ public:
 ///
 /// Clones that aren't type II clones are moved into separate clone groups.
 /// In contrast to the RecursiveCloneTypeIIHashConstraint, all clones in a clone
-/// group are guaranteed to be be type II clones of each other, but it is too
+/// group are guaranteed to be type II clones of each other, but it is too
 /// slow to efficiently handle large amounts of clones.
 class RecursiveCloneTypeIIVerifyConstraint {
 public:

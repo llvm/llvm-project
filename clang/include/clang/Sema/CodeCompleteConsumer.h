@@ -429,7 +429,7 @@ public:
   }
 };
 
-/// Get string representation of \p Kind, useful for for debugging.
+/// Get string representation of \p Kind, useful for debugging.
 llvm::StringRef getCompletionKindString(CodeCompletionContext::Kind Kind);
 
 /// A "string" used to describe how code completion can
