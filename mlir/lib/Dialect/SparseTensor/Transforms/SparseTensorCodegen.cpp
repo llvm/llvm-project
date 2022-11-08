@@ -852,6 +852,8 @@ public:
              index);
     genStore(rewriter, loc, constantI1(rewriter, loc, false), filled, index);
     rewriter.create<scf::YieldOp>(loc, fields);
+    rewriter.setInsertionPointAfter(loop);
+    Value result = genTuple(rewriter, loc, dstType, loop->getResults());
     // Deallocate the buffers on exit of the full loop nest.
     Operation *parent = getTop(op);
     rewriter.setInsertionPointAfter(parent);
@@ -859,8 +861,7 @@ public:
     rewriter.create<memref::DeallocOp>(loc, filled);
     rewriter.create<memref::DeallocOp>(loc, added);
     // Replace operation with resulting memrefs.
-    rewriter.replaceOp(op,
-                       genTuple(rewriter, loc, dstType, loop->getResults()));
+    rewriter.replaceOp(op, result);
     return success();
   }
 };
