@@ -226,6 +226,13 @@ private:
   /// split stack prologue.
   bool HasNoSplitStack = false;
 
+  /// `true` when the `.llvm_bb_addr_map` section is going to be loaded at
+  /// runtime and we've emitted at least one entry.
+  bool YkEmittedFirstBBAddrMap = false;
+
+  /// The last `.llvm_bb_addr_map` section fragment that we handled (if any).
+  MCSection *YkLastBBAddrMapSection = nullptr;
+
 protected:
   explicit AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer);
 

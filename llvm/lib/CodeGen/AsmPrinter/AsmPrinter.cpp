@@ -1326,16 +1326,24 @@ static unsigned getBBAddrMapMetadata(const MachineBasicBlock &MBB) {
          (const_cast<MachineBasicBlock &>(MBB).canFallThrough() << 3);
 }
 
-void emitYkBBAddrMapSymbol(const MachineFunction &MF, MCStreamer &OutStreamer,
+/// Emit a start (or stop) marker symbol into the `.llvm_bb_addr_map` section
+/// so that we can find the extent of the section at runtime.
+///
+/// The `MCStreamer` should be primed to output to the `.llvm_bb_addr_map`
+/// section prior to calling this function.
+///
+/// This assumes that LTO is being used (as is required for the Yk JIT), and
+/// thus that there is only a single `Module` in play, and in turn that no
+/// symbol clashes can occur.
+void emitYkBBAddrMapSymbol(MCContext &MCtxt, MCStreamer &OutStreamer,
                            bool Start) {
-  std::string SymName("ykllvm.bbaddrmap.");
-  SymName.append(MF.getName().str());
+  std::string SymName("ykllvm.bbaddrmaps");
   if (Start)
     SymName.append(".start");
   else
-    SymName.append(".end");
+    SymName.append(".stop");
 
-  MCSymbol *Sym = MF.getContext().getOrCreateSymbol(SymName);
+  MCSymbol *Sym = MCtxt.getOrCreateSymbol(SymName);
   OutStreamer.emitSymbolAttribute(Sym, llvm::MCSA_Global);
   OutStreamer.emitLabel(Sym);
 }
@@ -1350,9 +1358,16 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
   OutStreamer->pushSection();
   OutStreamer->switchSection(BBAddrMapSection);
 
-  // Add the `ykllvm.bbaddrmap.<func>.start` symbol.
-  if (YkAllocLLVMBBAddrMapSection)
-    emitYkBBAddrMapSymbol(MF, *OutStreamer, true);
+  if (YkAllocLLVMBBAddrMapSection) {
+    if (!YkEmittedFirstBBAddrMap) {
+      // Add the `ykllvm.bbaddrmaps.start` symbol.
+      emitYkBBAddrMapSymbol(MF.getContext(), *OutStreamer, true);
+      YkEmittedFirstBBAddrMap = true;
+    }
+    // We cache the last seen bbaddrmap section fragment so that we can insert
+    // the stop symbol when the asmprinter is finalising.
+    YkLastBBAddrMapSection = BBAddrMapSection;
+  }
 
   OutStreamer->AddComment("version");
   OutStreamer->emitInt8(OutStreamer->getContext().getBBAddrMapVersion());
@@ -1442,10 +1457,6 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       OutStreamer->emitULEB128IntValue(I);
     }
   }
-
-  // Add the `ykllvm.bbaddrmap.<func>.end` symbol.
-  if (YkAllocLLVMBBAddrMapSection)
-    emitYkBBAddrMapSymbol(MF, *OutStreamer, false);
 
   OutStreamer->popSection();
 }
@@ -2030,6 +2041,14 @@ void AsmPrinter::emitRemarksSection(remarks::RemarkStreamer &RS) {
 }
 
 bool AsmPrinter::doFinalization(Module &M) {
+  if (YkAllocLLVMBBAddrMapSection && YkEmittedFirstBBAddrMap) {
+    // Add the `ykllvm.bbaddrmaps.stop` symbol.
+    OutStreamer->pushSection();
+    OutStreamer->switchSection(YkLastBBAddrMapSection);
+    emitYkBBAddrMapSymbol(OutContext, *OutStreamer, false);
+    OutStreamer->popSection();
+  }
+
   // The `embed-bitcode` flag serialises the IR after only architecture
   // agnostic optimisations have been run, but then proceeds to apply other
   // optimisations and transformations afterwards. Sometimes this final version
