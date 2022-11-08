@@ -478,6 +478,7 @@ entry:
 
 ; ASM32PWR4:       stwu 1, -128(1)
 ; ASM32PWR4-NEXT:  lwz [[REG:[0-9]+]], L..C2(2)
+; ASM32PWR4-NEXT:  stw 0, 136(1)
 ; ASM32PWR4-NEXT:  lfd 1, 0([[REG]])
 ; ASM32PWR4-DAG:   stfd 1, 56(1)
 ; ASM32PWR4-DAG:   stfd 1, 64(1)
@@ -529,6 +530,7 @@ entry:
 
 ; ASM64PWR4:       stdu 1, -160(1)
 ; ASM64PWR4-NEXT:  ld [[REG:[0-9]+]], L..C2(2)
+; ASM64PWR4-NEXT:  std 0, 176(1)
 ; ASM64PWR4-NEXT:  lfd 1, 0([[REG]])
 ; ASM64PWR4-DAG:   stfd 1, 112(1)
 ; ASM64PWR4-DAG:   stfd 1, 120(1)
@@ -719,6 +721,7 @@ declare void @test_vararg(i32, ...)
 
 ; ASM32PWR4:      stwu 1, -80(1)
 ; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], L..C1(2)
+; ASM32PWR4-NEXT: stw 0, 88(1)
 ; ASM32PWR4-NEXT: lfs 1, 0([[REG]])
 ; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], L..C2(2)
 ; ASM32PWR4-NEXT: stfd 1, 64(1)
@@ -747,6 +750,7 @@ declare void @test_vararg(i32, ...)
 
 ; ASM64PWR4:      stdu 1, -128(1)
 ; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], L..C1(2)
+; ASM64PWR4-NEXT: std 0, 144(1)
 ; ASM64PWR4-NEXT: lfs 1, 0([[REG]])
 ; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], L..C2(2)
 ; ASM64PWR4-NEXT: stfd 1, 112(1)
@@ -787,6 +791,7 @@ entry:
 
 ; ASM32PWR4:      stwu 1, -80(1)
 ; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], L..C1(2)
+; ASM32PWR4-NEXT: stw 0, 88(1)
 ; ASM32PWR4-NEXT: li 6, 42
 ; ASM32PWR4-NEXT: lfs 1, 0([[REG]])
 ; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], L..C2(2)
@@ -817,6 +822,7 @@ entry:
 
 ; ASM64PWR4:      stdu 1, -128(1)
 ; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], L..C1(2)
+; ASM64PWR4-NEXT: std 0, 144(1)
 ; ASM64PWR4-NEXT: li 5, 42
 ; ASM64PWR4-NEXT: lfs 1, 0([[REG]])
 ; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], L..C2(2)
@@ -890,6 +896,7 @@ entry:
 
 ; ASM64PWR4:      stdu 1, -128(1)
 ; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], L..C1(2)
+; ASM64PWR4-NEXT: std 0, 144(1)
 ; ASM64PWR4-NEXT: li 5, 42
 ; ASM64PWR4-NEXT: lfs 1, 0([[REG]])
 ; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], L..C2(2)
@@ -922,6 +929,7 @@ entry:
 
 ; ASM32PWR4:      stwu 1, -64(1)
 ; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], L..C1(2)
+; ASM32PWR4-NEXT: stw 0, 72(1)
 ; ASM32PWR4-NEXT: lfs 1, 0([[REG]])
 ; ASM32PWR4-NEXT: li 3, 42
 ; ASM32PWR4-NEXT: stfs 1, 60(1)
@@ -940,6 +948,7 @@ entry:
 
 ; ASM64PWR4:      stdu 1, -128(1)
 ; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], L..C1(2)
+; ASM64PWR4-NEXT: std 0, 144(1)
 ; ASM64PWR4-NEXT: lfs 1, 0([[REG]])
 ; ASM64PWR4-NEXT: li 3, 42
 ; ASM64PWR4-NEXT: stfs 1, 124(1)
@@ -1554,8 +1563,8 @@ entry:
 ; CHECKASM-LABEL:  .caller_ints_stack:
 
 ; ASM32PWR4:        mflr 0
-; ASM32PWR4-DAG:    stw 0, 8(1)
-; ASM32PWR4-DAG:    stwu 1, -96(1)
+; ASM32PWR4-NEXT:   stwu 1, -96(1)
+; ASM32PWR4-DAG:    stw 0, 104(1)
 ; ASM32PWR4-DAG:    li 3, 1
 ; ASM32PWR4-DAG:    li 4, 2
 ; ASM32PWR4-DAG:    li 5, 3
@@ -1600,8 +1609,8 @@ entry:
 ; ASM32PWR4-NEXT:   blr
 
 ; ASM64PWR4:        mflr 0
-; ASM64PWR4-DAG:    std 0, 16(1)
-; ASM64PWR4-DAG:    stdu 1, -176(1)
+; ASM64PWR4-NEXT:   stdu 1, -176(1)
+; ASM64PWR4-DAG:    std 0, 192(1)
 ; ASM64PWR4-DAG:    li 3, 1
 ; ASM64PWR4-DAG:    li 4, 2
 ; ASM64PWR4-DAG:    li 5, 3
@@ -1909,8 +1918,8 @@ entry:
 ; CHECKASM-LABEL:  .caller_fpr_stack:
 
 ; ASM32PWR4:       mflr 0
-; ASM32PWR4-DAG:   stw 0, 8(1)
-; ASM32PWR4-DAG:   stwu 1, -144(1)
+; ASM32PWR4-NEXT:  stwu 1, -144(1)
+; ASM32PWR4-DAG:   stw 0, 152(1)
 ; ASM32PWR4-DAG:   lwz [[REGF1ADDR:[0-9]+]], L..C20(2)
 ; ASM32PWR4-DAG:   lwz [[REGF1:[0-9]+]], 0([[REGF1ADDR]])
 ; ASM32PWR4-DAG:   lwz [[REGDADDR:[0-9]+]], L..C19(2)
@@ -1941,8 +1950,8 @@ entry:
 ; ASM32PWR4-NEXT:  bl .test_fpr_stack
 
 ; ASM64PWR4:       mflr 0
-; ASM64PWR4-DAG:   std 0, 16(1)
-; ASM64PWR4-DAG:   stdu 1, -176(1)
+; ASM64PWR4-NEXT:  stdu 1, -176(1)
+; ASM64PWR4-DAG:   std 0, 192(1)
 ; ASM64PWR4-DAG:   ld [[REGF1ADDR:[0-9]+]], L..C18(2)
 ; ASM64PWR4-DAG:   lwz [[REGF1:[0-9]+]], 0([[REGF1ADDR]])
 ; ASM64PWR4-DAG:   ld [[REGDADDR:[0-9]+]], L..C19(2)
@@ -2290,8 +2299,8 @@ define void @caller_mix() {
 ; CHEKASM-LABEL:    .mix_floats_caller:
 
 ; ASM32PWR4:       mflr 0
-; ASM32PWR4-DAG:   stw 0, 8(1)
-; ASM32PWR4-DAG:   stwu 1, -176(1)
+; ASM32PWR4-NEXT:  stwu 1, -176(1)
+; ASM32PWR4-DAG:   stw 0, 184(1)
 ; ASM32PWR4-DAG:   stw [[REG:[0-9]+]], 56(1)
 ; ASM32PWR4-DAG:   stw [[REG:[0-9]+]], 60(1)
 ; ASM32PWR4-DAG:   stw [[REG:[0-9]+]], 64(1)
@@ -2323,8 +2332,8 @@ define void @caller_mix() {
 ; ASM32PWR4:       bl .mix_floats
 
 ; ASM64PWR4:      mflr 0
-; ASM64PWR4-DAG:  std 0, 16(1)
-; ASM64PWR4-DAG:  stdu 1, -240(1)
+; ASM64PWR4-NEXT: stdu 1, -240(1)
+; ASM64PWR4-DAG:  std 0, 256(1)
 ; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 112(1)
 ; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 120(1)
 ; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 128(1)

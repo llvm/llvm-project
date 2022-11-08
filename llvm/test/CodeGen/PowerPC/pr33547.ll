@@ -11,8 +11,8 @@ define void @main() {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %L.entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addis 3, 2, .LC0@toc@ha
@@ -47,8 +47,8 @@ define void @testFunc(ptr nocapture %r, ptr nocapture readonly %k) {
 ; CHECK-LABEL: testFunc:
 ; CHECK:       # %bb.0: # %L.entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -32(1)
+; CHECK-NEXT:    std 0, 48(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    bl .L2$pb
