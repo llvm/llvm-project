@@ -181,14 +181,16 @@ TEST(MachineInstrBundleIteratorTest, ReverseConstructor) {
   EXPECT_EQ(crbegin(), const_reverse_iterator(cend()));
 
   // Confirm lack of implicit conversions.
-  static_assert(!std::is_convertible_v<iterator, reverse_iterator>,
+  static_assert(!std::is_convertible<iterator, reverse_iterator>::value,
                 "unexpected implicit conversion");
-  static_assert(!std::is_convertible_v<reverse_iterator, iterator>,
+  static_assert(!std::is_convertible<reverse_iterator, iterator>::value,
                 "unexpected implicit conversion");
-  static_assert(!std::is_convertible_v<const_iterator, const_reverse_iterator>,
-                "unexpected implicit conversion");
-  static_assert(!std::is_convertible_v<const_reverse_iterator, const_iterator>,
-                "unexpected implicit conversion");
+  static_assert(
+      !std::is_convertible<const_iterator, const_reverse_iterator>::value,
+      "unexpected implicit conversion");
+  static_assert(
+      !std::is_convertible<const_reverse_iterator, const_iterator>::value,
+      "unexpected implicit conversion");
 }
 
 } // end namespace

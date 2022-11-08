@@ -25,8 +25,9 @@ struct S {
 TEST_F(ThreadLocalTest, Basics) {
   ThreadLocal<const S> x;
 
-  static_assert(std::is_const_v<std::remove_pointer_t<decltype(x.get())>>,
-                "ThreadLocal::get didn't return a pointer to const object");
+  static_assert(
+      std::is_const<std::remove_pointer<decltype(x.get())>::type>::value,
+      "ThreadLocal::get didn't return a pointer to const object");
 
   EXPECT_EQ(nullptr, x.get());
 
@@ -39,8 +40,9 @@ TEST_F(ThreadLocalTest, Basics) {
 
   ThreadLocal<S> y;
 
-  static_assert(!std::is_const_v<std::remove_pointer_t<decltype(y.get())>>,
-                "ThreadLocal::get returned a pointer to const object");
+  static_assert(
+      !std::is_const<std::remove_pointer<decltype(y.get())>::type>::value,
+      "ThreadLocal::get returned a pointer to const object");
 
   EXPECT_EQ(nullptr, y.get());
 

@@ -18,10 +18,10 @@
 
 using namespace llvm;
 
-static_assert(std::is_trivially_copyable_v<Optional<int>>,
+static_assert(std::is_trivially_copyable<Optional<int>>::value,
               "trivially copyable");
 
-static_assert(std::is_trivially_copyable_v<Optional<std::array<int, 3>>>,
+static_assert(std::is_trivially_copyable<Optional<std::array<int, 3>>>::value,
               "trivially copyable");
 
 void OptionalWorksInConstexpr() {
@@ -70,8 +70,9 @@ unsigned NonDefaultConstructible::CopyConstructions = 0;
 unsigned NonDefaultConstructible::Destructions = 0;
 unsigned NonDefaultConstructible::CopyAssignments = 0;
 
-static_assert(!std::is_trivially_copyable_v<Optional<NonDefaultConstructible>>,
-              "not trivially copyable");
+static_assert(
+    !std::is_trivially_copyable<Optional<NonDefaultConstructible>>::value,
+    "not trivially copyable");
 
 TEST(OptionalTest, NonDefaultConstructibleTest) {
   Optional<NonDefaultConstructible> O;
@@ -240,7 +241,7 @@ struct MultiArgConstructor {
 };
 unsigned MultiArgConstructor::Destructions = 0;
 
-static_assert(!std::is_trivially_copyable_v<Optional<MultiArgConstructor>>,
+static_assert(!std::is_trivially_copyable<Optional<MultiArgConstructor>>::value,
               "not trivially copyable");
 
 TEST(OptionalTest, Emplace) {
@@ -322,7 +323,7 @@ unsigned MoveOnly::MoveConstructions = 0;
 unsigned MoveOnly::Destructions = 0;
 unsigned MoveOnly::MoveAssignments = 0;
 
-static_assert(!std::is_trivially_copyable_v<Optional<MoveOnly>>,
+static_assert(!std::is_trivially_copyable<Optional<MoveOnly>>::value,
               "not trivially copyable");
 
 TEST(OptionalTest, MoveOnlyNull) {
@@ -426,7 +427,7 @@ private:
 unsigned Immovable::Constructions = 0;
 unsigned Immovable::Destructions = 0;
 
-static_assert(!std::is_trivially_copyable_v<Optional<Immovable>>,
+static_assert(!std::is_trivially_copyable<Optional<Immovable>>::value,
               "not trivially copyable");
 
 TEST(OptionalTest, ImmovableEmplace) {
@@ -564,7 +565,7 @@ TEST(OptionalTest, DeletedMoveConstructor) {
   NonTMove1 = std::move(NonTMove2);
 
   static_assert(
-      std::is_trivially_copyable_v<NoTMoveOptT>,
+      std::is_trivially_copyable<NoTMoveOptT>::value,
       "Expect Optional<NoTMove> to still use the trivial specialization "
       "of OptionalStorage despite the deleted move constructor / assignment.");
 }

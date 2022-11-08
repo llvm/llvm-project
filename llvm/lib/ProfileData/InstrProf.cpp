@@ -1351,7 +1351,7 @@ uint64_t Header::formatVersion() const {
 
 Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
   using namespace support;
-  static_assert(std::is_standard_layout_v<Header>,
+  static_assert(std::is_standard_layout<Header>::value,
                 "The header should be standard layout type since we use offset "
                 "of fields to read.");
   Header H;

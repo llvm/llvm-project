@@ -32,7 +32,7 @@ static Error readStruct(StringRef Buffer, const char *Src, T &Struct) {
 
 template <typename T>
 static Error readInteger(StringRef Buffer, const char *Src, T &Val) {
-  static_assert(std::is_integral_v<T>,
+  static_assert(std::is_integral<T>::value,
                 "Cannot call readInteger on non-integral type.");
   // Don't read before the beginning or past the end of the file
   if (Src < Buffer.begin() || Src + sizeof(T) > Buffer.end())

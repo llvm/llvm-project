@@ -14,14 +14,12 @@ using namespace llvm;
 
 namespace {
 
-static_assert(
-    std::is_const_v<
-        std::remove_pointer_t<DenseSet<int>::const_iterator::pointer>>,
-    "Iterator pointer type should be const");
-static_assert(
-    std::is_const_v<
-        std::remove_reference_t<DenseSet<int>::const_iterator::reference>>,
-    "Iterator reference type should be const");
+static_assert(std::is_const<std::remove_pointer<
+                  DenseSet<int>::const_iterator::pointer>::type>::value,
+              "Iterator pointer type should be const");
+static_assert(std::is_const<std::remove_reference<
+                  DenseSet<int>::const_iterator::reference>::type>::value,
+              "Iterator reference type should be const");
 
 // Test hashing with a set of only two entries.
 TEST(DenseSetTest, DoubleEntrySetTest) {

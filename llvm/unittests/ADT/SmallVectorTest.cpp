@@ -1229,7 +1229,7 @@ protected:
   VectorT V;
 
   template <class T> static bool isValueType() {
-    return std::is_same_v<T, typename VectorT::value_type>;
+    return std::is_same<T, typename VectorT::value_type>::value;
   }
 
   void SetUp() override {

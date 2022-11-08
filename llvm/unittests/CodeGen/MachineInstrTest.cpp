@@ -472,6 +472,7 @@ TEST(MachineInstrBuilder, BuildMI) {
   EXPECT_THAT(BuildMI(MBB, MIMD, MCID), HasMIMetadata(MIMD));
 }
 
-static_assert(std::is_trivially_copyable_v<MCOperand>, "trivially copyable");
+static_assert(std::is_trivially_copyable<MCOperand>::value,
+              "trivially copyable");
 
 } // end namespace
