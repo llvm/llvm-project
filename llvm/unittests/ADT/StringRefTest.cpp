@@ -34,24 +34,18 @@ std::ostream &operator<<(std::ostream &OS,
 // Check that we can't accidentally assign a temporary std::string to a
 // StringRef. (Unfortunately we can't make use of the same thing with
 // constructors.)
-static_assert(
-    !std::is_assignable<StringRef&, std::string>::value,
-    "Assigning from prvalue std::string");
-static_assert(
-    !std::is_assignable<StringRef&, std::string &&>::value,
-    "Assigning from xvalue std::string");
-static_assert(
-    std::is_assignable<StringRef&, std::string &>::value,
-    "Assigning from lvalue std::string");
-static_assert(
-    std::is_assignable<StringRef&, const char *>::value,
-    "Assigning from prvalue C string");
-static_assert(
-    std::is_assignable<StringRef&, const char * &&>::value,
-    "Assigning from xvalue C string");
-static_assert(
-    std::is_assignable<StringRef&, const char * &>::value,
-    "Assigning from lvalue C string");
+static_assert(!std::is_assignable_v<StringRef &, std::string>,
+              "Assigning from prvalue std::string");
+static_assert(!std::is_assignable_v<StringRef &, std::string &&>,
+              "Assigning from xvalue std::string");
+static_assert(std::is_assignable_v<StringRef &, std::string &>,
+              "Assigning from lvalue std::string");
+static_assert(std::is_assignable_v<StringRef &, const char *>,
+              "Assigning from prvalue C string");
+static_assert(std::is_assignable_v<StringRef &, const char *&&>,
+              "Assigning from xvalue C string");
+static_assert(std::is_assignable_v<StringRef &, const char *&>,
+              "Assigning from lvalue C string");
 
 namespace {
 TEST(StringRefTest, Construction) {
@@ -1144,7 +1138,6 @@ TEST(StringRefTest, LFCRLineEnding) {
   EXPECT_EQ(StringRef("\n\r"), Cases[2].detectEOL());
 }
 
-static_assert(std::is_trivially_copyable<StringRef>::value,
-              "trivially copyable");
+static_assert(std::is_trivially_copyable_v<StringRef>, "trivially copyable");
 
 } // end anonymous namespace
