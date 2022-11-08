@@ -27,7 +27,7 @@ function(libomp_check_version_symbols retval)
     void func2() { printf(\"World\"); }
     __asm__(\".symver func1, func@VER1\");
     __asm__(\".symver func2, func@VER2\");
-    int main() {
+    int main(void) {
       func1();
       func2();
       return 0;
