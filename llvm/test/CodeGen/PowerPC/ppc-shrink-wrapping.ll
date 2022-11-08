@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=powerpc-ibm-aix-xcoff -mattr=-altivec -mcpu=pwr8 %s -o - -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,ENABLE,CHECK-32,ENABLE-32
 ; RUN: llc -mtriple=powerpc-ibm-aix-xcoff %s -o - -enable-shrink-wrap=false -verify-machineinstrs |  FileCheck %s --check-prefixes=CHECK,DISABLE,CHECK-32,DISABLE-32
 ; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff -mattr=-altivec -mcpu=pwr8 %s -o - -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,ENABLE,CHECK-64,ENABLE-64
-; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff %s -o - -enable-shrink-wrap=false -verify-machineinstrs |  FileCheck %s --check-prefixes=CHECK,DISABLE,CHECK-64,DISABLE-64
+; RUN: llc -mtriple=powerpc64-ibm-aix-xcoff %s -o - -enable-shrink-wrap=false -verify-machineinstrs |  FileCheck %s --check-prefixes=CHECK,DISABLE,CHECK-64,DISABLE-64,DISABLE-64-AIX
 ;
 ;
 ; Note: Lots of tests use inline asm instead of regular calls.
@@ -30,6 +30,8 @@
 ; Compare the arguments and jump to exit.
 ; After the prologue is set.
 ; DISABLE: cmpw 3, 4
+; DISABLE-32: stw 0,
+; DISABLE-64-AIX: std 0, 
 ; DISABLE-NEXT: bge 0, {{.*}}[[EXIT_LABEL:BB[0-9_]+]]
 ;
 ; Store %a on the stack
@@ -478,6 +480,8 @@ if.end:                                           ; preds = %for.body, %if.else
 ; CHECK: mflr {{[0-9]+}}
 ;
 ; DISABLE: cmplwi 3, 0
+; DISABLE-32: stw 0, 72(1)
+; DISABLE-64-AIX: std 0,
 ; DISABLE-NEXT: beq 0, {{.*}}[[ELSE_LABEL:BB[0-9_]+]]
 ;
 ; Setup of the varags.
@@ -494,6 +498,7 @@ if.end:                                           ; preds = %for.body, %if.else
 ; CHECK-32-NEXT: mr 7, 4
 ; CHECK-32-NEXT: mr 8, 4
 ; CHECK-32-NEXT: mr 9, 4
+; ENABLE-32-NEXT: stw 0, 72(1)
 ;
 ; CHECK-NEXT: bl {{.*}}someVariadicFunc
 ; CHECK: slwi 3, 3, 3
@@ -539,6 +544,8 @@ declare i32 @someVariadicFunc(i32, ...)
 ; DISABLE: mflr {{[0-9]+}}
 ;
 ; CHECK: cmplwi 3, 0
+; DISABLE-32: stw 0, 72(1)
+; DISABLE-64-AIX: std 0,
 ; CHECK-NEXT: bne{{[-]?}} 0, {{.*}}[[ABORT:BB[0-9_]+]]
 ;
 ; CHECK: li 3, 42

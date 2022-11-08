@@ -85,11 +85,12 @@ declare signext i32 @do_something(ptr)
 ; ELFV2-NEXT:      $x12 = MFOCRF8 killed $cr2
 ; V1ANDAIX-NEXT:   $x12 = MFCR8 implicit killed $cr2
 ; CHECK64-DAG:     STD $x31, -8, $x1
-; CHECK64-DAG:     STD killed $x0, 16, $x1
 ; CHECK64-DAG:     STW8 killed $x12, 8, $x1
 
 ; ELFV2-NEXT:      $x1 = STDU $x1, -48, $x1
+; ELFV2-NEXT:      STD killed $x0, 64, $x1
 ; V1ANDAIX-NEXT:   x1 = STDU $x1, -128, $x1
+; V1ANDAIX-NEXT:   STD killed $x0, 144, $x1
 
 ; CHECK64:         $x31 = OR8 $x1, $x1
 
@@ -116,9 +117,9 @@ declare signext i32 @do_something(ptr)
 ; CHECK32:       $r0 = MFLR implicit $lr
 ; CHECK32-NEXT:  $r12 = MFCR implicit killed $cr2
 ; CHECK32-DAG:   STW $r31, -4, $r1
-; CHECK32-DAG:   STW killed $r0, 8, $r1
 ; CHECK32-DAG:   STW killed $r12, 4, $r1
 ; CHECK32:       $r1 = STWU $r1, -80, $r1
+; CHECK32-NEXT:  STW killed $r0, 88, $r1
 
 ; CHECK32:       $r31 = OR $r1, $r1
 ; CHECK32:       $[[ORIGSP:r[0-9]+]] = ADDI $r31, 80
