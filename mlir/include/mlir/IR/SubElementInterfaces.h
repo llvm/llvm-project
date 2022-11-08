@@ -138,8 +138,7 @@ struct AttrTypeSubElementHandler<
       return T();
     if constexpr (std::is_base_of_v<Attribute, T>) {
       return cast<T>(attrRepls.take_front(1)[0]);
-    } else if constexpr (!detail::IsInterface<T>::value &&
-                         std::is_base_of_v<Type, T>) {
+    } else {
       return cast<T>(typeRepls.take_front(1)[0]);
     }
   }
