@@ -803,20 +803,23 @@ def PPCDispRI34Operand : AsmOperandClass {
 }
 def dispRI34 : Operand<iPTR> {
   let ParserMatchClass = PPCDispRI34Operand;
+  let EncoderMethod = "getDispRI34Encoding";
+  let DecoderMethod = "decodeSImmOperand<34>";
+}
+def dispRI34_pcrel : Operand<iPTR> {
+  let ParserMatchClass = PPCDispRI34Operand;
+  let EncoderMethod = "getDispRI34PCRelEncoding";
+  let DecoderMethod = "decodeSImmOperand<34>";
 }
 def memri34 : Operand<iPTR> { // memri, imm is a 34-bit value.
   let PrintMethod = "printMemRegImm34";
   let MIOperandInfo = (ops dispRI34:$imm, ptr_rc_nor0:$reg);
-  let EncoderMethod = "getMemRI34Encoding";
-  let DecoderMethod = "decodeMemRI34Operands";
 }
 // memri, imm is a 34-bit value for pc-relative instructions where
 // base register is set to zero.
 def memri34_pcrel : Operand<iPTR> { // memri, imm is a 34-bit value.
   let PrintMethod = "printMemRegImm34PCRel";
-  let MIOperandInfo = (ops dispRI34:$imm, immZero:$reg);
-  let EncoderMethod = "getMemRI34PCRelEncoding";
-  let DecoderMethod = "decodeMemRI34PCRelOperands";
+  let MIOperandInfo = (ops dispRI34_pcrel:$imm, immZero:$reg);
 }
 
 // A version of ptr_rc usable with the asm parser.
@@ -833,6 +836,7 @@ def PPCDispRIOperand : AsmOperandClass {
 }
 def dispRI : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIOperand;
+  let EncoderMethod = "getDispRIEncoding";
 }
 def PPCDispRIXOperand : AsmOperandClass {
  let Name = "DispRIX"; let PredicateMethod = "isS16ImmX4";
@@ -840,6 +844,8 @@ def PPCDispRIXOperand : AsmOperandClass {
 }
 def dispRIX : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIXOperand;
+  let EncoderMethod = "getDispRIXEncoding";
+  let DecoderMethod = "decodeDispRIXOperand";
 }
 def PPCDispRIHashOperand : AsmOperandClass {
   let Name = "DispRIHash"; let PredicateMethod = "isHashImmX8";
@@ -847,6 +853,8 @@ def PPCDispRIHashOperand : AsmOperandClass {
 }
 def dispRIHash : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIHashOperand;
+  let EncoderMethod = "getDispRIHashEncoding";
+  let DecoderMethod = "decodeDispRIHashOperand";
 }
 def PPCDispRIX16Operand : AsmOperandClass {
  let Name = "DispRIX16"; let PredicateMethod = "isS16ImmX16";
@@ -854,6 +862,9 @@ def PPCDispRIX16Operand : AsmOperandClass {
 }
 def dispRIX16 : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIX16Operand;
+  let EncoderMethod = "getDispRIX16Encoding";
+  let DecoderMethod = "decodeDispRIX16Operand";
+
 }
 def PPCDispSPE8Operand : AsmOperandClass {
  let Name = "DispSPE8"; let PredicateMethod = "isU8ImmX8";
@@ -861,6 +872,8 @@ def PPCDispSPE8Operand : AsmOperandClass {
 }
 def dispSPE8 : Operand<iPTR> {
   let ParserMatchClass = PPCDispSPE8Operand;
+  let DecoderMethod = "decodeDispSPE8Operand";
+  let EncoderMethod = "getDispSPE8Encoding";
 }
 def PPCDispSPE4Operand : AsmOperandClass {
  let Name = "DispSPE4"; let PredicateMethod = "isU7ImmX4";
@@ -868,6 +881,8 @@ def PPCDispSPE4Operand : AsmOperandClass {
 }
 def dispSPE4 : Operand<iPTR> {
   let ParserMatchClass = PPCDispSPE4Operand;
+  let DecoderMethod = "decodeDispSPE4Operand";
+  let EncoderMethod = "getDispSPE4Encoding";
 }
 def PPCDispSPE2Operand : AsmOperandClass {
  let Name = "DispSPE2"; let PredicateMethod = "isU6ImmX2";
@@ -875,17 +890,13 @@ def PPCDispSPE2Operand : AsmOperandClass {
 }
 def dispSPE2 : Operand<iPTR> {
   let ParserMatchClass = PPCDispSPE2Operand;
+  let DecoderMethod = "decodeDispSPE2Operand";
+  let EncoderMethod = "getDispSPE2Encoding";
 }
 
-// FIXME: Remove the functions like getMemRIEncoding and decodeMemRIOperands,
-// and adjust the instruction definitions. There's no need to artificially merge
-// the values into a single field anymore, now that sub-operands can be named in
-// instruction definitions.
 def memri : Operand<iPTR> {
   let PrintMethod = "printMemRegImm";
   let MIOperandInfo = (ops dispRI:$imm, ptr_rc_nor0:$reg);
-  let EncoderMethod = "getMemRIEncoding";
-  let DecoderMethod = "decodeMemRIOperands";
   let OperandType = "OPERAND_MEMORY";
 }
 def memrr : Operand<iPTR> {
@@ -896,44 +907,32 @@ def memrr : Operand<iPTR> {
 def memrix : Operand<iPTR> {   // memri where the imm is 4-aligned.
   let PrintMethod = "printMemRegImm";
   let MIOperandInfo = (ops dispRIX:$imm, ptr_rc_nor0:$reg);
-  let EncoderMethod = "getMemRIXEncoding";
-  let DecoderMethod = "decodeMemRIXOperands";
   let OperandType = "OPERAND_MEMORY";
 }
 def memrihash : Operand<iPTR> {
   // memrihash 8-aligned for ROP Protection Instructions.
   let PrintMethod = "printMemRegImmHash";
   let MIOperandInfo = (ops dispRIHash:$imm, ptr_rc_nor0:$reg);
-  let EncoderMethod = "getMemRIHashEncoding";
-  let DecoderMethod = "decodeMemRIHashOperands";
   let OperandType = "OPERAND_MEMORY";
 }
 def memrix16 : Operand<iPTR> { // memri, imm is 16-aligned, 12-bit, Inst{16:27}
   let PrintMethod = "printMemRegImm";
   let MIOperandInfo = (ops dispRIX16:$imm, ptr_rc_nor0:$reg);
-  let EncoderMethod = "getMemRIX16Encoding";
-  let DecoderMethod = "decodeMemRIX16Operands";
   let OperandType = "OPERAND_MEMORY";
 }
 def spe8dis : Operand<iPTR> {   // SPE displacement where the imm is 8-aligned.
   let PrintMethod = "printMemRegImm";
   let MIOperandInfo = (ops dispSPE8:$imm, ptr_rc_nor0:$reg);
-  let EncoderMethod = "getSPE8DisEncoding";
-  let DecoderMethod = "decodeSPE8Operands";
   let OperandType = "OPERAND_MEMORY";
 }
 def spe4dis : Operand<iPTR> {   // SPE displacement where the imm is 4-aligned.
   let PrintMethod = "printMemRegImm";
   let MIOperandInfo = (ops dispSPE4:$imm, ptr_rc_nor0:$reg);
-  let EncoderMethod = "getSPE4DisEncoding";
-  let DecoderMethod = "decodeSPE4Operands";
   let OperandType = "OPERAND_MEMORY";
 }
 def spe2dis : Operand<iPTR> {   // SPE displacement where the imm is 2-aligned.
   let PrintMethod = "printMemRegImm";
   let MIOperandInfo = (ops dispSPE2:$imm, ptr_rc_nor0:$reg);
-  let EncoderMethod = "getSPE2DisEncoding";
-  let DecoderMethod = "decodeSPE2Operands";
   let OperandType = "OPERAND_MEMORY";
 }
 
