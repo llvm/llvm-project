@@ -1379,10 +1379,8 @@ def SKLWriteResGroup151 : SchedWriteRes<[SKLPort0,SKLPort23,SKLPort01]> {
   let NumMicroOps = 3;
   let ResourceCycles = [1,1,1];
 }
-def: InstRW<[SKLWriteResGroup151], (instregex "(V?)CVTSS2SI64rm",
-                                              "(V?)CVT(T?)SD2SI(64)?rm",
-                                              "VCVTTSS2SI64rm",
-                                              "(V?)CVT(T?)SS2SIrm")>;
+def: InstRW<[SKLWriteResGroup151], (instregex "(V?)CVT(T?)SD2SI(64)?rm",
+                                              "(V?)CVT(T?)SS2SI(64)?rm")>;
 
 def SKLWriteResGroup152 : SchedWriteRes<[SKLPort5,SKLPort23,SKLPort01]> {
   let Latency = 11;
@@ -1415,13 +1413,6 @@ def SKLWriteResGroup156 : SchedWriteRes<[SKLPort06,SKLPort0156]> {
   let ResourceCycles = [2,9];
 }
 def: InstRW<[SKLWriteResGroup156], (instrs LOOPE, LOOPNE)>;
-
-def SKLWriteResGroup160 : SchedWriteRes<[SKLPort0,SKLPort5,SKLPort23,SKLPort01]> {
-  let Latency = 12;
-  let NumMicroOps = 4;
-  let ResourceCycles = [1,1,1,1];
-}
-def: InstRW<[SKLWriteResGroup160], (instregex "CVTTSS2SI64rm")>;
 
 def SKLWriteResGroup162 : SchedWriteRes<[SKLPort5,SKLPort23]> {
   let Latency = 13;
