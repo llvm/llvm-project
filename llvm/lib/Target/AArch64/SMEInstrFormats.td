@@ -3569,3 +3569,58 @@ multiclass sme2_mova_array_to_vec_vg4_multi<string mnemonic> {
                                                 MatrixIndexGPR32Op8_11,
                                                 sme_elm_idx0_7, "mov", "vgx4">;
 }
+
+//===----------------------------------------------------------------------===//
+// SME2 multi-vec saturating shift right narrow
+class sme2_sat_shift_vector_vg2<string mnemonic, bit op, bit u>
+    : I<(outs ZPR16:$Zd), (ins ZZ_s_mul_r:$Zn, vecshiftR16:$imm4),
+        mnemonic, "\t$Zd, $Zn, $imm4",
+        "", []>, Sched<[]> {
+  bits<4> imm4;
+  bits<4> Zn;
+  bits<5> Zd;
+  let Inst{31-21} = 0b11000001111;
+  let Inst{20}    = op;
+  let Inst{19-16} = imm4;
+  let Inst{15-10} = 0b110101;
+  let Inst{9-6}   = Zn;
+  let Inst{5}     = u;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sme2_sat_shift_vector_vg2<string mnemonic, bit op, bit u> {
+  def _H : sme2_sat_shift_vector_vg2<mnemonic, op, u>;
+}
+
+class sme2_sat_shift_vector_vg4<bits<2> sz, bits<3> op, ZPRRegOp zpr_ty,
+                                RegisterOperand vector_ty, Operand imm_ty,
+                                string mnemonic>
+    : I<(outs zpr_ty:$Zd), (ins vector_ty:$Zn, imm_ty:$imm),
+        mnemonic, "\t$Zd, $Zn, $imm",
+        "", []>, Sched<[]> {
+  bits<3> Zn;
+  bits<5> Zd;
+  let Inst{31-24} = 0b11000001;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b1;
+  //  Inst{20-16} = imm5;
+  let Inst{15-11} = 0b11011;
+  let Inst{10}    = op{2};
+  let Inst{9-7}   = Zn;
+  let Inst{6-5}   = op{1-0};
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sme2_sat_shift_vector_vg4<string mnemonic, bits<3> op> {
+  def _B : sme2_sat_shift_vector_vg4<{0,1}, op, ZPR8, ZZZZ_s_mul_r, vecshiftR32,
+                                     mnemonic>{
+    bits<5> imm;
+    let Inst{20-16} = imm;
+  }
+  def _H : sme2_sat_shift_vector_vg4<{1,?}, op, ZPR16, ZZZZ_d_mul_r, vecshiftR64,
+                                      mnemonic> {
+    bits<6> imm;
+    let Inst{22}    = imm{5};
+    let Inst{20-16} = imm{4-0};
+  }
+}
