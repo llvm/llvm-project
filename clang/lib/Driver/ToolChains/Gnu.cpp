@@ -84,7 +84,7 @@ void tools::gcc::Common::ConstructJob(Compilation &C, const JobAction &JA,
 
   RenderExtraToolArgs(JA, CmdArgs);
 
-  // If using a driver driver, force the arch.
+  // If using a driver, force the arch.
   if (getToolChain().getTriple().isOSDarwin()) {
     CmdArgs.push_back("-arch");
     CmdArgs.push_back(

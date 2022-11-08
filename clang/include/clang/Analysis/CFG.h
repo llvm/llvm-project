@@ -265,7 +265,7 @@ private:
 };
 
 /// Represents the point where a loop ends.
-/// This element is is only produced when building the CFG for the static
+/// This element is only produced when building the CFG for the static
 /// analyzer and hidden behind the 'cfg-loopexit' analyzer config flag.
 ///
 /// Note: a loop exit element can be reached even when the loop body was never
