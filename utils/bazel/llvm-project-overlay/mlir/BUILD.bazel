@@ -10188,3 +10188,9 @@ cc_binary(
         ":Support",
     ],
 )
+
+td_library(
+    name = "DialectConversionPdllFiles",
+    srcs = ["include/mlir/Transforms/DialectConversion.pdll"],
+    includes = ["include"],
+)
