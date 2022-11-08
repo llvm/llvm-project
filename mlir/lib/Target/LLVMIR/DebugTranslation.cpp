@@ -247,7 +247,7 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
     return nullptr;
 
   // Check for a cached instance.
-  auto existingIt = locationToLoc.find(std::make_pair(loc, scope));
+  auto existingIt = locationToLoc.find(std::make_tuple(loc, scope, inlinedAt));
   if (existingIt != locationToLoc.end())
     return existingIt->second;
 
@@ -285,7 +285,7 @@ DebugTranslation::translateLoc(Location loc, llvm::DILocalScope *scope,
     llvm_unreachable("unknown location kind");
   }
 
-  locationToLoc.try_emplace(std::make_pair(loc, scope), llvmLoc);
+  locationToLoc.try_emplace(std::make_tuple(loc, scope, inlinedAt), llvmLoc);
   return llvmLoc;
 }
 
