@@ -28,8 +28,9 @@ toHeader(llvm::ArrayRef<tooling::stdlib::Header> Headers) {
 }
 } // namespace
 
-void walkUsed(const SourceManager &SM, llvm::ArrayRef<Decl *> ASTRoots,
-              llvm::ArrayRef<SymbolReference> MacroRefs, UsedSymbolCB CB) {
+void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
+              llvm::ArrayRef<SymbolReference> MacroRefs,
+              const SourceManager &SM, UsedSymbolCB CB) {
   tooling::stdlib::Recognizer Recognizer;
   for (auto *Root : ASTRoots) {
     auto &SM = Root->getASTContext().getSourceManager();

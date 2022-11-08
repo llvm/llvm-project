@@ -50,9 +50,9 @@ TEST(WalkUsed, Basic) {
 
   auto &SM = AST.sourceManager();
   llvm::DenseMap<size_t, std::vector<Header>> OffsetToProviders;
-  walkUsed(SM, TopLevelDecls, /*MacroRefs=*/{},
-           [&](SymbolReference SymRef, llvm::ArrayRef<Header> Providers) {
-             auto [FID, Offset] = SM.getDecomposedLoc(SymRef.RefLocation);
+  walkUsed(TopLevelDecls, /*MacroRefs=*/{}, SM,
+           [&](const SymbolReference &Ref, llvm::ArrayRef<Header> Providers) {
+             auto [FID, Offset] = SM.getDecomposedLoc(Ref.RefLocation);
              EXPECT_EQ(FID, SM.getMainFileID());
              OffsetToProviders.try_emplace(Offset, Providers.vec());
            });
@@ -89,11 +89,12 @@ TEST(WalkUsed, MacroRefs) {
   Symbol Answer =
       Macro{&Idents.get("ANSWER"), SM.getComposedLoc(HdrID, Hdr.point())};
   llvm::DenseMap<size_t, std::vector<Header>> OffsetToProviders;
-  walkUsed(SM, /*ASTRoots=*/{}, /*MacroRefs=*/
+  walkUsed(/*ASTRoots=*/{}, /*MacroRefs=*/
            {SymbolReference{SM.getComposedLoc(SM.getMainFileID(), Main.point()),
                             Answer, RefType::Explicit}},
-           [&](SymbolReference SymRef, llvm::ArrayRef<Header> Providers) {
-             auto [FID, Offset] = SM.getDecomposedLoc(SymRef.RefLocation);
+           SM,
+           [&](const SymbolReference &Ref, llvm::ArrayRef<Header> Providers) {
+             auto [FID, Offset] = SM.getDecomposedLoc(Ref.RefLocation);
              EXPECT_EQ(FID, SM.getMainFileID());
              OffsetToProviders.try_emplace(Offset, Providers.vec());
            });
