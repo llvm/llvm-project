@@ -66,7 +66,7 @@ amd_comgr_status_t
 Symbolizer::create(DataObject *CodeObjectP, PrintSymbolCallback PrintSymbol,
                    amd_comgr_symbolizer_info_t *SymbolizeInfo) {
   std::unique_ptr<llvm::MemoryBuffer> Buf = llvm::MemoryBuffer::getMemBuffer(
-      llvm::StringRef(CodeObjectP->Data, CodeObjectP->Size));
+      llvm::StringRef(CodeObjectP->Data, CodeObjectP->Size), "", false);
 
   if (!Buf) {
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
