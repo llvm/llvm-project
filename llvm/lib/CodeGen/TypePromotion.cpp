@@ -569,7 +569,8 @@ void IRPromoter::TruncateSinks() {
 void IRPromoter::Cleanup() {
   LLVM_DEBUG(dbgs() << "IR Promotion: Cleanup..\n");
   // Some zexts will now have become redundant, along with their trunc
-  // operands, so remove them
+  // operands, so remove them.
+  // Some zexts need to be replaced with truncate if src bitwidth is larger.
   for (auto *V : Visited) {
     if (!isa<ZExtInst>(V))
       continue;
@@ -583,6 +584,11 @@ void IRPromoter::Cleanup() {
       LLVM_DEBUG(dbgs() << "IR Promotion: Removing unnecessary cast: " << *ZExt
                         << "\n");
       ReplaceAllUsersOfWith(ZExt, Src);
+      continue;
+    } else if (ZExt->getSrcTy()->getScalarSizeInBits() > PromotedWidth) {
+      IRBuilder<> Builder{ZExt};
+      Value *Trunc = Builder.CreateTrunc(Src, ZExt->getDestTy());
+      ReplaceAllUsersOfWith(ZExt, Trunc);
       continue;
     }
 
