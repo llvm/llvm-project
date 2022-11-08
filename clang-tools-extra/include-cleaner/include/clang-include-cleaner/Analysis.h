@@ -28,7 +28,7 @@ namespace include_cleaner {
 /// that symbol may be provided by several headers.
 /// FIXME: Provide signals about the providing headers so the caller can filter
 /// and rank the results.
-using UsedSymbolCB = llvm::function_ref<void(SymbolReference SymRef,
+using UsedSymbolCB = llvm::function_ref<void(const SymbolReference &SymRef,
                                              llvm::ArrayRef<Header> Providers)>;
 
 /// Find and report all references to symbols in a region of code.
@@ -44,8 +44,9 @@ using UsedSymbolCB = llvm::function_ref<void(SymbolReference SymRef,
 ///    the headers for any referenced symbol
 /// FIXME: Take in an include structure to improve location to header mappings
 /// (e.g. IWYU pragmas).
-void walkUsed(const SourceManager &, llvm::ArrayRef<Decl *> ASTRoots,
-              llvm::ArrayRef<SymbolReference> MacroRefs, UsedSymbolCB CB);
+void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
+              llvm::ArrayRef<SymbolReference> MacroRefs, const SourceManager &,
+              UsedSymbolCB CB);
 
 } // namespace include_cleaner
 } // namespace clang
