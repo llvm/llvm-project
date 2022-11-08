@@ -9,9 +9,9 @@
 #ifndef MLIR_BINDINGS_PYTHON_IRMODULES_H
 #define MLIR_BINDINGS_PYTHON_IRMODULES_H
 
+#include <optional>
 #include <utility>
 #include <vector>
-#include <optional>
 
 #include "PybindUtils.h"
 
@@ -547,6 +547,12 @@ public:
   static PyOperationRef
   createDetached(PyMlirContextRef contextRef, MlirOperation operation,
                  pybind11::object parentKeepAlive = pybind11::object());
+
+  /// Parses a source string (either text assembly or bytecode), creating a
+  /// detached operation.
+  static PyOperationRef parse(PyMlirContextRef contextRef,
+                              const std::string &sourceStr,
+                              const std::string &sourceName);
 
   /// Detaches the operation from its parent block and updates its state
   /// accordingly.
