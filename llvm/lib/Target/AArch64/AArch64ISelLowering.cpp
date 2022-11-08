@@ -5996,8 +5996,9 @@ static bool requiresBufferForLazySave(const Function &F) {
   return false;
 }
 
-unsigned AArch64TargetLowering::allocateLazySaveBuffer(
-    SDValue &Chain, const SDLoc &DL, SelectionDAG &DAG, Register &Reg) const {
+unsigned
+AArch64TargetLowering::allocateLazySaveBuffer(SDValue &Chain, const SDLoc &DL,
+                                              SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
@@ -6009,7 +6010,7 @@ unsigned AArch64TargetLowering::allocateLazySaveBuffer(
   SDVTList VTs = DAG.getVTList(MVT::i64, MVT::Other);
   SDValue Buffer = DAG.getNode(ISD::DYNAMIC_STACKALLOC, DL, VTs, Ops);
   unsigned FI = MFI.CreateVariableSizedObject(Align(1), nullptr);
-  Reg = MF.getRegInfo().createVirtualRegister(getRegClassFor(MVT::i64));
+  Register Reg = MF.getRegInfo().createVirtualRegister(getRegClassFor(MVT::i64));
   Chain = DAG.getCopyToReg(Buffer.getValue(1), DL, Reg, Buffer.getValue(0));
 
   // Allocate an additional TPIDR2 object on the stack (16 bytes)
@@ -6412,9 +6413,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
 
   if (requiresBufferForLazySave(MF.getFunction())) {
     // Set up a buffer once and store the buffer in the MachineFunctionInfo.
-    Register Reg;
-    unsigned TPIDR2Obj = allocateLazySaveBuffer(Chain, DL, DAG, Reg);
-    FuncInfo->setLazySaveBufferReg(Reg);
+    unsigned TPIDR2Obj = allocateLazySaveBuffer(Chain, DL, DAG);
     FuncInfo->setLazySaveTPIDR2Obj(TPIDR2Obj);
   }
 
@@ -7010,10 +7009,8 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     SDValue NN = DAG.getNode(ISD::MUL, DL, MVT::i64, N, N);
     unsigned TPIDR2Obj = FuncInfo->getLazySaveTPIDR2Obj();
 
-    if (!TPIDR2Obj) {
-      Register Reg;
-      TPIDR2Obj = allocateLazySaveBuffer(Chain, DL, DAG, Reg);
-    }
+    if (!TPIDR2Obj)
+      TPIDR2Obj = allocateLazySaveBuffer(Chain, DL, DAG);
 
     MachinePointerInfo MPI = MachinePointerInfo::getStack(MF, TPIDR2Obj);
     SDValue TPIDR2ObjAddr = DAG.getFrameIndex(TPIDR2Obj,
