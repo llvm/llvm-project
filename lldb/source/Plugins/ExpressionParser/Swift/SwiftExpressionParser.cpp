@@ -917,7 +917,6 @@ SetupASTContext(SwiftASTContextForExpressions &swift_ast_context,
   // swift_ast_context.GetLanguageOptions().DebugConstraintSolver = true;
   swift_ast_context.ClearDiagnostics();
 
-  swift_ast_context.GetLanguageOptions().DebuggerSupport = true;
   // No longer part of debugger support, set it separately.
   swift_ast_context.GetLanguageOptions().EnableDollarIdentifiers = true;
   swift_ast_context.GetLanguageOptions().EnableAccessControl =
