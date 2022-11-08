@@ -164,7 +164,7 @@ public:
       LastPragmaKeepInMainFileLine =
           SM.getLineNumber(SM.getMainFileID(), Offset) - 1;
     } else {
-      // Memorize headers that that have export pragmas in them. Include Cleaner
+      // Memorize headers that have export pragmas in them. Include Cleaner
       // does not support them properly yet, so they will be not marked as
       // unused.
       // FIXME: Once IncludeCleaner supports export pragmas, remove this.
