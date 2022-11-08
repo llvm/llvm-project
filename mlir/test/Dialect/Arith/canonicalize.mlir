@@ -1682,3 +1682,45 @@ func.func @xorxor3(%a : i32, %b : i32) -> i32 {
 }
 
 // -----
+
+/// and(a, and(a, b)) -> and(a, b)
+
+// CHECK-LABEL: @andand0
+//  CHECK-SAME:   (%[[A:.*]]: i32, %[[B:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = arith.andi %[[A]], %[[B]] : i32
+//       CHECK:   return %[[RES]]
+func.func @andand0(%a : i32, %b : i32) -> i32 {
+  %c = arith.andi %a, %b : i32
+  %res = arith.andi %a, %c : i32
+  return %res : i32
+}
+
+// CHECK-LABEL: @andand1
+//  CHECK-SAME:   (%[[A:.*]]: i32, %[[B:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = arith.andi %[[A]], %[[B]] : i32
+//       CHECK:   return %[[RES]]
+func.func @andand1(%a : i32, %b : i32) -> i32 {
+  %c = arith.andi %a, %b : i32
+  %res = arith.andi %c, %a : i32
+  return %res : i32
+}
+
+// CHECK-LABEL: @andand2
+//  CHECK-SAME:   (%[[A:.*]]: i32, %[[B:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = arith.andi %[[A]], %[[B]] : i32
+//       CHECK:   return %[[RES]]
+func.func @andand2(%a : i32, %b : i32) -> i32 {
+  %c = arith.andi %a, %b : i32
+  %res = arith.andi %b, %c : i32
+  return %res : i32
+}
+
+// CHECK-LABEL: @andand3
+//  CHECK-SAME:   (%[[A:.*]]: i32, %[[B:.*]]: i32)
+//       CHECK:   %[[RES:.*]] = arith.andi %[[A]], %[[B]] : i32
+//       CHECK:   return %[[RES]]
+func.func @andand3(%a : i32, %b : i32) -> i32 {
+  %c = arith.andi %a, %b : i32
+  %res = arith.andi %c, %b : i32
+  return %res : i32
+}
