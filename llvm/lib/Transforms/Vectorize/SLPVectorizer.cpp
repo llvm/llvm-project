@@ -7153,8 +7153,10 @@ static bool areTwoInsertFromSameBuildVector(
     return false;
   auto *IE1 = VU;
   auto *IE2 = V;
-  unsigned Idx1 = *getInsertIndex(IE1);
-  unsigned Idx2 = *getInsertIndex(IE2);
+  Optional<unsigned> Idx1 = getInsertIndex(IE1);
+  Optional<unsigned> Idx2 = getInsertIndex(IE2);
+  if (Idx1 == None || Idx2 == None)
+    return false;
   // Go through the vector operand of insertelement instructions trying to find
   // either VU as the original vector for IE2 or V as the original vector for
   // IE1.
@@ -7165,14 +7167,14 @@ static bool areTwoInsertFromSameBuildVector(
       return V->hasOneUse();
     if (IE1) {
       if ((IE1 != VU && !IE1->hasOneUse()) ||
-          getInsertIndex(IE1).value_or(Idx2) == Idx2)
+          getInsertIndex(IE1).value_or(*Idx2) == *Idx2)
         IE1 = nullptr;
       else
         IE1 = dyn_cast_or_null<InsertElementInst>(GetBaseOperand(IE1));
     }
     if (IE2) {
       if ((IE2 != V && !IE2->hasOneUse()) ||
-          getInsertIndex(IE2).value_or(Idx1) == Idx1)
+          getInsertIndex(IE2).value_or(*Idx1) == *Idx1)
         IE2 = nullptr;
       else
         IE2 = dyn_cast_or_null<InsertElementInst>(GetBaseOperand(IE2));
