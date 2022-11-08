@@ -23536,36 +23536,26 @@ SDValue DAGCombiner::visitSCALAR_TO_VECTOR(SDNode *N) {
       DAG.isSafeToSpeculativelyExecute(Opcode) && hasOperation(Opcode, VT)) {
     // Match an extract element and get a shuffle mask equivalent.
     SmallVector<int, 8> ShufMask(VT.getVectorNumElements(), -1);
-    auto getShuffleMaskForExtElt = [&](SDValue EE) {
-      if (EE.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+
+    for (int i : {0, 1}) {
+      // s2v (bo (extelt V, Idx), C) --> shuffle (bo V, C'), {Idx, -1, -1...}
+      // s2v (bo C, (extelt V, Idx)) --> shuffle (bo C', V), {Idx, -1, -1...}
+      SDValue EE = Scalar.getOperand(i);
+      auto *C = dyn_cast<ConstantSDNode>(Scalar.getOperand(i ? 0 : 1));
+      if (C && EE.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
           EE.getOperand(0).getValueType() == VT &&
           isa<ConstantSDNode>(EE.getOperand(1))) {
         // Mask = {ExtractIndex, undef, undef....}
         ShufMask[0] = EE.getConstantOperandVal(1);
         // Make sure the shuffle is legal if we are crossing lanes.
-        return TLI.isShuffleMaskLegal(ShufMask, VT);
-      }
-      return false;
-    };
-
-    // s2v (bo (extelt V, Idx), C) --> shuffle (bo V, C'), {Idx, -1, -1...}
-    if (auto *C = dyn_cast<ConstantSDNode>(Scalar.getOperand(1))) {
-      if (getShuffleMaskForExtElt(Scalar.getOperand(0))) {
-        SDLoc DL(N);
-        SDValue V = Scalar.getOperand(0).getOperand(0);
-        SDValue VecC = DAG.getConstant(C->getAPIntValue(), DL, VT);
-        SDValue VecBO = DAG.getNode(Opcode, DL, VT, V, VecC);
-        return DAG.getVectorShuffle(VT, DL, VecBO, DAG.getUNDEF(VT), ShufMask);
-      }
-    }
-    // s2v (bo C, (extelt V, Idx)) --> shuffle (bo C', V), {Idx, -1, -1...}
-    if (auto *C = dyn_cast<ConstantSDNode>(Scalar.getOperand(0))) {
-      if (getShuffleMaskForExtElt(Scalar.getOperand(1))) {
-        SDLoc DL(N);
-        SDValue V = Scalar.getOperand(1).getOperand(0);
-        SDValue VecC = DAG.getConstant(C->getAPIntValue(), DL, VT);
-        SDValue VecBO = DAG.getNode(Opcode, DL, VT, VecC, V);
-        return DAG.getVectorShuffle(VT, DL, VecBO, DAG.getUNDEF(VT), ShufMask);
+        if (TLI.isShuffleMaskLegal(ShufMask, VT)) {
+          SDLoc DL(N);
+          SDValue V[] = {EE.getOperand(0),
+                         DAG.getConstant(C->getAPIntValue(), DL, VT)};
+          SDValue VecBO = DAG.getNode(Opcode, DL, VT, V[i], V[1 - i]);
+          return DAG.getVectorShuffle(VT, DL, VecBO, DAG.getUNDEF(VT),
+                                      ShufMask);
+        }
       }
     }
   }
