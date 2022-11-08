@@ -35,7 +35,7 @@ using UsedSymbolCB = llvm::function_ref<void(SymbolReference SymRef,
 ///
 /// The AST traversal is rooted at ASTRoots - typically top-level declarations
 /// of a single source file.
-/// FIXME: Handle macro uses.
+/// The references to macros must be recorded separately and provided.
 ///
 /// This is the main entrypoint of the include-cleaner library, and can be used:
 ///  - to diagnose missing includes: a referenced symbol is provided by
@@ -44,7 +44,8 @@ using UsedSymbolCB = llvm::function_ref<void(SymbolReference SymRef,
 ///    the headers for any referenced symbol
 /// FIXME: Take in an include structure to improve location to header mappings
 /// (e.g. IWYU pragmas).
-void walkUsed(llvm::ArrayRef<Decl *> ASTRoots, UsedSymbolCB CB);
+void walkUsed(const SourceManager &, llvm::ArrayRef<Decl *> ASTRoots,
+              llvm::ArrayRef<SymbolReference> MacroRefs, UsedSymbolCB CB);
 
 } // namespace include_cleaner
 } // namespace clang
