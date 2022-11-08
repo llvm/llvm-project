@@ -1746,9 +1746,15 @@ struct Conv1DGenerator : public StructuredGenerator<LinalgOp> {
     // Compute contraction: O{n, w, c} += I{n, sw * w + dw * kw, c} * F{c}
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
-        resVals[w] = depthwiseConv1dSliceAsFma(
+        resVals[w] = depthwiseConv1dSliceAsMulAcc(
             builder, loc, lhsVals[linearIndex(kw, w)], rhsVals[kw], resVals[w]);
       }
+    }
+
+    // Its possible we failed to create the Fma
+    for (auto v : resVals) {
+      if (!v)
+        return failure();
     }
 
     // Write back res slice: {n, wSizeStep, c} @ [0, w, 0].
@@ -1770,11 +1776,45 @@ struct Conv1DGenerator : public StructuredGenerator<LinalgOp> {
         .getOperation();
   }
 
-  /// Lower lhs{n, w, c} * rhs{c} -> res{n, w, c} to fma.
-  Value depthwiseConv1dSliceAsFma(OpBuilder &b, Location loc, Value lhs,
-                                  Value rhs, Value res) {
-    Value bcast = builder.create<vector::BroadcastOp>(loc, res.getType(), rhs);
-    return b.create<vector::FMAOp>(loc, lhs, bcast, res);
+  // Take a value of element type T and widen to the destination type.
+  Value promote(OpBuilder &b, Location loc, Value val, Type ty) {
+    if (val.getType() == ty)
+      return val;
+
+    const int64_t srcWidth =
+        getElementTypeOrSelf(val.getType()).getIntOrFloatBitWidth();
+    const int64_t destWidth = getElementTypeOrSelf(ty).getIntOrFloatBitWidth();
+
+    if (getElementTypeOrSelf(ty).isa<FloatType>() && srcWidth < destWidth)
+      return builder.create<arith::ExtFOp>(loc, ty, val);
+
+    if (getElementTypeOrSelf(ty).isa<IntegerType>() && srcWidth < destWidth)
+      return builder.create<arith::ExtSIOp>(loc, ty, val);
+
+    return nullptr;
+  }
+
+  /// Lower lhs{n, w, c} * rhs{c} -> res{n, w, c} to MulAcc
+  Value depthwiseConv1dSliceAsMulAcc(OpBuilder &b, Location loc, Value lhs,
+                                     Value rhs, Value res) {
+    auto rhsTy = rhs.getType().cast<ShapedType>();
+    auto resTy = res.getType().cast<ShapedType>();
+
+    // TODO(suderman): Change this to use a vector.ima intrinsic.
+    lhs = promote(b, loc, lhs, resTy);
+
+    rhs = builder.create<vector::BroadcastOp>(
+        loc, resTy.clone(rhsTy.getElementType()), rhs);
+    rhs = promote(b, loc, rhs, resTy);
+
+    if (!lhs || !rhs)
+      return nullptr;
+
+    if (resTy.getElementType().isa<FloatType>())
+      return b.create<vector::FMAOp>(loc, lhs, rhs, res);
+
+    auto mul = b.create<arith::MulIOp>(loc, lhs, rhs);
+    return b.create<arith::AddIOp>(loc, mul, res);
   }
 
   /// Entry point that transposes into the common form:
