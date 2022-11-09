@@ -111,11 +111,11 @@ if(CLANG_BUILT_STANDALONE)
         set(LLVM_UTILS_PROVIDED ON)
         set(CLANG_TEST_DEPS FileCheck count not)
       endif()
-      set(UNITTEST_DIR ${LLVM_THIRD_PARTY_DIR}/unittest)
+      set(UNITTEST_DIR ${LLVM_MAIN_SRC_DIR}/utils/unittest)
       if(EXISTS ${UNITTEST_DIR}/googletest/include/gtest/gtest.h
           AND NOT EXISTS ${LLVM_LIBRARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX}
           AND EXISTS ${UNITTEST_DIR}/CMakeLists.txt)
-        add_subdirectory(${UNITTEST_DIR} third-party/unittest)
+        add_subdirectory(${UNITTEST_DIR} utils/unittest)
       endif()
     endif()
 
@@ -526,7 +526,7 @@ endif()
 
 
 if( CLANG_INCLUDE_TESTS )
-  if(EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest/googletest/include/gtest/gtest.h)
+  if(EXISTS ${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include/gtest/gtest.h)
     add_subdirectory(unittests)
     list(APPEND CLANG_TEST_DEPS ClangUnitTests)
     list(APPEND CLANG_TEST_PARAMS

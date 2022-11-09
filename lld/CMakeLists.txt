@@ -68,11 +68,11 @@ if(LLD_BUILT_STANDALONE)
         set(LLVM_UTILS_PROVIDED ON)
         set(LLD_TEST_DEPS FileCheck not)
       endif()
-      set(UNITTEST_DIR ${LLVM_THIRD_PARTY_DIR}/unittest)
+      set(UNITTEST_DIR ${LLVM_MAIN_SRC_DIR}/utils/unittest)
       if(EXISTS ${UNITTEST_DIR}/googletest/include/gtest/gtest.h
           AND NOT EXISTS ${LLVM_LIBRARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}gtest${CMAKE_STATIC_LIBRARY_SUFFIX}
           AND EXISTS ${UNITTEST_DIR}/CMakeLists.txt)
-        add_subdirectory(${UNITTEST_DIR} third-party/unittest)
+        add_subdirectory(${UNITTEST_DIR} utils/unittest)
       endif()
     else()
       # Seek installed Lit.
