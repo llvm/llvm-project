@@ -20,20 +20,17 @@ define void @unsigned_overflow(ptr %p) {
 ; CHECK-NEXT:    [[V1_2:%.*]] = load i8, ptr [[P]], align 1, !range [[RNG5:![0-9]+]]
 ; CHECK-NEXT:    [[V1_3:%.*]] = load i8, ptr [[P]], align 1, !range [[RNG6:![0-9]+]]
 ; CHECK-NEXT:    [[WO1:%.*]] = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 [[V0_100]], i8 [[V0_155]])
-; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i8, i1 } [[WO1]], 1
-; CHECK-NEXT:    call void @use.i1(i1 [[OV1]])
+; CHECK-NEXT:    call void @use.i1(i1 false)
 ; CHECK-NEXT:    [[WO2:%.*]] = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 [[V0_100]], i8 [[V0_156]])
 ; CHECK-NEXT:    [[OV2:%.*]] = extractvalue { i8, i1 } [[WO2]], 1
 ; CHECK-NEXT:    call void @use.i1(i1 [[OV2]])
 ; CHECK-NEXT:    [[WO3:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[V100_255]], i8 [[V0_100]])
-; CHECK-NEXT:    [[OV3:%.*]] = extractvalue { i8, i1 } [[WO3]], 1
-; CHECK-NEXT:    call void @use.i1(i1 [[OV3]])
+; CHECK-NEXT:    call void @use.i1(i1 false)
 ; CHECK-NEXT:    [[WO4:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[V99_255]], i8 [[V0_100]])
 ; CHECK-NEXT:    [[OV4:%.*]] = extractvalue { i8, i1 } [[WO4]], 1
 ; CHECK-NEXT:    call void @use.i1(i1 [[OV4]])
 ; CHECK-NEXT:    [[WO5:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[V0_100]], i8 [[V1_2]])
-; CHECK-NEXT:    [[OV5:%.*]] = extractvalue { i8, i1 } [[WO5]], 1
-; CHECK-NEXT:    call void @use.i1(i1 [[OV5]])
+; CHECK-NEXT:    call void @use.i1(i1 false)
 ; CHECK-NEXT:    [[WO6:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[V0_100]], i8 [[V1_3]])
 ; CHECK-NEXT:    [[OV6:%.*]] = extractvalue { i8, i1 } [[WO6]], 1
 ; CHECK-NEXT:    call void @use.i1(i1 [[OV6]])
@@ -83,20 +80,17 @@ define void @signed_overflow(ptr %p) {
 ; CHECK-NEXT:    [[V1_4:%.*]] = load i8, ptr [[P]], align 1, !range [[RNG11:![0-9]+]]
 ; CHECK-NEXT:    [[V1_5:%.*]] = load i8, ptr [[P]], align 1, !range [[RNG12:![0-9]+]]
 ; CHECK-NEXT:    [[WO1:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[V0_100]], i8 [[V0_27]])
-; CHECK-NEXT:    [[OV1:%.*]] = extractvalue { i8, i1 } [[WO1]], 1
-; CHECK-NEXT:    call void @use.i1(i1 [[OV1]])
+; CHECK-NEXT:    call void @use.i1(i1 false)
 ; CHECK-NEXT:    [[WO2:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[V0_100]], i8 [[V0_28]])
 ; CHECK-NEXT:    [[OV2:%.*]] = extractvalue { i8, i1 } [[WO2]], 1
 ; CHECK-NEXT:    call void @use.i1(i1 [[OV2]])
 ; CHECK-NEXT:    [[WO3:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[V0_100]], i8 [[VM27_0]])
-; CHECK-NEXT:    [[OV3:%.*]] = extractvalue { i8, i1 } [[WO3]], 1
-; CHECK-NEXT:    call void @use.i1(i1 [[OV3]])
+; CHECK-NEXT:    call void @use.i1(i1 false)
 ; CHECK-NEXT:    [[WO4:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[V0_100]], i8 [[VM28_0]])
 ; CHECK-NEXT:    [[OV4:%.*]] = extractvalue { i8, i1 } [[WO4]], 1
 ; CHECK-NEXT:    call void @use.i1(i1 [[OV4]])
 ; CHECK-NEXT:    [[WO5:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[V0_27]], i8 [[V1_4]])
-; CHECK-NEXT:    [[OV5:%.*]] = extractvalue { i8, i1 } [[WO5]], 1
-; CHECK-NEXT:    call void @use.i1(i1 [[OV5]])
+; CHECK-NEXT:    call void @use.i1(i1 false)
 ; CHECK-NEXT:    [[WO6:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[V0_27]], i8 [[V1_5]])
 ; CHECK-NEXT:    [[OV6:%.*]] = extractvalue { i8, i1 } [[WO6]], 1
 ; CHECK-NEXT:    call void @use.i1(i1 [[OV6]])
@@ -144,30 +138,24 @@ define void @unsigned_result(ptr %p) {
 ; CHECK-NEXT:    [[V2_3:%.*]] = load i8, ptr [[P]], align 1, !range [[RNG16:![0-9]+]]
 ; CHECK-NEXT:    [[WO1:%.*]] = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 [[V0_20]], i8 [[V20_40]])
 ; CHECK-NEXT:    [[RES1:%.*]] = extractvalue { i8, i1 } [[WO1]], 0
-; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp uge i8 [[RES1]], 20
-; CHECK-NEXT:    call void @use.i1(i1 [[CMP1_1]])
-; CHECK-NEXT:    [[CMP1_2:%.*]] = icmp ule i8 [[RES1]], 60
-; CHECK-NEXT:    call void @use.i1(i1 [[CMP1_2]])
+; CHECK-NEXT:    call void @use.i1(i1 true)
+; CHECK-NEXT:    call void @use.i1(i1 true)
 ; CHECK-NEXT:    [[CMP1_3:%.*]] = icmp ugt i8 [[RES1]], 20
 ; CHECK-NEXT:    call void @use.i1(i1 [[CMP1_3]])
 ; CHECK-NEXT:    [[CMP1_4:%.*]] = icmp ult i8 [[RES1]], 60
 ; CHECK-NEXT:    call void @use.i1(i1 [[CMP1_4]])
 ; CHECK-NEXT:    [[WO2:%.*]] = call { i8, i1 } @llvm.usub.with.overflow.i8(i8 [[V0_10]], i8 [[V20_40]])
 ; CHECK-NEXT:    [[RES2:%.*]] = extractvalue { i8, i1 } [[WO2]], 0
-; CHECK-NEXT:    [[CMP2_1:%.*]] = icmp uge i8 [[RES2]], -40
-; CHECK-NEXT:    call void @use.i1(i1 [[CMP2_1]])
-; CHECK-NEXT:    [[CMP2_2:%.*]] = icmp ule i8 [[RES2]], -10
-; CHECK-NEXT:    call void @use.i1(i1 [[CMP2_2]])
+; CHECK-NEXT:    call void @use.i1(i1 true)
+; CHECK-NEXT:    call void @use.i1(i1 true)
 ; CHECK-NEXT:    [[CMP2_3:%.*]] = icmp ugt i8 [[RES2]], -40
 ; CHECK-NEXT:    call void @use.i1(i1 [[CMP2_3]])
 ; CHECK-NEXT:    [[CMP2_4:%.*]] = icmp ult i8 [[RES2]], -10
 ; CHECK-NEXT:    call void @use.i1(i1 [[CMP2_4]])
 ; CHECK-NEXT:    [[WO3:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 [[V20_40]], i8 [[V2_3]])
 ; CHECK-NEXT:    [[RES3:%.*]] = extractvalue { i8, i1 } [[WO3]], 0
-; CHECK-NEXT:    [[CMP3_1:%.*]] = icmp uge i8 [[RES3]], 40
-; CHECK-NEXT:    call void @use.i1(i1 [[CMP3_1]])
-; CHECK-NEXT:    [[CMP3_2:%.*]] = icmp ule i8 [[RES3]], 120
-; CHECK-NEXT:    call void @use.i1(i1 [[CMP3_2]])
+; CHECK-NEXT:    call void @use.i1(i1 true)
+; CHECK-NEXT:    call void @use.i1(i1 true)
 ; CHECK-NEXT:    [[CMP3_3:%.*]] = icmp ugt i8 [[RES3]], 40
 ; CHECK-NEXT:    call void @use.i1(i1 [[CMP3_3]])
 ; CHECK-NEXT:    [[CMP3_4:%.*]] = icmp ult i8 [[RES3]], 120
@@ -222,30 +210,24 @@ define void @signed_result(ptr %p) {
 ; CHECK-NEXT:    [[V2_3:%.*]] = load i8, ptr [[P]], align 1, !range [[RNG16]]
 ; CHECK-NEXT:    [[WO1:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[V0_20]], i8 [[V20_40]])
 ; CHECK-NEXT:    [[RES1:%.*]] = extractvalue { i8, i1 } [[WO1]], 0
-; CHECK-NEXT:    [[CMP1_1:%.*]] = icmp uge i8 [[RES1]], 20
-; CHECK-NEXT:    call void @use.i1(i1 [[CMP1_1]])
-; CHECK-NEXT:    [[CMP1_2:%.*]] = icmp ule i8 [[RES1]], 60
-; CHECK-NEXT:    call void @use.i1(i1 [[CMP1_2]])
+; CHECK-NEXT:    call void @use.i1(i1 true)
+; CHECK-NEXT:    call void @use.i1(i1 true)
 ; CHECK-NEXT:    [[CMP1_3:%.*]] = icmp ugt i8 [[RES1]], 20
 ; CHECK-NEXT:    call void @use.i1(i1 [[CMP1_3]])
 ; CHECK-NEXT:    [[CMP1_4:%.*]] = icmp ult i8 [[RES1]], 60
 ; CHECK-NEXT:    call void @use.i1(i1 [[CMP1_4]])
 ; CHECK-NEXT:    [[WO2:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[V0_10]], i8 [[V20_40]])
 ; CHECK-NEXT:    [[RES2:%.*]] = extractvalue { i8, i1 } [[WO2]], 0
-; CHECK-NEXT:    [[CMP2_1:%.*]] = icmp uge i8 [[RES2]], -40
-; CHECK-NEXT:    call void @use.i1(i1 [[CMP2_1]])
-; CHECK-NEXT:    [[CMP2_2:%.*]] = icmp ule i8 [[RES2]], -10
-; CHECK-NEXT:    call void @use.i1(i1 [[CMP2_2]])
+; CHECK-NEXT:    call void @use.i1(i1 true)
+; CHECK-NEXT:    call void @use.i1(i1 true)
 ; CHECK-NEXT:    [[CMP2_3:%.*]] = icmp ugt i8 [[RES2]], -40
 ; CHECK-NEXT:    call void @use.i1(i1 [[CMP2_3]])
 ; CHECK-NEXT:    [[CMP2_4:%.*]] = icmp ult i8 [[RES2]], -10
 ; CHECK-NEXT:    call void @use.i1(i1 [[CMP2_4]])
 ; CHECK-NEXT:    [[WO3:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[V20_40]], i8 [[V2_3]])
 ; CHECK-NEXT:    [[RES3:%.*]] = extractvalue { i8, i1 } [[WO3]], 0
-; CHECK-NEXT:    [[CMP3_1:%.*]] = icmp uge i8 [[RES3]], 40
-; CHECK-NEXT:    call void @use.i1(i1 [[CMP3_1]])
-; CHECK-NEXT:    [[CMP3_2:%.*]] = icmp ule i8 [[RES3]], 120
-; CHECK-NEXT:    call void @use.i1(i1 [[CMP3_2]])
+; CHECK-NEXT:    call void @use.i1(i1 true)
+; CHECK-NEXT:    call void @use.i1(i1 true)
 ; CHECK-NEXT:    [[CMP3_3:%.*]] = icmp ugt i8 [[RES3]], 40
 ; CHECK-NEXT:    call void @use.i1(i1 [[CMP3_3]])
 ; CHECK-NEXT:    [[CMP3_4:%.*]] = icmp ult i8 [[RES3]], 120
