@@ -175,6 +175,8 @@ public:
     Loc = SourceLocation().getRawEncoding();
   }
 
+  bool hasPtrData() const { return PtrData != nullptr; }
+
   IdentifierInfo *getIdentifierInfo() const {
     assert(isNot(tok::raw_identifier) &&
            "getIdentifierInfo() on a tok::raw_identifier token!");
