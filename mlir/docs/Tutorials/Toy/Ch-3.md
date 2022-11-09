@@ -124,7 +124,7 @@ pipeline. In MLIR, the optimizations are run through a `PassManager` in a
 similar way to LLVM:
 
 ```c++
-  mlir::PassManager pm(module.getContext());
+  mlir::PassManager pm(module->getName());
   pm.addNestedPass<mlir::toy::FuncOp>(mlir::createCanonicalizerPass());
 ```
 
