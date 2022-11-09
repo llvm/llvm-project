@@ -141,6 +141,10 @@ Changes in existing checks
   would be emitted for uninitialized members of an anonymous union despite
   there being an initializer for one of the other members.
 
+- Fixed false positives in :doc:`google-objc-avoid-throwing-exception
+  <clang-tidy/checks/google/objc-avoid-throwing-exception>` check for exceptions
+  thrown by code emitted from macros in system headers.
+
 - Improved :doc:`modernize-use-emplace <clang-tidy/checks/modernize/use-emplace>`
   check.
 
