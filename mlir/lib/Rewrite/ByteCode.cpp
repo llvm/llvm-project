@@ -2276,6 +2276,7 @@ void PDLByteCode::match(Operation *op, PatternRewriter &rewriter,
       uniquedData, matcherByteCode, state.currentPatternBenefits, patterns,
       constraintFunctions, rewriteFunctions);
   LogicalResult executeResult = executor.execute(rewriter, &matches);
+  (void)executeResult;
   assert(succeeded(executeResult) && "unexpected matcher execution failure");
 
   // Order the found matches by benefit.
