@@ -10,6 +10,7 @@
 #define LLDB_INTERPRETER_COMMANDOBJECT_H
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -64,7 +65,7 @@ size_t FindLongestCommandWord(std::map<std::string, ValueType> &dict) {
   return max_len;
 }
 
-class CommandObject {
+class CommandObject : public std::enable_shared_from_this<CommandObject> {
 public:
   typedef llvm::StringRef(ArgumentHelpCallbackFunction)();
 
