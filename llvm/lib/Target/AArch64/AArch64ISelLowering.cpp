@@ -16906,34 +16906,51 @@ static SDValue performBuildVectorCombine(SDNode *N,
   return SDValue();
 }
 
-// ((X >> C) - Y) + Z --> (Z - Y) + (X >> C)
+// Check an node is an extend or shift operand
+static bool isExtendOrShiftOperand(SDValue N) {
+  unsigned Opcode = N.getOpcode();
+  if (Opcode == ISD::SIGN_EXTEND || Opcode == ISD::SIGN_EXTEND_INREG ||
+      Opcode == ISD::ZERO_EXTEND || Opcode == ISD::ANY_EXTEND) {
+    EVT SrcVT;
+    if (Opcode == ISD::SIGN_EXTEND_INREG)
+      SrcVT = cast<VTSDNode>(N.getOperand(1))->getVT();
+    else
+      SrcVT = N.getOperand(0).getValueType();
+
+    return SrcVT == MVT::i32 || SrcVT == MVT::i16 || SrcVT == MVT::i8;
+  } else if (Opcode == ISD::AND) {
+    ConstantSDNode *CSD = dyn_cast<ConstantSDNode>(N.getOperand(1));
+    if (!CSD)
+      return false;
+    uint64_t AndMask = CSD->getZExtValue();
+    return AndMask == 0xff || AndMask == 0xffff || AndMask == 0xffffffff;
+  } else if (Opcode == ISD::SHL || Opcode == ISD::SRL || Opcode == ISD::SRA) {
+    return isa<ConstantSDNode>(N.getOperand(1));
+  }
+
+  return false;
+}
+
+// (N - Y) + Z --> (Z - Y) + N
+// when N is an extend or shift operand
 static SDValue performAddCombineSubShift(SDNode *N, SDValue SUB, SDValue Z,
                                          SelectionDAG &DAG) {
-  auto IsOneUseShiftC = [&](SDValue Shift) {
-    if (!Shift.hasOneUse())
-      return false;
-
-    // TODO: support SRL and SRA also
-    if (Shift.getOpcode() != ISD::SHL)
-      return false;
-
-    if (!isa<ConstantSDNode>(Shift.getOperand(1)))
-      return false;
-    return true;
+  auto IsOneUseExtend = [](SDValue N) {
+    return N.hasOneUse() && isExtendOrShiftOperand(N);
   };
 
   // DAGCombiner will revert the combination when Z is constant cause
   // dead loop. So don't enable the combination when Z is constant.
   // If Z is one use shift C, we also can't do the optimization.
   // It will falling to self infinite loop.
-  if (isa<ConstantSDNode>(Z) || IsOneUseShiftC(Z))
+  if (isa<ConstantSDNode>(Z) || IsOneUseExtend(Z))
     return SDValue();
 
   if (SUB.getOpcode() != ISD::SUB || !SUB.hasOneUse())
     return SDValue();
 
   SDValue Shift = SUB.getOperand(0);
-  if (!IsOneUseShiftC(Shift))
+  if (!IsOneUseExtend(Shift))
     return SDValue();
 
   SDLoc DL(N);
