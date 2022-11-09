@@ -19,8 +19,9 @@ namespace clang::include_cleaner {
 
 void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
               llvm::ArrayRef<SymbolReference> MacroRefs,
-              const PragmaIncludes &PI, const SourceManager &SM,
+              const PragmaIncludes *PI, const SourceManager &SM,
               UsedSymbolCB CB) {
+  // This is duplicated in writeHTMLReport, changes should be mirrored there.
   tooling::stdlib::Recognizer Recognizer;
   for (auto *Root : ASTRoots) {
     auto &SM = Root->getASTContext().getSourceManager();
