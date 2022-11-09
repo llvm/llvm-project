@@ -1403,14 +1403,11 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   if (!Value::hasMetadata())
     return; // Nothing to remove!
 
-  if (KnownIDs.empty()) {
-    // Just drop our entry at the store.
-    clearMetadata();
-    return;
-  }
-
   SmallSet<unsigned, 4> KnownSet;
   KnownSet.insert(KnownIDs.begin(), KnownIDs.end());
+
+  // A DIAssignID attachment is debug metadata, don't drop it.
+  KnownSet.insert(LLVMContext::MD_DIAssignID);
 
   auto &MetadataStore = getContext().pImpl->ValueMetadata;
   auto &Info = MetadataStore[this];

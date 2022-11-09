@@ -665,6 +665,17 @@ TEST(AssignmentTrackingTest, InstrMethods) {
     EXPECT_EQ(NewID0, NewID1);
     EXPECT_EQ(Markers[0]->getAssignID(), NewID0);
   }
+
+  // Test 5 - dropUnknownNonDebugMetadata.
+  //
+  // Input            store0->dropUnknownNonDebugMetadata()
+  // -----            -------------------------
+  // store0 !x        store0 !x
+  {
+    Stores[0]->dropUnknownNonDebugMetadata();
+    Metadata *NewID0 = Stores[0]->getMetadata(LLVMContext::MD_DIAssignID);
+    EXPECT_NE(NewID0, nullptr);
+  }
 }
 
 } // end namespace
