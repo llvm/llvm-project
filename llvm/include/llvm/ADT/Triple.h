@@ -1024,12 +1024,6 @@ public:
   ///          architecture if no such variant can be found.
   llvm::Triple getLittleEndianArchVariant() const;
 
-  /// Get the (LLVM) name of the minimum ARM CPU for the arch we are targeting.
-  ///
-  /// \param Arch the architecture name (e.g., "armv7s"). If it is an empty
-  /// string then the triple's arch name is used.
-  StringRef getARMCPUForArch(StringRef Arch = StringRef()) const;
-
   /// Tests whether the target triple is little endian.
   ///
   /// \returns true if the triple is little endian, false otherwise.

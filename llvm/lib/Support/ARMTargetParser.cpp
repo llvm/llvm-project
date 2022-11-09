@@ -643,3 +643,72 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
     return "aapcs";
   }
 }
+
+StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
+  if (MArch.empty())
+    MArch = Triple.getArchName();
+  MArch = llvm::ARM::getCanonicalArchName(MArch);
+
+  // Some defaults are forced.
+  switch (Triple.getOS()) {
+  case llvm::Triple::FreeBSD:
+  case llvm::Triple::NetBSD:
+  case llvm::Triple::OpenBSD:
+    if (!MArch.empty() && MArch == "v6")
+      return "arm1176jzf-s";
+    if (!MArch.empty() && MArch == "v7")
+      return "cortex-a8";
+    break;
+  case llvm::Triple::Win32:
+    // FIXME: this is invalid for WindowsCE
+    if (llvm::ARM::parseArchVersion(MArch) <= 7)
+      return "cortex-a9";
+    break;
+  case llvm::Triple::IOS:
+  case llvm::Triple::MacOSX:
+  case llvm::Triple::TvOS:
+  case llvm::Triple::WatchOS:
+  case llvm::Triple::DriverKit:
+    if (MArch == "v7k")
+      return "cortex-a7";
+    break;
+  default:
+    break;
+  }
+
+  if (MArch.empty())
+    return StringRef();
+
+  StringRef CPU = llvm::ARM::getDefaultCPU(MArch);
+  if (!CPU.empty() && !CPU.equals("invalid"))
+    return CPU;
+
+  // If no specific architecture version is requested, return the minimum CPU
+  // required by the OS and environment.
+  switch (Triple.getOS()) {
+  case llvm::Triple::NetBSD:
+    switch (Triple.getEnvironment()) {
+    case llvm::Triple::EABI:
+    case llvm::Triple::EABIHF:
+    case llvm::Triple::GNUEABI:
+    case llvm::Triple::GNUEABIHF:
+      return "arm926ej-s";
+    default:
+      return "strongarm";
+    }
+  case llvm::Triple::NaCl:
+  case llvm::Triple::OpenBSD:
+    return "cortex-a8";
+  default:
+    switch (Triple.getEnvironment()) {
+    case llvm::Triple::EABIHF:
+    case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::MuslEABIHF:
+      return "arm1176jzf-s";
+    default:
+      return "arm7tdmi";
+    }
+  }
+
+  llvm_unreachable("invalid arch name");
+}
