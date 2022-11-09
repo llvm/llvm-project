@@ -22,8 +22,7 @@ namespace mlir {
 namespace tosa {
 
 // Creates a SmallVector of Stringrefs for N parallel loops
-SmallVector<utils::IteratorType>
-getNParallelLoopsAttrs(unsigned nParallelLoops);
+SmallVector<StringRef> getNParallelLoopsAttrs(unsigned nParallelLoops);
 
 // Takes a vector of values and condenses them to a vector with no gaps.
 SmallVector<Value> condenseValues(const SmallVector<Value> &values);

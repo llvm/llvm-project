@@ -1420,12 +1420,11 @@ namespace {
 ///   Layout: {{n, strideW * w + dilationW * kw, c}, {kw, c}, {n, w, c}}
 /// ```
 /// kw is unrolled, w is unrolled iff dilationW > 1.
-struct Conv1DGenerator
-    : public StructuredGenerator<LinalgOp, utils::IteratorType> {
+struct Conv1DGenerator : public StructuredGenerator<LinalgOp> {
   Conv1DGenerator(OpBuilder &builder, LinalgOp linalgOp, int strideW,
                   int dilationW)
-      : StructuredGenerator<LinalgOp, utils::IteratorType>(builder, linalgOp),
-        strideW(strideW), dilationW(dilationW) {
+      : StructuredGenerator<LinalgOp>(builder, linalgOp), strideW(strideW),
+        dilationW(dilationW) {
     // Determine whether `linalgOp` can be generated with this generator
     if (linalgOp.getNumDpsInputs() != 2 || linalgOp.getNumDpsInits() != 1)
       return;
