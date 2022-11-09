@@ -80,6 +80,7 @@ static bool hasAllWUsers(const MachineInstr &OrigMI, MachineRegisterInfo &MRI) {
 
     for (auto &UserOp : MRI.use_operands(MI->getOperand(0).getReg())) {
       const MachineInstr *UserMI = UserOp.getParent();
+      unsigned OpIdx = UserMI->getOperandNo(&UserOp);
 
       switch (UserMI->getOpcode()) {
       default:
@@ -139,6 +140,14 @@ static bool hasAllWUsers(const MachineInstr &OrigMI, MachineRegisterInfo &MRI) {
 
       case RISCV::BEXTI:
         if (UserMI->getOperand(2).getImm() >= 32)
+          return false;
+        break;
+
+      case RISCV::SB:
+      case RISCV::SH:
+      case RISCV::SW:
+        // The first argument is the value to store.
+        if (OpIdx != 0)
           return false;
         break;
 
