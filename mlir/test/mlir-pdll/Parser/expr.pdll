@@ -213,6 +213,34 @@ Pattern {
 
 // -----
 
+// Test that we don't need to provide values if all elements
+// are optional.
+
+#include "include/ops.td"
+
+// CHECK: Module
+// CHECK:  -OperationExpr {{.*}} Type<Op<test.multi_variadic>>
+// CHECK-NOT:   `Operands`
+// CHECK-NOT:   `Result Types`
+// CHECK:  -OperationExpr {{.*}} Type<Op<test.all_variadic>>
+// CHECK-NOT:   `Operands`
+// CHECK-NOT:   `Result Types`
+// CHECK:  -OperationExpr {{.*}} Type<Op<test.multi_variadic>>
+// CHECK:    `Operands`
+// CHECK:      -RangeExpr {{.*}} Type<ValueRange>
+// CHECK:      -RangeExpr {{.*}} Type<ValueRange>
+// CHECK:    `Result Types`
+// CHECK:      -RangeExpr {{.*}} Type<TypeRange>
+// CHECK:      -RangeExpr {{.*}} Type<TypeRange>
+Pattern {
+  rewrite op<test.multi_variadic>() -> () with {
+    op<test.all_variadic> -> ();
+    op<test.multi_variadic> -> ();
+  };
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // TupleExpr
 //===----------------------------------------------------------------------===//
