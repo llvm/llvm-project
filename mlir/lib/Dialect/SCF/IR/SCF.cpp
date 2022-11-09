@@ -3529,7 +3529,7 @@ void IndexSwitchOp::getRegionInvocationBounds(
   }
 
   unsigned liveIndex = getNumRegions() - 1;
-  auto it = llvm::find(getCases(), operandValue.getInt());
+  const auto *it = llvm::find(getCases(), operandValue.getInt());
   if (it != getCases().end())
     liveIndex = std::distance(getCases().begin(), it);
   for (unsigned i = 0, e = getNumRegions(); i < e; ++i)
