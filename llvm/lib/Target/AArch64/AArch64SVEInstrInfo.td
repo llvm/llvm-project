@@ -3759,4 +3759,7 @@ defm FMAXNMQV : sve2p1_fp_reduction_q<0b100, "fmaxnmqv">;
 defm FMINNMQV : sve2p1_fp_reduction_q<0b101, "fminnmqv">;
 defm FMAXQV   : sve2p1_fp_reduction_q<0b110, "fmaxqv">;
 defm FMINQV   : sve2p1_fp_reduction_q<0b111, "fminqv">;
-}
+
+defm DUPQ_ZZI : sve2p1_dupq<"dupq">;
+def EXTQ_ZZI : sve2p1_extq<"extq">;
+} // End HasSVE2p1_or_HasSME2p1
