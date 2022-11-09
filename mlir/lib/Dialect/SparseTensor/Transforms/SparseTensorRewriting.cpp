@@ -533,6 +533,13 @@ private:
     SmallVector<Value, 4> dynSizes;
     getDynamicSizes(dstTp, sizes, dynSizes);
 
+    bool fromSparseConst = false;
+    if (auto constOp = op.getSource().getDefiningOp<arith::ConstantOp>()) {
+      if (constOp.getValue().dyn_cast<SparseElementsAttr>()) {
+        fromSparseConst = true;
+      }
+    }
+
     RankedTensorType cooTp = getUnorderedCOOFromType(dstTp);
     auto cooBuffer =
         rewriter.create<AllocTensorOp>(loc, cooTp, dynSizes).getResult();
@@ -540,8 +547,22 @@ private:
         loc, src, cooBuffer,
         [&](OpBuilder &builder, Location loc, ValueRange indices, Value v,
             ValueRange reduc) {
-          builder.create<sparse_tensor::YieldOp>(
-              loc, builder.create<InsertOp>(loc, v, reduc.front(), indices));
+          Value input = reduc.front();
+          if (fromSparseConst) {
+            input = builder.create<InsertOp>(loc, v, input, indices);
+          } else {
+            Value cond = genIsNonzero(builder, loc, v);
+            auto ifOp = builder.create<scf::IfOp>(
+                loc, TypeRange(input.getType()), cond, /*else*/ true);
+            builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+            Value insert = builder.create<InsertOp>(loc, v, input, indices);
+            builder.create<scf::YieldOp>(loc, insert);
+            builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+            builder.create<scf::YieldOp>(loc, input);
+            builder.setInsertionPointAfter(ifOp);
+            input = ifOp.getResult(0);
+          }
+          builder.create<sparse_tensor::YieldOp>(loc, input);
         });
     rewriter.setInsertionPointAfter(op);
     src = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
