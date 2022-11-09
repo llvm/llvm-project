@@ -14,6 +14,7 @@
 #include "LoongArch.h"
 #include "LoongArchMachineFunctionInfo.h"
 #include "MCTargetDesc/LoongArchMatInt.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 
 using namespace llvm;
 
@@ -154,6 +155,11 @@ void LoongArchInstrInfo::movImm(MachineBasicBlock &MBB,
 }
 
 unsigned LoongArchInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
+  if (MI.getOpcode() == TargetOpcode::INLINEASM) {
+    const MachineFunction *MF = MI.getParent()->getParent();
+    const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
+    return getInlineAsmLength(MI.getOperand(0).getSymbolName(), *MAI);
+  }
   return MI.getDesc().getSize();
 }
 
@@ -237,6 +243,29 @@ bool LoongArchInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
   return true;
 }
 
+bool LoongArchInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
+                                               int64_t BrOffset) const {
+  switch (BranchOp) {
+  default:
+    llvm_unreachable("Unknown branch instruction!");
+  case LoongArch::BEQ:
+  case LoongArch::BNE:
+  case LoongArch::BLT:
+  case LoongArch::BGE:
+  case LoongArch::BLTU:
+  case LoongArch::BGEU:
+    return isInt<18>(BrOffset);
+  case LoongArch::BEQZ:
+  case LoongArch::BNEZ:
+  case LoongArch::BCEQZ:
+  case LoongArch::BCNEZ:
+    return isInt<23>(BrOffset);
+  case LoongArch::B:
+  case LoongArch::PseudoBR:
+    return isInt<28>(BrOffset);
+  }
+}
+
 unsigned LoongArchInstrInfo::removeBranch(MachineBasicBlock &MBB,
                                           int *BytesRemoved) const {
   if (BytesRemoved)
@@ -306,6 +335,49 @@ unsigned LoongArchInstrInfo::insertBranch(
   if (BytesAdded)
     *BytesAdded += getInstSizeInBytes(MI);
   return 2;
+}
+
+void LoongArchInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
+                                              MachineBasicBlock &DestBB,
+                                              MachineBasicBlock &RestoreBB,
+                                              const DebugLoc &DL,
+                                              int64_t BrOffset,
+                                              RegScavenger *RS) const {
+  assert(RS && "RegScavenger required for long branching");
+  assert(MBB.empty() &&
+         "new block should be inserted for expanding unconditional branch");
+  assert(MBB.pred_size() == 1);
+
+  MachineFunction *MF = MBB.getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  if (!isInt<32>(BrOffset))
+    report_fatal_error(
+        "Branch offsets outside of the signed 32-bit range not supported");
+
+  Register ScratchReg = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
+  auto II = MBB.end();
+
+  MachineInstr &MI =
+      *BuildMI(MBB, II, DL, get(LoongArch::PCALAU12I), ScratchReg)
+           .addMBB(&DestBB, LoongArchII::MO_PCREL_HI);
+  BuildMI(MBB, II, DL,
+          get(STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W),
+          ScratchReg)
+      .addReg(ScratchReg)
+      .addMBB(&DestBB, LoongArchII::MO_PCREL_LO);
+  BuildMI(MBB, II, DL, get(LoongArch::PseudoBRIND))
+      .addReg(ScratchReg, RegState::Kill)
+      .addImm(0);
+
+  RS->enterBasicBlockEnd(MBB);
+  Register Scav = RS->scavengeRegisterBackwards(LoongArch::GPRRegClass,
+                                                MI.getIterator(), false, 0);
+  // TODO: When there is no scavenged register, it needs to specify a register.
+  assert(Scav != LoongArch::NoRegister && "No register is scavenged!");
+  MRI.replaceRegWith(ScratchReg, Scav);
+  MRI.clearVirtRegs();
+  RS->setRegUsed(Scav);
 }
 
 static unsigned getOppositeBranchOpc(unsigned Opc) {
