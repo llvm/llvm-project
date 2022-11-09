@@ -91,8 +91,8 @@ struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
     SmallVector<AffineMap, 3> indexingMaps(
         op->getNumResults() + op->getNumOperands(),
         rewriter.getMultiDimIdentityMap(rank));
-    SmallVector<utils::IteratorType, 6> iteratorTypes(
-        rank, utils::IteratorType::parallel);
+    SmallVector<StringRef, 6> iteratorTypes(rank,
+                                            getParallelIteratorTypeName());
     auto outputs = getOrCreateOperandsMatchingResultTypes(rewriter, op);
     rewriter.replaceOpWithNewOp<linalg::GenericOp>(
         op, /*resultTensorTypes=*/op->getResultTypes(),

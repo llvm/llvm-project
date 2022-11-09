@@ -193,8 +193,8 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return llvm::count($_op.getIteratorTypesArray(),
-                           utils::IteratorType::parallel);
+        return getNumIterators(getParallelIteratorTypeName(),
+                                $_op.getIteratorTypesArray());
       }]
     >,
     InterfaceMethod<
@@ -207,7 +207,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return findPositionsOfType($_op.getIteratorTypesArray(),
-                                   utils::IteratorType::parallel, res);
+                                   getParallelIteratorTypeName(), res);
       }]
     >,
     InterfaceMethod<
@@ -219,8 +219,8 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return llvm::count($_op.getIteratorTypesArray(),
-                           utils::IteratorType::reduction);
+        return getNumIterators(getReductionIteratorTypeName(),
+                               $_op.getIteratorTypesArray());
       }]
     >,
     InterfaceMethod<
@@ -233,7 +233,33 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return findPositionsOfType($_op.getIteratorTypesArray(),
-                                   utils::IteratorType::reduction, res);
+                                   getReductionIteratorTypeName(), res);
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the number of window loops.
+      }],
+      /*retTy=*/"unsigned",
+      /*methodName=*/"getNumWindowLoops",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return getNumIterators(getWindowIteratorTypeName(),
+                               $_op.getIteratorTypesArray());
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the dims that are window loops.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"getWindowDims",
+      /*args=*/(ins "SmallVectorImpl<unsigned> &":$res),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return findPositionsOfType($_op.getIteratorTypesArray(),
+                                   getWindowIteratorTypeName(), res);
       }]
     >,
     InterfaceMethod<
@@ -245,7 +271,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return $_op.getIteratorTypesArray().size();
+        return getNumIterators($_op.getIteratorTypesArray());
       }]
     >,
     InterfaceMethod<
@@ -260,7 +286,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*defaultImplementation=*/[{
         auto iters = $_op.getIteratorTypesArray();
         return iters.size() == 1 &&
-               llvm::count(iters, utils::IteratorType::reduction) == 1;
+               getNumIterators(getReductionIteratorTypeName(), iters) == 1;
       }]>,
     //===------------------------------------------------------------------===//
     // Input and Init arguments handling.
@@ -480,14 +506,12 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         can be infered from other parameters and in such cases default
         getIteratorTypesArray should be overriden.
       }],
-      /*retTy=*/"SmallVector<utils::IteratorType>",
+      /*retTy=*/"SmallVector<StringRef>",
       /*methodName=*/"getIteratorTypesArray",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        auto range = $_op.getIteratorTypes()
-                         .template getAsValueRange<IteratorTypeAttr,
-                                                   utils::IteratorType>();
+        auto range = $_op.getIteratorTypes().template getAsValueRange<StringAttr>();
         return {range.begin(), range.end()};
       }]
     >,
@@ -742,6 +766,10 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     /// shape of the input operands where possible
     LogicalResult reifyResultShapes(OpBuilder &b,
         ReifiedRankedShapedTypeDims &reifiedReturnShapes);
+
+    SmallVector<StringRef> getIteratorTypeNames() {
+      return getIteratorTypesArray();
+    }
 
     //========================================================================//
     // Forwarding functions to access interface methods from the

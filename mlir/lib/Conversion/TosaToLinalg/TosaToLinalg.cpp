@@ -791,12 +791,12 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
 
   SmallVector<AffineExpr, 2> srcExprs;
   SmallVector<AffineExpr, 2> dstExprs;
-  SmallVector<utils::IteratorType, 4> iteratorTypes;
+  SmallVector<StringRef, 4> iteratorTypes;
   for (unsigned int i = 0, rank = inputTy.getRank(); i != rank; ++i) {
     srcExprs.push_back(mlir::getAffineDimExpr(i, rewriter.getContext()));
 
-    iteratorTypes.push_back(axis == i ? utils::IteratorType::reduction
-                                      : utils::IteratorType::parallel);
+    iteratorTypes.push_back(axis == i ? getReductionIteratorTypeName()
+                                      : getParallelIteratorTypeName());
     if (axis != i)
       dstExprs.push_back(mlir::getAffineDimExpr(i, rewriter.getContext()));
   }
@@ -1383,8 +1383,7 @@ public:
     auto inputMap = AffineMap::get(/*dimCount=*/4, /*symbolCount=*/0,
                                    inputExprs, builder.getContext());
     auto resultMap = rewriter.getMultiDimIdentityMap(resultTy.getRank());
-    SmallVector<utils::IteratorType> iterators(4,
-                                               utils::IteratorType::parallel);
+    SmallVector<StringRef> iterators(4, getParallelIteratorTypeName());
 
     Value empty = builder.create<tensor::EmptyOp>(
         resultTy.getShape(), resultTy.getElementType(), outputDynSize);
@@ -2084,9 +2083,9 @@ public:
 
     // We need to reduce along the arg-max axis, with parallel operations along
     // the rest.
-    SmallVector<utils::IteratorType, 4> iteratorTypes;
-    iteratorTypes.resize(inputTy.getRank(), utils::IteratorType::parallel);
-    iteratorTypes[axis] = utils::IteratorType::reduction;
+    SmallVector<StringRef, 4> iteratorTypes;
+    iteratorTypes.resize(inputTy.getRank(), getParallelIteratorTypeName());
+    iteratorTypes[axis] = getReductionIteratorTypeName();
 
     SmallVector<AffineExpr, 2> srcExprs;
     SmallVector<AffineExpr, 2> dstExprs;

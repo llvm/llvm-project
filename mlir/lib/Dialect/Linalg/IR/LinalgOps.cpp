@@ -705,17 +705,12 @@ void GenericOp::build(
 void GenericOp::build(
     OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,
     ValueRange inputs, ValueRange outputs, ArrayRef<AffineMap> indexingMaps,
-    ArrayRef<utils::IteratorType> iteratorTypes, StringRef doc,
-    StringRef libraryCall,
+    ArrayRef<StringRef> iteratorTypes, StringRef doc, StringRef libraryCall,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild,
     ArrayRef<NamedAttribute> attributes) {
   build(builder, result, resultTensorTypes, inputs, outputs,
         builder.getAffineMapArrayAttr(indexingMaps),
-        builder.getArrayAttr(llvm::to_vector(llvm::map_range(
-            iteratorTypes,
-            [&](utils::IteratorType iter) -> mlir::Attribute {
-              return IteratorTypeAttr::get(builder.getContext(), iter);
-            }))),
+        builder.getStrArrayAttr(iteratorTypes),
         doc.empty() ? StringAttr() : builder.getStringAttr(doc),
         libraryCall.empty() ? StringAttr() : builder.getStringAttr(libraryCall),
         bodyBuild, attributes);
@@ -724,8 +719,7 @@ void GenericOp::build(
 void GenericOp::build(
     OpBuilder &builder, OperationState &result, ValueRange inputs,
     ValueRange outputs, ArrayRef<AffineMap> indexingMaps,
-    ArrayRef<utils::IteratorType> iteratorTypes, StringRef doc,
-    StringRef libraryCall,
+    ArrayRef<StringRef> iteratorTypes, StringRef doc, StringRef libraryCall,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild,
     ArrayRef<NamedAttribute> attributes) {
   build(builder, result, TypeRange{}, inputs, outputs, indexingMaps,
@@ -735,7 +729,7 @@ void GenericOp::build(
 void GenericOp::build(
     OpBuilder &builder, OperationState &result, ValueRange inputs,
     ValueRange outputs, ArrayRef<AffineMap> indexingMaps,
-    ArrayRef<utils::IteratorType> iteratorTypes,
+    ArrayRef<StringRef> iteratorTypes,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild,
     ArrayRef<NamedAttribute> attributes) {
   build(builder, result, inputs, outputs, indexingMaps, iteratorTypes,
@@ -746,7 +740,7 @@ void GenericOp::build(
 void GenericOp::build(
     OpBuilder &builder, OperationState &result, TypeRange resultTensorTypes,
     ValueRange inputs, ValueRange outputs, ArrayRef<AffineMap> indexingMaps,
-    ArrayRef<utils::IteratorType> iteratorTypes,
+    ArrayRef<StringRef> iteratorTypes,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuild,
     ArrayRef<NamedAttribute> attributes) {
   build(builder, result, resultTensorTypes, inputs, outputs, indexingMaps,
@@ -764,29 +758,9 @@ void GenericOp::print(OpAsmPrinter &p) {
   llvm::StringSet<> genericAttrNamesSet;
   genericAttrNamesSet.insert(genericAttrNames.begin(), genericAttrNames.end());
   SmallVector<NamedAttribute, 8> genericAttrs;
-  for (auto attr : (*this)->getAttrs()) {
-    if (attr.getName() == getIteratorTypesAttrName()) {
-      auto iteratorTypes =
-          attr.getValue()
-              .cast<ArrayAttr>()
-              .getAsValueRange<IteratorTypeAttr, utils::IteratorType>();
-      // Convert IteratorType enums into the string representation. This is
-      // needed, because tests still use the old format when 'iterator_types'
-      // attribute is represented as an array of strings.
-      // TODO: Remove this conversion once tests are fixed.
-      SmallVector<Attribute> iteratorTypeNames =
-          llvm::to_vector(llvm::map_range(
-              iteratorTypes, [&](utils::IteratorType t) -> Attribute {
-                return StringAttr::get(getContext(), stringifyIteratorType(t));
-              }));
-
-      genericAttrs.emplace_back(
-          getIteratorTypesAttrName(),
-          ArrayAttr::get(getContext(), iteratorTypeNames));
-    } else if (genericAttrNamesSet.count(attr.getName().strref()) > 0) {
+  for (auto attr : (*this)->getAttrs())
+    if (genericAttrNamesSet.count(attr.getName().strref()) > 0)
       genericAttrs.push_back(attr);
-    }
-  }
   if (!genericAttrs.empty()) {
     auto genericDictAttr = DictionaryAttr::get(getContext(), genericAttrs);
     p << genericDictAttr;
@@ -830,28 +804,6 @@ ParseResult GenericOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
   result.attributes.assign(dictAttr.getValue().begin(),
                            dictAttr.getValue().end());
-
-  // Convert array of string into an array of IteratyType enums. This is needed,
-  // because tests still use the old format when 'iterator_types' attribute is
-  // represented as an array of strings.
-  // TODO: Remove this conversion once tests are fixed.
-  ArrayAttr iteratorTypes =
-      result.attributes.get(getIteratorTypesAttrName(result.name))
-          .cast<ArrayAttr>();
-
-  SmallVector<Attribute> iteratorTypeAttrs;
-
-  for (StringRef s : iteratorTypes.getAsValueRange<StringAttr>()) {
-    auto maybeIteratorType = utils::symbolizeIteratorType(s);
-    if (!maybeIteratorType.has_value())
-      return parser.emitError(parser.getCurrentLocation())
-             << "unexpected iterator_type (" << s << ")";
-
-    iteratorTypeAttrs.push_back(
-        IteratorTypeAttr::get(parser.getContext(), maybeIteratorType.value()));
-  }
-  result.attributes.set(getIteratorTypesAttrName(result.name),
-                        parser.getBuilder().getArrayAttr(iteratorTypeAttrs));
 
   // Parsing is shared with named ops, except for the region.
   SmallVector<Type, 1> inputTypes, outputTypes;
@@ -1466,9 +1418,9 @@ LogicalResult MapOp::verify() {
   return success();
 }
 
-SmallVector<utils::IteratorType> MapOp::getIteratorTypesArray() {
+SmallVector<StringRef> MapOp::getIteratorTypesArray() {
   int64_t rank = getInit().getType().getRank();
-  return SmallVector<utils::IteratorType>(rank, utils::IteratorType::parallel);
+  return SmallVector<StringRef>(rank, getParallelIteratorTypeName());
 }
 
 ArrayAttr MapOp::getIndexingMaps() {
@@ -1524,12 +1476,12 @@ void ReduceOp::build(
                        inputs, inits, bodyBuild);
 }
 
-SmallVector<utils::IteratorType> ReduceOp::getIteratorTypesArray() {
+SmallVector<StringRef> ReduceOp::getIteratorTypesArray() {
   int64_t inputRank = getInputs()[0].getType().cast<ShapedType>().getRank();
-  SmallVector<utils::IteratorType> iteratorTypes(inputRank,
-                                                 utils::IteratorType::parallel);
+  SmallVector<StringRef> iteratorTypes(inputRank,
+                                       getParallelIteratorTypeName());
   for (int64_t reductionDim : getDimensions())
-    iteratorTypes[reductionDim] = utils::IteratorType::reduction;
+    iteratorTypes[reductionDim] = getReductionIteratorTypeName();
   return iteratorTypes;
 }
 
@@ -1801,9 +1753,9 @@ LogicalResult TransposeOp::verify() {
   return success();
 }
 
-SmallVector<utils::IteratorType> TransposeOp::getIteratorTypesArray() {
+SmallVector<StringRef> TransposeOp::getIteratorTypesArray() {
   int64_t rank = getInit().getType().getRank();
-  return SmallVector<utils::IteratorType>(rank, utils::IteratorType::parallel);
+  return SmallVector<StringRef>(rank, getParallelIteratorTypeName());
 }
 
 ArrayAttr TransposeOp::getIndexingMaps() {
@@ -1939,9 +1891,9 @@ LogicalResult BroadcastOp::verify() {
   return success();
 }
 
-SmallVector<utils::IteratorType> BroadcastOp::getIteratorTypesArray() {
+SmallVector<StringRef> BroadcastOp::getIteratorTypesArray() {
   int64_t rank = getInit().getType().getRank();
-  return SmallVector<utils::IteratorType>(rank, utils::IteratorType::parallel);
+  return SmallVector<StringRef>(rank, getParallelIteratorTypeName());
 }
 
 ArrayAttr BroadcastOp::getIndexingMaps() {
