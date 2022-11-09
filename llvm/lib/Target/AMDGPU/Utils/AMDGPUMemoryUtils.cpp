@@ -41,7 +41,7 @@ static bool shouldLowerLDSToStruct(const GlobalVariable &GV,
   SmallPtrSet<const User *, 8> Visited;
   SmallVector<const User *, 16> Stack(GV.users());
 
-  assert(!F || isKernel(F->getCallingConv()));
+  assert(!F || isKernelCC(F));
 
   while (!Stack.empty()) {
     const User *V = Stack.pop_back_val();
@@ -62,7 +62,7 @@ static bool shouldLowerLDSToStruct(const GlobalVariable &GV,
       } else if (!F) {
         // For module LDS lowering, lowering is required if the user instruction
         // is from non-kernel function.
-        Ret |= !isKernel(UF->getCallingConv());
+        Ret |= !isKernelCC(UF);
       }
       continue;
     }
