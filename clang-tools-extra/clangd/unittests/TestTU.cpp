@@ -54,7 +54,7 @@ ParseInputs TestTU::inputs(MockFS &FS) const {
     Argv.push_back("-include");
     Argv.push_back(ImplicitHeaderGuard ? ImportThunk : FullHeaderName);
     // ms-compatibility changes the meaning of #import.
-    // The default is OS-dependent (on on windows), ensure it's off.
+    // The default is OS-dependent (on windows), ensure it's off.
     if (ImplicitHeaderGuard)
       Inputs.CompileCommand.CommandLine.push_back("-fno-ms-compatibility");
   }
