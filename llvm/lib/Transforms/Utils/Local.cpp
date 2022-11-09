@@ -2583,6 +2583,9 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
         break;
       case LLVMContext::MD_dbg:
         llvm_unreachable("getAllMetadataOtherThanDebugLoc returned a MD_dbg");
+      case LLVMContext::MD_DIAssignID:
+        K->mergeDIAssignID(J);
+        break;
       case LLVMContext::MD_tbaa:
         K->setMetadata(Kind, MDNode::getMostGenericTBAA(JMD, KMD));
         break;
