@@ -1,9 +1,5 @@
 ; RUN: mlir-translate -import-llvm %s | FileCheck %s
 
-define void @intrinsics() {
-  ret void
-}
-
 ; CHECK-LABEL:  llvm.func @fmuladd_test
 define void @fmuladd_test(float %0, float %1, <8 x float> %2, i8* %3) {
   ; CHECK: llvm.intr.fmuladd(%{{.*}}, %{{.*}}, %{{.*}}) : (f32, f32, f32) -> f32
@@ -131,21 +127,21 @@ define void @bitreverse_test(i32 %0, <8 x i32> %1) {
 }
 ; CHECK-LABEL:  llvm.func @ctlz_test
 define void @ctlz_test(i32 %0, <8 x i32> %1) {
-  ; CHECK-DAG:   %[[falseval1:.+]] = llvm.mlir.constant(false) : i1
-  ; CHECK-DAG:   %[[falseval2:.+]] = llvm.mlir.constant(false) : i1
-  ; CHECK:   "llvm.intr.ctlz"(%{{.*}}, %[[falseval2]]) : (i32, i1) -> i32
+  ; CHECK:   %[[falseval1:.+]] = llvm.mlir.constant(false) : i1
+  ; CHECK:   %[[falseval2:.+]] = llvm.mlir.constant(false) : i1
+  ; CHECK:   "llvm.intr.ctlz"(%{{.*}}, %[[falseval1]]) : (i32, i1) -> i32
   %3 = call i32 @llvm.ctlz.i32(i32 %0, i1 false)
-  ; CHECK:   "llvm.intr.ctlz"(%{{.*}}, %[[falseval1]]) : (vector<8xi32>, i1) -> vector<8xi32>
+  ; CHECK:   "llvm.intr.ctlz"(%{{.*}}, %[[falseval2]]) : (vector<8xi32>, i1) -> vector<8xi32>
   %4 = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %1, i1 false)
   ret void
 }
 ; CHECK-LABEL:  llvm.func @cttz_test
 define void @cttz_test(i32 %0, <8 x i32> %1) {
-  ; CHECK-DAG:   %[[falseval1:.+]] = llvm.mlir.constant(false) : i1
-  ; CHECK-DAG:   %[[falseval2:.+]] = llvm.mlir.constant(false) : i1
-  ; CHECK:   "llvm.intr.cttz"(%{{.*}}, %[[falseval2]]) : (i32, i1) -> i32
+  ; CHECK:   %[[falseval1:.+]] = llvm.mlir.constant(false) : i1
+  ; CHECK:   %[[falseval2:.+]] = llvm.mlir.constant(false) : i1
+  ; CHECK:   "llvm.intr.cttz"(%{{.*}}, %[[falseval1]]) : (i32, i1) -> i32
   %3 = call i32 @llvm.cttz.i32(i32 %0, i1 false)
-  ; CHECK:   "llvm.intr.cttz"(%{{.*}}, %[[falseval1]]) : (vector<8xi32>, i1) -> vector<8xi32>
+  ; CHECK:   "llvm.intr.cttz"(%{{.*}}, %[[falseval2]]) : (vector<8xi32>, i1) -> vector<8xi32>
   %4 = call <8 x i32> @llvm.cttz.v8i32(<8 x i32> %1, i1 false)
   ret void
 }
@@ -340,9 +336,9 @@ define void @memcpy_test(i32 %0, i8* %1, i8* %2) {
   ; CHECK: %[[falseval1:.+]] = llvm.mlir.constant(false) : i1
   ; CHECK: %[[constant:.+]] = llvm.mlir.constant(10 : i64) : i64
   ; CHECK: %[[falseval2:.+]] = llvm.mlir.constant(false) : i1
-  ; CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}, %[[falseval2]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i32, i1) -> ()
+  ; CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %{{.*}}, %[[falseval1]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i32, i1) -> ()
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %1, i8* %2, i32 %0, i1 false)
-  ; CHECK: "llvm.intr.memcpy.inline"(%{{.*}}, %{{.*}}, %[[constant]], %[[falseval1]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i64, i1) -> ()
+  ; CHECK: "llvm.intr.memcpy.inline"(%{{.*}}, %{{.*}}, %[[constant]], %[[falseval2]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i64, i1) -> ()
   call void @llvm.memcpy.inline.p0i8.p0i8.i64(i8* %1, i8* %2, i64 10, i1 false)
   ret void
 }
