@@ -1762,6 +1762,7 @@ static CallInst *emitDbgAssign(AssignmentInfo Info, Value *Val, Value *Dest,
                                const VarRecord &VarRec, DIBuilder &DIB) {
   auto *ID = StoreLikeInst.getMetadata(LLVMContext::MD_DIAssignID);
   assert(ID && "Store instruction must have DIAssignID metadata");
+  (void)ID;
 
   DIExpression *Expr = DIExpression::get(StoreLikeInst.getContext(), None);
   if (!Info.StoreToWholeAlloca) {
@@ -1911,6 +1912,7 @@ void AssignmentTrackingPass::runOnFunction(Function &F) {
   for (auto &P : DbgDeclares) {
     const AllocaInst *Alloca = P.first;
     auto Markers = at::getAssignmentMarkers(Alloca);
+    (void)Markers;
     for (DbgDeclareInst *DDI : P.second) {
       // Assert that the alloca that DDI uses is now linked to a dbg.assign
       // describing the same variable (i.e. check that this dbg.declare
