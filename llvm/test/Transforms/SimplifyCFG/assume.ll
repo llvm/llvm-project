@@ -22,14 +22,8 @@ define void @assume_undef_to_unreachable() {
 define i32 @speculate_block_with_assume_basic(i1 %c, i32 %x) {
 ; CHECK-LABEL: @speculate_block_with_assume_basic(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
-; CHECK:       if:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[X:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    br label [[JOIN]]
-; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[IF]] ]
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], i32 1, i32 0
+; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
 ;
 entry:
   br i1 %c, label %if, label %join
@@ -47,15 +41,9 @@ join:
 define i32 @speculate_block_with_assume_extra_instr(i1 %c, i32 %x) {
 ; CHECK-LABEL: @speculate_block_with_assume_extra_instr(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
-; CHECK:       if:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[ADD]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    br label [[JOIN]]
-; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD]], [[IF]] ]
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], i32 [[ADD]], i32 0
+; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
 ;
 entry:
   br i1 %c, label %if, label %join
@@ -71,6 +59,8 @@ join:
   ret i32 %phi
 }
 
+; We only allow speculating one instruction. Here %add and %add2 are used by
+; the assume, but not ephemeral, because they are also used by %phi.
 define i32 @speculate_block_with_assume_extra_instrs_too_many(i1 %c, i32 %x) {
 ; CHECK-LABEL: @speculate_block_with_assume_extra_instrs_too_many(
 ; CHECK-NEXT:  entry:
@@ -103,16 +93,9 @@ join:
 define i32 @speculate_block_with_assume_extra_instrs_okay(i1 %c, i32 %x) {
 ; CHECK-LABEL: @speculate_block_with_assume_extra_instrs_okay(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
-; CHECK:       if:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[ADD2:%.*]] = add i32 [[ADD]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[ADD2]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    br label [[JOIN]]
-; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD]], [[IF]] ]
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], i32 [[ADD]], i32 0
+; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
 ;
 entry:
   br i1 %c, label %if, label %join
@@ -132,13 +115,8 @@ join:
 define i32 @speculate_block_with_assume_operand_bundle(i1 %c, ptr %p) {
 ; CHECK-LABEL: @speculate_block_with_assume_operand_bundle(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
-; CHECK:       if:
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P:%.*]]) ]
-; CHECK-NEXT:    br label [[JOIN]]
-; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ 1, [[IF]] ]
-; CHECK-NEXT:    ret i32 [[PHI]]
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[C:%.*]], i32 1, i32 0
+; CHECK-NEXT:    ret i32 [[SPEC_SELECT]]
 ;
 entry:
   br i1 %c, label %if, label %join

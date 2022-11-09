@@ -351,14 +351,14 @@ defm UMLSL_VG4_M4ZZ  : sme2_int_mla_long_array_vg4_single<"umlsl", 0b11>;
 defm UMLSL_VG2_M2Z2Z : sme2_int_mla_long_array_vg2_multi<"umlsl",  0b11>;
 defm UMLSL_VG4_M4Z4Z : sme2_int_mla_long_array_vg4_multi<"umlsl",  0b11>;
 
-def FCVT_Z2Z_StoH   : sme2_cvt_vg2_single<"fcvt",   0b00, 0b00>;
-def FCVTN_Z2Z_StoH  : sme2_cvt_vg2_single<"fcvtn",  0b01, 0b00>;
-def BFCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"bfcvt",  0b10, 0b00>;
-def BFCVTN_Z2Z_StoH : sme2_cvt_vg2_single<"bfcvtn", 0b11, 0b00>;
+defm FCVT_Z2Z_StoH   : sme2_cvt_vg2_single<"fcvt",   0b0000>;
+defm FCVTN_Z2Z_StoH  : sme2_cvt_vg2_single<"fcvtn",  0b0001>;
+defm BFCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"bfcvt",  0b1000>;
+defm BFCVTN_Z2Z_StoH : sme2_cvt_vg2_single<"bfcvtn", 0b1001>;
 
-def SQCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"sqcvt", 0b00, 0b11>;
-def UQCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"uqcvt", 0b01, 0b11>;
-def SQCVTU_Z2Z_StoH : sme2_cvt_vg2_single<"sqcvtu", 0b10, 0b11>;
+defm SQCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"sqcvt",  0b0110>;
+defm UQCVT_Z2Z_StoH  : sme2_cvt_vg2_single<"uqcvt",  0b0111>;
+defm SQCVTU_Z2Z_StoH : sme2_cvt_vg2_single<"sqcvtu", 0b1110>;
 defm SQCVT_Z4Z      : sme2_int_cvt_vg4_single<"sqcvt", 0b000>;
 defm UQCVT_Z4Z      : sme2_int_cvt_vg4_single<"uqcvt", 0b001>;
 defm SQCVTU_Z4Z     : sme2_int_cvt_vg4_single<"sqcvtu", 0b100>;
@@ -366,14 +366,14 @@ defm SQCVTN_Z4Z     : sme2_int_cvt_vg4_single<"sqcvtn", 0b010>;
 defm SQCVTUN_Z4Z    : sme2_int_cvt_vg4_single<"sqcvtun", 0b110>;
 defm UQCVTN_Z4Z     : sme2_int_cvt_vg4_single<"uqcvtn", 0b011>;
 
-def FCVTZS_2Z2Z_StoS : sme2_fp_cvt_vg2_multi<"fcvtzs", 0b010>;
-def FCVTZS_4Z4Z_StoS : sme2_fp_cvt_vg4_multi<"fcvtzs", 0b010>;
-def FCVTZU_2Z2Z_StoS : sme2_fp_cvt_vg2_multi<"fcvtzu", 0b011>;
-def FCVTZU_4Z4Z_StoS : sme2_fp_cvt_vg4_multi<"fcvtzu", 0b011>;
-def SCVTF_2Z2Z_StoS  : sme2_fp_cvt_vg2_multi<"scvtf", 0b100>;
-def SCVTF_4Z4Z_StoS  : sme2_fp_cvt_vg4_multi<"scvtf", 0b100>;
-def UCVTF_2Z2Z_StoS  : sme2_fp_cvt_vg2_multi<"ucvtf", 0b101>;
-def UCVTF_4Z4Z_StoS  : sme2_fp_cvt_vg4_multi<"ucvtf", 0b101>;
+defm FCVTZS_2Z2Z_StoS : sme2_fp_cvt_vg2_multi<"fcvtzs", 0b00010>;
+defm FCVTZS_4Z4Z_StoS : sme2_fp_cvt_vg4_multi<"fcvtzs", 0b0001000>;
+defm FCVTZU_2Z2Z_StoS : sme2_fp_cvt_vg2_multi<"fcvtzu", 0b00011>;
+defm FCVTZU_4Z4Z_StoS : sme2_fp_cvt_vg4_multi<"fcvtzu", 0b0001010>;
+defm SCVTF_2Z2Z_StoS  : sme2_fp_cvt_vg2_multi<"scvtf", 0b00100>;
+defm SCVTF_4Z4Z_StoS  : sme2_fp_cvt_vg4_multi<"scvtf", 0b0010000>;
+defm UCVTF_2Z2Z_StoS  : sme2_fp_cvt_vg2_multi<"ucvtf", 0b00101>;
+defm UCVTF_4Z4Z_StoS  : sme2_fp_cvt_vg4_multi<"ucvtf", 0b0010010>;
 
 defm SMAX_VG2_2ZZ  : sme2_int_sve_destructive_vector_vg2_single<"smax", 0b0000000>;
 defm SMAX_VG4_4ZZ  : sme2_int_sve_destructive_vector_vg4_single<"smax", 0b0000000>;
@@ -575,6 +575,27 @@ defm LUTI2_4ZTZI : sme2_luti2_vector_vg4_index<"luti2">;
 defm LUTI4_ZTZI  : sme2_luti4_vector_index<"luti4">;
 defm LUTI4_2ZTZI : sme2_luti4_vector_vg2_index<"luti4">;
 defm LUTI4_4ZTZI : sme2_luti4_vector_vg4_index<"luti4">;
+
+defm SUNPK_VG2_2ZZ  : sme2_unpk_vector_vg2<"sunpk", 0b0>;
+defm SUNPK_VG4_4Z2Z : sme2_unpk_vector_vg4<"sunpk", 0b0>;
+defm UUNPK_VG2_2ZZ  : sme2_unpk_vector_vg2<"uunpk", 0b1>;
+defm UUNPK_VG4_4Z2Z : sme2_unpk_vector_vg4<"uunpk", 0b1>;
+
+defm ZIP_VG2_2ZZZ : sme2_zip_vector_vg2<"zip", 0b0>;
+defm UZP_VG2_2ZZZ : sme2_zip_vector_vg2<"uzp", 0b1>;
+defm ZIP_VG4_4Z4Z : sme2_zip_vector_vg4<"zip", 0b0110000>;
+defm UZP_VG4_4Z4Z : sme2_zip_vector_vg4<"uzp", 0b0110001>;
+defm ZIP_VG4_4Z4Z_Q : sme2_zip_vector_vg4_Q<"zip", 0b0111000>;
+defm UZP_VG4_4Z4Z_Q : sme2_zip_vector_vg4_Q<"uzp", 0b0111001>;
+
+defm FRINTA_2Z2Z: sme2_frint_vector_vg2_multi<"frinta", 0b11000>;
+defm FRINTA_4Z4Z: sme2_frint_vector_vg4_multi<"frinta", 0b1100000>;
+defm FRINTM_2Z2Z: sme2_frint_vector_vg2_multi<"frintm", 0b10100>;
+defm FRINTM_4Z4Z: sme2_frint_vector_vg4_multi<"frintm", 0b1010000>;
+defm FRINTN_2Z2Z: sme2_frint_vector_vg2_multi<"frintn", 0b10000>;
+defm FRINTN_4Z4Z: sme2_frint_vector_vg4_multi<"frintn", 0b1000000>;
+defm FRINTP_2Z2Z: sme2_frint_vector_vg2_multi<"frintp", 0b10010>;
+defm FRINTP_4Z4Z: sme2_frint_vector_vg4_multi<"frintp", 0b1001000>;
 }
 
 let Predicates = [HasSME2, HasSMEI16I64] in {

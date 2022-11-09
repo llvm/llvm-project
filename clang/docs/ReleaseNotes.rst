@@ -638,6 +638,9 @@ C++2b Feature Support
 CUDA/HIP Language Changes in Clang
 ----------------------------------
 
+ - Allow the use of ``__noinline__`` as a keyword (instead of ``__attribute__((noinline))``)
+   in lambda declarations.
+
 Objective-C Language Changes in Clang
 -------------------------------------
 
