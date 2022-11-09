@@ -526,6 +526,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Alderlake:
   case CK_Raptorlake:
   case CK_Meteorlake:
+  case CK_Sierraforest:
+  case CK_Grandridge:
+  case CK_Graniterapids:
     // FIXME: Historically, we defined this legacy name, it would be nice to
     // remove it at some point. We've never exposed fine-grained names for
     // recent primary x86 CPUs, and we should keep it that way.
@@ -1413,6 +1416,9 @@ Optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_Alderlake:
     case CK_Raptorlake:
     case CK_Meteorlake:
+    case CK_Sierraforest:
+    case CK_Grandridge:
+    case CK_Graniterapids:
     case CK_KNL:
     case CK_KNM:
     // K7
