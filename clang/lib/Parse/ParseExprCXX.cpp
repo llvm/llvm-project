@@ -1291,7 +1291,22 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   if (getLangOpts().CUDA) {
     // In CUDA code, GNU attributes are allowed to appear immediately after the
     // "[...]", even if there is no "(...)" before the lambda body.
-    MaybeParseGNUAttributes(D);
+    //
+    // Note that we support __noinline__ as a keyword in this mode and thus
+    // it has to be separately handled.
+    while (true) {
+      if (Tok.is(tok::kw___noinline__)) {
+        IdentifierInfo *AttrName = Tok.getIdentifierInfo();
+        SourceLocation AttrNameLoc = ConsumeToken();
+        Attr.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+                    ParsedAttr::AS_Keyword);
+      } else if (Tok.is(tok::kw___attribute))
+        ParseGNUAttributes(Attr, nullptr, &D);
+      else
+        break;
+    }
+
+    D.takeAttributes(Attr);
   }
 
   // Helper to emit a warning if we see a CUDA host/device/global attribute
