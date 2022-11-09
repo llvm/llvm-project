@@ -259,7 +259,7 @@ public:
 
       IRBuilder<> Builder(Ctx);
       for (Function &Func : M.functions()) {
-        if (!Func.isDeclaration() && AMDGPU::isKernel(Func.getCallingConv())) {
+        if (!Func.isDeclaration() && AMDGPU::isKernelCC(&Func)) {
           const CallGraphNode *N = CG[&Func];
           const bool CalleesRequireModuleLDS = N->size() > 0;
 
