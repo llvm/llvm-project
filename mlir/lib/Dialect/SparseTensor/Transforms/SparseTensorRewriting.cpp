@@ -536,17 +536,17 @@ private:
     RankedTensorType cooTp = getUnorderedCOOFromType(dstTp);
     auto cooBuffer =
         rewriter.create<AllocTensorOp>(loc, cooTp, dynSizes).getResult();
-    unsigned rank = dstTp.cast<ShapedType>().getRank();
-
-    genDenseTensorOrSparseConstantIterLoop(
-        rewriter, loc, src, rank,
-        [&](OpBuilder &builder, Location loc, Value val, ValueRange indices) {
-          builder.create<InsertOp>(loc, val, cooBuffer, indices);
+    auto foreachOp = rewriter.create<ForeachOp>(
+        loc, src, cooBuffer,
+        [&](OpBuilder &builder, Location loc, ValueRange indices, Value v,
+            ValueRange reduc) {
+          builder.create<sparse_tensor::YieldOp>(
+              loc, builder.create<InsertOp>(loc, v, reduc.front(), indices));
         });
-
     rewriter.setInsertionPointAfter(op);
-    rewriter.replaceOpWithNewOp<ConvertOp>(op, dstTp, cooBuffer);
-    rewriter.create<DeallocTensorOp>(loc, cooBuffer);
+    src = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
+    rewriter.replaceOpWithNewOp<ConvertOp>(op, dstTp, src);
+    rewriter.create<DeallocTensorOp>(loc, src);
 
     return success();
   }
