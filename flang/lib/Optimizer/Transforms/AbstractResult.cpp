@@ -334,13 +334,14 @@ public:
             });
         return;
       }
-      func.setType(getNewFunctionType(funcTy, shouldBoxResult));
       if (!func.empty()) {
         // Insert new argument.
         mlir::OpBuilder rewriter(context);
         auto resultType = funcTy.getResult(0);
         auto argTy = getResultArgumentType(resultType, shouldBoxResult);
-        mlir::Value newArg = func.front().insertArgument(0u, argTy, loc);
+        func.insertArgument(0u, argTy, {}, loc);
+        func.eraseResult(0u);
+        mlir::Value newArg = func.getArgument(0u);
         if (mustEmboxResult(resultType, shouldBoxResult)) {
           auto bufferType = fir::ReferenceType::get(resultType);
           rewriter.setInsertionPointToStart(&func.front());
@@ -349,6 +350,10 @@ public:
         patterns.insert<ReturnOpConversion>(context, newArg);
         target.addDynamicallyLegalOp<mlir::func::ReturnOp>(
             [](mlir::func::ReturnOp ret) { return ret.operands().empty(); });
+        assert(func.getFunctionType() ==
+               getNewFunctionType(funcTy, shouldBoxResult));
+      } else {
+        func.setType(getNewFunctionType(funcTy, shouldBoxResult));
       }
     }
   }
