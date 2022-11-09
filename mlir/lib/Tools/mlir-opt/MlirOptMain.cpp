@@ -269,7 +269,7 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   registerPassManagerCLOptions();
   registerDefaultTimingManagerCLOptions();
   DebugCounter::registerCLOptions();
-  PassPipelineCLParser passPipeline("", "Compiler passes to run");
+  PassPipelineCLParser passPipeline("", "Compiler passes to run", "p");
 
   // Build the list of dialects as a header for the --help message.
   std::string helpHeader = (toolName + "\nAvailable Dialects: ").str();

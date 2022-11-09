@@ -236,7 +236,9 @@ struct PassPipelineCLParserImpl;
 class PassPipelineCLParser {
 public:
   /// Construct a pass pipeline parser with the given command line description.
+  /// Optionally registers an alias for the `pass-pipeline` option.
   PassPipelineCLParser(StringRef arg, StringRef description);
+  PassPipelineCLParser(StringRef arg, StringRef description, StringRef alias);
   ~PassPipelineCLParser();
 
   /// Returns true if this parser contains any valid options to add.
@@ -257,6 +259,7 @@ private:
   std::unique_ptr<detail::PassPipelineCLParserImpl> impl;
 
   llvm::cl::opt<std::string> passPipeline;
+  Optional<llvm::cl::alias> passPipelineAlias;
 };
 
 /// This class implements a command-line parser specifically for MLIR pass
