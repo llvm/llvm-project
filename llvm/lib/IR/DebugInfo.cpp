@@ -844,14 +844,13 @@ void Instruction::mergeDIAssignID(
     ArrayRef<const Instruction *> SourceInstructions) {
   // Replace all uses (and attachments) of all the DIAssignIDs
   // on SourceInstructions with a single merged value.
-  Function *Fn = getFunction();
-  assert(Fn && "Uninserted instruction merged");
+  assert(getFunction() && "Uninserted instruction merged");
   // Collect up the DIAssignID tags.
   SmallVector<DIAssignID *, 4> IDs;
   for (const Instruction *I : SourceInstructions) {
     if (auto *MD = I->getMetadata(LLVMContext::MD_DIAssignID))
       IDs.push_back(cast<DIAssignID>(MD));
-    assert(Fn == I->getFunction() &&
+    assert(getFunction() == I->getFunction() &&
            "Merging with instruction from another function not allowed");
   }
 
