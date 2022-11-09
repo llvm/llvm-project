@@ -22054,15 +22054,6 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
       return true;
   }
 
-  // Checks to allow the use of SME instructions
-  if (auto *Base = dyn_cast<CallBase>(&Inst)) {
-    auto CallerAttrs = SMEAttrs(*Inst.getFunction());
-    auto CalleeAttrs = SMEAttrs(*Base);
-    if (CallerAttrs.requiresSMChange(CalleeAttrs,
-                                     /*BodyOverridesInterface=*/false) ||
-        CallerAttrs.requiresLazySave(CalleeAttrs))
-      return true;
-  }
   return false;
 }
 
