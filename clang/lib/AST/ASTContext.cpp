@@ -6529,7 +6529,7 @@ bool ASTContext::FriendsDifferByConstraints(const FunctionDecl *X,
   if (!X->getFriendObjectKind() || !Y->getFriendObjectKind())
     return false;
 
-  // If the the two functions share lexical declaration context, they are not in
+  // If the two functions share lexical declaration context, they are not in
   // separate instantations, and thus in the same scope.
   if (X->getLexicalDeclContext() == Y->getLexicalDeclContext())
     return false;

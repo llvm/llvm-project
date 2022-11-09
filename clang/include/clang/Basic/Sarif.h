@@ -372,7 +372,7 @@ public:
 /// attributes. However, it requires an ordering among certain method calls:
 ///
 /// 1. Because every SARIF document must contain at least 1 \c run, callers
-///    must ensure that \ref SarifDocumentWriter::createRun is is called before
+///    must ensure that \ref SarifDocumentWriter::createRun is called before
 ///    any other methods.
 /// 2. If SarifDocumentWriter::endRun is called, callers MUST call
 ///    SarifDocumentWriter::createRun, before invoking any of the result

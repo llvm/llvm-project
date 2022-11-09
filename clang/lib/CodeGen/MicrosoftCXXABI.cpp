@@ -289,7 +289,7 @@ public:
                                            CodeGenFunction::VPtr Vptr) override;
 
   /// Don't initialize vptrs if dynamic class
-  /// is marked with with the 'novtable' attribute.
+  /// is marked with the 'novtable' attribute.
   bool doStructorsInitializeVPtrs(const CXXRecordDecl *VTableClass) override {
     return !VTableClass->hasAttr<MSNoVTableAttr>();
   }

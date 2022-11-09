@@ -2231,7 +2231,7 @@ public:
   /// Emit the unified return block, trying to avoid its emission when
   /// possible.
   /// \return The debug location of the user written return statement if the
-  /// return block is is avoided.
+  /// return block is avoided.
   llvm::DebugLoc EmitReturnBlock();
 
   /// FinishFunction - Complete IR generation of the current function. It is
@@ -2884,7 +2884,7 @@ public:
                               AggValueSlot::Overlap_t Overlap,
                               SourceLocation Loc, bool NewPointerIsChecked);
 
-  /// Emit assumption load for all bases. Requires to be be called only on
+  /// Emit assumption load for all bases. Requires to be called only on
   /// most-derived class and not under construction of the object.
   void EmitVTableAssumptionLoads(const CXXRecordDecl *ClassDecl, Address This);
 

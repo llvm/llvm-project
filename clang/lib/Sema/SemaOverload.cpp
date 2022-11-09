@@ -10289,7 +10289,7 @@ OverloadCandidateSet::BestViableFunction(Sema &S, SourceLocation Loc,
     } else if (Cand->NotValidBecauseConstraintExprHasError()) {
       // This candidate has constraint that we were unable to evaluate because
       // it referenced an expression that contained an error. Rather than fall
-      // back onto a potentially unintended candidate (made worse by by
+      // back onto a potentially unintended candidate (made worse by
       // subsuming constraints), treat this as 'no viable candidate'.
       Best = end();
       return OR_No_Viable_Function;
