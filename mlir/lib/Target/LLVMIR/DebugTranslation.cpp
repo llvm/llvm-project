@@ -108,9 +108,10 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
     elements.push_back(translate(member));
   return llvm::DICompositeType::get(
       llvmCtx, attr.getTag(), attr.getName(), translate(attr.getFile()),
-      attr.getLine(), translate(attr.getScope()), /*BaseType=*/nullptr,
+      attr.getLine(), translate(attr.getScope()), translate(attr.getBaseType()),
       attr.getSizeInBits(), attr.getAlignInBits(),
-      /*OffsetInBits=*/0, /*Flags=*/llvm::DINode::FlagZero,
+      /*OffsetInBits=*/0,
+      /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
       llvm::MDNode::get(llvmCtx, elements),
       /*RuntimeLang=*/0, /*VTableHolder=*/nullptr);
 }
