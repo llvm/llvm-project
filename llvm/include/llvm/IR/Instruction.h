@@ -515,6 +515,10 @@ private:
   void
   getAllMetadataImpl(SmallVectorImpl<std::pair<unsigned, MDNode *>> &) const;
 
+  /// Update the LLVMContext ID-to-Instruction(s) mapping. If \p ID is nullptr
+  /// then clear the mapping for this instruction.
+  void updateDIAssignIDMapping(DIAssignID *ID);
+
 public:
   //===--------------------------------------------------------------------===//
   // Predicates and helper methods.

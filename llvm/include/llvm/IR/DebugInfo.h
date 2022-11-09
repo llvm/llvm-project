@@ -21,7 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/IntrinsicInst.h"
 
 namespace llvm {
 
@@ -158,6 +158,70 @@ private:
   SmallVector<DIScope *, 8> Scopes;
   SmallPtrSet<const MDNode *, 32> NodesSeen;
 };
+
+/// Assignment Tracking (at).
+namespace at {
+//
+// Utilities for enumerating storing instructions from an assignment ID.
+//
+/// A range of instructions.
+using AssignmentInstRange =
+    iterator_range<SmallVectorImpl<Instruction *>::iterator>;
+/// Return a range of instructions (typically just one) that have \p ID
+/// as an attachment.
+/// Iterators invalidated by adding or removing DIAssignID metadata to/from any
+/// instruction (including by deleting or cloning instructions).
+AssignmentInstRange getAssignmentInsts(DIAssignID *ID);
+/// Return a range of instructions (typically just one) that perform the
+/// assignment that \p DAI encodes.
+/// Iterators invalidated by adding or removing DIAssignID metadata to/from any
+/// instruction (including by deleting or cloning instructions).
+inline AssignmentInstRange getAssignmentInsts(const DbgAssignIntrinsic *DAI) {
+  return getAssignmentInsts(DAI->getAssignID());
+}
+
+//
+// Utilities for enumerating llvm.dbg.assign intrinsic from an assignment ID.
+//
+/// High level: this is an iterator for llvm.dbg.assign intrinsics.
+/// Implementation details: this is a wrapper around Value's User iterator that
+/// dereferences to a DbgAssignIntrinsic ptr rather than a User ptr.
+class DbgAssignIt
+    : public iterator_adaptor_base<DbgAssignIt, Value::user_iterator,
+                                   typename std::iterator_traits<
+                                       Value::user_iterator>::iterator_category,
+                                   DbgAssignIntrinsic *, std::ptrdiff_t,
+                                   DbgAssignIntrinsic **,
+                                   DbgAssignIntrinsic *&> {
+public:
+  DbgAssignIt(Value::user_iterator It) : iterator_adaptor_base(It) {}
+  DbgAssignIntrinsic *operator*() const { return cast<DbgAssignIntrinsic>(*I); }
+};
+/// A range of llvm.dbg.assign intrinsics.
+using AssignmentMarkerRange = iterator_range<DbgAssignIt>;
+/// Return a range of dbg.assign intrinsics which use \ID as an operand.
+/// Iterators invalidated by deleting an intrinsic contained in this range.
+AssignmentMarkerRange getAssignmentMarkers(DIAssignID *ID);
+/// Return a range of dbg.assign intrinsics for which \p Inst performs the
+/// assignment they encode.
+/// Iterators invalidated by deleting an intrinsic contained in this range.
+inline AssignmentMarkerRange getAssignmentMarkers(const Instruction *Inst) {
+  if (auto *ID = Inst->getMetadata(LLVMContext::MD_DIAssignID))
+    return getAssignmentMarkers(cast<DIAssignID>(ID));
+  else
+    return make_range(Value::user_iterator(), Value::user_iterator());
+}
+
+/// Delete the llvm.dbg.assign intrinsics linked to \p Inst.
+void deleteAssignmentMarkers(const Instruction *Inst);
+
+/// Replace all uses (and attachments) of \p Old with \p New.
+void RAUW(DIAssignID *Old, DIAssignID *New);
+
+/// Remove all Assignment Tracking related intrinsics and metadata from \p F.
+void deleteAll(Function *F);
+
+} // end namespace at
 
 /// Return true if assignment tracking is enabled.
 bool getEnableAssignmentTracking();
