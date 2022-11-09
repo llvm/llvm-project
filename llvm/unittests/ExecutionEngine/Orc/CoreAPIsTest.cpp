@@ -1039,6 +1039,21 @@ TEST_F(CoreAPIsStandardTest, TestBasicWeakSymbolMaterialization) {
       << "Duplicate bar definition not discarded";
 }
 
+TEST_F(CoreAPIsStandardTest, RedefineBoundWeakSymbol) {
+  // Check that redefinition of a bound weak symbol fails.
+
+  JITSymbolFlags WeakExported(JITSymbolFlags::Exported);
+  WeakExported |= JITSymbolFlags::Weak;
+
+  // Define "Foo" as weak, force materialization.
+  cantFail(JD.define(absoluteSymbols({{Foo, {FooAddr, WeakExported}}})));
+  cantFail(ES.lookup({&JD}, Foo));
+
+  // Attempt to redefine "Foo". Expect failure, despite "Foo" being weak,
+  // since it has already been bound.
+  EXPECT_THAT_ERROR(JD.define(absoluteSymbols({{Foo, FooSym}})), Failed());
+}
+
 TEST_F(CoreAPIsStandardTest, DefineMaterializingSymbol) {
   bool ExpectNoMoreMaterialization = false;
   ES.setDispatchTask([&](std::unique_ptr<Task> T) {
