@@ -355,11 +355,11 @@ defm : HWWriteResPair<WriteFVarBlendY, [HWPort5], 2, [2], 2, 7>;
 defm : HWWriteResPair<WriteFVarBlendZ, [HWPort5], 2, [2], 2, 7>; // Unsupported = 1
 
 // Conversion between integer and float.
-defm : HWWriteResPair<WriteCvtSD2I,   [HWPort1], 3>;
+defm : HWWriteResPair<WriteCvtSD2I,   [HWPort1,HWPort0], 4, [1,1], 2, 5>;
 defm : HWWriteResPair<WriteCvtPD2I,   [HWPort1], 3>;
 defm : HWWriteResPair<WriteCvtPD2IY,  [HWPort1], 3>;
 defm : HWWriteResPair<WriteCvtPD2IZ,  [HWPort1], 3>; // Unsupported = 1
-defm : HWWriteResPair<WriteCvtSS2I,   [HWPort1], 3>;
+defm : HWWriteResPair<WriteCvtSS2I,   [HWPort1,HWPort0], 4, [1,1], 2, 5>;
 defm : HWWriteResPair<WriteCvtPS2I,   [HWPort1], 3, [1], 1, 6>;
 defm : HWWriteResPair<WriteCvtPS2IY,  [HWPort1], 3, [1], 1, 7>;
 defm : HWWriteResPair<WriteCvtPS2IZ,  [HWPort1], 3, [1], 1, 7>; // Unsupported = 1
@@ -1342,14 +1342,6 @@ def: InstRW<[HWWriteResGroup69], (instregex "ROL(8|16|32|64)mCL",
                                             "SHR(8|16|32|64)mCL")>;
 def: SchedAlias<WriteADCRMW, HWWriteResGroup69>;
 
-def HWWriteResGroup70 : SchedWriteRes<[HWPort0,HWPort1]> {
-  let Latency = 4;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1];
-}
-def: InstRW<[HWWriteResGroup70], (instregex "(V?)CVT(T?)SD2SI(64)?rr",
-                                            "(V?)CVT(T?)SS2SI(64)?rr")>;
-
 def HWWriteResGroup72 : SchedWriteRes<[HWPort0,HWPort0156]> {
   let Latency = 4;
   let NumMicroOps = 2;
@@ -1376,14 +1368,6 @@ def HWWriteResGroup75 : SchedWriteRes<[HWPort1,HWPort23]> {
   let ResourceCycles = [2,1];
 }
 def: InstRW<[HWWriteResGroup75], (instregex "FICOM(P?)(16|32)m")>;
-
-def HWWriteResGroup76 : SchedWriteRes<[HWPort0,HWPort1,HWPort23]> {
-  let Latency = 9;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,1,1];
-}
-def: InstRW<[HWWriteResGroup76], (instregex "(V?)CVT(T?)SD2SI(64)?rm",
-                                            "(V?)CVT(T?)SS2SI(64)?rm")>;
 
 def HWWriteResGroup78 : SchedWriteRes<[HWPort1,HWPort5,HWPort23]> {
   let Latency = 10;
