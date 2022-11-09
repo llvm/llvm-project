@@ -16,7 +16,7 @@
 include "mlir/IR/OpBase.td"
 
 
-def FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
+def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
   let description = [{
     Interface for operations that create Fortran like variables in order to
     query about all their Fortran properties.
@@ -150,6 +150,8 @@ def FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
     mlir::LogicalResult verifyImpl();
 
   }];
+
+  let cppNamespace = "fir";
 
   let verify = [{
     return ::mlir::cast<::fir::FortranVariableOpInterface>($_op).verifyImpl();

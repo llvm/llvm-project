@@ -2872,7 +2872,7 @@ def fir_IsPresentOp : fir_SimpleOp<"is_present", [NoMemoryEffect]> {
 }
 
 def fir_DeclareOp : fir_Op<"declare", [AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<FortranVariableOpInterface>]> {
+    DeclareOpInterfaceMethods<fir_FortranVariableOpInterface>]> {
   let summary = "declare a variable";
 
   let description = [{
