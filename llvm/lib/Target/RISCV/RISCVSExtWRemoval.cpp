@@ -139,6 +139,9 @@ static bool hasAllWUsers(const MachineInstr &OrigMI, MachineRegisterInfo &MRI) {
         break;
 
       case RISCV::SLL:
+      case RISCV::BSET:
+      case RISCV::BCLR:
+      case RISCV::BINV:
         // Operand 2 is the shift amount which uses 6 bits.
         if (OpIdx == 2)
           break;
@@ -199,6 +202,9 @@ static bool hasAllWUsers(const MachineInstr &OrigMI, MachineRegisterInfo &MRI) {
       case RISCV::SH2ADD:
       case RISCV::SH3ADD:
       case RISCV::XNOR:
+      case RISCV::BSETI:
+      case RISCV::BCLRI:
+      case RISCV::BINVI:
         Worklist.push_back(UserMI);
         break;
       }
