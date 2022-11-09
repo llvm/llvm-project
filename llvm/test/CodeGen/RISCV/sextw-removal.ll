@@ -971,3 +971,51 @@ define signext i32 @test14d(i31 zeroext %0, i32 signext %1) {
   %13 = phi i32 [ %zext, %2 ], [ -1, %4 ], [ %9, %8 ]
   ret i32 %13
 }
+
+define signext i32 @test15(i64 %arg1, i64 %arg2, i64 %arg3, i32* %arg4)  {
+; CHECK-LABEL: test15:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    li a4, 256
+; CHECK-NEXT:  .LBB17_1: # %bb2
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    andi a0, a0, 1234
+; CHECK-NEXT:    addw a0, a0, a1
+; CHECK-NEXT:    addi a2, a2, 1
+; CHECK-NEXT:    sw a0, 0(a3)
+; CHECK-NEXT:    bltu a2, a4, .LBB17_1
+; CHECK-NEXT:  # %bb.2: # %bb7
+; CHECK-NEXT:    ret
+;
+; NOREMOVAL-LABEL: test15:
+; NOREMOVAL:       # %bb.0: # %entry
+; NOREMOVAL-NEXT:    addi a2, a2, -1
+; NOREMOVAL-NEXT:    li a4, 256
+; NOREMOVAL-NEXT:  .LBB17_1: # %bb2
+; NOREMOVAL-NEXT:    # =>This Inner Loop Header: Depth=1
+; NOREMOVAL-NEXT:    andi a0, a0, 1234
+; NOREMOVAL-NEXT:    add a0, a0, a1
+; NOREMOVAL-NEXT:    addi a2, a2, 1
+; NOREMOVAL-NEXT:    sw a0, 0(a3)
+; NOREMOVAL-NEXT:    bltu a2, a4, .LBB17_1
+; NOREMOVAL-NEXT:  # %bb.2: # %bb7
+; NOREMOVAL-NEXT:    sext.w a0, a0
+; NOREMOVAL-NEXT:    ret
+entry:
+  br label %bb2
+
+bb2:                                              ; preds = %bb2, %entry
+  %i1 = phi i64 [ %arg1, %entry ], [ %i5, %bb2 ]
+  %i2 = phi i64 [ %arg3, %entry ], [ %i3, %bb2 ]
+  %i3 = add i64 %i2, 1
+  %i4 = and i64 %i1, 1234
+  %i5 = add i64 %i4, %arg2
+  %i8 = trunc i64 %i5 to i32
+  store i32 %i8, i32* %arg4
+  %i6 = icmp ugt i64 %i2, 255
+  br i1 %i6, label %bb7, label %bb2
+
+bb7:                                              ; preds = %bb2
+  %i7 = trunc i64 %i5 to i32
+  ret i32 %i7
+}
