@@ -26,9 +26,10 @@ toHeader(llvm::ArrayRef<tooling::stdlib::Header> Headers) {
   });
   return Result;
 }
-
 } // namespace
-void walkUsed(llvm::ArrayRef<Decl *> ASTRoots, UsedSymbolCB CB) {
+
+void walkUsed(const SourceManager &SM, llvm::ArrayRef<Decl *> ASTRoots,
+              llvm::ArrayRef<SymbolReference> MacroRefs, UsedSymbolCB CB) {
   tooling::stdlib::Recognizer Recognizer;
   for (auto *Root : ASTRoots) {
     auto &SM = Root->getASTContext().getSourceManager();
@@ -45,7 +46,14 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots, UsedSymbolCB CB) {
         return CB({Loc, Symbol(ND), RT}, {Header(FE)});
     });
   }
-  // FIXME: Handle references of macros.
+  for (const SymbolReference &MacroRef : MacroRefs) {
+    assert(MacroRef.Target.kind() == Symbol::Macro);
+    // FIXME: Handle IWYU pragmas, non self-contained files.
+    // FIXME: Handle macro locations.
+    if (auto *FE = SM.getFileEntryForID(
+            SM.getFileID(MacroRef.Target.macro().Definition)))
+      CB(MacroRef, {Header(FE)});
+  }
 }
 
 } // namespace clang::include_cleaner
