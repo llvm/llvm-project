@@ -3851,7 +3851,7 @@ def moutline_atomics : Flag<["-"], "moutline-atomics">, Group<f_clang_Group>, Fl
 def mno_outline_atomics : Flag<["-"], "mno-outline-atomics">, Group<f_clang_Group>, Flags<[CC1Option]>,
   HelpText<"Don't generate local calls to out-of-line atomic operations">;
 def mno_implicit_float : Flag<["-"], "mno-implicit-float">, Group<m_Group>,
-  HelpText<"Don't generate implicit floating point instructions">;
+  HelpText<"Don't generate implicit floating point or vector instructions">;
 def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>;
 def mrecip : Flag<["-"], "mrecip">, Group<m_Group>;
 def mrecip_EQ : CommaJoined<["-"], "mrecip=">, Group<m_Group>, Flags<[CC1Option]>,
@@ -5408,7 +5408,7 @@ def fforbid_guard_variables : Flag<["-"], "fforbid-guard-variables">,
   HelpText<"Emit an error if a C++ static local initializer would need a guard variable">,
   MarshallingInfoFlag<CodeGenOpts<"ForbidGuardVariables">>;
 def no_implicit_float : Flag<["-"], "no-implicit-float">,
-  HelpText<"Don't generate implicit floating point instructions">,
+  HelpText<"Don't generate implicit floating point or vector instructions">,
   MarshallingInfoFlag<CodeGenOpts<"NoImplicitFloat">>;
 def fdump_vtable_layouts : Flag<["-"], "fdump-vtable-layouts">,
   HelpText<"Dump the layouts of all vtables that will be emitted in a translation unit">,
