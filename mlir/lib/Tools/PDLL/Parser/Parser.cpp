@@ -297,13 +297,10 @@ private:
   /// existing constraints that have already been parsed for the same entity
   /// that will be constrained by this constraint. `allowInlineTypeConstraints`
   /// allows the use of inline Type constraints, e.g. `Value<valueType: Type>`.
-  /// If `allowNonCoreConstraints` is true, then complex (e.g. user defined
-  /// constraints) may be used with the variable.
   FailureOr<ast::ConstraintRef>
   parseConstraint(Optional<SMRange> &typeConstraint,
                   ArrayRef<ast::ConstraintRef> existingConstraints,
-                  bool allowInlineTypeConstraints,
-                  bool allowNonCoreConstraints);
+                  bool allowInlineTypeConstraints);
 
   /// Try to parse the constraint for a UserConstraintDecl/UserRewriteDecl
   /// argument or result variable. The constraints for these variables do not
@@ -389,20 +386,16 @@ private:
   /// `inferredType` is the type of the variable inferred by the constraints
   /// within the list, and is updated to the most refined type as determined by
   /// the constraints. Returns success if the constraint list is valid, failure
-  /// otherwise. If `allowNonCoreConstraints` is true, then complex (e.g. user
-  /// defined constraints) may be used with the variable.
+  /// otherwise.
   LogicalResult
   validateVariableConstraints(ArrayRef<ast::ConstraintRef> constraints,
-                              ast::Type &inferredType,
-                              bool allowNonCoreConstraints = true);
+                              ast::Type &inferredType);
   /// Validate a single reference to a constraint. `inferredType` contains the
   /// currently inferred variabled type and is refined within the type defined
   /// by the constraint. Returns success if the constraint is valid, failure
-  /// otherwise. If `allowNonCoreConstraints` is true, then complex (e.g. user
-  /// defined constraints) may be used with the variable.
+  /// otherwise.
   LogicalResult validateVariableConstraint(const ast::ConstraintRef &ref,
-                                           ast::Type &inferredType,
-                                           bool allowNonCoreConstraints = true);
+                                           ast::Type &inferredType);
   LogicalResult validateTypeConstraintExpr(const ast::Expr *typeExpr);
   LogicalResult validateTypeRangeConstraintExpr(const ast::Expr *typeExpr);
 
@@ -469,7 +462,6 @@ private:
   LogicalResult codeCompleteMemberAccess(ast::Expr *parentExpr);
   LogicalResult codeCompleteAttributeName(Optional<StringRef> opName);
   LogicalResult codeCompleteConstraintName(ast::Type inferredType,
-                                           bool allowNonCoreConstraints,
                                            bool allowInlineTypeConstraints);
   LogicalResult codeCompleteDialectName();
   LogicalResult codeCompleteOperationName(StringRef dialectName);
@@ -1129,18 +1121,7 @@ FailureOr<ast::VariableDecl *> Parser::parseResultDecl(unsigned resultNum) {
   // Check to see if this result is named.
   if (curToken.is(Token::identifier) || curToken.isDependentKeyword()) {
     // Check to see if this name actually refers to a Constraint.
-    ast::Decl *existingDecl = curDeclScope->lookup(curToken.getSpelling());
-    if (isa_and_nonnull<ast::ConstraintDecl>(existingDecl)) {
-      // If yes, and this is a Rewrite, give a nice error message as non-Core
-      // constraints are not supported on Rewrite results.
-      if (parserContext == ParserContext::Rewrite) {
-        return emitError(
-            "`Rewrite` results are only permitted to use core constraints, "
-            "such as `Attr`, `Op`, `Type`, `TypeRange`, `Value`, `ValueRange`");
-      }
-
-      // Otherwise, parse this as an unnamed result variable.
-    } else {
+    if (!curDeclScope->lookup<ast::ConstraintDecl>(curToken.getSpelling())) {
       // If it wasn't a constraint, parse the result similarly to a variable. If
       // there is already an existing decl, we will emit an error when defining
       // this variable later.
@@ -1662,8 +1643,7 @@ LogicalResult Parser::parseVariableDeclConstraintList(
   Optional<SMRange> typeConstraint;
   auto parseSingleConstraint = [&] {
     FailureOr<ast::ConstraintRef> constraint = parseConstraint(
-        typeConstraint, constraints, /*allowInlineTypeConstraints=*/true,
-        /*allowNonCoreConstraints=*/true);
+        typeConstraint, constraints, /*allowInlineTypeConstraints=*/true);
     if (failed(constraint))
       return failure();
     constraints.push_back(*constraint);
@@ -1684,8 +1664,7 @@ LogicalResult Parser::parseVariableDeclConstraintList(
 FailureOr<ast::ConstraintRef>
 Parser::parseConstraint(Optional<SMRange> &typeConstraint,
                         ArrayRef<ast::ConstraintRef> existingConstraints,
-                        bool allowInlineTypeConstraints,
-                        bool allowNonCoreConstraints) {
+                        bool allowInlineTypeConstraints) {
   auto parseTypeConstraint = [&](ast::Expr *&typeExpr) -> LogicalResult {
     if (!allowInlineTypeConstraints) {
       return emitError(
@@ -1791,12 +1770,10 @@ Parser::parseConstraint(Optional<SMRange> &typeConstraint,
   case Token::code_complete: {
     // Try to infer the current type for use by code completion.
     ast::Type inferredType;
-    if (failed(validateVariableConstraints(existingConstraints, inferredType,
-                                           allowNonCoreConstraints)))
+    if (failed(validateVariableConstraints(existingConstraints, inferredType)))
       return failure();
 
-    return codeCompleteConstraintName(inferredType, allowNonCoreConstraints,
-                                      allowInlineTypeConstraints);
+    return codeCompleteConstraintName(inferredType, allowInlineTypeConstraints);
   }
   default:
     break;
@@ -1805,13 +1782,9 @@ Parser::parseConstraint(Optional<SMRange> &typeConstraint,
 }
 
 FailureOr<ast::ConstraintRef> Parser::parseArgOrResultConstraint() {
-  // Constraint arguments may apply more complex constraints via the arguments.
-  bool allowNonCoreConstraints = parserContext == ParserContext::Constraint;
-
   Optional<SMRange> typeConstraint;
   return parseConstraint(typeConstraint, /*existingConstraints=*/llvm::None,
-                         /*allowInlineTypeConstraints=*/false,
-                         allowNonCoreConstraints);
+                         /*allowInlineTypeConstraints=*/false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2598,29 +2571,23 @@ Parser::createVariableDecl(StringRef name, SMRange loc, ast::Expr *initializer,
 FailureOr<ast::VariableDecl *>
 Parser::createArgOrResultVariableDecl(StringRef name, SMRange loc,
                                       const ast::ConstraintRef &constraint) {
-  // Constraint arguments may apply more complex constraints via the arguments.
-  bool allowNonCoreConstraints = parserContext == ParserContext::Constraint;
   ast::Type argType;
-  if (failed(validateVariableConstraint(constraint, argType,
-                                        allowNonCoreConstraints)))
+  if (failed(validateVariableConstraint(constraint, argType)))
     return failure();
   return defineVariableDecl(name, loc, argType, constraint);
 }
 
 LogicalResult
 Parser::validateVariableConstraints(ArrayRef<ast::ConstraintRef> constraints,
-                                    ast::Type &inferredType,
-                                    bool allowNonCoreConstraints) {
+                                    ast::Type &inferredType) {
   for (const ast::ConstraintRef &ref : constraints)
-    if (failed(validateVariableConstraint(ref, inferredType,
-                                          allowNonCoreConstraints)))
+    if (failed(validateVariableConstraint(ref, inferredType)))
       return failure();
   return success();
 }
 
 LogicalResult Parser::validateVariableConstraint(const ast::ConstraintRef &ref,
-                                                 ast::Type &inferredType,
-                                                 bool allowNonCoreConstraints) {
+                                                 ast::Type &inferredType) {
   ast::Type constraintType;
   if (const auto *cst = dyn_cast<ast::AttrConstraintDecl>(ref.constraint)) {
     if (const ast::Expr *typeExpr = cst->getTypeExpr()) {
@@ -2652,13 +2619,6 @@ LogicalResult Parser::validateVariableConstraint(const ast::ConstraintRef &ref,
     constraintType = valueRangeTy;
   } else if (const auto *cst =
                  dyn_cast<ast::UserConstraintDecl>(ref.constraint)) {
-    if (!allowNonCoreConstraints) {
-      return emitError(ref.referenceLoc,
-                       "`Rewrite` arguments and results are only permitted to "
-                       "use core constraints, such as `Attr`, `Op`, `Type`, "
-                       "`TypeRange`, `Value`, `ValueRange`");
-    }
-
     ArrayRef<ast::VariableDecl *> inputs = cst->getInputs();
     if (inputs.size() != 1) {
       return emitErrorAndNote(ref.referenceLoc,
@@ -3160,11 +3120,9 @@ LogicalResult Parser::codeCompleteAttributeName(Optional<StringRef> opName) {
 
 LogicalResult
 Parser::codeCompleteConstraintName(ast::Type inferredType,
-                                   bool allowNonCoreConstraints,
                                    bool allowInlineTypeConstraints) {
   codeCompleteContext->codeCompleteConstraintName(
-      inferredType, allowNonCoreConstraints, allowInlineTypeConstraints,
-      curDeclScope);
+      inferredType, allowInlineTypeConstraints, curDeclScope);
   return failure();
 }
 

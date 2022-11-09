@@ -943,7 +943,7 @@ private:
                      Type resultType)
       : Base(name.getLoc(), &name), numInputs(numInputs),
         numResults(numResults), codeBlock(codeBlock), constraintBody(body),
-        resultType(resultType) {}
+        resultType(resultType), hasNativeInputTypes(hasNativeInputTypes) {}
 
   /// The number of inputs to this constraint.
   unsigned numInputs;
