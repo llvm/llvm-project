@@ -47,10 +47,9 @@ public:
          bool enableDocumentation, CodeCompleteContext *codeCompleteContext)
       : ctx(ctx), lexer(sourceMgr, ctx.getDiagEngine(), codeCompleteContext),
         curToken(lexer.lexToken()), enableDocumentation(enableDocumentation),
-        valueTy(ast::ValueType::get(ctx)),
-        valueRangeTy(ast::ValueRangeType::get(ctx)),
-        typeTy(ast::TypeType::get(ctx)),
+        typeTy(ast::TypeType::get(ctx)), valueTy(ast::ValueType::get(ctx)),
         typeRangeTy(ast::TypeRangeType::get(ctx)),
+        valueRangeTy(ast::ValueRangeType::get(ctx)),
         attrTy(ast::AttributeType::get(ctx)),
         codeCompleteContext(codeCompleteContext) {}
 
@@ -116,6 +115,14 @@ private:
   LogicalResult convertExpressionTo(
       ast::Expr *&expr, ast::Type type,
       function_ref<void(ast::Diagnostic &diag)> noteAttachFn = {});
+  LogicalResult
+  convertOpExpressionTo(ast::Expr *&expr, ast::OperationType exprType,
+                        ast::Type type,
+                        function_ref<ast::InFlightDiagnostic()> emitErrorFn);
+  LogicalResult convertTupleExpressionTo(
+      ast::Expr *&expr, ast::TupleType exprType, ast::Type type,
+      function_ref<ast::InFlightDiagnostic()> emitErrorFn,
+      function_ref<void(ast::Diagnostic &diag)> noteAttachFn);
 
   /// Given an operation expression, convert it to a Value or ValueRange
   /// typed expression.
@@ -555,8 +562,8 @@ private:
   ParserContext parserContext = ParserContext::Global;
 
   /// Cached types to simplify verification and expression creation.
-  ast::Type valueTy, valueRangeTy;
-  ast::Type typeTy, typeRangeTy;
+  ast::Type typeTy, valueTy;
+  ast::RangeType typeRangeTy, valueRangeTy;
   ast::Type attrTy;
 
   /// A counter used when naming anonymous constraints and rewrites.
@@ -619,55 +626,8 @@ LogicalResult Parser::convertExpressionTo(
     return diag;
   };
 
-  if (auto exprOpType = exprType.dyn_cast<ast::OperationType>()) {
-    // Two operation types are compatible if they have the same name, or if the
-    // expected type is more general.
-    if (auto opType = type.dyn_cast<ast::OperationType>()) {
-      if (opType.getName())
-        return emitConvertError();
-      return success();
-    }
-
-    // An operation can always convert to a ValueRange.
-    if (type == valueRangeTy) {
-      expr = ast::AllResultsMemberAccessExpr::create(ctx, expr->getLoc(), expr,
-                                                     valueRangeTy);
-      return success();
-    }
-
-    // Allow conversion to a single value by constraining the result range.
-    if (type == valueTy) {
-      // If the operation is registered, we can verify if it can ever have a
-      // single result.
-      if (const ods::Operation *odsOp = exprOpType.getODSOperation()) {
-        if (odsOp->getResults().empty()) {
-          return emitConvertError()->attachNote(
-              llvm::formatv("see the definition of `{0}`, which was defined "
-                            "with zero results",
-                            odsOp->getName()),
-              odsOp->getLoc());
-        }
-
-        unsigned numSingleResults = llvm::count_if(
-            odsOp->getResults(), [](const ods::OperandOrResult &result) {
-              return result.getVariableLengthKind() ==
-                     ods::VariableLengthKind::Single;
-            });
-        if (numSingleResults > 1) {
-          return emitConvertError()->attachNote(
-              llvm::formatv("see the definition of `{0}`, which was defined "
-                            "with at least {1} results",
-                            odsOp->getName(), numSingleResults),
-              odsOp->getLoc());
-        }
-      }
-
-      expr = ast::AllResultsMemberAccessExpr::create(ctx, expr->getLoc(), expr,
-                                                     valueTy);
-      return success();
-    }
-    return emitConvertError();
-  }
+  if (auto exprOpType = exprType.dyn_cast<ast::OperationType>())
+    return convertOpExpressionTo(expr, exprOpType, type, emitConvertError);
 
   // FIXME: Decide how to allow/support converting a single result to multiple,
   // and multiple to a single result. For now, we just allow Single->Range,
@@ -681,22 +641,85 @@ LogicalResult Parser::convertExpressionTo(
     return success();
 
   // Handle tuple types.
-  if (auto exprTupleType = exprType.dyn_cast<ast::TupleType>()) {
-    auto tupleType = type.dyn_cast<ast::TupleType>();
-    if (!tupleType || tupleType.size() != exprTupleType.size())
-      return emitConvertError();
+  if (auto exprTupleType = exprType.dyn_cast<ast::TupleType>())
+    return convertTupleExpressionTo(expr, exprTupleType, type, emitConvertError,
+                                    noteAttachFn);
+
+  return emitConvertError();
+}
+
+LogicalResult Parser::convertOpExpressionTo(
+    ast::Expr *&expr, ast::OperationType exprType, ast::Type type,
+    function_ref<ast::InFlightDiagnostic()> emitErrorFn) {
+  // Two operation types are compatible if they have the same name, or if the
+  // expected type is more general.
+  if (auto opType = type.dyn_cast<ast::OperationType>()) {
+    if (opType.getName())
+      return emitErrorFn();
+    return success();
+  }
+
+  // An operation can always convert to a ValueRange.
+  if (type == valueRangeTy) {
+    expr = ast::AllResultsMemberAccessExpr::create(ctx, expr->getLoc(), expr,
+                                                   valueRangeTy);
+    return success();
+  }
+
+  // Allow conversion to a single value by constraining the result range.
+  if (type == valueTy) {
+    // If the operation is registered, we can verify if it can ever have a
+    // single result.
+    if (const ods::Operation *odsOp = exprType.getODSOperation()) {
+      if (odsOp->getResults().empty()) {
+        return emitErrorFn()->attachNote(
+            llvm::formatv("see the definition of `{0}`, which was defined "
+                          "with zero results",
+                          odsOp->getName()),
+            odsOp->getLoc());
+      }
+
+      unsigned numSingleResults = llvm::count_if(
+          odsOp->getResults(), [](const ods::OperandOrResult &result) {
+            return result.getVariableLengthKind() ==
+                   ods::VariableLengthKind::Single;
+          });
+      if (numSingleResults > 1) {
+        return emitErrorFn()->attachNote(
+            llvm::formatv("see the definition of `{0}`, which was defined "
+                          "with at least {1} results",
+                          odsOp->getName(), numSingleResults),
+            odsOp->getLoc());
+      }
+    }
+
+    expr = ast::AllResultsMemberAccessExpr::create(ctx, expr->getLoc(), expr,
+                                                   valueTy);
+    return success();
+  }
+  return emitErrorFn();
+}
+
+LogicalResult Parser::convertTupleExpressionTo(
+    ast::Expr *&expr, ast::TupleType exprType, ast::Type type,
+    function_ref<ast::InFlightDiagnostic()> emitErrorFn,
+    function_ref<void(ast::Diagnostic &diag)> noteAttachFn) {
+  // Handle conversions between tuples.
+  if (auto tupleType = type.dyn_cast<ast::TupleType>()) {
+    if (tupleType.size() != exprType.size())
+      return emitErrorFn();
 
     // Build a new tuple expression using each of the elements of the current
     // tuple.
     SmallVector<ast::Expr *> newExprs;
-    for (unsigned i = 0, e = exprTupleType.size(); i < e; ++i) {
+    for (unsigned i = 0, e = exprType.size(); i < e; ++i) {
       newExprs.push_back(ast::MemberAccessExpr::create(
           ctx, expr->getLoc(), expr, llvm::to_string(i),
-          exprTupleType.getElementTypes()[i]));
+          exprType.getElementTypes()[i]));
 
       auto diagFn = [&](ast::Diagnostic &diag) {
         diag.attachNote(llvm::formatv("when converting element #{0} of `{1}`",
-                                      i, exprTupleType));
+                                      i, exprType));
         if (noteAttachFn)
           noteAttachFn(diag);
       };
@@ -709,7 +732,37 @@ LogicalResult Parser::convertExpressionTo(
     return success();
   }
 
-  return emitConvertError();
+  // Handle conversion to a range.
+  auto convertToRange = [&](ArrayRef<ast::Type> allowedElementTypes,
+                            ast::RangeType resultTy) -> LogicalResult {
+    // TODO: We currently only allow range conversion within a rewrite context.
+    if (parserContext != ParserContext::Rewrite) {
+      return emitErrorFn()->attachNote("Tuple to Range conversion is currently "
+                                       "only allowed within a rewrite context");
+    }
+
+    // All of the tuple elements must be allowed types.
+    for (ast::Type elementType : exprType.getElementTypes())
+      if (!llvm::is_contained(allowedElementTypes, elementType))
+        return emitErrorFn();
+
+    // Build a new tuple expression using each of the elements of the current
+    // tuple.
+    SmallVector<ast::Expr *> newExprs;
+    for (unsigned i = 0, e = exprType.size(); i < e; ++i) {
+      newExprs.push_back(ast::MemberAccessExpr::create(
+          ctx, expr->getLoc(), expr, llvm::to_string(i),
+          exprType.getElementTypes()[i]));
+    }
+    expr = ast::RangeExpr::create(ctx, expr->getLoc(), newExprs, resultTy);
+    return success();
+  };
+  if (type == valueRangeTy)
+    return convertToRange({valueTy, valueRangeTy}, valueRangeTy);
+  if (type == typeRangeTy)
+    return convertToRange({typeTy, typeRangeTy}, typeRangeTy);
+
+  return emitErrorFn();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2954,6 +3007,10 @@ LogicalResult Parser::validateOperationOperandsOrResults(
         continue;
       }
     }
+
+    // Otherwise, try to convert the expression to a range.
+    if (succeeded(convertExpressionTo(valueExpr, rangeTy)))
+      continue;
 
     return emitError(
         valueExpr->getLoc(),
