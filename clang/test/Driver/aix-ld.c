@@ -136,6 +136,33 @@
 // CHECK-LD32-PROF-NOT: "-lm"
 // CHECK-LD32-PROF:     "-lc"
 
+// Check powerpc64-ibm-aix7.1.0.0, 64-bit. Enable profiling.
+// RUN: %clang %s -### 2>&1 \
+// RUN:        -resource-dir=%S/Inputs/resource_dir \
+// RUN:        -p \
+// RUN:        --target=powerpc64-ibm-aix7.1.0.0 \
+// RUN:        --sysroot %S/Inputs/aix_ppc_tree \
+// RUN:        --unwindlib=libunwind \
+// RUN:   | FileCheck --check-prefix=CHECK-LD64-PROF %s
+// CHECK-LD64-PROF-NOT: warning:
+// CHECK-LD64-PROF:     "-cc1" "-triple" "powerpc64-ibm-aix7.1.0.0"
+// CHECK-LD64-PROF:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-LD64-PROF:     "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-LD64-PROF:     "{{.*}}ld{{(.exe)?}}"
+// CHECK-LD64-PROF-NOT: "-bnso"
+// CHECK-LD64-PROF:     "-b64"
+// CHECK-LD64-PROF:     "-bpT:0x100000000" "-bpD:0x110000000"
+// CHECK-LD64-PROF:     "[[SYSROOT]]/usr/lib{{/|\\\\}}mcrt0_64.o"
+// CHECK-LD64-PROF:     "[[SYSROOT]]/usr/lib{{/|\\\\}}crti_64.o"
+// CHECK-LD64-PROF-NOT: "-lc++"
+// CHECK-LD64-PROF-NOT: "-lc++abi"
+// CHECK-LD64-PROF:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}aix{{/|\\\\}}libclang_rt.builtins-powerpc64.a"
+// CHECK-LD64-PROF-NOT: "--as-needed"
+// CHECK-LD64-PROF:     "-lunwind"
+// CHECK-LD64-PROF-NOT: "--no-as-needed"
+// CHECK-LD64-PROF-NOT: "-lm"
+// CHECK-LD64-PROF:     "-lc"
+
 // Check powerpc64-ibm-aix7.1.0.0, 64-bit. Enable g-profiling.
 // RUN: %clang %s -### 2>&1 \
 // RUN:        -resource-dir=%S/Inputs/resource_dir \
