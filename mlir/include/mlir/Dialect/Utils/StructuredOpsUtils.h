@@ -21,6 +21,7 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/StringRef.h"
 
 // Pull in all enum type definitions and utility function declarations.
 #include "mlir/Dialect/Utils/DialectUtilsEnums.h.inc"
@@ -47,9 +48,42 @@ bool isColumnMajorMatmul(ArrayAttr indexingMaps);
 /// the reduction.
 bool isRowMajorBatchMatmul(ArrayAttr indexingMaps);
 
+/// Use to encode that a particular iterator type has parallel semantics.
+constexpr StringRef getParallelIteratorTypeName() { return "parallel"; }
+
+/// Use to encode that a particular iterator type has reduction semantics.
+constexpr StringRef getReductionIteratorTypeName() { return "reduction"; }
+
+/// Use to encode that a particular iterator type has window semantics.
+constexpr StringRef getWindowIteratorTypeName() { return "window"; }
+
+/// Use to encode that a particular iterator type has window semantics.
+inline ArrayRef<StringRef> getAllIteratorTypeNames() {
+  static constexpr StringRef names[3] = {getParallelIteratorTypeName(),
+                                         getReductionIteratorTypeName(),
+                                         getWindowIteratorTypeName()};
+  return llvm::makeArrayRef(names);
+}
+
+/// Returns the iterator of a certain type.
+inline unsigned getNumIterators(StringRef name,
+                                ArrayRef<StringRef> iteratorTypes) {
+  auto names = getAllIteratorTypeNames();
+  (void)names;
+  assert(llvm::is_contained(names, name));
+  return llvm::count(iteratorTypes, name);
+}
+
+inline unsigned getNumIterators(ArrayRef<StringRef> iteratorTypes) {
+  unsigned res = 0;
+  for (auto n : getAllIteratorTypeNames())
+    res += getNumIterators(n, iteratorTypes);
+  return res;
+}
+
 /// Return positions in `iteratorTypes` that match `iteratorTypeName`.
-inline void findPositionsOfType(ArrayRef<utils::IteratorType> iteratorTypes,
-                                utils::IteratorType iteratorTypeName,
+inline void findPositionsOfType(ArrayRef<StringRef> iteratorTypes,
+                                StringRef iteratorTypeName,
                                 SmallVectorImpl<unsigned> &res) {
   for (const auto &en : llvm::enumerate(iteratorTypes)) {
     if (en.value() == iteratorTypeName)
@@ -60,28 +94,29 @@ inline void findPositionsOfType(ArrayRef<utils::IteratorType> iteratorTypes,
 /// Helper StructuredGenerator class to manipulate and rewrite ops with
 /// `StructuredOpInterface`. This is templated for now because VectorOps do not
 /// yet implement the StructuredOpInterface itself.
-template <typename StructuredOpInterface, typename IteratorTypeT>
+template <typename StructuredOpInterface>
 class StructuredGenerator {
 public:
   using MapList = ArrayRef<ArrayRef<AffineExpr>>;
 
   struct IteratorType {
-    IteratorType(IteratorTypeT iter) : iter(iter) {}
-    bool isOfType(IteratorTypeT expectedIter) const {
-      return expectedIter == iter;
-    }
-    IteratorTypeT iter;
+    IteratorType(StringRef strRef) : strRef(strRef) {}
+    bool isOfType(StringRef typeName) const { return typeName == strRef; }
+    StringRef strRef;
   };
   struct Par : public IteratorType {
-    Par() : IteratorType(IteratorTypeT::parallel) {}
+    Par() : IteratorType(getParallelIteratorTypeName()) {}
   };
   struct Red : public IteratorType {
-    Red() : IteratorType(IteratorTypeT::reduction) {}
+    Red() : IteratorType(getReductionIteratorTypeName()) {}
+  };
+  struct Win : public IteratorType {
+    Win() : IteratorType(getWindowIteratorTypeName()) {}
   };
 
   StructuredGenerator(OpBuilder &builder, StructuredOpInterface op)
       : builder(builder), ctx(op.getContext()), loc(op.getLoc()),
-        iterators(op.getIteratorTypesArray()), maps(op.getIndexingMapsArray()),
+        iterators(op.getIteratorTypeNames()), maps(op.getIndexingMapsArray()),
         op(op) {}
 
   bool iters(ArrayRef<IteratorType> its) {
@@ -103,7 +138,7 @@ protected:
   OpBuilder &builder;
   MLIRContext *ctx;
   Location loc;
-  SmallVector<IteratorTypeT> iterators;
+  SmallVector<StringRef> iterators;
   SmallVector<AffineMap, 4> maps;
   Operation *op;
 };

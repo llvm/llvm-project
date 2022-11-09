@@ -321,7 +321,7 @@ static MatchConvolutionResult isConvolutionInterfaceImpl(Operation *op) {
     if (inputExprWalker.unConvolvedDims.count(outputDim) &&
         !filterDims.count(outputDim)) {
       // Batch dimension.
-      if (iteratorTypes[outputDim] != utils::IteratorType::parallel)
+      if (iteratorTypes[outputDim] != getParallelIteratorTypeName())
         return MatchConvolutionResult::OutputDimsNotParallel;
       allLoopDims.insert(outputDim);
       continue;
@@ -329,7 +329,7 @@ static MatchConvolutionResult isConvolutionInterfaceImpl(Operation *op) {
     if (inputExprWalker.convolvedDims.count(outputDim) &&
         !filterDims.count(outputDim)) {
       // Output image Loop dimension.
-      if (iteratorTypes[outputDim] != utils::IteratorType::parallel)
+      if (iteratorTypes[outputDim] != getParallelIteratorTypeName())
         return MatchConvolutionResult::OutputDimsNotParallel;
       allLoopDims.insert(outputDim);
       continue;
@@ -338,7 +338,7 @@ static MatchConvolutionResult isConvolutionInterfaceImpl(Operation *op) {
         !inputExprWalker.unConvolvedDims.count(outputDim) &&
         filterDims.count(outputDim)) {
       // Output channel dimension.
-      if (iteratorTypes[outputDim] != utils::IteratorType::parallel)
+      if (iteratorTypes[outputDim] != getParallelIteratorTypeName())
         return MatchConvolutionResult::OutputDimsNotParallel;
       allLoopDims.insert(outputDim);
       continue;
@@ -346,7 +346,7 @@ static MatchConvolutionResult isConvolutionInterfaceImpl(Operation *op) {
     if (inputExprWalker.unConvolvedDims.count(outputDim) &&
         filterDims.count(outputDim)) {
       // Depth multiplier.
-      if (iteratorTypes[outputDim] != utils::IteratorType::parallel)
+      if (iteratorTypes[outputDim] != getParallelIteratorTypeName())
         return MatchConvolutionResult::OutputDimsNotParallel;
       allLoopDims.insert(outputDim);
       continue;
@@ -364,7 +364,7 @@ static MatchConvolutionResult isConvolutionInterfaceImpl(Operation *op) {
     if (inputExprWalker.convolvedDims.count(filterDim) &&
         !outputDims.count(filterDim)) {
       // Filter loop dimension.
-      if (iteratorTypes[filterDim] != utils::IteratorType::reduction)
+      if (iteratorTypes[filterDim] != getReductionIteratorTypeName())
         return MatchConvolutionResult::NonOutputDimNotReduction;
       if (allLoopDims.count(filterDim))
         return MatchConvolutionResult::NonConvolutionLoop;
@@ -374,7 +374,7 @@ static MatchConvolutionResult isConvolutionInterfaceImpl(Operation *op) {
     if (inputExprWalker.unConvolvedDims.count(filterDim) &&
         !outputDims.count(filterDim)) {
       // Input channel dimension.
-      if (iteratorTypes[filterDim] != utils::IteratorType::reduction)
+      if (iteratorTypes[filterDim] != getReductionIteratorTypeName())
         return MatchConvolutionResult::NonOutputDimNotReduction;
       if (allLoopDims.count(filterDim))
         return MatchConvolutionResult::NonConvolutionLoop;
@@ -618,6 +618,15 @@ LinalgOp::reifyResultShapes(OpBuilder &b,
 
 LogicalResult mlir::linalg::detail::verifyStructuredOpInterface(Operation *op) {
   LinalgOp linalgOp = cast<LinalgOp>(op);
+
+  // Check all iterator types are known.
+  auto iteratorTypesRange = linalgOp.getIteratorTypesArray();
+  for (StringRef iteratorType : iteratorTypesRange) {
+    if (!llvm::is_contained(getAllIteratorTypeNames(), iteratorType) ||
+        !utils::symbolizeIteratorType(iteratorType).has_value())
+      return op->emitOpError("unexpected iterator_type (")
+             << iteratorType << ")";
+  }
 
   // Before checking indexing maps, we need to make sure the attributes
   // referenced by it are valid.

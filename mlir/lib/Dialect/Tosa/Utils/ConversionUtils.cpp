@@ -15,10 +15,9 @@
 using namespace mlir;
 using namespace mlir::tosa;
 
-SmallVector<utils::IteratorType>
+SmallVector<StringRef>
 mlir::tosa::getNParallelLoopsAttrs(unsigned nParallelLoops) {
-  return SmallVector<utils::IteratorType>(nParallelLoops,
-                                          utils::IteratorType::parallel);
+  return SmallVector<StringRef>(nParallelLoops, getParallelIteratorTypeName());
 }
 
 SmallVector<Value>

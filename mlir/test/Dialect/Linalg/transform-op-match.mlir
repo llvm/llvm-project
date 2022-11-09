@@ -59,19 +59,13 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %match_attr = transform.structured.match
       ops{["linalg.generic"]}
-      attributes{iterator_types = [
-        #linalg.iterator_type<parallel>,
-        #linalg.iterator_type<parallel>,
-        #linalg.iterator_type<parallel>]}
+      attributes{iterator_types = ["parallel", "parallel", "parallel"]}
       in %arg1
   transform.test_print_remark_at_operand %match_attr, "matched complex attr" : !pdl.operation
   transform.test_consume_operand %match_attr
 
   %no_match = transform.structured.match
-      attributes{iterator_types = [
-        #linalg.iterator_type<parallel>,
-        #linalg.iterator_type<parallel>,
-        #linalg.iterator_type<reduction>]}
+      attributes{iterator_types = ["parallel", "parallel", "reduction"]}
       in %arg1
 // expected-remark @below {{0}}
   transform.test_print_number_of_associated_payload_ir_ops %no_match
