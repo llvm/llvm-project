@@ -25,9 +25,11 @@ if(MLIR_STANDALONE_BUILD)
 
   include_directories(${LLVM_INCLUDE_DIRS})
 
-  set(UNITTEST_DIR ${LLVM_THIRD_PARTY_DIR}/unittest)
+  set(LLVM_MAIN_SRC_DIR ${CMAKE_SOURCE_DIR}/../llvm CACHE PATH
+      "Path to LLVM source tree")
+  set(UNITTEST_DIR ${LLVM_MAIN_SRC_DIR}/utils/unittest)
   if(EXISTS ${UNITTEST_DIR}/googletest/include/gtest/gtest.h)
-    add_subdirectory(${UNITTEST_DIR} third-party/unittest)
+    add_subdirectory(${UNITTEST_DIR} utils/unittest)
   endif()
 
   set(CMAKE_LIBRARY_OUTPUT_DIRECTORY
@@ -176,7 +178,7 @@ add_subdirectory(lib/CAPI)
 if (MLIR_INCLUDE_TESTS)
   add_definitions(-DMLIR_INCLUDE_TESTS)
   add_custom_target(MLIRUnitTests)
-  if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest/googletest/include/gtest/gtest.h)
+  if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest/include/gtest/gtest.h)
     add_subdirectory(unittests)
   else()
     message(WARNING "gtest not found, unittests will not be available")
