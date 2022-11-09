@@ -101,22 +101,24 @@ TEST(IntrusiveRefCntPtr, UsesTraitsToRetainAndRelease) {
 struct X : RefCountedBase<X> {};
 struct Y : X {};
 struct Z : RefCountedBase<Z> {};
-static_assert(
-    !std::is_convertible_v<IntrusiveRefCntPtr<X> &&, IntrusiveRefCntPtr<Y>>,
-    "X&& -> Y should be rejected with SFINAE");
-static_assert(!std::is_convertible_v<const IntrusiveRefCntPtr<X> &,
-                                     IntrusiveRefCntPtr<Y>>,
+static_assert(!std::is_convertible<IntrusiveRefCntPtr<X> &&,
+                                   IntrusiveRefCntPtr<Y>>::value,
+              "X&& -> Y should be rejected with SFINAE");
+static_assert(!std::is_convertible<const IntrusiveRefCntPtr<X> &,
+                                   IntrusiveRefCntPtr<Y>>::value,
               "const X& -> Y should be rejected with SFINAE");
-static_assert(!std::is_convertible_v<std::unique_ptr<X>, IntrusiveRefCntPtr<Y>>,
-              "X -> Y should be rejected with SFINAE");
 static_assert(
-    !std::is_convertible_v<IntrusiveRefCntPtr<X> &&, IntrusiveRefCntPtr<Z>>,
-    "X&& -> Z should be rejected with SFINAE");
-static_assert(!std::is_convertible_v<const IntrusiveRefCntPtr<X> &,
-                                     IntrusiveRefCntPtr<Z>>,
+    !std::is_convertible<std::unique_ptr<X>, IntrusiveRefCntPtr<Y>>::value,
+    "X -> Y should be rejected with SFINAE");
+static_assert(!std::is_convertible<IntrusiveRefCntPtr<X> &&,
+                                   IntrusiveRefCntPtr<Z>>::value,
+              "X&& -> Z should be rejected with SFINAE");
+static_assert(!std::is_convertible<const IntrusiveRefCntPtr<X> &,
+                                   IntrusiveRefCntPtr<Z>>::value,
               "const X& -> Z should be rejected with SFINAE");
-static_assert(!std::is_convertible_v<std::unique_ptr<X>, IntrusiveRefCntPtr<Z>>,
-              "X -> Z should be rejected with SFINAE");
+static_assert(
+    !std::is_convertible<std::unique_ptr<X>, IntrusiveRefCntPtr<Z>>::value,
+    "X -> Z should be rejected with SFINAE");
 
 TEST(IntrusiveRefCntPtr, InteropsWithConvertible) {
   // Check converting constructors and operator=.

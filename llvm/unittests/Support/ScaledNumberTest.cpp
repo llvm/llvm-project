@@ -562,7 +562,7 @@ TEST(ScaledNumberHelpersTest, toIntBug) {
   EXPECT_EQ(1u, (n * n).toInt<uint32_t>());
 }
 
-static_assert(std::is_trivially_copyable_v<ScaledNumber<uint32_t>>,
+static_assert(std::is_trivially_copyable<ScaledNumber<uint32_t>>::value,
               "trivially copyable");
 
 } // end namespace

@@ -27,11 +27,14 @@ struct AdaptedIter : iterator_adaptor_base<AdaptedIter, WeirdIter> {};
 
 // Test that iterator_adaptor_base forwards typedefs, if value_type is
 // unchanged.
-static_assert(std::is_same_v<typename AdaptedIter::value_type, Shadow<0>>, "");
-static_assert(std::is_same_v<typename AdaptedIter::difference_type, Shadow<1>>,
+static_assert(std::is_same<typename AdaptedIter::value_type, Shadow<0>>::value,
               "");
-static_assert(std::is_same_v<typename AdaptedIter::pointer, Shadow<2>>, "");
-static_assert(std::is_same_v<typename AdaptedIter::reference, Shadow<3>>, "");
+static_assert(
+    std::is_same<typename AdaptedIter::difference_type, Shadow<1>>::value, "");
+static_assert(std::is_same<typename AdaptedIter::pointer, Shadow<2>>::value,
+              "");
+static_assert(std::is_same<typename AdaptedIter::reference, Shadow<3>>::value,
+              "");
 
 // Ensure that pointe{e,r}_iterator adaptors correctly forward the category of
 // the underlying iterator.
@@ -84,12 +87,13 @@ static_assert(&IntIterator::operator* == &IntIterator::operator*, "");
 static_assert(&IntIterator::operator-> == &IntIterator::operator->, "");
 static_assert(&IntIterator::operator[] == &IntIterator::operator[], "");
 
-template <class T, std::enable_if_t<std::is_assignable_v<T, int>, bool> = false>
+template <class T,
+          std::enable_if_t<std::is_assignable<T, int>::value, bool> = false>
 constexpr bool canAssignFromInt(T &&) {
   return true;
 }
 template <class T,
-          std::enable_if_t<!std::is_assignable_v<T, int>, bool> = false>
+          std::enable_if_t<!std::is_assignable<T, int>::value, bool> = false>
 constexpr bool canAssignFromInt(T &&) {
   return false;
 }
@@ -139,17 +143,15 @@ TEST(IteratorAdaptorTest, Dereference) {
 }
 
 // pointeE_iterator
-static_assert(
-    IsAdaptedIterCategorySame_v<pointee_iterator_defaulted, RandomAccessIter>,
-    "");
-static_assert(IsAdaptedIterCategorySame_v<pointee_iterator_defaulted, BidiIter>,
-              "");
+static_assert(IsAdaptedIterCategorySame<pointee_iterator_defaulted,
+                                        RandomAccessIter>::value, "");
+static_assert(IsAdaptedIterCategorySame<pointee_iterator_defaulted,
+                                        BidiIter>::value, "");
 // pointeR_iterator
-static_assert(
-    IsAdaptedIterCategorySame_v<pointer_iterator_defaulted, RandomAccessIter>,
-    "");
-static_assert(IsAdaptedIterCategorySame_v<pointer_iterator_defaulted, BidiIter>,
-              "");
+static_assert(IsAdaptedIterCategorySame<pointer_iterator_defaulted,
+                                        RandomAccessIter>::value, "");
+static_assert(IsAdaptedIterCategorySame<pointer_iterator_defaulted,
+                                        BidiIter>::value, "");
 
 TEST(PointeeIteratorTest, Basic) {
   int arr[4] = {1, 2, 3, 4};

@@ -17,12 +17,13 @@
 using namespace llvm;
 
 #if __has_feature(is_trivially_copyable) || (defined(__GNUC__) && __GNUC__ >= 5)
-static_assert(std::is_trivially_copyable_v<PressureChange>,
+static_assert(std::is_trivially_copyable<PressureChange>::value,
               "trivially copyable");
-static_assert(std::is_trivially_copyable_v<SDep>, "trivially copyable");
-static_assert(std::is_trivially_copyable_v<SDValue>, "trivially copyable");
-static_assert(std::is_trivially_copyable_v<SlotIndex>, "trivially copyable");
-static_assert(std::is_trivially_copyable_v<IdentifyingPassPtr>,
+static_assert(std::is_trivially_copyable<SDep>::value, "trivially copyable");
+static_assert(std::is_trivially_copyable<SDValue>::value, "trivially copyable");
+static_assert(std::is_trivially_copyable<SlotIndex>::value,
+              "trivially copyable");
+static_assert(std::is_trivially_copyable<IdentifyingPassPtr>::value,
               "trivially copyable");
 #endif
 

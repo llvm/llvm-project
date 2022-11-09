@@ -23,11 +23,11 @@ template <typename Ty> void canSpecializeGraphTraitsIterators(Ty *G) {
   auto X = ++I;
 
   // Should be able to iterate over all nodes of the graph.
-  static_assert(std::is_same_v<decltype(*I), NodeRef>,
+  static_assert(std::is_same<decltype(*I), NodeRef>::value,
                 "Node type does not match");
-  static_assert(std::is_same_v<decltype(*X), NodeRef>,
+  static_assert(std::is_same<decltype(*X), NodeRef>::value,
                 "Node type does not match");
-  static_assert(std::is_same_v<decltype(*E), NodeRef>,
+  static_assert(std::is_same<decltype(*E), NodeRef>::value,
                 "Node type does not match");
 
   NodeRef N = GraphTraits<Ty *>::getEntryNode(G);
@@ -36,9 +36,9 @@ template <typename Ty> void canSpecializeGraphTraitsIterators(Ty *G) {
   auto F = GraphTraits<NodeRef>::child_end(N);
 
   // Should be able to iterate over immediate successors of a node.
-  static_assert(std::is_same_v<decltype(*S), NodeRef>,
+  static_assert(std::is_same<decltype(*S), NodeRef>::value,
                 "Node type does not match");
-  static_assert(std::is_same_v<decltype(*F), NodeRef>,
+  static_assert(std::is_same<decltype(*F), NodeRef>::value,
                 "Node type does not match");
 }
 

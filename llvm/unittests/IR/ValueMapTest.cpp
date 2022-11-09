@@ -115,7 +115,8 @@ TYPED_TEST(ValueMapTest, OperationsWork) {
 
 template<typename ExpectedType, typename VarType>
 void CompileAssertHasType(VarType) {
-  static_assert(std::is_same_v<ExpectedType, VarType>, "Not the same type");
+  static_assert(std::is_same<ExpectedType, VarType>::value,
+                "Not the same type");
 }
 
 TYPED_TEST(ValueMapTest, Iteration) {

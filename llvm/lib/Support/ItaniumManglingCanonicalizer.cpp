@@ -27,7 +27,8 @@ struct FoldingSetNodeIDBuilder {
     ID.AddString(llvm::StringRef(Str.begin(), Str.size()));
   }
   template <typename T>
-  std::enable_if_t<std::is_integral_v<T> || std::is_enum_v<T>> operator()(T V) {
+  std::enable_if_t<std::is_integral<T>::value || std::is_enum<T>::value>
+  operator()(T V) {
     ID.AddInteger((unsigned long long)V);
   }
   void operator()(itanium_demangle::NodeArray A) {
