@@ -485,7 +485,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_SQRT,        ISD::VP_FMINNUM,     ISD::VP_FMAXNUM,
         ISD::VP_FCEIL,       ISD::VP_FFLOOR,      ISD::VP_FROUND,
         ISD::VP_FROUNDEVEN,  ISD::VP_FCOPYSIGN,   ISD::VP_FROUNDTOZERO,
-        ISD::VP_FRINT};
+        ISD::VP_FRINT,       ISD::VP_FNEARBYINT};
 
     static const unsigned IntegerVecReduceOps[] = {
         ISD::VECREDUCE_ADD,  ISD::VECREDUCE_AND,  ISD::VECREDUCE_OR,
@@ -2018,9 +2018,9 @@ static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
 }
 
 // Expand vector FTRUNC, FCEIL, FFLOOR, FROUND, VP_FCEIL, VP_FFLOOR, VP_FROUND
-// VP_FROUNDEVEN, VP_FROUNDTOZERO and VP_FRINT by converting to the integer
-// domain and back. Taking care to avoid converting values that are nan or
-// already correct.
+// VP_FROUNDEVEN, VP_FROUNDTOZERO, VP_FRINT and VP_FNEARBYINT by converting to
+// the integer domain and back. Taking care to avoid converting values that are
+// nan or already correct.
 static SDValue
 lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
                                       const RISCVSubtarget &Subtarget) {
@@ -2101,10 +2101,16 @@ lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   case ISD::VP_FRINT:
     Truncated = DAG.getNode(RISCVISD::VFCVT_X_F_VL, DL, IntVT, Src, Mask, VL);
     break;
+  case ISD::VP_FNEARBYINT:
+    Truncated = DAG.getNode(RISCVISD::VFROUND_NOEXCEPT_VL, DL, ContainerVT, Src,
+                            Mask, VL);
+    break;
   }
 
-  Truncated = DAG.getNode(RISCVISD::SINT_TO_FP_VL, DL, ContainerVT, Truncated,
-                          Mask, VL);
+  // VFROUND_NOEXCEPT_VL includes SINT_TO_FP_VL.
+  if (Op.getOpcode() != ISD::VP_FNEARBYINT)
+    Truncated = DAG.getNode(RISCVISD::SINT_TO_FP_VL, DL, ContainerVT, Truncated,
+                            Mask, VL);
 
   // Restore the original sign so that -0.0 is preserved.
   Truncated = DAG.getNode(RISCVISD::FCOPYSIGN_VL, DL, ContainerVT, Truncated,
@@ -4107,6 +4113,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_FCEIL:
   case ISD::VP_FFLOOR:
   case ISD::VP_FRINT:
+  case ISD::VP_FNEARBYINT:
   case ISD::VP_FROUND:
   case ISD::VP_FROUNDEVEN:
   case ISD::VP_FROUNDTOZERO:
@@ -10793,6 +10800,54 @@ emitVFCVT_RM_MASK(MachineInstr &MI, MachineBasicBlock *BB, unsigned Opcode) {
   return BB;
 }
 
+static MachineBasicBlock *emitVFROUND_NOEXCEPT_MASK(MachineInstr &MI,
+                                                    MachineBasicBlock *BB,
+                                                    unsigned CVTXOpc,
+                                                    unsigned CVTFOpc) {
+  DebugLoc DL = MI.getDebugLoc();
+
+  const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
+
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+  Register SavedFFLAGS = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+
+  // Save the old value of FFLAGS.
+  BuildMI(*BB, MI, DL, TII.get(RISCV::ReadFFLAGS), SavedFFLAGS);
+
+  assert(MI.getNumOperands() == 7);
+
+  // Emit a VFCVT_X_F
+  const TargetRegisterInfo *TRI =
+      BB->getParent()->getSubtarget().getRegisterInfo();
+  const TargetRegisterClass *RC = MI.getRegClassConstraint(0, &TII, TRI);
+  Register Tmp = MRI.createVirtualRegister(RC);
+  BuildMI(*BB, MI, DL, TII.get(CVTXOpc), Tmp)
+      .add(MI.getOperand(1))
+      .add(MI.getOperand(2))
+      .add(MI.getOperand(3))
+      .add(MI.getOperand(4))
+      .add(MI.getOperand(5))
+      .add(MI.getOperand(6));
+
+  // Emit a VFCVT_F_X
+  BuildMI(*BB, MI, DL, TII.get(CVTFOpc))
+      .add(MI.getOperand(0))
+      .add(MI.getOperand(1))
+      .addReg(Tmp)
+      .add(MI.getOperand(3))
+      .add(MI.getOperand(4))
+      .add(MI.getOperand(5))
+      .add(MI.getOperand(6));
+
+  // Restore FFLAGS.
+  BuildMI(*BB, MI, DL, TII.get(RISCV::WriteFFLAGS))
+      .addReg(SavedFFLAGS, RegState::Kill);
+
+  // Erase the pseudoinstruction.
+  MI.eraseFromParent();
+  return BB;
+}
+
 static MachineBasicBlock *emitFROUND(MachineInstr &MI, MachineBasicBlock *MBB,
                                      const RISCVSubtarget &Subtarget) {
   unsigned CmpOpc, F2IOpc, I2FOpc, FSGNJOpc, FSGNJXOpc;
@@ -10943,6 +10998,24 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF2_MASK);
   case RISCV::PseudoVFCVT_RM_X_F_V_MF4_MASK:
     return emitVFCVT_RM_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF4_MASK);
+  case RISCV::PseudoVFROUND_NOEXCEPT_V_M1_MASK:
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M1_MASK,
+                                     RISCV::PseudoVFCVT_F_X_V_M1_MASK);
+  case RISCV::PseudoVFROUND_NOEXCEPT_V_M2_MASK:
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M2_MASK,
+                                     RISCV::PseudoVFCVT_F_X_V_M2_MASK);
+  case RISCV::PseudoVFROUND_NOEXCEPT_V_M4_MASK:
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M4_MASK,
+                                     RISCV::PseudoVFCVT_F_X_V_M4_MASK);
+  case RISCV::PseudoVFROUND_NOEXCEPT_V_M8_MASK:
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_M8_MASK,
+                                     RISCV::PseudoVFCVT_F_X_V_M8_MASK);
+  case RISCV::PseudoVFROUND_NOEXCEPT_V_MF2_MASK:
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF2_MASK,
+                                     RISCV::PseudoVFCVT_F_X_V_MF2_MASK);
+  case RISCV::PseudoVFROUND_NOEXCEPT_V_MF4_MASK:
+    return emitVFROUND_NOEXCEPT_MASK(MI, BB, RISCV::PseudoVFCVT_X_F_V_MF4_MASK,
+                                     RISCV::PseudoVFCVT_F_X_V_MF4_MASK);
   case RISCV::PseudoFROUND_H:
   case RISCV::PseudoFROUND_S:
   case RISCV::PseudoFROUND_D:
@@ -12510,6 +12583,7 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(VFCVT_RTZ_XU_F_VL)
   NODE_NAME_CASE(VFCVT_RM_X_F_VL)
   NODE_NAME_CASE(VFCVT_X_F_VL)
+  NODE_NAME_CASE(VFROUND_NOEXCEPT_VL)
   NODE_NAME_CASE(SINT_TO_FP_VL)
   NODE_NAME_CASE(UINT_TO_FP_VL)
   NODE_NAME_CASE(FP_EXTEND_VL)

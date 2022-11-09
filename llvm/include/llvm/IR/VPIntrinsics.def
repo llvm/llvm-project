@@ -314,6 +314,10 @@ END_REGISTER_VP(vp_roundtozero, VP_FROUNDTOZERO)
 BEGIN_REGISTER_VP(vp_rint, 1, 2, VP_FRINT, -1)
 END_REGISTER_VP(vp_rint, VP_FRINT)
 
+// llvm.vp.nearbyint(x,mask,vlen)
+BEGIN_REGISTER_VP(vp_nearbyint, 1, 2, VP_FNEARBYINT, -1)
+END_REGISTER_VP(vp_nearbyint, VP_FNEARBYINT)
+
 ///// } Floating-Point Arithmetic
 
 ///// Type Casts {
