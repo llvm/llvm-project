@@ -537,12 +537,6 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
     LLVM_DEBUG(dbgs() << "Falling back to SDAG because we don't support no-NEON\n");
     return true;
   }
-
-  SMEAttrs Attrs(F);
-  if (Attrs.hasNewZAInterface() ||
-      (!Attrs.hasStreamingInterface() && Attrs.hasStreamingBody()))
-    return true;
-
   return false;
 }
 
