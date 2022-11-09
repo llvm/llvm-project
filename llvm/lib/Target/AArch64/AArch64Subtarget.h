@@ -69,6 +69,7 @@ public:
     CortexX1,
     CortexX1C,
     CortexX2,
+    CortexX3,
     ExynosM3,
     Falkor,
     Kryo,

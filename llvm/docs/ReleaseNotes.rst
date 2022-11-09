@@ -103,6 +103,7 @@ Changes to the AArch64 Backend
 ------------------------------
 
 * Added support for the Cortex-A715 CPU.
+* Added support for the Cortex-X3 CPU.
 
 Changes to the AMDGPU Backend
 -----------------------------
