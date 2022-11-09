@@ -3914,3 +3914,11 @@ void __tgt_rtl_print_device_info(int32_t DeviceId) {
 }
 
 } // extern "C"
+
+///// Target specific OMPT implementations
+
+// Return the current device time in nanoseconds based on HSA
+ompt_device_time_t devrtl_ompt_get_device_time(ompt_device_t *device) {
+  // TODO: Correctly implement the ompt_device_t *mechanism for device RTL
+  return getSystemTimestampInNs();
+}

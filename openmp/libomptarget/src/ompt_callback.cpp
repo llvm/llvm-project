@@ -509,7 +509,7 @@ static void LIBOMPTARGET_GET_TARGET_OPID(uint64_t *device_num,
 static int libomptarget_ompt_initialize(ompt_function_lookup_t lookup,
                                         int initial_device_num,
                                         ompt_data_t *tool_data) {
-  DP("enter libomptarget_ompt_initialize!\n");
+  DP("OMPT: enter libomptarget_ompt_initialize!\n");
 
   ompt_enabled = true;
 
@@ -525,7 +525,7 @@ static int libomptarget_ompt_initialize(ompt_function_lookup_t lookup,
 
   ompt_device_callbacks.register_callbacks(lookup);
 
-  DP("exit libomptarget_ompt_initialize!\n");
+  DP("OMPT: exit libomptarget_ompt_initialize!\n");
 
   return 0;
 }
@@ -578,7 +578,8 @@ __attribute__((constructor(102))) static void ompt_init(void) {
 extern "C" {
 
 void libomptarget_ompt_connect(ompt_start_tool_result_t *result) {
-  DP("OMPT: Enter libomptarget_ompt_connect\n");
+  DP("OMPT: Enter libomptarget_ompt_connect: OMPT enabled == %d\n",
+     ompt_enabled);
   if (ompt_enabled && result) {
     libomptarget_rtl_finalizer.register_rtl(result->finalize);
     result->initialize(ompt_device_callbacks_t::lookup, 0, NULL);
@@ -660,5 +661,14 @@ void libomptarget_ompt_set_granted_teams(uint32_t num_teams) {
 void libomptarget_ompt_set_timestamp(uint64_t start, uint64_t end) {
   ompt_tr_start_time = start;
   ompt_tr_end_time = end;
+}
+
+// Device-independent entry point to query for the trace format used.
+// Currently, only OMPT format is supported.
+ompt_record_t libomptarget_ompt_get_record_type(ompt_buffer_t *buffer,
+                                                ompt_buffer_cursor_t current) {
+  // TODO: When different OMPT trace buffer formats supported, this needs to be
+  // fixed.
+  return ompt_record_t::ompt_record_ompt;
 }
 }

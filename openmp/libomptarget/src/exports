@@ -84,7 +84,8 @@ VERS1.0 {
     libomptarget_ompt_stop_trace;
     libomptarget_ompt_set_granted_teams;
     libomptarget_ompt_set_timestamp;
-    libomptarget_ompt_advance_buffer_cursor;    
+    libomptarget_ompt_advance_buffer_cursor;
+    libomptarget_ompt_get_record_type;
     omp_get_interop_ptr;
     omp_get_interop_str;
     omp_get_interop_int;

@@ -40,7 +40,8 @@
 #define FOREACH_TARGET_FN(macro)                                               \
   macro(ompt_set_trace_ompt) macro(ompt_start_trace) macro(ompt_flush_trace)   \
       macro(ompt_stop_trace) macro(ompt_advance_buffer_cursor)                 \
-          macro(ompt_get_record_ompt)
+          macro(ompt_get_record_ompt) macro(ompt_get_device_time)              \
+              macro(ompt_get_record_type)
 
 #define fnptr_to_ptr(x) ((void *)(uint64_t)x)
 
@@ -58,6 +59,7 @@ static std::mutex start_trace_mutex;
 static std::mutex flush_trace_mutex;
 static std::mutex stop_trace_mutex;
 static std::mutex advance_buffer_cursor_mutex;
+static std::mutex get_record_type_mutex;
 
 //****************************************************************************
 // global data
@@ -74,6 +76,10 @@ typedef int (*libomptarget_ompt_stop_trace_t)(ompt_device_t *);
 typedef int (*libomptarget_ompt_advance_buffer_cursor_t)(
     ompt_device_t *, ompt_buffer_t *, size_t, ompt_buffer_cursor_t,
     ompt_buffer_cursor_t *);
+typedef ompt_device_time_t (*libomptarget_ompt_get_device_time_t)(
+    ompt_device_t *);
+typedef ompt_record_t (*libomptarget_ompt_get_record_type_t)(
+    ompt_buffer_t *, ompt_buffer_cursor_t);
 
 libomptarget_ompt_set_trace_ompt_t ompt_set_trace_ompt_fn = nullptr;
 libomptarget_ompt_start_trace_t ompt_start_trace_fn = nullptr;
@@ -81,9 +87,13 @@ libomptarget_ompt_flush_trace_t ompt_flush_trace_fn = nullptr;
 libomptarget_ompt_stop_trace_t ompt_stop_trace_fn = nullptr;
 libomptarget_ompt_advance_buffer_cursor_t ompt_advance_buffer_cursor_fn =
     nullptr;
+libomptarget_ompt_get_record_type_t ompt_get_record_type_fn = nullptr;
 
 /// Global function to enable/disable queue profiling for all devices
 extern void ompt_enable_queue_profiling(int enable);
+
+// These are the implementations in the device plugin/RTL
+extern ompt_device_time_t devrtl_ompt_get_device_time(ompt_device_t *device);
 
 // Runtime entry-points for device tracing
 
@@ -224,6 +234,26 @@ ompt_advance_buffer_cursor(ompt_device_t *device, ompt_buffer_t *buffer,
     }
   }
   return ompt_advance_buffer_cursor_fn(device, buffer, size, current, next);
+}
+
+OMPT_API_ROUTINE ompt_record_t
+ompt_get_record_type(ompt_buffer_t *buffer, ompt_buffer_cursor_t current) {
+  {
+    std::unique_lock<std::mutex> lck(get_record_type_mutex);
+    if (!ompt_get_record_type_fn) {
+      void *vptr = dlsym(NULL, "libomptarget_ompt_get_record_type");
+      assert(vptr && "OMPT get record type entry point not found");
+      ompt_get_record_type_fn =
+          reinterpret_cast<libomptarget_ompt_get_record_type_t>(vptr);
+    }
+  }
+  return ompt_get_record_type_fn(buffer, current);
+}
+
+OMPT_API_ROUTINE ompt_device_time_t
+ompt_get_device_time(ompt_device_t *device) {
+  DP("OMPT: Executing ompt_get_device_time\n");
+  return devrtl_ompt_get_device_time(device);
 }
 
 // End of runtime entry-points for trace records
