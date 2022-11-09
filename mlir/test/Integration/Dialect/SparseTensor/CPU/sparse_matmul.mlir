@@ -9,7 +9,13 @@
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void \
 // RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
-
+//
+// Do the same run, but now with direct IR generation.
+//
+// RUN: mlir-opt %s --sparse-compiler=enable-runtime-library=false | \
+// RUN: mlir-cpu-runner -e entry -entry-point-result=void \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
+// RUN: FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{
   dimLevelType = [ "dense", "compressed" ],
@@ -221,8 +227,10 @@ module {
     //
     // Sanity check on nonzeros.
     //
-    // CHECK: ( 30.5, 4.2, 4.6, 7, 8, -1, -1, -1 )
-    // CHECK: ( 30.5, 4.2, 4.6, 7, 8, -1, -1, -1 )
+    // FIXME: bring this back once dense2sparse skips zeros
+    //
+    // C_HECK: ( 30.5, 4.2, 4.6, 7, 8 )
+    // C_HECK: ( 30.5, 4.2, 4.6, 7, 8 )
     //
     %val7 = sparse_tensor.values %7 : tensor<4x4xf64, #CSR> to memref<?xf64>
     %val8 = sparse_tensor.values %8 : tensor<4x4xf64, #DCSR> to memref<?xf64>
