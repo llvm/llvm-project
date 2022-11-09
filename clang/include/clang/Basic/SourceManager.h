@@ -710,7 +710,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// not have been loaded, so that value would be unknown.
   SourceLocation::UIntTy CurrentLoadedOffset;
 
-  /// The highest possible offset is 2^32-1 (2^63-1 for 64-bit source
+  /// The highest possible offset is 2^31-1 (2^63-1 for 64-bit source
   /// locations), so CurrentLoadedOffset starts at 2^31 (2^63 resp.).
   static const SourceLocation::UIntTy MaxLoadedOffset =
       1ULL << (8 * sizeof(SourceLocation::UIntTy) - 1);
@@ -1690,6 +1690,10 @@ public:
   void PrintStats() const;
 
   void dump() const;
+
+  // Produce notes describing the current source location address space usage.
+  void noteSLocAddressSpaceUsage(DiagnosticsEngine &Diag,
+                                 Optional<unsigned> MaxNotes = 32) const;
 
   /// Get the number of local SLocEntries we have.
   unsigned local_sloc_entry_size() const { return LocalSLocEntryTable.size(); }
