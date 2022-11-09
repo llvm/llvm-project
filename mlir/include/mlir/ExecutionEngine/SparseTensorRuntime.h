@@ -56,12 +56,16 @@ extern "C" {
 /// kSparseToSparse STS             STS, copied from the STS source
 /// kToIterator     STS             Iterator, call @getNext to use and
 ///                                 @delSparseTensorIterator to free.
-MLIR_CRUNNERUTILS_EXPORT void *
-_mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
-                             StridedMemRefType<index_type, 1> *sref,
-                             StridedMemRefType<index_type, 1> *pref,
-                             OverheadType ptrTp, OverheadType indTp,
-                             PrimaryType valTp, Action action, void *ptr);
+MLIR_CRUNNERUTILS_EXPORT void *_mlir_ciface_newSparseTensor( // NOLINT
+    StridedMemRefType<index_type, 1> *dimSizesRef,
+    StridedMemRefType<index_type, 1> *lvlSizesRef,
+    StridedMemRefType<DimLevelType, 1> *lvlTypesRef,
+    StridedMemRefType<index_type, 1> *lvl2dimRef,
+    StridedMemRefType<index_type, 1> *dim2lvlRef, OverheadType ptrTp,
+    OverheadType indTp, PrimaryType valTp, Action action, void *ptr);
+
+// TODO: document what all the arguments are/mean for the functions below,
+// especially with regards to "dim"-vs-"lvl" and mappings/permutations.
 
 /// Tensor-storage method to obtain direct access to the values array.
 #define DECL_SPARSEVALUES(VNAME, V)                                            \
@@ -130,8 +134,8 @@ MLIR_SPARSETENSOR_FOREVERY_V(DECL_EXPINSERT)
 //
 //===----------------------------------------------------------------------===//
 
-/// Tensor-storage method to get the size of the given dimension.
-MLIR_CRUNNERUTILS_EXPORT index_type sparseDimSize(void *tensor, index_type d);
+/// Tensor-storage method to get the size of the given level.
+MLIR_CRUNNERUTILS_EXPORT index_type sparseLvlSize(void *tensor, index_type l);
 
 /// Tensor-storage method to finalize lexicographic insertions.
 MLIR_CRUNNERUTILS_EXPORT void endInsert(void *tensor);
