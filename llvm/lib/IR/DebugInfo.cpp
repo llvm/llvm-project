@@ -840,6 +840,36 @@ void Instruction::applyMergedLocation(const DILocation *LocA,
   setDebugLoc(DILocation::getMergedLocation(LocA, LocB));
 }
 
+void Instruction::mergeDIAssignID(
+    ArrayRef<const Instruction *> SourceInstructions) {
+  // Replace all uses (and attachments) of all the DIAssignIDs
+  // on SourceInstructions with a single merged value.
+  Function *Fn = getFunction();
+  assert(Fn && "Uninserted instruction merged");
+  // Collect up the DIAssignID tags.
+  SmallVector<DIAssignID *, 4> IDs;
+  for (const Instruction *I : SourceInstructions) {
+    if (auto *MD = I->getMetadata(LLVMContext::MD_DIAssignID))
+      IDs.push_back(cast<DIAssignID>(MD));
+    assert(Fn == I->getFunction() &&
+           "Merging with instruction from another function not allowed");
+  }
+
+  // Add this instruction's DIAssignID too, if it has one.
+  if (auto *MD = getMetadata(LLVMContext::MD_DIAssignID))
+    IDs.push_back(cast<DIAssignID>(MD));
+
+  if (IDs.empty())
+    return; // No DIAssignID tags to process.
+
+  DIAssignID *MergeID = IDs[0];
+  for (auto It = std::next(IDs.begin()), End = IDs.end(); It != End; ++It) {
+    if (*It != MergeID)
+      at::RAUW(*It, MergeID);
+  }
+  setMetadata(LLVMContext::MD_DIAssignID, MergeID);
+}
+
 void Instruction::updateLocationAfterHoist() { dropLocation(); }
 
 void Instruction::dropLocation() {
