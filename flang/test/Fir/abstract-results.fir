@@ -87,6 +87,26 @@ func.func @boxfunc_callee() -> !fir.box<!fir.heap<f64>> {
   // FUNC-BOX: return
 }
 
+// FUNC-REF-LABEL: func @retcptr() -> i64
+// FUNC-BOX-LABEL: func @retcptr() -> i64
+func.func @retcptr() -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {
+  %0 = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {bindc_name = "rec", uniq_name = "_QFrecErec"}
+  %1 = fir.load %0 : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
+  return %1 : !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+
+  // FUNC-REF: %[[ALLOC:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {bindc_name = "rec", uniq_name = "_QFrecErec"}
+  // FUNC-REF: %[[FIELD:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+  // FUNC-REF: %[[ADDR:.*]] = fir.coordinate_of %[[ALLOC]], %[[FIELD]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+  // FUNC-REF: %[[VAL:.*]] = fir.load %[[ADDR]] : !fir.ref<i64>
+  // FUNC-REF: return %[[VAL]] : i64
+  // FUNC-BOX: %[[ALLOC:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {bindc_name = "rec", uniq_name = "_QFrecErec"}
+  // FUNC-BOX: %[[FIELD:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+  // FUNC-BOX: %[[ADDR:.*]] = fir.coordinate_of %[[ALLOC]], %[[FIELD]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+  // FUNC-BOX: %[[VAL:.*]] = fir.load %[[ADDR]] : !fir.ref<i64>
+  // FUNC-BOX: return %[[VAL]] : i64
+}
+
+
 // ------------------------ Test caller rewrite --------------------------------
 
 // FUNC-REF-LABEL: func @call_arrayfunc() {
@@ -202,15 +222,26 @@ func.func @call_chararrayfunc() {
   // FUNC-BOX-NOT: fir.save_result
 }
 
-func.func private @rettcptr() -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> attributes {fir.bindc_name = "rettcptr"}
-
-// FUNC-REF-LABEL: func @_QPtest_return_cptr() {
-// FUNC-BOX-LABEL: func @_QPtest_return_cptr() {
+// FUNC-REF-LABEL: func @_QPtest_return_cptr
+// FUNC-BOX-LABEL: func @_QPtest_return_cptr
 func.func @_QPtest_return_cptr() {
-  // FUNC-REF: [[VAL:.*]] = fir.call @rettcptr() : () -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-  // FUNC-BOX: [[VAL:.*]] = fir.call @rettcptr() : () -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-  %1 = fir.call @rettcptr() : () -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+  %0 = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {bindc_name = ".result"}
+  %1 = fir.call @retcptr() : () -> i64
+  %2 = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+  %3 = fir.coordinate_of %0, %2 : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+  fir.store %1 to %3 : !fir.ref<i64>
   return
+
+  // FUNC-REF: %[[ALLOC:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {bindc_name = ".result"}
+  // FUNC-REF: %[[VAL:.*]] = fir.call @retcptr() : () -> i64
+  // FUNC-REF: %[[FIELD:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+  // FUNC-REF: %[[ADDR:.*]] = fir.coordinate_of %[[ALLOC]], %[[FIELD]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+  // FUNC-REF: fir.store %[[VAL]] to %[[ADDR]] : !fir.ref<i64>
+  // FUNC-BOX: %[[ALLOC:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {bindc_name = ".result"}
+  // FUNC-BOX: %[[VAL:.*]] = fir.call @retcptr() : () -> i64
+  // FUNC-BOX: %[[FIELD:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+  // FUNC-BOX: %[[ADDR:.*]] = fir.coordinate_of %[[ALLOC]], %[[FIELD]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+  // FUNC-BOX: fir.store %[[VAL]] to %[[ADDR]] : !fir.ref<i64>
 }
 
 // ------------------------ Test fir.address_of rewrite ------------------------
@@ -233,6 +264,29 @@ func.func @test_address_of() {
   // FUNC-BOX: fir.call @takesfuncarray(%[[conv]]) : ((i32) -> !fir.array<?xf32>) -> ()
 
 }
+
+// FUNC-REF-LABEL: func.func private @returns_null() -> i64
+// FUNC-BOX-LABEL: func.func private @returns_null() -> i64
+func.func private @returns_null() -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+
+// FUNC-REF-LABEL: func @test_address_of_cptr
+// FUNC-BOX-LABEL: func @test_address_of_cptr
+func.func @test_address_of_cptr() {
+  %0 = fir.address_of(@returns_null) : () -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+  %1 = fir.convert %0 : (() -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>) -> (() -> ())
+  fir.call @_QMtest_c_func_modPsubr(%1) : (() -> ()) -> ()
+  return
+
+  // FUNC-REF: %[[VAL_0:.*]] = fir.address_of(@returns_null) : () -> i64
+  // FUNC-REF: %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (() -> i64) -> (() -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>)
+  // FUNC-REF: %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (() -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>) -> (() -> ())
+  // FUNC-REF: fir.call @_QMtest_c_func_modPsubr(%[[VAL_2]]) : (() -> ()) -> ()
+  // FUNC-BOX: %[[VAL_0:.*]] = fir.address_of(@returns_null) : () -> i64
+  // FUNC-BOX: %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (() -> i64) -> (() -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>)
+  // FUNC-BOX: %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (() -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>) -> (() -> ())
+  // FUNC-BOX: fir.call @_QMtest_c_func_modPsubr(%[[VAL_2]]) : (() -> ()) -> ()
+}
+
 
 // ----------------------- Test indirect calls rewrite ------------------------
 
@@ -265,6 +319,33 @@ func.func @test_indirect_calls(%arg0: () -> ()) {
   // FUNC-BOX: %[[conv:.*]] = fir.convert %[[original_conv]] : ((index) -> !fir.array<?xf32>) -> ((!fir.box<!fir.array<?xf32>>, index) -> ())
   // FUNC-BOX: fir.call %[[conv]](%[[box]], %c100) : (!fir.box<!fir.array<?xf32>>, index) -> ()
   // FUNC-BOX-NOT: fir.save_result
+}
+
+// FUNC-REF-LABEL: func @test_indirect_calls_return_cptr(
+// FUNC-REF-SAME: %[[ARG0:.*]]: () -> ())
+// FUNC-BOX-LABEL: func @test_indirect_calls_return_cptr(
+// FUNC-BOX-SAME: %[[ARG0:.*]]: () -> ())
+func.func @test_indirect_calls_return_cptr(%arg0: () -> ()) {
+  %0 = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {bindc_name = ".result"}
+  %1 = fir.convert %arg0 : (() -> ()) -> (() -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>)
+  %2 = fir.call %1() : () -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+  fir.save_result %2 to %0 : !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
+  return
+
+  // FUNC-REF: %[[VAL_0:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {bindc_name = ".result"}
+  // FUNC-REF: %[[VAL_1:.*]] = fir.convert %[[ARG0]] : (() -> ()) -> (() -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>)
+  // FUNC-REF: %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (() -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>) -> (() -> i64)
+  // FUNC-REF: %[[VAL_3:.*]] = fir.call %[[VAL_2]]() : () -> i64
+  // FUNC-REF: %[[VAL_4:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+  // FUNC-REF: %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_4]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+  // FUNC-REF: fir.store %[[VAL_3]] to %[[VAL_5]] : !fir.ref<i64>
+  // FUNC-BOX: %[[VAL_0:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {bindc_name = ".result"}
+  // FUNC-BOX: %[[VAL_1:.*]] = fir.convert %[[ARG0]] : (() -> ()) -> (() -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>)
+  // FUNC-BOX: %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (() -> !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>) -> (() -> i64)
+  // FUNC-BOX: %[[VAL_3:.*]] = fir.call %[[VAL_2]]() : () -> i64
+  // FUNC-BOX: %[[VAL_4:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+  // FUNC-BOX: %[[VAL_5:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_4]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+  // FUNC-BOX: fir.store %[[VAL_3]] to %[[VAL_5]] : !fir.ref<i64>
 }
 
 // ----------------------- Test GlobalOp rewrite ------------------------
