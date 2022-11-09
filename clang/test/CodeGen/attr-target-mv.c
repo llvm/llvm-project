@@ -17,6 +17,9 @@ int __attribute__((target("arch=rocketlake"))) foo(void) {return 12;}
 int __attribute__((target("arch=core2"))) foo(void) {return 13;}
 int __attribute__((target("arch=raptorlake"))) foo(void) {return 14;}
 int __attribute__((target("arch=meteorlake"))) foo(void) {return 15;}
+int __attribute__((target("arch=sierraforest"))) foo(void) {return 16;}
+int __attribute__((target("arch=grandridge"))) foo(void) {return 17;}
+int __attribute__((target("arch=graniterapids"))) foo(void) {return 18;}
 int __attribute__((target("default"))) foo(void) { return 2; }
 
 int bar(void) {
@@ -155,6 +158,12 @@ void calls_pr50025c(void) { pr50025c(); }
 // LINUX: ret i32 14
 // LINUX: define{{.*}} i32 @foo.arch_meteorlake()
 // LINUX: ret i32 15
+// LINUX: define{{.*}} i32 @foo.arch_sierraforest()
+// LINUX: ret i32 16
+// LINUX: define{{.*}} i32 @foo.arch_grandridge()
+// LINUX: ret i32 17
+// LINUX: define{{.*}} i32 @foo.arch_graniterapids()
+// LINUX: ret i32 18
 // LINUX: define{{.*}} i32 @foo()
 // LINUX: ret i32 2
 // LINUX: define{{.*}} i32 @bar()
@@ -190,6 +199,12 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: ret i32 14
 // WINDOWS: define dso_local i32 @foo.arch_meteorlake()
 // WINDOWS: ret i32 15
+// WINDOWS: define{{.*}} i32 @foo.arch_sierraforest()
+// WINDOWS: ret i32 16
+// WINDOWS: define{{.*}} i32 @foo.arch_grandridge()
+// WINDOWS: ret i32 17
+// WINDOWS: define{{.*}} i32 @foo.arch_graniterapids()
+// WINDOWS: ret i32 18
 // WINDOWS: define dso_local i32 @foo()
 // WINDOWS: ret i32 2
 // WINDOWS: define dso_local i32 @bar()

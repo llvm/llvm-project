@@ -76,6 +76,9 @@ enum ProcessorTypes {
   INTEL_GOLDMONT_PLUS,
   INTEL_TREMONT,
   AMDFAM19H,
+  ZHAOXIN_FAM7H,
+  INTEL_SIERRAFOREST,
+  INTEL_GRANDRIDGE,
   CPU_TYPE_MAX
 };
 
@@ -107,6 +110,9 @@ enum ProcessorSubtypes {
   INTEL_COREI7_ALDERLAKE,
   AMDFAM19H_ZNVER3,
   INTEL_COREI7_ROCKETLAKE,
+  ZHAOXIN_FAM7H_LUJIAZUI,
+  AMDFAM19H_ZNVER4,
+  INTEL_COREI7_GRANITERAPIDS,
   CPU_SUBTYPE_MAX
 };
 
@@ -440,6 +446,12 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     // Alderlake:
     case 0x97:
     case 0x9a:
+    // Raptorlake:
+    case 0xb7:
+    // Meteorlake:
+    case 0xb5:
+    case 0xaa:
+    case 0xac:
       CPU = "alderlake";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_ALDERLAKE;
@@ -458,6 +470,14 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       CPU = "sapphirerapids";
       *Type = INTEL_COREI7;
       *Subtype = INTEL_COREI7_SAPPHIRERAPIDS;
+      break;
+
+    // Graniterapids:
+    case 0xae:
+    case 0xad:
+      CPU = "graniterapids";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_GRANITERAPIDS;
       break;
 
     case 0x1c: // Most 45 nm Intel Atom processors
@@ -492,6 +512,18 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x86:
       CPU = "tremont";
       *Type = INTEL_TREMONT;
+      break;
+
+    // Sierraforest:
+    case 0xaf:
+      CPU = "sierraforest";
+      *Type = INTEL_SIERRAFOREST;
+      break;
+
+    // Grandridge:
+    case 0xb6:
+      CPU = "grandridge";
+      *Type = INTEL_GRANDRIDGE;
       break;
 
     case 0x57:
