@@ -1,4 +1,4 @@
-; RUN: opt -early-cse -S < %s | FileCheck %s
+; RUN: opt -passes=early-cse -S < %s | FileCheck %s
 
 ; We allow either sign to provide flexibility for mathlib
 ; implementations. The POSIX standard is not strict here.
