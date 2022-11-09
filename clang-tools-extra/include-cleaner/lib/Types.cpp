@@ -47,9 +47,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SymbolReference &R) {
   // We can't decode the Location without SourceManager. Its raw representation
   // isn't completely useless (and distinguishes SymbolReference from Symbol).
   return OS << R.Target << "@0x"
-            << llvm::utohexstr(R.RefLocation.getRawEncoding(),
-                               /*Width=*/CHAR_BIT *
-                                   sizeof(SourceLocation::UIntTy));
+            << llvm::utohexstr(
+                   R.RefLocation.getRawEncoding(), /*LowerCase=*/false,
+                   /*Width=*/CHAR_BIT * sizeof(SourceLocation::UIntTy));
 }
 
 } // namespace clang::include_cleaner
