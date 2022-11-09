@@ -1177,6 +1177,10 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
       std::string bundle_entry_id = "hip-amdgcn-amd-amdhsa-gfx" +
         isa_name.substr(index + 3);
 
+      // Write data to file system so that Offload Bundler can process
+      // TODO: Switch write to VFS
+      outputToFile(Input, Input->Name);
+
       // Configure Offload Bundler
       OffloadBundlerConfig BundlerConfig;
       BundlerConfig.AllowMissingBundles = true;
@@ -1240,9 +1244,11 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
 
       Result->release();
 
-      // Remove output file
-      if (!env::shouldSaveTemps())
+      // Remove temporary files
+      if (!env::shouldSaveTemps()) {
+        sys::fs::remove(Input->Name);
         sys::fs::remove(output_file_name);
+      }
     }
     // Unbundle bitcode archive
     else if (Input->DataKind == AMD_COMGR_DATA_KIND_AR_BUNDLE) {
@@ -1254,6 +1260,10 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
       size_t index = isa_name.find("gfx");
       std::string bundle_entry_id = "hip-amdgcn-amd-amdhsa-gfx" +
         isa_name.substr(index + 3);
+
+      // Write data to file system so that Offload Bundler can process
+      // TODO: Switch write to VFS
+      outputToFile(Input, Input->Name);
 
       // Configure Offload Bundler
       OffloadBundlerConfig BundlerConfig;
@@ -1361,9 +1371,11 @@ amd_comgr_status_t AMDGPUCompiler::linkBitcodeToBitcode() {
 
       Result->release();
 
-      // Remove output file
-      if (!env::shouldSaveTemps())
+      // Remove temporary files
+      if (!env::shouldSaveTemps()) {
+        sys::fs::remove(Input->Name);
         sys::fs::remove(output_file_name);
+      }
     }
     else
       continue;
