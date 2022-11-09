@@ -947,6 +947,11 @@ Value mlir::sparse_tensor::allocDenseTensor(OpBuilder &builder, Location loc,
   return mem;
 }
 
+void mlir::sparse_tensor::deallocDenseTensor(OpBuilder &builder, Location loc,
+                                             Value buffer) {
+  builder.create<memref::DeallocOp>(loc, buffer);
+}
+
 Value mlir::sparse_tensor::genValueForDense(OpBuilder &builder, Location loc,
                                             Value tensor, ValueRange ivs) {
   Value val = builder.create<tensor::ExtractOp>(loc, tensor, ivs);
