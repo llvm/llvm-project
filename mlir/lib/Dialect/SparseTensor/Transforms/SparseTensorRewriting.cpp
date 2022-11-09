@@ -696,11 +696,49 @@ public:
 
     auto loc = op.getLoc();
     Value input = op.getTensor();
+    SmallVector<Value> reduc = op.getInitArgs();
     auto rtp = input.getType().cast<RankedTensorType>();
     int64_t rank = rtp.getRank();
-    auto enc = getSparseTensorEncoding(rtp);
 
-    SmallVector<Value> reduc = op.getInitArgs();
+    // Special-case: for each over a sparse constant uses its own rewriting
+    // rule.
+    if (auto constOp = input.getDefiningOp<arith::ConstantOp>()) {
+      if (auto attr = constOp.getValue().dyn_cast<SparseElementsAttr>()) {
+        // Foreach on constant.
+        DenseElementsAttr indicesAttr = attr.getIndices();
+        DenseElementsAttr valuesAttr = attr.getValues();
+
+        SmallVector<Value> args;
+        for (int i = 0, e = valuesAttr.size(); i < e; i++) {
+          auto valAttr = valuesAttr.getValues<TypedAttr>()[i];
+          for (int j = 0; j < rank; j++) {
+            auto coordAttr = indicesAttr.getValues<IntegerAttr>()[i * rank + j];
+            auto coord = rewriter.create<arith::ConstantIndexOp>(
+                loc, coordAttr.getInt());
+            // Remaps coordinates.
+            args.push_back(coord);
+          }
+          // Remaps value.
+          auto val = rewriter.create<arith::ConstantOp>(loc, valAttr);
+          args.push_back(val);
+          // Remaps iteration args.
+          args.append(reduc);
+          auto cloned = cast<ForeachOp>(rewriter.clone(*op.getOperation()));
+          Operation *yield = cloned.getBody()->getTerminator();
+          rewriter.mergeBlockBefore(cloned.getBody(), op, args);
+          // clean up
+          args.clear();
+          rewriter.eraseOp(cloned);
+          reduc = yield->getOperands();
+          rewriter.eraseOp(yield);
+        }
+        rewriter.replaceOp(op, reduc);
+        return success();
+      }
+    }
+
+    // Otherwise, use loop emitter to generate loops.
+    auto enc = getSparseTensorEncoding(rtp);
 
     // 1. Generates loop for the sparse input.
     SparseTensorLoopEmitter loopEmitter(ValueRange{input});
