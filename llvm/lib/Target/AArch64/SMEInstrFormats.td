@@ -2670,3 +2670,902 @@ multiclass sme2_luti4_vector_vg4_index<string mnemonic> {
   def _S : sme2_luti4_vector_vg4_index<0b10, ZZZZ_s_mul_r, mnemonic>;
 }
 
+//===----------------------------------------------------------------------===//
+// SME2 MOV
+class sme2_mova_vec_to_tile_vg2_multi_base<bits<2> sz, bit v,
+                                           RegisterOperand tile_ty,
+                                           Operand index_ty,
+                                           RegisterOperand vector_ty,
+                                           string mnemonic>
+   : I<(outs tile_ty:$ZAd),
+       (ins tile_ty:$_ZAd, MatrixIndexGPR32Op12_15:$Rs, index_ty:$imm, vector_ty:$Zn),
+       mnemonic, "\t$ZAd[$Rs, $imm, vgx2], $Zn",
+       "", []>, Sched<[]> {
+  bits<2> Rs;
+  bits<4> Zn;
+  let Inst{31-24} = 0b11000000;
+  let Inst{23-22} = sz;
+  let Inst{21-16} = 0b000100;
+  let Inst{15}    = v;
+  let Inst{14-13} = Rs;
+  let Inst{12-10} = 0b000;
+  let Inst{9-6}   = Zn;
+  let Inst{5-3}   = 0b000;
+
+  let Constraints = "$ZAd = $_ZAd";
+}
+
+multiclass sme2_mova_vec_to_tile_or_array_aliases<int prefer, Instruction inst,
+                                                  RegisterOperand tile_or_array_ty,
+                                                  RegisterOperand  rv_ty,
+                                                  Operand index_ty,
+                                                  RegisterOperand vector_ty,
+                                                  string mnemonic,
+                                                  string vg_acronym=""> {
+  def : InstAlias<mnemonic # "\t$ZAd[$Rs, $imm" # !if(!eq(vg_acronym, ""), "", ", " # vg_acronym) # "], $Zn",
+                  (inst tile_or_array_ty:$ZAd, rv_ty:$Rs, index_ty:$imm, vector_ty:$Zn), prefer>;
+
+}
+
+// SME2 move vector to tile, two registers
+multiclass sme2_mova_vec_to_tile_vg2_multi_base<bit v, string mnemonic> {
+
+  def _B : sme2_mova_vec_to_tile_vg2_multi_base<0b00, v,
+                                                !if(v, TileVectorOpV8,
+                                                       TileVectorOpH8),
+                                                uimm3s2range,  ZZ_b_mul_r,
+                                                mnemonic> {
+    bits<3> imm;
+    let Inst{2-0} = imm;
+  }
+
+  def _H : sme2_mova_vec_to_tile_vg2_multi_base<0b01, v,
+                                                !if(v, TileVectorOpV16,
+                                                       TileVectorOpH16),
+                                                uimm2s2range, ZZ_h_mul_r,
+                                                mnemonic> {
+    bits<1> ZAd;
+    bits<2> imm;
+    let Inst{2}   = ZAd;
+    let Inst{1-0} = imm;
+  }
+
+  def _S : sme2_mova_vec_to_tile_vg2_multi_base<0b10, v,
+                                                !if(v, TileVectorOpV32,
+                                                       TileVectorOpH32),
+                                                 uimm1s2range, ZZ_s_mul_r,
+                                                 mnemonic> {
+    bits<2> ZAd;
+    bits<1> imm;
+    let Inst{2-1} = ZAd;
+    let Inst{0}   = imm;
+  }
+
+  def _D : sme2_mova_vec_to_tile_vg2_multi_base<0b11, v,
+                                                !if(v, TileVectorOpV64,
+                                                       TileVectorOpH64),
+                                                uimm0s2range, ZZ_d_mul_r,
+                                                mnemonic> {
+    bits<3> ZAd;
+    let Inst{2-0} = ZAd;
+   }
+
+  defm : sme2_mova_vec_to_tile_or_array_aliases<1, !cast<Instruction>(NAME # _B),
+                                                !if(v, TileVectorOpV8,
+                                                       TileVectorOpH8),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm3s2range,  ZZ_b_mul_r,
+                                                "mov">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<1, !cast<Instruction>(NAME # _H),
+                                                !if(v, TileVectorOpV16,
+                                                       TileVectorOpH16),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm2s2range,  ZZ_h_mul_r,
+                                                "mov">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<1, !cast<Instruction>(NAME # _S),
+                                                !if(v, TileVectorOpV32,
+                                                       TileVectorOpH32),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm1s2range,  ZZ_s_mul_r,
+                                                "mov">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<1, !cast<Instruction>(NAME # _D),
+                                                !if(v, TileVectorOpV64,
+                                                       TileVectorOpH64),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm0s2range,  ZZ_d_mul_r,
+                                                "mov">;
+
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME # _B),
+                                                !if(v, TileVectorOpV8,
+                                                       TileVectorOpH8),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm3s2range,  ZZ_b_mul_r,
+                                                "mova">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME # _H),
+                                                !if(v, TileVectorOpV16,
+                                                       TileVectorOpH16),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm2s2range,  ZZ_h_mul_r,
+                                                "mova">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME # _S),
+                                                !if(v, TileVectorOpV32,
+                                                       TileVectorOpH32),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm1s2range,  ZZ_s_mul_r,
+                                                "mova">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME # _D),
+                                                !if(v, TileVectorOpV64,
+                                                       TileVectorOpH64),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm0s2range,  ZZ_d_mul_r,
+                                                "mova">;
+
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME # _B),
+                                                !if(v, TileVectorOpV8,
+                                                       TileVectorOpH8),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm3s2range,  ZZ_b_mul_r,
+                                                "mova">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME # _H),
+                                                !if(v, TileVectorOpV16,
+                                                       TileVectorOpH16),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm2s2range,  ZZ_h_mul_r,
+                                                "mova">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME # _S),
+                                                !if(v, TileVectorOpV32,
+                                                       TileVectorOpH32),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm1s2range,  ZZ_s_mul_r,
+                                                "mova">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME # _D),
+                                                !if(v, TileVectorOpV64,
+                                                       TileVectorOpH64),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm0s2range,  ZZ_d_mul_r,
+                                                "mova">;
+}
+
+multiclass sme2_mova_vec_to_tile_vg2_multi<string mnemonic>{
+ defm _H : sme2_mova_vec_to_tile_vg2_multi_base<0b0, mnemonic>;
+ defm _V : sme2_mova_vec_to_tile_vg2_multi_base<0b1, mnemonic>;
+}
+
+class sme2_mova_vec_to_tile_vg4_multi_base<bits<2> sz, bit v, bits<3> op,
+                                           RegisterOperand tile_ty,
+                                           Operand index_ty,
+                                           RegisterOperand vector_ty,
+                                           string mnemonic>
+   : I<(outs tile_ty:$ZAd),
+       (ins tile_ty:$_ZAd, MatrixIndexGPR32Op12_15:$Rs, index_ty:$imm,
+            vector_ty:$Zn),
+       mnemonic,
+       "\t$ZAd[$Rs, $imm, vgx4], $Zn",
+       "", []>, Sched<[]> {
+  bits<2> Rs;
+  bits<3> Zn;
+  let Inst{31-24} = 0b11000000;
+  let Inst{23-22} = sz;
+  let Inst{21-16} = 0b000100;
+  let Inst{15}    = v;
+  let Inst{14-13} = Rs;
+  let Inst{12-10} = 0b001;
+  let Inst{9-7}   = Zn;
+  let Inst{6-3}   = 0b0000;
+  let Inst{2-0}   = op;
+  let Constraints = "$ZAd = $_ZAd";
+}
+
+// SME2 move vector to tile, four registers
+multiclass sme2_mova_vec_to_tile_vg4_multi_base<bit v, string mnemonic> {
+
+  def _B : sme2_mova_vec_to_tile_vg4_multi_base<0b00, v, {0,?,?},
+                                                !if(v, TileVectorOpV8,
+                                                       TileVectorOpH8),
+                                                uimm2s4range, ZZZZ_b_mul_r,
+                                                mnemonic> {
+    bits<2> imm;
+    let Inst{1-0} = imm;
+  }
+
+  def _H : sme2_mova_vec_to_tile_vg4_multi_base<0b01, v, {0,?,?},
+                                                !if(v, TileVectorOpV16,
+                                                       TileVectorOpH16),
+                                                uimm1s4range, ZZZZ_h_mul_r,
+                                                mnemonic> {
+    bits<1> ZAd;
+    bits<1> imm;
+    let Inst{1}   = ZAd;
+    let Inst{0}   = imm;
+  }
+
+  def _S : sme2_mova_vec_to_tile_vg4_multi_base<0b10, v, {0,?,?},
+                                                !if(v, TileVectorOpV32,
+                                                       TileVectorOpH32),
+                                                 uimm0s4range, ZZZZ_s_mul_r,
+                                                 mnemonic> {
+    bits<2> ZAd;
+    let Inst{1-0} = ZAd;
+  }
+
+  def _D : sme2_mova_vec_to_tile_vg4_multi_base<0b11, v, {?,?,?},
+                                                !if(v, TileVectorOpV64,
+                                                       TileVectorOpH64),
+                                                uimm0s4range, ZZZZ_d_mul_r,
+                                                mnemonic> {
+    bits<3> ZAd;
+    let Inst{2-0} = ZAd;
+  }
+
+  defm : sme2_mova_vec_to_tile_or_array_aliases<1, !cast<Instruction>(NAME # _B),
+                                                !if(v, TileVectorOpV8,
+                                                       TileVectorOpH8),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm2s4range, ZZZZ_b_mul_r,
+                                                "mov">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<1, !cast<Instruction>(NAME # _H),
+                                                !if(v, TileVectorOpV16,
+                                                       TileVectorOpH16),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm1s4range, ZZZZ_h_mul_r,
+                                                "mov">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<1, !cast<Instruction>(NAME # _S),
+                                                !if(v, TileVectorOpV32,
+                                                       TileVectorOpH32),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm0s4range, ZZZZ_s_mul_r,
+                                                "mov">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<1, !cast<Instruction>(NAME # _D),
+                                                !if(v, TileVectorOpV64,
+                                                       TileVectorOpH64),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm0s4range, ZZZZ_d_mul_r,
+                                                "mov">;
+
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME # _B),
+                                                !if(v, TileVectorOpV8,
+                                                       TileVectorOpH8),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm2s4range, ZZZZ_b_mul_r,
+                                                "mova">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME # _H),
+                                                !if(v, TileVectorOpV16,
+                                                       TileVectorOpH16),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm1s4range, ZZZZ_h_mul_r,
+                                                "mova">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME # _S),
+                                                !if(v, TileVectorOpV32,
+                                                       TileVectorOpH32),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm0s4range, ZZZZ_s_mul_r,
+                                                "mova">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME # _D),
+                                                !if(v, TileVectorOpV64,
+                                                       TileVectorOpH64),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm0s4range, ZZZZ_d_mul_r,
+                                                "mova">;
+
+}
+
+multiclass sme2_mova_vec_to_tile_vg4_multi<string mnemonic>{
+ defm _H : sme2_mova_vec_to_tile_vg4_multi_base<0b0, mnemonic>;
+ defm _V : sme2_mova_vec_to_tile_vg4_multi_base<0b1, mnemonic>;
+}
+
+// SME Move into Array
+class sme2_mova_vec_to_array_vg24_multi< bits<5> op, RegisterOperand array_ty,
+                                        RegisterOperand vector_ty,
+                                        string mnemonic,
+                                        string vg_acronym="">
+   : I<(outs array_ty:$ZAd),
+       (ins array_ty:$_ZAd, MatrixIndexGPR32Op8_11:$Rs, sme_elm_idx0_7:$imm,
+            vector_ty:$Zn),
+       mnemonic, "\t$ZAd[$Rs, $imm, " # vg_acronym # "], $Zn",
+       "", []>, Sched<[]> {
+  bits<2> Rs;
+  bits<3> imm;
+  let Inst{31-15} = 0b11000000000001000;
+  let Inst{14-13} = Rs;
+  let Inst{12-11} = 0b01;
+  let Inst{10-6}  = op;
+  let Inst{5-3}   = 0b000;
+  let Inst{2-0}   = imm;
+
+  let Constraints = "$ZAd = $_ZAd";
+}
+
+// MOVA (vector to array, two registers)
+multiclass sme2_mova_vec_to_array_vg2_multi<string mnemonic> {
+  def NAME : sme2_mova_vec_to_array_vg24_multi<{0,?,?,?,?}, MatrixOp64,
+                                               ZZ_d_mul_r, mnemonic, "vgx2">{
+   bits<4> Zn;
+   let Inst{9-6} = Zn;
+  }
+
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp8,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZ_b_mul_r,
+                                                "mova">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp16,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZ_h_mul_r,
+                                                "mova">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp32,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZ_s_mul_r,
+                                                "mova">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp64,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZ_d_mul_r,
+                                                "mova">;
+
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp8,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZ_b_mul_r,
+                                                "mova", "vgx2">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp16,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZ_h_mul_r,
+                                                "mova", "vgx2">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp32,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZ_s_mul_r,
+                                                "mova", "vgx2">;
+
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp8,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZ_b_mul_r,
+                                                "mov">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp16,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZ_h_mul_r,
+                                                "mov">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp32,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZ_s_mul_r,
+                                                "mov">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp64,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZ_d_mul_r,
+                                                "mov">;
+
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp8,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZ_b_mul_r,
+                                                "mov", "vgx2">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp16,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZ_h_mul_r,
+                                                "mov", "vgx2">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp32,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZ_s_mul_r,
+                                                "mov", "vgx2">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<1, !cast<Instruction>(NAME),
+                                                MatrixOp64,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZ_d_mul_r,
+                                                "mov", "vgx2">;
+}
+
+// MOVA (vector to array, four registers)
+multiclass sme2_mova_vec_to_array_vg4_multi<string mnemonic> {
+  def NAME : sme2_mova_vec_to_array_vg24_multi<{1,?,?,?,0}, MatrixOp64,
+                                               ZZZZ_d_mul_r, mnemonic, "vgx4"> {
+    bits<3> Zn;
+    let Inst{9-7} = Zn;
+  }
+
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp8,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZZZ_b_mul_r,
+                                                "mova">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp16,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZZZ_h_mul_r,
+                                                "mova">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp32,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZZZ_s_mul_r,
+                                                "mova">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp64,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZZZ_d_mul_r,
+                                                "mova">;
+
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp8,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZZZ_b_mul_r,
+                                                "mova", "vgx4">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp16,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZZZ_h_mul_r,
+                                                "mova", "vgx4">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp32,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZZZ_s_mul_r,
+                                                "mova", "vgx4">;
+
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp8,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZZZ_b_mul_r,
+                                                "mov">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp16,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZZZ_h_mul_r,
+                                                "mov">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp32,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZZZ_s_mul_r,
+                                                "mov">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp64,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZZZ_d_mul_r,
+                                                "mov">;
+
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp8,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZZZ_b_mul_r,
+                                                "mov", "vgx4">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp16,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZZZ_h_mul_r,
+                                                "mov", "vgx4">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<0, !cast<Instruction>(NAME),
+                                                MatrixOp32,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZZZ_s_mul_r,
+                                                "mov", "vgx4">;
+  defm : sme2_mova_vec_to_tile_or_array_aliases<1, !cast<Instruction>(NAME),
+                                                MatrixOp64,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, ZZZZ_d_mul_r,
+                                                "mov", "vgx4">;
+
+}
+
+class sme2_mova_tile_to_vec_vg2_multi_base<bits<2> sz, bit v,
+                                           RegisterOperand vector_ty,
+                                           RegisterOperand tile_ty,
+                                           Operand index_ty,
+                                           string mnemonic>
+   : I<(outs vector_ty:$Zd),
+       (ins tile_ty:$ZAn, MatrixIndexGPR32Op12_15:$Rs, index_ty:$imm),
+       mnemonic,
+       "\t$Zd, $ZAn[$Rs, $imm, vgx2]",
+       "", []>, Sched<[]> {
+  bits<4> Zd;
+  bits<2> Rs;
+  let Inst{31-24} = 0b11000000;
+  let Inst{23-22} = sz;
+  let Inst{21-16} = 0b000110;
+  let Inst{15}    = v;
+  let Inst{14-13} = Rs;
+  let Inst{12-8}  = 0b00000;
+  let Inst{4-1}   = Zd;
+  let Inst{0}     = 0b0;
+}
+
+multiclass sme2_mova_tile_or_array_to_vec_aliases<int op, Instruction inst,
+                                                  RegisterOperand vector_ty,
+                                                  RegisterOperand tile_or_array_ty,
+                                                  RegisterOperand rv_ty,
+                                                  Operand index_ty,
+                                                  string mnemonic,
+                                                  string vg_acronym=""> {
+def : InstAlias<mnemonic # "\t$Zd, $ZAn[$Rs, $imm" # !if(!eq(vg_acronym, ""), "", ", " # vg_acronym) # "]",
+                  (inst vector_ty:$Zd, tile_or_array_ty:$ZAn, rv_ty:$Rs, index_ty:$imm), op>;
+
+}
+
+// SME2 move tile to vector, two registers
+multiclass sme2_mova_tile_to_vec_vg2_multi_inst<bit v, string mnemonic> {
+
+  def _B : sme2_mova_tile_to_vec_vg2_multi_base<0b00, v, ZZ_b_mul_r,
+                                                !if(v, TileVectorOpV8,
+                                                       TileVectorOpH8),
+                                                 uimm3s2range, mnemonic> {
+    bits<3> imm;
+    let Inst{7-5} = imm;
+  }
+
+  def _H : sme2_mova_tile_to_vec_vg2_multi_base<0b01, v, ZZ_h_mul_r,
+                                                !if(v, TileVectorOpV16,
+                                                       TileVectorOpH16),
+                                                 uimm2s2range, mnemonic> {
+    bits<1> ZAn;
+    bits<2> imm;
+    let Inst{7}   = ZAn;
+    let Inst{6-5} = imm;
+  }
+
+  def _S : sme2_mova_tile_to_vec_vg2_multi_base<0b10, v, ZZ_s_mul_r,
+                                                !if(v, TileVectorOpV32,
+                                                       TileVectorOpH32),
+                                                 uimm1s2range, mnemonic> {
+    bits<2> ZAn;
+    bits<1> imm;
+    let Inst{7-6} = ZAn;
+    let Inst{5}   = imm;
+  }
+
+  def _D : sme2_mova_tile_to_vec_vg2_multi_base<0b11, v, ZZ_d_mul_r,
+                                                !if(v, TileVectorOpV64,
+                                                        TileVectorOpH64),
+                                                uimm0s2range, mnemonic> {
+    bits<3> ZAn;
+    let Inst{7-5} = ZAn;
+  }
+
+  defm : sme2_mova_tile_or_array_to_vec_aliases<1,!cast<Instruction>(NAME # _B),
+                                                ZZ_b_mul_r,
+                                               !if(v, TileVectorOpV8,
+                                                       TileVectorOpH8),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm3s2range, "mov">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<1,!cast<Instruction>(NAME # _H),
+                                                ZZ_h_mul_r,
+                                                !if(v, TileVectorOpV16,
+                                                       TileVectorOpH16),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm2s2range, "mov">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<1, !cast<Instruction>(NAME # _S),
+                                                ZZ_s_mul_r,
+                                                !if(v, TileVectorOpV32,
+                                                       TileVectorOpH32),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm1s2range, "mov">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<1, !cast<Instruction>(NAME # _D),
+                                                ZZ_d_mul_r,
+                                                !if(v, TileVectorOpV64,
+                                                       TileVectorOpH64),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm0s2range, "mov">;
+
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0,!cast<Instruction>(NAME # _B),
+                                                ZZ_b_mul_r,
+                                               !if(v, TileVectorOpV8,
+                                                       TileVectorOpH8),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm3s2range, "mova">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0,!cast<Instruction>(NAME # _H),
+                                                ZZ_h_mul_r,
+                                                !if(v, TileVectorOpV16,
+                                                       TileVectorOpH16),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm2s2range, "mova">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME # _S),
+                                                ZZ_s_mul_r,
+                                                !if(v, TileVectorOpV32,
+                                                       TileVectorOpH32),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm1s2range, "mova">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME # _D),
+                                                ZZ_d_mul_r,
+                                                !if(v, TileVectorOpV64,
+                                                       TileVectorOpH64),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm0s2range, "mova">;
+
+}
+
+multiclass sme2_mova_tile_to_vec_vg2_multi<string mnemonic>{
+ defm _H : sme2_mova_tile_to_vec_vg2_multi_inst<0b0, mnemonic>;
+ defm _V : sme2_mova_tile_to_vec_vg2_multi_inst<0b1, mnemonic>;
+}
+
+// SME2 move tile to vector, four registers
+class sme2_mova_tile_to_vec_vg4_multi_base<bits<2> sz, bit v, bits<3> op,
+                                           RegisterOperand vector_ty,
+                                           RegisterOperand tile_ty,
+                                           Operand index_ty,
+                                           string mnemonic>
+   : I<(outs vector_ty:$Zd),
+       (ins tile_ty:$ZAn, MatrixIndexGPR32Op12_15:$Rs, index_ty:$imm),
+       mnemonic,
+       "\t$Zd, $ZAn[$Rs, $imm, vgx4]",
+       "", []>, Sched<[]> {
+  bits<3> Zd;
+  bits<2> Rs;
+  let Inst{31-24} = 0b11000000;
+  let Inst{23-22} = sz;
+  let Inst{21-16} = 0b000110;
+  let Inst{15}    = v;
+  let Inst{14-13} = Rs;
+  let Inst{12-8}  = 0b00100;
+  let Inst{7-5}   = op;
+  let Inst{4-2}   = Zd;
+  let Inst{1-0}   = 0b00;
+}
+
+multiclass sme2_mova_tile_to_vec_vg4_multi_base<bit v, string mnemonic> {
+
+  def _B : sme2_mova_tile_to_vec_vg4_multi_base<0b00, v, {0,?,?},
+                                                ZZZZ_b_mul_r,
+                                                !if(v, TileVectorOpV8,
+                                                       TileVectorOpH8),
+                                                uimm2s4range, mnemonic> {
+    bits<2> imm;
+    let Inst{6-5} = imm;
+  }
+
+  def _H : sme2_mova_tile_to_vec_vg4_multi_base<0b01, v, {0,?,?},
+                                                ZZZZ_h_mul_r,
+                                                !if(v, TileVectorOpV16,
+                                                       TileVectorOpH16),
+                                                uimm1s4range, mnemonic> {
+    bits<1> ZAn;
+    bits<1> imm;
+    let Inst{6}   = ZAn;
+    let Inst{5}   = imm;
+  }
+
+  def _S : sme2_mova_tile_to_vec_vg4_multi_base<0b10, v, {0,?,?},
+                                                ZZZZ_s_mul_r,
+                                                !if(v, TileVectorOpV32,
+                                                       TileVectorOpH32),
+                                                 uimm0s4range, mnemonic> {
+    bits<2> ZAn;
+    let Inst{6-5} = ZAn;
+  }
+
+  def _D : sme2_mova_tile_to_vec_vg4_multi_base<0b11, v, {?,?,?},
+                                                ZZZZ_d_mul_r,
+                                                !if(v, TileVectorOpV64,
+                                                       TileVectorOpH64),
+                                                uimm0s4range, mnemonic> {
+    bits<3> ZAn;
+    let Inst{7-5} = ZAn;
+  }
+
+  defm : sme2_mova_tile_or_array_to_vec_aliases<1, !cast<Instruction>(NAME # _B),
+                                               ZZZZ_b_mul_r,
+                                               !if(v, TileVectorOpV8,
+                                                      TileVectorOpH8),
+                                               MatrixIndexGPR32Op12_15,
+                                               uimm2s4range, "mov">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<1, !cast<Instruction>(NAME # _H),
+                                                ZZZZ_h_mul_r,
+                                                !if(v, TileVectorOpV16,
+                                                       TileVectorOpH16),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm1s4range, "mov">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<1, !cast<Instruction>(NAME # _S),
+                                                ZZZZ_s_mul_r,
+                                                !if(v, TileVectorOpV32,
+                                                      TileVectorOpH32),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm0s4range, "mov">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<1, !cast<Instruction>(NAME # _D),
+                                                ZZZZ_d_mul_r,
+                                                !if(v, TileVectorOpV64,
+                                                       TileVectorOpH64),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm0s4range, "mov">;
+
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME # _B),
+                                                ZZZZ_b_mul_r,
+                                                !if(v, TileVectorOpV8,
+                                                       TileVectorOpH8),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm2s4range, "mova">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME # _H),
+                                                ZZZZ_h_mul_r,
+                                                !if(v, TileVectorOpV16,
+                                                       TileVectorOpH16),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm1s4range, "mova">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME # _S),
+                                                ZZZZ_s_mul_r,
+                                                !if(v, TileVectorOpV32,
+                                                      TileVectorOpH32),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm0s4range, "mova">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME # _D),
+                                                ZZZZ_d_mul_r,
+                                                !if(v, TileVectorOpV64,
+                                                       TileVectorOpH64),
+                                                MatrixIndexGPR32Op12_15,
+                                                uimm0s4range, "mova">;
+
+}
+multiclass sme2_mova_tile_to_vec_vg4_multi<string mnemonic>{
+ defm _H : sme2_mova_tile_to_vec_vg4_multi_base<0b0, mnemonic>;
+ defm _V : sme2_mova_tile_to_vec_vg4_multi_base<0b1, mnemonic>;
+}
+
+// SME Move from Array
+class sme2_mova_array_to_vec_vg24_multi<bits<4> op, RegisterOperand vector_ty,
+                                        RegisterOperand array_ty,
+                                        string mnemonic, string vg_acronym>
+   : I<(outs vector_ty:$Zd),
+       (ins array_ty:$ZAn, MatrixIndexGPR32Op8_11:$Rs, sme_elm_idx0_7:$imm),
+       mnemonic,
+       "\t$Zd, $ZAn[$Rs, $imm, " # vg_acronym # "]",
+       "", []>, Sched<[]> {
+  bits<2> Rs;
+  bits<3> imm;
+  let Inst{31-15} = 0b11000000000001100;
+  let Inst{14-13} = Rs;
+  let Inst{12-11} = 0b01;
+  let Inst{10}    = op{3};
+  let Inst{9-8}   = op{2-1};
+  let Inst{7-5}   = imm;
+  let Inst{1}     = op{0};
+  let Inst{0}     = 0b0;
+}
+
+// MOVA (array to vector, two registers)
+multiclass sme2_mova_array_to_vec_vg2_multi<string mnemonic> {
+  def NAME : sme2_mova_array_to_vec_vg24_multi<{0b000,?}, ZZ_d_mul_r, MatrixOp64,
+                                               mnemonic, "vgx2">{
+    bits<4> Zd;
+    let Inst{4-1} = Zd;
+  }
+
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZ_b_mul_r, MatrixOp8,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mova">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZ_h_mul_r, MatrixOp16,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mova">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZ_s_mul_r, MatrixOp32,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mova">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZ_d_mul_r,  MatrixOp64,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mova">;
+
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZ_b_mul_r, MatrixOp8,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mova", "vgx2">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZ_h_mul_r, MatrixOp16,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mova", "vgx2">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZ_s_mul_r, MatrixOp32,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mova", "vgx2">;
+
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZ_b_mul_r, MatrixOp8,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mov">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZ_h_mul_r, MatrixOp16,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mov">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZ_s_mul_r, MatrixOp32,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mov">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZ_d_mul_r,  MatrixOp64,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mov">;
+
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZ_b_mul_r, MatrixOp8,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mov", "vgx2">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZ_h_mul_r, MatrixOp16,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mov", "vgx2">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZ_s_mul_r, MatrixOp32,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mov", "vgx2">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<1, !cast<Instruction>(NAME),
+                                                ZZ_d_mul_r,  MatrixOp64,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mov", "vgx2">;
+}
+
+// MOVA (array to vector, four registers)
+multiclass sme2_mova_array_to_vec_vg4_multi<string mnemonic> {
+  def NAME : sme2_mova_array_to_vec_vg24_multi<0b1000, ZZZZ_d_mul_r, MatrixOp64,
+                                               mnemonic, "vgx4">{
+    bits<3> Zd;
+    let Inst{4-2} = Zd;
+  }
+
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZZZ_b_mul_r, MatrixOp8,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mova">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZZZ_h_mul_r, MatrixOp16,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mova">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZZZ_s_mul_r, MatrixOp32,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mova">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZZZ_d_mul_r, MatrixOp64,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mova">;
+
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZZZ_b_mul_r, MatrixOp8,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mova", "vgx4">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZZZ_h_mul_r, MatrixOp16,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mova", "vgx4">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZZZ_s_mul_r, MatrixOp32,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mova", "vgx4">;
+
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZZZ_b_mul_r, MatrixOp8,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mov">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZZZ_h_mul_r, MatrixOp16,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mov">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZZZ_s_mul_r, MatrixOp32,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mov">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZZZ_d_mul_r, MatrixOp64,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mov">;
+
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZZZ_b_mul_r, MatrixOp8,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mov", "vgx4">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZZZ_h_mul_r, MatrixOp16,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mov", "vgx4">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<0, !cast<Instruction>(NAME),
+                                                ZZZZ_s_mul_r, MatrixOp32,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mov", "vgx4">;
+  defm : sme2_mova_tile_or_array_to_vec_aliases<1, !cast<Instruction>(NAME),
+                                                ZZZZ_d_mul_r, MatrixOp64,
+                                                MatrixIndexGPR32Op8_11,
+                                                sme_elm_idx0_7, "mov", "vgx4">;
+}
