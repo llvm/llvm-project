@@ -10,13 +10,18 @@ void test_fullfp16(float16_t f16) {
   vabdh_f16(f16, f16);
 }
 
+__attribute__((target("fp16")))
+void fp16(float16_t f16) {
+  vabdh_f16(f16, f16);
+}
+
 __attribute__((target("arch=armv8-a+fp16")))
 void test_fp16_arch(float16_t f16) {
     vabdh_f16(f16, f16);
 }
 
 __attribute__((target("+fp16")))
-void test_fp16(float16_t f16) {
+void test_plusfp16(float16_t f16) {
     vabdh_f16(f16, f16);
 }
 
