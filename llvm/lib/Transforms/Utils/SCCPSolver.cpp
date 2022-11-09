@@ -270,6 +270,8 @@ private:
   void handleCallOverdefined(CallBase &CB);
   void handleCallResult(CallBase &CB);
   void handleCallArguments(CallBase &CB);
+  void handleExtractOfWithOverflow(ExtractValueInst &EVI,
+                                   const WithOverflowInst *WO, unsigned Idx);
 
 private:
   friend class InstVisitor<SCCPInstVisitor>;
@@ -860,6 +862,33 @@ void SCCPInstVisitor::visitCastInst(CastInst &I) {
     markOverdefined(&I);
 }
 
+void SCCPInstVisitor::handleExtractOfWithOverflow(ExtractValueInst &EVI,
+                                                  const WithOverflowInst *WO,
+                                                  unsigned Idx) {
+  Value *LHS = WO->getLHS(), *RHS = WO->getRHS();
+  ValueLatticeElement L = getValueState(LHS);
+  ValueLatticeElement R = getValueState(RHS);
+  addAdditionalUser(LHS, &EVI);
+  addAdditionalUser(RHS, &EVI);
+  if (L.isUnknownOrUndef() || R.isUnknownOrUndef())
+    return; // Wait to resolve.
+
+  Type *Ty = LHS->getType();
+  ConstantRange LR = getConstantRange(L, Ty);
+  ConstantRange RR = getConstantRange(R, Ty);
+  if (Idx == 0) {
+    ConstantRange Res = LR.binaryOp(WO->getBinaryOp(), RR);
+    mergeInValue(&EVI, ValueLatticeElement::getRange(Res));
+  } else {
+    assert(Idx == 1 && "Index can only be 0 or 1");
+    ConstantRange NWRegion = ConstantRange::makeGuaranteedNoWrapRegion(
+        WO->getBinaryOp(), RR, WO->getNoWrapKind());
+    if (NWRegion.contains(LR))
+      return (void)markConstant(&EVI, ConstantInt::getFalse(EVI.getType()));
+    markOverdefined(&EVI);
+  }
+}
+
 void SCCPInstVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
   // If this returns a struct, mark all elements over defined, we don't track
   // structs in structs.
@@ -878,6 +907,8 @@ void SCCPInstVisitor::visitExtractValueInst(ExtractValueInst &EVI) {
   Value *AggVal = EVI.getAggregateOperand();
   if (AggVal->getType()->isStructTy()) {
     unsigned i = *EVI.idx_begin();
+    if (auto *WO = dyn_cast<WithOverflowInst>(AggVal))
+      return handleExtractOfWithOverflow(EVI, WO, i);
     ValueLatticeElement EltVal = getStructValueState(AggVal, i);
     mergeInValue(getValueState(&EVI), &EVI, EltVal);
   } else {
