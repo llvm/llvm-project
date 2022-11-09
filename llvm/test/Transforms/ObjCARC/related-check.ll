@@ -28,6 +28,7 @@
 @_unnamed_cfstring_ = private global %struct.__NSConstantString_tag { i32* getelementptr inbounds ([0 x i32], [0 x i32]* @__CFConstantStringClassReference, i32 0, i32 0), i32 1992, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.1, i32 0, i32 0), i64 2 }, section "__DATA,__cfstring", align 8 #0
 @OBJC_METH_VAR_NAME_.2 = private unnamed_addr constant [18 x i8] c"stringWithFormat:\00", section "__TEXT,__objc_methname,cstring_literals", align 1
 @OBJC_SELECTOR_REFERENCES_.3 = internal externally_initialized global i8* getelementptr inbounds ([18 x i8], [18 x i8]* @OBJC_METH_VAR_NAME_.2, i32 0, i32 0), section "__DATA,__objc_selrefs,literal_pointers,no_dead_strip", align 8
+@global1 = external local_unnamed_addr constant i8*, align 8
 @llvm.compiler.used = appending global [5 x i8*] [i8* getelementptr inbounds ([25 x i8], [25 x i8]* @OBJC_METH_VAR_NAME_, i32 0, i32 0), i8* bitcast (i8** @OBJC_SELECTOR_REFERENCES_ to i8*), i8* bitcast (%struct._class_t** @"OBJC_CLASSLIST_REFERENCES_$_" to i8*), i8* getelementptr inbounds ([18 x i8], [18 x i8]* @OBJC_METH_VAR_NAME_.2, i32 0, i32 0), i8* bitcast (i8** @OBJC_SELECTOR_REFERENCES_.3 to i8*)], section "llvm.metadata"
 
 ; Function Attrs: optsize ssp uwtable(sync)
@@ -120,6 +121,25 @@ if.end19:                                         ; preds = %if.end18, %for.body
   %exitcond.not = icmp eq i32 %inc, %argc
   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
 }
+
+; CHECK-LABEL: define i8* @foo() {
+; CHECK-NOT: @llvm.objc
+; CHECK: ret i8* %
+
+define i8* @foo() {
+  %t = alloca i8*, align 8
+  %v4 = load i8*, i8** @global1, align 8
+  %v5 = tail call i8* @llvm.objc.retain(i8* %v4)
+  store i8* %v4, i8** %t, align 8
+  %v13 = load i8*, i8** bitcast (%struct._class_t** @"OBJC_CLASSLIST_REFERENCES_$_" to i8**), align 8
+  %call78 = call i8* @bar(i8* %v13)
+  call void @llvm.objc.release(i8* %v4)
+  ret i8* %call78
+}
+
+declare i8* @bar(i8*)
+
+declare i8* @llvm.objc.retain(i8*)
 
 ; Function Attrs: argmemonly mustprogress nocallback nofree nosync nounwind willreturn
 declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #2
