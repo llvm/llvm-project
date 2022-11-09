@@ -1293,7 +1293,10 @@ uint32_t Process::AssignIndexIDToThread(uint64_t thread_id) {
 }
 
 StateType Process::GetState() {
-  return m_public_state.GetValue();
+  if (CurrentThreadIsPrivateStateThread())
+    return m_private_state.GetValue();
+  else
+    return m_public_state.GetValue();
 }
 
 void Process::SetPublicState(StateType new_state, bool restarted) {
