@@ -8,8 +8,16 @@
  */
 
 #ifndef __STDARG_H
-#define __STDARG_H
 
+#ifndef __GNUC_VA_LIST
+#define __GNUC_VA_LIST
+typedef __builtin_va_list __gnuc_va_list;
+#endif
+
+#ifdef __need___va_list
+#undef __need___va_list
+#else
+#define __STDARG_H
 #ifndef _VA_LIST
 typedef __builtin_va_list va_list;
 #define _VA_LIST
@@ -29,9 +37,6 @@ typedef __builtin_va_list va_list;
 #define va_copy(dest, src)  __builtin_va_copy(dest, src)
 #endif
 
-#ifndef __GNUC_VA_LIST
-#define __GNUC_VA_LIST 1
-typedef __builtin_va_list __gnuc_va_list;
-#endif
-
 #endif /* __STDARG_H */
+
+#endif /* not __STDARG_H */
