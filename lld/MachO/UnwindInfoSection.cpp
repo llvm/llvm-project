@@ -262,7 +262,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
       // application provides its own personality function, it might be
       // referenced by an extern Defined symbol reloc, or a local section reloc.
       if (auto *defined = dyn_cast<Defined>(s)) {
-        // XXX(vyng) This is a a special case for handling duplicate personality
+        // XXX(vyng) This is a special case for handling duplicate personality
         // symbols. Note that LD64's behavior is a bit different and it is
         // inconsistent with how symbol resolution usually work
         //
@@ -571,10 +571,9 @@ void UnwindInfoSectionImpl::finalize() {
     }
     page.entryCount = i - page.entryIndex;
 
-    // If this is not the final page, see if it's possible to fit more
-    // entries by using the regular format. This can happen when there
-    // are many unique encodings, and we we saturated the local
-    // encoding table early.
+    // If this is not the final page, see if it's possible to fit more entries
+    // by using the regular format. This can happen when there are many unique
+    // encodings, and we saturated the local encoding table early.
     if (i < cuIndices.size() &&
         page.entryCount < REGULAR_SECOND_LEVEL_ENTRIES_MAX) {
       page.kind = UNWIND_SECOND_LEVEL_REGULAR;
