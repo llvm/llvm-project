@@ -638,13 +638,12 @@ define i32 @test_orr_not_bfxil_i32(i32 %0) {
 }
 
 ; For or operation, one operand is a left shift of another operand.
-; Use orr with left-shifted operand is better than bfi.
+; So orr with a left-shifted operand is generated (not bfi).
 define i64 @test_orr_not_bfi_i64(i64 %0) {
 ; CHECK-LABEL: test_orr_not_bfi_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and x8, x0, #0xff
-; CHECK-NEXT:    bfi x8, x0, #8, #8
-; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    orr x0, x8, x8, lsl #8
 ; CHECK-NEXT:    ret
   %2 = and i64 %0, 255
   %3 = shl i64 %2, 8
@@ -668,14 +667,13 @@ define i32 @test_bfi_not_orr_i32(i32 %0, i32 %1) {
   ret i32 %or_res
 }
 
-; orr is better than bfi, since both simplify away one instruction (%3)
+; orr is generated (not bfi), since both simplify away one instruction (%3)
 ; while orr has shorter latency and higher throughput.
 define i32 @test_orr_not_bfi_i32(i32 %0) {
 ; CHECK-LABEL: test_orr_not_bfi_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    bfi w8, w0, #8, #8
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    orr w0, w8, w8, lsl #8
 ; CHECK-NEXT:    ret
   %2 = and i32 %0, 255
   %3 = shl i32 %2, 8
@@ -698,14 +696,13 @@ define i64 @test_bfxil_not_orr_i64(i64 %0, i64 %1) {
   ret i64 %or_res
 }
 
-; orr is better than bfxil, since one operand is the right shift of  another
+; orr is generated (not bfxil), since one operand is the right shift of another
 ; operand.
 define i64 @orr_not_bfxil_test2_i64(i64 %0) {
 ; CHECK-LABEL: orr_not_bfxil_test2_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and x8, x0, #0xff000
-; CHECK-NEXT:    bfxil x8, x0, #12, #8
-; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    orr x0, x8, x8, lsr #12
 ; CHECK-NEXT:    ret
   %2 = and i64 %0, 1044480 ; 0xff000
   %3 = lshr i64 %2, 12
@@ -729,13 +726,12 @@ define i32 @test_bfxil_not_orr_i32(i32 %0, i32 %1) {
   ret i32 %or_res
 }
 
-; one operand is the shift of another operand, so orr is better.
+; one operand is the shift of another operand, so orr is generated (not bfxil).
 define i32 @orr_not_bfxil_test2_i32(i32 %0) {
 ; CHECK-LABEL: orr_not_bfxil_test2_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0xff000
-; CHECK-NEXT:    bfxil w8, w0, #12, #8
-; CHECK-NEXT:    mov w0, w8
+; CHECK-NEXT:    orr w0, w8, w8, lsr #12
 ; CHECK-NEXT:    ret
   %2 = and i32 %0, 1044480  ; 0xff000
   %3 = lshr i32 %2, 12
