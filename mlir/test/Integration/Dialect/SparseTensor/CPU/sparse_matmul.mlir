@@ -116,6 +116,35 @@ module {
     %b3 = sparse_tensor.convert %sb : tensor<8x4xf64> to tensor<8x4xf64, #CSR>
     %b4 = sparse_tensor.convert %sb : tensor<8x4xf64> to tensor<8x4xf64, #DCSR>
 
+    //
+    // Sanity check on stored entries before going into the computations.
+    //
+    // CHECK:      32
+    // CHECK-NEXT: 32
+    // CHECK-NEXT: 4
+    // CHECK-NEXT: 4
+    // CHECK-NEXT: 32
+    // CHECK-NEXT: 32
+    // CHECK-NEXT: 8
+    // CHECK-NEXT: 8
+    //
+    %noea1 = sparse_tensor.number_of_entries %a1 : tensor<4x8xf64, #CSR>
+    %noea2 = sparse_tensor.number_of_entries %a2 : tensor<4x8xf64, #DCSR>
+    %noea3 = sparse_tensor.number_of_entries %a3 : tensor<4x8xf64, #CSR>
+    %noea4 = sparse_tensor.number_of_entries %a4 : tensor<4x8xf64, #DCSR>
+    %noeb1 = sparse_tensor.number_of_entries %b1 : tensor<8x4xf64, #CSR>
+    %noeb2 = sparse_tensor.number_of_entries %b2 : tensor<8x4xf64, #DCSR>
+    %noeb3 = sparse_tensor.number_of_entries %b3 : tensor<8x4xf64, #CSR>
+    %noeb4 = sparse_tensor.number_of_entries %b4 : tensor<8x4xf64, #DCSR>
+    vector.print %noea1 : index
+    vector.print %noea2 : index
+    vector.print %noea3 : index
+    vector.print %noea4 : index
+    vector.print %noeb1 : index
+    vector.print %noeb2 : index
+    vector.print %noeb3 : index
+    vector.print %noeb4 : index
+
     // Call kernels with dense.
     %0 = call @matmul1(%da, %db, %zero)
        : (tensor<4x8xf64>, tensor<8x4xf64>, tensor<4x4xf64>) -> tensor<4x4xf64>
@@ -205,20 +234,20 @@ module {
     vector.print %v5 : vector<4x4xf64>
 
     //
-    // CHECK: ( ( 0, 30.5, 4.2, 0 ), ( 0, 0, 0, 0 ), ( 0, 0, 4.6, 0 ), ( 0, 0, 7, 8 ) )
+    // CHECK-NEXT: ( ( 0, 30.5, 4.2, 0 ), ( 0, 0, 0, 0 ), ( 0, 0, 4.6, 0 ), ( 0, 0, 7, 8 ) )
     //
     %v6 = vector.transfer_read %6[%c0, %c0], %d1 : tensor<4x4xf64>, vector<4x4xf64>
     vector.print %v6 : vector<4x4xf64>
 
     //
-    // CHECK: ( ( 0, 30.5, 4.2, 0 ), ( 0, 0, 0, 0 ), ( 0, 0, 4.6, 0 ), ( 0, 0, 7, 8 ) )
+    // CHECK-NEXT: ( ( 0, 30.5, 4.2, 0 ), ( 0, 0, 0, 0 ), ( 0, 0, 4.6, 0 ), ( 0, 0, 7, 8 ) )
     //
     %c7 = sparse_tensor.convert %7 : tensor<4x4xf64, #CSR> to tensor<4x4xf64>
     %v7 = vector.transfer_read %c7[%c0, %c0], %d1 : tensor<4x4xf64>, vector<4x4xf64>
     vector.print %v7 : vector<4x4xf64>
 
     //
-    // CHECK: ( ( 0, 30.5, 4.2, 0 ), ( 0, 0, 0, 0 ), ( 0, 0, 4.6, 0 ), ( 0, 0, 7, 8 ) )
+    // CHECK-NEXT: ( ( 0, 30.5, 4.2, 0 ), ( 0, 0, 0, 0 ), ( 0, 0, 4.6, 0 ), ( 0, 0, 7, 8 ) )
     //
     %c8 = sparse_tensor.convert %8 : tensor<4x4xf64, #DCSR> to tensor<4x4xf64>
     %v8 = vector.transfer_read %c8[%c0, %c0], %d1 : tensor<4x4xf64>, vector<4x4xf64>
@@ -227,17 +256,26 @@ module {
     //
     // Sanity check on nonzeros.
     //
-    // FIXME: bring this back once dense2sparse skips zeros
-    //
-    // C_HECK: ( 30.5, 4.2, 4.6, 7, 8 )
-    // C_HECK: ( 30.5, 4.2, 4.6, 7, 8 )
+    // CHECK-NEXT: ( 30.5, 4.2, 4.6, 7, 8 )
+    // CHECK-NEXT: ( 30.5, 4.2, 4.6, 7, 8 )
     //
     %val7 = sparse_tensor.values %7 : tensor<4x4xf64, #CSR> to memref<?xf64>
     %val8 = sparse_tensor.values %8 : tensor<4x4xf64, #DCSR> to memref<?xf64>
-    %nz7 = vector.transfer_read %val7[%c0], %d1 : memref<?xf64>, vector<8xf64>
-    %nz8 = vector.transfer_read %val8[%c0], %d1 : memref<?xf64>, vector<8xf64>
-    vector.print %nz7 : vector<8xf64>
-    vector.print %nz8 : vector<8xf64>
+    %nz7 = vector.transfer_read %val7[%c0], %d1 : memref<?xf64>, vector<5xf64>
+    %nz8 = vector.transfer_read %val8[%c0], %d1 : memref<?xf64>, vector<5xf64>
+    vector.print %nz7 : vector<5xf64>
+    vector.print %nz8 : vector<5xf64>
+
+    //
+    // Sanity check on stored entries after the computations.
+    //
+    // CHECK-NEXT: 5
+    // CHECK-NEXT: 5
+    //
+    %noe7 = sparse_tensor.number_of_entries %7 : tensor<4x4xf64, #CSR>
+    %noe8 = sparse_tensor.number_of_entries %8 : tensor<4x4xf64, #DCSR>
+    vector.print %noe7 : index
+    vector.print %noe8 : index
 
     // Release the resources.
     bufferization.dealloc_tensor %a1 : tensor<4x8xf64, #CSR>
