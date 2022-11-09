@@ -64,7 +64,7 @@ llvm.func @func_with_debug(%arg: i64) {
   llvm.call @func_no_debug() : () -> () loc("named"("foo.mlir":10:10))
 
   // CHECK: call void @func_no_debug(), !dbg ![[FUSED_LOC:[0-9]+]]
-  llvm.call @func_no_debug() : () -> () loc(fused[callsite("mysource.cc":1:1 at "mysource.cc":5:6), "mysource.cc":1:1])
+  llvm.call @func_no_debug() : () -> () loc(fused[callsite("mysource.cc":5:6 at "mysource.cc":1:1), "mysource.cc":1:1])
 
   llvm.return
 } loc(fused<#sp>["foo.mlir":1:1])
