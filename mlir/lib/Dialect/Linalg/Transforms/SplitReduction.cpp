@@ -162,13 +162,13 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
 
   newMaps.push_back(AffineMap::get(oldOutputMap.getNumDims() + 1, 0, outputExpr,
                                    op.getContext()));
-  SmallVector<StringRef> newIteratorTypes;
+  SmallVector<utils::IteratorType> newIteratorTypes;
   for (auto &it : llvm::enumerate(op.getIteratorTypesArray())) {
     if (insertSplitDimension == it.index() && !control.innerParallel)
-      newIteratorTypes.push_back(getParallelIteratorTypeName());
+      newIteratorTypes.push_back(utils::IteratorType::parallel);
     newIteratorTypes.push_back(it.value());
     if (insertSplitDimension == it.index() && control.innerParallel)
-      newIteratorTypes.push_back(getParallelIteratorTypeName());
+      newIteratorTypes.push_back(utils::IteratorType::parallel);
   }
   // Create the new op matching the original op with an extra parallel
   // dimension.
@@ -182,14 +182,14 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   // from the previous op.
   unsigned intermRank = newOutputShape.size();
   AffineMap inputMap = b.getMultiDimIdentityMap(intermRank);
-  SmallVector<StringRef> reductionIteratorTypes;
+  SmallVector<utils::IteratorType> reductionIteratorTypes;
   SmallVector<AffineExpr> exprs;
   for (unsigned i : llvm::seq<unsigned>(0, intermRank)) {
     if (insertSplitDimension == i) {
-      reductionIteratorTypes.push_back(getReductionIteratorTypeName());
+      reductionIteratorTypes.push_back(utils::IteratorType::reduction);
     } else {
       exprs.push_back(b.getAffineDimExpr(i));
-      reductionIteratorTypes.push_back(getParallelIteratorTypeName());
+      reductionIteratorTypes.push_back(utils::IteratorType::parallel);
     }
   }
   AffineMap outputMap = AffineMap::get(intermRank, 0, exprs, op.getContext());
@@ -367,7 +367,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   // dimension.
   auto iteratorTypes = op.getIteratorTypesArray();
   iteratorTypes.insert(iteratorTypes.begin() + reductionDimPos,
-                       getParallelIteratorTypeName());
+                       utils::IteratorType::parallel);
   GenericOp genericOp =
       b.create<GenericOp>(loc, ValueRange(newOutputs).getTypes(), newInputs,
                           newOutputs, newMaps, iteratorTypes);
@@ -394,10 +394,10 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
     AffineMap map = b.getMultiDimIdentityMap(originalOutputType.getRank() + 1);
     SmallVector<AffineMap> indexingMaps = {
         map, map.dropResult(insertSplitDimension)};
-    SmallVector<StringRef> reductionIteratorTypes(
-        originalOutputType.getRank() + 1, getParallelIteratorTypeName());
+    SmallVector<utils::IteratorType> reductionIteratorTypes(
+        originalOutputType.getRank() + 1, utils::IteratorType::parallel);
     reductionIteratorTypes[insertSplitDimension] =
-        getReductionIteratorTypeName();
+        utils::IteratorType::reduction;
 
     // clang-format off
     auto reductionOp = b.create<GenericOp>(
