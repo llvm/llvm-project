@@ -781,5 +781,6 @@ include "M68kInstrShiftRotate.td"
 include "M68kInstrBits.td"
 include "M68kInstrArithmetic.td"
 include "M68kInstrControl.td"
+include "M68kInstrAtomics.td"
 
 include "M68kInstrCompiler.td"
