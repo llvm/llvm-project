@@ -957,5 +957,10 @@ void CompilerInvocation::setLoweringOptions() {
   mathOpts
       .setFPContractEnabled(langOptions.getFPContractMode() ==
                             LangOptions::FPM_Fast)
-      .setNoHonorInfs(langOptions.NoHonorInfs);
+      .setNoHonorInfs(langOptions.NoHonorInfs)
+      .setNoHonorNaNs(langOptions.NoHonorNaNs)
+      .setApproxFunc(langOptions.ApproxFunc)
+      .setNoSignedZeros(langOptions.NoSignedZeros)
+      .setAssociativeMath(langOptions.AssociativeMath)
+      .setReciprocalMath(langOptions.ReciprocalMath);
 }
