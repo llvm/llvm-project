@@ -138,6 +138,16 @@ static bool hasAllWUsers(const MachineInstr &OrigMI, MachineRegisterInfo &MRI) {
         Worklist.push_back(UserMI);
         break;
 
+      case RISCV::ADD_UW:
+      case RISCV::SH1ADD_UW:
+      case RISCV::SH2ADD_UW:
+      case RISCV::SH3ADD_UW:
+        // Operand 1 is implicitly zero extended.
+        if (OpIdx == 1)
+          break;
+        Worklist.push_back(UserMI);
+        break;
+
       case RISCV::BEXTI:
         if (UserMI->getOperand(2).getImm() >= 32)
           return false;
@@ -166,17 +176,13 @@ static bool hasAllWUsers(const MachineInstr &OrigMI, MachineRegisterInfo &MRI) {
       case RISCV::XOR:
       case RISCV::XORI:
 
-      case RISCV::ADD_UW:
       case RISCV::ANDN:
       case RISCV::CLMUL:
       case RISCV::ORC_B:
       case RISCV::ORN:
       case RISCV::SH1ADD:
-      case RISCV::SH1ADD_UW:
       case RISCV::SH2ADD:
-      case RISCV::SH2ADD_UW:
       case RISCV::SH3ADD:
-      case RISCV::SH3ADD_UW:
       case RISCV::XNOR:
         Worklist.push_back(UserMI);
         break;
