@@ -1,18 +1,18 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-cpu cyclone \
-// RUN: -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg \
+// RUN: -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg \
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=UNCONSTRAINED %s
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-cpu cyclone \
 // RUN: -ffp-exception-behavior=strict \
 // RUN: -fexperimental-strict-floating-point \
-// RUN: -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg \
+// RUN: -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg \
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=COMMONIR --check-prefix=CONSTRAINED %s
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-cpu cyclone \
-// RUN: -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | llc -o=- - \
+// RUN: -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | llc -o=- - \
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM %s
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-cpu cyclone \
 // RUN: -ffp-exception-behavior=strict \
 // RUN: -fexperimental-strict-floating-point \
-// RUN: -disable-O0-optnone -emit-llvm -o - %s | opt -S -mem2reg | llc -o=- - \
+// RUN: -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | llc -o=- - \
 // RUN: | FileCheck --check-prefix=COMMON --check-prefix=CHECK-ASM %s
 
 // REQUIRES: aarch64-registered-target
