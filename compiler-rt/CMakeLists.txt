@@ -639,7 +639,7 @@ elseif (SANITIZER_TEST_CXX_LIBNAME STREQUAL "libstdc++")
 endif()
 
 # Unittests support.
-set(COMPILER_RT_GTEST_PATH ${LLVM_MAIN_SRC_DIR}/utils/unittest/googletest)
+set(COMPILER_RT_GTEST_PATH ${LLVM_THIRD_PARTY_DIR}/unittest/googletest)
 set(COMPILER_RT_GTEST_SOURCE ${COMPILER_RT_GTEST_PATH}/src/gtest-all.cc)
 set(COMPILER_RT_GTEST_CFLAGS
   -DGTEST_NO_LLVM_SUPPORT=1
@@ -649,7 +649,7 @@ set(COMPILER_RT_GTEST_CFLAGS
 )
 
 # Mocking support.
-set(COMPILER_RT_GMOCK_PATH ${LLVM_MAIN_SRC_DIR}/utils/unittest/googlemock)
+set(COMPILER_RT_GMOCK_PATH ${LLVM_THIRD_PATY_DIR}/unittest/googlemock)
 set(COMPILER_RT_GMOCK_SOURCE ${COMPILER_RT_GMOCK_PATH}/src/gmock-all.cc)
 set(COMPILER_RT_GMOCK_CFLAGS
   -DGTEST_NO_LLVM_SUPPORT=1
