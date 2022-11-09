@@ -79,8 +79,7 @@ performActions(raw_ostream &os, bool verifyDiagnostics, bool verifyPasses,
   parserTiming.stop();
 
   // Prepare the pass manager, applying command-line and reproducer options.
-  PassManager pm(context, OpPassManager::Nesting::Implicit,
-                 op.get()->getName().getStringRef());
+  PassManager pm(op.get()->getName(), PassManager::Nesting::Implicit);
   pm.enableVerifier(verifyPasses);
   applyPassManagerCLOptions(pm);
   pm.enableTiming(timing);
