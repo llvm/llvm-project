@@ -908,6 +908,9 @@ static std::string flattenCommandLine(ArrayRef<std::string> Args,
     }
     if (Arg.startswith("-object-file-name") || Arg == MainFilename)
       continue;
+    // Skip fmessage-length for reproduciability.
+    if (Arg.startswith("-fmessage-length"))
+      continue;
     if (PrintedOneArg)
       OS << " ";
     llvm::sys::printArg(OS, Arg, /*Quote=*/true);
