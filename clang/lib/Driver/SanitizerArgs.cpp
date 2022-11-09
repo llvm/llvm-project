@@ -249,7 +249,7 @@ static SanitizerMask parseSanitizeTrapArgs(const Driver &D,
         SanitizerSet S;
         S.Mask = InvalidValues;
         D.Diag(diag::err_drv_unsupported_option_argument)
-            << Arg->getOption().getName() << toString(S);
+            << Arg->getSpelling() << toString(S);
       }
       TrappingKinds |= expandSanitizerGroups(Add) & ~TrapRemove;
     } else if (Arg->getOption().matches(options::OPT_fno_sanitize_trap_EQ)) {
@@ -604,7 +604,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         SetToDiagnose.Mask |= KindsToDiagnose;
         if (DiagnoseErrors)
           D.Diag(diag::err_drv_unsupported_option_argument)
-              << Arg->getOption().getName() << toString(SetToDiagnose);
+              << Arg->getSpelling() << toString(SetToDiagnose);
         DiagnosedUnrecoverableKinds |= KindsToDiagnose;
       }
       RecoverableKinds |= expandSanitizerGroups(Add);
@@ -619,7 +619,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         SetToDiagnose.Mask |= KindsToDiagnose;
         if (DiagnoseErrors)
           D.Diag(diag::err_drv_unsupported_option_argument)
-              << Arg->getOption().getName() << toString(SetToDiagnose);
+              << Arg->getSpelling() << toString(SetToDiagnose);
         DiagnosedAlwaysRecoverableKinds |= KindsToDiagnose;
       }
       RecoverableKinds &= ~expandSanitizerGroups(Remove);
@@ -951,7 +951,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       auto parsedAsanDtorKind = AsanDtorKindFromString(Arg->getValue());
       if (parsedAsanDtorKind == llvm::AsanDtorKind::Invalid && DiagnoseErrors) {
         TC.getDriver().Diag(clang::diag::err_drv_unsupported_option_argument)
-            << Arg->getOption().getName() << Arg->getValue();
+            << Arg->getSpelling() << Arg->getValue();
       }
       AsanDtorKind = parsedAsanDtorKind;
     }
@@ -964,7 +964,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
               llvm::AsanDetectStackUseAfterReturnMode::Invalid &&
           DiagnoseErrors) {
         TC.getDriver().Diag(clang::diag::err_drv_unsupported_option_argument)
-            << Arg->getOption().getName() << Arg->getValue();
+            << Arg->getSpelling() << Arg->getValue();
       }
       AsanUseAfterReturn = parsedAsanUseAfterReturn;
     }
@@ -1346,7 +1346,7 @@ SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
       Kinds |= Kind;
     else if (DiagnoseErrors)
       D.Diag(clang::diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << Value;
+          << A->getSpelling() << Value;
   }
   return Kinds;
 }
@@ -1381,7 +1381,7 @@ int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A,
                 .Default(0);
     if (F == 0 && DiagnoseErrors)
       D.Diag(clang::diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << Value;
+          << A->getSpelling() << Value;
     Features |= F;
   }
   return Features;
@@ -1403,7 +1403,7 @@ int parseBinaryMetadataFeatures(const Driver &D, const llvm::opt::Arg *A,
                 .Default(0);
     if (F == 0 && DiagnoseErrors)
       D.Diag(clang::diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << Value;
+          << A->getSpelling() << Value;
     Features |= F;
   }
   return Features;

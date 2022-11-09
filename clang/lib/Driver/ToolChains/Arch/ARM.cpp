@@ -122,7 +122,7 @@ static void checkARMArchName(const Driver &D, const Arg *A, const ArgList &Args,
       (Split.second.size() && !DecodeARMFeatures(D, Split.second, CPUName,
                                                  ArchKind, Features, ArgFPUID)))
     D.Diag(clang::diag::err_drv_unsupported_option_argument)
-        << A->getOption().getName() << A->getValue();
+        << A->getSpelling() << A->getValue();
 }
 
 // Check -mcpu=. Needs ArchName to handle -mcpu=generic.
@@ -139,7 +139,7 @@ static void checkARMCPUName(const Driver &D, const Arg *A, const ArgList &Args,
       (Split.second.size() &&
        !DecodeARMFeatures(D, Split.second, CPU, ArchKind, Features, ArgFPUID)))
     D.Diag(clang::diag::err_drv_unsupported_option_argument)
-        << A->getOption().getName() << A->getValue();
+        << A->getSpelling() << A->getValue();
 }
 
 bool arm::useAAPCSForMachO(const llvm::Triple &T) {
@@ -879,7 +879,7 @@ fp16_fml_fallthrough:
           continue;
         }
         D.Diag(diag::err_drv_unsupported_option_argument)
-            << A->getOption().getName() << Scope;
+            << A->getSpelling() << Scope;
         break;
       }
     }
