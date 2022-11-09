@@ -1790,6 +1790,40 @@ void llvm::salvageDebugInfo(Instruction &I) {
   salvageDebugInfoForDbgValues(I, DbgUsers);
 }
 
+/// Salvage the address component of \p DAI.
+static void salvageDbgAssignAddress(DbgAssignIntrinsic *DAI) {
+  Instruction *I = dyn_cast<Instruction>(DAI->getAddress());
+  // Only instructions can be salvaged at the moment.
+  if (!I)
+    return;
+
+  assert(!DAI->getAddressExpression()->getFragmentInfo().has_value() &&
+         "address-expression shouldn't have fragment info");
+
+  // The address component of a dbg.assign cannot be variadic.
+  uint64_t CurrentLocOps = 0;
+  SmallVector<Value *, 4> AdditionalValues;
+  SmallVector<uint64_t, 16> Ops;
+  Value *NewV = salvageDebugInfoImpl(*I, CurrentLocOps, Ops, AdditionalValues);
+
+  // Check if the salvage failed.
+  if (!NewV)
+    return;
+
+  DIExpression *SalvagedExpr = DIExpression::appendOpsToArg(
+      DAI->getAddressExpression(), Ops, 0, /*StackValue=*/false);
+  assert(!SalvagedExpr->getFragmentInfo().has_value() &&
+         "address-expression shouldn't have fragment info");
+
+  // Salvage succeeds if no additional values are required.
+  if (AdditionalValues.empty()) {
+    DAI->setAddress(NewV);
+    DAI->setAddressExpression(SalvagedExpr);
+  } else {
+    DAI->setAddress(UndefValue::get(I->getType()));
+  }
+}
+
 void llvm::salvageDebugInfoForDbgValues(
     Instruction &I, ArrayRef<DbgVariableIntrinsic *> DbgUsers) {
   // These are arbitrary chosen limits on the maximum number of values and the
@@ -1800,6 +1834,15 @@ void llvm::salvageDebugInfoForDbgValues(
   bool Salvaged = false;
 
   for (auto *DII : DbgUsers) {
+    if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DII)) {
+      if (DAI->getAddress() == &I) {
+        salvageDbgAssignAddress(DAI);
+        Salvaged = true;
+      }
+      if (DAI->getValue() != &I)
+        continue;
+    }
+
     // Do not add DW_OP_stack_value for DbgDeclare and DbgAddr, because they
     // are implicitly pointing out the value as a DWARF memory location
     // description.
@@ -1836,13 +1879,15 @@ void llvm::salvageDebugInfoForDbgValues(
     bool IsValidSalvageExpr = SalvagedExpr->getNumElements() <= MaxExpressionSize;
     if (AdditionalValues.empty() && IsValidSalvageExpr) {
       DII->setExpression(SalvagedExpr);
-    } else if (isa<DbgValueInst>(DII) && IsValidSalvageExpr &&
+    } else if (isa<DbgValueInst>(DII) && !isa<DbgAssignIntrinsic>(DII) &&
+               IsValidSalvageExpr &&
                DII->getNumVariableLocationOps() + AdditionalValues.size() <=
                    MaxDebugArgs) {
       DII->addVariableLocationOps(AdditionalValues, SalvagedExpr);
     } else {
       // Do not salvage using DIArgList for dbg.addr/dbg.declare, as it is
-      // currently only valid for stack value expressions.
+      // currently only valid for stack value expressions. Do not salvage
+      // using DIArgList for dbg.assign yet. FIXME: support this.
       // Also do not salvage if the resulting DIArgList would contain an
       // unreasonably large number of values.
       Value *Undef = UndefValue::get(I.getOperand(0)->getType());
