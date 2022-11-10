@@ -151,7 +151,11 @@ FormatSection Parser::get_next_section() {
       section.has_conv = false;
       break;
     }
-    ++cur_pos;
+    // If the end of the format section is on the '\0'. This means we need to
+    // not advance the cur_pos.
+    if (str[cur_pos] != '\0')
+      ++cur_pos;
+
   } else {
     // raw section
     section.has_conv = false;
@@ -372,7 +376,10 @@ Parser::TypeDesc Parser::get_type_desc(size_t index) {
       if (conv_index == index)
         return conv_size;
     }
-    ++local_pos;
+    // If the end of the format section is on the '\0'. This means we need to
+    // not advance the local_pos.
+    if (str[local_pos] != '\0')
+      ++local_pos;
   }
 
   // If there is no size for the requested index, then just guess that it's an

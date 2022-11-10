@@ -29,22 +29,22 @@
 // (in, ...)
 template <class Func, std::ranges::range Input, class ...Args>
 constexpr void test(Func&& func, Input& in, Args&& ...args) {
-  func(in.begin(), in.end(), std::forward<Args>(args)...);
-  func(in, std::forward<Args>(args)...);
+  (void)func(in.begin(), in.end(), std::forward<Args>(args)...);
+  (void)func(in, std::forward<Args>(args)...);
 }
 
 // (in1, in2, ...)
 template <class Func, std::ranges::range Range1, std::ranges::range Range2, class ...Args>
 constexpr void test(Func&& func, Range1& r1, Range2& r2, Args&& ...args) {
-  func(r1.begin(), r1.end(), r2.begin(), r2.end(), std::forward<Args>(args)...);
-  func(r1, r2, std::forward<Args>(args)...);
+  (void)func(r1.begin(), r1.end(), r2.begin(), r2.end(), std::forward<Args>(args)...);
+  (void)func(r1, r2, std::forward<Args>(args)...);
 }
 
 // (in, mid, ...)
 template <class Func, std::ranges::range Input, class ...Args>
 constexpr void test_mid(Func&& func, Input& in, std::ranges::iterator_t<Input> mid, Args&& ...args) {
-  func(in.begin(), mid, in.end(), std::forward<Args>(args)...);
-  func(in, mid, std::forward<Args>(args)...);
+  (void)func(in.begin(), mid, in.end(), std::forward<Args>(args)...);
+  (void)func(in, mid, std::forward<Args>(args)...);
 }
 
 std::mt19937 rand_gen() { return std::mt19937(); }

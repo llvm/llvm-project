@@ -156,3 +156,55 @@ exit:
   %lcssa = phi i16 [ %sum.next, %loop ]
   ret i16 0
 }
+
+define i32 @pr58750(i16 %a, ptr %dst, i1 %c.0) {
+; CHECK-LABEL: @pr58750(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP186_NOT:%.*]] = icmp eq i16 [[A:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP186_NOT]])
+; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
+; CHECK:       outer.header:
+; CHECK-NEXT:    [[P_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[LCSSA:%.*]], [[OUTER_LATCH:%.*]] ]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[P_0]], 0
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    store i16 0, ptr [[DST:%.*]], align 1
+; CHECK-NEXT:    br i1 false, label [[INNER]], label [[OUTER_LATCH]]
+; CHECK:       outer.latch:
+; CHECK-NEXT:    [[LCSSA]] = phi i32 [ [[XOR]], [[INNER]] ]
+; CHECK-NEXT:    br i1 [[C_0:%.*]], label [[OUTER_HEADER]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[LCSSA_LCSSA:%.*]] = phi i32 [ [[LCSSA]], [[OUTER_LATCH]] ]
+; CHECK-NEXT:    ret i32 [[LCSSA_LCSSA]]
+;
+entry:
+  %cmp186.not = icmp eq i16 %a, 0
+  call void @llvm.assume(i1 %cmp186.not)
+  br label %outer.header
+
+outer.header:
+  %p.0 = phi i32 [ 0, %entry ], [ %lcssa, %outer.latch ]
+  br label %inner
+
+inner:
+  %inner.iv = phi i16 [ 0, %outer.header ], [ %inner.iv.next, %inner ]
+  %p.1 = phi i32 [ %p.0, %outer.header ], [ %xor, %inner ]
+  store i16 %inner.iv, ptr %dst, align 1
+  %conv = sext i16 %inner.iv to i32
+  %xor = xor i32 %p.1, %conv
+  %inner.iv.next = add nuw i16 %inner.iv, 1
+  %c.1 = icmp ult i16 %inner.iv.next, %a
+  br i1 %c.1, label %inner, label %outer.latch
+
+outer.latch:
+  %lcssa = phi i32 [ %xor, %inner ]
+  br i1 %c.0, label %outer.header, label %exit
+
+exit:
+  ret i32 %lcssa
+}
+
+; Function Attrs: inaccessiblememonly nocallback nofree nosync nounwind willreturn
+declare void @llvm.assume(i1 noundef) #1
+
+

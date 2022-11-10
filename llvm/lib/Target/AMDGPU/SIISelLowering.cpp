@@ -10038,8 +10038,11 @@ SDValue SITargetLowering::performRcpCombine(SDNode *N,
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
 
-  if (N0.isUndef())
-    return N0;
+  if (N0.isUndef()) {
+    return DCI.DAG.getConstantFP(
+        APFloat::getQNaN(SelectionDAG::EVTToAPFloatSemantics(VT)), SDLoc(N),
+        VT);
+  }
 
   if (VT == MVT::f32 && (N0.getOpcode() == ISD::UINT_TO_FP ||
                          N0.getOpcode() == ISD::SINT_TO_FP)) {
@@ -11915,7 +11918,7 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
 
   if (TII->isMIMG(Opcode) && !TII->get(Opcode).mayStore() &&
       !TII->isGather4(Opcode) &&
-      AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::dmask) != -1) {
+      AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::dmask)) {
     return adjustWritemask(Node, DAG);
   }
 

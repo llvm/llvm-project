@@ -912,9 +912,9 @@ static void printStateTraitWithLocationContextJson(
 
   // Try to do as much compile time checking as possible.
   // FIXME: check for invocable instead of function?
-  static_assert(std::is_function<std::remove_pointer_t<Printer>>::value,
+  static_assert(std::is_function_v<std::remove_pointer_t<Printer>>,
                 "Printer is not a function!");
-  static_assert(std::is_convertible<Printer, RequiredType>::value,
+  static_assert(std::is_convertible_v<Printer, RequiredType>,
                 "Printer doesn't have the required type!");
 
   if (LCtx && !State->get<Trait>().isEmpty()) {

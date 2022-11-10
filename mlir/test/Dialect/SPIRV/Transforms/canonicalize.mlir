@@ -86,6 +86,30 @@ func.func @convert_bitcast_multi_use(%arg0 : vector<2xf32>, %arg1 : !spirv.ptr<i
 
 // -----
 
+// CHECK-LABEL: @convert_bitcast_roundtip
+// CHECK-SAME:    %[[ARG:.+]]: i64
+func.func @convert_bitcast_roundtip(%arg0 : i64) -> i64 {
+  // CHECK: spirv.ReturnValue %[[ARG]]
+  %0 = spirv.Bitcast %arg0 : i64 to f64
+  %1 = spirv.Bitcast %0 : f64 to i64
+  spirv.ReturnValue %1 : i64
+}
+
+// -----
+
+// CHECK-LABEL: @convert_bitcast_chained_roundtip
+// CHECK-SAME:    %[[ARG:.+]]: i64
+func.func @convert_bitcast_chained_roundtip(%arg0 : i64) -> i64 {
+  // CHECK: spirv.ReturnValue %[[ARG]]
+  %0 = spirv.Bitcast %arg0 : i64 to f64
+  %1 = spirv.Bitcast %0 : f64 to vector<2xi32>
+  %2 = spirv.Bitcast %1 : vector<2xi32> to vector<2xf32>
+  %3 = spirv.Bitcast %2 : vector<2xf32> to i64
+  spirv.ReturnValue %3 : i64
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.CompositeExtract
 //===----------------------------------------------------------------------===//

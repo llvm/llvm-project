@@ -73,8 +73,7 @@ static void addUses(const MachineInstr &MI,
 // returns true if all uses of OrigMI only depend on the lower word of its
 // output, so we can transform OrigMI to the corresponding W-version.
 // TODO: handle multiple interdependent transformations
-static bool isAllUsesReadW(const MachineInstr &OrigMI,
-                           MachineRegisterInfo &MRI) {
+static bool hasAllWUsers(const MachineInstr &OrigMI, MachineRegisterInfo &MRI) {
 
   SmallPtrSet<const MachineInstr *, 4> Visited;
   SmallVector<const MachineInstr *, 4> Worklist;
@@ -258,7 +257,7 @@ static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI,
   case RISCV::ADDI:
     if (MI.getOperand(1).isReg() && MI.getOperand(1).getReg() == RISCV::X0)
       return true;
-    if (isAllUsesReadW(MI, MRI)) {
+    if (hasAllWUsers(MI, MRI)) {
       // transform to ADDIW
       FixableDef.insert(&MI);
       return true;
@@ -286,7 +285,7 @@ static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI,
   case RISCV::LWU:
   case RISCV::MUL:
   case RISCV::SUB:
-    if (isAllUsesReadW(MI, MRI)) {
+    if (hasAllWUsers(MI, MRI)) {
       FixableDef.insert(&MI);
       return true;
     }

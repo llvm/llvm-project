@@ -184,20 +184,6 @@ LLVMArrayType::getPreferredAlignment(const DataLayout &dataLayout,
 }
 
 //===----------------------------------------------------------------------===//
-// SubElementTypeInterface
-
-void LLVMArrayType::walkImmediateSubElements(
-    function_ref<void(Attribute)> walkAttrsFn,
-    function_ref<void(Type)> walkTypesFn) const {
-  walkTypesFn(getElementType());
-}
-
-Type LLVMArrayType::replaceImmediateSubElements(
-    ArrayRef<Attribute> replAttrs, ArrayRef<Type> replTypes) const {
-  return get(replTypes.front(), getNumElements());
-}
-
-//===----------------------------------------------------------------------===//
 // Function type.
 //===----------------------------------------------------------------------===//
 
@@ -245,22 +231,6 @@ LLVMFunctionType::verify(function_ref<InFlightDiagnostic()> emitError,
       return emitError() << "invalid function argument type: " << arg;
 
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// SubElementTypeInterface
-
-void LLVMFunctionType::walkImmediateSubElements(
-    function_ref<void(Attribute)> walkAttrsFn,
-    function_ref<void(Type)> walkTypesFn) const {
-  walkTypesFn(getReturnType());
-  for (Type type : getParams())
-    walkTypesFn(type);
-}
-
-Type LLVMFunctionType::replaceImmediateSubElements(
-    ArrayRef<Attribute> replAttrs, ArrayRef<Type> replTypes) const {
-  return get(replTypes.front(), replTypes.drop_front(), isVarArg());
 }
 
 //===----------------------------------------------------------------------===//
@@ -437,20 +407,6 @@ LogicalResult LLVMPointerType::verifyEntries(DataLayoutEntryListRef entries,
     }
   }
   return success();
-}
-
-//===----------------------------------------------------------------------===//
-// SubElementTypeInterface
-
-void LLVMPointerType::walkImmediateSubElements(
-    function_ref<void(Attribute)> walkAttrsFn,
-    function_ref<void(Type)> walkTypesFn) const {
-  walkTypesFn(getElementType());
-}
-
-Type LLVMPointerType::replaceImmediateSubElements(
-    ArrayRef<Attribute> replAttrs, ArrayRef<Type> replTypes) const {
-  return get(getContext(), replTypes.front(), getAddressSpace());
 }
 
 //===----------------------------------------------------------------------===//
@@ -749,17 +705,6 @@ LLVMFixedVectorType::verify(function_ref<InFlightDiagnostic()> emitError,
       emitError, elementType, numElements);
 }
 
-void LLVMFixedVectorType::walkImmediateSubElements(
-    function_ref<void(Attribute)> walkAttrsFn,
-    function_ref<void(Type)> walkTypesFn) const {
-  walkTypesFn(getElementType());
-}
-
-Type LLVMFixedVectorType::replaceImmediateSubElements(
-    ArrayRef<Attribute> replAttrs, ArrayRef<Type> replTypes) const {
-  return get(replTypes[0], getNumElements());
-}
-
 //===----------------------------------------------------------------------===//
 // LLVMScalableVectorType.
 //===----------------------------------------------------------------------===//
@@ -790,17 +735,6 @@ LLVMScalableVectorType::verify(function_ref<InFlightDiagnostic()> emitError,
                                Type elementType, unsigned numElements) {
   return verifyVectorConstructionInvariants<LLVMScalableVectorType>(
       emitError, elementType, numElements);
-}
-
-void LLVMScalableVectorType::walkImmediateSubElements(
-    function_ref<void(Attribute)> walkAttrsFn,
-    function_ref<void(Type)> walkTypesFn) const {
-  walkTypesFn(getElementType());
-}
-
-Type LLVMScalableVectorType::replaceImmediateSubElements(
-    ArrayRef<Attribute> replAttrs, ArrayRef<Type> replTypes) const {
-  return get(replTypes[0], getMinNumElements());
 }
 
 //===----------------------------------------------------------------------===//

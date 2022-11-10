@@ -689,8 +689,8 @@ let Predicates = [HasSVE] in {
 } // End HasSVE
 
 let Predicates = [HasSVEorSME] in {
-  defm FMLA_ZZZI : sve_fp_fma_by_indexed_elem<0b0, "fmla", int_aarch64_sve_fmla_lane>;
-  defm FMLS_ZZZI : sve_fp_fma_by_indexed_elem<0b1, "fmls", int_aarch64_sve_fmls_lane>;
+  defm FMLA_ZZZI : sve_fp_fma_by_indexed_elem<0b00, "fmla", int_aarch64_sve_fmla_lane>;
+  defm FMLS_ZZZI : sve_fp_fma_by_indexed_elem<0b01, "fmls", int_aarch64_sve_fmls_lane>;
 
   defm FCMLA_ZZZI : sve_fp_fcmla_by_indexed_elem<"fcmla", int_aarch64_sve_fcmla_lane>;
   defm FMUL_ZZZI   : sve_fp_fmul_by_indexed_elem<"fmul", int_aarch64_sve_fmul_lane>;
@@ -904,10 +904,16 @@ let Predicates = [HasSVEorSME] in {
   defm LD1SH_S_IMM : sve_mem_cld_si<0b1001, "ld1sh", Z_s, ZPR32>;
   defm LD1W_IMM    : sve_mem_cld_si<0b1010, "ld1w",  Z_s, ZPR32>;
   defm LD1W_D_IMM  : sve_mem_cld_si<0b1011, "ld1w",  Z_d, ZPR64>;
+  let Predicates = [HasSVE2p1] in {
+  defm LD1W_Q_IMM  : sve_mem_128b_cld_si<0b10, "ld1w">;
+  }
   defm LD1SB_D_IMM : sve_mem_cld_si<0b1100, "ld1sb", Z_d, ZPR64>;
   defm LD1SB_S_IMM : sve_mem_cld_si<0b1101, "ld1sb", Z_s, ZPR32>;
   defm LD1SB_H_IMM : sve_mem_cld_si<0b1110, "ld1sb", Z_h, ZPR16>;
   defm LD1D_IMM    : sve_mem_cld_si<0b1111, "ld1d",  Z_d, ZPR64>;
+  let Predicates = [HasSVE2p1] in {
+  defm LD1D_Q_IMM  : sve_mem_128b_cld_si<0b11, "ld1d">;
+  }
 
   // LD1R loads (splat scalar to vector)
   defm LD1RB_IMM    : sve_mem_ld_dup<0b00, 0b00, "ld1rb",  Z_b, ZPR8,  uimm6s1>;
@@ -965,10 +971,16 @@ let Predicates = [HasSVEorSME] in {
   defm LD1SH_S : sve_mem_cld_ss<0b1001, "ld1sh", Z_s, ZPR32, GPR64NoXZRshifted16>;
   defm LD1W    : sve_mem_cld_ss<0b1010, "ld1w",  Z_s, ZPR32, GPR64NoXZRshifted32>;
   defm LD1W_D  : sve_mem_cld_ss<0b1011, "ld1w",  Z_d, ZPR64, GPR64NoXZRshifted32>;
+  let Predicates = [HasSVE2p1] in {
+  defm LD1W_Q  : sve_mem_128b_cld_ss<0b10, "ld1w", GPR64NoXZRshifted32>;
+  }
   defm LD1SB_D : sve_mem_cld_ss<0b1100, "ld1sb", Z_d, ZPR64, GPR64NoXZRshifted8>;
   defm LD1SB_S : sve_mem_cld_ss<0b1101, "ld1sb", Z_s, ZPR32, GPR64NoXZRshifted8>;
   defm LD1SB_H : sve_mem_cld_ss<0b1110, "ld1sb", Z_h, ZPR16, GPR64NoXZRshifted8>;
   defm LD1D    : sve_mem_cld_ss<0b1111, "ld1d",  Z_d, ZPR64, GPR64NoXZRshifted64>;
+  let Predicates = [HasSVE2p1] in {
+  defm LD1D_Q  : sve_mem_128b_cld_ss<0b11, "ld1d", GPR64NoXZRshifted64>;
+  }
 } // End HasSVEorSME
 
 let Predicates = [HasSVE] in {
@@ -1265,7 +1277,13 @@ let Predicates = [HasSVEorSME] in {
   defm ST1H_D_IMM : sve_mem_cst_si<0b01, 0b11, "st1h", Z_d, ZPR64>;
   defm ST1W_IMM   : sve_mem_cst_si<0b10, 0b10, "st1w", Z_s, ZPR32>;
   defm ST1W_D_IMM : sve_mem_cst_si<0b10, 0b11, "st1w", Z_d, ZPR64>;
+  let Predicates = [HasSVE2p1] in {
+  defm ST1W_Q_IMM : sve_mem_cst_si<0b10, 0b00, "st1w", Z_q, ZPR128>;
+  }
   defm ST1D_IMM   : sve_mem_cst_si<0b11, 0b11, "st1d", Z_d, ZPR64>;
+  let Predicates = [HasSVE2p1] in {
+  defm ST1D_Q_IMM : sve_mem_cst_si<0b11, 0b10, "st1d", Z_q, ZPR128>;
+  }
 
   // contiguous store with reg+reg addressing.
   defm ST1B   : sve_mem_cst_ss<0b0000, "st1b", Z_b, ZPR8,  GPR64NoXZRshifted8>;
@@ -1277,7 +1295,13 @@ let Predicates = [HasSVEorSME] in {
   defm ST1H_D : sve_mem_cst_ss<0b0111, "st1h", Z_d, ZPR64, GPR64NoXZRshifted16>;
   defm ST1W   : sve_mem_cst_ss<0b1010, "st1w", Z_s, ZPR32, GPR64NoXZRshifted32>;
   defm ST1W_D : sve_mem_cst_ss<0b1011, "st1w", Z_d, ZPR64, GPR64NoXZRshifted32>;
+  let Predicates = [HasSVE2p1] in {
+  defm ST1W_Q : sve_mem_cst_ss<0b1000, "st1w", Z_q, ZPR128, GPR64NoXZRshifted32>;
+  }
   defm ST1D   : sve_mem_cst_ss<0b1111, "st1d", Z_d, ZPR64, GPR64NoXZRshifted64>;
+  let Predicates = [HasSVE2p1] in {
+  defm ST1D_Q : sve_mem_cst_ss<0b1110, "st1d", Z_q, ZPR128, GPR64NoXZRshifted64>;
+  }
 } // End HasSVEorSME
 
 let Predicates = [HasSVE] in {
@@ -3696,3 +3720,31 @@ defm WHILEHI_CXX  : sve2p1_int_while_rr_pn<"whilehi", 0b101>;
 defm WHILELO_CXX  : sve2p1_int_while_rr_pn<"whilelo", 0b110>;
 defm WHILELS_CXX  : sve2p1_int_while_rr_pn<"whilels", 0b111>;
 } // End HasSVE2p1_or_HasSME2
+
+//===----------------------------------------------------------------------===//
+// SVE2.1 non-widening BFloat16 to BFloat16 instructions
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasSVE2p1_or_HasSME2p1, HasB16B16] in {
+def BFADD_ZZZ : sve_fp_3op_u_zd<0b00, 0b000, "bfadd", ZPR16>;
+def BFSUB_ZZZ : sve_fp_3op_u_zd<0b00, 0b001, "bfsub", ZPR16>;
+def BFMUL_ZZZ : sve_fp_3op_u_zd<0b00, 0b010, "bfmul", ZPR16>;
+
+def BFMLA_ZPmZZ : sve_fp_3op_p_zds_a<0b00, 0b00, "bfmla", ZPR16>;
+def BFMLS_ZPmZZ : sve_fp_3op_p_zds_a<0b00, 0b01, "bfmls", ZPR16>;
+
+def BFADD_ZPZmZ   : sve_fp_2op_p_zds<0b00, 0b0000, "bfadd", ZPR16>;
+def BFSUB_ZPZmZ   : sve_fp_2op_p_zds<0b00, 0b0001, "bfsub", ZPR16>;
+def BFMUL_ZPZmZ   : sve_fp_2op_p_zds<0b00, 0b0010, "bfmul", ZPR16>;
+def BFMAXNM_ZPZmZ : sve_fp_2op_p_zds<0b00, 0b0100, "bfmaxnm", ZPR16>;
+def BFMINNM_ZPZmZ : sve_fp_2op_p_zds<0b00, 0b0101, "bfminnm", ZPR16>;
+def BFMAX_ZPZmZ   : sve_fp_2op_p_zds<0b00, 0b0110, "bfmax", ZPR16>;
+def BFMIN_ZPZmZ   : sve_fp_2op_p_zds<0b00, 0b0111, "bfmin", ZPR16>;
+
+defm BFMLA_ZZZI : sve2p1_fp_bfma_by_indexed_elem<"bfmla", 0b10>;
+defm BFMLS_ZZZI : sve2p1_fp_bfma_by_indexed_elem<"bfmls", 0b11>;
+
+defm BFMUL_ZZZI : sve2p1_fp_bfmul_by_indexed_elem<"bfmul">;
+
+def BFCLAMP_ZZZ : sve2p1_fclamp<"bfclamp", 0b00, ZPR16>;
+} // End HasSVE2p1_or_HasSME2p1, HasB16B16

@@ -101,22 +101,22 @@ void checkDeclName(const SelectedASTNode &Node, StringRef Name) {
 }
 
 template <typename T>
-const SelectedASTNode &checkNode(
-    const SelectedASTNode &StmtNode, SourceSelectionKind SelectionKind,
-    unsigned NumChildren = 0,
-    std::enable_if_t<std::is_base_of<Stmt, T>::value, T> *StmtOverloadChecker =
-        nullptr) {
+const SelectedASTNode &
+checkNode(const SelectedASTNode &StmtNode, SourceSelectionKind SelectionKind,
+          unsigned NumChildren = 0,
+          std::enable_if_t<std::is_base_of_v<Stmt, T>, T> *StmtOverloadChecker =
+              nullptr) {
   checkNodeImpl(isa<T>(StmtNode.Node.get<Stmt>()), StmtNode, SelectionKind,
                 NumChildren);
   return StmtNode;
 }
 
 template <typename T>
-const SelectedASTNode &checkNode(
-    const SelectedASTNode &DeclNode, SourceSelectionKind SelectionKind,
-    unsigned NumChildren = 0, StringRef Name = "",
-    std::enable_if_t<std::is_base_of<Decl, T>::value, T> *DeclOverloadChecker =
-        nullptr) {
+const SelectedASTNode &
+checkNode(const SelectedASTNode &DeclNode, SourceSelectionKind SelectionKind,
+          unsigned NumChildren = 0, StringRef Name = "",
+          std::enable_if_t<std::is_base_of_v<Decl, T>, T> *DeclOverloadChecker =
+              nullptr) {
   checkNodeImpl(isa<T>(DeclNode.Node.get<Decl>()), DeclNode, SelectionKind,
                 NumChildren);
   if (!Name.empty())
