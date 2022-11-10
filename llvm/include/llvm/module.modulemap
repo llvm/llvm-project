@@ -421,6 +421,7 @@ module LLVM_Utils {
     textual header "Support/RISCVTargetParser.def"
     textual header "Support/TargetOpcodes.def"
     textual header "Support/X86TargetParser.def"
+    textual header "Support/LoongArchTargetParser.def"
     textual header "Support/VirtualOutputConfig.def"
   }
 
