@@ -62,8 +62,10 @@ struct SCFTilingOptions {
 
 /// Transformation information returned after tiling.
 struct SCFTilingResult {
-  /// The tiled operation generated.
-  Operation *tiledOp;
+  /// Tiled operations that are generated during tiling. The order does not
+  /// matter except the last op. The replacements are expected to be the results
+  /// of the last op.
+  SmallVector<Operation *> tiledOps;
   /// The `scf.for` operations that iterate over the tiles.
   SmallVector<scf::ForOp> loops;
   /// Values to use as replacements for the untiled op. Is the same size as the

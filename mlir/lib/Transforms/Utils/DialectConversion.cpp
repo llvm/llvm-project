@@ -3056,6 +3056,29 @@ auto TypeConverter::convertBlockSignature(Block *block)
 // FunctionOpInterfaceSignatureConversion
 //===----------------------------------------------------------------------===//
 
+static LogicalResult convertFuncOpTypes(FunctionOpInterface funcOp,
+                                        TypeConverter &typeConverter,
+                                        ConversionPatternRewriter &rewriter) {
+  FunctionType type = funcOp.getFunctionType().cast<FunctionType>();
+
+  // Convert the original function types.
+  TypeConverter::SignatureConversion result(type.getNumInputs());
+  SmallVector<Type, 1> newResults;
+  if (failed(typeConverter.convertSignatureArgs(type.getInputs(), result)) ||
+      failed(typeConverter.convertTypes(type.getResults(), newResults)) ||
+      failed(rewriter.convertRegionTypes(&funcOp.getFunctionBody(),
+                                         typeConverter, &result)))
+    return failure();
+
+  // Update the function signature in-place.
+  auto newType = FunctionType::get(rewriter.getContext(),
+                                   result.getConvertedTypes(), newResults);
+
+  rewriter.updateRootInPlace(funcOp, [&] { funcOp.setType(newType); });
+
+  return success();
+}
+
 /// Create a default conversion pattern that rewrites the type signature of a
 /// FunctionOpInterface op. This only supports ops which use FunctionType to
 /// represent their type.
@@ -3067,27 +3090,21 @@ struct FunctionOpInterfaceSignatureConversion : public ConversionPattern {
       : ConversionPattern(converter, functionLikeOpName, /*benefit=*/1, ctx) {}
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(Operation *op, ArrayRef<Value> /*operands*/,
                   ConversionPatternRewriter &rewriter) const override {
     FunctionOpInterface funcOp = cast<FunctionOpInterface>(op);
-    FunctionType type = funcOp.getFunctionType().cast<FunctionType>();
+    return convertFuncOpTypes(funcOp, *typeConverter, rewriter);
+  }
+};
 
-    // Convert the original function types.
-    TypeConverter::SignatureConversion result(type.getNumInputs());
-    SmallVector<Type, 1> newResults;
-    if (failed(typeConverter->convertSignatureArgs(type.getInputs(), result)) ||
-        failed(typeConverter->convertTypes(type.getResults(), newResults)) ||
-        failed(rewriter.convertRegionTypes(&funcOp.getFunctionBody(),
-                                           *typeConverter, &result)))
-      return failure();
+struct AnyFunctionOpInterfaceSignatureConversion
+    : public OpInterfaceConversionPattern<FunctionOpInterface> {
+  using OpInterfaceConversionPattern::OpInterfaceConversionPattern;
 
-    // Update the function signature in-place.
-    auto newType = FunctionType::get(rewriter.getContext(),
-                                     result.getConvertedTypes(), newResults);
-
-    rewriter.updateRootInPlace(op, [&] { funcOp.setType(newType); });
-
-    return success();
+  LogicalResult
+  matchAndRewrite(FunctionOpInterface funcOp, ArrayRef<Value> /*operands*/,
+                  ConversionPatternRewriter &rewriter) const override {
+    return convertFuncOpTypes(funcOp, *typeConverter, rewriter);
   }
 };
 } // namespace
@@ -3097,6 +3114,12 @@ void mlir::populateFunctionOpInterfaceTypeConversionPattern(
     TypeConverter &converter) {
   patterns.add<FunctionOpInterfaceSignatureConversion>(
       functionLikeOpName, patterns.getContext(), converter);
+}
+
+void mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(
+    RewritePatternSet &patterns, TypeConverter &converter) {
+  patterns.add<AnyFunctionOpInterfaceSignatureConversion>(
+      converter, patterns.getContext());
 }
 
 //===----------------------------------------------------------------------===//

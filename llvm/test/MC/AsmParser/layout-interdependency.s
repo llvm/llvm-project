@@ -1,5 +1,5 @@
 # RUN: not llvm-mc --filetype=obj %s -o /dev/null 2>&1 | FileCheck %s
-# REQUIRES: default_triple
+# REQUIRES: object-emission
 
 fct_end:
 

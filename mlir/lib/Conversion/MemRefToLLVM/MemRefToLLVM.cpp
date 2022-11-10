@@ -2115,7 +2115,7 @@ public:
       return failure();
 
     // Create the descriptor.
-    MemRefDescriptor sourceMemRef(adaptor.getOperands().front());
+    MemRefDescriptor sourceMemRef(adaptor.getSource());
     Location loc = extractStridedMetadataOp.getLoc();
     Value source = extractStridedMetadataOp.getSource();
 
@@ -2125,7 +2125,13 @@ public:
     results.reserve(2 + rank * 2);
 
     // Base buffer.
-    results.push_back(sourceMemRef.allocatedPtr(rewriter, loc));
+    Value baseBuffer = sourceMemRef.allocatedPtr(rewriter, loc);
+    Value alignedBuffer = sourceMemRef.alignedPtr(rewriter, loc);
+    MemRefDescriptor dstMemRef = MemRefDescriptor::fromStaticShape(
+        rewriter, loc, *getTypeConverter(),
+        extractStridedMetadataOp.getBaseBuffer().getType().cast<MemRefType>(),
+        baseBuffer, alignedBuffer);
+    results.push_back((Value)dstMemRef);
 
     // Offset.
     results.push_back(sourceMemRef.offset(rewriter, loc));

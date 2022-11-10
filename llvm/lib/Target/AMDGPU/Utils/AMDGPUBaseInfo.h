@@ -300,6 +300,11 @@ LLVM_READONLY
 int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx);
 
 LLVM_READONLY
+inline bool hasNamedOperand(uint64_t Opcode, uint64_t NamedIdx) {
+  return getNamedOperandIdx(Opcode, NamedIdx) != -1;
+}
+
+LLVM_READONLY
 int getSOPPWithRelaxation(uint16_t Opcode);
 
 struct MIMGBaseOpcodeInfo {

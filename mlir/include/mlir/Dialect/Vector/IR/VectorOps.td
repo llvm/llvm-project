@@ -244,7 +244,7 @@ def Vector_ContractionOp :
       return getOperand(4).getType().cast<VectorType>();
     }
     Type getResultType() { return getResult().getType(); }
-    ArrayRef<StringRef> getTraitAttrNames();
+    SmallVector<StringRef> getTraitAttrNames();
     static unsigned getAccOperandIndex() { return 2; }
 
     llvm::SmallVector<::mlir::AffineMap, 4> getIndexingMapsArray() {
@@ -264,8 +264,6 @@ def Vector_ContractionOp :
 
     std::vector<std::pair<int64_t, int64_t>> getContractingDimMap();
     std::vector<std::pair<int64_t, int64_t>> getBatchDimMap();
-
-    static constexpr StringRef getKindAttrStrName() { return "kind"; }
 
     static CombiningKind getDefaultKind() {
       return CombiningKind::ADD;

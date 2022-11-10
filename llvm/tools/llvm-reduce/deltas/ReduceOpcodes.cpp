@@ -19,6 +19,12 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 
+// Assume outgoing undef arguments aren't relevant.
+// TODO: Maybe skip any trivial constant arguments.
+static bool shouldIgnoreArgument(const Value *V) {
+  return isa<UndefValue>(V);
+}
+
 static Value *replaceIntrinsic(Module &M, IntrinsicInst *II,
                                Intrinsic::ID NewIID,
                                ArrayRef<Type *> Tys = None) {
@@ -64,8 +70,142 @@ static Value *reduceIntrinsic(Oracle &O, Module &M, IntrinsicInst *II) {
   }
 }
 
+/// Look for calls that look like they could be replaced with a load or store.
+static bool callLooksLikeLoadStore(CallBase *CB, Value *&DataArg,
+                                   Value *&PtrArg) {
+  const bool IsStore = CB->getType()->isVoidTy();
+
+  PtrArg = nullptr;
+  DataArg = nullptr;
+  for (Value *Arg : CB->args()) {
+    if (shouldIgnoreArgument(Arg))
+      continue;
+
+    if (!Arg->getType()->isSized())
+      return false;
+
+    PointerType *PT = dyn_cast<PointerType>(Arg->getType());
+    if (!PtrArg && PT) {
+      // FIXME: Could create bitcast for typed pointers, but roll back unused
+      // replacement only erases one instruction.
+      if (!IsStore && !PT->isOpaqueOrPointeeTypeMatches(CB->getType()))
+        return false;
+
+      PtrArg = Arg;
+      continue;
+    }
+
+    if (!IsStore || DataArg)
+      return false;
+
+    DataArg = Arg;
+  }
+
+  if (IsStore && !DataArg) {
+    // FIXME: For typed pointers, use element type?
+    DataArg = ConstantInt::get(IntegerType::getInt32Ty(CB->getContext()), 0);
+  }
+
+  // If we didn't find any arguments, we can fill in the pointer.
+  if (!PtrArg) {
+    unsigned AS = CB->getModule()->getDataLayout().getAllocaAddrSpace();
+
+    PointerType *PtrTy =
+        PointerType::get(DataArg ? DataArg->getType()
+                                 : IntegerType::getInt32Ty(CB->getContext()),
+                         AS);
+
+    PtrArg = ConstantPointerNull::get(PtrTy);
+  }
+
+  // Make sure we don't emit an invalid store with typed pointers.
+  if (IsStore && DataArg->getType()->getPointerTo(
+        cast<PointerType>(PtrArg->getType())->getAddressSpace()) !=
+      PtrArg->getType())
+    return false;
+
+  return true;
+}
+
+// TODO: Replace 2 pointer argument calls with memcpy
+static Value *tryReplaceCallWithLoadStore(Oracle &O, Module &M, CallBase *CB) {
+  Value *PtrArg = nullptr;
+  Value *DataArg = nullptr;
+  if (!callLooksLikeLoadStore(CB, DataArg, PtrArg) || O.shouldKeep())
+    return nullptr;
+
+  IRBuilder<> B(CB);
+  if (DataArg)
+    return B.CreateStore(DataArg, PtrArg, true);
+  return B.CreateLoad(CB->getType(), PtrArg, true);
+}
+
+static bool callLooksLikeOperator(CallBase *CB,
+                                  SmallVectorImpl<Value *> &OperatorArgs) {
+  Type *ReturnTy = CB->getType();
+  if (!ReturnTy->isFirstClassType())
+    return false;
+
+  for (Value *Arg : CB->args()) {
+    if (shouldIgnoreArgument(Arg))
+      continue;
+
+    if (Arg->getType() != ReturnTy)
+      return false;
+
+    OperatorArgs.push_back(Arg);
+  }
+
+  return true;
+}
+
+static Value *tryReplaceCallWithOperator(Oracle &O, Module &M, CallBase *CB) {
+  SmallVector<Value *, 4> Arguments;
+
+  if (!callLooksLikeOperator(CB, Arguments) || Arguments.size() > 3)
+    return nullptr;
+
+  if (O.shouldKeep())
+    return nullptr;
+
+  IRBuilder<> B(CB);
+  if (CB->getType()->isFPOrFPVectorTy()) {
+    switch (Arguments.size()) {
+    case 1:
+      return B.CreateFNeg(Arguments[0]);
+    case 2:
+      return B.CreateFMul(Arguments[0], Arguments[1]);
+    case 3:
+      return B.CreateIntrinsic(Intrinsic::fma, {CB->getType()}, Arguments);
+    default:
+      return nullptr;
+    }
+
+    llvm_unreachable("all argument sizes handled");
+  }
+
+  if (CB->getType()->isIntOrIntVectorTy()) {
+    switch (Arguments.size()) {
+    case 1:
+      return B.CreateUnaryIntrinsic(Intrinsic::bswap, Arguments[0]);
+    case 2:
+      return B.CreateAnd(Arguments[0], Arguments[1]);
+    case 3:
+      return B.CreateIntrinsic(Intrinsic::fshl, {CB->getType()}, Arguments);
+    default:
+      return nullptr;
+    }
+
+    llvm_unreachable("all argument sizes handled");
+  }
+
+  return nullptr;
+}
+
 static Value *reduceInstruction(Oracle &O, Module &M, Instruction &I) {
   IRBuilder<> B(&I);
+
+  // TODO: fp binary operator with constant to fneg
   switch (I.getOpcode()) {
   case Instruction::FDiv:
   case Instruction::FRem:
@@ -95,6 +235,14 @@ static Value *reduceInstruction(Oracle &O, Module &M, Instruction &I) {
   case Instruction::Call: {
     if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I))
       return reduceIntrinsic(O, M, II);
+
+    CallBase *CB = cast<CallBase>(&I);
+
+    if (Value *NewOp = tryReplaceCallWithOperator(O, M, CB))
+      return NewOp;
+
+    if (Value *NewOp = tryReplaceCallWithLoadStore(O, M, CB))
+      return NewOp;
 
     return nullptr;
   }

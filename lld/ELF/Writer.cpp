@@ -1794,10 +1794,9 @@ static void removeUnusedSyntheticSections() {
   // all regular ones. Reverse iterate to find the first synthetic section
   // after a non-synthetic one which will be our starting point.
   auto start =
-      std::find_if(
-          ctx.inputSections.rbegin(), ctx.inputSections.rend(),
-          [](InputSectionBase *s) { return !isa<SyntheticSection>(s); })
-          .base();
+      llvm::find_if(llvm::reverse(ctx.inputSections), [](InputSectionBase *s) {
+        return !isa<SyntheticSection>(s);
+      }).base();
 
   // Remove unused synthetic sections from ctx.inputSections;
   DenseSet<InputSectionBase *> unused;

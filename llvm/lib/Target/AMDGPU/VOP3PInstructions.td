@@ -173,7 +173,7 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
                        $src1_modifiers, $src1,
                        $src2_modifiers, $src2,
                        DSTCLAMP.NONE,
-                       $elt0))
+                       VGPR_32:$elt0))
   >;
 
   def : GCNPat <
@@ -186,7 +186,7 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
                        $src1_modifiers, $src1,
                        $src2_modifiers, $src2,
                        DSTCLAMP.ENABLE,
-                       $elt0))
+                       VGPR_32:$elt0))
   >;
 
   def : GCNPat <

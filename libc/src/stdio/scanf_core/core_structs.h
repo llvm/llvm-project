@@ -78,7 +78,7 @@ struct FormatSection {
 
 enum ErrorCodes : int {
   // This is the value to be returned by conversions when no error has occurred.
-  WRITE_OK = 0,
+  READ_OK = 0,
   // These are the scanf return values for when an error has occurred. They are
   // all negative, and should be distinct.
   FILE_READ_ERROR = -1,

@@ -1403,7 +1403,7 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
 }
 
 /// Remove negation and try to convert division into multiplication.
-static Instruction *foldFDivConstantDivisor(BinaryOperator &I) {
+Instruction *InstCombinerImpl::foldFDivConstantDivisor(BinaryOperator &I) {
   Constant *C;
   if (!match(I.getOperand(1), m_Constant(C)))
     return nullptr;
@@ -1414,6 +1414,17 @@ static Instruction *foldFDivConstantDivisor(BinaryOperator &I) {
   if (match(I.getOperand(0), m_FNeg(m_Value(X))))
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
       return BinaryOperator::CreateFDivFMF(X, NegC, &I);
+
+  // nnan X / +0.0 -> copysign(inf, X)
+  if (I.hasNoNaNs() && match(I.getOperand(1), m_Zero())) {
+    IRBuilder<> B(&I);
+    // TODO: nnan nsz X / -0.0 -> copysign(inf, X)
+    CallInst *CopySign = B.CreateIntrinsic(
+        Intrinsic::copysign, {C->getType()},
+        {ConstantFP::getInfinity(I.getType()), I.getOperand(0)}, &I);
+    CopySign->takeName(&I);
+    return replaceInstUsesWith(I, CopySign);
+  }
 
   // If the constant divisor has an exact inverse, this is always safe. If not,
   // then we can still create a reciprocal if fast-math-flags allow it and the

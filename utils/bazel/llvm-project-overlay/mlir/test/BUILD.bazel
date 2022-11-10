@@ -67,6 +67,7 @@ cc_library(
     srcs = glob(
         [
             "lib/Analysis/*.cpp",
+            "lib/Analysis/*.h",
             "lib/Analysis/DataFlow/*.cpp",
         ],
     ),

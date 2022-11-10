@@ -125,6 +125,7 @@ static int sectionOrder(OutputSection *osec) {
     }
   } else if (segname == segment_names::linkEdit) {
     return StringSwitch<int>(osec->name)
+        .Case(section_names::chainFixups, -11)
         .Case(section_names::rebase, -10)
         .Case(section_names::binding, -9)
         .Case(section_names::weakBinding, -8)

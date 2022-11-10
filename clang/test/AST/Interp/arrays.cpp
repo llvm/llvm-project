@@ -37,6 +37,60 @@ constexpr int getElement(int i) {
 static_assert(getElement(1) == 4, "");
 static_assert(getElement(5) == 36, "");
 
+constexpr int data[] = {5, 4, 3, 2, 1};
+constexpr int getElement(const int *Arr, int index) {
+  return *(Arr + index);
+}
+
+static_assert(getElement(data, 1) == 4, "");
+static_assert(getElement(data, 4) == 1, "");
+
+constexpr int getElementFromEnd(const int *Arr, int size, int index) {
+  return *(Arr + size - index - 1);
+}
+static_assert(getElementFromEnd(data, 5, 0) == 1, "");
+static_assert(getElementFromEnd(data, 5, 4) == 5, "");
+
+
+constexpr static int arr[2] = {1,2};
+constexpr static int arr2[2] = {3,4};
+constexpr int *p1 = nullptr;
+constexpr int *p2 = p1 + 1; // expected-error {{must be initialized by a constant expression}} \
+                            // expected-note {{cannot perform pointer arithmetic on null pointer}} \
+                            // ref-error {{must be initialized by a constant expression}} \
+                            // ref-note {{cannot perform pointer arithmetic on null pointer}}
+constexpr int *p3 = p1 + 0;
+constexpr int *p4 = p1 - 0;
+constexpr int *p5 =  0 + p1;
+constexpr int *p6 =  0 - p1; // expected-error {{invalid operands to binary expression}} \
+                             // ref-error {{invalid operands to binary expression}}
+
+constexpr int const * ap1 = &arr[0];
+constexpr int const * ap2 = ap1 + 3; // expected-error {{must be initialized by a constant expression}} \
+                                     // expected-note {{cannot refer to element 3 of array of 2}} \
+                                     // ref-error {{must be initialized by a constant expression}} \
+                                     // ref-note {{cannot refer to element 3 of array of 2}}
+
+constexpr auto ap3 = arr - 1; // expected-error {{must be initialized by a constant expression}} \
+                              // expected-note {{cannot refer to element -1}} \
+                              // ref-error {{must be initialized by a constant expression}} \
+                              // ref-note {{cannot refer to element -1}}
+constexpr int k1 = &arr[1] - &arr[0];
+static_assert(k1 == 1, "");
+static_assert((&arr[0] - &arr[1]) == -1, "");
+
+constexpr int k2 = &arr2[1] - &arr[0]; // expected-error {{must be initialized by a constant expression}} \
+                                       // ref-error {{must be initialized by a constant expression}}
+
+static_assert((arr + 0) == arr, "");
+static_assert(&arr[0] == arr, "");
+static_assert(*(&arr[0]) == 1, "");
+static_assert(*(&arr[1]) == 2, "");
+
+constexpr const int *OOB = (arr + 3) - 3; // expected-error {{must be initialized by a constant expression}} \
+                                          // expected-note {{cannot refer to element 3 of array of 2}} \
+                                          // ref-error {{must be initialized by a constant expression}} \
+                                          // ref-note {{cannot refer to element 3 of array of 2}}
 
 template<typename T>
 constexpr T getElementOf(T* array, int i) {
@@ -52,7 +106,6 @@ constexpr T& getElementOfArray(T (&array)[N], int I) {
 static_assert(getElementOfArray(foo[2], 3) == &m, "");
 
 
-constexpr int data[] = {5, 4, 3, 2, 1};
 static_assert(data[0] == 4, ""); // expected-error{{failed}} \
                                  // expected-note{{5 == 4}} \
                                  // ref-error{{failed}} \
