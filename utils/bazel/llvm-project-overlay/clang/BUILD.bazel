@@ -361,6 +361,7 @@ genrule(
     cmd = (
         "echo '#define CLANG_VERSION 16.0.0' >> $@\n" +
         "echo '#define CLANG_VERSION_MAJOR 16' >> $@\n" +
+        "echo '#define CLANG_VERSION_MAJOR_STRING \"16\"' >> $@\n" +
         "echo '#define CLANG_VERSION_MINOR 0' >> $@\n" +
         "echo '#define CLANG_VERSION_PATCHLEVEL 0' >> $@\n" +
         "echo '#define CLANG_VERSION_STRING \"16.0.0\"' >> $@\n"
