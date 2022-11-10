@@ -590,21 +590,28 @@ bool llvm::runIPSCCP(
         }
       }
 
-      // If we replaced an argument, the argmemonly and
-      // inaccessiblemem_or_argmemonly attributes do not hold any longer. Remove
-      // them from both the function and callsites.
+      // If we replaced an argument, we may now also access a global (currently
+      // classified as "other" memory). Update memory attribute to reflect this.
       if (ReplacedPointerArg) {
-        AttributeMask AttributesToRemove;
-        AttributesToRemove.addAttribute(Attribute::ArgMemOnly);
-        AttributesToRemove.addAttribute(Attribute::InaccessibleMemOrArgMemOnly);
-        F.removeFnAttrs(AttributesToRemove);
+        auto UpdateAttrs = [&](AttributeList AL) {
+          MemoryEffects ME = AL.getMemoryEffects();
+          if (ME == MemoryEffects::unknown())
+            return AL;
 
+          ME |= MemoryEffects(MemoryEffects::Other,
+                              ME.getModRef(MemoryEffects::ArgMem));
+          return AL.addFnAttribute(
+              F.getContext(),
+              Attribute::getWithMemoryEffects(F.getContext(), ME));
+        };
+
+        F.setAttributes(UpdateAttrs(F.getAttributes()));
         for (User *U : F.users()) {
           auto *CB = dyn_cast<CallBase>(U);
           if (!CB || CB->getCalledFunction() != &F)
             continue;
 
-          CB->removeFnAttrs(AttributesToRemove);
+          CB->setAttributes(UpdateAttrs(CB->getAttributes()));
         }
       }
       MadeChanges |= ReplacedPointerArg;

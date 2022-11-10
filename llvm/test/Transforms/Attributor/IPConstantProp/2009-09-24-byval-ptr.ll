@@ -45,7 +45,7 @@ return:                                           ; preds = %entry
 }
 
 define internal i32 @vfu2(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounwind readonly {
-; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: define {{[^@]+}}@vfu2
 ; CHECK-SAME: (i8 [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -86,7 +86,7 @@ define i32 @unions() nounwind {
 ; TUNIT-NEXT:    [[TMP2:%.*]] = load i8, i8* [[MYSTR_CAST1]], align 8
 ; TUNIT-NEXT:    [[MYSTR_0_12:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* @mystr, i64 0, i32 1
 ; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, i32* [[MYSTR_0_12]], align 8
-; TUNIT-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR2:[0-9]+]]
+; TUNIT-NEXT:    [[RESULT:%.*]] = call i32 @vfu2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR0]]
 ; TUNIT-NEXT:    ret i32 [[RESULT]]
 ;
 ; CGSCC: Function Attrs: nounwind
@@ -110,7 +110,7 @@ entry:
 }
 
 define internal i32 @vfu2_v2(%struct.MYstr* byval(%struct.MYstr) align 4 %u) nounwind readonly {
-; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind readonly willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CHECK-LABEL: define {{[^@]+}}@vfu2_v2
 ; CHECK-SAME: (i8 [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
@@ -155,7 +155,7 @@ define i32 @unions_v2() nounwind {
 ; TUNIT-NEXT:    [[TMP2:%.*]] = load i8, i8* [[MYSTR_CAST1]], align 8
 ; TUNIT-NEXT:    [[MYSTR_0_12:%.*]] = getelementptr [[STRUCT_MYSTR]], %struct.MYstr* @mystr, i64 0, i32 1
 ; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, i32* [[MYSTR_0_12]], align 8
-; TUNIT-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR2]]
+; TUNIT-NEXT:    [[RESULT:%.*]] = call i32 @vfu2_v2(i8 [[TMP2]], i32 [[TMP3]]) #[[ATTR0]]
 ; TUNIT-NEXT:    ret i32 [[RESULT]]
 ;
 ; CGSCC: Function Attrs: nounwind
@@ -172,10 +172,6 @@ entry:
   ret i32 %result
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nounwind }
-; TUNIT: attributes #[[ATTR1]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
-; TUNIT: attributes #[[ATTR2]] = { nounwind readonly }
-;.
-; CGSCC: attributes #[[ATTR0]] = { nounwind }
-; CGSCC: attributes #[[ATTR1]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
+; CHECK: attributes #[[ATTR0]] = { nounwind }
+; CHECK: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(argmem: read) }
 ;.

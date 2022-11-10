@@ -14,7 +14,7 @@ declare void @_ZdaPv(ptr) local_unnamed_addr #2
 
 ; TEST 1 (positive case)
 define void @only_return() #0 {
-; FNATTR: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind readnone willreturn uwtable
+; FNATTR: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@only_return
 ; FNATTR-SAME: () #[[ATTR3:[0-9]+]] {
 ; FNATTR-NEXT:    ret void
@@ -101,7 +101,7 @@ end:
 
 
 define void @mutual_recursion1() #0 {
-; FNATTR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
+; FNATTR: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@mutual_recursion1
 ; FNATTR-SAME: () #[[ATTR4:[0-9]+]] {
 ; FNATTR-NEXT:    call void @mutual_recursion2()
@@ -112,7 +112,7 @@ define void @mutual_recursion1() #0 {
 }
 
 define void @mutual_recursion2() #0 {
-; FNATTR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
+; FNATTR: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@mutual_recursion2
 ; FNATTR-SAME: () #[[ATTR4]] {
 ; FNATTR-NEXT:    call void @mutual_recursion1()
@@ -174,7 +174,7 @@ define noalias ptr @call_realloc(ptr nocapture %0, i64 %1) local_unnamed_addr #0
 declare void @nofree_function() nofree readnone #0
 
 define void @call_nofree_function() #0 {
-; FNATTR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
+; FNATTR: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@call_nofree_function
 ; FNATTR-SAME: () #[[ATTR4]] {
 ; FNATTR-NEXT:    tail call void @nofree_function()
@@ -225,7 +225,7 @@ define void @call_both() #0 {
 declare float @llvm.floor.f32(float)
 
 define void @call_floor(float %a) #0 {
-; FNATTR: Function Attrs: mustprogress nofree noinline nosync nounwind readnone willreturn uwtable
+; FNATTR: Function Attrs: mustprogress nofree noinline nosync nounwind willreturn memory(none) uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@call_floor
 ; FNATTR-SAME: (float [[A:%.*]]) #[[ATTR7:[0-9]+]] {
 ; FNATTR-NEXT:    [[TMP1:%.*]] = tail call float @llvm.floor.f32(float [[A]])
@@ -239,7 +239,7 @@ define void @call_floor(float %a) #0 {
 ; Check propagation.
 
 define void @f1() #0 {
-; FNATTR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
+; FNATTR: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@f1
 ; FNATTR-SAME: () #[[ATTR4]] {
 ; FNATTR-NEXT:    tail call void @nofree_function()
@@ -250,7 +250,7 @@ define void @f1() #0 {
 }
 
 define void @f2() #0 {
-; FNATTR: Function Attrs: nofree noinline nosync nounwind readnone uwtable
+; FNATTR: Function Attrs: nofree noinline nosync nounwind memory(none) uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@f2
 ; FNATTR-SAME: () #[[ATTR4]] {
 ; FNATTR-NEXT:    tail call void @f1()

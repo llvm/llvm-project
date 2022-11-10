@@ -1414,6 +1414,30 @@ Currently, only the following parameter attributes are defined:
     same address may be returned), for a free-like function the
     pointer will always be invalidated.
 
+``readnone``
+    This attribute indicates that the function does not dereference that
+    pointer argument, even though it may read or write the memory that the
+    pointer points to if accessed through other pointers.
+
+    If a function reads from or writes to a readnone pointer argument, the
+    behavior is undefined.
+
+``readonly``
+    This attribute indicates that the function does not write through this
+    pointer argument, even though it may write to the memory that the pointer
+    points to.
+
+    If a function writes to a readonly pointer argument, the behavior is
+    undefined.
+
+``writeonly``
+    This attribute indicates that the function may write to, but does not read
+    through this pointer argument (even though it may read from the memory that
+    the pointer points to).
+
+    If a function reads from a writeonly pointer argument, the behavior is
+    undefined.
+
 .. _gc:
 
 Garbage Collector Strategy Names
@@ -1701,22 +1725,6 @@ example:
     the profile information. By marking a function ``hot``, users can work
     around the cases where the training input does not have good coverage
     on all the hot functions.
-``inaccessiblememonly``
-    This attribute indicates that the function may only access memory that
-    is not accessible by the module being compiled before return from the
-    function. This is a weaker form of ``readnone``. If the function reads
-    or writes other memory, the behavior is undefined.
-
-    For clarity, note that such functions are allowed to return new memory
-    which is ``noalias`` with respect to memory already accessible from
-    the module.  That is, a function can be both ``inaccessiblememonly`` and
-    have a ``noalias`` return which introduces a new, potentially initialized,
-    allocation.
-``inaccessiblemem_or_argmemonly``
-    This attribute indicates that the function may only access memory that is
-    either not accessible by the module being compiled, or is pointed to
-    by its pointer arguments. This is a weaker form of  ``argmemonly``. If the
-    function reads or writes other memory, the behavior is undefined.
 ``inlinehint``
     This attribute indicates that the source code contained a hint that
     inlining this function is desirable (such as the "inline" keyword in
@@ -1974,45 +1982,6 @@ example:
     function that has a ``"probe-stack"`` attribute is inlined into a
     function that has no ``"probe-stack"`` attribute at all, the resulting
     function has the ``"probe-stack"`` attribute of the callee.
-``readnone``
-    On a function, this attribute indicates that the function computes its
-    result (or decides to unwind an exception) based strictly on its arguments,
-    without dereferencing any pointer arguments or otherwise accessing
-    any mutable state (e.g. memory, control registers, etc) visible outside the
-    ``readnone`` function. It does not write through any pointer arguments
-    (including ``byval`` arguments) and never changes any state visible to
-    callers. This means while it cannot unwind exceptions by calling the ``C++``
-    exception throwing methods (since they write to memory), there may be
-    non-``C++`` mechanisms that throw exceptions without writing to LLVM visible
-    memory.
-
-    On an argument, this attribute indicates that the function does not
-    dereference that pointer argument, even though it may read or write the
-    memory that the pointer points to if accessed through other pointers.
-
-    If a readnone function reads or writes memory visible outside the function,
-    or has other side-effects, the behavior is undefined. If a
-    function reads from or writes to a readnone pointer argument, the behavior
-    is undefined.
-``readonly``
-    On a function, this attribute indicates that the function does not write
-    through any pointer arguments (including ``byval`` arguments) or otherwise
-    modify any state (e.g. memory, control registers, etc) visible outside the
-    ``readonly`` function. It may dereference pointer arguments and read
-    state that may be set in the caller. A readonly function always
-    returns the same value (or unwinds an exception identically) when
-    called with the same set of arguments and global state.  This means while it
-    cannot unwind exceptions by calling the ``C++`` exception throwing methods
-    (since they write to memory), there may be non-``C++`` mechanisms that throw
-    exceptions without writing to LLVM visible memory.
-
-    On an argument, this attribute indicates that the function does not write
-    through this pointer argument, even though it may write to the memory that
-    the pointer points to.
-
-    If a readonly function writes memory visible outside the function, or has
-    other side-effects, the behavior is undefined. If a function writes to a
-    readonly pointer argument, the behavior is undefined.
 ``"stack-probe-size"``
     This attribute controls the behavior of stack probes: either
     the ``"probe-stack"`` attribute, or ABI-required stack probes, if any.
@@ -2030,29 +1999,6 @@ example:
     of the callee.
 ``"no-stack-arg-probe"``
     This attribute disables ABI-required stack probes, if any.
-``writeonly``
-    On a function, this attribute indicates that the function may write to but
-    does not read from memory visible outside the ``writeonly`` function.
-
-    On an argument, this attribute indicates that the function may write to but
-    does not read through this pointer argument (even though it may read from
-    the memory that the pointer points to).
-
-    If a writeonly function reads memory visible outside the function or has
-    other side-effects, the behavior is undefined. If a function reads
-    from a writeonly pointer argument, the behavior is undefined.
-``argmemonly``
-    This attribute indicates that the only memory accesses inside function are
-    loads and stores from objects pointed to by its pointer-typed arguments,
-    with arbitrary offsets. Or in other words, all memory operations in the
-    function can refer to memory only using pointers based on its function
-    arguments.
-
-    Note that ``argmemonly`` can be used together with ``readonly`` attribute
-    in order to specify that function reads only from its arguments.
-
-    If an argmemonly function reads or writes memory other than the pointer
-    arguments, or has other side-effects, the behavior is undefined.
 ``returns_twice``
     This attribute indicates that this function can return twice. The C
     ``setjmp`` is an example of such a function. The compiler disables

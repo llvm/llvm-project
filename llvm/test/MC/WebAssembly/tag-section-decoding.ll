@@ -339,4 +339,4 @@ define i32 @test_throw(i8* %p) {
 ; number with which its LEB128 and ULEB128 encodings are different, because its
 ; 7th least significant bit is not 0.
 ; CHECK:      - Type:            TAG
-; CHEC-NEXT:    TagTypes:        [ 64 ]
+; CHECK-NEXT:    TagTypes:        [ 64 ]

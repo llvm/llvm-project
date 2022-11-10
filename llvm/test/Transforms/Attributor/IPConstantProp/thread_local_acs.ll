@@ -26,7 +26,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: @[[GSH:[a-zA-Z0-9_$"\\.-]+]] = dso_local global i32 0, align 4
 ;.
 define internal i32 @callee(i32* %thread_local_ptr, i32* %shared_ptr) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readonly willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(read)
 ; CHECK-LABEL: define {{[^@]+}}@callee
 ; CHECK-SAME: (i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[THREAD_LOCAL_PTR:%.*]], i32* nocapture nofree nonnull readonly align 4 dereferenceable(4) [[SHARED_PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -63,7 +63,7 @@ declare !callback !0 dso_local void @broker(i32*, i32 (i32*, i32*)*, i32*)
 !1 = !{i64 1, i64 0, i64 2, i1 false}
 !0 = !{!1}
 ;.
-; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readonly willreturn }
+; CHECK: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(read) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!1}
 ; CHECK: [[META1:![0-9]+]] = !{i64 1, i64 0, i64 2, i1 false}

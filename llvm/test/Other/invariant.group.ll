@@ -91,11 +91,11 @@ declare void @use(i8* readonly)
 declare void @useBool(i1)
 
 declare void @clobber(i8*)
-; CHECK: Function Attrs: inaccessiblememonly nocallback nofree nosync nounwind speculatable willreturn{{$}}
+; CHECK: Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(inaccessiblemem: readwrite){{$}}
 ; CHECK-NEXT: declare i8* @llvm.launder.invariant.group.p0i8(i8*)
 declare i8* @llvm.launder.invariant.group.p0i8(i8*)
 
-; CHECK: Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn{{$}}
+; CHECK: Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none){{$}}
 ; CHECK-NEXT: declare i8* @llvm.strip.invariant.group.p0i8(i8*)
 declare i8* @llvm.strip.invariant.group.p0i8(i8*)
 

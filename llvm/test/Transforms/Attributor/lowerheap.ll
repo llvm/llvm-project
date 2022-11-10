@@ -47,6 +47,6 @@ attributes #0 = { nounwind willreturn }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc" }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { allockind("alloc,zeroed") allocsize(0,1) "alloc-family"="malloc" }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { allockind("free") "alloc-family"="malloc" }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
 ; CHECK: attributes #[[ATTR5]] = { nounwind }
 ;.

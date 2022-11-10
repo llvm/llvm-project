@@ -448,6 +448,6 @@ define void @call_stpncpy_s(ptr %dst, ptr %src, i64 %n) {
   ret void
 }
 ;.
-; ANY: attributes #[[ATTR0:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
-; ANY: attributes #[[ATTR1:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn }
+; ANY: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; ANY: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
 ;.
