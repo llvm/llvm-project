@@ -110,7 +110,6 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/Utility/XcodeSDK.h"
@@ -3445,7 +3444,7 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
       // Lookup the module by file basename and make sure that
       // basename has "<basename>.framework" in the path.
       ModuleSpec module_spec;
-      module_spec.GetFileSpec().GetFilename() = library_cstr;
+      module_spec.GetFileSpec().SetFilename(library_cstr);
       lldb_private::ModuleList matching_module_list;
       bool module_already_loaded = false;
       process.GetTarget().GetImages().FindModules(module_spec,
@@ -3625,7 +3624,7 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
   }
 
   ModuleSpec module_spec;
-  module_spec.GetFileSpec().GetFilename().SetCString(library_fullname.c_str());
+  module_spec.GetFileSpec().SetFilename(library_fullname);
 
   if (process.GetTarget().GetImages().FindFirstModule(module_spec)) {
     LOG_PRINTF(GetLog(LLDBLog::Types),
@@ -3677,7 +3676,7 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
         &process, library_spec, uniqued_paths, error, &found_library);
   if (token != LLDB_INVALID_IMAGE_TOKEN) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "Found library at: %s.",
-               found_library.GetCString());
+               found_library.GetPath().c_str());
     return true;
   } else {
     all_dlopen_errors.Printf("Failed to find \"%s\" in paths:\n",

@@ -725,7 +725,7 @@ static llvm::Optional<llvm::Error> AddVariableInfo(
       variable_sp->GetScope(), variable_sp->GetSymbolContextScope(),
       variable_sp->GetScopeRange(),
       const_cast<lldb_private::Declaration *>(&variable_sp->GetDeclaration()),
-      variable_sp->LocationExpression(), variable_sp->IsExternal(),
+      variable_sp->LocationExpressionList(), variable_sp->IsExternal(),
       variable_sp->IsArtificial(),
       variable_sp->GetLocationIsConstantValueData(),
       variable_sp->IsStaticMember(), variable_sp->IsConstant());
@@ -1766,7 +1766,7 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
     if (GenModule) {
       swift::performLLVMOptimizations(IRGenOpts, GenModule.getModule(),
-                                      GenModule.getTargetMachine());
+                                      GenModule.getTargetMachine(), nullptr);
     }
     auto ContextAndModule = std::move(GenModule).release();
     m_llvm_context.reset(ContextAndModule.first);

@@ -862,7 +862,7 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
   }
   bool found = HasReflectionInfo(obj_file);
   LLDB_LOGF(GetLog(LLDBLog::Types), "%s reflection metadata in \"%s\"",
-            found ? "Adding" : "No", obj_file->GetFileSpec().GetCString());
+            found ? "Adding" : "No", obj_file->GetFileSpec().GetPath().c_str());
   if (!found)
     return true;
 

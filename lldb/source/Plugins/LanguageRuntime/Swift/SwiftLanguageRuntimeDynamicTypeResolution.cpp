@@ -1900,7 +1900,7 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_Protocol(
 llvm::Optional<lldb::addr_t>
 SwiftLanguageRuntimeImpl::GetTypeMetadataForTypeNameAndFrame(
     StringRef mdvar_name, StackFrame &frame) {
-  VariableList *var_list = frame.GetVariableList(false);
+  VariableList *var_list = frame.GetVariableList(false, nullptr);
   if (!var_list)
     return {};
 
@@ -1929,7 +1929,7 @@ SwiftLanguageRuntimeImpl::GetPromiseForTypeNameAndFrame(const char *type_name,
 
   StreamString type_metadata_ptr_var_name;
   type_metadata_ptr_var_name.Printf("$%s", type_name);
-  VariableList *var_list = frame->GetVariableList(false);
+  VariableList *var_list = frame->GetVariableList(false, nullptr);
   if (!var_list)
     return nullptr;
 
