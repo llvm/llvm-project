@@ -564,15 +564,13 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       }
 
       if (Inst.mayStore()) {
-        if (AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
-                                       AMDGPU::OpName::data0) != -1) {
+        if (AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::data0)) {
           setExpScore(
               &Inst, TII, TRI, MRI,
               AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::data0),
               CurrScore);
         }
-        if (AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
-                                       AMDGPU::OpName::data1) != -1) {
+        if (AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::data1)) {
           setExpScore(&Inst, TII, TRI, MRI,
                       AMDGPU::getNamedOperandIdx(Inst.getOpcode(),
                                                  AMDGPU::OpName::data1),

@@ -30,21 +30,21 @@ struct SPIRVConversionOptions {
   /// The number of bits to store a boolean value.
   unsigned boolNumBits{8};
 
-  /// Whether to emulate non-32-bit scalar types with 32-bit scalar types if
-  /// no native support.
+  /// Whether to emulate narrower scalar types with 32-bit scalar types if not
+  /// supported by the target.
   ///
   /// Non-32-bit scalar types require special hardware support that may not
   /// exist on all GPUs. This is reflected in SPIR-V as that non-32-bit scalar
   /// types require special capabilities or extensions. This option controls
-  /// whether to use 32-bit types to emulate, if a scalar type of a certain
-  /// bitwidth is not supported in the target environment. This requires the
-  /// runtime to also feed in data with a matched bitwidth and layout for
-  /// interface types. The runtime can do that by inspecting the SPIR-V
-  /// module.
+  /// whether to use 32-bit types to emulate < 32-bits-wide scalars, if a scalar
+  /// type of a certain bitwidth is not supported in the target environment.
+  /// This requires the runtime to also feed in data with a matched bitwidth and
+  /// layout for interface types. The runtime can do that by inspecting the
+  /// SPIR-V module.
   ///
   /// If the original scalar type has less than 32-bit, a multiple of its
   /// values will be packed into one 32-bit value to be memory efficient.
-  bool emulateNon32BitScalarTypes{true};
+  bool emulateLT32BitScalarTypes{true};
 
   /// Use 64-bit integers to convert index types.
   bool use64bitIndex{false};

@@ -199,8 +199,7 @@ static void denormalizeSimpleFlag(SmallVectorImpl<const char *> &Args,
 }
 
 template <typename T> static constexpr bool is_uint64_t_convertible() {
-  return !std::is_same<T, uint64_t>::value &&
-         llvm::is_integral_or_enum<T>::value;
+  return !std::is_same_v<T, uint64_t> && llvm::is_integral_or_enum<T>::value;
 }
 
 template <typename T,

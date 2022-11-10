@@ -116,9 +116,23 @@ void spirv::AccessChainOp::getCanonicalizationPatterns(
 // spirv.BitcastOp
 //===----------------------------------------------------------------------===//
 
-void spirv::BitcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                                   MLIRContext *context) {
-  results.add<ConvertChainedBitcast>(context);
+OpFoldResult spirv::BitcastOp::fold(ArrayRef<Attribute> /*operands*/) {
+  Value curInput = getOperand();
+  if (getType() == curInput.getType())
+    return curInput;
+
+  // Look through nested bitcasts.
+  if (auto prevCast = curInput.getDefiningOp<spirv::BitcastOp>()) {
+    Value prevInput = prevCast.getOperand();
+    if (prevInput.getType() == getType())
+      return prevInput;
+
+    getOperandMutable().assign(prevInput);
+    return getResult();
+  }
+
+  // TODO(kuhar): Consider constant-folding the operand attribute.
+  return {};
 }
 
 //===----------------------------------------------------------------------===//

@@ -33,7 +33,7 @@ struct __fn {
   template <forward_iterator _Iter, sentinel_for<_Iter> _Sent,
             class _Proj = identity,
             indirect_strict_weak_order<projected<_Iter, _Proj>> _Comp = ranges::less>
-  _LIBCPP_HIDE_FROM_ABI constexpr
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
   bool operator()(_Iter __first, _Sent __last, _Comp __comp = {}, _Proj __proj = {}) const {
     return ranges::__is_sorted_until_impl(std::move(__first), __last, __comp, __proj) == __last;
   }
@@ -41,7 +41,7 @@ struct __fn {
   template <forward_range _Range,
             class _Proj = identity,
             indirect_strict_weak_order<projected<iterator_t<_Range>, _Proj>> _Comp = ranges::less>
-  _LIBCPP_HIDE_FROM_ABI constexpr
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
   bool operator()(_Range&& __range, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __last = ranges::end(__range);
     return ranges::__is_sorted_until_impl(ranges::begin(__range), __last, __comp, __proj) == __last;

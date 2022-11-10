@@ -71,7 +71,7 @@ class CrashLogScriptedProcess(ScriptedProcess):
 
         self.crashlog_path = None
 
-        crashlog_path = args.GetValueForKey("crashlog_path")
+        crashlog_path = args.GetValueForKey("file_path")
         if crashlog_path and crashlog_path.IsValid():
             if crashlog_path.GetType() == lldb.eStructuredDataTypeString:
                 self.crashlog_path = crashlog_path.GetStringValue(4096)

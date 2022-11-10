@@ -775,9 +775,9 @@ func.func @input_stays_same(%arg0 : memref<?x1x?xf32, strided<[?, 1, 1]>>, %arg1
   return %shape : memref<?x1x?x1x?xf32>
 }
 
-// CHECK:     #[[MAP1:.*]] = affine_map<(d0, d1, d2) -> (d0, 0, d2)>
-// CHECK:     #[[MAP2:.*]] = affine_map<(d0, d1, d2) -> ()>
-// CHECK:     #[[MAP3:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-DAG:     #[[MAP1:.*]] = affine_map<(d0, d1, d2) -> (d0, 0, d2)>
+// CHECK-DAG:     #[[MAP2:.*]] = affine_map<(d0, d1, d2) -> ()>
+// CHECK-DAG:     #[[MAP3:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 // CHECK:     func @input_stays_same(
 // CHECK-SAME:  %[[ARG0:.*]]: memref<?x1x?xf32, strided<[?, 1, 1]>>,
 // CHECK-SAME:  %[[ARG1:.*]]: f32, %[[ARG2:.*]]: memref<?x1x?x1x?xf32>)

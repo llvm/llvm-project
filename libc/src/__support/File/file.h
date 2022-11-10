@@ -28,7 +28,9 @@ public:
 
   using WriteFunc = size_t(File *, const void *, size_t);
   using ReadFunc = size_t(File *, void *, size_t);
-  using SeekFunc = int(File *, long, int);
+  // The SeekFunc is expected to return the current offset of the external
+  // file position indicator.
+  using SeekFunc = long(File *, long, int);
   using CloseFunc = int(File *);
   using FlushFunc = int(File *);
 
@@ -191,6 +193,8 @@ public:
 
   int seek(long offset, int whence);
 
+  long tell();
+
   // If buffer has data written to it, flush it out. Does nothing if the
   // buffer is currently being used as a read buffer.
   int flush() {
@@ -282,6 +286,10 @@ private:
 // The implementaiton of this function is provided by the platfrom_file
 // library.
 File *openfile(const char *path, const char *mode);
+
+// The platform_file library should implement it if it relevant for that
+// platform.
+int get_fileno(File *f);
 
 extern File *stdin;
 extern File *stdout;

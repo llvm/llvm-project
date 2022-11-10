@@ -54,22 +54,26 @@
     {
       "kind": "memberOf",
       "source": "c:objc(cs)Interface(im)InstanceMethod",
-      "target": "c:objc(cs)Interface"
+      "target": "c:objc(cs)Interface",
+      "targetFallback": "Interface"
     },
     {
       "kind": "memberOf",
       "source": "c:objc(cs)Interface(cm)ClassMethod",
-      "target": "c:objc(cs)Interface"
+      "target": "c:objc(cs)Interface",
+      "targetFallback": "Interface"
     },
     {
       "kind": "memberOf",
       "source": "c:objc(cs)Interface(py)Property",
-      "target": "c:objc(cs)Interface"
+      "target": "c:objc(cs)Interface",
+      "targetFallback": "Interface"
     },
     {
       "kind": "conformsTo",
       "source": "c:objc(cs)Interface",
-      "target": "c:objc(pl)Protocol"
+      "target": "c:objc(pl)Protocol",
+      "targetFallback": "Protocol"
     }
   ],
   "symbols": [

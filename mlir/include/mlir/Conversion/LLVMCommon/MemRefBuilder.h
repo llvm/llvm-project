@@ -43,6 +43,10 @@ public:
   static MemRefDescriptor fromStaticShape(OpBuilder &builder, Location loc,
                                           LLVMTypeConverter &typeConverter,
                                           MemRefType type, Value memory);
+  static MemRefDescriptor fromStaticShape(OpBuilder &builder, Location loc,
+                                          LLVMTypeConverter &typeConverter,
+                                          MemRefType type, Value memory,
+                                          Value alignedMemory);
 
   /// Builds IR extracting the allocated pointer from the descriptor.
   Value allocatedPtr(OpBuilder &builder, Location loc);

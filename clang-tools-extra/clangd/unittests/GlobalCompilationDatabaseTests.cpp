@@ -138,11 +138,9 @@ TEST_F(OverlayCDBTest, Watch) {
 
 TEST_F(OverlayCDBTest, Adjustments) {
   OverlayCDB CDB(Base.get(), {"-DFallback"},
-                 [](const std::vector<std::string> &Cmd, llvm::StringRef File) {
-                   auto Ret = Cmd;
-                   Ret.push_back(
+                 [](tooling::CompileCommand &Cmd, llvm::StringRef File) {
+                   Cmd.CommandLine.push_back(
                        ("-DAdjust_" + llvm::sys::path::filename(File)).str());
-                   return Ret;
                  });
   // Command from underlying gets adjusted.
   auto Cmd = *CDB.getCompileCommand(testPath("foo.cc"));

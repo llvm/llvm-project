@@ -9,13 +9,13 @@
 #ifndef _LIBCPP___RANGES_SIZE_H
 #define _LIBCPP___RANGES_SIZE_H
 
+#include <__concepts/arithmetic.h>
 #include <__concepts/class_or_enum.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__ranges/access.h>
 #include <__utility/auto_cast.h>
-#include <concepts>
 #include <cstddef>
 #include <type_traits>
 

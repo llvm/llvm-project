@@ -366,11 +366,14 @@ Improvements to Clang's diagnostics
 - Clang now correctly points to the problematic parameter for the ``-Wnonnull``
   warning. This fixes
   `Issue 58273 <https://github.com/llvm/llvm-project/issues/58273>`_.
-- Introduced ``-Wcast-function-type-strict`` to warn about function type mismatches
-  in casts that may result in runtime indirect call `Control-Flow Integrity (CFI)
-  <https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_ failures. This diagnostic
-  is grouped under ``-Wcast-function-type`` as it identifies a more strict set of
-  potentially problematic function type casts.
+- Introduced ``-Wcast-function-type-strict`` and
+  ``-Wincompatible-function-pointer-types-strict`` to warn about function type
+  mismatches in casts and assignments that may result in runtime indirect call
+  `Control-Flow Integrity (CFI)
+  <https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_ failures. The
+  ``-Wcast-function-type-strict`` diagnostic is grouped under
+  ``-Wcast-function-type`` as it identifies a more strict set of potentially
+  problematic function type casts.
 - Clang will now disambiguate NTTP types when printing diagnostic that contain NTTP types.
   Fixes `Issue 57562 <https://github.com/llvm/llvm-project/issues/57562>`_.
 - Better error recovery for pack expansion of expressions.
@@ -578,11 +581,6 @@ C++ Language Changes in Clang
   conforming GNU extensions. Projects incompatible with C++17 can add
   ``-std=gnu++14`` to their build settings to restore the previous behaviour.
 - Implemented DR2358 allowing init captures in lambdas in default arguments.
-- Implemented DR2631. Invalid ``consteval`` calls in default arguments and default
-  member initializers are diagnosed when and if the default is used.
-  This Fixes `Issue 56379 <https://github.com/llvm/llvm-project/issues/56379>`_
-  and changes the value of ``std::source_location::current()``
-  used in default parameters calls compared to previous versions of Clang.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -682,6 +680,7 @@ RISC-V Support in Clang
 -----------------------
 - ``sifive-7-rv32`` and ``sifive-7-rv64`` are no longer supported for ``-mcpu``.
   Use ``sifive-e76``, ``sifive-s76``, or ``sifive-u74`` instead.
+- Native detections via ``-mcpu=native`` and ``-mtune=native`` are supported.
 
 X86 Support in Clang
 --------------------

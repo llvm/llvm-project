@@ -1,5 +1,6 @@
 // RUN: mlir-opt -split-input-file -convert-func-to-spirv %s -o - | FileCheck %s
-// RUN: mlir-opt -split-input-file -convert-func-to-spirv="emulate-non-32-bit-scalar-types=false" %s -o - | FileCheck %s --check-prefix=NOEMU
+// RUN: mlir-opt -split-input-file -convert-func-to-spirv="emulate-lt-32-bit-scalar-types=false" %s | \
+// RUN:   FileCheck %s --check-prefix=NOEMU
 
 //===----------------------------------------------------------------------===//
 // Integer types
@@ -15,7 +16,7 @@ module attributes {
 // CHECK-SAME: i32
 // CHECK-SAME: si32
 // CHECK-SAME: ui32
-// NOEMU-LABEL: func @integer8
+// NOEMU-LABEL: func.func @integer8
 // NOEMU-SAME: i8
 // NOEMU-SAME: si8
 // NOEMU-SAME: ui8
@@ -25,16 +26,17 @@ func.func @integer8(%arg0: i8, %arg1: si8, %arg2: ui8) { return }
 // CHECK-SAME: i32
 // CHECK-SAME: si32
 // CHECK-SAME: ui32
-// NOEMU-LABEL: func @integer16
+// NOEMU-LABEL: func.func @integer16
 // NOEMU-SAME: i16
 // NOEMU-SAME: si16
 // NOEMU-SAME: ui16
 func.func @integer16(%arg0: i16, %arg1: si16, %arg2: ui16) { return }
 
-// CHECK-LABEL: spirv.func @integer64
-// CHECK-SAME: i32
-// CHECK-SAME: si32
-// CHECK-SAME: ui32
+// We do not truncate 64-bit types to 32-bit ones.
+// CHECK-LABEL: func.func @integer64
+// CHECK-SAME: i64
+// CHECK-SAME: si64
+// CHECK-SAME: ui64
 // NOEMU-LABEL: func @integer64
 // NOEMU-SAME: i64
 // NOEMU-SAME: si64
@@ -131,13 +133,13 @@ module attributes {
 
 // CHECK-LABEL: spirv.func @float16
 // CHECK-SAME: f32
-// NOEMU-LABEL: func @float16
+// NOEMU-LABEL: func.func @float16
 // NOEMU-SAME: f16
 func.func @float16(%arg0: f16) { return }
 
-// CHECK-LABEL: spirv.func @float64
-// CHECK-SAME: f32
-// NOEMU-LABEL: func @float64
+// CHECK-LABEL: func.func @float64
+// CHECK-SAME: f64
+// NOEMU-LABEL: func.func @float64
 // NOEMU-SAME: f64
 func.func @float64(%arg0: f64) { return }
 
@@ -184,7 +186,7 @@ func.func @bf16_type(%arg0: bf16) { return }
 //===----------------------------------------------------------------------===//
 
 // Check that capabilities for scalar types affects vector types too: no special
-// capabilities available means using turning element types to 32-bit.
+// capabilities available means widening element types to 32-bit.
 module attributes {
   spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
 } {
@@ -192,19 +194,15 @@ module attributes {
 // CHECK-LABEL: spirv.func @int_vector
 // CHECK-SAME: vector<2xi32>
 // CHECK-SAME: vector<3xsi32>
-// CHECK-SAME: vector<4xui32>
 func.func @int_vector(
   %arg0: vector<2xi8>,
-  %arg1: vector<3xsi16>,
-  %arg2: vector<4xui64>
+  %arg1: vector<3xsi16>
 ) { return }
 
 // CHECK-LABEL: spirv.func @float_vector
 // CHECK-SAME: vector<2xf32>
-// CHECK-SAME: vector<3xf32>
 func.func @float_vector(
-  %arg0: vector<2xf16>,
-  %arg1: vector<3xf64>
+  %arg0: vector<2xf16>
 ) { return }
 
 // CHECK-LABEL: spirv.func @one_element_vector
@@ -389,33 +387,35 @@ func.func @memref_16bit_Input(%arg3: memref<16xf16, #spirv.storage_class<Input>>
 // NOEMU-SAME: memref<16xf16, #spirv.storage_class<Output>>
 func.func @memref_16bit_Output(%arg4: memref<16xf16, #spirv.storage_class<Output>>) { return }
 
-// CHECK-LABEL: spirv.func @memref_64bit_StorageBuffer
-// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.array<32 x i32, stride=4> [0])>, StorageBuffer>
-// NOEMU-LABEL: func @memref_64bit_StorageBuffer
+// We do not truncate i64 to i32.
+
+// CHECK-LABEL: func.func @memref_64bit_StorageBuffer
+// CHECK-SAME: memref<16xi64, #spirv.storage_class<StorageBuffer>>
+// NOEMU-LABEL: func.func @memref_64bit_StorageBuffer
 // NOEMU-SAME: memref<16xi64, #spirv.storage_class<StorageBuffer>>
 func.func @memref_64bit_StorageBuffer(%arg0: memref<16xi64, #spirv.storage_class<StorageBuffer>>) { return }
 
-// CHECK-LABEL: spirv.func @memref_64bit_Uniform
-// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.array<32 x si32, stride=4> [0])>, Uniform>
-// NOEMU-LABEL: func @memref_64bit_Uniform
+// CHECK-LABEL: func.func @memref_64bit_Uniform
+// CHECK-SAME: memref<16xsi64, #spirv.storage_class<Uniform>>
+// NOEMU-LABEL: func.func @memref_64bit_Uniform
 // NOEMU-SAME: memref<16xsi64, #spirv.storage_class<Uniform>>
 func.func @memref_64bit_Uniform(%arg0: memref<16xsi64, #spirv.storage_class<Uniform>>) { return }
 
-// CHECK-LABEL: spirv.func @memref_64bit_PushConstant
-// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.array<32 x ui32, stride=4> [0])>, PushConstant>
-// NOEMU-LABEL: func @memref_64bit_PushConstant
+// CHECK-LABEL: func.func @memref_64bit_PushConstant
+// CHECK-SAME: memref<16xui64, #spirv.storage_class<PushConstant>>
+// NOEMU-LABEL: func.func @memref_64bit_PushConstant
 // NOEMU-SAME: memref<16xui64, #spirv.storage_class<PushConstant>>
 func.func @memref_64bit_PushConstant(%arg0: memref<16xui64, #spirv.storage_class<PushConstant>>) { return }
 
-// CHECK-LABEL: spirv.func @memref_64bit_Input
-// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.array<32 x f32>)>, Input>
-// NOEMU-LABEL: func @memref_64bit_Input
+// CHECK-LABEL: func.func @memref_64bit_Input
+// CHECK-SAME: memref<16xf64, #spirv.storage_class<Input>>
+// NOEMU-LABEL: func.func @memref_64bit_Input
 // NOEMU-SAME: memref<16xf64, #spirv.storage_class<Input>>
 func.func @memref_64bit_Input(%arg3: memref<16xf64, #spirv.storage_class<Input>>) { return }
 
-// CHECK-LABEL: spirv.func @memref_64bit_Output
-// CHECK-SAME: !spirv.ptr<!spirv.struct<(!spirv.array<32 x f32>)>, Output>
-// NOEMU-LABEL: func @memref_64bit_Output
+// CHECK-LABEL: func.func @memref_64bit_Output
+// CHECK-SAME: memref<16xf64, #spirv.storage_class<Output>>
+// NOEMU-LABEL: func.func @memref_64bit_Output
 // NOEMU-SAME: memref<16xf64, #spirv.storage_class<Output>>
 func.func @memref_64bit_Output(%arg4: memref<16xf64, #spirv.storage_class<Output>>) { return }
 
@@ -791,9 +791,7 @@ module attributes {
 // CHECK-SAME: !spirv.array<32 x i32>
 // CHECK-SAME: !spirv.array<32 x i32>
 // CHECK-SAME: !spirv.array<32 x i32>
-// CHECK-SAME: !spirv.array<32 x i32>
 func.func @int_tensor_types(
-  %arg0: tensor<8x4xi64>,
   %arg1: tensor<8x4xi32>,
   %arg2: tensor<8x4xi16>,
   %arg3: tensor<8x4xi8>
@@ -802,9 +800,7 @@ func.func @int_tensor_types(
 // CHECK-LABEL: spirv.func @float_tensor_types
 // CHECK-SAME: !spirv.array<32 x f32>
 // CHECK-SAME: !spirv.array<32 x f32>
-// CHECK-SAME: !spirv.array<32 x f32>
 func.func @float_tensor_types(
-  %arg0: tensor<8x4xf64>,
   %arg1: tensor<8x4xf32>,
   %arg2: tensor<8x4xf16>
 ) { return }

@@ -3184,11 +3184,7 @@ ExprResult Parser::ParseCXXMemberInitializer(Decl *D, bool IsFunction,
          "Data member initializer not starting with '=' or '{'");
 
   EnterExpressionEvaluationContext Context(
-      Actions,
-      isa_and_present<FieldDecl>(D)
-          ? Sema::ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed
-          : Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
-      D);
+      Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated, D);
   if (TryConsumeToken(tok::equal, EqualLoc)) {
     if (Tok.is(tok::kw_delete)) {
       // In principle, an initializer of '= delete p;' is legal, but it will

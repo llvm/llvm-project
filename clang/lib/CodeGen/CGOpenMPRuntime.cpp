@@ -1858,7 +1858,7 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
   auto EntryInfo =
       getTargetEntryUniqueInfo(CGM.getContext(), Loc, VD->getName());
   SmallString<128> Buffer, Out;
-  EntryInfo.getTargetRegionEntryFnName(Buffer);
+  OffloadEntriesInfoManager.getTargetRegionEntryFnName(Buffer, EntryInfo);
 
   const Expr *Init = VD->getAnyInitializer();
   if (CGM.getLangOpts().CPlusPlus && PerformInit) {
@@ -6101,18 +6101,20 @@ void CGOpenMPRuntime::emitTargetOutlinedFunctionHelper(
   // Create a unique name for the entry function using the source location
   // information of the current target region. The name will be something like:
   //
-  // __omp_offloading_DD_FFFF_PP_lBB
+  // __omp_offloading_DD_FFFF_PP_lBB[_CC]
   //
   // where DD_FFFF is an ID unique to the file (device and file IDs), PP is the
   // mangled name of the function that encloses the target region and BB is the
-  // line number of the target region.
+  // line number of the target region. CC is a count added when more than one
+  // region is located at the same location.
 
   const bool BuildOutlinedFn = CGM.getLangOpts().OpenMPIsDevice ||
                                !CGM.getLangOpts().OpenMPOffloadMandatory;
   auto EntryInfo =
       getTargetEntryUniqueInfo(CGM.getContext(), D.getBeginLoc(), ParentName);
+
   SmallString<64> EntryFnName;
-  EntryInfo.getTargetRegionEntryFnName(EntryFnName);
+  OffloadEntriesInfoManager.getTargetRegionEntryFnName(EntryFnName, EntryInfo);
 
   const CapturedStmt &CS = *D.getCapturedStmt(OMPD_target);
 
@@ -8737,34 +8739,10 @@ public:
     // If this declaration appears in a is_device_ptr clause we just have to
     // pass the pointer by value. If it is a reference to a declaration, we just
     // pass its value.
-    if (VD && DevPointersMap.count(VD)) {
+    if (VD && (DevPointersMap.count(VD) || HasDevAddrsMap.count(VD))) {
       CombinedInfo.Exprs.push_back(VD);
       CombinedInfo.BasePointers.emplace_back(Arg, VD);
       CombinedInfo.Pointers.push_back(Arg);
-      CombinedInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
-          CGF.getTypeSize(CGF.getContext().VoidPtrTy), CGF.Int64Ty,
-          /*isSigned=*/true));
-      CombinedInfo.Types.push_back(
-          (Cap->capturesVariable() ? OMP_MAP_TO : OMP_MAP_LITERAL) |
-          OMP_MAP_TARGET_PARAM);
-      CombinedInfo.Mappers.push_back(nullptr);
-      return;
-    }
-    if (VD && HasDevAddrsMap.count(VD)) {
-      auto I = HasDevAddrsMap.find(VD);
-      CombinedInfo.Exprs.push_back(VD);
-      Expr *E = nullptr;
-      for (auto &MCL : I->second) {
-        E = MCL.begin()->getAssociatedExpression();
-        break;
-      }
-      llvm::Value *Ptr = nullptr;
-      if (E->isGLValue())
-        Ptr = CGF.EmitLValue(E).getPointer(CGF);
-      else
-        Ptr = CGF.EmitScalarExpr(E);
-      CombinedInfo.BasePointers.emplace_back(Ptr, VD);
-      CombinedInfo.Pointers.push_back(Ptr);
       CombinedInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
           CGF.getTypeSize(CGF.getContext().VoidPtrTy), CGF.Int64Ty,
           /*isSigned=*/true));
