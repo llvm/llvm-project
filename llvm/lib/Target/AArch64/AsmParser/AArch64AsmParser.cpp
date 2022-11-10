@@ -3497,6 +3497,7 @@ static const struct Extension {
     {"sme2p1", {AArch64::FeatureSME2p1}},
     {"hbc", {AArch64::FeatureHBC}},
     {"mops", {AArch64::FeatureMOPS}},
+    {"mec", {AArch64::FeatureMEC}},
     // FIXME: Unsupported extensions
     {"lor", {}},
     {"rdma", {}},
