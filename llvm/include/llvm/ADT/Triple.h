@@ -230,6 +230,9 @@ public:
     GNUABI64,
     GNUEABI,
     GNUEABIHF,
+    GNUF32,
+    GNUF64,
+    GNUSF,
     GNUX32,
     GNUILP32,
     CODE16,
@@ -559,7 +562,9 @@ public:
     EnvironmentType Env = getEnvironment();
     return Env == Triple::GNU || Env == Triple::GNUABIN32 ||
            Env == Triple::GNUABI64 || Env == Triple::GNUEABI ||
-           Env == Triple::GNUEABIHF || Env == Triple::GNUX32;
+           Env == Triple::GNUEABIHF || Env == Triple::GNUF32 ||
+           Env == Triple::GNUF64 || Env == Triple::GNUSF ||
+           Env == Triple::GNUX32;
   }
 
   bool isOSContiki() const {
