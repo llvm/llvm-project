@@ -1,129 +1,179 @@
-//===- bolt/runtime/hugify.cpp --------------------------------------------===//
+//===- bolt/runtime/hugify.cpp -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===----------------------------------------------------------------------===//
+//===---------------------------------------------------------------------===//
 
 #if defined (__x86_64__)
 #if !defined(__APPLE__)
 
 #include "common.h"
-#include <sys/mman.h>
+
+#pragma GCC visibility push(hidden)
 
 // Enables a very verbose logging to stderr useful when debugging
-//#define ENABLE_DEBUG
+// #define ENABLE_DEBUG
 
-// Function pointers to init routines in the binary, so we can resume
-// regular execution of the function that we hooked.
-extern void (*__bolt_hugify_init_ptr)();
+#ifdef ENABLE_DEBUG
+#define DEBUG(X)                                                               \
+  { X; }
+#else
+#define DEBUG(X)                                                               \
+  {}
+#endif
+
+// Function constains trampoline to _start,
+// so we can resume regular execution of the function that we hooked.
+extern void __bolt_hugify_start_program();
 
 // The __hot_start and __hot_end symbols set by Bolt. We use them to figure
 // out the rage for marking huge pages.
 extern uint64_t __hot_start;
 extern uint64_t __hot_end;
 
-#ifdef MADV_HUGEPAGE
-/// Check whether the kernel supports THP via corresponding sysfs entry.
-static bool has_pagecache_thp_support() {
-  char buf[256] = {0};
-  const char *madviseStr = "always [madvise] never";
+static void getKernelVersion(uint32_t *Val) {
+  // release should be in the format: %d.%d.%d
+  // major, minor, release
+  struct UtsNameTy UtsName;
+  int Ret = __uname(&UtsName);
+  const char *Buf = UtsName.release;
+  const char *End = Buf + strLen(Buf);
+  const char Delims[2][2] = {".", "."};
 
-  int fd = __open("/sys/kernel/mm/transparent_hugepage/enabled",
-                  0 /* O_RDONLY */, 0);
-  if (fd < 0)
-    return false;
-
-  size_t res = __read(fd, buf, 256);
-  if (res < 0)
-    return false;
-
-  int cmp = strnCmp(buf, madviseStr, strLen(madviseStr));
-  return cmp == 0;
+  for (int i = 0; i < 3; ++i) {
+    if (!scanUInt32(Buf, End, Val[i])) {
+      return;
+    }
+    if (i < sizeof(Delims) / sizeof(Delims[0])) {
+      const char *Ptr = Delims[i];
+      while (*Ptr != '\0') {
+        if (*Ptr != *Buf) {
+          return;
+        }
+        ++Ptr;
+        ++Buf;
+      }
+    }
+  }
 }
 
-static void hugify_for_old_kernel(uint8_t *from, uint8_t *to) {
-  size_t size = to - from;
+/// Check whether the kernel supports THP via corresponding sysfs entry.
+/// thp works only starting from 5.10
+static bool hasPagecacheTHPSupport() {
+  char Buf[64];
 
-  uint8_t *mem = reinterpret_cast<uint8_t *>(
-      __mmap(0, size, 0x3 /* PROT_READ | PROT_WRITE*/,
-             0x22 /* MAP_PRIVATE | MAP_ANONYMOUS*/, -1, 0));
+  int FD = __open("/sys/kernel/mm/transparent_hugepage/enabled",
+                  0 /* O_RDONLY */, 0);
+  if (FD < 0)
+    return false;
 
-  if (mem == (void *)MAP_FAILED) {
-    char msg[] = "Could not allocate memory for text move\n";
-    reportError(msg, sizeof(msg));
+  memset(Buf, 0, sizeof(Buf));
+  const size_t Res = __read(FD, Buf, sizeof(Buf));
+  if (Res < 0)
+    return false;
+
+  if (!strStr(Buf, "[always]") && !strStr(Buf, "[madvise]"))
+    return false;
+
+  struct KernelVersionTy {
+    uint32_t major;
+    uint32_t minor;
+    uint32_t release;
+  };
+
+  KernelVersionTy KernelVersion;
+
+  getKernelVersion((uint32_t *)&KernelVersion);
+  if (KernelVersion.major >= 5 && KernelVersion.minor >= 10)
+    return true;
+
+  return false;
+}
+
+static void hugifyForOldKernel(uint8_t *From, uint8_t *To) {
+  const size_t Size = To - From;
+
+  uint8_t *Mem = reinterpret_cast<uint8_t *>(
+      __mmap(0, Size, 0x3 /* PROT_READ | PROT_WRITE */,
+             0x22 /* MAP_PRIVATE | MAP_ANONYMOUS */, -1, 0));
+
+  if (Mem == ((void *)-1) /* MAP_FAILED */) {
+    char Msg[] = "[hugify] could not allocate memory for text move\n";
+    reportError(Msg, sizeof(Msg));
   }
-#ifdef ENABLE_DEBUG
-  reportNumber("Allocated temporary space: ", (uint64_t)mem, 16);
-#endif
 
-  // Copy the hot code to a temproary location.
-  memcpy(mem, from, size);
+  DEBUG(reportNumber("[hugify] allocated temporary address: ", (uint64_t)Mem,
+                     16);)
+  DEBUG(reportNumber("[hugify] allocated size: ", (uint64_t)Size, 16);)
 
+  // Copy the hot code to a temporary location.
+  memcpy(Mem, From, Size);
+
+  __prctl(41 /* PR_SET_THP_DISABLE */, 0, 0, 0, 0);
   // Maps out the existing hot code.
-  if (__mmap(reinterpret_cast<uint64_t>(from), size,
-             PROT_READ | PROT_WRITE | PROT_EXEC,
-             MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1,
-             0) == (void *)MAP_FAILED) {
-    char msg[] = "failed to mmap memory for large page move terminating\n";
-    reportError(msg, sizeof(msg));
+  if (__mmap(reinterpret_cast<uint64_t>(From), Size,
+             0x3 /* PROT_READ | PROT_WRITE */,
+             0x32 /* MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE */, -1,
+             0) == ((void *)-1) /*MAP_FAILED*/) {
+    char Msg[] =
+        "[hugify] failed to mmap memory for large page move terminating\n";
+    reportError(Msg, sizeof(Msg));
   }
 
   // Mark the hot code page to be huge page.
-  if (__madvise(from, size, MADV_HUGEPAGE) == -1) {
-    char msg[] = "failed to allocate large page\n";
-    reportError(msg, sizeof(msg));
+  if (__madvise(From, Size, 14 /* MADV_HUGEPAGE */) == -1) {
+    char Msg[] = "[hugify] setting MADV_HUGEPAGE is failed\n";
+    reportError(Msg, sizeof(Msg));
   }
 
   // Copy the hot code back.
-  memcpy(from, mem, size);
+  memcpy(From, Mem, Size);
 
   // Change permission back to read-only, ignore failure
-  __mprotect(from, size, PROT_READ | PROT_EXEC);
+  __mprotect(From, Size, 0x5 /* PROT_READ | PROT_EXEC */);
 
-  __munmap(mem, size);
+  __munmap(Mem, Size);
 }
 #endif
 
 extern "C" void __bolt_hugify_self_impl() {
-#ifdef MADV_HUGEPAGE
-  uint8_t *hotStart = (uint8_t *)&__hot_start;
-  uint8_t *hotEnd = (uint8_t *)&__hot_end;
+  uint8_t *HotStart = (uint8_t *)&__hot_start;
+  uint8_t *HotEnd = (uint8_t *)&__hot_end;
   // Make sure the start and end are aligned with huge page address
-  const size_t hugePageBytes = 2L * 1024 * 1024;
-  uint8_t *from = hotStart - ((intptr_t)hotStart & (hugePageBytes - 1));
-  uint8_t *to = hotEnd + (hugePageBytes - 1);
-  to -= (intptr_t)to & (hugePageBytes - 1);
+  const size_t HugePageBytes = 2L * 1024 * 1024;
+  uint8_t *From = HotStart - ((intptr_t)HotStart & (HugePageBytes - 1));
+  uint8_t *To = HotEnd + (HugePageBytes - 1);
+  To -= (intptr_t)To & (HugePageBytes - 1);
 
-#ifdef ENABLE_DEBUG
-  reportNumber("[hugify] hot start: ", (uint64_t)hotStart, 16);
-  reportNumber("[hugify] hot end: ", (uint64_t)hotEnd, 16);
-  reportNumber("[hugify] aligned huge page from: ", (uint64_t)from, 16);
-  reportNumber("[hugify] aligned huge page to: ", (uint64_t)to, 16);
-#endif
+  DEBUG(reportNumber("[hugify] hot start: ", (uint64_t)HotStart, 16);)
+  DEBUG(reportNumber("[hugify] hot end: ", (uint64_t)HotEnd, 16);)
+  DEBUG(reportNumber("[hugify] aligned huge page from: ", (uint64_t)From, 16);)
+  DEBUG(reportNumber("[hugify] aligned huge page to: ", (uint64_t)To, 16);)
 
-  if (!has_pagecache_thp_support()) {
-    hugify_for_old_kernel(from, to);
+  if (!hasPagecacheTHPSupport()) {
+    DEBUG(report(
+              "[hugify] workaround with memory alignment for kernel < 5.10\n");)
+    hugifyForOldKernel(From, To);
     return;
   }
 
-  if (__madvise(from, (to - from), MADV_HUGEPAGE) == -1) {
-    char msg[] = "failed to allocate large page\n";
+  if (__madvise(From, (To - From), 14 /* MADV_HUGEPAGE */) == -1) {
+    char Msg[] = "[hugify] failed to allocate large page\n";
     // TODO: allow user to control the failure behavior.
-    reportError(msg, sizeof(msg));
+    reportError(Msg, sizeof(Msg));
   }
-#endif
 }
 
 /// This is hooking ELF's entry, it needs to save all machine state.
 extern "C" __attribute((naked)) void __bolt_hugify_self() {
-  __asm__ __volatile__(SAVE_ALL
-                       "call __bolt_hugify_self_impl\n"
-                       RESTORE_ALL
-                       "jmp *__bolt_hugify_init_ptr(%%rip)\n"
-                       :::);
-}
-
+#if defined(__x86_64__)
+  __asm__ __volatile__(SAVE_ALL "call __bolt_hugify_self_impl\n" RESTORE_ALL
+                                "jmp __bolt_hugify_start_program\n" ::
+                                    :);
+#else
+  exit(1);
 #endif
+}
 #endif

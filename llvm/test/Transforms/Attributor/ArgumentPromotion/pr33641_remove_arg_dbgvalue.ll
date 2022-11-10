@@ -12,7 +12,7 @@
 %fun_t = type void (%p_t)*
 
 define void @foo() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP:%.*]] = alloca void (i16*)*, align 8
@@ -24,7 +24,7 @@ define void @foo() {
 }
 
 define internal void @bar(%p_t %p)  {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@bar
 ; CGSCC-SAME: (i16* nocapture nofree readnone [[P:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:    call void @llvm.dbg.value(metadata i16* [[P]], metadata [[META3:![0-9]+]], metadata !DIExpression()) #[[ATTR2:[0-9]+]], !dbg [[DBG5:![0-9]+]]
@@ -47,12 +47,12 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !5 = !DIExpression()
 !6 = !DILocation(line: 1, column: 1, scope: !3)
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; TUNIT: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind readnone speculatable willreturn }
-; CGSCC: attributes #[[ATTR2]] = { readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CGSCC: attributes #[[ATTR2]] = { willreturn }
 ;.
 ; TUNIT: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 ; TUNIT: [[META1:![0-9]+]] = !DIFile(filename: "test.c", directory: "")

@@ -149,6 +149,6 @@ declare dso_local i32 @printf(i8* %_Format, ...)
 declare i32 @llvm.eh.exceptioncode(token)
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { noreturn }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind readnone }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nounwind memory(none) }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nofree nosync nounwind }
 ;.

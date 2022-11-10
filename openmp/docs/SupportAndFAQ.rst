@@ -413,3 +413,17 @@ linkable device image.
    clang++ openmp.cpp -fopenmp --offload-arch=sm_80 -c
    clang++ cuda.cu --offload-new-driver --offload-arch=sm_80 -fgpu-rdc -c
    clang++ openmp.o cuda.o --offload-link -o app
+
+Q: Are libomptarget and plugins backward compatible?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+No. libomptarget and plugins are now built as LLVM libraries starting from LLVM
+15. Because LLVM libraries are not backward compatible, libomptarget and plugins
+are not as well. Given that fact, the interfaces between 1) the Clang compiler
+and libomptarget, 2) the Clang compiler and device runtime library, and
+3) libomptarget and plugins are not guaranteed to be compatible with an earlier
+version. Users are responsible for ensuring compatibility when not using the
+Clang compiler and runtime libraries from the same build. Nevertheless, in order
+to better support third-party libraries and toolchains that depend on existing
+libomptarget entry points, contributors are discouraged from making
+modifications to them.

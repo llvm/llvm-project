@@ -479,6 +479,11 @@ Error RewriteInstance::discoverStorage() {
   NextAvailableAddress = alignTo(NextAvailableAddress, BC->PageAlign);
   NextAvailableOffset = alignTo(NextAvailableOffset, BC->PageAlign);
 
+  // Hugify: Additional huge page from left side due to
+  // weird ASLR mapping addresses (4KB aligned)
+  if (opts::Hugify && !BC->HasFixedLoadAddress)
+    NextAvailableAddress += BC->PageAlign;
+
   if (!opts::UseGnuStack) {
     // This is where the black magic happens. Creating PHDR table in a segment
     // other than that containing ELF header is tricky. Some loaders and/or
@@ -3719,6 +3724,12 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
         Address = alignTo(Address, Section->getAlignment());
         Section->setOutputAddress(Address);
         Address += Section->getOutputSize();
+
+        // Hugify: Additional huge page from right side due to
+        // weird ASLR mapping addresses (4KB aligned)
+        if (opts::Hugify && !BC->HasFixedLoadAddress &&
+            Section->getName() == BC->getMainCodeSectionName())
+          Address = alignTo(Address, Section->getAlignment());
       }
 
       // Make sure we allocate enough space for huge pages.

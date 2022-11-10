@@ -2475,5 +2475,5 @@ declare dso_local i32 @__gxx_personality_v0(...)
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { noreturn }
 ; CHECK: attributes #[[ATTR1]] = { nomerge }
-; CHECK: attributes #[[ATTR2]] = { readnone }
+; CHECK: attributes #[[ATTR2]] = { memory(none) }
 ;.

@@ -1073,10 +1073,10 @@ Optional<Attribute> getNeutralElement(Operation *op) {
       return b.getFloatAttr(resultType, llvm::APFloat(semantic, 1));
     if (isa<arith::MaxFOp>(op))
       return b.getFloatAttr(resultType,
-                            llvm::APFloat::getLargest(semantic, true));
+                            llvm::APFloat::getInf(semantic, /*Negative=*/true));
     if (isa<arith::MinFOp>(op))
-      return b.getFloatAttr(resultType,
-                            llvm::APFloat::getLargest(semantic, true));
+      return b.getFloatAttr(
+          resultType, llvm::APFloat::getInf(semantic, /*Negative=*/false));
     return Attribute();
   }
   if (isa<arith::AddIOp, arith::OrIOp, arith::XOrIOp>(op))

@@ -4,7 +4,7 @@
 
 ;; This function returns its second argument on all return statements
 define internal i32* @incdec(i1 %C, i32* %V) {
-; TUNIT: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@incdec
 ; TUNIT-SAME: (i1 [[C:%.*]], i32* noalias nofree noundef nonnull returned writeonly align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
@@ -13,7 +13,7 @@ define internal i32* @incdec(i1 %C, i32* %V) {
 ; TUNIT:       F:
 ; TUNIT-NEXT:    ret i32* [[V]]
 ;
-; CGSCC: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@incdec
 ; CGSCC-SAME: (i1 [[C:%.*]], i32* nofree noundef nonnull returned align 4 dereferenceable(4) "no-capture-maybe-returned" [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:    [[X:%.*]] = load i32, i32* [[V]], align 4
@@ -44,7 +44,7 @@ F:              ; preds = %0
 ;; This function returns its first argument as a part of a multiple return
 ;; value
 define internal { i32, i32 } @foo(i32 %A, i32 %B) {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@foo
 ; CGSCC-SAME: (i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    [[X:%.*]] = add i32 [[A]], [[B]]
@@ -59,7 +59,7 @@ define internal { i32, i32 } @foo(i32 %A, i32 %B) {
 }
 
 define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@caller
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] personality i32 (...)* @__gxx_personality_v0 {
 ; TUNIT-NEXT:    [[Q:%.*]] = alloca i32, align 4
@@ -79,7 +79,7 @@ define void @caller(i1 %C) personality i32 (...)* @__gxx_personality_v0 {
 ; CGSCC-NEXT:    [[W:%.*]] = call align 4 i32* @incdec(i1 [[C]], i32* nofree noundef nonnull align 4 dereferenceable(4) [[Q]]) #[[ATTR3:[0-9]+]]
 ; CGSCC-NEXT:    [[S1:%.*]] = call { i32, i32 } @foo(i32 noundef 1, i32 noundef 2) #[[ATTR4:[0-9]+]]
 ; CGSCC-NEXT:    [[X1:%.*]] = extractvalue { i32, i32 } [[S1]], 0
-; CGSCC-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 noundef 3, i32 noundef 4) #[[ATTR5:[0-9]+]]
+; CGSCC-NEXT:    [[S2:%.*]] = call { i32, i32 } @foo(i32 noundef 3, i32 noundef 4) #[[ATTR3]]
 ; CGSCC-NEXT:    br label [[OK:%.*]]
 ; CGSCC:       OK:
 ; CGSCC-NEXT:    [[X2:%.*]] = extractvalue { i32, i32 } [[S2]], 0
@@ -118,14 +118,13 @@ RET:
 
 declare i32 @__gxx_personality_v0(...)
 ;.
-; TUNIT: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
-; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn writeonly }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: write) }
+; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn }
-; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
+; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind willreturn }
 ; CGSCC: attributes #[[ATTR3]] = { nounwind willreturn }
-; CGSCC: attributes #[[ATTR4]] = { readnone willreturn }
-; CGSCC: attributes #[[ATTR5]] = { nounwind readnone willreturn }
+; CGSCC: attributes #[[ATTR4]] = { willreturn }
 ;.

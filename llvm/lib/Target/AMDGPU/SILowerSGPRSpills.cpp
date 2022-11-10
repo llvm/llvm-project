@@ -319,6 +319,7 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
       // adequate to lower the DIExpression. It should be worked out later.
       for (MachineInstr &MI : MBB) {
         if (MI.isDebugValue() && MI.getOperand(0).isFI() &&
+            !MFI.isFixedObjectIndex(MI.getOperand(0).getIndex()) &&
             SpillFIs[MI.getOperand(0).getIndex()]) {
           MI.getOperand(0).ChangeToRegister(Register(), false /*isDef*/);
         }

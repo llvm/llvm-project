@@ -57,7 +57,7 @@ func.func @subview_canonicalize(%arg0 : memref<?x?x?xf32>, %arg1 : index,
 //  CHECK-SAME:      [4, 1, %{{[a-zA-Z0-9_]+}}] [1, 1, 1]
 //  CHECK-SAME:      : memref<?x?x?xf32> to memref<4x1x?xf32
 //       CHECK:   %[[RESULT:.+]] = memref.cast %[[SUBVIEW]]
-//       CHEKC:   return %[[RESULT]]
+//       CHECK:   return %[[RESULT]]
 
 // -----
 

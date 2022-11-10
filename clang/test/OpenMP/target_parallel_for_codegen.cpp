@@ -112,18 +112,18 @@ int foo(int n) {
     a += 1;
   }
 
-  // CEHCK-32:    [[FPSIZEGEP]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[KMP_PRIVATES]], i32 0, i32 0
-  // CEHCK-32:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPSIZEGEP]], ptr align 8 [[SIZET2]], i64 24, i1 false)
-  // CEHCK-32:    [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[KMP_PRIVATES]], i32 0, i32 1
-  // CEHCK-32:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPBPGEP]], ptr align 8 [[BPGEP]], i64 24, i1 false)
-  // CEHCK-32:    [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[KMP_PRIVATES]], i32 0, i32 2
-  // CEHCK-32:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPPGEP]], ptr align 8 [[BCAST]], i64 24, i1 false)
-  // CEHCK-64:    [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[KMP_PRIVATES]], i32 0, i32 0
-  // CEHCK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPBPGEP]], ptr align 8 [[BPGEP]], i64 24, i1 false)
-  // CEHCK-64:    [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[KMP_PRIVATES]], i32 0, i32 1
-  // CEHCK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPPGEP]], ptr align 8 [[BCAST]], i64 24, i1 false)
-  // CEHCK-64:    [[FPSIZEGEP]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[KMP_PRIVATES]], i32 0, i32 2
-  // CEHCK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPSIZEGEP]], ptr align 8 [[SIZET2]], i64 24, i1 false)
+  // CHECK-32:    [[FPSIZEGEP]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[KMP_PRIVATES]], i32 0, i32 0
+  // CHECK-32:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPSIZEGEP]], ptr align 8 [[SIZET2]], i64 24, i1 false)
+  // CHECK-32:    [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[KMP_PRIVATES]], i32 0, i32 1
+  // CHECK-32:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPBPGEP]], ptr align 8 [[BPGEP]], i64 24, i1 false)
+  // CHECK-32:    [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[KMP_PRIVATES]], i32 0, i32 2
+  // CHECK-32:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPPGEP]], ptr align 8 [[BCAST]], i64 24, i1 false)
+  // CHECK-64:    [[FPBPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[KMP_PRIVATES]], i32 0, i32 0
+  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPBPGEP]], ptr align 8 [[BPGEP]], i64 24, i1 false)
+  // CHECK-64:    [[FPPGEP:%.+]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[KMP_PRIVATES]], i32 0, i32 1
+  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPPGEP]], ptr align 8 [[BCAST]], i64 24, i1 false)
+  // CHECK-64:    [[FPSIZEGEP]] = getelementptr inbounds [[KMP_PRIVATES_T]], ptr [[KMP_PRIVATES]], i32 0, i32 2
+  // CHECK-64:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[FPSIZEGEP]], ptr align 8 [[SIZET2]], i64 24, i1 false)
   int lin = 12;
   #pragma omp target parallel for if(target: 1) linear(lin, a : get_val()) nowait
   for (unsigned long long it = 2000; it >= 600; it-=400) {

@@ -6,7 +6,7 @@
 declare i32 @e() readnone
 
 define i32 @f() {
-; CHECK: Function Attrs: nofree nosync readnone
+; CHECK: Function Attrs: nofree nosync memory(none)
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:    [[TMP:%.*]] = call i32 @e()
 ; CHECK-NEXT:    ret i32 [[TMP]]
@@ -16,7 +16,7 @@ define i32 @f() {
 }
 
 define i32 @g() readonly {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -24,7 +24,7 @@ define i32 @g() readonly {
 }
 
 define i32 @h() readnone {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: @h(
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr @x, align 4
 ; CHECK-NEXT:    ret i32 [[TMP]]

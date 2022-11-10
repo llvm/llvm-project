@@ -112,6 +112,10 @@ def FuseIntoContainingOp :
                           [TransformMappingAlloc,
                            TransformMappingWrite]>:$fused_op);
   let assemblyFormat = "$producer_op `into` $containing_op attr-dict";
+
+  let builders = [
+    OpBuilder<(ins "Value":$producerOp, "Value":$containingOp)>
+  ];
 }
 
 def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
@@ -225,6 +229,10 @@ def MatchOp : Op<Transform_Dialect, "structured.match",
                        OptionalAttr<TypeAttr>:$filter_result_type);
   // TODO: variadic results when needed.
   let results = (outs PDL_Operation:$results);
+
+  let builders = [
+    OpBuilder<(ins "Value":$target, "ArrayRef<StringRef>":$opNames)>
+  ];
 
   let assemblyFormat = [{
     (`ops` `{` $ops^ `}`)?
@@ -600,6 +608,15 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
 
   let assemblyFormat = "$target attr-dict";
 
+  let builders = [
+    OpBuilder<(ins "Value":$target,
+                   "int64_t":$splitFactor,
+                   "int64_t":$insertSplitDimension,
+                   CArg<"bool", "false">:$innerParallel,
+                   CArg<"bool", "false">:$useScalingAlgorithm,
+                   CArg<"bool", "false">:$useAlloc)>
+  ];
+
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::linalg::LinalgOp target, 
@@ -818,6 +835,30 @@ def TileToForeachThreadOp :
                    OptionalAttr<I64ArrayAttr>:$thread_dim_mapping);
   let results = (outs PDL_Operation:$foreach_thread_op,
                       PDL_Operation:$tiled_op);
+
+  let builders = [
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<int64_t>":$staticTileSizes,
+                   CArg<"::mlir::transform::TileSizesSpec", 
+                        "::mlir::transform::TileSizesSpec()">,
+                   CArg<"ArrayRef<int64_t>", "{}">:$threadDimMapping)>,
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<OpFoldResult>":$mixedTileSizes,
+                   CArg<"::mlir::transform::TileSizesSpec", 
+                        "::mlir::transform::TileSizesSpec()">,
+                   CArg<"ArrayRef<int64_t>", "{}">:$threadDimMapping)>,
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<int64_t>":$staticNumThreads,
+                   CArg<"::mlir::transform::NumThreadsSpec", 
+                        "::mlir::transform::NumThreadsSpec()">,
+                   CArg<"ArrayRef<int64_t>", "{}">:$threadDimMapping)>,
+    OpBuilder<(ins "Value":$target,
+                   "ArrayRef<OpFoldResult>":$mixedNumThreads,
+                   CArg<"::mlir::transform::NumThreadsSpec", 
+                        "::mlir::transform::NumThreadsSpec()">,
+                   CArg<"ArrayRef<int64_t>", "{}">:$threadDimMapping)>,
+  ];
+
   let assemblyFormat = [{
     $target oilist(
         `num_threads` custom<DynamicIndexList>($num_threads,
@@ -943,6 +984,10 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
   let results = (outs PDL_Operation:$transformed);
 
   let assemblyFormat = "$target attr-dict";
+
+  let builders = [
+    OpBuilder<(ins "Value":$target, CArg<"bool", "false">:$vectorizePadding)>
+  ];
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::Operation *target, 
