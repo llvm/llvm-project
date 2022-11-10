@@ -469,16 +469,18 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
   }
   case llvm::Triple::loongarch32: {
     LibDir = "lib32";
-    Loader = ("ld-linux-loongarch-" +
-              tools::loongarch::getLoongArchABI(Args, Triple) + ".so.1")
-                 .str();
+    Loader =
+        ("ld-linux-loongarch-" +
+         tools::loongarch::getLoongArchABI(getDriver(), Args, Triple) + ".so.1")
+            .str();
     break;
   }
   case llvm::Triple::loongarch64: {
     LibDir = "lib64";
-    Loader = ("ld-linux-loongarch-" +
-              tools::loongarch::getLoongArchABI(Args, Triple) + ".so.1")
-                 .str();
+    Loader =
+        ("ld-linux-loongarch-" +
+         tools::loongarch::getLoongArchABI(getDriver(), Args, Triple) + ".so.1")
+            .str();
     break;
   }
   case llvm::Triple::m68k:

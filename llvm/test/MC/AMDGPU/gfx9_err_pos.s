@@ -179,15 +179,15 @@ v_add_i16 v5, 0.5, v2
 // CHECK-NEXT:{{^}}              ^
 
 //==============================================================================
-// missing dst operand or lds modifier
+// too few operands for instruction
 
 buffer_load_dword off, s[8:11], s3
-// CHECK: error: missing dst operand or lds modifier
+// CHECK: error: too few operands for instruction
 // CHECK-NEXT:{{^}}buffer_load_dword off, s[8:11], s3
 // CHECK-NEXT:{{^}}^
 
 buffer_load_dword off, s[8:11], s3 offset:1
-// CHECK: error: missing dst operand or lds modifier
+// CHECK: error: too few operands for instruction
 // CHECK-NEXT:{{^}}buffer_load_dword off, s[8:11], s3 offset:1
 // CHECK-NEXT:{{^}}^
 

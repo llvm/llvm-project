@@ -103,6 +103,7 @@ Changes to the AArch64 Backend
 ------------------------------
 
 * Added support for the Cortex-A715 CPU.
+* Added support for the Cortex-X3 CPU.
 
 Changes to the AMDGPU Backend
 -----------------------------
@@ -170,6 +171,7 @@ Changes to the X86 Backend
 * Support ISA of ``AVX-VNNI-INT8``.
 * Support ISA of ``AVX-NE-CONVERT``.
 * ``-mcpu=raptorlake`` and ``-mcpu=meteorlake`` are now supported.
+* ``-mcpu=sierraforest``, ``-mcpu=graniterapids`` and ``-mcpu=grandridge`` are now supported.
 
 Changes to the OCaml bindings
 -----------------------------

@@ -8,6 +8,7 @@ set(UNITTEST_SOURCES
   orc_unit_test_main.cpp
   wrapper_function_utils_test.cpp
   simple_packed_serialization_test.cpp
+  string_pool_test.cpp
   )
 
 if (COMPILER_RT_CAN_EXECUTE_TESTS)

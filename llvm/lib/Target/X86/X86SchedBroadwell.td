@@ -357,13 +357,13 @@ defm : X86WriteResPairUnsupported<WriteFVarBlendZ>;
 // class FMASC { X86FoldableSchedWrite Sched = WriteFAdd; }
 
 // Conversion between integer and float.
-defm : BWWriteResPair<WriteCvtSS2I,   [BWPort1], 3>;
+defm : BWWriteResPair<WriteCvtSS2I,   [BWPort1,BWPort0], 4, [1,1], 2, 5>;
 defm : BWWriteResPair<WriteCvtPS2I,   [BWPort1], 3>;
 defm : BWWriteResPair<WriteCvtPS2IY,  [BWPort1], 3>;
 defm : X86WriteResPairUnsupported<WriteCvtPS2IZ>;
-defm : BWWriteResPair<WriteCvtSD2I,   [BWPort1], 3>;
-defm : BWWriteResPair<WriteCvtPD2I,   [BWPort1], 3>;
-defm : BWWriteResPair<WriteCvtPD2IY,  [BWPort1], 3>;
+defm : BWWriteResPair<WriteCvtSD2I,   [BWPort1,BWPort0], 4, [1,1], 2, 5>;
+defm : BWWriteResPair<WriteCvtPD2I,   [BWPort1,BWPort5], 4, [1,1], 2, 5>;
+defm : BWWriteResPair<WriteCvtPD2IY,  [BWPort1,BWPort5], 6, [1,1], 2, 6>;
 defm : X86WriteResPairUnsupported<WriteCvtPD2IZ>;
 
 defm : BWWriteResPair<WriteCvtI2SS,   [BWPort1], 4>;
@@ -838,15 +838,6 @@ def BWWriteResGroup38 : SchedWriteRes<[BWPort4,BWPort237,BWPort06,BWPort0156]> {
 }
 def: InstRW<[BWWriteResGroup38], (instrs CALL64pcrel32)>;
 
-def BWWriteResGroup39 : SchedWriteRes<[BWPort0,BWPort1]> {
-  let Latency = 4;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1];
-}
-def: InstRW<[BWWriteResGroup39], (instregex "(V?)CVT(T?)SD2SI64rr",
-                                            "(V?)CVT(T?)SD2SIrr",
-                                            "(V?)CVT(T?)SS2SI64rr",
-                                            "(V?)CVT(T?)SS2SIrr")>;
 
 def BWWriteResGroup41 : SchedWriteRes<[BWPort0,BWPort0156]> {
   let Latency = 4;
@@ -860,12 +851,10 @@ def BWWriteResGroup42 : SchedWriteRes<[BWPort1,BWPort5]> {
   let NumMicroOps = 2;
   let ResourceCycles = [1,1];
 }
-def: InstRW<[BWWriteResGroup42], (instregex "MMX_CVT(T?)PD2PIrr",
-                                            "MMX_CVT(T?)PS2PIrr",
+def: InstRW<[BWWriteResGroup42], (instregex "MMX_CVT(T?)PS2PIrr",
                                             "(V?)CVTSI642SDrr",
                                             "(V?)CVTSI2SDrr",
-                                            "(V?)CVTSI2SSrr",
-                                            "(V?)CVT(T?)PD2DQrr")>;
+                                            "(V?)CVTSI2SSrr")>;
 
 def BWWriteResGroup43 : SchedWriteRes<[BWPort0,BWPort4,BWPort237]> {
   let Latency = 4;
@@ -976,14 +965,6 @@ def: InstRW<[BWWriteResGroup59], (instrs CVTPS2PDrm, VCVTPS2PDrm,
                                          CVTSS2SDrm_Int, VCVTSS2SDrm_Int,
                                          VPSLLVQrm,
                                          VPSRLVQrm)>;
-
-def BWWriteResGroup60 : SchedWriteRes<[BWPort1,BWPort5]> {
-  let Latency = 6;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1];
-}
-def: InstRW<[BWWriteResGroup60], (instrs VCVTPD2DQYrr,
-                                         VCVTTPD2DQYrr)>;
 
 def BWWriteResGroup62 : SchedWriteRes<[BWPort6,BWPort23]> {
   let Latency = 6;
@@ -1197,26 +1178,6 @@ def: InstRW<[BWWriteResGroup101], (instregex "(ADD|SUB|SUBR)_F(32|64)m",
 def: InstRW<[BWWriteResGroup101], (instrs VCVTPS2DQYrm,
                                           VCVTTPS2DQYrm)>;
 
-def BWWriteResGroup105 : SchedWriteRes<[BWPort0,BWPort1,BWPort23]> {
-  let Latency = 9;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,1,1];
-}
-def: InstRW<[BWWriteResGroup105], (instregex "(V?)CVTSS2SI(64)?rm",
-                                             "(V?)CVT(T?)SD2SI64rm",
-                                             "(V?)CVT(T?)SD2SIrm",
-                                             "VCVTTSS2SI64rm",
-                                             "(V?)CVTTSS2SIrm")>;
-
-def BWWriteResGroup107 : SchedWriteRes<[BWPort1,BWPort5,BWPort23]> {
-  let Latency = 9;
-  let NumMicroOps = 3;
-  let ResourceCycles = [1,1,1];
-}
-def: InstRW<[BWWriteResGroup107], (instrs CVTPD2DQrm, VCVTPD2DQrm,
-                                          CVTTPD2DQrm, VCVTTPD2DQrm)>;
-def: InstRW<[BWWriteResGroup107], (instregex "MMX_CVT(T?)PD2PIrm")>;
-
 def BWWriteResGroup108 : SchedWriteRes<[BWPort5,BWPort23,BWPort015]> {
   let Latency = 9;
   let NumMicroOps = 3;
@@ -1253,13 +1214,6 @@ def BWWriteResGroup117 : SchedWriteRes<[BWPort1,BWPort23]> {
   let ResourceCycles = [2,1];
 }
 def: InstRW<[BWWriteResGroup117], (instregex "FICOM(P?)(16|32)m")>;
-
-def BWWriteResGroup120 : SchedWriteRes<[BWPort0,BWPort1,BWPort5,BWPort23]> {
-  let Latency = 10;
-  let NumMicroOps = 4;
-  let ResourceCycles = [1,1,1,1];
-}
-def: InstRW<[BWWriteResGroup120], (instregex "CVTTSS2SI64rm")>;
 
 def BWWriteResGroup122_1 : SchedWriteRes<[BWPort0,BWFPDivider]> {
   let Latency = 11;

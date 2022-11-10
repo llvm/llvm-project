@@ -37,8 +37,10 @@ using test2 = B<int, 1>;
 // CHECK-NEXT:       `-ElaboratedType 0x{{[0-9A-Fa-f]+}} '__make_integer_seq<A, int, 1>' sugar
 // CHECK-NEXT:         `-TemplateSpecializationType 0x{{[0-9A-Fa-f]+}} '__make_integer_seq<A, int, 1>' sugar alias __make_integer_seq
 // CHECK-NEXT:           |-TemplateArgument template A
-// CHECK-NEXT:           |-TemplateArgument type 'int'
-// CHECK-NEXT:           | `-BuiltinType 0x{{[0-9A-Fa-f]+}} 'int'
+// CHECK-NEXT:           |-TemplateArgument type 'int':'int'
+// CHECK-NEXT:           | `-SubstTemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'int' sugar class depth 0 index 0 B1
+// CHECK-NEXT:           |   |-TypeAliasTemplate 0x{{[0-9A-Fa-f]+}} 'B'
+// CHECK-NEXT:           |   `-BuiltinType 0x{{[0-9A-Fa-f]+}} 'int'
 // CHECK-NEXT:           |-TemplateArgument expr
 // CHECK-NEXT:           | `-ConstantExpr 0x{{[0-9A-Fa-f]+}} <line:26:64> 'int'
 // CHECK-NEXT:           |   |-value: Int 1
@@ -46,18 +48,20 @@ using test2 = B<int, 1>;
 // CHECK-NEXT:           |     |-NonTypeTemplateParmDecl 0x{{[0-9A-Fa-f]+}} <col:21, col:24> col:24 referenced 'B1' depth 0 index 1 B2
 // CHECK-NEXT:           |     `-IntegerLiteral 0x{{[0-9A-Fa-f]+}} <col:64> 'int' 1
 // CHECK-NEXT:           `-TemplateSpecializationType 0x{{[0-9A-Fa-f]+}} 'A<int, 0>' sugar A
-// CHECK-NEXT:             |-TemplateArgument type 'int'
-// CHECK-NEXT:             | `-BuiltinType 0x{{[0-9A-Fa-f]+}} 'int'
+// CHECK-NEXT:             |-TemplateArgument type 'int':'int'
+// CHECK-NEXT:             | `-SubstTemplateTypeParmType 0x{{[0-9A-Fa-f]+}} 'int' sugar class depth 0 index 0 B1
+// CHECK-NEXT:             |   |-TypeAliasTemplate 0x{{[0-9A-Fa-f]+}} 'B'
+// CHECK-NEXT:             |   `-BuiltinType 0x{{[0-9A-Fa-f]+}} 'int'
 // CHECK-NEXT:             |-TemplateArgument expr
 // CHECK-NEXT:             | `-ConstantExpr 0x{{[0-9A-Fa-f]+}} <col:64> 'int'
 // CHECK-NEXT:             |   |-value: Int 0
-// CHECK-NEXT:             |   `-IntegerLiteral 0x{{[0-9A-Fa-f]+}} <col:64> 'int' 0
+// CHECK-NEXT:             |   `-IntegerLiteral 0x{{[0-9A-Fa-f]+}} <col:64> 'int':'int' 0
 // CHECK-NEXT:             `-RecordType 0x{{[0-9A-Fa-f]+}} 'A<int, 0>'
 // CHECK-NEXT:               `-ClassTemplateSpecialization 0x{{[0-9A-Fa-f]+}} 'A'
 
 template <template <class T, T...> class S, class T, int N> struct C {
   using test3 = __make_integer_seq<S, T, N>;
-//      CHECK: |-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <line:59:3, col:43> col:9 test3 '__make_integer_seq<S, T, N>':'__make_integer_seq<type-parameter-0-1, N>'
+//      CHECK: |-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <line:63:3, col:43> col:9 test3 '__make_integer_seq<S, T, N>':'__make_integer_seq<type-parameter-0-1, N>'
 // CHECK-NEXT:   `-ElaboratedType 0x{{[0-9A-Fa-f]+}} '__make_integer_seq<S, T, N>' sugar dependent
 // CHECK-NEXT:     `-TemplateSpecializationType 0x{{[0-9A-Fa-f]+}} '__make_integer_seq<S, T, N>' sugar dependent alias __make_integer_seq
 // CHECK-NEXT:       |-TemplateArgument template S
@@ -76,7 +80,7 @@ template <template <class T, T...> class S, class T, int N> struct C {
 // CHECK-NEXT:             `-DeclRefExpr 0x{{[0-9A-Fa-f]+}} <col:42> 'int' NonTypeTemplateParm 0x{{[0-9A-Fa-f]+}} 'N' 'int'
 
   using test4 = __make_integer_seq<A, T, 1>;
-//      CHECK: |-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <line:78:3, col:43> col:9 test4 '__make_integer_seq<A, T, 1>':'__make_integer_seq<A, type-parameter-0-1, 1>'
+//      CHECK: |-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <line:82:3, col:43> col:9 test4 '__make_integer_seq<A, T, 1>':'__make_integer_seq<A, type-parameter-0-1, 1>'
 // CHECK-NEXT:   `-ElaboratedType 0x{{[0-9A-Fa-f]+}} '__make_integer_seq<A, T, 1>' sugar dependent
 // CHECK-NEXT:     `-TemplateSpecializationType 0x{{[0-9A-Fa-f]+}} '__make_integer_seq<A, T, 1>' sugar dependent alias __make_integer_seq
 // CHECK-NEXT:       |-TemplateArgument template A
@@ -95,7 +99,7 @@ template <template <class T, T...> class S, class T, int N> struct C {
 // CHECK-NEXT:             `-IntegerLiteral 0x{{[0-9A-Fa-f]+}} <col:42> 'int' 1
 
   using test5 = __make_integer_seq<A, int, N>;
-//      CHECK: `-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <line:97:3, col:45> col:9 test5 '__make_integer_seq<A, int, N>':'__make_integer_seq<A, int, N>'
+//      CHECK: `-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <line:101:3, col:45> col:9 test5 '__make_integer_seq<A, int, N>':'__make_integer_seq<A, int, N>'
 // CHECK-NEXT:   `-ElaboratedType 0x{{[0-9A-Fa-f]+}} '__make_integer_seq<A, int, N>' sugar dependent
 // CHECK-NEXT:     `-TemplateSpecializationType 0x{{[0-9A-Fa-f]+}} '__make_integer_seq<A, int, N>' sugar dependent alias __make_integer_seq
 // CHECK-NEXT:       |-TemplateArgument template A

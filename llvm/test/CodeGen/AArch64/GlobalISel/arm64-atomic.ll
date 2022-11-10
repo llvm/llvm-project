@@ -3,8 +3,6 @@
 ; RUN: llc < %s -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -O0 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-NOLSE,CHECK-NOLSE-O0
 ; RUN: llc < %s -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -mcpu=apple-a13 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-LSE-O1
 ; RUN: llc < %s -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -mcpu=apple-a13 -O0 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-LSE-O0
-; RUN: llc < %s -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -mattr=+rcpc,+ldapr -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-LDAPR-O1
-; RUN: llc < %s -mtriple=arm64-apple-ios -global-isel -global-isel-abort=1 -mattr=+rcpc,+ldapr -O0 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK-LDAPR-O0
 
 define i32 @val_compare_and_swap(i32* %p, i32 %cmp, i32 %new) #0 {
 ; CHECK-NOLSE-O1-LABEL: val_compare_and_swap:
@@ -51,38 +49,6 @@ define i32 @val_compare_and_swap(i32* %p, i32 %cmp, i32 %new) #0 {
 ; CHECK-LSE-O0-NEXT:    mov x0, x1
 ; CHECK-LSE-O0-NEXT:    casa w0, w2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: val_compare_and_swap:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB0_1: ; %cmpxchg.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxr w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    cmp w8, w1
-; CHECK-LDAPR-O1-NEXT:    b.ne LBB0_4
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
-; CHECK-LDAPR-O1-NEXT:    ; in Loop: Header=BB0_1 Depth=1
-; CHECK-LDAPR-O1-NEXT:    stxr w9, w2, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w9, LBB0_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-; CHECK-LDAPR-O1-NEXT:  LBB0_4: ; %cmpxchg.nostore
-; CHECK-LDAPR-O1-NEXT:    clrex
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: val_compare_and_swap:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    mov x9, x0
-; CHECK-LDAPR-O0-NEXT:  LBB0_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ldaxr w0, [x9]
-; CHECK-LDAPR-O0-NEXT:    cmp w0, w1
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB0_3
-; CHECK-LDAPR-O0-NEXT:  ; %bb.2: ; in Loop: Header=BB0_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    stlxr w8, w2, [x9]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB0_1
-; CHECK-LDAPR-O0-NEXT:  LBB0_3:
-; CHECK-LDAPR-O0-NEXT:    ret
   %pair = cmpxchg i32* %p, i32 %cmp, i32 %new acquire acquire
   %val = extractvalue { i32, i1 } %pair, 0
   ret i32 %val
@@ -137,40 +103,6 @@ define i32 @val_compare_and_swap_from_load(i32* %p, i32 %cmp, i32* %pnew) #0 {
 ; CHECK-LSE-O0-NEXT:    ldr w8, [x2]
 ; CHECK-LSE-O0-NEXT:    casa w0, w8, [x9]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: val_compare_and_swap_from_load:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    ldr w9, [x2]
-; CHECK-LDAPR-O1-NEXT:  LBB1_1: ; %cmpxchg.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxr w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    cmp w8, w1
-; CHECK-LDAPR-O1-NEXT:    b.ne LBB1_4
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
-; CHECK-LDAPR-O1-NEXT:    ; in Loop: Header=BB1_1 Depth=1
-; CHECK-LDAPR-O1-NEXT:    stxr w10, w9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB1_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-; CHECK-LDAPR-O1-NEXT:  LBB1_4: ; %cmpxchg.nostore
-; CHECK-LDAPR-O1-NEXT:    clrex
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: val_compare_and_swap_from_load:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    mov x9, x0
-; CHECK-LDAPR-O0-NEXT:    ldr w10, [x2]
-; CHECK-LDAPR-O0-NEXT:  LBB1_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ldaxr w0, [x9]
-; CHECK-LDAPR-O0-NEXT:    cmp w0, w1
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB1_3
-; CHECK-LDAPR-O0-NEXT:  ; %bb.2: ; in Loop: Header=BB1_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    stlxr w8, w10, [x9]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB1_1
-; CHECK-LDAPR-O0-NEXT:  LBB1_3:
-; CHECK-LDAPR-O0-NEXT:    ret
   %new = load i32, i32* %pnew
   %pair = cmpxchg i32* %p, i32 %cmp, i32 %new acquire acquire
   %val = extractvalue { i32, i1 } %pair, 0
@@ -222,38 +154,6 @@ define i32 @val_compare_and_swap_rel(i32* %p, i32 %cmp, i32 %new) #0 {
 ; CHECK-LSE-O0-NEXT:    mov x0, x1
 ; CHECK-LSE-O0-NEXT:    casal w0, w2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: val_compare_and_swap_rel:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB2_1: ; %cmpxchg.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxr w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    cmp w8, w1
-; CHECK-LDAPR-O1-NEXT:    b.ne LBB2_4
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
-; CHECK-LDAPR-O1-NEXT:    ; in Loop: Header=BB2_1 Depth=1
-; CHECK-LDAPR-O1-NEXT:    stlxr w9, w2, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w9, LBB2_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-; CHECK-LDAPR-O1-NEXT:  LBB2_4: ; %cmpxchg.nostore
-; CHECK-LDAPR-O1-NEXT:    clrex
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: val_compare_and_swap_rel:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    mov x9, x0
-; CHECK-LDAPR-O0-NEXT:  LBB2_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ldaxr w0, [x9]
-; CHECK-LDAPR-O0-NEXT:    cmp w0, w1
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB2_3
-; CHECK-LDAPR-O0-NEXT:  ; %bb.2: ; in Loop: Header=BB2_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    stlxr w8, w2, [x9]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB2_1
-; CHECK-LDAPR-O0-NEXT:  LBB2_3:
-; CHECK-LDAPR-O0-NEXT:    ret
   %pair = cmpxchg i32* %p, i32 %cmp, i32 %new acq_rel monotonic
   %val = extractvalue { i32, i1 } %pair, 0
   ret i32 %val
@@ -304,38 +204,6 @@ define i64 @val_compare_and_swap_64(i64* %p, i64 %cmp, i64 %new) #0 {
 ; CHECK-LSE-O0-NEXT:    mov x0, x1
 ; CHECK-LSE-O0-NEXT:    cas x0, x2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: val_compare_and_swap_64:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB3_1: ; %cmpxchg.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldxr x8, [x0]
-; CHECK-LDAPR-O1-NEXT:    cmp x8, x1
-; CHECK-LDAPR-O1-NEXT:    b.ne LBB3_4
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
-; CHECK-LDAPR-O1-NEXT:    ; in Loop: Header=BB3_1 Depth=1
-; CHECK-LDAPR-O1-NEXT:    stxr w9, x2, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w9, LBB3_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
-; CHECK-LDAPR-O1-NEXT:    mov x0, x8
-; CHECK-LDAPR-O1-NEXT:    ret
-; CHECK-LDAPR-O1-NEXT:  LBB3_4: ; %cmpxchg.nostore
-; CHECK-LDAPR-O1-NEXT:    clrex
-; CHECK-LDAPR-O1-NEXT:    mov x0, x8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: val_compare_and_swap_64:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    mov x9, x0
-; CHECK-LDAPR-O0-NEXT:  LBB3_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ldaxr x0, [x9]
-; CHECK-LDAPR-O0-NEXT:    cmp x0, x1
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB3_3
-; CHECK-LDAPR-O0-NEXT:  ; %bb.2: ; in Loop: Header=BB3_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    stlxr w8, x2, [x9]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB3_1
-; CHECK-LDAPR-O0-NEXT:  LBB3_3:
-; CHECK-LDAPR-O0-NEXT:    ret
   %pair = cmpxchg i64* %p, i64 %cmp, i64 %new monotonic monotonic
   %val = extractvalue { i64, i1 } %pair, 0
   ret i64 %val
@@ -386,38 +254,6 @@ define i64 @val_compare_and_swap_64_monotonic_seqcst(i64* %p, i64 %cmp, i64 %new
 ; CHECK-LSE-O0-NEXT:    mov x0, x1
 ; CHECK-LSE-O0-NEXT:    casal x0, x2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: val_compare_and_swap_64_monotonic_seqcst:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB4_1: ; %cmpxchg.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxr x8, [x0]
-; CHECK-LDAPR-O1-NEXT:    cmp x8, x1
-; CHECK-LDAPR-O1-NEXT:    b.ne LBB4_4
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
-; CHECK-LDAPR-O1-NEXT:    ; in Loop: Header=BB4_1 Depth=1
-; CHECK-LDAPR-O1-NEXT:    stlxr w9, x2, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w9, LBB4_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
-; CHECK-LDAPR-O1-NEXT:    mov x0, x8
-; CHECK-LDAPR-O1-NEXT:    ret
-; CHECK-LDAPR-O1-NEXT:  LBB4_4: ; %cmpxchg.nostore
-; CHECK-LDAPR-O1-NEXT:    clrex
-; CHECK-LDAPR-O1-NEXT:    mov x0, x8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: val_compare_and_swap_64_monotonic_seqcst:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    mov x9, x0
-; CHECK-LDAPR-O0-NEXT:  LBB4_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ldaxr x0, [x9]
-; CHECK-LDAPR-O0-NEXT:    cmp x0, x1
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB4_3
-; CHECK-LDAPR-O0-NEXT:  ; %bb.2: ; in Loop: Header=BB4_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    stlxr w8, x2, [x9]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB4_1
-; CHECK-LDAPR-O0-NEXT:  LBB4_3:
-; CHECK-LDAPR-O0-NEXT:    ret
   %pair = cmpxchg i64* %p, i64 %cmp, i64 %new monotonic seq_cst
   %val = extractvalue { i64, i1 } %pair, 0
   ret i64 %val
@@ -468,38 +304,6 @@ define i64 @val_compare_and_swap_64_release_acquire(i64* %p, i64 %cmp, i64 %new)
 ; CHECK-LSE-O0-NEXT:    mov x0, x1
 ; CHECK-LSE-O0-NEXT:    casal x0, x2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: val_compare_and_swap_64_release_acquire:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB5_1: ; %cmpxchg.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxr x8, [x0]
-; CHECK-LDAPR-O1-NEXT:    cmp x8, x1
-; CHECK-LDAPR-O1-NEXT:    b.ne LBB5_4
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
-; CHECK-LDAPR-O1-NEXT:    ; in Loop: Header=BB5_1 Depth=1
-; CHECK-LDAPR-O1-NEXT:    stlxr w9, x2, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w9, LBB5_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.3: ; %cmpxchg.end
-; CHECK-LDAPR-O1-NEXT:    mov x0, x8
-; CHECK-LDAPR-O1-NEXT:    ret
-; CHECK-LDAPR-O1-NEXT:  LBB5_4: ; %cmpxchg.nostore
-; CHECK-LDAPR-O1-NEXT:    clrex
-; CHECK-LDAPR-O1-NEXT:    mov x0, x8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: val_compare_and_swap_64_release_acquire:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    mov x9, x0
-; CHECK-LDAPR-O0-NEXT:  LBB5_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ldaxr x0, [x9]
-; CHECK-LDAPR-O0-NEXT:    cmp x0, x1
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB5_3
-; CHECK-LDAPR-O0-NEXT:  ; %bb.2: ; in Loop: Header=BB5_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    stlxr w8, x2, [x9]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB5_1
-; CHECK-LDAPR-O0-NEXT:  LBB5_3:
-; CHECK-LDAPR-O0-NEXT:    ret
   %pair = cmpxchg i64* %p, i64 %cmp, i64 %new release acquire
   %val = extractvalue { i64, i1 } %pair, 0
   ret i64 %val
@@ -594,56 +398,6 @@ define i32 @fetch_and_nand(i32* %p) #0 {
 ; CHECK-LSE-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
 ; CHECK-LSE-O0-NEXT:    add sp, sp, #32
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: fetch_and_nand:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB6_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldxr w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    and w9, w8, #0x7
-; CHECK-LDAPR-O1-NEXT:    mvn w9, w9
-; CHECK-LDAPR-O1-NEXT:    stlxr w10, w9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB6_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: fetch_and_nand:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB6_1
-; CHECK-LDAPR-O0-NEXT:  LBB6_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB6_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    and w9, w8, #0x7
-; CHECK-LDAPR-O0-NEXT:    mvn w12, w9
-; CHECK-LDAPR-O0-NEXT:  LBB6_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB6_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxr w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w8
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB6_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB6_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxr w10, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w10, LBB6_2
-; CHECK-LDAPR-O0-NEXT:  LBB6_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB6_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    subs w8, w9, w8
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB6_1
-; CHECK-LDAPR-O0-NEXT:    b LBB6_5
-; CHECK-LDAPR-O0-NEXT:  LBB6_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %val = atomicrmw nand i32* %p, i32 7 release
   ret i32 %val
 }
@@ -737,56 +491,6 @@ define i64 @fetch_and_nand_64(i64* %p) #0 {
 ; CHECK-LSE-O0-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
 ; CHECK-LSE-O0-NEXT:    add sp, sp, #32
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: fetch_and_nand_64:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB7_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxr x8, [x0]
-; CHECK-LDAPR-O1-NEXT:    and x9, x8, #0x7
-; CHECK-LDAPR-O1-NEXT:    mvn x9, x9
-; CHECK-LDAPR-O1-NEXT:    stlxr w10, x9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB7_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov x0, x8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: fetch_and_nand_64:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldr x8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str x8, [sp, #24] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB7_1
-; CHECK-LDAPR-O0-NEXT:  LBB7_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB7_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr x8, [sp, #24] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    and x9, x8, #0x7
-; CHECK-LDAPR-O0-NEXT:    mvn x12, x9
-; CHECK-LDAPR-O0-NEXT:  LBB7_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB7_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxr x9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp x9, x8
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB7_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB7_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxr w10, x12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w10, LBB7_2
-; CHECK-LDAPR-O0-NEXT:  LBB7_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB7_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str x9, [sp, #8] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    subs x8, x9, x8
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str x9, [sp, #24] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB7_1
-; CHECK-LDAPR-O0-NEXT:    b LBB7_5
-; CHECK-LDAPR-O0-NEXT:  LBB7_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %val = atomicrmw nand i64* %p, i64 7 acq_rel
   ret i64 %val
 }
@@ -853,56 +557,6 @@ define i32 @fetch_and_or(i32* %p) #0 {
 ; CHECK-LSE-O0-NEXT:    mov w8, #5
 ; CHECK-LSE-O0-NEXT:    ldsetal w8, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: fetch_and_or:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    mov w9, #5
-; CHECK-LDAPR-O1-NEXT:  LBB8_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxr w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    orr w10, w8, w9
-; CHECK-LDAPR-O1-NEXT:    stlxr w11, w10, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w11, LBB8_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: fetch_and_or:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB8_1
-; CHECK-LDAPR-O0-NEXT:  LBB8_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB8_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    mov w9, #5
-; CHECK-LDAPR-O0-NEXT:    orr w12, w8, w9
-; CHECK-LDAPR-O0-NEXT:  LBB8_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB8_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxr w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w8
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB8_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB8_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxr w10, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w10, LBB8_2
-; CHECK-LDAPR-O0-NEXT:  LBB8_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB8_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    subs w8, w9, w8
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB8_1
-; CHECK-LDAPR-O0-NEXT:    b LBB8_5
-; CHECK-LDAPR-O0-NEXT:  LBB8_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %val = atomicrmw or i32* %p, i32 5 seq_cst
   ret i32 %val
 }
@@ -968,54 +622,6 @@ define i64 @fetch_and_or_64(i64* %p) #0 {
 ; CHECK-LSE-O0-NEXT:    ; kill: def $x8 killed $w8
 ; CHECK-LSE-O0-NEXT:    ldset x8, x0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: fetch_and_or_64:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB9_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldxr x8, [x0]
-; CHECK-LDAPR-O1-NEXT:    orr x9, x8, #0x7
-; CHECK-LDAPR-O1-NEXT:    stxr w10, x9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB9_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov x0, x8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: fetch_and_or_64:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldr x8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str x8, [sp, #24] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB9_1
-; CHECK-LDAPR-O0-NEXT:  LBB9_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB9_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr x8, [sp, #24] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    orr x12, x8, #0x7
-; CHECK-LDAPR-O0-NEXT:  LBB9_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB9_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxr x9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp x9, x8
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB9_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB9_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxr w10, x12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w10, LBB9_2
-; CHECK-LDAPR-O0-NEXT:  LBB9_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB9_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str x9, [sp, #8] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    subs x8, x9, x8
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str x9, [sp, #24] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB9_1
-; CHECK-LDAPR-O0-NEXT:    b LBB9_5
-; CHECK-LDAPR-O0-NEXT:  LBB9_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr x0, [sp, #8] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %val = atomicrmw or i64* %p, i64 7 monotonic
   ret i64 %val
 }
@@ -1035,16 +641,6 @@ define void @acquire_fence() #0 {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    dmb ishld
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: acquire_fence:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    dmb ishld
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: acquire_fence:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    dmb ishld
-; CHECK-LDAPR-O0-NEXT:    ret
    fence acquire
    ret void
 }
@@ -1064,16 +660,6 @@ define void @release_fence() #0 {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    dmb ish
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: release_fence:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    dmb ish
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: release_fence:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    dmb ish
-; CHECK-LDAPR-O0-NEXT:    ret
    fence release
    ret void
 }
@@ -1093,16 +679,6 @@ define void @seq_cst_fence() #0 {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    dmb ish
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: seq_cst_fence:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    dmb ish
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: seq_cst_fence:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    dmb ish
-; CHECK-LDAPR-O0-NEXT:    ret
    fence seq_cst
    ret void
 }
@@ -1122,16 +698,6 @@ define i32 @atomic_load(i32* %p) #0 {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldar w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomic_load:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    ldar w0, [x0]
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomic_load:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    ldar w0, [x0]
-; CHECK-LDAPR-O0-NEXT:    ret
    %r = load atomic i32, i32* %p seq_cst, align 4
    ret i32 %r
 }
@@ -1188,32 +754,6 @@ define i8 @atomic_load_relaxed_8(i8* %p, i32 %off32) #0 {
 ; CHECK-LSE-O0-NEXT:    ldrb w9, [x9]
 ; CHECK-LSE-O0-NEXT:    add w0, w8, w9, uxtb
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomic_load_relaxed_8:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
-; CHECK-LDAPR-O1-NEXT:    ldrb w9, [x0, #4095]
-; CHECK-LDAPR-O1-NEXT:    ldrb w10, [x0, w1, sxtw]
-; CHECK-LDAPR-O1-NEXT:    ldurb w11, [x0, #-256]
-; CHECK-LDAPR-O1-NEXT:    ldrb w8, [x8]
-; CHECK-LDAPR-O1-NEXT:    add w9, w9, w10
-; CHECK-LDAPR-O1-NEXT:    add w9, w9, w11
-; CHECK-LDAPR-O1-NEXT:    add w0, w9, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomic_load_relaxed_8:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    ldrb w9, [x0, #4095]
-; CHECK-LDAPR-O0-NEXT:    add x8, x0, w1, sxtw
-; CHECK-LDAPR-O0-NEXT:    ldrb w8, [x8]
-; CHECK-LDAPR-O0-NEXT:    add w8, w8, w9, uxtb
-; CHECK-LDAPR-O0-NEXT:    subs x9, x0, #256
-; CHECK-LDAPR-O0-NEXT:    ldrb w9, [x9]
-; CHECK-LDAPR-O0-NEXT:    add w8, w8, w9, uxtb
-; CHECK-LDAPR-O0-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
-; CHECK-LDAPR-O0-NEXT:    ldrb w9, [x9]
-; CHECK-LDAPR-O0-NEXT:    add w0, w8, w9, uxtb
-; CHECK-LDAPR-O0-NEXT:    ret
   %ptr_unsigned = getelementptr i8, i8* %p, i32 4095
   %val_unsigned = load atomic i8, i8* %ptr_unsigned monotonic, align 1
 
@@ -1284,32 +824,6 @@ define i16 @atomic_load_relaxed_16(i16* %p, i32 %off32) #0 {
 ; CHECK-LSE-O0-NEXT:    ldrh w9, [x9]
 ; CHECK-LSE-O0-NEXT:    add w0, w8, w9, uxth
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomic_load_relaxed_16:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
-; CHECK-LDAPR-O1-NEXT:    ldrh w9, [x0, #8190]
-; CHECK-LDAPR-O1-NEXT:    ldrh w10, [x0, w1, sxtw #1]
-; CHECK-LDAPR-O1-NEXT:    ldurh w11, [x0, #-256]
-; CHECK-LDAPR-O1-NEXT:    ldrh w8, [x8]
-; CHECK-LDAPR-O1-NEXT:    add w9, w9, w10
-; CHECK-LDAPR-O1-NEXT:    add w9, w9, w11
-; CHECK-LDAPR-O1-NEXT:    add w0, w9, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomic_load_relaxed_16:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    ldrh w9, [x0, #8190]
-; CHECK-LDAPR-O0-NEXT:    add x8, x0, w1, sxtw #1
-; CHECK-LDAPR-O0-NEXT:    ldrh w8, [x8]
-; CHECK-LDAPR-O0-NEXT:    add w8, w8, w9, uxth
-; CHECK-LDAPR-O0-NEXT:    subs x9, x0, #256
-; CHECK-LDAPR-O0-NEXT:    ldrh w9, [x9]
-; CHECK-LDAPR-O0-NEXT:    add w8, w8, w9, uxth
-; CHECK-LDAPR-O0-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
-; CHECK-LDAPR-O0-NEXT:    ldrh w9, [x9]
-; CHECK-LDAPR-O0-NEXT:    add w0, w8, w9, uxth
-; CHECK-LDAPR-O0-NEXT:    ret
   %ptr_unsigned = getelementptr i16, i16* %p, i32 4095
   %val_unsigned = load atomic i16, i16* %ptr_unsigned monotonic, align 2
 
@@ -1376,30 +890,6 @@ define i32 @atomic_load_relaxed_32(i32* %p, i32 %off32) #0 {
 ; CHECK-LSE-O0-NEXT:    ldr w9, [x9]
 ; CHECK-LSE-O0-NEXT:    add w0, w8, w9
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomic_load_relaxed_32:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
-; CHECK-LDAPR-O1-NEXT:    ldr w9, [x0, #16380]
-; CHECK-LDAPR-O1-NEXT:    ldr w10, [x0, w1, sxtw #2]
-; CHECK-LDAPR-O1-NEXT:    ldur w11, [x0, #-256]
-; CHECK-LDAPR-O1-NEXT:    ldr w8, [x8]
-; CHECK-LDAPR-O1-NEXT:    add w9, w9, w10
-; CHECK-LDAPR-O1-NEXT:    add w9, w9, w11
-; CHECK-LDAPR-O1-NEXT:    add w0, w9, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomic_load_relaxed_32:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [x0, #16380]
-; CHECK-LDAPR-O0-NEXT:    ldr w9, [x0, w1, sxtw #2]
-; CHECK-LDAPR-O0-NEXT:    add w8, w8, w9
-; CHECK-LDAPR-O0-NEXT:    ldur w9, [x0, #-256]
-; CHECK-LDAPR-O0-NEXT:    add w8, w8, w9
-; CHECK-LDAPR-O0-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
-; CHECK-LDAPR-O0-NEXT:    ldr w9, [x9]
-; CHECK-LDAPR-O0-NEXT:    add w0, w8, w9
-; CHECK-LDAPR-O0-NEXT:    ret
   %ptr_unsigned = getelementptr i32, i32* %p, i32 4095
   %val_unsigned = load atomic i32, i32* %ptr_unsigned monotonic, align 4
 
@@ -1466,30 +956,6 @@ define i64 @atomic_load_relaxed_64(i64* %p, i32 %off32) #0 {
 ; CHECK-LSE-O0-NEXT:    ldr x9, [x9]
 ; CHECK-LSE-O0-NEXT:    add x0, x8, x9
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomic_load_relaxed_64:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
-; CHECK-LDAPR-O1-NEXT:    ldr x9, [x0, #32760]
-; CHECK-LDAPR-O1-NEXT:    ldr x10, [x0, w1, sxtw #3]
-; CHECK-LDAPR-O1-NEXT:    ldur x11, [x0, #-256]
-; CHECK-LDAPR-O1-NEXT:    ldr x8, [x8]
-; CHECK-LDAPR-O1-NEXT:    add x9, x9, x10
-; CHECK-LDAPR-O1-NEXT:    add x9, x9, x11
-; CHECK-LDAPR-O1-NEXT:    add x0, x9, x8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomic_load_relaxed_64:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    ldr x8, [x0, #32760]
-; CHECK-LDAPR-O0-NEXT:    ldr x9, [x0, w1, sxtw #3]
-; CHECK-LDAPR-O0-NEXT:    add x8, x8, x9
-; CHECK-LDAPR-O0-NEXT:    ldur x9, [x0, #-256]
-; CHECK-LDAPR-O0-NEXT:    add x8, x8, x9
-; CHECK-LDAPR-O0-NEXT:    add x9, x0, #291, lsl #12 ; =1191936
-; CHECK-LDAPR-O0-NEXT:    ldr x9, [x9]
-; CHECK-LDAPR-O0-NEXT:    add x0, x8, x9
-; CHECK-LDAPR-O0-NEXT:    ret
   %ptr_unsigned = getelementptr i64, i64* %p, i32 4095
   %val_unsigned = load atomic i64, i64* %ptr_unsigned monotonic, align 8
 
@@ -1527,18 +993,6 @@ define void @atomc_store(i32* %p) #0 {
 ; CHECK-LSE-O0-NEXT:    mov w8, #4
 ; CHECK-LSE-O0-NEXT:    stlr w8, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomc_store:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    mov w8, #4
-; CHECK-LDAPR-O1-NEXT:    stlr w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomc_store:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    mov w8, #4
-; CHECK-LDAPR-O0-NEXT:    stlr w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    ret
    store atomic i32 4, i32* %p seq_cst, align 4
    ret void
 }
@@ -1579,24 +1033,6 @@ define void @atomic_store_relaxed_8(i8* %p, i32 %off32, i8 %val) #0 {
 ; CHECK-LSE-O0-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O0-NEXT:    strb w2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomic_store_relaxed_8:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
-; CHECK-LDAPR-O1-NEXT:    strb w2, [x0, #4095]
-; CHECK-LDAPR-O1-NEXT:    strb w2, [x0, w1, sxtw]
-; CHECK-LDAPR-O1-NEXT:    sturb w2, [x0, #-256]
-; CHECK-LDAPR-O1-NEXT:    strb w2, [x8]
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomic_store_relaxed_8:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    strb w2, [x0, #4095]
-; CHECK-LDAPR-O0-NEXT:    strb w2, [x0, w1, sxtw]
-; CHECK-LDAPR-O0-NEXT:    sturb w2, [x0, #-256]
-; CHECK-LDAPR-O0-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
-; CHECK-LDAPR-O0-NEXT:    strb w2, [x8]
-; CHECK-LDAPR-O0-NEXT:    ret
   %ptr_unsigned = getelementptr i8, i8* %p, i32 4095
   store atomic i8 %val, i8* %ptr_unsigned monotonic, align 1
 
@@ -1648,24 +1084,6 @@ define void @atomic_store_relaxed_16(i16* %p, i32 %off32, i16 %val) #0 {
 ; CHECK-LSE-O0-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O0-NEXT:    strh w2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomic_store_relaxed_16:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
-; CHECK-LDAPR-O1-NEXT:    strh w2, [x0, #8190]
-; CHECK-LDAPR-O1-NEXT:    strh w2, [x0, w1, sxtw #1]
-; CHECK-LDAPR-O1-NEXT:    sturh w2, [x0, #-256]
-; CHECK-LDAPR-O1-NEXT:    strh w2, [x8]
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomic_store_relaxed_16:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    strh w2, [x0, #8190]
-; CHECK-LDAPR-O0-NEXT:    strh w2, [x0, w1, sxtw #1]
-; CHECK-LDAPR-O0-NEXT:    sturh w2, [x0, #-256]
-; CHECK-LDAPR-O0-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
-; CHECK-LDAPR-O0-NEXT:    strh w2, [x8]
-; CHECK-LDAPR-O0-NEXT:    ret
   %ptr_unsigned = getelementptr i16, i16* %p, i32 4095
   store atomic i16 %val, i16* %ptr_unsigned monotonic, align 2
 
@@ -1717,24 +1135,6 @@ define void @atomic_store_relaxed_32(i32* %p, i32 %off32, i32 %val) #0 {
 ; CHECK-LSE-O0-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O0-NEXT:    str w2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomic_store_relaxed_32:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
-; CHECK-LDAPR-O1-NEXT:    str w2, [x0, #16380]
-; CHECK-LDAPR-O1-NEXT:    str w2, [x0, w1, sxtw #2]
-; CHECK-LDAPR-O1-NEXT:    stur w2, [x0, #-256]
-; CHECK-LDAPR-O1-NEXT:    str w2, [x8]
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomic_store_relaxed_32:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    str w2, [x0, #16380]
-; CHECK-LDAPR-O0-NEXT:    str w2, [x0, w1, sxtw #2]
-; CHECK-LDAPR-O0-NEXT:    stur w2, [x0, #-256]
-; CHECK-LDAPR-O0-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
-; CHECK-LDAPR-O0-NEXT:    str w2, [x8]
-; CHECK-LDAPR-O0-NEXT:    ret
   %ptr_unsigned = getelementptr i32, i32* %p, i32 4095
   store atomic i32 %val, i32* %ptr_unsigned monotonic, align 4
 
@@ -1786,24 +1186,6 @@ define void @atomic_store_relaxed_64(i64* %p, i32 %off32, i64 %val) #0 {
 ; CHECK-LSE-O0-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
 ; CHECK-LSE-O0-NEXT:    str x2, [x8]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomic_store_relaxed_64:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
-; CHECK-LDAPR-O1-NEXT:    str x2, [x0, #32760]
-; CHECK-LDAPR-O1-NEXT:    str x2, [x0, w1, sxtw #3]
-; CHECK-LDAPR-O1-NEXT:    stur x2, [x0, #-256]
-; CHECK-LDAPR-O1-NEXT:    str x2, [x8]
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomic_store_relaxed_64:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    str x2, [x0, #32760]
-; CHECK-LDAPR-O0-NEXT:    str x2, [x0, w1, sxtw #3]
-; CHECK-LDAPR-O0-NEXT:    stur x2, [x0, #-256]
-; CHECK-LDAPR-O0-NEXT:    add x8, x0, #291, lsl #12 ; =1191936
-; CHECK-LDAPR-O0-NEXT:    str x2, [x8]
-; CHECK-LDAPR-O0-NEXT:    ret
   %ptr_unsigned = getelementptr i64, i64* %p, i32 4095
   store atomic i64 %val, i64* %ptr_unsigned monotonic, align 8
 
@@ -1836,31 +1218,17 @@ define i32 @load_zext(i8* %p8, i16* %p16) {
 ;
 ; CHECK-LSE-O1-LABEL: load_zext:
 ; CHECK-LSE-O1:       ; %bb.0:
-; CHECK-LSE-O1-NEXT:    ldarb w8, [x0]
+; CHECK-LSE-O1-NEXT:    ldaprb w8, [x0]
 ; CHECK-LSE-O1-NEXT:    ldrh w9, [x1]
 ; CHECK-LSE-O1-NEXT:    add w0, w9, w8, uxtb
 ; CHECK-LSE-O1-NEXT:    ret
 ;
 ; CHECK-LSE-O0-LABEL: load_zext:
 ; CHECK-LSE-O0:       ; %bb.0:
-; CHECK-LSE-O0-NEXT:    ldarb w9, [x0]
+; CHECK-LSE-O0-NEXT:    ldaprb w9, [x0]
 ; CHECK-LSE-O0-NEXT:    ldrh w8, [x1]
 ; CHECK-LSE-O0-NEXT:    add w0, w8, w9, uxtb
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: load_zext:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    ldaprb w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    ldrh w9, [x1]
-; CHECK-LDAPR-O1-NEXT:    add w0, w9, w8, uxtb
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: load_zext:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    ldaprb w9, [x0]
-; CHECK-LDAPR-O0-NEXT:    ldrh w8, [x1]
-; CHECK-LDAPR-O0-NEXT:    add w0, w8, w9, uxtb
-; CHECK-LDAPR-O0-NEXT:    ret
   %val1.8 = load atomic i8, i8* %p8 acquire, align 1
   %val1 = zext i8 %val1.8 to i32
 
@@ -1881,26 +1249,14 @@ define { i32, i64 } @load_acq(i32* %p32, i64* %p64) {
 ; CHECK-LSE-O1-LABEL: load_acq:
 ; CHECK-LSE-O1:       ; %bb.0:
 ; CHECK-LSE-O1-NEXT:    ldar w0, [x0]
-; CHECK-LSE-O1-NEXT:    ldar x1, [x1]
+; CHECK-LSE-O1-NEXT:    ldapr x1, [x1]
 ; CHECK-LSE-O1-NEXT:    ret
 ;
 ; CHECK-LSE-O0-LABEL: load_acq:
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldar w0, [x0]
-; CHECK-LSE-O0-NEXT:    ldar x1, [x1]
+; CHECK-LSE-O0-NEXT:    ldapr x1, [x1]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: load_acq:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    ldar w0, [x0]
-; CHECK-LDAPR-O1-NEXT:    ldapr x1, [x1]
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: load_acq:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    ldar w0, [x0]
-; CHECK-LDAPR-O0-NEXT:    ldapr x1, [x1]
-; CHECK-LDAPR-O0-NEXT:    ret
   %val32 = load atomic i32, i32* %p32 seq_cst, align 4
   %tmp = insertvalue { i32, i64 } undef, i32 %val32, 0
 
@@ -1929,7 +1285,7 @@ define i32 @load_sext(i8* %p8, i16* %p16) {
 ;
 ; CHECK-LSE-O1-LABEL: load_sext:
 ; CHECK-LSE-O1:       ; %bb.0:
-; CHECK-LSE-O1-NEXT:    ldarb w8, [x0]
+; CHECK-LSE-O1-NEXT:    ldaprb w8, [x0]
 ; CHECK-LSE-O1-NEXT:    ldrh w9, [x1]
 ; CHECK-LSE-O1-NEXT:    sxth w9, w9
 ; CHECK-LSE-O1-NEXT:    add w0, w9, w8, sxtb
@@ -1937,27 +1293,11 @@ define i32 @load_sext(i8* %p8, i16* %p16) {
 ;
 ; CHECK-LSE-O0-LABEL: load_sext:
 ; CHECK-LSE-O0:       ; %bb.0:
-; CHECK-LSE-O0-NEXT:    ldarb w9, [x0]
+; CHECK-LSE-O0-NEXT:    ldaprb w9, [x0]
 ; CHECK-LSE-O0-NEXT:    ldrh w8, [x1]
 ; CHECK-LSE-O0-NEXT:    sxth w8, w8
 ; CHECK-LSE-O0-NEXT:    add w0, w8, w9, sxtb
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: load_sext:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    ldaprb w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    ldrh w9, [x1]
-; CHECK-LDAPR-O1-NEXT:    sxth w9, w9
-; CHECK-LDAPR-O1-NEXT:    add w0, w9, w8, sxtb
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: load_sext:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    ldaprb w9, [x0]
-; CHECK-LDAPR-O0-NEXT:    ldrh w8, [x1]
-; CHECK-LDAPR-O0-NEXT:    sxth w8, w8
-; CHECK-LDAPR-O0-NEXT:    add w0, w8, w9, sxtb
-; CHECK-LDAPR-O0-NEXT:    ret
   %val1.8 = load atomic i8, i8* %p8 acquire, align 1
   %val1 = sext i8 %val1.8 to i32
 
@@ -1986,18 +1326,6 @@ define void @store_trunc(i32 %val, i8* %p8, i16* %p16) {
 ; CHECK-LSE-O0-NEXT:    stlrb w0, [x1]
 ; CHECK-LSE-O0-NEXT:    strh w0, [x2]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: store_trunc:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    stlrb w0, [x1]
-; CHECK-LDAPR-O1-NEXT:    strh w0, [x2]
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: store_trunc:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    stlrb w0, [x1]
-; CHECK-LDAPR-O0-NEXT:    strh w0, [x2]
-; CHECK-LDAPR-O0-NEXT:    ret
   %val8 = trunc i32 %val to i8
   store atomic i8 %val8, i8* %p8 seq_cst, align 1
 
@@ -2069,58 +1397,6 @@ define i8 @atomicrmw_add_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldaddalb w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_add_i8:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB27_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxrb w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    add w9, w8, w1
-; CHECK-LDAPR-O1-NEXT:    stlxrb w10, w9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB27_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_add_i8:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrb w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB27_1
-; CHECK-LDAPR-O0-NEXT:  LBB27_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB27_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add w12, w8, w10, uxth
-; CHECK-LDAPR-O0-NEXT:  LBB27_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB27_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrb w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB27_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB27_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrb w8, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB27_2
-; CHECK-LDAPR-O0-NEXT:  LBB27_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB27_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    and w8, w9, #0xff
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB27_1
-; CHECK-LDAPR-O0-NEXT:    b LBB27_5
-; CHECK-LDAPR-O0-NEXT:  LBB27_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw add i8* %ptr, i8 %rhs seq_cst
   ret i8 %res
 }
@@ -2186,57 +1462,6 @@ define i8 @atomicrmw_xchg_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    swpb w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_xchg_i8:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    ; kill: def $w1 killed $w1 def $x1
-; CHECK-LDAPR-O1-NEXT:  LBB28_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldxrb w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    stxrb w9, w1, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w9, LBB28_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_xchg_i8:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrb w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB28_1
-; CHECK-LDAPR-O0-NEXT:  LBB28_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB28_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w12, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:  LBB28_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB28_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrb w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB28_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB28_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrb w8, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB28_2
-; CHECK-LDAPR-O0-NEXT:  LBB28_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB28_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    and w8, w9, #0xff
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB28_1
-; CHECK-LDAPR-O0-NEXT:    b LBB28_5
-; CHECK-LDAPR-O0-NEXT:  LBB28_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw xchg i8* %ptr, i8 %rhs monotonic
   ret i8 %res
 }
@@ -2305,58 +1530,6 @@ define i8 @atomicrmw_sub_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0-NEXT:    neg w8, w1
 ; CHECK-LSE-O0-NEXT:    ldaddab w8, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_sub_i8:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB29_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxrb w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    sub w9, w8, w1
-; CHECK-LDAPR-O1-NEXT:    stxrb w10, w9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB29_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_sub_i8:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrb w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB29_1
-; CHECK-LDAPR-O0-NEXT:  LBB29_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB29_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    subs w12, w10, w8
-; CHECK-LDAPR-O0-NEXT:  LBB29_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB29_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrb w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB29_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB29_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrb w8, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB29_2
-; CHECK-LDAPR-O0-NEXT:  LBB29_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB29_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    and w8, w9, #0xff
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB29_1
-; CHECK-LDAPR-O0-NEXT:    b LBB29_5
-; CHECK-LDAPR-O0-NEXT:  LBB29_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw sub i8* %ptr, i8 %rhs acquire
   ret i8 %res
 }
@@ -2425,58 +1598,6 @@ define i8 @atomicrmw_and_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0-NEXT:    mvn w8, w1
 ; CHECK-LSE-O0-NEXT:    ldclrlb w8, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_and_i8:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB30_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldxrb w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    and w9, w8, w1
-; CHECK-LDAPR-O1-NEXT:    stlxrb w10, w9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB30_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_and_i8:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrb w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB30_1
-; CHECK-LDAPR-O0-NEXT:  LBB30_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB30_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    and w12, w10, w8
-; CHECK-LDAPR-O0-NEXT:  LBB30_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB30_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrb w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB30_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB30_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrb w8, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB30_2
-; CHECK-LDAPR-O0-NEXT:  LBB30_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB30_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    and w8, w9, #0xff
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB30_1
-; CHECK-LDAPR-O0-NEXT:    b LBB30_5
-; CHECK-LDAPR-O0-NEXT:  LBB30_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw and i8* %ptr, i8 %rhs release
   ret i8 %res
 }
@@ -2543,58 +1664,6 @@ define i8 @atomicrmw_or_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldsetalb w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_or_i8:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB31_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxrb w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    orr w9, w8, w1
-; CHECK-LDAPR-O1-NEXT:    stlxrb w10, w9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB31_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_or_i8:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrb w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB31_1
-; CHECK-LDAPR-O0-NEXT:  LBB31_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB31_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    orr w12, w10, w8
-; CHECK-LDAPR-O0-NEXT:  LBB31_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB31_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrb w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB31_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB31_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrb w8, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB31_2
-; CHECK-LDAPR-O0-NEXT:  LBB31_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB31_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    and w8, w9, #0xff
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB31_1
-; CHECK-LDAPR-O0-NEXT:    b LBB31_5
-; CHECK-LDAPR-O0-NEXT:  LBB31_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw or i8* %ptr, i8 %rhs seq_cst
   ret i8 %res
 }
@@ -2661,58 +1730,6 @@ define i8 @atomicrmw_xor_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldeorb w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_xor_i8:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB32_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldxrb w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    eor w9, w8, w1
-; CHECK-LDAPR-O1-NEXT:    stxrb w10, w9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB32_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_xor_i8:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrb w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB32_1
-; CHECK-LDAPR-O0-NEXT:  LBB32_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB32_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    eor w12, w10, w8
-; CHECK-LDAPR-O0-NEXT:  LBB32_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB32_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrb w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB32_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB32_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrb w8, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB32_2
-; CHECK-LDAPR-O0-NEXT:  LBB32_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB32_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    and w8, w9, #0xff
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB32_1
-; CHECK-LDAPR-O0-NEXT:    b LBB32_5
-; CHECK-LDAPR-O0-NEXT:  LBB32_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw xor i8* %ptr, i8 %rhs monotonic
   ret i8 %res
 }
@@ -2786,65 +1803,6 @@ define i8 @atomicrmw_min_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldsminab w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_min_i8:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB33_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxrb w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    sxtb w9, w8
-; CHECK-LDAPR-O1-NEXT:    cmp w9, w1, sxtb
-; CHECK-LDAPR-O1-NEXT:    csel w9, w8, w1, le
-; CHECK-LDAPR-O1-NEXT:    stxrb w10, w9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB33_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_min_i8:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrb w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB33_1
-; CHECK-LDAPR-O0-NEXT:  LBB33_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB33_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    sxtb w9, w10
-; CHECK-LDAPR-O0-NEXT:    subs w9, w9, w8, sxtb
-; CHECK-LDAPR-O0-NEXT:    cset w9, le
-; CHECK-LDAPR-O0-NEXT:    and w9, w9, #0x1
-; CHECK-LDAPR-O0-NEXT:    ands w9, w9, #0x1
-; CHECK-LDAPR-O0-NEXT:    csel w12, w10, w8, ne
-; CHECK-LDAPR-O0-NEXT:  LBB33_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB33_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrb w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB33_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB33_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrb w8, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB33_2
-; CHECK-LDAPR-O0-NEXT:  LBB33_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB33_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    and w8, w9, #0xff
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB33_1
-; CHECK-LDAPR-O0-NEXT:    b LBB33_5
-; CHECK-LDAPR-O0-NEXT:  LBB33_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw min i8* %ptr, i8 %rhs acquire
   ret i8 %res
 }
@@ -2918,65 +1876,6 @@ define i8 @atomicrmw_max_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldsmaxlb w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_max_i8:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB34_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldxrb w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    sxtb w9, w8
-; CHECK-LDAPR-O1-NEXT:    cmp w9, w1, sxtb
-; CHECK-LDAPR-O1-NEXT:    csel w9, w8, w1, gt
-; CHECK-LDAPR-O1-NEXT:    stlxrb w10, w9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB34_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_max_i8:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrb w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB34_1
-; CHECK-LDAPR-O0-NEXT:  LBB34_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB34_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    sxtb w9, w10
-; CHECK-LDAPR-O0-NEXT:    subs w9, w9, w8, sxtb
-; CHECK-LDAPR-O0-NEXT:    cset w9, gt
-; CHECK-LDAPR-O0-NEXT:    and w9, w9, #0x1
-; CHECK-LDAPR-O0-NEXT:    ands w9, w9, #0x1
-; CHECK-LDAPR-O0-NEXT:    csel w12, w10, w8, ne
-; CHECK-LDAPR-O0-NEXT:  LBB34_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB34_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrb w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB34_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB34_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrb w8, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB34_2
-; CHECK-LDAPR-O0-NEXT:  LBB34_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB34_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    and w8, w9, #0xff
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB34_1
-; CHECK-LDAPR-O0-NEXT:    b LBB34_5
-; CHECK-LDAPR-O0-NEXT:  LBB34_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw max i8* %ptr, i8 %rhs release
   ret i8 %res
 }
@@ -3051,66 +1950,6 @@ define i8 @atomicrmw_umin_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    lduminalb w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_umin_i8:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    and w9, w1, #0xff
-; CHECK-LDAPR-O1-NEXT:  LBB35_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxrb w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    and w10, w8, #0xff
-; CHECK-LDAPR-O1-NEXT:    cmp w10, w9
-; CHECK-LDAPR-O1-NEXT:    csel w10, w10, w9, ls
-; CHECK-LDAPR-O1-NEXT:    stlxrb w11, w10, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w11, LBB35_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_umin_i8:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrb w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB35_1
-; CHECK-LDAPR-O0-NEXT:  LBB35_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB35_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    and w9, w10, #0xff
-; CHECK-LDAPR-O0-NEXT:    subs w9, w9, w8, uxtb
-; CHECK-LDAPR-O0-NEXT:    cset w9, ls
-; CHECK-LDAPR-O0-NEXT:    and w9, w9, #0x1
-; CHECK-LDAPR-O0-NEXT:    ands w9, w9, #0x1
-; CHECK-LDAPR-O0-NEXT:    csel w12, w10, w8, ne
-; CHECK-LDAPR-O0-NEXT:  LBB35_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB35_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrb w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB35_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB35_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrb w8, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB35_2
-; CHECK-LDAPR-O0-NEXT:  LBB35_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB35_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    and w8, w9, #0xff
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB35_1
-; CHECK-LDAPR-O0-NEXT:    b LBB35_5
-; CHECK-LDAPR-O0-NEXT:  LBB35_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw umin i8* %ptr, i8 %rhs seq_cst
   ret i8 %res
 }
@@ -3185,66 +2024,6 @@ define i8 @atomicrmw_umax_i8(i8* %ptr, i8 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldumaxb w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_umax_i8:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    and w9, w1, #0xff
-; CHECK-LDAPR-O1-NEXT:  LBB36_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldxrb w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    and w10, w8, #0xff
-; CHECK-LDAPR-O1-NEXT:    cmp w10, w9
-; CHECK-LDAPR-O1-NEXT:    csel w10, w10, w9, hi
-; CHECK-LDAPR-O1-NEXT:    stxrb w11, w10, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w11, LBB36_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_umax_i8:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrb w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB36_1
-; CHECK-LDAPR-O0-NEXT:  LBB36_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB36_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w10, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    and w9, w10, #0xff
-; CHECK-LDAPR-O0-NEXT:    subs w9, w9, w8, uxtb
-; CHECK-LDAPR-O0-NEXT:    cset w9, hi
-; CHECK-LDAPR-O0-NEXT:    and w9, w9, #0x1
-; CHECK-LDAPR-O0-NEXT:    ands w9, w9, #0x1
-; CHECK-LDAPR-O0-NEXT:    csel w12, w10, w8, ne
-; CHECK-LDAPR-O0-NEXT:  LBB36_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB36_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrb w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB36_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB36_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrb w8, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB36_2
-; CHECK-LDAPR-O0-NEXT:  LBB36_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB36_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    and w8, w9, #0xff
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w10, uxtb
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB36_1
-; CHECK-LDAPR-O0-NEXT:    b LBB36_5
-; CHECK-LDAPR-O0-NEXT:  LBB36_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw umax i8* %ptr, i8 %rhs monotonic
   ret i8 %res
 }
@@ -3311,58 +2090,6 @@ define i16 @atomicrmw_add_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldaddalh w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_add_i16:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB37_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxrh w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    add w9, w8, w1
-; CHECK-LDAPR-O1-NEXT:    stlxrh w10, w9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB37_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_add_i16:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrh w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB37_1
-; CHECK-LDAPR-O0-NEXT:  LBB37_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB37_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add w12, w9, w8, uxth
-; CHECK-LDAPR-O0-NEXT:  LBB37_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB37_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrh w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w8, uxth
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB37_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB37_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrh w10, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w10, LBB37_2
-; CHECK-LDAPR-O0-NEXT:  LBB37_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB37_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    uxth w8, w8
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w9, uxth
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB37_1
-; CHECK-LDAPR-O0-NEXT:    b LBB37_5
-; CHECK-LDAPR-O0-NEXT:  LBB37_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw add i16* %ptr, i16 %rhs seq_cst
   ret i16 %res
 }
@@ -3428,57 +2155,6 @@ define i16 @atomicrmw_xchg_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    swph w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_xchg_i16:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    ; kill: def $w1 killed $w1 def $x1
-; CHECK-LDAPR-O1-NEXT:  LBB38_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldxrh w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    stxrh w9, w1, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w9, LBB38_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_xchg_i16:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrh w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB38_1
-; CHECK-LDAPR-O0-NEXT:  LBB38_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB38_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w12, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:  LBB38_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB38_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrh w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w8, uxth
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB38_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB38_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrh w10, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w10, LBB38_2
-; CHECK-LDAPR-O0-NEXT:  LBB38_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB38_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    uxth w8, w8
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w9, uxth
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB38_1
-; CHECK-LDAPR-O0-NEXT:    b LBB38_5
-; CHECK-LDAPR-O0-NEXT:  LBB38_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw xchg i16* %ptr, i16 %rhs monotonic
   ret i16 %res
 }
@@ -3547,58 +2223,6 @@ define i16 @atomicrmw_sub_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0-NEXT:    neg w8, w1
 ; CHECK-LSE-O0-NEXT:    ldaddah w8, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_sub_i16:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB39_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxrh w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    sub w9, w8, w1
-; CHECK-LDAPR-O1-NEXT:    stxrh w10, w9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB39_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_sub_i16:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrh w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB39_1
-; CHECK-LDAPR-O0-NEXT:  LBB39_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB39_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    subs w12, w8, w9
-; CHECK-LDAPR-O0-NEXT:  LBB39_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB39_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrh w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w8, uxth
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB39_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB39_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrh w10, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w10, LBB39_2
-; CHECK-LDAPR-O0-NEXT:  LBB39_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB39_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    uxth w8, w8
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w9, uxth
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB39_1
-; CHECK-LDAPR-O0-NEXT:    b LBB39_5
-; CHECK-LDAPR-O0-NEXT:  LBB39_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw sub i16* %ptr, i16 %rhs acquire
   ret i16 %res
 }
@@ -3667,58 +2291,6 @@ define i16 @atomicrmw_and_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0-NEXT:    mvn w8, w1
 ; CHECK-LSE-O0-NEXT:    ldclrlh w8, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_and_i16:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB40_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldxrh w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    and w9, w8, w1
-; CHECK-LDAPR-O1-NEXT:    stlxrh w10, w9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB40_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_and_i16:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrh w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB40_1
-; CHECK-LDAPR-O0-NEXT:  LBB40_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB40_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    and w12, w8, w9
-; CHECK-LDAPR-O0-NEXT:  LBB40_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB40_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrh w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w8, uxth
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB40_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB40_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrh w10, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w10, LBB40_2
-; CHECK-LDAPR-O0-NEXT:  LBB40_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB40_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    uxth w8, w8
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w9, uxth
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB40_1
-; CHECK-LDAPR-O0-NEXT:    b LBB40_5
-; CHECK-LDAPR-O0-NEXT:  LBB40_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw and i16* %ptr, i16 %rhs release
   ret i16 %res
 }
@@ -3785,58 +2357,6 @@ define i16 @atomicrmw_or_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldsetalh w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_or_i16:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB41_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxrh w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    orr w9, w8, w1
-; CHECK-LDAPR-O1-NEXT:    stlxrh w10, w9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB41_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_or_i16:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrh w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB41_1
-; CHECK-LDAPR-O0-NEXT:  LBB41_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB41_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    orr w12, w8, w9
-; CHECK-LDAPR-O0-NEXT:  LBB41_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB41_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrh w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w8, uxth
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB41_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB41_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrh w10, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w10, LBB41_2
-; CHECK-LDAPR-O0-NEXT:  LBB41_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB41_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    uxth w8, w8
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w9, uxth
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB41_1
-; CHECK-LDAPR-O0-NEXT:    b LBB41_5
-; CHECK-LDAPR-O0-NEXT:  LBB41_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw or i16* %ptr, i16 %rhs seq_cst
   ret i16 %res
 }
@@ -3903,58 +2423,6 @@ define i16 @atomicrmw_xor_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldeorh w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_xor_i16:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB42_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldxrh w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    eor w9, w8, w1
-; CHECK-LDAPR-O1-NEXT:    stxrh w10, w9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB42_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_xor_i16:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrh w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB42_1
-; CHECK-LDAPR-O0-NEXT:  LBB42_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB42_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    eor w12, w8, w9
-; CHECK-LDAPR-O0-NEXT:  LBB42_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB42_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrh w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w8, uxth
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB42_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB42_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrh w10, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w10, LBB42_2
-; CHECK-LDAPR-O0-NEXT:  LBB42_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB42_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    uxth w8, w8
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w9, uxth
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB42_1
-; CHECK-LDAPR-O0-NEXT:    b LBB42_5
-; CHECK-LDAPR-O0-NEXT:  LBB42_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw xor i16* %ptr, i16 %rhs monotonic
   ret i16 %res
 }
@@ -4028,65 +2496,6 @@ define i16 @atomicrmw_min_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldsminah w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_min_i16:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB43_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxrh w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    sxth w9, w8
-; CHECK-LDAPR-O1-NEXT:    cmp w9, w1, sxth
-; CHECK-LDAPR-O1-NEXT:    csel w9, w8, w1, le
-; CHECK-LDAPR-O1-NEXT:    stxrh w10, w9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB43_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_min_i16:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrh w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB43_1
-; CHECK-LDAPR-O0-NEXT:  LBB43_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB43_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    sxth w10, w8
-; CHECK-LDAPR-O0-NEXT:    subs w10, w10, w9, sxth
-; CHECK-LDAPR-O0-NEXT:    cset w10, le
-; CHECK-LDAPR-O0-NEXT:    and w10, w10, #0x1
-; CHECK-LDAPR-O0-NEXT:    ands w10, w10, #0x1
-; CHECK-LDAPR-O0-NEXT:    csel w12, w8, w9, ne
-; CHECK-LDAPR-O0-NEXT:  LBB43_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB43_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrh w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w8, uxth
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB43_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB43_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrh w10, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w10, LBB43_2
-; CHECK-LDAPR-O0-NEXT:  LBB43_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB43_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    uxth w8, w8
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w9, uxth
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB43_1
-; CHECK-LDAPR-O0-NEXT:    b LBB43_5
-; CHECK-LDAPR-O0-NEXT:  LBB43_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw min i16* %ptr, i16 %rhs acquire
   ret i16 %res
 }
@@ -4160,65 +2569,6 @@ define i16 @atomicrmw_max_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldsmaxlh w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_max_i16:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:  LBB44_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldxrh w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    sxth w9, w8
-; CHECK-LDAPR-O1-NEXT:    cmp w9, w1, sxth
-; CHECK-LDAPR-O1-NEXT:    csel w9, w8, w1, gt
-; CHECK-LDAPR-O1-NEXT:    stlxrh w10, w9, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w10, LBB44_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_max_i16:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrh w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB44_1
-; CHECK-LDAPR-O0-NEXT:  LBB44_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB44_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    sxth w10, w8
-; CHECK-LDAPR-O0-NEXT:    subs w10, w10, w9, sxth
-; CHECK-LDAPR-O0-NEXT:    cset w10, gt
-; CHECK-LDAPR-O0-NEXT:    and w10, w10, #0x1
-; CHECK-LDAPR-O0-NEXT:    ands w10, w10, #0x1
-; CHECK-LDAPR-O0-NEXT:    csel w12, w8, w9, ne
-; CHECK-LDAPR-O0-NEXT:  LBB44_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB44_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrh w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w8, uxth
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB44_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB44_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrh w10, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w10, LBB44_2
-; CHECK-LDAPR-O0-NEXT:  LBB44_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB44_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    uxth w8, w8
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w9, uxth
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB44_1
-; CHECK-LDAPR-O0-NEXT:    b LBB44_5
-; CHECK-LDAPR-O0-NEXT:  LBB44_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw max i16* %ptr, i16 %rhs release
   ret i16 %res
 }
@@ -4293,66 +2643,6 @@ define i16 @atomicrmw_umin_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    lduminalh w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_umin_i16:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    and w9, w1, #0xffff
-; CHECK-LDAPR-O1-NEXT:  LBB45_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldaxrh w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    and w10, w8, #0xffff
-; CHECK-LDAPR-O1-NEXT:    cmp w10, w9
-; CHECK-LDAPR-O1-NEXT:    csel w10, w10, w9, ls
-; CHECK-LDAPR-O1-NEXT:    stlxrh w11, w10, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w11, LBB45_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_umin_i16:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrh w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB45_1
-; CHECK-LDAPR-O0-NEXT:  LBB45_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB45_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    uxth w10, w8
-; CHECK-LDAPR-O0-NEXT:    subs w10, w10, w9, uxth
-; CHECK-LDAPR-O0-NEXT:    cset w10, ls
-; CHECK-LDAPR-O0-NEXT:    and w10, w10, #0x1
-; CHECK-LDAPR-O0-NEXT:    ands w10, w10, #0x1
-; CHECK-LDAPR-O0-NEXT:    csel w12, w8, w9, ne
-; CHECK-LDAPR-O0-NEXT:  LBB45_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB45_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrh w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w8, uxth
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB45_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB45_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrh w10, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w10, LBB45_2
-; CHECK-LDAPR-O0-NEXT:  LBB45_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB45_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    uxth w8, w8
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w9, uxth
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB45_1
-; CHECK-LDAPR-O0-NEXT:    b LBB45_5
-; CHECK-LDAPR-O0-NEXT:  LBB45_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw umin i16* %ptr, i16 %rhs seq_cst
   ret i16 %res
 }
@@ -4427,66 +2717,6 @@ define i16 @atomicrmw_umax_i16(i16* %ptr, i16 %rhs) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldumaxh w1, w0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: atomicrmw_umax_i16:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    and w9, w1, #0xffff
-; CHECK-LDAPR-O1-NEXT:  LBB46_1: ; %atomicrmw.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldxrh w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    and w10, w8, #0xffff
-; CHECK-LDAPR-O1-NEXT:    cmp w10, w9
-; CHECK-LDAPR-O1-NEXT:    csel w10, w10, w9, hi
-; CHECK-LDAPR-O1-NEXT:    stxrh w11, w10, [x0]
-; CHECK-LDAPR-O1-NEXT:    cbnz w11, LBB46_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %atomicrmw.end
-; CHECK-LDAPR-O1-NEXT:    mov w0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: atomicrmw_umax_i16:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    sub sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LDAPR-O0-NEXT:    str x0, [sp, #16] ; 8-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    str w1, [sp, #24] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    ldrh w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    str w8, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    b LBB46_1
-; CHECK-LDAPR-O0-NEXT:  LBB46_1: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; =>This Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; Child Loop BB46_2 Depth 2
-; CHECK-LDAPR-O0-NEXT:    ldr w8, [sp, #28] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr x11, [sp, #16] ; 8-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    ldr w9, [sp, #24] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    uxth w10, w8
-; CHECK-LDAPR-O0-NEXT:    subs w10, w10, w9, uxth
-; CHECK-LDAPR-O0-NEXT:    cset w10, hi
-; CHECK-LDAPR-O0-NEXT:    and w10, w10, #0x1
-; CHECK-LDAPR-O0-NEXT:    ands w10, w10, #0x1
-; CHECK-LDAPR-O0-NEXT:    csel w12, w8, w9, ne
-; CHECK-LDAPR-O0-NEXT:  LBB46_2: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; Parent Loop BB46_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-LDAPR-O0-NEXT:    ldaxrh w9, [x11]
-; CHECK-LDAPR-O0-NEXT:    cmp w9, w8, uxth
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB46_4
-; CHECK-LDAPR-O0-NEXT:  ; %bb.3: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB46_2 Depth=2
-; CHECK-LDAPR-O0-NEXT:    stlxrh w10, w12, [x11]
-; CHECK-LDAPR-O0-NEXT:    cbnz w10, LBB46_2
-; CHECK-LDAPR-O0-NEXT:  LBB46_4: ; %atomicrmw.start
-; CHECK-LDAPR-O0-NEXT:    ; in Loop: Header=BB46_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #12] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    uxth w8, w8
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w9, uxth
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    str w9, [sp, #28] ; 4-byte Folded Spill
-; CHECK-LDAPR-O0-NEXT:    tbz w8, #0, LBB46_1
-; CHECK-LDAPR-O0-NEXT:    b LBB46_5
-; CHECK-LDAPR-O0-NEXT:  LBB46_5: ; %atomicrmw.end
-; CHECK-LDAPR-O0-NEXT:    ldr w0, [sp, #12] ; 4-byte Folded Reload
-; CHECK-LDAPR-O0-NEXT:    add sp, sp, #32
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = atomicrmw umax i16* %ptr, i16 %rhs monotonic
   ret i16 %res
 }
@@ -4553,47 +2783,6 @@ define { i8, i1 } @cmpxchg_i8(i8* %ptr, i8 %desired, i8 %new) {
 ; CHECK-LSE-O0-NEXT:    cset w8, eq
 ; CHECK-LSE-O0-NEXT:    and w1, w8, #0x1
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: cmpxchg_i8:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    mov x8, x0
-; CHECK-LDAPR-O1-NEXT:    ; kill: def $w2 killed $w2 def $x2
-; CHECK-LDAPR-O1-NEXT:  LBB47_1: ; %cmpxchg.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldxrb w0, [x8]
-; CHECK-LDAPR-O1-NEXT:    and w9, w0, #0xff
-; CHECK-LDAPR-O1-NEXT:    cmp w9, w1, uxtb
-; CHECK-LDAPR-O1-NEXT:    b.ne LBB47_4
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
-; CHECK-LDAPR-O1-NEXT:    ; in Loop: Header=BB47_1 Depth=1
-; CHECK-LDAPR-O1-NEXT:    stxrb w9, w2, [x8]
-; CHECK-LDAPR-O1-NEXT:    cbnz w9, LBB47_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.3:
-; CHECK-LDAPR-O1-NEXT:    mov w1, #1
-; CHECK-LDAPR-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
-; CHECK-LDAPR-O1-NEXT:    ret
-; CHECK-LDAPR-O1-NEXT:  LBB47_4: ; %cmpxchg.nostore
-; CHECK-LDAPR-O1-NEXT:    mov w1, wzr
-; CHECK-LDAPR-O1-NEXT:    clrex
-; CHECK-LDAPR-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: cmpxchg_i8:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    mov x9, x0
-; CHECK-LDAPR-O0-NEXT:  LBB47_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ldaxrb w0, [x9]
-; CHECK-LDAPR-O0-NEXT:    cmp w0, w1, uxtb
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB47_3
-; CHECK-LDAPR-O0-NEXT:  ; %bb.2: ; in Loop: Header=BB47_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    stlxrb w8, w2, [x9]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB47_1
-; CHECK-LDAPR-O0-NEXT:  LBB47_3:
-; CHECK-LDAPR-O0-NEXT:    and w8, w0, #0xff
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w1, uxtb
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    and w1, w8, #0x1
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = cmpxchg i8* %ptr, i8 %desired, i8 %new monotonic monotonic
   ret { i8, i1 } %res
 }
@@ -4660,47 +2849,6 @@ define { i16, i1 } @cmpxchg_i16(i16* %ptr, i16 %desired, i16 %new) {
 ; CHECK-LSE-O0-NEXT:    cset w8, eq
 ; CHECK-LSE-O0-NEXT:    and w1, w8, #0x1
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: cmpxchg_i16:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    mov x8, x0
-; CHECK-LDAPR-O1-NEXT:    ; kill: def $w2 killed $w2 def $x2
-; CHECK-LDAPR-O1-NEXT:  LBB48_1: ; %cmpxchg.start
-; CHECK-LDAPR-O1-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O1-NEXT:    ldxrh w0, [x8]
-; CHECK-LDAPR-O1-NEXT:    and w9, w0, #0xffff
-; CHECK-LDAPR-O1-NEXT:    cmp w9, w1, uxth
-; CHECK-LDAPR-O1-NEXT:    b.ne LBB48_4
-; CHECK-LDAPR-O1-NEXT:  ; %bb.2: ; %cmpxchg.trystore
-; CHECK-LDAPR-O1-NEXT:    ; in Loop: Header=BB48_1 Depth=1
-; CHECK-LDAPR-O1-NEXT:    stxrh w9, w2, [x8]
-; CHECK-LDAPR-O1-NEXT:    cbnz w9, LBB48_1
-; CHECK-LDAPR-O1-NEXT:  ; %bb.3:
-; CHECK-LDAPR-O1-NEXT:    mov w1, #1
-; CHECK-LDAPR-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
-; CHECK-LDAPR-O1-NEXT:    ret
-; CHECK-LDAPR-O1-NEXT:  LBB48_4: ; %cmpxchg.nostore
-; CHECK-LDAPR-O1-NEXT:    mov w1, wzr
-; CHECK-LDAPR-O1-NEXT:    clrex
-; CHECK-LDAPR-O1-NEXT:    ; kill: def $w0 killed $w0 killed $x0
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: cmpxchg_i16:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    mov x9, x0
-; CHECK-LDAPR-O0-NEXT:  LBB48_1: ; =>This Inner Loop Header: Depth=1
-; CHECK-LDAPR-O0-NEXT:    ldaxrh w0, [x9]
-; CHECK-LDAPR-O0-NEXT:    cmp w0, w1, uxth
-; CHECK-LDAPR-O0-NEXT:    b.ne LBB48_3
-; CHECK-LDAPR-O0-NEXT:  ; %bb.2: ; in Loop: Header=BB48_1 Depth=1
-; CHECK-LDAPR-O0-NEXT:    stlxrh w8, w2, [x9]
-; CHECK-LDAPR-O0-NEXT:    cbnz w8, LBB48_1
-; CHECK-LDAPR-O0-NEXT:  LBB48_3:
-; CHECK-LDAPR-O0-NEXT:    and w8, w0, #0xffff
-; CHECK-LDAPR-O0-NEXT:    subs w8, w8, w1, uxth
-; CHECK-LDAPR-O0-NEXT:    cset w8, eq
-; CHECK-LDAPR-O0-NEXT:    and w1, w8, #0x1
-; CHECK-LDAPR-O0-NEXT:    ret
   %res = cmpxchg i16* %ptr, i16 %desired, i16 %new monotonic monotonic
   ret { i16, i1 } %res
 }
@@ -4723,18 +2871,6 @@ define internal double @bitcast_to_double(i64* %ptr) {
 ; CHECK-LSE-O0-NEXT:    ldar x8, [x0]
 ; CHECK-LSE-O0-NEXT:    fmov d0, x8
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: bitcast_to_double:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    ldar x8, [x0]
-; CHECK-LDAPR-O1-NEXT:    fmov d0, x8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: bitcast_to_double:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    ldar x8, [x0]
-; CHECK-LDAPR-O0-NEXT:    fmov d0, x8
-; CHECK-LDAPR-O0-NEXT:    ret
   %load = load atomic i64, i64* %ptr seq_cst, align 8
   %bitcast = bitcast i64 %load to double
   ret double %bitcast
@@ -4758,18 +2894,6 @@ define internal float @bitcast_to_float(i32* %ptr) {
 ; CHECK-LSE-O0-NEXT:    ldar w8, [x0]
 ; CHECK-LSE-O0-NEXT:    fmov s0, w8
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: bitcast_to_float:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    ldar w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    fmov s0, w8
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: bitcast_to_float:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    ldar w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    fmov s0, w8
-; CHECK-LDAPR-O0-NEXT:    ret
   %load = load atomic i32, i32* %ptr seq_cst, align 8
   %bitcast = bitcast i32 %load to float
   ret float %bitcast
@@ -4796,20 +2920,6 @@ define internal half @bitcast_to_half(i16* %ptr) {
 ; CHECK-LSE-O0-NEXT:    fmov s0, w8
 ; CHECK-LSE-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: bitcast_to_half:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    ldarh w8, [x0]
-; CHECK-LDAPR-O1-NEXT:    fmov s0, w8
-; CHECK-LDAPR-O1-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: bitcast_to_half:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    ldarh w8, [x0]
-; CHECK-LDAPR-O0-NEXT:    fmov s0, w8
-; CHECK-LDAPR-O0-NEXT:    ; kill: def $h0 killed $h0 killed $s0
-; CHECK-LDAPR-O0-NEXT:    ret
   %load = load atomic i16, i16* %ptr seq_cst, align 8
   %bitcast = bitcast i16 %load to half
   ret half %bitcast
@@ -4830,16 +2940,6 @@ define internal i64* @inttoptr(i64* %ptr) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldar x0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: inttoptr:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    ldar x0, [x0]
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: inttoptr:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    ldar x0, [x0]
-; CHECK-LDAPR-O0-NEXT:    ret
   %load = load atomic i64, i64* %ptr seq_cst, align 8
   %bitcast = inttoptr i64 %load to i64*
   ret i64* %bitcast
@@ -4860,16 +2960,6 @@ define internal i64* @load_ptr(i64** %ptr) {
 ; CHECK-LSE-O0:       ; %bb.0:
 ; CHECK-LSE-O0-NEXT:    ldar x0, [x0]
 ; CHECK-LSE-O0-NEXT:    ret
-;
-; CHECK-LDAPR-O1-LABEL: load_ptr:
-; CHECK-LDAPR-O1:       ; %bb.0:
-; CHECK-LDAPR-O1-NEXT:    ldar x0, [x0]
-; CHECK-LDAPR-O1-NEXT:    ret
-;
-; CHECK-LDAPR-O0-LABEL: load_ptr:
-; CHECK-LDAPR-O0:       ; %bb.0:
-; CHECK-LDAPR-O0-NEXT:    ldar x0, [x0]
-; CHECK-LDAPR-O0-NEXT:    ret
   %load = load atomic i64*, i64** %ptr seq_cst, align 8
   ret i64* %load
 }

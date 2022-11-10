@@ -797,7 +797,7 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
   // most newly created FileID.
 
   // LessIndex - This is the lower bound of the range that we're searching.
-  // We know that the offset corresponding to the FileID is is less than
+  // We know that the offset corresponding to the FileID is less than
   // SLocOffset.
   unsigned LessIndex = 0;
   // upper bound of the search range.

@@ -3700,8 +3700,8 @@ cc_binary(
         ":BinaryFormat",
         ":CodeGen",
         ":DebugInfo",
-        ":Debuginfod",
         ":DebugInfoDWARF",
+        ":Debuginfod",
         ":Demangle",
         ":MC",
         ":MCDisassembler",
@@ -4249,97 +4249,6 @@ cc_library(
     ],
 )
 
-# A hacky library to expose some internal headers of gtest to its own
-# implementation source files using a stripped include prefix rather than
-# file-relative-inclusion.
-#
-# FIXME: This file should be in `textual_hdrs` instead of `hdrs`, but
-# unfortunately that doesn't work with `strip_include_prefix`:
-# https://github.com/bazelbuild/bazel/issues/12424
-#
-# For now, simply disable parsing and header modules.
-cc_library(
-    name = "gtest_internal_headers",
-    testonly = True,
-    hdrs = ["utils/unittest/googletest/src/gtest-internal-inl.h"],
-    features = [
-        "-parse_headers",
-        "-header_modules",
-    ],
-    strip_include_prefix = "utils/unittest/googletest",
-)
-
-cc_library(
-    name = "gtest",
-    testonly = True,
-    srcs = glob(
-        [
-            "utils/unittest/googletest/include/**/*.h",
-            "utils/unittest/googletest/src/*.cc",
-        ],
-        exclude = [
-            "utils/unittest/googletest/src/gtest-all.cc",
-            "utils/unittest/googletest/include/gtest/gtest_pred_impl.h",
-        ],
-    ) + [
-    ],
-    hdrs = ["utils/unittest/googletest/include/gtest/gtest.h"],
-    copts = llvm_copts,
-    defines = [
-        "GTEST_HAS_RTTI=0",
-        "__STDC_LIMIT_MACROS",
-        "__STDC_CONSTANT_MACROS",
-    ] + select({
-        "@bazel_tools//src/conditions:windows": ["GTEST_USE_OWN_TR1_TUPLE=0"],
-        "//conditions:default": ["GTEST_USE_OWN_TR1_TUPLE=1"],
-    }),
-    includes = [
-        "include",
-        "utils/unittest/googletest/include",
-    ],
-    textual_hdrs = [
-        "utils/unittest/googletest/include/gtest/gtest_pred_impl.h",
-    ],
-    deps = [
-        ":Support",
-        ":gtest_internal_headers",
-    ],
-)
-
-cc_library(
-    name = "gtest_main",
-    testonly = True,
-    srcs = ["utils/unittest/UnitTestMain/TestMain.cpp"],
-    copts = llvm_copts,
-    deps = [
-        ":Support",
-        ":gmock",
-        ":gtest",
-    ],
-)
-
-cc_library(
-    name = "gmock",
-    testonly = True,
-    srcs = glob(
-        [
-            "utils/unittest/googlemock/include/**/*.h",
-            "utils/unittest/googlemock/src/*.cc",
-        ],
-        exclude = ["utils/unittest/googlemock/src/gmock-all.cc"],
-    ),
-    hdrs = [
-        "utils/unittest/googlemock/include/gmock/gmock.h",
-        "utils/unittest/googlemock/include/gmock/gmock-matchers.h",
-    ],
-    copts = llvm_copts,
-    includes = [
-        "include",
-        "utils/unittest/googlemock/include",
-    ],
-    deps = [":gtest"],
-)
-
 py_binary(
     name = "lit",
     testonly = True,
@@ -4355,7 +4264,7 @@ cc_library(
     copts = llvm_copts,
     deps = [
         ":Support",
-        ":gmock",
+        "//third-party/unittest:gmock",
     ],
 )
 
@@ -4373,8 +4282,8 @@ cc_library(
     deps = [
         ":Support",
         ":config",
-        ":gmock",
-        ":gtest",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
     ],
 )
 

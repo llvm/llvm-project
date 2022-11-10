@@ -326,7 +326,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_constexpr_string_view                201811L
 # define __cpp_lib_constexpr_tuple                      201811L
 # define __cpp_lib_constexpr_utility                    201811L
-// # define __cpp_lib_constexpr_vector                     201907L
+# define __cpp_lib_constexpr_vector                     201907L
 # define __cpp_lib_coroutine                            201902L
 # if _LIBCPP_STD_VER > 17 && defined(__cpp_impl_destroying_delete) && __cpp_impl_destroying_delete >= 201806L
 #   define __cpp_lib_destroying_delete                  201806L

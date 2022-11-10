@@ -1673,7 +1673,6 @@ private:
   bool validateMIMGDataSize(const MCInst &Inst, const SMLoc &IDLoc);
   bool validateMIMGAddrSize(const MCInst &Inst);
   bool validateMIMGD16(const MCInst &Inst);
-  bool validateMIMGDim(const MCInst &Inst);
   bool validateMIMGMSAA(const MCInst &Inst);
   bool validateOpSel(const MCInst &Inst);
   bool validateDPP(const MCInst &Inst, const OperandVector &Operands);
@@ -1690,8 +1689,6 @@ private:
   bool validateWaitCnt(const MCInst &Inst, const OperandVector &Operands);
   bool validateCoherencyBits(const MCInst &Inst, const OperandVector &Operands,
                              const SMLoc &IDLoc);
-  bool validateLdsDMA(uint64_t Enc, const MCInst &Inst,
-                      const OperandVector &Operands, const SMLoc &IDLoc);
   bool validateExeczVcczOperands(const OperandVector &Operands);
   Optional<StringRef> validateLdsDirect(const MCInst &Inst);
   unsigned getConstantBusLimit(unsigned Opcode) const;
@@ -3956,24 +3953,6 @@ bool AMDGPUAsmParser::validateMIMGD16(const MCInst &Inst) {
   return true;
 }
 
-bool AMDGPUAsmParser::validateMIMGDim(const MCInst &Inst) {
-  const unsigned Opc = Inst.getOpcode();
-  const MCInstrDesc &Desc = MII.get(Opc);
-
-  if ((Desc.TSFlags & SIInstrFlags::MIMG) == 0)
-    return true;
-
-  int DimIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::dim);
-  if (DimIdx < 0)
-    return true;
-
-  int64_t Imm = Inst.getOperand(DimIdx).getImm();
-  if (Imm < 0 || Imm >= 8)
-    return false;
-
-  return true;
-}
-
 static bool IsRevOpcode(const unsigned Opcode)
 {
   switch (Opcode) {
@@ -4601,37 +4580,6 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
   return true;
 }
 
-bool AMDGPUAsmParser::validateLdsDMA(uint64_t Enc, const MCInst &Inst,
-                                     const OperandVector &Operands,
-                                     const SMLoc &IDLoc) {
-  assert(Enc == SIInstrFlags::FLAT || Enc == SIInstrFlags::MUBUF);
-
-  // Exclude cases when there are separate DMA opcodes.
-  // In these cases, incorrect opcode selection is not possible.
-  if (Enc == SIInstrFlags::FLAT && isGFX940())
-    return true;
-  if (Enc == SIInstrFlags::MUBUF && isGFX11Plus())
-    return true;
-
-  uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
-  if ((TSFlags & (SIInstrFlags::VALU | Enc)) !=
-      (SIInstrFlags::VALU | Enc))
-    return true;
-  // This is FLAT/MUBUF LDS DMA.
-
-  SMLoc S = getImmLoc(AMDGPUOperand::ImmTyLDS, Operands);
-  StringRef CStr(S.getPointer());
-  if (!CStr.startswith("lds")) {
-    // This is incorrectly selected LDS DMA version of a FLAT/MUBUF load
-    // opcode. And LDS version should have 'lds' modifier, but it follows
-    // optional operands so its absense is ignored by the matcher.
-    Error(IDLoc, "missing dst operand or lds modifier");
-    return false;
-  }
-
-  return true;
-}
-
 bool AMDGPUAsmParser::validateExeczVcczOperands(const OperandVector &Operands) {
   if (!isGFX11Plus())
     return true;
@@ -4686,10 +4634,6 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
   if (!validateMIMGD16(Inst)) {
     Error(getImmLoc(AMDGPUOperand::ImmTyD16, Operands),
       "d16 modifier is not supported on this GPU");
-    return false;
-  }
-  if (!validateMIMGDim(Inst)) {
-    Error(IDLoc, "dim modifier is required on this GPU");
     return false;
   }
   if (!validateMIMGMSAA(Inst)) {
@@ -4765,14 +4709,6 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateExeczVcczOperands(Operands)) {
-    return false;
-  }
-
-  if (!validateLdsDMA(SIInstrFlags::FLAT, Inst, Operands, IDLoc)) {
-    return false;
-  }
-
-  if (!validateLdsDMA(SIInstrFlags::MUBUF, Inst, Operands, IDLoc)) {
     return false;
   }
 

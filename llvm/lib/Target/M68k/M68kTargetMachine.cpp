@@ -143,6 +143,7 @@ public:
   const M68kSubtarget &getM68kSubtarget() const {
     return *getM68kTargetMachine().getSubtargetImpl();
   }
+  void addIRPasses() override;
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
   bool addRegBankSelect() override;
@@ -155,6 +156,11 @@ public:
 
 TargetPassConfig *M68kTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new M68kPassConfig(*this, PM);
+}
+
+void M68kPassConfig::addIRPasses() {
+  addPass(createAtomicExpandPass());
+  TargetPassConfig::addIRPasses();
 }
 
 bool M68kPassConfig::addInstSelector() {

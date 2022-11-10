@@ -12,9 +12,7 @@
 
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 
-namespace fir {
 #include "flang/Optimizer/Dialect/FortranVariableInterface.cpp.inc"
-}
 
 mlir::LogicalResult fir::FortranVariableOpInterface::verifyImpl() {
   const unsigned numExplicitTypeParams = getExplicitTypeParams().size();

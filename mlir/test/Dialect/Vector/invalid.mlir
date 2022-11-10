@@ -1632,3 +1632,16 @@ func.func @vector_mask_passthru_no_return(%val: vector<16xf32>, %t0: tensor<?xf3
   return
 }
 
+// -----
+
+func.func @vector_scalable_insert_unaligned(%subv: vector<4xi32>, %vec: vector<[16]xi32>) {
+  // expected-error@+1 {{op failed to verify that position is a multiple of the source length.}}
+  %0 = vector.scalable.insert %subv, %vec[2] : vector<4xi32> into vector<[16]xi32>
+}
+
+// -----
+
+func.func @vector_scalable_extract_unaligned(%vec: vector<[16]xf32>) {
+  // expected-error@+1 {{op failed to verify that position is a multiple of the result length.}}
+  %0 = vector.scalable.extract %vec[5] : vector<4xf32> from vector<[16]xf32>
+}

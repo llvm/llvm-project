@@ -744,7 +744,10 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
       else
         // Pushing the original feature string to give a sema error later on
         // when they get checked.
-        Features.push_back(Feature.str());
+        if (Feature.startswith("no"))
+          Features.push_back("-" + Feature.drop_front(2).str());
+        else
+          Features.push_back("+" + Feature.str());
     }
   };
 
@@ -792,13 +795,25 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
         Ret.Duplicate = "tune=";
       else
         Ret.Tune = Feature.split("=").second.trim();
-    } else if (Feature.startswith("no-"))
-      Ret.Features.push_back("-" + Feature.split("-").second.str());
-    else if (Feature.startswith("+")) {
+    } else if (Feature.startswith("+")) {
       SplitAndAddFeatures(Feature, Ret.Features);
+    } else if (Feature.startswith("no-")) {
+      StringRef FeatureName =
+          llvm::AArch64::getArchExtFeature(Feature.split("-").second);
+      if (!FeatureName.empty())
+        Ret.Features.push_back("-" + FeatureName.drop_front(1).str());
+      else
+        Ret.Features.push_back("-" + Feature.split("-").second.str());
+    } else {
+      // Try parsing the string to the internal target feature name. If it is
+      // invalid, add the original string (which could already be an internal
+      // name). These should be checked later by isValidFeatureName.
+      StringRef FeatureName = llvm::AArch64::getArchExtFeature(Feature);
+      if (!FeatureName.empty())
+        Ret.Features.push_back(FeatureName.str());
+      else
+        Ret.Features.push_back("+" + Feature.str());
     }
-    else
-      Ret.Features.push_back("+" + Feature.str());
   }
   return Ret;
 }

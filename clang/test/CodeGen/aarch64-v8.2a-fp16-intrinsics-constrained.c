@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +fullfp16 \
 // RUN: -S -disable-O0-optnone \
-// RUN: -emit-llvm -o - %s | opt -S -mem2reg \
+// RUN: -emit-llvm -o - %s | opt -S -passes=mem2reg \
 // RUN: | FileCheck --check-prefixes=COMMON,COMMONIR,UNCONSTRAINED %s
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +fullfp16 \
 // RUN: -S -disable-O0-optnone \
-// RUN: -ffp-exception-behavior=strict -fexperimental-strict-floating-point -emit-llvm -o - %s | opt -S -mem2reg \
+// RUN: -ffp-exception-behavior=strict -fexperimental-strict-floating-point -emit-llvm -o - %s | opt -S -passes=mem2reg \
 // RUN: | FileCheck --check-prefixes=COMMON,COMMONIR,CONSTRAINED %s
 
 // REQUIRES: aarch64-registered-target

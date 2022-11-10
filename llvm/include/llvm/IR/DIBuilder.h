@@ -37,6 +37,7 @@ namespace llvm {
   class LLVMContext;
   class Module;
   class Value;
+  class DbgAssignIntrinsic;
 
   class DIBuilder {
     Module &M;
@@ -47,6 +48,7 @@ namespace llvm {
     Function *ValueFn;       ///< llvm.dbg.value
     Function *LabelFn;       ///< llvm.dbg.label
     Function *AddrFn;        ///< llvm.dbg.addr
+    Function *AssignFn;      ///< llvm.dbg.assign
 
     SmallVector<TrackingMDNodeRef, 4> AllEnumTypes;
     /// Track the RetainTypes, since they can be updated later on.
@@ -916,6 +918,26 @@ namespace llvm {
     Instruction *insertDeclare(llvm::Value *Storage, DILocalVariable *VarInfo,
                                DIExpression *Expr, const DILocation *DL,
                                BasicBlock *InsertAtEnd);
+
+    /// Insert a new llvm.dbg.assign intrinsic call.
+    /// \param LinkedInstr   Instruction with a DIAssignID to link with the new
+    ///                      intrinsic. The intrinsic will be inserted after
+    ///                      this instruction.
+    /// \param Val           The value component of this dbg.assign.
+    /// \param SrcVar        Variable's debug info descriptor.
+    /// \param ValExpr       A complex location expression to modify \p Val.
+    /// \param Addr          The address component (store destination).
+    /// \param AddrExpr      A complex location expression to modify \p Addr.
+    ///                      NOTE: \p ValExpr carries the FragInfo for the
+    ///                      variable.
+    /// \param DL            Debug info location, usually: (line: 0,
+    ///                      column: 0, scope: var-decl-scope). See
+    ///                      getDebugValueLoc.
+    DbgAssignIntrinsic *insertDbgAssign(Instruction *LinkedInstr, Value *Val,
+                                        DILocalVariable *SrcVar,
+                                        DIExpression *ValExpr, Value *Addr,
+                                        DIExpression *AddrExpr,
+                                        const DILocation *DL);
 
     /// Insert a new llvm.dbg.declare intrinsic call.
     /// \param Storage      llvm::Value of the variable

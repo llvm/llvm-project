@@ -34,7 +34,7 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"bool",
         /*methodName=*/"bufferizesToAllocation",
-        /*args=*/(ins "OpResult":$opResult),
+        /*args=*/(ins "::mlir::OpResult":$opResult),
         /*methodBody=*/"",
         /*defaultImplementation=*/"return false;"
       >,
@@ -52,8 +52,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"bool",
         /*methodName=*/"bufferizesToMemoryRead",
-        /*args=*/(ins "OpOperand &":$opOperand,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::OpOperand &":$opOperand,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // Does not have to be implemented for ops without tensor OpOperands.
@@ -81,8 +81,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"bool",
         /*methodName=*/"bufferizesToMemoryWrite",
-        /*args=*/(ins "OpOperand &":$opOperand,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::OpOperand &":$opOperand,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // Does not have to be implemented for ops without tensor OpOperands.
@@ -104,8 +104,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           }],
           /*retType=*/"bool",
           /*methodName=*/"isMemoryWrite",
-          /*args=*/(ins "OpResult":$opResult,
-                        "const AnalysisState &":$state),
+          /*args=*/(ins "::mlir::OpResult":$opResult,
+                        "const ::mlir::bufferization::AnalysisState &":$state),
           /*methodBody=*/"",
           /*defaultImplementation=*/[{
             auto bufferizableOp =
@@ -131,8 +131,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"bool",
         /*methodName=*/"mustBufferizeInPlace",
-        /*args=*/(ins "OpOperand &":$opOperand,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::OpOperand &":$opOperand,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return false;
@@ -148,10 +148,10 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           given OpOperand may at runtime alias with any (or multiple) of the
           returned OpResults.
         }],
-        /*retType=*/"SmallVector<OpResult>",
+        /*retType=*/"::mlir::SmallVector<::mlir::OpResult>",
         /*methodName=*/"getAliasingOpResult",
-        /*args=*/(ins "OpOperand &":$opOperand,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::OpOperand &":$opOperand,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // Does not have to be implemented for ops without tensor OpOperands.
@@ -173,10 +173,10 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           returned OpOperands. This can be useful for branches and for ops such
           as `arith.select`.
         }],
-        /*retType=*/"SmallVector<OpOperand *>",
+        /*retType=*/"::mlir::SmallVector<::mlir::OpOperand *>",
         /*methodName=*/"getAliasingOpOperand",
-        /*args=*/(ins "OpResult":$opResult,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::OpResult":$opResult,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           assert(opResult.getType().isa<TensorType>() &&
@@ -206,10 +206,10 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           TODO: Support other relations such as "OpOperand is included in
           OpResult".
         }],
-        /*retType=*/"BufferRelation",
+        /*retType=*/"::mlir::bufferization::BufferRelation",
         /*methodName=*/"bufferRelation",
-        /*args=*/(ins "OpResult":$opResult,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::OpResult":$opResult,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           // Does not have to be implemented for ops without tensor OpResults
@@ -231,10 +231,10 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           This method can query analysis information from the given analysis
           state.
         }],
-        /*retType=*/"LogicalResult",
+        /*retType=*/"::mlir::LogicalResult",
         /*methodName=*/"resolveConflicts",
-        /*args=*/(ins "RewriterBase &":$rewriter,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::RewriterBase &":$rewriter,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           auto bufferizableOp =
@@ -268,10 +268,10 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           expected to survive bufferization, `success` should be returned
           (together with `allow-unknown-ops` enabled).
         }],
-        /*retType=*/"LogicalResult",
+        /*retType=*/"::mlir::LogicalResult",
         /*methodName=*/"bufferize",
-        /*args=*/(ins "RewriterBase &":$rewriter,
-                      "const BufferizationOptions &":$options),
+        /*args=*/(ins "::mlir::RewriterBase &":$rewriter,
+                      "const ::mlir::bufferization::BufferizationOptions &":$options),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           llvm_unreachable("bufferize not implemented");
@@ -296,8 +296,8 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"bool",
         /*methodName=*/"isWritable",
-        /*args=*/(ins "Value":$value,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::Value":$value,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return value.isa<OpResult>();
@@ -318,9 +318,9 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
         }],
         /*retType=*/"bool",
         /*methodName=*/"isNotConflicting",
-        /*args=*/(ins "OpOperand *":$uRead,
-                      "OpOperand *":$uWrite,
-                      "const AnalysisState &":$state),
+        /*args=*/(ins "::mlir::OpOperand *":$uRead,
+                      "::mlir::OpOperand *":$uWrite,
+                      "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return false;
@@ -335,9 +335,9 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           This method can be used to check expected invariants and limitations
           of the current bufferization implementation.
         }],
-        /*retType=*/"LogicalResult",
+        /*retType=*/"::mlir::LogicalResult",
         /*methodName=*/"verifyAnalysis",
-        /*args=*/(ins "const AnalysisState &":$state),
+        /*args=*/(ins "const ::mlir::bufferization::AnalysisState &":$state),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           return success();
@@ -352,11 +352,11 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
           This method is useful when the bufferized type of value must be
           predicted before modifying any IR.
         }],
-        /*retType=*/"FailureOr<BaseMemRefType>",
+        /*retType=*/"::mlir::FailureOr<::mlir::BaseMemRefType>",
         /*methodName=*/"getBufferType",
-        /*args=*/(ins "Value":$value,
-                      "const BufferizationOptions &":$options,
-                      "const DenseMap<Value, BaseMemRefType>":$fixedTypes),
+        /*args=*/(ins "::mlir::Value":$value,
+                      "const ::mlir::bufferization::BufferizationOptions &":$options,
+                      "const ::mlir::DenseMap<::mlir::Value, ::mlir::BaseMemRefType>":$fixedTypes),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
           assert(getOwnerOfValue(value) == $_op.getOperation() &&

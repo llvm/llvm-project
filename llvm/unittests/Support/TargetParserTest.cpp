@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Support/TargetParser.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Support/AArch64TargetParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/TargetParser.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <string>
@@ -871,6 +872,70 @@ TEST(TargetParserTest, ARMparseArchVersion) {
       EXPECT_EQ(5u, ARM::parseArchVersion(ARMArch[i]));
 }
 
+TEST(TargetParserTest, getARMCPUForArch) {
+  // Platform specific defaults.
+  {
+    llvm::Triple Triple("arm--nacl");
+    EXPECT_EQ("cortex-a8", ARM::getARMCPUForArch(Triple));
+  }
+  {
+    llvm::Triple Triple("arm--openbsd");
+    EXPECT_EQ("cortex-a8", ARM::getARMCPUForArch(Triple));
+  }
+  {
+    llvm::Triple Triple("armv6-unknown-freebsd");
+    EXPECT_EQ("arm1176jzf-s", ARM::getARMCPUForArch(Triple));
+  }
+  {
+    llvm::Triple Triple("thumbv6-unknown-freebsd");
+    EXPECT_EQ("arm1176jzf-s", ARM::getARMCPUForArch(Triple));
+  }
+  {
+    llvm::Triple Triple("armebv6-unknown-freebsd");
+    EXPECT_EQ("arm1176jzf-s", ARM::getARMCPUForArch(Triple));
+  }
+  {
+    llvm::Triple Triple("arm--win32");
+    EXPECT_EQ("cortex-a9", ARM::getARMCPUForArch(Triple));
+    EXPECT_EQ("generic", ARM::getARMCPUForArch(Triple, "armv8-a"));
+  }
+  // Some alternative architectures
+  {
+    llvm::Triple Triple("armv7k-apple-ios9");
+    EXPECT_EQ("cortex-a7", ARM::getARMCPUForArch(Triple));
+  }
+  {
+    llvm::Triple Triple("armv7k-apple-watchos3");
+    EXPECT_EQ("cortex-a7", ARM::getARMCPUForArch(Triple));
+  }
+  {
+    llvm::Triple Triple("armv7k-apple-tvos9");
+    EXPECT_EQ("cortex-a7", ARM::getARMCPUForArch(Triple));
+  }
+  // armeb is permitted, but armebeb is not
+  {
+    llvm::Triple Triple("armeb-none-eabi");
+    EXPECT_EQ("arm7tdmi", ARM::getARMCPUForArch(Triple));
+  }
+  {
+    llvm::Triple Triple("armebeb-none-eabi");
+    EXPECT_EQ("", ARM::getARMCPUForArch(Triple));
+  }
+  {
+    llvm::Triple Triple("armebv6eb-none-eabi");
+    EXPECT_EQ("", ARM::getARMCPUForArch(Triple));
+  }
+  // xscaleeb is permitted, but armebxscale is not
+  {
+    llvm::Triple Triple("xscaleeb-none-eabi");
+    EXPECT_EQ("xscale", ARM::getARMCPUForArch(Triple));
+  }
+  {
+    llvm::Triple Triple("armebxscale-none-eabi");
+    EXPECT_EQ("", ARM::getARMCPUForArch(Triple));
+  }
+}
+
 class AArch64CPUTestFixture
     : public ::testing::TestWithParam<ARMCPUTestParams> {};
 
@@ -1085,6 +1150,19 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_SVE | AArch64::AEK_SVE2 |
                              AArch64::AEK_SVE2BITPERM | AArch64::AEK_SSBS |
                              AArch64::AEK_SB | AArch64::AEK_FP16FML,
+                         "9-A"),
+        ARMCPUTestParams("cortex-x3", "armv9-a", "neon-fp-armv8",
+                         AArch64::AEK_CRC | AArch64::AEK_FP | AArch64::AEK_BF16 |
+                             AArch64::AEK_SIMD | AArch64::AEK_RAS |
+                             AArch64::AEK_LSE | AArch64::AEK_RDM |
+                             AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+                             AArch64::AEK_MTE | AArch64::AEK_PAUTH |
+                             AArch64::AEK_SVE | AArch64::AEK_SVE2 |
+                             AArch64::AEK_SVE2BITPERM | AArch64::AEK_SB |
+                             AArch64::AEK_PROFILE | AArch64::AEK_PERFMON |
+                             AArch64::AEK_I8MM | AArch64::AEK_FP16 |
+                             AArch64::AEK_FP16FML | AArch64::AEK_PREDRES |
+                             AArch64::AEK_FLAGM | AArch64::AEK_SSBS,
                          "9-A"),
         ARMCPUTestParams("cyclone", "armv8-a", "crypto-neon-fp-armv8",
                          AArch64::AEK_NONE | AArch64::AEK_CRYPTO |
@@ -1309,7 +1387,7 @@ INSTANTIATE_TEST_SUITE_P(
                          "8.2-A")));
 
 // Note: number of CPUs includes aliases.
-static constexpr unsigned NumAArch64CPUArchs = 60;
+static constexpr unsigned NumAArch64CPUArchs = 61;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;

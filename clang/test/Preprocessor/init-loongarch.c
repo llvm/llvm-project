@@ -322,6 +322,7 @@
 // LA32-LINUX: #define __gnu_linux__ 1
 // LA32-LINUX: #define __linux 1
 // LA32-LINUX: #define __linux__ 1
+// LA32-NOT: #define __loongarch64 1
 // LA32: #define __loongarch__ 1
 // LA32-LINUX: #define __unix 1
 // LA32-LINUX: #define __unix__ 1
@@ -634,8 +635,149 @@
 // LA64-LINUX: #define __gnu_linux__ 1
 // LA64-LINUX: #define __linux 1
 // LA64-LINUX: #define __linux__ 1
+// LA64: #define __loongarch64 1
 // LA64: #define __loongarch__ 1
 // LA64-LINUX: #define __unix 1
 // LA64-LINUX: #define __unix__ 1
 // LA64-LINUX: #define linux 1
 // LA64-LINUX: #define unix 1
+
+
+/// Check various macros prefixed with "__loongarch_" in different cases.
+/// "__loongarch__"" is not listed here as it has been checked above.
+
+// RUN: %clang --target=loongarch32 -mfpu=64 -mabi=ilp32d -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA32-FPU64-ILP32D %s
+// RUN: %clang --target=loongarch32 -mdouble-float -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA32-FPU64-ILP32D %s
+// LA32-FPU64-ILP32D: __loongarch_double_float 1
+// LA32-FPU64-ILP32D-NEXT: __loongarch_frlen 64
+// LA32-FPU64-ILP32D-NEXT: __loongarch_grlen 32
+// LA32-FPU64-ILP32D-NEXT: __loongarch_hard_float 1
+// LA32-FPU64-ILP32D-NOT: __loongarch_lp64
+// LA32-FPU64-ILP32D-NOT: __loongarch_single_float
+// LA32-FPU64-ILP32D-NOT: __loongarch_soft_float
+
+// RUN: %clang --target=loongarch32 -mfpu=64 -mabi=ilp32f -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA32-FPU64-ILP32F %s
+// LA32-FPU64-ILP32F-NOT: __loongarch_double_float
+// LA32-FPU64-ILP32F: __loongarch_frlen 64
+// LA32-FPU64-ILP32F-NEXT: __loongarch_grlen 32
+// LA32-FPU64-ILP32F-NEXT: __loongarch_hard_float 1
+// LA32-FPU64-ILP32F-NOT: __loongarch_lp64
+// LA32-FPU64-ILP32F-NEXT: __loongarch_single_float 1
+// LA32-FPU64-ILP32F-NOT: __loongarch_soft_float
+
+// RUN: %clang --target=loongarch32 -mfpu=64 -mabi=ilp32s -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA32-FPU64-ILP32S %s
+// LA32-FPU64-ILP32S-NOT: __loongarch_double_float
+// LA32-FPU64-ILP32S: __loongarch_frlen 64
+// LA32-FPU64-ILP32S-NEXT: __loongarch_grlen 32
+// LA32-FPU64-ILP32S-NOT: __loongarch_hard_float
+// LA32-FPU64-ILP32S-NOT: __loongarch_lp64
+// LA32-FPU64-ILP32S-NOT: __loongarch_single_float
+// LA32-FPU64-ILP32S-NEXT: __loongarch_soft_float 1
+
+// RUN: %clang --target=loongarch32 -mfpu=32 -mabi=ilp32f -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA32-FPU32-ILP32F %s
+// RUN: %clang --target=loongarch32 -msingle-float -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA32-FPU32-ILP32F %s
+// LA32-FPU32-ILP32F-NOT: __loongarch_double_float
+// LA32-FPU32-ILP32F: __loongarch_frlen 32
+// LA32-FPU32-ILP32F-NEXT: __loongarch_grlen 32
+// LA32-FPU32-ILP32F-NEXT: __loongarch_hard_float 1
+// LA32-FPU32-ILP32F-NOT: __loongarch_lp64
+// LA32-FPU32-ILP32F-NEXT: __loongarch_single_float 1
+// LA32-FPU32-ILP32F-NOT: __loongarch_soft_float
+
+// RUN: %clang --target=loongarch32 -mfpu=32 -mabi=ilp32s -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA32-FPU32-ILP32S %s
+// LA32-FPU32-ILP32S-NOT: __loongarch_double_float
+// LA32-FPU32-ILP32S: __loongarch_frlen 32
+// LA32-FPU32-ILP32S-NEXT: __loongarch_grlen 32
+// LA32-FPU32-ILP32S-NOT: __loongarch_hard_float
+// LA32-FPU32-ILP32S-NOT: __loongarch_lp64
+// LA32-FPU32-ILP32S-NOT: __loongarch_single_float
+// LA32-FPU32-ILP32S-NEXT: __loongarch_soft_float 1
+
+// RUN: %clang --target=loongarch32 -mfpu=0 -mabi=ilp32s -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA32-FPU0-ILP32S %s
+// RUN: %clang --target=loongarch32 -mfpu=none -mabi=ilp32s -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA32-FPU0-ILP32S %s
+// RUN: %clang --target=loongarch32 -msoft-float -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA32-FPU0-ILP32S %s
+// LA32-FPU0-ILP32S-NOT: __loongarch_double_float
+// LA32-FPU0-ILP32S: __loongarch_frlen 0
+// LA32-FPU0-ILP32S-NEXT: __loongarch_grlen 32
+// LA32-FPU0-ILP32S-NOT: __loongarch_hard_float
+// LA32-FPU0-ILP32S-NOT: __loongarch_lp64
+// LA32-FPU0-ILP32S-NOT: __loongarch_single_float
+// LA32-FPU0-ILP32S-NEXT: __loongarch_soft_float 1
+
+// RUN: %clang --target=loongarch64 -mfpu=64 -mabi=lp64d -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA64-FPU64-LP64D %s
+// RUN: %clang --target=loongarch64 -mdouble-float -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA64-FPU64-LP64D %s
+// LA64-FPU64-LP64D: __loongarch_double_float 1
+// LA64-FPU64-LP64D-NEXT: __loongarch_frlen 64
+// LA64-FPU64-LP64D-NEXT: __loongarch_grlen 64
+// LA64-FPU64-LP64D-NEXT: __loongarch_hard_float 1
+// LA64-FPU64-LP64D-NEXT: __loongarch_lp64 1
+// LA64-FPU64-LP64D-NOT: __loongarch_single_float
+// LA64-FPU64-LP64D-NOT: __loongarch_soft_float
+
+// RUN: %clang --target=loongarch64 -mfpu=64 -mabi=lp64f -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA64-FPU64-LP64F %s
+// LA64-FPU64-LP64F-NOT: __loongarch_double_float
+// LA64-FPU64-LP64F: __loongarch_frlen 64
+// LA64-FPU64-LP64F-NEXT: __loongarch_grlen 64
+// LA64-FPU64-LP64F-NEXT: __loongarch_hard_float 1
+// LA64-FPU64-LP64F-NEXT: __loongarch_lp64 1
+// LA64-FPU64-LP64F-NEXT: __loongarch_single_float 1
+// LA64-FPU64-LP64F-NOT: __loongarch_soft_float
+
+// RUN: %clang --target=loongarch64 -mfpu=64 -mabi=lp64s -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA64-FPU64-LP64S %s
+// LA64-FPU64-LP64S-NOT: __loongarch_double_float
+// LA64-FPU64-LP64S: __loongarch_frlen 64
+// LA64-FPU64-LP64S-NEXT: __loongarch_grlen 64
+// LA64-FPU64-LP64S-NOT: __loongarch_hard_float
+// LA64-FPU64-LP64S-NEXT: __loongarch_lp64 1
+// LA64-FPU64-LP64S-NOT: __loongarch_single_float
+// LA64-FPU64-LP64S-NEXT: __loongarch_soft_float 1
+
+// RUN: %clang --target=loongarch64 -mfpu=32 -mabi=lp64f -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA64-FPU32-LP64F %s
+// RUN: %clang --target=loongarch64 -msingle-float -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA64-FPU32-LP64F %s
+// LA64-FPU32-LP64F-NOT: __loongarch_double_float
+// LA64-FPU32-LP64F: __loongarch_frlen 32
+// LA64-FPU32-LP64F-NEXT: __loongarch_grlen 64
+// LA64-FPU32-LP64F-NEXT: __loongarch_hard_float 1
+// LA64-FPU32-LP64F-NEXT: __loongarch_lp64 1
+// LA64-FPU32-LP64F-NEXT: __loongarch_single_float 1
+// LA64-FPU32-LP64F-NOT: __loongarch_soft_float
+
+// RUN: %clang --target=loongarch64 -mfpu=32 -mabi=lp64s -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA64-FPU32-LP64S %s
+// LA64-FPU32-LP64S-NOT: __loongarch_double_float
+// LA64-FPU32-LP64S: __loongarch_frlen 32
+// LA64-FPU32-LP64S-NEXT: __loongarch_grlen 64
+// LA64-FPU32-LP64S-NOT: __loongarch_hard_float
+// LA64-FPU32-LP64S-NEXT: __loongarch_lp64 1
+// LA64-FPU32-LP64S-NOT: __loongarch_single_float
+// LA64-FPU32-LP64S-NEXT: __loongarch_soft_float 1
+
+// RUN: %clang --target=loongarch64 -mfpu=0 -mabi=lp64s -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA64-FPU0-LP64S %s
+// RUN: %clang --target=loongarch64 -mfpu=none -mabi=lp64s -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA64-FPU0-LP64S %s
+// RUN: %clang --target=loongarch64 -msoft-float -x c -E -dM %s -o - \
+// RUN:   | grep __loongarch_ | FileCheck --check-prefix=LA64-FPU0-LP64S %s
+// LA64-FPU0-LP64S-NOT: __loongarch_double_float
+// LA64-FPU0-LP64S: __loongarch_frlen 0
+// LA64-FPU0-LP64S-NEXT: __loongarch_grlen 64
+// LA64-FPU0-LP64S-NOT: __loongarch_hard_float
+// LA64-FPU0-LP64S-NEXT: __loongarch_lp64 1
+// LA64-FPU0-LP64S-NOT: __loongarch_single_float
+// LA64-FPU0-LP64S-NEXT: __loongarch_soft_float 1

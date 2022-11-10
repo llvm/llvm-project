@@ -1,23 +1,23 @@
 // RUN: %clang_cc1 %s -emit-llvm -DDOUBLE -O0 -o - -triple=amdgcn-amd-amdhsa \
-// RUN:   | opt -instnamer -S | FileCheck -check-prefixes=FLOAT,DOUBLE %s
+// RUN:   | opt -passes=instnamer -S | FileCheck -check-prefixes=FLOAT,DOUBLE %s
 
 // RUN: %clang_cc1 %s -emit-llvm -DDOUBLE -O0 -o - -triple=aarch64-linux-gnu \
-// RUN:   | opt -instnamer -S | FileCheck -check-prefixes=FLOAT,DOUBLE %s
+// RUN:   | opt -passes=instnamer -S | FileCheck -check-prefixes=FLOAT,DOUBLE %s
 
 // RUN: %clang_cc1 %s -emit-llvm -O0 -o - -triple=armv8-apple-ios7.0 \
-// RUN:   | opt -instnamer -S | FileCheck -check-prefixes=FLOAT %s
+// RUN:   | opt -passes=instnamer -S | FileCheck -check-prefixes=FLOAT %s
 
 // RUN: %clang_cc1 %s -emit-llvm -DDOUBLE -O0 -o - -triple=hexagon \
-// RUN:   | opt -instnamer -S | FileCheck -check-prefixes=FLOAT,DOUBLE %s
+// RUN:   | opt -passes=instnamer -S | FileCheck -check-prefixes=FLOAT,DOUBLE %s
 
 // RUN: %clang_cc1 %s -emit-llvm -DDOUBLE -O0 -o - -triple=mips64-mti-linux-gnu \
-// RUN:   | opt -instnamer -S | FileCheck -check-prefixes=FLOAT,DOUBLE %s
+// RUN:   | opt -passes=instnamer -S | FileCheck -check-prefixes=FLOAT,DOUBLE %s
 
 // RUN: %clang_cc1 %s -emit-llvm -O0 -o - -triple=i686-linux-gnu \
-// RUN:   | opt -instnamer -S | FileCheck -check-prefixes=FLOAT %s
+// RUN:   | opt -passes=instnamer -S | FileCheck -check-prefixes=FLOAT %s
 
 // RUN: %clang_cc1 %s -emit-llvm -DDOUBLE -O0 -o - -triple=x86_64-linux-gnu \
-// RUN:   | opt -instnamer -S | FileCheck -check-prefixes=FLOAT,DOUBLE %s
+// RUN:   | opt -passes=instnamer -S | FileCheck -check-prefixes=FLOAT,DOUBLE %s
 
 typedef enum memory_order {
   memory_order_relaxed = __ATOMIC_RELAXED,

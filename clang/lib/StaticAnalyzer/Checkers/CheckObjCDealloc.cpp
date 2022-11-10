@@ -1004,7 +1004,7 @@ bool ObjCDeallocChecker::instanceDeallocIsOnStack(const CheckerContext &C,
   return false;
 }
 
-/// Returns true if the ID is a class in which which is known to have
+/// Returns true if the ID is a class in which is known to have
 /// a separate teardown lifecycle. In this case, -dealloc warnings
 /// about missing releases should be suppressed.
 bool ObjCDeallocChecker::classHasSeparateTeardown(
