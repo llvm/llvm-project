@@ -1105,7 +1105,7 @@ uptr GetMaxVirtualAddress() {
 #if SANITIZER_NETBSD && defined(__x86_64__)
   return 0x7f7ffffff000ULL;  // (0x00007f8000000000 - PAGE_SIZE)
 #elif SANITIZER_WORDSIZE == 64
-# if defined(__powerpc64__) || defined(__aarch64__)
+# if defined(__powerpc64__) || defined(__aarch64__) || defined(__loongarch__)
   // On PowerPC64 we have two different address space layouts: 44- and 46-bit.
   // We somehow need to figure out which one we are using now and choose
   // one of 0x00000fffffffffffUL and 0x00003fffffffffffUL.
@@ -1113,6 +1113,7 @@ uptr GetMaxVirtualAddress() {
   // of the address space, so simply checking the stack address is not enough.
   // This should (does) work for both PowerPC64 Endian modes.
   // Similarly, aarch64 has multiple address space layouts: 39, 42 and 47-bit.
+  // loongarch64 also has multiple address space layouts: default is 47-bit.
   return (1ULL << (MostSignificantSetBitIndex(GET_CURRENT_FRAME()) + 1)) - 1;
 #elif SANITIZER_RISCV64
   return (1ULL << 38) - 1;
