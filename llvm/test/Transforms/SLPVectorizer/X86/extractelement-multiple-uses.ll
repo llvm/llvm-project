@@ -16,11 +16,11 @@ define float @multi_uses(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @multi_uses(
 ; CHECK-NEXT:    [[Y1:%.*]] = extractelement <2 x float> [[Y:%.*]], i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[Y1]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> [[TMP1]], float [[Y1]], i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[X:%.*]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP3]], i32 1
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[X:%.*]], [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
   %x0 = extractelement <2 x float> %x, i32 0
