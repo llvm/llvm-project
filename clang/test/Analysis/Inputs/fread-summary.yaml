@@ -1,0 +1,25 @@
+# size_t fread(void *restrict ptr, size_t size, size_t nitems,
+#              FILE *restrict stream);
+Summaries:
+  - Name: "fread"
+    Signature:
+      ArgTypes:
+        - "size_t"
+        - "size_t"
+        - "size_t"
+        - "FILE *restrict"
+      RetType: "size_t"
+    EvaluationType: "NoEvalCall"
+    ArgConstraints: # We give an error if this is violated
+    -
+      type: "NotNull"
+      arg: 0
+
+    -
+      type: "NotNull"
+      arg: 3
+    -
+      type: "BufferSize"
+      bufferArg: 0
+      sizeArg: 1
+      countArg: 2

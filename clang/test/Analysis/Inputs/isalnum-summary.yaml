@@ -1,0 +1,38 @@
+#list of summaries
+- Name: "isalnum" #int isalnum(int)
+  Signature:
+    ArgTypes:
+      - "int"
+    RetType: "int"
+  EvaluationType: "EvalCallAsPure" # or NoEvalCall
+  #case1
+  Summary: #This models the function behaviour
+    - ArgumentCondition:
+        arg: 0
+        type: "WithinRange"
+        ranges: [['0','9'],['A', 'Z'], ['a', 'z']]
+      ReturnValueCondition:
+        type: "OutOfRange"
+        ranges: [0,0]
+      Errno: "ErrnoIrrelevant"
+      AssumptionNote: "Assuming the character is alphanumeric"
+    - ArgumentCondition:
+      arg: 0
+      type: "WithinRange"
+      ranges: [128,"UCharRangeMax"]
+      Errno: "ErrnoIrrelevant"
+    - ArgumentCondition:
+        arg: 0
+        type: "OutOfRange"
+        ranges: [['0','9'],['A', 'Z'], ['a', 'z'],[128,"UCharRangeMax"]]
+      ReturnValueCondition:
+        type: "WithinRange"
+        ranges: [0,0]
+      Errno: "ErrnoIrrelevant"
+      AssumptionNote: "Assuming the character is non-alphanumeric"
+  ArgConstraint: # We give an error if this is violated
+  - ArgumentCondition:
+        arg: 0
+        type: "WithinRange"
+        ranges: [["EOFv","EOFv"],[0,"UCharRangeMax"]]
+
