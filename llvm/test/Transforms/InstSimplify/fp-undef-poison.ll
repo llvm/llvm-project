@@ -275,12 +275,9 @@ define double @fadd_ninf_inf_op1(double %x) {
   ret double %r
 }
 
-; TODO: Should simplify to inf.
-
 define double @fsub_nnan_inf_op0(double %x) {
 ; CHECK-LABEL: @fsub_nnan_inf_op0(
-; CHECK-NEXT:    [[R:%.*]] = fsub nnan double 0x7FF0000000000000, [[X:%.*]]
-; CHECK-NEXT:    ret double [[R]]
+; CHECK-NEXT:    ret double 0x7FF0000000000000
 ;
   %r = fsub nnan double 0x7ff0000000000000, %x
   ret double %r
