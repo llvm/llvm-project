@@ -121,6 +121,13 @@ def FLDLE_S : FP_LOAD_3R<0b00111000011101010, "fldle.s", FPR32>;
 def FSTGT_S : FP_STORE_3R<0b00111000011101100, "fstgt.s", FPR32>;
 def FSTLE_S : FP_STORE_3R<0b00111000011101110, "fstle.s", FPR32>;
 
+// Pseudo instructions for spill/reload CFRs.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
+def PseudoST_CFR : Pseudo<(outs),
+                          (ins CFR:$ccd, GPR:$rj, grlenimm:$imm)>;
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+def PseudoLD_CFR : Pseudo<(outs CFR:$ccd),
+                          (ins GPR:$rj, grlenimm:$imm)>;
 } // Predicates = [HasBasicF]
 
 //===----------------------------------------------------------------------===//
@@ -159,7 +166,7 @@ def : Pat<(fcanonicalize FPR32:$fj), (FMAX_S $fj, $fj)>;
 
 class PatFPSetcc<CondCode cc, LAInst CmpInst, RegisterClass RegTy>
     : Pat<(any_fsetcc RegTy:$fj, RegTy:$fk, cc),
-          (MOVCF2GR (CmpInst RegTy:$fj, RegTy:$fk))>;
+          (CmpInst RegTy:$fj, RegTy:$fk)>;
 // SETOGT/SETOGE/SETUGT/SETUGE/SETGE/SETNE/SETGT will expand into
 // SETOLT/SETOLE/SETULT/SETULE/SETLE/SETEQ/SETLT.
 def : PatFPSetcc<SETOEQ, FCMP_CEQ_S,  FPR32>;
@@ -200,7 +207,7 @@ defm : PatFPBrcond<SETLT,  FCMP_CLT_S, FPR32>;
 
 class PatStrictFsetccs<CondCode cc, LAInst CmpInst, RegisterClass RegTy>
     : Pat<(strict_fsetccs RegTy:$fj, RegTy:$fk, cc),
-          (MOVCF2GR (CmpInst RegTy:$fj, RegTy:$fk))>;
+          (CmpInst RegTy:$fj, RegTy:$fk)>;
 def : PatStrictFsetccs<SETOEQ, FCMP_SEQ_S,  FPR32>;
 def : PatStrictFsetccs<SETOLT, FCMP_SLT_S,  FPR32>;
 def : PatStrictFsetccs<SETOLE, FCMP_SLE_S,  FPR32>;
@@ -215,8 +222,8 @@ def : PatStrictFsetccs<SETLT,  FCMP_SLT_S,  FPR32>;
 
 /// Select
 
-def : Pat<(select GPR:$cc, FPR32:$fk, FPR32:$fj),
-          (FSEL_S FPR32:$fj, FPR32:$fk, (MOVGR2CF GPR:$cc))>;
+def : Pat<(select CFR:$cc, FPR32:$fk, FPR32:$fj),
+          (FSEL_S FPR32:$fj, FPR32:$fk, CFR:$cc)>;
 
 /// Selectcc
 

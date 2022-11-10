@@ -350,3 +350,16 @@ define <4 x i32> @load_v2i32_v4i32_non_canonical_mask_commute(ptr dereferenceabl
   %s = shufflevector <2 x i32> poison, <2 x i32> %l, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
   ret <4 x i32> %s
 }
+
+define <4 x i32> @load_v2i32_v4i32_addrspacecast(ptr addrspace(5) align 16 dereferenceable(16) %p) {
+; CHECK-LABEL: @load_v2i32_v4i32_addrspacecast(
+; CHECK-NEXT:    [[ASC:%.*]] = addrspacecast ptr addrspace(5) [[P:%.*]] to ptr addrspace(42)
+; CHECK-NEXT:    [[L:%.*]] = load <2 x i32>, ptr addrspace(42) [[ASC]], align 4
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x i32> [[L]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %asc = addrspacecast ptr addrspace(5) %p to ptr addrspace(42)
+  %l = load <2 x i32>, ptr addrspace(42) %asc, align 4
+  %s = shufflevector <2 x i32> %l, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  ret <4 x i32> %s
+}

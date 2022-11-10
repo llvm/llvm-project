@@ -1428,10 +1428,38 @@ class UImmScaledMemoryIndexedRange<int Width, int Scale, int OffsetVal> : AsmOpe
   let ParserMethod = "tryParseImmRange";
 }
 
+// Implicit immediate ranges 0:1 and 0:3, scale has no meaning
+// since the immediate is zero
+def UImm0s2RangeOperand : UImmScaledMemoryIndexedRange<0, 2, 1>;
+def UImm0s4RangeOperand : UImmScaledMemoryIndexedRange<0, 4, 3>;
+
+def UImm1s2RangeOperand : UImmScaledMemoryIndexedRange<1, 2, 1>;
 def UImm1s4RangeOperand : UImmScaledMemoryIndexedRange<1, 4, 3>;
 def UImm2s2RangeOperand : UImmScaledMemoryIndexedRange<2, 2, 1>;
 def UImm2s4RangeOperand : UImmScaledMemoryIndexedRange<2, 4, 3>;
 def UImm3s2RangeOperand : UImmScaledMemoryIndexedRange<3, 2, 1>;
+
+def uimm0s2range : Operand<i64>, ImmLeaf<i64,
+[{ return Imm == 0; }], UImmS1XForm> {
+  let PrintMethod = "printImmRangeScale<2, 1>";
+  let ParserMatchClass = UImm0s2RangeOperand;
+  let OperandNamespace = "AArch64";
+  let OperandType = "OPERAND_IMPLICIT_IMM_0";
+}
+
+def uimm0s4range : Operand<i64>, ImmLeaf<i64,
+[{ return Imm == 0; }], UImmS1XForm> {
+  let PrintMethod = "printImmRangeScale<4, 3>";
+  let ParserMatchClass = UImm0s4RangeOperand;
+  let OperandNamespace = "AArch64";
+  let OperandType = "OPERAND_IMPLICIT_IMM_0";
+}
+
+def uimm1s2range : Operand<i64>, ImmLeaf<i64,
+[{ return Imm >= 0 && Imm <= 2 && ((Imm % 2) == 0); }], UImmS2XForm> {
+  let PrintMethod = "printImmRangeScale<2, 1>";
+  let ParserMatchClass = UImm1s2RangeOperand;
+}
 
 def uimm1s4range : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >= 0 && Imm <= 4 && ((Imm % 4) == 0); }], UImmS4XForm> {

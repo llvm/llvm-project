@@ -764,7 +764,7 @@ namespace {
 
 /// The name for the command line option used for parsing the textual pass
 /// pipeline.
-static constexpr StringLiteral passPipelineArg = "pass-pipeline";
+#define PASS_PIPELINE_ARG "pass-pipeline"
 
 /// Adds command line option for each registered pass or pass pipeline, as well
 /// as textual pass pipelines.
@@ -896,8 +896,17 @@ PassPipelineCLParser::PassPipelineCLParser(StringRef arg, StringRef description)
     : impl(std::make_unique<detail::PassPipelineCLParserImpl>(
           arg, description, /*passNamesOnly=*/false)),
       passPipeline(
-          StringRef(passPipelineArg),
+          PASS_PIPELINE_ARG,
           llvm::cl::desc("Textual description of the pass pipeline to run")) {}
+
+PassPipelineCLParser::PassPipelineCLParser(StringRef arg, StringRef description,
+                                           StringRef alias)
+    : PassPipelineCLParser(arg, description) {
+  passPipelineAlias.emplace(alias,
+                            llvm::cl::desc("Alias for --" PASS_PIPELINE_ARG),
+                            llvm::cl::aliasopt(passPipeline));
+}
+
 PassPipelineCLParser::~PassPipelineCLParser() = default;
 
 /// Returns true if this parser contains any valid options to add.
@@ -919,7 +928,7 @@ LogicalResult PassPipelineCLParser::addToPipeline(
   if (passPipeline.getNumOccurrences()) {
     if (impl->passList.getNumOccurrences())
       return errorHandler(
-          "'-" + passPipelineArg +
+          "'-" PASS_PIPELINE_ARG
           "' option can't be used with individual pass options");
     std::string errMsg;
     llvm::raw_string_ostream os(errMsg);

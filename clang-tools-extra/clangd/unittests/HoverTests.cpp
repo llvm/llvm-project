@@ -1067,7 +1067,7 @@ class Foo final {})cpp";
          HI.LocalScope = "";
          HI.Kind = index::SymbolKind::TypeAlias;
          HI.Definition = "template <typename T> using AA = A<T>";
-         HI.Type = {"A<T>", "T"};
+         HI.Type = {"A<T>", "type-parameter-0-0"}; // FIXME: should be 'T'
          HI.TemplateParameters = {{{"typename"}, std::string("T"), llvm::None}};
        }},
       {// Constant array
@@ -1300,7 +1300,6 @@ TEST(Hover, NoHover) {
       "auto x = ^42.0i;",
       "auto x = ^42;",
       "auto x = ^nullptr;",
-      "auto x = ^\"asdf\";",
   };
 
   for (const auto &Test : Tests) {
@@ -1325,6 +1324,12 @@ TEST(Hover, All) {
          HI.Name = "expression";
          HI.Type = "char";
          HI.Value = "65 (0x41)";
+       }},
+      {"auto s = ^[[\"Hello, world!\"]]; // string literal",
+       [](HoverInfo &HI) {
+         HI.Name = "string-literal";
+         HI.Size = 14;
+         HI.Type = "const char[14]";
        }},
       {
           R"cpp(// Local variable

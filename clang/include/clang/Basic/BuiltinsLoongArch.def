@@ -1,0 +1,23 @@
+//==- BuiltinsLoongArch.def - LoongArch Builtin function database -- C++ -*-==//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the LoongArch-specific builtin function database.  Users of
+// this file must define the BUILTIN macro to make use of this information.
+//
+//===----------------------------------------------------------------------===//
+
+#if defined(BUILTIN) && !defined(TARGET_BUILTIN)
+#   define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
+#endif
+
+// TODO: Support more builtins.
+// TODO: Added feature constraints.
+TARGET_BUILTIN(__builtin_loongarch_dbar, "vIUi", "nc", "")
+
+#undef BUILTIN
+#undef TARGET_BUILTIN

@@ -948,10 +948,6 @@ bool fir::hasAbstractResult(mlir::FunctionType ty) {
   if (ty.getNumResults() == 0)
     return false;
   auto resultType = ty.getResult(0);
-  // FIXME: The interoperable derived type needs more investigations and tests.
-  // The derived type without BIND attribute may also not be abstract result.
-  if (fir::isa_builtin_cptr_type(resultType))
-    return false;
   return resultType.isa<fir::SequenceType, fir::BoxType, fir::RecordType>();
 }
 

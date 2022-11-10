@@ -969,7 +969,7 @@ void RefLeakReport::findBindingToReport(CheckerContext &Ctx,
     // Let's pick one of them at random (if there is something to pick from).
     AllocBindingToReport = AllVarBindings[0].first;
 
-    // Because 'AllocBindingToReport' is not the the same as
+    // Because 'AllocBindingToReport' is not the same as
     // 'AllocFirstBinding', we need to explain how the leaking object
     // got from one to another.
     //

@@ -128,6 +128,9 @@ private:
   void replaceFrameIndices(MachineFunction &MF);
   void replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
                            int &SPAdj);
+  bool replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
+                                   unsigned OpIdx, int SPAdj = 0);
+
   void insertPrologEpilogCode(MachineFunction &MF);
   void insertZeroCallUsedRegs(MachineFunction &MF);
 };
@@ -1353,6 +1356,88 @@ void PEI::replaceFrameIndices(MachineFunction &MF) {
   }
 }
 
+bool PEI::replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
+                                      unsigned OpIdx, int SPAdj) {
+  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  if (MI.isDebugValue()) {
+
+    MachineOperand &Op = MI.getOperand(OpIdx);
+    assert(MI.isDebugOperand(&Op) &&
+           "Frame indices can only appear as a debug operand in a DBG_VALUE*"
+           " machine instruction");
+    Register Reg;
+    unsigned FrameIdx = Op.getIndex();
+    unsigned Size = MF.getFrameInfo().getObjectSize(FrameIdx);
+
+    StackOffset Offset = TFI->getFrameIndexReference(MF, FrameIdx, Reg);
+    Op.ChangeToRegister(Reg, false /*isDef*/);
+
+    const DIExpression *DIExpr = MI.getDebugExpression();
+
+    // If we have a direct DBG_VALUE, and its location expression isn't
+    // currently complex, then adding an offset will morph it into a
+    // complex location that is interpreted as being a memory address.
+    // This changes a pointer-valued variable to dereference that pointer,
+    // which is incorrect. Fix by adding DW_OP_stack_value.
+
+    if (MI.isNonListDebugValue()) {
+      unsigned PrependFlags = DIExpression::ApplyOffset;
+      if (!MI.isIndirectDebugValue() && !DIExpr->isComplex())
+        PrependFlags |= DIExpression::StackValue;
+
+      // If we have DBG_VALUE that is indirect and has a Implicit location
+      // expression need to insert a deref before prepending a Memory
+      // location expression. Also after doing this we change the DBG_VALUE
+      // to be direct.
+      if (MI.isIndirectDebugValue() && DIExpr->isImplicit()) {
+        SmallVector<uint64_t, 2> Ops = {dwarf::DW_OP_deref_size, Size};
+        bool WithStackValue = true;
+        DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, WithStackValue);
+        // Make the DBG_VALUE direct.
+        MI.getDebugOffset().ChangeToRegister(0, false);
+      }
+      DIExpr = TRI.prependOffsetExpression(DIExpr, PrependFlags, Offset);
+    } else {
+      // The debug operand at DebugOpIndex was a frame index at offset
+      // `Offset`; now the operand has been replaced with the frame
+      // register, we must add Offset with `register x, plus Offset`.
+      unsigned DebugOpIndex = MI.getDebugOperandIndex(&Op);
+      SmallVector<uint64_t, 3> Ops;
+      TRI.getOffsetOpcodes(Offset, Ops);
+      DIExpr = DIExpression::appendOpsToArg(DIExpr, Ops, DebugOpIndex);
+    }
+    MI.getDebugExpressionOp().setMetadata(DIExpr);
+    return true;
+  }
+
+  if (MI.isDebugPHI()) {
+    // Allow stack ref to continue onwards.
+    return true;
+  }
+
+  // TODO: This code should be commoned with the code for
+  // PATCHPOINT. There's no good reason for the difference in
+  // implementation other than historical accident.  The only
+  // remaining difference is the unconditional use of the stack
+  // pointer as the base register.
+  if (MI.getOpcode() == TargetOpcode::STATEPOINT) {
+    assert((!MI.isDebugValue() || OpIdx == 0) &&
+           "Frame indicies can only appear as the first operand of a "
+           "DBG_VALUE machine instruction");
+    Register Reg;
+    MachineOperand &Offset = MI.getOperand(OpIdx + 1);
+    StackOffset refOffset = TFI->getFrameIndexReferencePreferSP(
+        MF, MI.getOperand(OpIdx).getIndex(), Reg, /*IgnoreSPUpdates*/ false);
+    assert(!refOffset.getScalable() &&
+           "Frame offsets with a scalable component are not supported");
+    Offset.setImm(Offset.getImm() + refOffset.getFixed() + SPAdj);
+    MI.getOperand(OpIdx).ChangeToRegister(Reg, false /*isDef*/);
+    return true;
+  }
+  return false;
+}
+
 void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
                               int &SPAdj) {
   assert(MF.getSubtarget().getRegisterInfo() &&
@@ -1384,80 +1469,8 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
       // Frame indices in debug values are encoded in a target independent
       // way with simply the frame index and offset rather than any
       // target-specific addressing mode.
-      if (MI.isDebugValue()) {
-        MachineOperand &Op = MI.getOperand(i);
-        assert(
-            MI.isDebugOperand(&Op) &&
-            "Frame indices can only appear as a debug operand in a DBG_VALUE*"
-            " machine instruction");
-        Register Reg;
-        unsigned FrameIdx = Op.getIndex();
-        unsigned Size = MF.getFrameInfo().getObjectSize(FrameIdx);
-
-        StackOffset Offset =
-            TFI->getFrameIndexReference(MF, FrameIdx, Reg);
-        Op.ChangeToRegister(Reg, false /*isDef*/);
-
-        const DIExpression *DIExpr = MI.getDebugExpression();
-
-        // If we have a direct DBG_VALUE, and its location expression isn't
-        // currently complex, then adding an offset will morph it into a
-        // complex location that is interpreted as being a memory address.
-        // This changes a pointer-valued variable to dereference that pointer,
-        // which is incorrect. Fix by adding DW_OP_stack_value.
-
-        if (MI.isNonListDebugValue()) {
-          unsigned PrependFlags = DIExpression::ApplyOffset;
-          if (!MI.isIndirectDebugValue() && !DIExpr->isComplex())
-            PrependFlags |= DIExpression::StackValue;
-
-          // If we have DBG_VALUE that is indirect and has a Implicit location
-          // expression need to insert a deref before prepending a Memory
-          // location expression. Also after doing this we change the DBG_VALUE
-          // to be direct.
-          if (MI.isIndirectDebugValue() && DIExpr->isImplicit()) {
-            SmallVector<uint64_t, 2> Ops = {dwarf::DW_OP_deref_size, Size};
-            bool WithStackValue = true;
-            DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, WithStackValue);
-            // Make the DBG_VALUE direct.
-            MI.getDebugOffset().ChangeToRegister(0, false);
-          }
-          DIExpr = TRI.prependOffsetExpression(DIExpr, PrependFlags, Offset);
-        } else {
-          // The debug operand at DebugOpIndex was a frame index at offset
-          // `Offset`; now the operand has been replaced with the frame
-          // register, we must add Offset with `register x, plus Offset`.
-          unsigned DebugOpIndex = MI.getDebugOperandIndex(&Op);
-          SmallVector<uint64_t, 3> Ops;
-          TRI.getOffsetOpcodes(Offset, Ops);
-          DIExpr = DIExpression::appendOpsToArg(DIExpr, Ops, DebugOpIndex);
-        }
-        MI.getDebugExpressionOp().setMetadata(DIExpr);
+      if (replaceFrameIndexDebugInstr(MF, MI, i, SPAdj))
         continue;
-      } else if (MI.isDebugPHI()) {
-        // Allow stack ref to continue onwards.
-        continue;
-      }
-
-      // TODO: This code should be commoned with the code for
-      // PATCHPOINT. There's no good reason for the difference in
-      // implementation other than historical accident.  The only
-      // remaining difference is the unconditional use of the stack
-      // pointer as the base register.
-      if (MI.getOpcode() == TargetOpcode::STATEPOINT) {
-        assert((!MI.isDebugValue() || i == 0) &&
-               "Frame indicies can only appear as the first operand of a "
-               "DBG_VALUE machine instruction");
-        Register Reg;
-        MachineOperand &Offset = MI.getOperand(i + 1);
-        StackOffset refOffset = TFI->getFrameIndexReferencePreferSP(
-            MF, MI.getOperand(i).getIndex(), Reg, /*IgnoreSPUpdates*/ false);
-        assert(!refOffset.getScalable() &&
-               "Frame offsets with a scalable component are not supported");
-        Offset.setImm(Offset.getImm() + refOffset.getFixed() + SPAdj);
-        MI.getOperand(i).ChangeToRegister(Reg, false /*isDef*/);
-        continue;
-      }
 
       // Some instructions (e.g. inline asm instructions) can have
       // multiple frame indices and/or cause eliminateFrameIndex

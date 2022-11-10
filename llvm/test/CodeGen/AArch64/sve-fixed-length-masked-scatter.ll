@@ -9,7 +9,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; ST1B
 ;
 
-define void @masked_scatter_v2i8(<2 x i8>* %a, <2 x i8*>* %b) vscale_range(2,0) #0 {
+define void @masked_scatter_v2i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v2i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrb w8, [x0]
@@ -24,14 +24,14 @@ define void @masked_scatter_v2i8(<2 x i8>* %a, <2 x i8*>* %b) vscale_range(2,0) 
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    st1b { z0.d }, p0, [z2.d]
 ; CHECK-NEXT:    ret
-  %vals = load <2 x i8>, <2 x i8>* %a
-  %ptrs = load <2 x i8*>, <2 x i8*>* %b
+  %vals = load <2 x i8>, ptr %a
+  %ptrs = load <2 x ptr>, ptr %b
   %mask = icmp eq <2 x i8> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v2i8(<2 x i8> %vals, <2 x i8*> %ptrs, i32 8, <2 x i1> %mask)
+  call void @llvm.masked.scatter.v2i8(<2 x i8> %vals, <2 x ptr> %ptrs, i32 8, <2 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v4i8(<4 x i8>* %a, <4 x i8*>* %b) vscale_range(2,0) #0 {
+define void @masked_scatter_v4i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v4i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s0, [x0]
@@ -46,14 +46,14 @@ define void @masked_scatter_v4i8(<4 x i8>* %a, <4 x i8*>* %b) vscale_range(2,0) 
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z2.d, #0
 ; CHECK-NEXT:    st1b { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <4 x i8>, <4 x i8>* %a
-  %ptrs = load <4 x i8*>, <4 x i8*>* %b
+  %vals = load <4 x i8>, ptr %a
+  %ptrs = load <4 x ptr>, ptr %b
   %mask = icmp eq <4 x i8> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v4i8(<4 x i8> %vals, <4 x i8*> %ptrs, i32 8, <4 x i1> %mask)
+  call void @llvm.masked.scatter.v4i8(<4 x i8> %vals, <4 x ptr> %ptrs, i32 8, <4 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v8i8(<8 x i8>* %a, <8 x i8*>* %b) #0 {
+define void @masked_scatter_v8i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: masked_scatter_v8i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ldr d0, [x0]
@@ -99,14 +99,14 @@ define void @masked_scatter_v8i8(<8 x i8>* %a, <8 x i8*>* %b) #0 {
 ; VBITS_GE_512-NEXT:    cmpne p0.d, p0/z, z2.d, #0
 ; VBITS_GE_512-NEXT:    st1b { z0.d }, p0, [z1.d]
 ; VBITS_GE_512-NEXT:    ret
-  %vals = load <8 x i8>, <8 x i8>* %a
-  %ptrs = load <8 x i8*>, <8 x i8*>* %b
+  %vals = load <8 x i8>, ptr %a
+  %ptrs = load <8 x ptr>, ptr %b
   %mask = icmp eq <8 x i8> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v8i8(<8 x i8> %vals, <8 x i8*> %ptrs, i32 8, <8 x i1> %mask)
+  call void @llvm.masked.scatter.v8i8(<8 x i8> %vals, <8 x ptr> %ptrs, i32 8, <8 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v16i8(<16 x i8>* %a, <16 x i8*>* %b) vscale_range(8,0) #0 {
+define void @masked_scatter_v16i8(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: masked_scatter_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -122,14 +122,14 @@ define void @masked_scatter_v16i8(<16 x i8>* %a, <16 x i8*>* %b) vscale_range(8,
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z2.d, #0
 ; CHECK-NEXT:    st1b { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <16 x i8>, <16 x i8>* %a
-  %ptrs = load <16 x i8*>, <16 x i8*>* %b
+  %vals = load <16 x i8>, ptr %a
+  %ptrs = load <16 x ptr>, ptr %b
   %mask = icmp eq <16 x i8> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v16i8(<16 x i8> %vals, <16 x i8*> %ptrs, i32 8, <16 x i1> %mask)
+  call void @llvm.masked.scatter.v16i8(<16 x i8> %vals, <16 x ptr> %ptrs, i32 8, <16 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v32i8(<32 x i8>* %a, <32 x i8*>* %b) vscale_range(16,0) #0 {
+define void @masked_scatter_v32i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -145,10 +145,10 @@ define void @masked_scatter_v32i8(<32 x i8>* %a, <32 x i8*>* %b) vscale_range(16
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1b { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x i8>, <32 x i8>* %a
-  %ptrs = load <32 x i8*>, <32 x i8*>* %b
+  %vals = load <32 x i8>, ptr %a
+  %ptrs = load <32 x ptr>, ptr %b
   %mask = icmp eq <32 x i8> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32i8(<32 x i8> %vals, <32 x i8*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32i8(<32 x i8> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
@@ -156,7 +156,7 @@ define void @masked_scatter_v32i8(<32 x i8>* %a, <32 x i8*>* %b) vscale_range(16
 ; ST1H
 ;
 
-define void @masked_scatter_v2i16(<2 x i16>* %a, <2 x i16*>* %b) vscale_range(2,0) #0 {
+define void @masked_scatter_v2i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v2i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrh w8, [x0]
@@ -171,14 +171,14 @@ define void @masked_scatter_v2i16(<2 x i16>* %a, <2 x i16*>* %b) vscale_range(2,
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    st1h { z0.d }, p0, [z2.d]
 ; CHECK-NEXT:    ret
-  %vals = load <2 x i16>, <2 x i16>* %a
-  %ptrs = load <2 x i16*>, <2 x i16*>* %b
+  %vals = load <2 x i16>, ptr %a
+  %ptrs = load <2 x ptr>, ptr %b
   %mask = icmp eq <2 x i16> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v2i16(<2 x i16> %vals, <2 x i16*> %ptrs, i32 8, <2 x i1> %mask)
+  call void @llvm.masked.scatter.v2i16(<2 x i16> %vals, <2 x ptr> %ptrs, i32 8, <2 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v4i16(<4 x i16>* %a, <4 x i16*>* %b) vscale_range(2,0) #0 {
+define void @masked_scatter_v4i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -192,14 +192,14 @@ define void @masked_scatter_v4i16(<4 x i16>* %a, <4 x i16*>* %b) vscale_range(2,
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z2.d, #0
 ; CHECK-NEXT:    st1h { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <4 x i16>, <4 x i16>* %a
-  %ptrs = load <4 x i16*>, <4 x i16*>* %b
+  %vals = load <4 x i16>, ptr %a
+  %ptrs = load <4 x ptr>, ptr %b
   %mask = icmp eq <4 x i16> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v4i16(<4 x i16> %vals, <4 x i16*> %ptrs, i32 8, <4 x i1> %mask)
+  call void @llvm.masked.scatter.v4i16(<4 x i16> %vals, <4 x ptr> %ptrs, i32 8, <4 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v8i16(<8 x i16>* %a, <8 x i16*>* %b) #0 {
+define void @masked_scatter_v8i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: masked_scatter_v8i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ldr q0, [x0]
@@ -237,14 +237,14 @@ define void @masked_scatter_v8i16(<8 x i16>* %a, <8 x i16*>* %b) #0 {
 ; VBITS_GE_512-NEXT:    cmpne p0.d, p0/z, z2.d, #0
 ; VBITS_GE_512-NEXT:    st1h { z0.d }, p0, [z1.d]
 ; VBITS_GE_512-NEXT:    ret
-  %vals = load <8 x i16>, <8 x i16>* %a
-  %ptrs = load <8 x i16*>, <8 x i16*>* %b
+  %vals = load <8 x i16>, ptr %a
+  %ptrs = load <8 x ptr>, ptr %b
   %mask = icmp eq <8 x i16> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v8i16(<8 x i16> %vals, <8 x i16*> %ptrs, i32 8, <8 x i1> %mask)
+  call void @llvm.masked.scatter.v8i16(<8 x i16> %vals, <8 x ptr> %ptrs, i32 8, <8 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v16i16(<16 x i16>* %a, <16 x i16*>* %b) vscale_range(8,0) #0 {
+define void @masked_scatter_v16i16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: masked_scatter_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -258,14 +258,14 @@ define void @masked_scatter_v16i16(<16 x i16>* %a, <16 x i16*>* %b) vscale_range
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1h { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <16 x i16>, <16 x i16>* %a
-  %ptrs = load <16 x i16*>, <16 x i16*>* %b
+  %vals = load <16 x i16>, ptr %a
+  %ptrs = load <16 x ptr>, ptr %b
   %mask = icmp eq <16 x i16> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v16i16(<16 x i16> %vals, <16 x i16*> %ptrs, i32 8, <16 x i1> %mask)
+  call void @llvm.masked.scatter.v16i16(<16 x i16> %vals, <16 x ptr> %ptrs, i32 8, <16 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v32i16(<32 x i16>* %a, <32 x i16*>* %b) vscale_range(16,0) #0 {
+define void @masked_scatter_v32i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_v32i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
@@ -279,10 +279,10 @@ define void @masked_scatter_v32i16(<32 x i16>* %a, <32 x i16*>* %b) vscale_range
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1h { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x i16>, <32 x i16>* %a
-  %ptrs = load <32 x i16*>, <32 x i16*>* %b
+  %vals = load <32 x i16>, ptr %a
+  %ptrs = load <32 x ptr>, ptr %b
   %mask = icmp eq <32 x i16> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32i16(<32 x i16> %vals, <32 x i16*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32i16(<32 x i16> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
@@ -290,7 +290,7 @@ define void @masked_scatter_v32i16(<32 x i16>* %a, <32 x i16*>* %b) vscale_range
 ; ST1W
 ;
 
-define void @masked_scatter_v2i32(<2 x i32>* %a, <2 x i32*>* %b) vscale_range(2,0) #0 {
+define void @masked_scatter_v2i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v2i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -302,14 +302,14 @@ define void @masked_scatter_v2i32(<2 x i32>* %a, <2 x i32*>* %b) vscale_range(2,
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    st1w { z0.d }, p0, [z2.d]
 ; CHECK-NEXT:    ret
-  %vals = load <2 x i32>, <2 x i32>* %a
-  %ptrs = load <2 x i32*>, <2 x i32*>* %b
+  %vals = load <2 x i32>, ptr %a
+  %ptrs = load <2 x ptr>, ptr %b
   %mask = icmp eq <2 x i32> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v2i32(<2 x i32> %vals, <2 x i32*> %ptrs, i32 8, <2 x i1> %mask)
+  call void @llvm.masked.scatter.v2i32(<2 x i32> %vals, <2 x ptr> %ptrs, i32 8, <2 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v4i32(<4 x i32>* %a, <4 x i32*>* %b) vscale_range(2,0) #0 {
+define void @masked_scatter_v4i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v4i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -321,14 +321,14 @@ define void @masked_scatter_v4i32(<4 x i32>* %a, <4 x i32*>* %b) vscale_range(2,
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z2.d, #0
 ; CHECK-NEXT:    st1w { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <4 x i32>, <4 x i32>* %a
-  %ptrs = load <4 x i32*>, <4 x i32*>* %b
+  %vals = load <4 x i32>, ptr %a
+  %ptrs = load <4 x ptr>, ptr %b
   %mask = icmp eq <4 x i32> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v4i32(<4 x i32> %vals, <4 x i32*> %ptrs, i32 8, <4 x i1> %mask)
+  call void @llvm.masked.scatter.v4i32(<4 x i32> %vals, <4 x ptr> %ptrs, i32 8, <4 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v8i32(<8 x i32>* %a, <8 x i32*>* %b) #0 {
+define void @masked_scatter_v8i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: masked_scatter_v8i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
@@ -362,14 +362,14 @@ define void @masked_scatter_v8i32(<8 x i32>* %a, <8 x i32*>* %b) #0 {
 ; VBITS_GE_512-NEXT:    punpklo p0.h, p0.b
 ; VBITS_GE_512-NEXT:    st1w { z0.d }, p0, [z1.d]
 ; VBITS_GE_512-NEXT:    ret
-  %vals = load <8 x i32>, <8 x i32>* %a
-  %ptrs = load <8 x i32*>, <8 x i32*>* %b
+  %vals = load <8 x i32>, ptr %a
+  %ptrs = load <8 x ptr>, ptr %b
   %mask = icmp eq <8 x i32> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v8i32(<8 x i32> %vals, <8 x i32*> %ptrs, i32 8, <8 x i1> %mask)
+  call void @llvm.masked.scatter.v8i32(<8 x i32> %vals, <8 x ptr> %ptrs, i32 8, <8 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v16i32(<16 x i32>* %a, <16 x i32*>* %b) vscale_range(8,0) #0 {
+define void @masked_scatter_v16i32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: masked_scatter_v16i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl16
@@ -381,14 +381,14 @@ define void @masked_scatter_v16i32(<16 x i32>* %a, <16 x i32*>* %b) vscale_range
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1w { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <16 x i32>, <16 x i32>* %a
-  %ptrs = load <16 x i32*>, <16 x i32*>* %b
+  %vals = load <16 x i32>, ptr %a
+  %ptrs = load <16 x ptr>, ptr %b
   %mask = icmp eq <16 x i32> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v16i32(<16 x i32> %vals, <16 x i32*> %ptrs, i32 8, <16 x i1> %mask)
+  call void @llvm.masked.scatter.v16i32(<16 x i32> %vals, <16 x ptr> %ptrs, i32 8, <16 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v32i32(<32 x i32>* %a, <32 x i32*>* %b) vscale_range(16,0) #0 {
+define void @masked_scatter_v32i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -400,10 +400,10 @@ define void @masked_scatter_v32i32(<32 x i32>* %a, <32 x i32*>* %b) vscale_range
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1w { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x i32>, <32 x i32>* %a
-  %ptrs = load <32 x i32*>, <32 x i32*>* %b
+  %vals = load <32 x i32>, ptr %a
+  %ptrs = load <32 x ptr>, ptr %b
   %mask = icmp eq <32 x i32> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32i32(<32 x i32> %vals, <32 x i32*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32i32(<32 x i32> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
@@ -412,7 +412,7 @@ define void @masked_scatter_v32i32(<32 x i32>* %a, <32 x i32*>* %b) vscale_range
 ;
 
 ; Scalarize 1 x i64 scatters
-define void @masked_scatter_v1i64(<1 x i64>* %a, <1 x i64*>* %b) vscale_range(2,0) #0 {
+define void @masked_scatter_v1i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -424,14 +424,14 @@ define void @masked_scatter_v1i64(<1 x i64>* %a, <1 x i64*>* %b) vscale_range(2,
 ; CHECK-NEXT:    str d0, [x8]
 ; CHECK-NEXT:  .LBB15_2: // %else
 ; CHECK-NEXT:    ret
-  %vals = load <1 x i64>, <1 x i64>* %a
-  %ptrs = load <1 x i64*>, <1 x i64*>* %b
+  %vals = load <1 x i64>, ptr %a
+  %ptrs = load <1 x ptr>, ptr %b
   %mask = icmp eq <1 x i64> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v1i64(<1 x i64> %vals, <1 x i64*> %ptrs, i32 8, <1 x i1> %mask)
+  call void @llvm.masked.scatter.v1i64(<1 x i64> %vals, <1 x ptr> %ptrs, i32 8, <1 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v2i64(<2 x i64>* %a, <2 x i64*>* %b) vscale_range(2,0) #0 {
+define void @masked_scatter_v2i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -441,14 +441,14 @@ define void @masked_scatter_v2i64(<2 x i64>* %a, <2 x i64*>* %b) vscale_range(2,
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z2.d, #0
 ; CHECK-NEXT:    st1d { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <2 x i64>, <2 x i64>* %a
-  %ptrs = load <2 x i64*>, <2 x i64*>* %b
+  %vals = load <2 x i64>, ptr %a
+  %ptrs = load <2 x ptr>, ptr %b
   %mask = icmp eq <2 x i64> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v2i64(<2 x i64> %vals, <2 x i64*> %ptrs, i32 8, <2 x i1> %mask)
+  call void @llvm.masked.scatter.v2i64(<2 x i64> %vals, <2 x ptr> %ptrs, i32 8, <2 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v4i64(<4 x i64>* %a, <4 x i64*>* %b) vscale_range(2,0) #0 {
+define void @masked_scatter_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -457,14 +457,14 @@ define void @masked_scatter_v4i64(<4 x i64>* %a, <4 x i64*>* %b) vscale_range(2,
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    st1d { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <4 x i64>, <4 x i64>* %a
-  %ptrs = load <4 x i64*>, <4 x i64*>* %b
+  %vals = load <4 x i64>, ptr %a
+  %ptrs = load <4 x ptr>, ptr %b
   %mask = icmp eq <4 x i64> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v4i64(<4 x i64> %vals, <4 x i64*> %ptrs, i32 8, <4 x i1> %mask)
+  call void @llvm.masked.scatter.v4i64(<4 x i64> %vals, <4 x ptr> %ptrs, i32 8, <4 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v8i64(<8 x i64>* %a, <8 x i64*>* %b) #0 {
+define void @masked_scatter_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: masked_scatter_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -487,14 +487,14 @@ define void @masked_scatter_v8i64(<8 x i64>* %a, <8 x i64*>* %b) #0 {
 ; VBITS_GE_512-NEXT:    cmpeq p0.d, p0/z, z0.d, #0
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [z1.d]
 ; VBITS_GE_512-NEXT:    ret
-  %vals = load <8 x i64>, <8 x i64>* %a
-  %ptrs = load <8 x i64*>, <8 x i64*>* %b
+  %vals = load <8 x i64>, ptr %a
+  %ptrs = load <8 x ptr>, ptr %b
   %mask = icmp eq <8 x i64> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v8i64(<8 x i64> %vals, <8 x i64*> %ptrs, i32 8, <8 x i1> %mask)
+  call void @llvm.masked.scatter.v8i64(<8 x i64> %vals, <8 x ptr> %ptrs, i32 8, <8 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v16i64(<16 x i64>* %a, <16 x i64*>* %b) vscale_range(8,0) #0 {
+define void @masked_scatter_v16i64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: masked_scatter_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -503,14 +503,14 @@ define void @masked_scatter_v16i64(<16 x i64>* %a, <16 x i64*>* %b) vscale_range
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    st1d { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <16 x i64>, <16 x i64>* %a
-  %ptrs = load <16 x i64*>, <16 x i64*>* %b
+  %vals = load <16 x i64>, ptr %a
+  %ptrs = load <16 x ptr>, ptr %b
   %mask = icmp eq <16 x i64> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v16i64(<16 x i64> %vals, <16 x i64*> %ptrs, i32 8, <16 x i1> %mask)
+  call void @llvm.masked.scatter.v16i64(<16 x i64> %vals, <16 x ptr> %ptrs, i32 8, <16 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v32i64(<32 x i64>* %a, <32 x i64*>* %b) vscale_range(16,0) #0 {
+define void @masked_scatter_v32i64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -519,10 +519,10 @@ define void @masked_scatter_v32i64(<32 x i64>* %a, <32 x i64*>* %b) vscale_range
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    st1d { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x i64>, <32 x i64>* %a
-  %ptrs = load <32 x i64*>, <32 x i64*>* %b
+  %vals = load <32 x i64>, ptr %a
+  %ptrs = load <32 x ptr>, ptr %b
   %mask = icmp eq <32 x i64> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32i64(<32 x i64> %vals, <32 x i64*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32i64(<32 x i64> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
@@ -530,7 +530,7 @@ define void @masked_scatter_v32i64(<32 x i64>* %a, <32 x i64*>* %b) vscale_range
 ; ST1H (float)
 ;
 
-define void @masked_scatter_v2f16(<2 x half>* %a, <2 x half*>* %b) vscale_range(2,0) #0 {
+define void @masked_scatter_v2f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s1, [x0]
@@ -552,14 +552,14 @@ define void @masked_scatter_v2f16(<2 x half>* %a, <2 x half*>* %b) vscale_range(
 ; CHECK-NEXT:    uunpklo z0.d, z1.s
 ; CHECK-NEXT:    st1h { z0.d }, p0, [z2.d]
 ; CHECK-NEXT:    ret
-  %vals = load <2 x half>, <2 x half>* %a
-  %ptrs = load <2 x half*>, <2 x half*>* %b
+  %vals = load <2 x half>, ptr %a
+  %ptrs = load <2 x ptr>, ptr %b
   %mask = fcmp oeq <2 x half> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v2f16(<2 x half> %vals, <2 x half*> %ptrs, i32 8, <2 x i1> %mask)
+  call void @llvm.masked.scatter.v2f16(<2 x half> %vals, <2 x ptr> %ptrs, i32 8, <2 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v4f16(<4 x half>* %a, <4 x half*>* %b) vscale_range(2,0) #0 {
+define void @masked_scatter_v4f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v4f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -573,14 +573,14 @@ define void @masked_scatter_v4f16(<4 x half>* %a, <4 x half*>* %b) vscale_range(
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z2.d, #0
 ; CHECK-NEXT:    st1h { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <4 x half>, <4 x half>* %a
-  %ptrs = load <4 x half*>, <4 x half*>* %b
+  %vals = load <4 x half>, ptr %a
+  %ptrs = load <4 x ptr>, ptr %b
   %mask = fcmp oeq <4 x half> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v4f16(<4 x half> %vals, <4 x half*> %ptrs, i32 8, <4 x i1> %mask)
+  call void @llvm.masked.scatter.v4f16(<4 x half> %vals, <4 x ptr> %ptrs, i32 8, <4 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v8f16(<8 x half>* %a, <8 x half*>* %b) #0 {
+define void @masked_scatter_v8f16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: masked_scatter_v8f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ldr q0, [x0]
@@ -618,14 +618,14 @@ define void @masked_scatter_v8f16(<8 x half>* %a, <8 x half*>* %b) #0 {
 ; VBITS_GE_512-NEXT:    cmpne p0.d, p0/z, z2.d, #0
 ; VBITS_GE_512-NEXT:    st1h { z0.d }, p0, [z1.d]
 ; VBITS_GE_512-NEXT:    ret
-  %vals = load <8 x half>, <8 x half>* %a
-  %ptrs = load <8 x half*>, <8 x half*>* %b
+  %vals = load <8 x half>, ptr %a
+  %ptrs = load <8 x ptr>, ptr %b
   %mask = fcmp oeq <8 x half> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v8f16(<8 x half> %vals, <8 x half*> %ptrs, i32 8, <8 x i1> %mask)
+  call void @llvm.masked.scatter.v8f16(<8 x half> %vals, <8 x ptr> %ptrs, i32 8, <8 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v16f16(<16 x half>* %a, <16 x half*>* %b) vscale_range(8,0) #0 {
+define void @masked_scatter_v16f16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: masked_scatter_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -639,14 +639,14 @@ define void @masked_scatter_v16f16(<16 x half>* %a, <16 x half*>* %b) vscale_ran
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1h { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <16 x half>, <16 x half>* %a
-  %ptrs = load <16 x half*>, <16 x half*>* %b
+  %vals = load <16 x half>, ptr %a
+  %ptrs = load <16 x ptr>, ptr %b
   %mask = fcmp oeq <16 x half> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v16f16(<16 x half> %vals, <16 x half*> %ptrs, i32 8, <16 x i1> %mask)
+  call void @llvm.masked.scatter.v16f16(<16 x half> %vals, <16 x ptr> %ptrs, i32 8, <16 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v32f16(<32 x half>* %a, <32 x half*>* %b) vscale_range(16,0) #0 {
+define void @masked_scatter_v32f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_v32f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
@@ -660,10 +660,10 @@ define void @masked_scatter_v32f16(<32 x half>* %a, <32 x half*>* %b) vscale_ran
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1h { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x half>, <32 x half>* %a
-  %ptrs = load <32 x half*>, <32 x half*>* %b
+  %vals = load <32 x half>, ptr %a
+  %ptrs = load <32 x ptr>, ptr %b
   %mask = fcmp oeq <32 x half> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32f16(<32 x half> %vals, <32 x half*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32f16(<32 x half> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
@@ -671,7 +671,7 @@ define void @masked_scatter_v32f16(<32 x half>* %a, <32 x half*>* %b) vscale_ran
 ; ST1W (float)
 ;
 
-define void @masked_scatter_v2f32(<2 x float>* %a, <2 x float*>* %b) vscale_range(2,0) #0 {
+define void @masked_scatter_v2f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -683,14 +683,14 @@ define void @masked_scatter_v2f32(<2 x float>* %a, <2 x float*>* %b) vscale_rang
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    st1w { z0.d }, p0, [z2.d]
 ; CHECK-NEXT:    ret
-  %vals = load <2 x float>, <2 x float>* %a
-  %ptrs = load <2 x float*>, <2 x float*>* %b
+  %vals = load <2 x float>, ptr %a
+  %ptrs = load <2 x ptr>, ptr %b
   %mask = fcmp oeq <2 x float> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v2f32(<2 x float> %vals, <2 x float*> %ptrs, i32 8, <2 x i1> %mask)
+  call void @llvm.masked.scatter.v2f32(<2 x float> %vals, <2 x ptr> %ptrs, i32 8, <2 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v4f32(<4 x float>* %a, <4 x float*>* %b) vscale_range(2,0) #0 {
+define void @masked_scatter_v4f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -702,14 +702,14 @@ define void @masked_scatter_v4f32(<4 x float>* %a, <4 x float*>* %b) vscale_rang
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z2.d, #0
 ; CHECK-NEXT:    st1w { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <4 x float>, <4 x float>* %a
-  %ptrs = load <4 x float*>, <4 x float*>* %b
+  %vals = load <4 x float>, ptr %a
+  %ptrs = load <4 x ptr>, ptr %b
   %mask = fcmp oeq <4 x float> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v4f32(<4 x float> %vals, <4 x float*> %ptrs, i32 8, <4 x i1> %mask)
+  call void @llvm.masked.scatter.v4f32(<4 x float> %vals, <4 x ptr> %ptrs, i32 8, <4 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v8f32(<8 x float>* %a, <8 x float*>* %b) #0 {
+define void @masked_scatter_v8f32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: masked_scatter_v8f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
@@ -743,14 +743,14 @@ define void @masked_scatter_v8f32(<8 x float>* %a, <8 x float*>* %b) #0 {
 ; VBITS_GE_512-NEXT:    punpklo p0.h, p0.b
 ; VBITS_GE_512-NEXT:    st1w { z0.d }, p0, [z1.d]
 ; VBITS_GE_512-NEXT:    ret
-  %vals = load <8 x float>, <8 x float>* %a
-  %ptrs = load <8 x float*>, <8 x float*>* %b
+  %vals = load <8 x float>, ptr %a
+  %ptrs = load <8 x ptr>, ptr %b
   %mask = fcmp oeq <8 x float> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v8f32(<8 x float> %vals, <8 x float*> %ptrs, i32 8, <8 x i1> %mask)
+  call void @llvm.masked.scatter.v8f32(<8 x float> %vals, <8 x ptr> %ptrs, i32 8, <8 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v16f32(<16 x float>* %a, <16 x float*>* %b) vscale_range(8,0) #0 {
+define void @masked_scatter_v16f32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: masked_scatter_v16f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl16
@@ -762,14 +762,14 @@ define void @masked_scatter_v16f32(<16 x float>* %a, <16 x float*>* %b) vscale_r
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1w { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <16 x float>, <16 x float>* %a
-  %ptrs = load <16 x float*>, <16 x float*>* %b
+  %vals = load <16 x float>, ptr %a
+  %ptrs = load <16 x ptr>, ptr %b
   %mask = fcmp oeq <16 x float> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v16f32(<16 x float> %vals, <16 x float*> %ptrs, i32 8, <16 x i1> %mask)
+  call void @llvm.masked.scatter.v16f32(<16 x float> %vals, <16 x ptr> %ptrs, i32 8, <16 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v32f32(<32 x float>* %a, <32 x float*>* %b) vscale_range(16,0) #0 {
+define void @masked_scatter_v32f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -781,10 +781,10 @@ define void @masked_scatter_v32f32(<32 x float>* %a, <32 x float*>* %b) vscale_r
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1w { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x float>, <32 x float>* %a
-  %ptrs = load <32 x float*>, <32 x float*>* %b
+  %vals = load <32 x float>, ptr %a
+  %ptrs = load <32 x ptr>, ptr %b
   %mask = fcmp oeq <32 x float> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32f32(<32 x float> %vals, <32 x float*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32f32(<32 x float> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
@@ -793,7 +793,7 @@ define void @masked_scatter_v32f32(<32 x float>* %a, <32 x float*>* %b) vscale_r
 ;
 
 ; Scalarize 1 x double scatters
-define void @masked_scatter_v1f64(<1 x double>* %a, <1 x double*>* %b) vscale_range(8,0) #0 {
+define void @masked_scatter_v1f64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: masked_scatter_v1f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -805,14 +805,14 @@ define void @masked_scatter_v1f64(<1 x double>* %a, <1 x double*>* %b) vscale_ra
 ; CHECK-NEXT:    str d0, [x8]
 ; CHECK-NEXT:  .LBB31_2: // %else
 ; CHECK-NEXT:    ret
-  %vals = load <1 x double>, <1 x double>* %a
-  %ptrs = load <1 x double*>, <1 x double*>* %b
+  %vals = load <1 x double>, ptr %a
+  %ptrs = load <1 x ptr>, ptr %b
   %mask = fcmp oeq <1 x double> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v1f64(<1 x double> %vals, <1 x double*> %ptrs, i32 8, <1 x i1> %mask)
+  call void @llvm.masked.scatter.v1f64(<1 x double> %vals, <1 x ptr> %ptrs, i32 8, <1 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v2f64(<2 x double>* %a, <2 x double*>* %b) vscale_range(2,0) #0 {
+define void @masked_scatter_v2f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v2f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -822,14 +822,14 @@ define void @masked_scatter_v2f64(<2 x double>* %a, <2 x double*>* %b) vscale_ra
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    st1d { z0.d }, p0, [z2.d]
 ; CHECK-NEXT:    ret
-  %vals = load <2 x double>, <2 x double>* %a
-  %ptrs = load <2 x double*>, <2 x double*>* %b
+  %vals = load <2 x double>, ptr %a
+  %ptrs = load <2 x ptr>, ptr %b
   %mask = fcmp oeq <2 x double> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v2f64(<2 x double> %vals, <2 x double*> %ptrs, i32 8, <2 x i1> %mask)
+  call void @llvm.masked.scatter.v2f64(<2 x double> %vals, <2 x ptr> %ptrs, i32 8, <2 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v4f64(<4 x double>* %a, <4 x double*>* %b) vscale_range(2,0) #0 {
+define void @masked_scatter_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_scatter_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -838,14 +838,14 @@ define void @masked_scatter_v4f64(<4 x double>* %a, <4 x double*>* %b) vscale_ra
 ; CHECK-NEXT:    fcmeq p0.d, p0/z, z0.d, #0.0
 ; CHECK-NEXT:    st1d { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <4 x double>, <4 x double>* %a
-  %ptrs = load <4 x double*>, <4 x double*>* %b
+  %vals = load <4 x double>, ptr %a
+  %ptrs = load <4 x ptr>, ptr %b
   %mask = fcmp oeq <4 x double> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v4f64(<4 x double> %vals, <4 x double*> %ptrs, i32 8, <4 x i1> %mask)
+  call void @llvm.masked.scatter.v4f64(<4 x double> %vals, <4 x ptr> %ptrs, i32 8, <4 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v8f64(<8 x double>* %a, <8 x double*>* %b) #0 {
+define void @masked_scatter_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: masked_scatter_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -868,14 +868,14 @@ define void @masked_scatter_v8f64(<8 x double>* %a, <8 x double*>* %b) #0 {
 ; VBITS_GE_512-NEXT:    fcmeq p0.d, p0/z, z0.d, #0.0
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [z1.d]
 ; VBITS_GE_512-NEXT:    ret
-  %vals = load <8 x double>, <8 x double>* %a
-  %ptrs = load <8 x double*>, <8 x double*>* %b
+  %vals = load <8 x double>, ptr %a
+  %ptrs = load <8 x ptr>, ptr %b
   %mask = fcmp oeq <8 x double> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v8f64(<8 x double> %vals, <8 x double*> %ptrs, i32 8, <8 x i1> %mask)
+  call void @llvm.masked.scatter.v8f64(<8 x double> %vals, <8 x ptr> %ptrs, i32 8, <8 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v16f64(<16 x double>* %a, <16 x double*>* %b) vscale_range(8,0) #0 {
+define void @masked_scatter_v16f64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: masked_scatter_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -884,14 +884,14 @@ define void @masked_scatter_v16f64(<16 x double>* %a, <16 x double*>* %b) vscale
 ; CHECK-NEXT:    fcmeq p0.d, p0/z, z0.d, #0.0
 ; CHECK-NEXT:    st1d { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <16 x double>, <16 x double>* %a
-  %ptrs = load <16 x double*>, <16 x double*>* %b
+  %vals = load <16 x double>, ptr %a
+  %ptrs = load <16 x ptr>, ptr %b
   %mask = fcmp oeq <16 x double> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v16f64(<16 x double> %vals, <16 x double*> %ptrs, i32 8, <16 x i1> %mask)
+  call void @llvm.masked.scatter.v16f64(<16 x double> %vals, <16 x ptr> %ptrs, i32 8, <16 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_v32f64(<32 x double>* %a, <32 x double*>* %b) vscale_range(16,0) #0 {
+define void @masked_scatter_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -900,17 +900,17 @@ define void @masked_scatter_v32f64(<32 x double>* %a, <32 x double*>* %b) vscale
 ; CHECK-NEXT:    fcmeq p0.d, p0/z, z0.d, #0.0
 ; CHECK-NEXT:    st1d { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x double>, <32 x double>* %a
-  %ptrs = load <32 x double*>, <32 x double*>* %b
+  %vals = load <32 x double>, ptr %a
+  %ptrs = load <32 x ptr>, ptr %b
   %mask = fcmp oeq <32 x double> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32f64(<32 x double> %vals, <32 x double*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32f64(<32 x double> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
 ; The above tests test the types, the below tests check that the addressing
 ; modes still function
 
-define void @masked_scatter_32b_scaled_sext_f16(<32 x half>* %a, <32 x i32>* %b, half* %base) vscale_range(16,0) #0 {
+define void @masked_scatter_32b_scaled_sext_f16(ptr %a, ptr %b, ptr %base) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_32b_scaled_sext_f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
@@ -922,16 +922,16 @@ define void @masked_scatter_32b_scaled_sext_f16(<32 x half>* %a, <32 x i32>* %b,
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x2, z1.s, sxtw #1]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x half>, <32 x half>* %a
-  %idxs = load <32 x i32>, <32 x i32>* %b
+  %vals = load <32 x half>, ptr %a
+  %idxs = load <32 x i32>, ptr %b
   %ext = sext <32 x i32> %idxs to <32 x i64>
-  %ptrs = getelementptr half, half* %base, <32 x i64> %ext
+  %ptrs = getelementptr half, ptr %base, <32 x i64> %ext
   %mask = fcmp oeq <32 x half> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32f16(<32 x half> %vals, <32 x half*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32f16(<32 x half> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_32b_scaled_sext_f32(<32 x float>* %a, <32 x i32>* %b, float* %base) vscale_range(16,0) #0 {
+define void @masked_scatter_32b_scaled_sext_f32(ptr %a, ptr %b, ptr %base) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_32b_scaled_sext_f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -940,16 +940,16 @@ define void @masked_scatter_32b_scaled_sext_f32(<32 x float>* %a, <32 x i32>* %b
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x2, z1.s, sxtw #2]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x float>, <32 x float>* %a
-  %idxs = load <32 x i32>, <32 x i32>* %b
+  %vals = load <32 x float>, ptr %a
+  %idxs = load <32 x i32>, ptr %b
   %ext = sext <32 x i32> %idxs to <32 x i64>
-  %ptrs = getelementptr float, float* %base, <32 x i64> %ext
+  %ptrs = getelementptr float, ptr %base, <32 x i64> %ext
   %mask = fcmp oeq <32 x float> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32f32(<32 x float> %vals, <32 x float*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32f32(<32 x float> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_32b_scaled_sext_f64(<32 x double>* %a, <32 x i32>* %b, double* %base) vscale_range(16,0) #0 {
+define void @masked_scatter_32b_scaled_sext_f64(ptr %a, ptr %b, ptr %base) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_32b_scaled_sext_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -958,16 +958,16 @@ define void @masked_scatter_32b_scaled_sext_f64(<32 x double>* %a, <32 x i32>* %
 ; CHECK-NEXT:    fcmeq p0.d, p0/z, z0.d, #0.0
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x2, z1.d, lsl #3]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x double>, <32 x double>* %a
-  %idxs = load <32 x i32>, <32 x i32>* %b
+  %vals = load <32 x double>, ptr %a
+  %idxs = load <32 x i32>, ptr %b
   %ext = sext <32 x i32> %idxs to <32 x i64>
-  %ptrs = getelementptr double, double* %base, <32 x i64> %ext
+  %ptrs = getelementptr double, ptr %base, <32 x i64> %ext
   %mask = fcmp oeq <32 x double> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32f64(<32 x double> %vals, <32 x double*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32f64(<32 x double> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_32b_scaled_zext(<32 x half>* %a, <32 x i32>* %b, half* %base) vscale_range(16,0) #0 {
+define void @masked_scatter_32b_scaled_zext(ptr %a, ptr %b, ptr %base) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_32b_scaled_zext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
@@ -979,16 +979,16 @@ define void @masked_scatter_32b_scaled_zext(<32 x half>* %a, <32 x i32>* %b, hal
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x2, z1.s, uxtw #1]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x half>, <32 x half>* %a
-  %idxs = load <32 x i32>, <32 x i32>* %b
+  %vals = load <32 x half>, ptr %a
+  %idxs = load <32 x i32>, ptr %b
   %ext = zext <32 x i32> %idxs to <32 x i64>
-  %ptrs = getelementptr half, half* %base, <32 x i64> %ext
+  %ptrs = getelementptr half, ptr %base, <32 x i64> %ext
   %mask = fcmp oeq <32 x half> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32f16(<32 x half> %vals, <32 x half*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32f16(<32 x half> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_32b_unscaled_sext(<32 x half>* %a, <32 x i32>* %b, i8* %base) vscale_range(16,0) #0 {
+define void @masked_scatter_32b_unscaled_sext(ptr %a, ptr %b, ptr %base) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_32b_unscaled_sext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
@@ -1000,17 +1000,17 @@ define void @masked_scatter_32b_unscaled_sext(<32 x half>* %a, <32 x i32>* %b, i
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x2, z1.s, sxtw]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x half>, <32 x half>* %a
-  %idxs = load <32 x i32>, <32 x i32>* %b
+  %vals = load <32 x half>, ptr %a
+  %idxs = load <32 x i32>, ptr %b
   %ext = sext <32 x i32> %idxs to <32 x i64>
-  %byte_ptrs = getelementptr i8, i8* %base, <32 x i64> %ext
-  %ptrs = bitcast <32 x i8*> %byte_ptrs to <32 x half*>
+  %byte_ptrs = getelementptr i8, ptr %base, <32 x i64> %ext
+  %ptrs = bitcast <32 x ptr> %byte_ptrs to <32 x ptr>
   %mask = fcmp oeq <32 x half> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32f16(<32 x half> %vals, <32 x half*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32f16(<32 x half> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_32b_unscaled_zext(<32 x half>* %a, <32 x i32>* %b, i8* %base) vscale_range(16,0) #0 {
+define void @masked_scatter_32b_unscaled_zext(ptr %a, ptr %b, ptr %base) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_32b_unscaled_zext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl32
@@ -1022,17 +1022,17 @@ define void @masked_scatter_32b_unscaled_zext(<32 x half>* %a, <32 x i32>* %b, i
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x2, z1.s, uxtw]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x half>, <32 x half>* %a
-  %idxs = load <32 x i32>, <32 x i32>* %b
+  %vals = load <32 x half>, ptr %a
+  %idxs = load <32 x i32>, ptr %b
   %ext = zext <32 x i32> %idxs to <32 x i64>
-  %byte_ptrs = getelementptr i8, i8* %base, <32 x i64> %ext
-  %ptrs = bitcast <32 x i8*> %byte_ptrs to <32 x half*>
+  %byte_ptrs = getelementptr i8, ptr %base, <32 x i64> %ext
+  %ptrs = bitcast <32 x ptr> %byte_ptrs to <32 x ptr>
   %mask = fcmp oeq <32 x half> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32f16(<32 x half> %vals, <32 x half*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32f16(<32 x half> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_64b_scaled(<32 x float>* %a, <32 x i64>* %b, float* %base) vscale_range(16,0) #0 {
+define void @masked_scatter_64b_scaled(ptr %a, ptr %b, ptr %base) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_64b_scaled:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -1044,15 +1044,15 @@ define void @masked_scatter_64b_scaled(<32 x float>* %a, <32 x i64>* %b, float* 
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x2, z1.d, lsl #2]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x float>, <32 x float>* %a
-  %idxs = load <32 x i64>, <32 x i64>* %b
-  %ptrs = getelementptr float, float* %base, <32 x i64> %idxs
+  %vals = load <32 x float>, ptr %a
+  %idxs = load <32 x i64>, ptr %b
+  %ptrs = getelementptr float, ptr %base, <32 x i64> %idxs
   %mask = fcmp oeq <32 x float> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32f32(<32 x float> %vals, <32 x float*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32f32(<32 x float> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_64b_unscaled(<32 x float>* %a, <32 x i64>* %b, i8* %base) vscale_range(16,0) #0 {
+define void @masked_scatter_64b_unscaled(ptr %a, ptr %b, ptr %base) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_64b_unscaled:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -1064,16 +1064,16 @@ define void @masked_scatter_64b_unscaled(<32 x float>* %a, <32 x i64>* %b, i8* %
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x2, z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x float>, <32 x float>* %a
-  %idxs = load <32 x i64>, <32 x i64>* %b
-  %byte_ptrs = getelementptr i8, i8* %base, <32 x i64> %idxs
-  %ptrs = bitcast <32 x i8*> %byte_ptrs to <32 x float*>
+  %vals = load <32 x float>, ptr %a
+  %idxs = load <32 x i64>, ptr %b
+  %byte_ptrs = getelementptr i8, ptr %base, <32 x i64> %idxs
+  %ptrs = bitcast <32 x ptr> %byte_ptrs to <32 x ptr>
   %mask = fcmp oeq <32 x float> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32f32(<32 x float> %vals, <32 x float*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32f32(<32 x float> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_vec_plus_reg(<32 x float>* %a, <32 x i8*>* %b, i64 %off) vscale_range(16,0) #0 {
+define void @masked_scatter_vec_plus_reg(ptr %a, ptr %b, i64 %off) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_vec_plus_reg:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -1085,16 +1085,16 @@ define void @masked_scatter_vec_plus_reg(<32 x float>* %a, <32 x i8*>* %b, i64 %
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x2, z1.d]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x float>, <32 x float>* %a
-  %bases = load <32 x i8*>, <32 x i8*>* %b
-  %byte_ptrs = getelementptr i8, <32 x i8*> %bases, i64 %off
-  %ptrs = bitcast <32 x i8*> %byte_ptrs to <32 x float*>
+  %vals = load <32 x float>, ptr %a
+  %bases = load <32 x ptr>, ptr %b
+  %byte_ptrs = getelementptr i8, <32 x ptr> %bases, i64 %off
+  %ptrs = bitcast <32 x ptr> %byte_ptrs to <32 x ptr>
   %mask = fcmp oeq <32 x float> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32f32(<32 x float> %vals, <32 x float*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32f32(<32 x float> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
-define void @masked_scatter_vec_plus_imm(<32 x float>* %a, <32 x i8*>* %b) vscale_range(16,0) #0 {
+define void @masked_scatter_vec_plus_imm(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_scatter_vec_plus_imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -1106,12 +1106,12 @@ define void @masked_scatter_vec_plus_imm(<32 x float>* %a, <32 x i8*>* %b) vscal
 ; CHECK-NEXT:    punpklo p0.h, p0.b
 ; CHECK-NEXT:    st1w { z0.d }, p0, [z1.d, #4]
 ; CHECK-NEXT:    ret
-  %vals = load <32 x float>, <32 x float>* %a
-  %bases = load <32 x i8*>, <32 x i8*>* %b
-  %byte_ptrs = getelementptr i8, <32 x i8*> %bases, i64 4
-  %ptrs = bitcast <32 x i8*> %byte_ptrs to <32 x float*>
+  %vals = load <32 x float>, ptr %a
+  %bases = load <32 x ptr>, ptr %b
+  %byte_ptrs = getelementptr i8, <32 x ptr> %bases, i64 4
+  %ptrs = bitcast <32 x ptr> %byte_ptrs to <32 x ptr>
   %mask = fcmp oeq <32 x float> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v32f32(<32 x float> %vals, <32 x float*> %ptrs, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.scatter.v32f32(<32 x float> %vals, <32 x ptr> %ptrs, i32 8, <32 x i1> %mask)
   ret void
 }
 
@@ -1123,7 +1123,7 @@ define void @masked_scatter_vec_plus_imm(<32 x float>* %a, <32 x i8*>* %b) vscal
 ; NOTE: For this test to function correctly it's critical for %vals to be in a
 ; different block to the scatter store.  If not, the problematic bitcast will be
 ; removed before operation legalisation and thus not exercise the combine.
-define void @masked_scatter_bitcast_infinite_loop(<8 x double>* %a, <8 x double*>* %b, i1 %cond) vscale_range(4,0) #0 {
+define void @masked_scatter_bitcast_infinite_loop(ptr %a, ptr %b, i1 %cond) vscale_range(4,0) #0 {
 ; CHECK-LABEL: masked_scatter_bitcast_infinite_loop:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl8
@@ -1135,61 +1135,61 @@ define void @masked_scatter_bitcast_infinite_loop(<8 x double>* %a, <8 x double*
 ; CHECK-NEXT:    st1d { z0.d }, p0, [z1.d]
 ; CHECK-NEXT:  .LBB47_2: // %bb.2
 ; CHECK-NEXT:    ret
-  %vals = load volatile <8 x double>, <8 x double>* %a
+  %vals = load volatile <8 x double>, ptr %a
   br i1 %cond, label %bb.1, label %bb.2
 
 bb.1:
-  %ptrs = load <8 x double*>, <8 x double*>* %b
+  %ptrs = load <8 x ptr>, ptr %b
   %mask = fcmp oeq <8 x double> %vals, zeroinitializer
-  call void @llvm.masked.scatter.v8f64(<8 x double> %vals, <8 x double*> %ptrs, i32 8, <8 x i1> %mask)
+  call void @llvm.masked.scatter.v8f64(<8 x double> %vals, <8 x ptr> %ptrs, i32 8, <8 x i1> %mask)
   br label %bb.2
 
 bb.2:
   ret void
 }
 
-declare void @llvm.masked.scatter.v2i8(<2 x i8>, <2 x i8*>, i32, <2 x i1>)
-declare void @llvm.masked.scatter.v4i8(<4 x i8>, <4 x i8*>, i32, <4 x i1>)
-declare void @llvm.masked.scatter.v8i8(<8 x i8>, <8 x i8*>, i32, <8 x i1>)
-declare void @llvm.masked.scatter.v16i8(<16 x i8>, <16 x i8*>, i32, <16 x i1>)
-declare void @llvm.masked.scatter.v32i8(<32 x i8>, <32 x i8*>, i32, <32 x i1>)
+declare void @llvm.masked.scatter.v2i8(<2 x i8>, <2 x ptr>, i32, <2 x i1>)
+declare void @llvm.masked.scatter.v4i8(<4 x i8>, <4 x ptr>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v8i8(<8 x i8>, <8 x ptr>, i32, <8 x i1>)
+declare void @llvm.masked.scatter.v16i8(<16 x i8>, <16 x ptr>, i32, <16 x i1>)
+declare void @llvm.masked.scatter.v32i8(<32 x i8>, <32 x ptr>, i32, <32 x i1>)
 
-declare void @llvm.masked.scatter.v2i16(<2 x i16>, <2 x i16*>, i32, <2 x i1>)
-declare void @llvm.masked.scatter.v4i16(<4 x i16>, <4 x i16*>, i32, <4 x i1>)
-declare void @llvm.masked.scatter.v8i16(<8 x i16>, <8 x i16*>, i32, <8 x i1>)
-declare void @llvm.masked.scatter.v16i16(<16 x i16>, <16 x i16*>, i32, <16 x i1>)
-declare void @llvm.masked.scatter.v32i16(<32 x i16>, <32 x i16*>, i32, <32 x i1>)
+declare void @llvm.masked.scatter.v2i16(<2 x i16>, <2 x ptr>, i32, <2 x i1>)
+declare void @llvm.masked.scatter.v4i16(<4 x i16>, <4 x ptr>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v8i16(<8 x i16>, <8 x ptr>, i32, <8 x i1>)
+declare void @llvm.masked.scatter.v16i16(<16 x i16>, <16 x ptr>, i32, <16 x i1>)
+declare void @llvm.masked.scatter.v32i16(<32 x i16>, <32 x ptr>, i32, <32 x i1>)
 
-declare void @llvm.masked.scatter.v2i32(<2 x i32>, <2 x i32*>, i32, <2 x i1>)
-declare void @llvm.masked.scatter.v4i32(<4 x i32>, <4 x i32*>, i32, <4 x i1>)
-declare void @llvm.masked.scatter.v8i32(<8 x i32>, <8 x i32*>, i32, <8 x i1>)
-declare void @llvm.masked.scatter.v16i32(<16 x i32>, <16 x i32*>, i32, <16 x i1>)
-declare void @llvm.masked.scatter.v32i32(<32 x i32>, <32 x i32*>, i32, <32 x i1>)
+declare void @llvm.masked.scatter.v2i32(<2 x i32>, <2 x ptr>, i32, <2 x i1>)
+declare void @llvm.masked.scatter.v4i32(<4 x i32>, <4 x ptr>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v8i32(<8 x i32>, <8 x ptr>, i32, <8 x i1>)
+declare void @llvm.masked.scatter.v16i32(<16 x i32>, <16 x ptr>, i32, <16 x i1>)
+declare void @llvm.masked.scatter.v32i32(<32 x i32>, <32 x ptr>, i32, <32 x i1>)
 
-declare void @llvm.masked.scatter.v1i64(<1 x i64>, <1 x i64*>, i32, <1 x i1>)
-declare void @llvm.masked.scatter.v2i64(<2 x i64>, <2 x i64*>, i32, <2 x i1>)
-declare void @llvm.masked.scatter.v4i64(<4 x i64>, <4 x i64*>, i32, <4 x i1>)
-declare void @llvm.masked.scatter.v8i64(<8 x i64>, <8 x i64*>, i32, <8 x i1>)
-declare void @llvm.masked.scatter.v16i64(<16 x i64>, <16 x i64*>, i32, <16 x i1>)
-declare void @llvm.masked.scatter.v32i64(<32 x i64>, <32 x i64*>, i32, <32 x i1>)
+declare void @llvm.masked.scatter.v1i64(<1 x i64>, <1 x ptr>, i32, <1 x i1>)
+declare void @llvm.masked.scatter.v2i64(<2 x i64>, <2 x ptr>, i32, <2 x i1>)
+declare void @llvm.masked.scatter.v4i64(<4 x i64>, <4 x ptr>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v8i64(<8 x i64>, <8 x ptr>, i32, <8 x i1>)
+declare void @llvm.masked.scatter.v16i64(<16 x i64>, <16 x ptr>, i32, <16 x i1>)
+declare void @llvm.masked.scatter.v32i64(<32 x i64>, <32 x ptr>, i32, <32 x i1>)
 
-declare void @llvm.masked.scatter.v2f16(<2 x half>, <2 x half*>, i32, <2 x i1>)
-declare void @llvm.masked.scatter.v4f16(<4 x half>, <4 x half*>, i32, <4 x i1>)
-declare void @llvm.masked.scatter.v8f16(<8 x half>, <8 x half*>, i32, <8 x i1>)
-declare void @llvm.masked.scatter.v16f16(<16 x half>, <16 x half*>, i32, <16 x i1>)
-declare void @llvm.masked.scatter.v32f16(<32 x half>, <32 x half*>, i32, <32 x i1>)
+declare void @llvm.masked.scatter.v2f16(<2 x half>, <2 x ptr>, i32, <2 x i1>)
+declare void @llvm.masked.scatter.v4f16(<4 x half>, <4 x ptr>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v8f16(<8 x half>, <8 x ptr>, i32, <8 x i1>)
+declare void @llvm.masked.scatter.v16f16(<16 x half>, <16 x ptr>, i32, <16 x i1>)
+declare void @llvm.masked.scatter.v32f16(<32 x half>, <32 x ptr>, i32, <32 x i1>)
 
-declare void @llvm.masked.scatter.v2f32(<2 x float>, <2 x float*>, i32, <2 x i1>)
-declare void @llvm.masked.scatter.v4f32(<4 x float>, <4 x float*>, i32, <4 x i1>)
-declare void @llvm.masked.scatter.v8f32(<8 x float>, <8 x float*>, i32, <8 x i1>)
-declare void @llvm.masked.scatter.v16f32(<16 x float>, <16 x float*>, i32, <16 x i1>)
-declare void @llvm.masked.scatter.v32f32(<32 x float>, <32 x float*>, i32, <32 x i1>)
+declare void @llvm.masked.scatter.v2f32(<2 x float>, <2 x ptr>, i32, <2 x i1>)
+declare void @llvm.masked.scatter.v4f32(<4 x float>, <4 x ptr>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v8f32(<8 x float>, <8 x ptr>, i32, <8 x i1>)
+declare void @llvm.masked.scatter.v16f32(<16 x float>, <16 x ptr>, i32, <16 x i1>)
+declare void @llvm.masked.scatter.v32f32(<32 x float>, <32 x ptr>, i32, <32 x i1>)
 
-declare void @llvm.masked.scatter.v1f64(<1 x double>, <1 x double*>, i32, <1 x i1>)
-declare void @llvm.masked.scatter.v2f64(<2 x double>, <2 x double*>, i32, <2 x i1>)
-declare void @llvm.masked.scatter.v4f64(<4 x double>, <4 x double*>, i32, <4 x i1>)
-declare void @llvm.masked.scatter.v8f64(<8 x double>, <8 x double*>, i32, <8 x i1>)
-declare void @llvm.masked.scatter.v16f64(<16 x double>, <16 x double*>, i32, <16 x i1>)
-declare void @llvm.masked.scatter.v32f64(<32 x double>, <32 x double*>, i32, <32 x i1>)
+declare void @llvm.masked.scatter.v1f64(<1 x double>, <1 x ptr>, i32, <1 x i1>)
+declare void @llvm.masked.scatter.v2f64(<2 x double>, <2 x ptr>, i32, <2 x i1>)
+declare void @llvm.masked.scatter.v4f64(<4 x double>, <4 x ptr>, i32, <4 x i1>)
+declare void @llvm.masked.scatter.v8f64(<8 x double>, <8 x ptr>, i32, <8 x i1>)
+declare void @llvm.masked.scatter.v16f64(<16 x double>, <16 x ptr>, i32, <16 x i1>)
+declare void @llvm.masked.scatter.v32f64(<32 x double>, <32 x ptr>, i32, <32 x i1>)
 
 attributes #0 = { "target-features"="+sve" }

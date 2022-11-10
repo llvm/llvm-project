@@ -2829,7 +2829,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         static constexpr unsigned LDAROpcodes[] = {
             AArch64::LDARB, AArch64::LDARH, AArch64::LDARW, AArch64::LDARX};
         ArrayRef<unsigned> Opcodes =
-            STI.hasLDAPR() && Order != AtomicOrdering::SequentiallyConsistent
+            STI.hasRCPC() && Order != AtomicOrdering::SequentiallyConsistent
                 ? LDAPROpcodes
                 : LDAROpcodes;
         I.setDesc(TII.get(Opcodes[Log2_32(MemSizeInBytes)]));

@@ -1,4 +1,4 @@
-// RUN: mlir-translate -test-spirv-roundtrip -split-input-file %s | FileCheck %s
+// RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
   spirv.func @bitcount(%arg: i32) -> i32 "None" {

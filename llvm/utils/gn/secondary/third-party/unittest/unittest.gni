@@ -45,9 +45,9 @@ template("unittest") {
     output_dir = target_out_dir
 
     if (has_custom_main) {
-      deps += [ "//llvm/utils/unittest:gtest" ]
+      deps += [ "//third-party/unittest:gtest" ]
     } else {
-      deps += [ "//llvm/utils/unittest/UnitTestMain" ]
+      deps += [ "//third-party/unittest/UnitTestMain" ]
     }
     testonly = true
   }

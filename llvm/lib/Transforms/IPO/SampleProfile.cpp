@@ -133,6 +133,11 @@ static cl::opt<bool> ReportProfileStaleness(
     "report-profile-staleness", cl::Hidden, cl::init(false),
     cl::desc("Compute and report stale profile statistical metrics."));
 
+static cl::opt<bool> PersistProfileStaleness(
+    "persist-profile-staleness", cl::Hidden, cl::init(false),
+    cl::desc("Compute stale profile statistical metrics and write it into the "
+             "native object file(.llvm_stats section)."));
+
 static cl::opt<bool> ProfileSampleAccurate(
     "profile-sample-accurate", cl::Hidden, cl::init(false),
     cl::desc("If the sample profile is accurate, we will mark all un-sampled "
@@ -2041,7 +2046,7 @@ bool SampleProfileLoader::doInitialization(Module &M,
     }
   }
 
-  if (ReportProfileStaleness) {
+  if (ReportProfileStaleness || PersistProfileStaleness) {
     MatchingManager =
         std::make_unique<SampleProfileMatcher>(M, *Reader, ProbeManager.get());
   }
@@ -2150,18 +2155,42 @@ void SampleProfileMatcher::detectProfileMismatch() {
     detectProfileMismatch(F, *FS);
   }
 
-  if (FunctionSamples::ProfileIsProbeBased) {
-    errs() << "(" << NumMismatchedFuncHash << "/" << TotalProfiledFunc << ")"
-           << " of functions' profile are invalid and "
-           << " (" << MismatchedFuncHashSamples << "/" << TotalFuncHashSamples
+  if (ReportProfileStaleness) {
+    if (FunctionSamples::ProfileIsProbeBased) {
+      errs() << "(" << NumMismatchedFuncHash << "/" << TotalProfiledFunc << ")"
+             << " of functions' profile are invalid and "
+             << " (" << MismatchedFuncHashSamples << "/" << TotalFuncHashSamples
+             << ")"
+             << " of samples are discarded due to function hash mismatch.\n";
+    }
+    errs() << "(" << NumMismatchedCallsite << "/" << TotalProfiledCallsite
            << ")"
-           << " of samples are discarded due to function hash mismatch.\n";
+           << " of callsites' profile are invalid and "
+           << "(" << MismatchedCallsiteSamples << "/" << TotalCallsiteSamples
+           << ")"
+           << " of samples are discarded due to callsite location mismatch.\n";
   }
-  errs() << "(" << NumMismatchedCallsite << "/" << TotalProfiledCallsite << ")"
-         << " of callsites' profile are invalid and "
-         << "(" << MismatchedCallsiteSamples << "/" << TotalCallsiteSamples
-         << ")"
-         << " of samples are discarded due to callsite location mismatch.\n";
+
+  if (PersistProfileStaleness) {
+    LLVMContext &Ctx = M.getContext();
+    MDBuilder MDB(Ctx);
+
+    SmallVector<std::pair<StringRef, uint64_t>> ProfStatsVec;
+    if (FunctionSamples::ProfileIsProbeBased) {
+      ProfStatsVec.emplace_back("NumMismatchedFuncHash", NumMismatchedFuncHash);
+      ProfStatsVec.emplace_back("TotalProfiledFunc", TotalProfiledFunc);
+      ProfStatsVec.emplace_back("MismatchedFuncHashSamples",
+                                MismatchedFuncHashSamples);
+      ProfStatsVec.emplace_back("TotalFuncHashSamples", TotalFuncHashSamples);
+    }
+    ProfStatsVec.emplace_back("MismatchedCallsiteSamples",
+                              MismatchedCallsiteSamples);
+    ProfStatsVec.emplace_back("TotalCallsiteSamples", TotalCallsiteSamples);
+
+    auto *MD = MDB.createLLVMStats(ProfStatsVec);
+    auto *NMD = M.getOrInsertNamedMetadata("llvm.stats");
+    NMD->addOperand(MD);
+  }
 }
 
 bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
@@ -2208,7 +2237,7 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
   assert(SymbolMap.count(StringRef()) == 0 &&
          "No empty StringRef should be added in SymbolMap");
 
-  if (ReportProfileStaleness)
+  if (ReportProfileStaleness || PersistProfileStaleness)
     MatchingManager->detectProfileMismatch();
 
   bool retval = false;

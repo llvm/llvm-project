@@ -37,7 +37,7 @@ global_load_lds_dword v[2:3], off
 // GFX9ERR: error: instruction not supported on this GPU
 
 global_load_dword v[2:3], off
-// GFX9ERR: error: missing dst operand or lds modifier
+// GFX9ERR: error: too few operands for instruction
 
 scratch_load_dword v2, off, offset:256
-// GFX9ERR: error: missing dst operand or lds modifier
+// GFX9ERR: error: too few operands for instruction

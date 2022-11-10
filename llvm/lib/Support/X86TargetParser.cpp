@@ -207,6 +207,8 @@ constexpr FeatureBitset FeaturesSapphireRapids =
     FeatureENQCMD | FeatureMOVDIR64B | FeatureMOVDIRI | FeaturePTWRITE |
     FeatureSERIALIZE | FeatureSHSTK | FeatureTSXLDTRK | FeatureUINTR |
     FeatureWAITPKG;
+constexpr FeatureBitset FeaturesGraniteRapids =
+    FeaturesSapphireRapids | FeatureAMX_FP16 | FeaturePREFETCHI;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
@@ -228,6 +230,11 @@ constexpr FeatureBitset FeaturesAlderlake =
     FeatureSERIALIZE | FeatureSHSTK | FeatureVAES | FeatureVPCLMULQDQ |
     FeatureCLDEMOTE | FeatureMOVDIR64B | FeatureMOVDIRI | FeatureWAITPKG |
     FeatureAVXVNNI | FeatureHRESET | FeatureWIDEKL;
+constexpr FeatureBitset FeaturesSierraforest =
+    FeaturesAlderlake | FeatureCMPCCXADD | FeatureAVXIFMA |
+    FeatureAVXNECONVERT | FeatureAVXVNNIINT8;
+constexpr FeatureBitset FeaturesGrandridge =
+    FeaturesSierraforest | FeatureRAOINT;
 
 // Geode Processor.
 constexpr FeatureBitset FeaturesGeode =
@@ -374,6 +381,12 @@ constexpr ProcInfo Processors[] = {
   { {"raptorlake"}, CK_Raptorlake, FEATURE_AVX2, FeaturesAlderlake },
   // Meteorlake microarchitecture based processors.
   { {"meteorlake"}, CK_Meteorlake, FEATURE_AVX2, FeaturesAlderlake },
+  // Sierraforest microarchitecture based processors.
+  { {"sierraforest"}, CK_Sierraforest, FEATURE_AVX2, FeaturesSierraforest },
+  // Grandridge microarchitecture based processors.
+  { {"grandridge"}, CK_Grandridge, FEATURE_AVX2, FeaturesGrandridge },
+  // Graniterapids microarchitecture based processors.
+  { {"graniterapids"}, CK_Graniterapids, FEATURE_AVX512BF16, FeaturesGraniteRapids },
   // Knights Landing processor.
   { {"knl"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL },
   // Knights Mill processor.

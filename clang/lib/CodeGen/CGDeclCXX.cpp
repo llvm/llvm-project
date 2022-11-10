@@ -740,7 +740,7 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
   CodeGenFunction(*this).GenerateCXXGlobalInitFunc(
       Fn, ModuleInits, ConstantAddress(Guard, Int8Ty, GuardAlign));
   // We allow for the case that a module object is added to  a linked binary
-  // without a specific call to the the initializer.  This also ensure that
+  // without a specific call to the initializer.  This also ensure that
   // implementation partition initializers are called when the partition
   // is not imported as an interface.
   AddGlobalCtor(Fn);
