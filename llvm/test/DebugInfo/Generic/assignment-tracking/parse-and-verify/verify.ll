@@ -6,6 +6,13 @@
 ;;
 ;; Checks for this one are inline.
 
+define dso_local void @fun2() !dbg !15 {
+  ;; DIAssignID copied here from @fun() where it is used by intrinsics.
+  ; CHECK: dbg.assign not in same function as inst
+  %x = alloca i32, align 4, !DIAssignID !14
+  ret void
+}
+
 define dso_local void @fun() !dbg !7 {
 entry:
   %a = alloca i32, align 4, !DIAssignID !14
@@ -50,3 +57,4 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !11 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 !13 = !DILocation(line: 1, column: 1, scope: !7)
 !14 = distinct !DIAssignID()
+!15 = distinct !DISubprogram(name: "fun2", scope: !1, file: !1, line: 1, type: !8, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)

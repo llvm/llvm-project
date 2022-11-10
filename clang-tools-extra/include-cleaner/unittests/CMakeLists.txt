@@ -19,6 +19,7 @@ clang_target_link_libraries(ClangIncludeCleanerTests
   clangAST
   clangBasic
   clangFrontend
+  clangLex
   clangToolingInclusionsStdlib
   )
 

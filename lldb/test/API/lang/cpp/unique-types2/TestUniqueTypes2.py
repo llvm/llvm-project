@@ -7,7 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
-class UniqueTypesTestCase(TestBase):
+class UniqueTypesTestCase2(TestBase):
     def do_test(self, debug_flags):
         """Test that we only display the requested Foo instantiation, not all Foo instantiations."""
         self.build(dictionary=debug_flags)

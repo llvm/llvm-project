@@ -1815,6 +1815,10 @@ void Fortran::lower::genOpenMPDeclarativeConstruct(
             TODO(converter.getCurrentLocation(),
                  "OpenMPDeclareTargetConstruct");
           },
+          [&](const Fortran::parser::OpenMPRequiresConstruct
+                  &requiresConstruct) {
+            TODO(converter.getCurrentLocation(), "OpenMPRequiresConstruct");
+          },
           [&](const Fortran::parser::OpenMPThreadprivate &threadprivate) {
             // The directive is lowered when instantiating the variable to
             // support the case of threadprivate variable declared in module.

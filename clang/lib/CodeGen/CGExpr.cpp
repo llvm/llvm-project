@@ -5242,6 +5242,15 @@ llvm::Value *CodeGenFunction::EmitIvarOffset(const ObjCInterfaceDecl *Interface,
   return CGM.getObjCRuntime().EmitIvarOffset(*this, Interface, Ivar);
 }
 
+llvm::Value *
+CodeGenFunction::EmitIvarOffsetAsPointerDiff(const ObjCInterfaceDecl *Interface,
+                                             const ObjCIvarDecl *Ivar) {
+  llvm::Value *OffsetValue = EmitIvarOffset(Interface, Ivar);
+  QualType PointerDiffType = getContext().getPointerDiffType();
+  return Builder.CreateZExtOrTrunc(OffsetValue,
+                                   getTypes().ConvertType(PointerDiffType));
+}
+
 LValue CodeGenFunction::EmitLValueForIvar(QualType ObjectTy,
                                           llvm::Value *BaseValue,
                                           const ObjCIvarDecl *Ivar,

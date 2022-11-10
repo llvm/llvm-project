@@ -47,8 +47,8 @@ build:generic_clang --repo_env=CC=clang
 # C++17 standard version is required.
 build:generic_clang --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
 
-# Use `-Wall` and `-Werror` for Clang.
-build:generic_clang --copt=-Wall --copt=-Werror --host_copt=-Wall --host_copt=-Werror
+# Use `-Wall` for Clang.
+build:generic_clang --copt=-Wall --host_copt=-Wall
 
 # The Clang available on MacOS has a warning that isn't clean on MLIR code. The
 # warning doesn't show up with more recent Clangs, so just disable for now.
@@ -87,9 +87,6 @@ build:generic_gcc --copt=-Wno-comment --host_copt=-Wno-comment
 build:generic_gcc --cxxopt=-Wno-class-memaccess --host_cxxopt=-Wno-class-memaccess
 build:generic_gcc --copt=-Wno-maybe-uninitialized --host_copt=-Wno-maybe-uninitialized
 build:generic_gcc --copt=-Wno-misleading-indentation --host_copt=-Wno-misleading-indentation
-
-# Use `-Werror` for GCC to make sure warnings don't slip past.
-build:generic_gcc --copt=-Werror --host_copt=-Werror
 
 ###############################################################################
 # Generic Windows flags common to both MSVC and Clang.

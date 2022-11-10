@@ -134,22 +134,19 @@ bool ProvenanceAnalysis::relatedCheck(const Value *A, const Value *B) {
   bool BIsIdentified = IsObjCIdentifiedObject(B);
 
   // An ObjC-Identified object can't alias a load if it is never locally stored.
-  if (AIsIdentified) {
-    // Check for an obvious escape.
-    if (isa<LoadInst>(B))
-      return IsStoredObjCPointer(A);
-    if (BIsIdentified) {
-      // Check for an obvious escape.
-      if (isa<LoadInst>(A))
-        return IsStoredObjCPointer(B);
-      // Both pointers are identified and escapes aren't an evident problem.
-      return false;
-    }
-  } else if (BIsIdentified) {
-    // Check for an obvious escape.
-    if (isa<LoadInst>(A))
-      return IsStoredObjCPointer(B);
-  }
+
+  // Check for an obvious escape.
+  if ((AIsIdentified && isa<LoadInst>(B) && !IsStoredObjCPointer(A)) ||
+      (BIsIdentified && isa<LoadInst>(A) && !IsStoredObjCPointer(B)))
+    return false;
+
+  if ((AIsIdentified && isa<LoadInst>(B)) ||
+      (BIsIdentified && isa<LoadInst>(A)))
+    return true;
+
+  // Both pointers are identified and escapes aren't an evident problem.
+  if (AIsIdentified && BIsIdentified && !isa<LoadInst>(A) && !isa<LoadInst>(B))
+    return false;
 
    // Special handling for PHI and Select.
   if (const PHINode *PN = dyn_cast<PHINode>(A))

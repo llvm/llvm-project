@@ -1243,7 +1243,6 @@ kmp_set_disp_num_buffers                    890
     %ifdef IS_IA_ARCH
     __kmpc_atomic_float10_max              2139
     __kmpc_atomic_float10_min              2140
-    %endif
     __kmpc_atomic_float10_max_cpt          2141
     __kmpc_atomic_float10_min_cpt          2142
 
@@ -1263,6 +1262,7 @@ kmp_set_disp_num_buffers                    890
     __kmpc_atomic_val_2_cas_cpt            2156
     __kmpc_atomic_val_4_cas_cpt            2157
     __kmpc_atomic_val_8_cas_cpt            2158
+    %endif
 
 %endif
 

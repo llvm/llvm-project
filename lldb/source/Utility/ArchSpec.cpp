@@ -16,6 +16,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/ARMTargetParser.h"
 #include "llvm/Support/Compiler.h"
 
 using namespace lldb;
@@ -638,7 +639,7 @@ std::string ArchSpec::GetClangTargetCPU() const {
   }
 
   if (GetTriple().isARM())
-    cpu = GetTriple().getARMCPUForArch("").str();
+    cpu = llvm::ARM::getARMCPUForArch(GetTriple(), "").str();
   return cpu;
 }
 

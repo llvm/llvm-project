@@ -8,6 +8,10 @@
 // RUN: %clang_cl -gno-codeview-command-line --target=i686-windows-msvc /c /Z7 /Fo%t.obj -- %s
 // RUN: llvm-pdbutil dump --types %t.obj | FileCheck %s --check-prefix DISABLE
 
+// -fmessage-length shouldn't be included in the command line since it breaks reproducibility
+// RUN: %clang_cl -gcodeview-command-line --target=i686-windows-msvc -Xclang -fmessage-length=100 /c /Z7 /Fo%t.obj -- %s
+// RUN: llvm-pdbutil dump --types %t.obj | FileCheck %s --check-prefix MESSAGELEN
+
 int main(void) { return 42; }
 
 // CHECK:                       Types (.debug$T)
@@ -36,3 +40,8 @@ int main(void) { return 42; }
 // DISABLE-NEXT:          0x{{.+}}: `{{.*}}`
 // DISABLE-NEXT:          0x{{.+}}: ``
 // DISABLE-NEXT:          <no type>: ``
+
+// MESSAGELEN:                       Types (.debug$T)
+// MESSAGELEN: ============================================================
+// MESSAGELEN: 0x{{.+}} | LF_BUILDINFO [size = {{.+}}]
+// MESSAGELEN-NOT: -fmessage-length

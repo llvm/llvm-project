@@ -1167,6 +1167,10 @@ def ZZ_d  : RegisterOperand<ZPR2, "printTypedVectorList<0,'d'>"> {
   let ParserMatchClass = ZPRVectorList<64, 2>;
 }
 
+def ZZ_q  : RegisterOperand<ZPR2, "printTypedVectorList<0,'q'>"> {
+  let ParserMatchClass = ZPRVectorList<128, 2>;
+}
+
 def ZZZ_b  : RegisterOperand<ZPR3, "printTypedVectorList<0,'b'>"> {
   let ParserMatchClass = ZPRVectorList<8, 3>;
 }
@@ -1183,6 +1187,10 @@ def ZZZ_d  : RegisterOperand<ZPR3, "printTypedVectorList<0,'d'>"> {
   let ParserMatchClass = ZPRVectorList<64, 3>;
 }
 
+def ZZZ_q  : RegisterOperand<ZPR3, "printTypedVectorList<0,'q'>"> {
+  let ParserMatchClass = ZPRVectorList<128, 3>;
+}
+
 def ZZZZ_b : RegisterOperand<ZPR4, "printTypedVectorList<0,'b'>"> {
   let ParserMatchClass = ZPRVectorList<8, 4>;
 }
@@ -1197,6 +1205,10 @@ def ZZZZ_s : RegisterOperand<ZPR4, "printTypedVectorList<0,'s'>"> {
 
 def ZZZZ_d : RegisterOperand<ZPR4, "printTypedVectorList<0,'d'>"> {
   let ParserMatchClass = ZPRVectorList<64, 4>;
+}
+
+def ZZZZ_q : RegisterOperand<ZPR4, "printTypedVectorList<0,'q'>"> {
+  let ParserMatchClass = ZPRVectorList<128, 4>;
 }
 
 // SME2 multiple-of-2 or 4 multi-vector operands
@@ -1542,6 +1554,8 @@ class MatrixOperand<RegisterClass RC, int EltSize> : RegisterOperand<RC> {
 
 def MatrixOp : MatrixOperand<MPR, 0>;
 // SME2 register operands and classes
+def MatrixOp8 : MatrixOperand<MPR, 8>;
+def MatrixOp16 : MatrixOperand<MPR, 16>;
 def MatrixOp32 : MatrixOperand<MPR, 32>;
 def MatrixOp64 : MatrixOperand<MPR, 64>;
 

@@ -75,6 +75,10 @@ set(hlsl_files
   ${hlsl_subdir_files}
   )
 
+set(loongarch_files
+  larchintrin.h
+  )
+
 set(mips_msa_files
   msa.h
   )
@@ -233,6 +237,7 @@ set(files
   ${cuda_files}
   ${hexagon_files}
   ${hip_files}
+  ${loongarch_files}
   ${mips_msa_files}
   ${opencl_files}
   ${ppc_files}
@@ -412,6 +417,7 @@ add_header_target("aarch64-resource-headers" "${aarch64_only_files};${aarch64_on
 add_header_target("cuda-resource-headers" "${cuda_files};${cuda_wrapper_files}")
 add_header_target("hexagon-resource-headers" "${hexagon_files}")
 add_header_target("hip-resource-headers" "${hip_files}")
+add_header_target("loongarch-resource-headers" "${loongarch_files}")
 add_header_target("mips-resource-headers" "${mips_msa_files}")
 add_header_target("ppc-resource-headers" "${ppc_files};${ppc_wrapper_files}")
 add_header_target("ppc-htm-resource-headers" "${ppc_htm_files}")
@@ -501,6 +507,12 @@ install(
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT hip-resource-headers)
+
+install(
+  FILES ${loongarch_files}
+  DESTINATION ${header_install_dir}
+  EXCLUDE_FROM_ALL
+  COMPONENT loongarch-resource-headers)
 
 install(
   FILES ${mips_msa_files}

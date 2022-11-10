@@ -2618,7 +2618,7 @@ void X86_64TargetCodeGenInfo::checkFunctionCallABI(
   llvm::StringMap<bool> CalleeMap;
   unsigned ArgIndex = 0;
 
-  // We need to loop through the actual call arguments rather than the the
+  // We need to loop through the actual call arguments rather than the
   // function's parameters, in case this variadic.
   for (const CallArg &Arg : Args) {
     // The "avx" feature changes how vectors >128 in size are passed. "avx512f"
@@ -10305,7 +10305,7 @@ bool TypeStringCache::removeIncomplete(const IdentifierInfo *ID) {
 void TypeStringCache::addIfComplete(const IdentifierInfo *ID, StringRef Str,
                                     bool IsRecursive) {
   if (!ID || IncompleteUsedCount)
-    return; // No key or it is is an incomplete sub-type so don't add.
+    return; // No key or it is an incomplete sub-type so don't add.
   Entry &E = Map[ID];
   if (IsRecursive && !E.Str.empty()) {
     assert(E.State==Recursive && E.Str.size() == Str.size() &&
