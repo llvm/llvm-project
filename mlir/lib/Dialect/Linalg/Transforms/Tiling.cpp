@@ -215,7 +215,7 @@ static OpFoldResult buildMin(OpBuilder &b, Location loc,
 /// tiling is specified by the number of tiles/threads `numThreads` and the
 /// optional nominal tile size `nominalTileSizes`. If `nominalTilSizes` is
 /// not specified, then  it is derived from `numThreads` as `ceilDiv(dimSize[i],
-/// numThreads[i])`. If non-empty, the `threadDimMapping` is added as an
+/// numThreads[i])`. If non-empty, the `mapping` is added as an
 /// attribute to the resulting `scf.foreach_thread`. A zero tile sizes indicate
 /// that the dimension is not tiled, and can be thought of as tiling by the full
 /// size of data.
@@ -226,7 +226,7 @@ static OpFoldResult buildMin(OpBuilder &b, Location loc,
 static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
     RewriterBase &b, TilingInterface op, ArrayRef<OpFoldResult> numThreads,
     Optional<ArrayRef<OpFoldResult>> nominalTileSizes,
-    ArrayRef<int64_t> threadDimMapping, bool omitTileOffsetBoundsCheck) {
+    Optional<ArrayAttr> mapping, bool omitTileOffsetBoundsCheck) {
   Location loc = op->getLoc();
   OpBuilder::InsertionGuard g(b);
   SmallVector<Range> loopRanges = op.getIterationDomain(b);
@@ -256,7 +256,7 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
   // version because we require the use of RewriterBase in the body, so we
   // manually move the insertion point to the body below.
   scf::ForeachThreadOp foreachThreadOp = b.create<scf::ForeachThreadOp>(
-      loc, dest, ValueRange(materializedNonZeroNumThreads), threadDimMapping);
+      loc, dest, ValueRange(materializedNonZeroNumThreads), mapping);
 
   // Fill out the ForeachThreadOp body.
   b.setInsertionPointToStart(foreachThreadOp.getBody(0));
@@ -363,16 +363,16 @@ static FailureOr<ForeachThreadTilingResult> tileToForeachThreadOpImpl(
 FailureOr<ForeachThreadTilingResult>
 linalg::tileToForeachThreadOp(RewriterBase &b, TilingInterface op,
                               ArrayRef<OpFoldResult> numThreads,
-                              ArrayRef<int64_t> threadDimMapping) {
+                              Optional<ArrayAttr> mapping) {
   return tileToForeachThreadOpImpl(b, op, numThreads, /*nominalTileSizes=*/None,
-                                   threadDimMapping,
+                                   mapping,
                                    /*omitTileOffsetBoundsCheck=*/false);
 }
 
 FailureOr<ForeachThreadTilingResult>
-linalg::tileToForeachThreadOpUsingTileSizes(
-    RewriterBase &b, TilingInterface op, ArrayRef<OpFoldResult> tileSizes,
-    ArrayRef<int64_t> threadDimMapping) {
+linalg::tileToForeachThreadOpUsingTileSizes(RewriterBase &b, TilingInterface op,
+                                            ArrayRef<OpFoldResult> tileSizes,
+                                            Optional<ArrayAttr> mapping) {
   SmallVector<Range> loopRanges = op.getIterationDomain(b);
   unsigned nLoops = loopRanges.size();
   SmallVector<OpFoldResult> numThreads;
@@ -388,8 +388,7 @@ linalg::tileToForeachThreadOpUsingTileSizes(
     numThreads.push_back(numTiles);
   }
   return tileToForeachThreadOpImpl(b, op, numThreads,
-                                   /*nominalTileSizes=*/tileSizes,
-                                   threadDimMapping,
+                                   /*nominalTileSizes=*/tileSizes, mapping,
                                    /*omitTileOffsetBoundsCheck=*/true);
 }
 

@@ -166,8 +166,20 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapForeachToBlocksImpl(
 
   // Step 0. Outline the compute workload region and set up the workload
   // operands.
+  SmallVector<int64_t> mapping;
+  if (!foreachThreadOp.getMapping().has_value())
+    return transformOp.emitSilenceableError() << "mapping must be present";
+  for (DeviceMappingAttrInterface map : *foreachThreadOp.getMapping()) {
+    if (auto blockMap = map.dyn_cast<GPUBlockMappingAttr>()) {
+      mapping.push_back((int64_t)blockMap.getBlock());
+    } else {
+      return transformOp.emitSilenceableError()
+             << "mapping must be #gpu.block<x/y/z/>";
+    }
+  }
+
   FailureOr<SmallVector<OpFoldResult>> potentialGridDim =
-      foreachThreadOp.getPermutedNumThreads(rewriter);
+      foreachThreadOp.getPermutedNumThreads(rewriter, mapping);
 
   if (failed(potentialGridDim) ||
       llvm::any_of(*potentialGridDim, [](OpFoldResult ofr) {
@@ -193,7 +205,7 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapForeachToBlocksImpl(
 
   // Step 2. RAUW thread indices to thread ops.
   SmallVector<Value> threadIndices =
-      *foreachThreadOp.getPermutedThreadIndices();
+      *foreachThreadOp.getPermutedThreadIndices(mapping);
   assert(blockOps.size() == 3 && "3 block id ops are required");
   for (auto [blockIdx, blockOp] : llvm::zip(threadIndices, blockOps)) {
     Value val = blockIdx;
@@ -230,7 +242,8 @@ DiagnosedSilenceableFailure mlir::transform::gpu::findTopLevelForeachThreadOp(
 }
 
 /// This is a helper that is only used in
-/// rewriteTopLevelForeachThreadToGpuBlocks. It generates GPU dialects block_id.
+/// rewriteTopLevelForeachThreadToGpuBlocks. It generates GPU dialects
+/// block_id.
 static void generateGpuBlockIds(RewriterBase &rewriter,
                                 scf::ForeachThreadOp foreachOp,
                                 SmallVectorImpl<Value> &blockOps) {
@@ -335,7 +348,18 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
     return failureHelper(
         "scf.foreach_thread with rank > 3 does not lower to gpu.thread_id");
 
-  auto potentialBlockDim = foreachThreadOp.getPermutedNumThreads(rewriter);
+  SmallVector<int64_t> mapping;
+  if (!foreachThreadOp.getMapping().has_value())
+    return failureHelper("mapping must be present");
+  for (DeviceMappingAttrInterface map : *foreachThreadOp.getMapping()) {
+    if (auto threadMap = map.dyn_cast<GPUThreadMappingAttr>()) {
+      mapping.push_back((int64_t)threadMap.getThread());
+    } else {
+      return failureHelper("mapping must be #gpu.thread<x/y/z/>");
+    }
+  }
+  FailureOr<SmallVector<OpFoldResult>> potentialBlockDim =
+      foreachThreadOp.getPermutedNumThreads(rewriter, mapping);
   if (failed(potentialBlockDim) ||
       llvm::any_of(*potentialBlockDim, [](OpFoldResult ofr) {
         return !getConstantIntValue(ofr).has_value();
@@ -365,8 +389,8 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
     if (blockDim > globalBlockDim) {
       return failureHelper(
           "The requested GPU threads are fewer than the number of loop trip "
-          "counts. Try to tile scf.foreach_thread before mapping or set small "
-          "blockDim.");
+          "counts. Try to tile scf.foreach_thread before mapping or set "
+          "small blockDim.");
     }
     if (blockDim == globalBlockDim)
       continue;
@@ -400,7 +424,7 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
 
   // Step 4. RAUW thread indices to thread ops.
   SmallVector<Value> threadIndices =
-      *foreachThreadOp.getPermutedThreadIndices();
+      *foreachThreadOp.getPermutedThreadIndices(mapping);
   for (auto [threadIdx, threadOp] : llvm::zip(threadIndices, threadOps)) {
     Value val = threadIdx;
     Value op = threadOp;

@@ -217,7 +217,7 @@ struct RewriteExtractSliceFromCollapseShapeUsingScfForeach
     Location loc = op.getLoc();
     auto foreachOp = rewriter.create<scf::ForeachThreadOp>(
         loc, /*outputs=*/dest, /*numThreads=*/helper.getIterationSpaceSizes(),
-        /*threadDimMapping=*/ArrayRef<int64_t>{},
+        /*mapping=*/ArrayRef<Attribute>{},
         [&](OpBuilder &nestedBuilder, Location loc, ValueRange regionArgs) {
           unsigned numThreadIdRegionArgs =
               helper.getIterationSpaceSizes().size();
