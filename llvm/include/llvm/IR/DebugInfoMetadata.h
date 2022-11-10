@@ -215,6 +215,7 @@ public:
     case DIImportedEntityKind:
     case DIModuleKind:
     case DIGenericSubrangeKind:
+    case DIAssignIDKind:
       return true;
     }
   }
@@ -292,6 +293,41 @@ public:
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == GenericDINodeKind;
+  }
+};
+
+/// Assignment ID.
+/// Used to link stores (as an attachment) and dbg.assigns (as an operand).
+/// DIAssignID metadata is never uniqued as we compare instances using
+/// referential equality (the instance/address is the ID).
+class DIAssignID : public MDNode {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  DIAssignID(LLVMContext &C, StorageType Storage)
+      : MDNode(C, DIAssignIDKind, Storage, None) {}
+
+  ~DIAssignID() { dropAllReferences(); }
+
+  static DIAssignID *getImpl(LLVMContext &Context, StorageType Storage,
+                             bool ShouldCreate = true);
+
+  TempDIAssignID cloneImpl() const { return getTemporary(getContext()); }
+
+public:
+  // This node has no operands to replace.
+  void replaceOperandWith(unsigned I, Metadata *New) = delete;
+
+  static DIAssignID *getDistinct(LLVMContext &Context) {
+    return getImpl(Context, Distinct);
+  }
+  static TempDIAssignID getTemporary(LLVMContext &Context) {
+    return TempDIAssignID(getImpl(Context, Temporary));
+  }
+  // NOTE: Do not define get(LLVMContext&) - see class comment.
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DIAssignIDKind;
   }
 };
 

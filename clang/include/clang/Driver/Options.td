@@ -1251,6 +1251,13 @@ def fprofile_sample_accurate : Flag<["-"], "fprofile-sample-accurate">,
                as cold. Otherwise, treat callsites without profile samples as if
                we have no profile}]>,
    MarshallingInfoFlag<CodeGenOpts<"ProfileSampleAccurate">>;
+def fsample_profile_use_profi : Flag<["-"], "fsample-profile-use-profi">,
+    Flags<[NoXarchOption, CC1Option]>, Group<f_Group>,
+    HelpText<"Use profi to infer block and edge counts">,
+    DocBrief<[{Infer block and edge counts. If the profiles have errors or missing
+               blocks caused by sampling, profile inference (profi) can convert
+               basic block counts to branch probabilites to fix them by extended
+               and re-engineered classic MCMF (min-cost max-flow) approach.}]>;
 def fno_profile_sample_accurate : Flag<["-"], "fno-profile-sample-accurate">,
   Group<f_Group>, Flags<[NoXarchOption]>;
 def fauto_profile : Flag<["-"], "fauto-profile">, Group<f_Group>,

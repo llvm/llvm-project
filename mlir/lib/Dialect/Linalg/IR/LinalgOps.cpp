@@ -836,8 +836,8 @@ ParseResult GenericOp::parse(OpAsmParser &parser, OperationState &result) {
 static void getGenericEffectsImpl(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects,
-    ValueRange results, OpOperandVector inputOperands,
-    OpOperandVector outputOperands) {
+    ValueRange results, const OpOperandVector &inputOperands,
+    const OpOperandVector &outputOperands) {
   for (auto *operand : inputOperands) {
     if (!operand->get().getType().isa<MemRefType>())
       continue;
@@ -1852,7 +1852,7 @@ LogicalResult BroadcastOp::verify() {
   auto inputShape = inputType.getShape();
   auto initShape = initType.getShape();
 
-  if (inputRank != dimensionsRef.size())
+  if ((size_t)inputRank != dimensionsRef.size())
     return emitOpError()
            << "input rank does match the number of dimensions. expected: "
            << inputRank << ", got: " << dimensionsRef.size();

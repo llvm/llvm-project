@@ -1031,6 +1031,7 @@ module std [system] {
       module allocation_guard                { private header "__memory/allocation_guard.h" }
       module allocator                       { private header "__memory/allocator.h" }
       module allocator_arg_t                 { private header "__memory/allocator_arg_t.h" }
+      module allocator_destructor            { private header "__memory/allocator_destructor.h" }
       module allocator_traits                { private header "__memory/allocator_traits.h" }
       module assume_aligned                  { private header "__memory/assume_aligned.h" }
       module auto_ptr                        { private header "__memory/auto_ptr.h" }

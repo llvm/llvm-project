@@ -294,7 +294,28 @@ int File::seek(long offset, int whence) {
   // Reset the eof flag as a seek might move the file positon to some place
   // readable.
   eof = false;
-  return platform_seek(this, offset, whence);
+  long platform_pos = platform_seek(this, offset, whence);
+  if (platform_pos >= 0)
+    return 0;
+  else
+    return -1;
+}
+
+long File::tell() {
+  FileLock lock(this);
+  long platform_offset;
+  if (eof)
+    platform_offset = platform_seek(this, 0, SEEK_END);
+  else
+    platform_offset = platform_seek(this, 0, SEEK_CUR);
+  if (platform_offset < 0)
+    return -1;
+  if (prev_op == FileOp::READ)
+    return platform_offset - (read_limit - pos);
+  else if (prev_op == FileOp::WRITE)
+    return platform_offset + pos;
+  else
+    return platform_offset;
 }
 
 int File::flush_unlocked() {

@@ -559,6 +559,7 @@ void SymbolGraphSerializer::serializeRelationship(RelationshipKind Kind,
   Object Relationship;
   Relationship["source"] = Source.USR;
   Relationship["target"] = Target.USR;
+  Relationship["targetFallback"] = Target.Name;
   Relationship["kind"] = getRelationshipString(Kind);
 
   Relationships.emplace_back(std::move(Relationship));

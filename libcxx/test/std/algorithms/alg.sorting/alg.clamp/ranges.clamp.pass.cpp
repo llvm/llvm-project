@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <concepts>
 #include <functional>
 #include <utility>
 

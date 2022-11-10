@@ -1,4 +1,4 @@
-.. _clangtidy_rules:
+.. _clang_tidy_checks:
 
 LLVM libc clang-tidy checks
 ===========================

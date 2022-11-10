@@ -74,7 +74,7 @@ static OpFoldResult foldBinaryOpUnchecked(
     return {};
   assert(result->trunc(32) ==
          calculate(lhs.getValue().trunc(32), rhs.getValue().trunc(32)));
-  return IntegerAttr::get(IndexType::get(lhs.getContext()), std::move(*result));
+  return IntegerAttr::get(IndexType::get(lhs.getContext()), *result);
 }
 
 /// Fold an index operation only if the truncated 64-bit result matches the
@@ -107,8 +107,7 @@ static OpFoldResult foldBinaryOpChecked(
   if (result64->trunc(32) != *result32)
     return {};
   // The operation can be folded for these particular operands.
-  return IntegerAttr::get(IndexType::get(lhs.getContext()),
-                          std::move(*result64));
+  return IntegerAttr::get(IndexType::get(lhs.getContext()), *result64);
 }
 
 //===----------------------------------------------------------------------===//

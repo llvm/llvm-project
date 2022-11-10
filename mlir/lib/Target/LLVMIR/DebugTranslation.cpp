@@ -216,7 +216,7 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
           .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
                 DIDerivedTypeAttr, DIFileAttr, DILexicalBlockAttr,
                 DILexicalBlockFileAttr, DILocalVariableAttr, DISubprogramAttr,
-                DISubroutineTypeAttr>(
+                DISubrangeAttr, DISubroutineTypeAttr>(
               [&](auto attr) { return translateImpl(attr); });
   attrToNode.insert({attr, node});
   return node;

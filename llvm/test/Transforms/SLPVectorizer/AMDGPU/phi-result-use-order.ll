@@ -63,8 +63,8 @@ define <4 x half> @phis_reverse(i1 %cmp1, <4 x half> %in1, <4 x half> %in2)  {
 ; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x half> [[IN1]], i64 1
 ; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x half> [[IN1]], i64 2
 ; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x half> [[IN1]], i64 3
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x half> poison, half [[A0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x half> [[TMP0]], half [[A1]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x half> poison, half [[A1]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x half> [[TMP0]], half [[A0]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x half> poison, half [[A2]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x half> [[TMP2]], half [[A3]], i32 1
 ; CHECK-NEXT:    br i1 [[CMP:%.*]], label [[BB1:%.*]], label [[BB0:%.*]]
@@ -73,15 +73,15 @@ define <4 x half> @phis_reverse(i1 %cmp1, <4 x half> %in1, <4 x half> %in2)  {
 ; CHECK-NEXT:    [[B1:%.*]] = extractelement <4 x half> [[IN2]], i64 1
 ; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x half> [[IN2]], i64 2
 ; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x half> [[IN2]], i64 3
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x half> poison, half [[B0]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x half> [[TMP4]], half [[B1]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x half> poison, half [[B1]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x half> [[TMP4]], half [[B0]], i32 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x half> poison, half [[B2]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x half> [[TMP6]], half [[B3]], i32 1
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x half> [ [[TMP1]], %entry ], [ [[TMP5]], %bb0 ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x half> [ [[TMP3]], %entry ], [ [[TMP7]], %bb0 ]
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x half> [[TMP8]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x half> [[TMP8]], <2 x half> poison, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x half> [[TMP9]], <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x half> [[TMP10]], <4 x half> [[TMP11]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    ret <4 x half> [[TMP12]]

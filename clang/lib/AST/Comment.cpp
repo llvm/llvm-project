@@ -29,7 +29,7 @@ namespace comments {
 #undef ABSTRACT_COMMENT
 
 // DeclInfo is also allocated with a BumpPtrAllocator.
-static_assert(std::is_trivially_destructible<DeclInfo>::value,
+static_assert(std::is_trivially_destructible_v<DeclInfo>,
               "DeclInfo should be trivially destructible!");
 
 const char *Comment::getCommentKindName() const {

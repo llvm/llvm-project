@@ -1301,7 +1301,7 @@ def CVTSD2SSrm  : I<0x5A, MRMSrcMem, (outs FR32:$dst), (ins f64mem:$src),
                     "cvtsd2ss\t{$src, $dst|$dst, $src}",
                     [(set FR32:$dst, (any_fpround (loadf64 addr:$src)))]>,
                     XD, Requires<[UseSSE2, OptForSize]>,
-                    Sched<[WriteCvtSD2SS.Folded]>, SIMD_EXC;
+                    Sched<[WriteCvtSD2SS.Folded, WriteCvtSD2SS.ReadAfterFold]>, SIMD_EXC;
 }
 
 let Uses = [MXCSR], mayRaiseFPException = 1, ExeDomain = SSEPackedSingle in {
@@ -1367,7 +1367,7 @@ def CVTSS2SDrm : I<0x5A, MRMSrcMem, (outs FR64:$dst), (ins f32mem:$src),
                    "cvtss2sd\t{$src, $dst|$dst, $src}",
                    [(set FR64:$dst, (any_fpextend (loadf32 addr:$src)))]>,
                    XS, Requires<[UseSSE2, OptForSize]>,
-                   Sched<[WriteCvtSS2SD.Folded]>, SIMD_EXC;
+                   Sched<[WriteCvtSS2SD.Folded, WriteCvtSS2SD.ReadAfterFold]>, SIMD_EXC;
 } // isCodeGenOnly = 1
 
 let hasSideEffects = 0, Uses = [MXCSR], mayRaiseFPException = 1,

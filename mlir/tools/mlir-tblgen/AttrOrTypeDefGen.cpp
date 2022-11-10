@@ -457,6 +457,13 @@ void DefGen::emitKeyType() {
                         [&](auto &param) { os << param.getCppType(); });
   os << '>';
   storageCls->declare<UsingDeclaration>("KeyTy", std::move(os.str()));
+
+  // Add a method to construct the key type from the storage.
+  Method *m = storageCls->addConstMethod<Method::Inline>("KeyTy", "getAsKey");
+  m->body().indent() << "return KeyTy(";
+  llvm::interleaveComma(params, m->body().indent(),
+                        [&](auto &param) { m->body() << param.getName(); });
+  m->body() << ");";
 }
 
 void DefGen::emitEquals() {
