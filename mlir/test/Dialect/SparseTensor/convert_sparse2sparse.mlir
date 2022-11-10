@@ -86,11 +86,9 @@ func.func @sparse_convert_1d_ss(%arg0: tensor<?xf32, #SparseVector64>) -> tensor
 // CHECK-RWT-LABEL: func.func @sparse_convert(
 //  CHECK-RWT-SAME: %[[A:.*]]: tensor<?xf32, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ], pointerBitWidth = 64, indexBitWidth = 64 }>>)
 //  CHECK-RWT-DAG:  %[[C0:.*]] = arith.constant 0 : index
-//  CHECK-RWT-DAG:  %[[C1:.*]] = arith.constant 1 : index
 //      CHECK-RWT:  %[[D:.*]] = tensor.dim %[[A]], %[[C0]]
 //      CHECK-RWT:  %[[I0:.*]] = sparse_tensor.indices %[[A]] {dimension = 0 : index}
-//      CHECK-RWT:  %[[NNZr:.*]] = memref.load %[[I0]]{{\[}}%[[C1]]] : memref<?xi64>
-//      CHECK-RWT:  %[[NNZ:.*]] = arith.index_cast %[[NNZr]] : i64 to index
+//      CHECK-RWT:  %[[NNZ:.*]] = sparse_tensor.number_of_entries %[[A]]
 //      CHECK-RWT:  %[[V:.*]] = sparse_tensor.values %[[A]]
 //      CHECK-RWT:  sparse_tensor.sort %[[NNZ]], %[[I0]] jointly %[[V]]
 //      CHECK-RWT:  %[[DST:.*]] = bufferization.alloc_tensor(%[[D]])
