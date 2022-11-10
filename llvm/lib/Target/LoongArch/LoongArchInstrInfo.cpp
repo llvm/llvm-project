@@ -13,6 +13,8 @@
 #include "LoongArchInstrInfo.h"
 #include "LoongArch.h"
 #include "LoongArchMachineFunctionInfo.h"
+#include "LoongArchRegisterInfo.h"
+#include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "MCTargetDesc/LoongArchMatInt.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 
@@ -34,6 +36,21 @@ void LoongArchInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     BuildMI(MBB, MBBI, DL, get(LoongArch::OR), DstReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
         .addReg(LoongArch::R0);
+    return;
+  }
+
+  // GPR->CFR copy.
+  if (LoongArch::CFRRegClass.contains(DstReg) &&
+      LoongArch::GPRRegClass.contains(SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(LoongArch::MOVGR2CF), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+  // CFR->GPR copy.
+  if (LoongArch::GPRRegClass.contains(DstReg) &&
+      LoongArch::CFRRegClass.contains(SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(LoongArch::MOVCF2GR), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
 
@@ -71,6 +88,8 @@ void LoongArchInstrInfo::storeRegToStackSlot(
     Opcode = LoongArch::FST_S;
   else if (LoongArch::FPR64RegClass.hasSubClassEq(RC))
     Opcode = LoongArch::FST_D;
+  else if (LoongArch::CFRRegClass.hasSubClassEq(RC))
+    Opcode = LoongArch::PseudoST_CFR;
   else
     llvm_unreachable("Can't store this register to stack slot");
 
@@ -104,6 +123,8 @@ void LoongArchInstrInfo::loadRegFromStackSlot(
     Opcode = LoongArch::FLD_S;
   else if (LoongArch::FPR64RegClass.hasSubClassEq(RC))
     Opcode = LoongArch::FLD_D;
+  else if (LoongArch::CFRRegClass.hasSubClassEq(RC))
+    Opcode = LoongArch::PseudoLD_CFR;
   else
     llvm_unreachable("Can't load this register from stack slot");
 
