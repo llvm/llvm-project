@@ -492,9 +492,9 @@ define float @convert_u32_to_float(i32 %a) nounwind {
 ; LA32F-NEXT:    ffint.s.w $fa0, $fa0
 ; LA32F-NEXT:    fadd.s $fa0, $fa0, $fa0
 ; LA32F-NEXT:    slti $a1, $a0, 0
-; LA32F-NEXT:    movgr2cf $fcc0, $a1
 ; LA32F-NEXT:    movgr2fr.w $fa1, $a0
 ; LA32F-NEXT:    ffint.s.w $fa1, $fa1
+; LA32F-NEXT:    movgr2cf $fcc0, $a1
 ; LA32F-NEXT:    fsel $fa0, $fa1, $fa0, $fcc0
 ; LA32F-NEXT:    ret
 ;
@@ -570,9 +570,9 @@ define float @convert_u64_to_float(i64 %a) nounwind {
 ; LA64D-NEXT:    ffint.s.l $fa0, $fa0
 ; LA64D-NEXT:    fadd.s $fa0, $fa0, $fa0
 ; LA64D-NEXT:    slti $a1, $a0, 0
-; LA64D-NEXT:    movgr2cf $fcc0, $a1
 ; LA64D-NEXT:    movgr2fr.d $fa1, $a0
 ; LA64D-NEXT:    ffint.s.l $fa1, $fa1
+; LA64D-NEXT:    movgr2cf $fcc0, $a1
 ; LA64D-NEXT:    fsel $fa0, $fa1, $fa0, $fcc0
 ; LA64D-NEXT:    ret
   %1 = uitofp i64 %a to float
