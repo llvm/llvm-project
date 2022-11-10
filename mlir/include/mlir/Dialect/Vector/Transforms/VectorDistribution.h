@@ -67,11 +67,17 @@ void populateDistributeTransferWriteOpPatterns(
 /// region.
 void moveScalarUniformCode(WarpExecuteOnLane0Op op);
 
+/// Lambda signature to compute a warp shuffle of a given value of a given lane
+/// within a given warp size.
+using WarpShuffleFromIdxFn =
+    std::function<Value(Location, OpBuilder &b, Value, Value, int64_t)>;
+
 /// Collect patterns to propagate warp distribution. `distributionMapFn` is used
 /// to decide how a value should be distributed when this cannot be inferred
 /// from its uses.
 void populatePropagateWarpVectorDistributionPatterns(
     RewritePatternSet &pattern, const DistributionMapFn &distributionMapFn,
+    const WarpShuffleFromIdxFn &warpShuffleFromIdxFn,
     PatternBenefit benefit = 1);
 
 /// Lambda signature to compute a reduction of a distributed value for the given
