@@ -2236,8 +2236,8 @@ static void populateMap(LinalgOp linalgOp, MutableArrayRef<OpOperand> operands,
     if (parentOp) {
       if (auto castOp = dyn_cast<tensor::CastOp>(parentOp)) {
         Value castSource = castOp.getSource();
-        auto castSourceType = castSource.getType().cast<RankedTensorType>();
-        if (castSourceType.hasStaticShape())
+        auto castSourceType = castSource.getType().dyn_cast<RankedTensorType>();
+        if (castSourceType && castSourceType.hasStaticShape())
           sourceShape = castSourceType.getShape();
       }
     }
