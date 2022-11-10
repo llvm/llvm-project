@@ -4145,6 +4145,7 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
     case swift::DeclKind::Macro:
     case swift::DeclKind::Module:
     case swift::DeclKind::MissingMember:
+    case swift::DeclKind::MacroExpansion:
       break;
 
     case swift::DeclKind::InfixOperator:
@@ -7963,6 +7964,9 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
         break;
       case swift::SourceFileKind::Interface:
         s.PutCString("Interface");
+        break;
+      case swift::SourceFileKind::MacroExpansion:
+        s.PutCString("MacroExpansion");
         break;
       }
     }
