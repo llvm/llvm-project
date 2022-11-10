@@ -666,12 +666,7 @@ private:
     }
 
     // Retrieve NNZ.
-    auto ptrTp =
-        MemRefType::get(dynShape, getPointerOverheadType(rewriter, encSrc));
-    Value p0 =
-        rewriter.create<ToIndicesOp>(loc, ptrTp, src, rewriter.getIndexAttr(0));
-    Value c1 = constantIndex(rewriter, loc, 1);
-    Value nnz = rewriter.create<memref::LoadOp>(loc, p0, c1);
+    Value nnz = rewriter.create<NumberOfEntriesOp>(loc, src);
     nnz =
         rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(), nnz);
 
