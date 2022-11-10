@@ -134,7 +134,7 @@ module {
     // CHECK-NEXT: ( 0, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
     // CHECK-NEXT: ( 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0 )
     // CHECK-NEXT: ( 0, 0, 1, 1, 2, 2, 2, 2, 0, 0, 0, 1, 1, 1, 1, 2, 2, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 0, 1, 1, 2, 2, 2, 2, 0, 0, 0, 1, 1, 1, 1, 2, 2, 0, 0, 0 )
+    // CHECK-NEXT: ( 2, 3, 1, 2, 0, 1, 2, 3, 0, 2, 3, 0, 1, 2, 3, 1, 2, 0, 0, 0 )
     // CHECK-NEXT: ( 3, 63, 11, 100, 66, 61, 13, 43, 77, 10, 46, 61, 53, 3, 75, 22, 18, nan, nan, nan )
     //
     %p2 = sparse_tensor.pointers %2 { dimension = 0 : index }
@@ -150,14 +150,14 @@ module {
     call @dumpi(%p2)  : (memref<?xindex>) -> ()
     call @dumpi(%i20) : (memref<?xindex>) -> ()
     call @dumpi(%i21) : (memref<?xindex>) -> ()
-    call @dumpi(%i21) : (memref<?xindex>) -> ()
+    call @dumpi(%i22) : (memref<?xindex>) -> ()
     call @dumpf(%v2)  : (memref<?xf64>) -> ()
 
     //
     // CHECK-NEXT: ( 0, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 )
     // CHECK-NEXT: ( 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 0, 0, 0 )
     // CHECK-NEXT: ( 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0 )
-    // CHECK-NEXT: ( 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0 )
+    // CHECK-NEXT: ( 2, 0, 1, 1, 2, 1, 2, 0, 1, 2, 0, 1, 2, 0, 2, 0, 1, 0, 0, 0 )
     // CHECK-NEXT: ( 66, 77, 61, 11, 61, 53, 22, 3, 100, 13, 10, 3, 18, 63, 43, 46, 75, nan, nan, nan )
     //
     %p3 = sparse_tensor.pointers %3 { dimension = 0 : index }
@@ -173,7 +173,7 @@ module {
     call @dumpi(%p3)  : (memref<?xindex>) -> ()
     call @dumpi(%i30) : (memref<?xindex>) -> ()
     call @dumpi(%i31) : (memref<?xindex>) -> ()
-    call @dumpi(%i31) : (memref<?xindex>) -> ()
+    call @dumpi(%i32) : (memref<?xindex>) -> ()
     call @dumpf(%v3)  : (memref<?xf64>) -> ()
 
     //

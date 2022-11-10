@@ -5245,14 +5245,18 @@ simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (!isDefaultFPEnvironment(ExBehavior, Rounding))
     return nullptr;
 
-  // With nnan: -X + X --> 0.0 (and commuted variant)
-  // We don't have to explicitly exclude infinities (ninf): INF + -INF == NaN.
-  // Negative zeros are allowed because we always end up with positive zero:
-  // X = -0.0: (-0.0 - (-0.0)) + (-0.0) == ( 0.0) + (-0.0) == 0.0
-  // X = -0.0: ( 0.0 - (-0.0)) + (-0.0) == ( 0.0) + (-0.0) == 0.0
-  // X =  0.0: (-0.0 - ( 0.0)) + ( 0.0) == (-0.0) + ( 0.0) == 0.0
-  // X =  0.0: ( 0.0 - ( 0.0)) + ( 0.0) == ( 0.0) + ( 0.0) == 0.0
   if (FMF.noNaNs()) {
+    // With nnan: X + {+/-}Inf --> {+/-}Inf
+    if (match(Op1, m_Inf()))
+      return Op1;
+
+    // With nnan: -X + X --> 0.0 (and commuted variant)
+    // We don't have to explicitly exclude infinities (ninf): INF + -INF == NaN.
+    // Negative zeros are allowed because we always end up with positive zero:
+    // X = -0.0: (-0.0 - (-0.0)) + (-0.0) == ( 0.0) + (-0.0) == 0.0
+    // X = -0.0: ( 0.0 - (-0.0)) + (-0.0) == ( 0.0) + (-0.0) == 0.0
+    // X =  0.0: (-0.0 - ( 0.0)) + ( 0.0) == (-0.0) + ( 0.0) == 0.0
+    // X =  0.0: ( 0.0 - ( 0.0)) + ( 0.0) == ( 0.0) + ( 0.0) == 0.0
     if (match(Op0, m_FSub(m_AnyZeroFP(), m_Specific(Op1))) ||
         match(Op1, m_FSub(m_AnyZeroFP(), m_Specific(Op0))))
       return ConstantFP::getNullValue(Op0->getType());
