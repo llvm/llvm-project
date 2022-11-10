@@ -1956,6 +1956,13 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag() const {
   u64 esr;
   if (!Aarch64GetESR(ucontext, &esr)) return Unknown;
   return esr & ESR_ELx_WNR ? Write : Read;
+#elif defined(__loongarch__)
+  u32 flags = ucontext->uc_mcontext.__flags;
+  if (flags & SC_ADDRERR_RD)
+    return SignalContext::Read;
+  if (flags & SC_ADDRERR_WR)
+    return SignalContext::Write;
+  return SignalContext::Unknown;
 #elif defined(__sparc__)
   // Decode the instruction to determine the access type.
   // From OpenSolaris $SRC/uts/sun4/os/trap.c (get_accesstype).
