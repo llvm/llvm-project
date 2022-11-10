@@ -37,3 +37,12 @@ var q : A? = A(23)
 
 let tinky : UInt8? = 250
 // CHECK-NEXT: {{tinky}}: UInt8? = 250
+
+let optTrue: Bool? = true
+// CHECK-NEXT: {{optTrue}}: Bool? = true
+
+let optFalse: Bool? = false
+// CHECK-NEXT: {{optFalse}}: Bool? = false
+
+let optNil: Bool? = nil
+// CHECK-NEXT: {{optNil}}: Bool? = nil
