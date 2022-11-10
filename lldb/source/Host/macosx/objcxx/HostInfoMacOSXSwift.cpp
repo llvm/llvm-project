@@ -39,7 +39,7 @@ bool HostInfoMacOSX::ComputeSwiftResourceDirectory(FileSpec &lldb_shlib_spec,
   raw_path.resize(framework_pos);
   raw_path.append("/Resources/Swift");
   if (!verify || VerifySwiftPath(raw_path)) {
-    file_spec.GetDirectory().SetString(raw_path);
+    file_spec.SetDirectory(raw_path);
     FileSystem::Instance().Resolve(file_spec);
     return true;
   }
@@ -117,7 +117,7 @@ std::string HostInfoMacOSX::DetectSwiftResourceDir(
     FileSpec swift_dir_spec(swift_dir);
     if (swift_dir_spec) {
       LLDB_LOGF(GetLog(LLDBLog::Types), "trying ePathTypeSwiftDir: %s",
-                 swift_dir_spec.GetCString());
+                swift_dir_spec.GetPath().c_str());
       // We can't just check for the Swift directory, because that
       // always exists.  We have to look for "clang" inside that.
       FileSpec swift_clang_dir_spec = swift_dir_spec;
@@ -125,8 +125,8 @@ std::string HostInfoMacOSX::DetectSwiftResourceDir(
 
       if (IsDirectory(swift_clang_dir_spec)) {
         LLDB_LOGF(GetLog(LLDBLog::Types),
-                   "found Swift resource dir via ePathTypeSwiftDir': %s",
-                   swift_dir_spec.GetCString());
+                  "found Swift resource dir via ePathTypeSwiftDir': %s",
+                  swift_dir_spec.GetPath().c_str());
         return swift_dir_spec.GetPath();
       }
     }
@@ -241,8 +241,7 @@ std::string HostInfoMacOSX::DetectSwiftResourceDir(
       auto match_regex =
           std::regex("^(.+([/\\\\]))lldb-(.+)$");
       const std::string replace_format = "$1swift-$3";
-      const std::string faux_swift_dir =
-          faux_swift_dir_spec.GetCString();
+      const std::string faux_swift_dir = faux_swift_dir_spec.GetPath();
       const std::string build_tree_resource_dir =
           std::regex_replace(faux_swift_dir, match_regex,
                              replace_format);
@@ -252,10 +251,10 @@ std::string HostInfoMacOSX::DetectSwiftResourceDir(
       FileSpec swift_resource_dir_spec(build_tree_resource_dir.c_str());
       if (IsDirectory(swift_resource_dir_spec)) {
         LLDB_LOGF(GetLog(LLDBLog::Types),
-                   "found Swift resource dir via "
-                   "ePathTypeSwiftDir + inferred build-tree dir: %s",
-                   swift_resource_dir_spec.GetCString());
-        return swift_resource_dir_spec.GetCString();
+                  "found Swift resource dir via "
+                  "ePathTypeSwiftDir + inferred build-tree dir: %s",
+                  swift_resource_dir_spec.GetPath().c_str());
+        return swift_resource_dir_spec.GetPath();
       }
     }
   }

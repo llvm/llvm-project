@@ -39,7 +39,7 @@ bool lldb_private::DefaultComputeSwiftResourceDirectory(
 
   static const llvm::StringRef kResourceDirSuffixes[] = {
       "lib/swift",
-      "lib" LLDB_LIBDIR_SUFFIX "/lldb/swift",
+      "lib" LLDB_INSTALL_LIBDIR_BASENAME "/lldb/swift",
   };
   for (const auto &Suffix : kResourceDirSuffixes) {
     llvm::SmallString<256> swift_path(parent_path);
@@ -50,7 +50,7 @@ bool lldb_private::DefaultComputeSwiftResourceDirectory(
         log->Printf("DefaultComputeSwiftResourceDir: Setting SwiftResourceDir "
                     "to \"%s\", verify = %s",
                     swift_path.str().str().c_str(), verify ? "true" : "false");
-      file_spec.GetDirectory().SetString(swift_path);
+      file_spec.SetDirectory(swift_path);
       FileSystem::Instance().Resolve(file_spec);
       return true;
     }

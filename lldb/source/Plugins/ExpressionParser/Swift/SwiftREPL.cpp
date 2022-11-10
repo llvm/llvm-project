@@ -114,7 +114,7 @@ lldb::REPLSP SwiftREPL::CreateInstanceFromDebugger(Status &err,
 #else
   const char *repl_exe_name = "repl_swift.exe";
 #endif
-  repl_executable.GetFilename().SetCString(repl_exe_name);
+  repl_executable.SetFilename(repl_exe_name);
   std::string repl_exe_path(repl_executable.GetPath());
 
   if (!FileSystem::Instance().Exists(repl_executable)) {

@@ -1184,7 +1184,7 @@ void Module::ReportWarningUnsupportedLanguage(
 void Module::ReportWarningCantLoadSwiftModule(
     std::string details, llvm::Optional<lldb::user_id_t> debugger_id) {
   StreamString ss;
-  ss << GetFileSpec().GetCString() << ": "
+  ss << GetFileSpec() << ": "
      << "Cannot load Swift type information: " << details;
   Debugger::ReportWarning(std::string(ss.GetString()), debugger_id,
                           &m_swift_import_warning);

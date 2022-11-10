@@ -725,7 +725,7 @@ static bool Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
   }
 #ifdef LLDB_ENABLE_SWIFT
   }
-  llvm::Optional<DWARFExpression> subexpr;
+  llvm::Optional<DWARFExpressionList> subexpr;
   if (!matched_param) {
     auto *ctx_func = parent_func ? parent_func : current_func;
     subexpr.emplace(ctx_func->CalculateSymbolContextModule(),
