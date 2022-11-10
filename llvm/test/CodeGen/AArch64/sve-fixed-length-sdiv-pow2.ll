@@ -29,7 +29,7 @@ define <16 x i8> @sdiv_v16i8(<16 x i8> %op1) vscale_range(2,0) #0 {
   ret <16 x i8> %res
 }
 
-define void @sdiv_v32i8(<32 x i8>* %a) vscale_range(2,0) #0 {
+define void @sdiv_v32i8(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sdiv_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -37,13 +37,13 @@ define void @sdiv_v32i8(<32 x i8>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    asrd z0.b, p0/m, z0.b, #5
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i8>, <32 x i8>* %a
+  %op1 = load <32 x i8>, ptr %a
   %res = sdiv <32 x i8> %op1, shufflevector (<32 x i8> insertelement (<32 x i8> poison, i8 32, i32 0), <32 x i8> poison, <32 x i32> zeroinitializer)
-  store <32 x i8> %res, <32 x i8>* %a
+  store <32 x i8> %res, ptr %a
   ret void
 }
 
-define void @sdiv_v64i8(<64 x i8>* %a) #0 {
+define void @sdiv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: sdiv_v64i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov w8, #32
@@ -63,13 +63,13 @@ define void @sdiv_v64i8(<64 x i8>* %a) #0 {
 ; VBITS_GE_512-NEXT:    asrd z0.b, p0/m, z0.b, #5
 ; VBITS_GE_512-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <64 x i8>, <64 x i8>* %a
+  %op1 = load <64 x i8>, ptr %a
   %res = sdiv <64 x i8> %op1, shufflevector (<64 x i8> insertelement (<64 x i8> poison, i8 32, i32 0), <64 x i8> poison, <64 x i32> zeroinitializer)
-  store <64 x i8> %res, <64 x i8>* %a
+  store <64 x i8> %res, ptr %a
   ret void
 }
 
-define void @sdiv_v128i8(<128 x i8>* %a) vscale_range(8,0) #0 {
+define void @sdiv_v128i8(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: sdiv_v128i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
@@ -77,13 +77,13 @@ define void @sdiv_v128i8(<128 x i8>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    asrd z0.b, p0/m, z0.b, #5
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <128 x i8>, <128 x i8>* %a
+  %op1 = load <128 x i8>, ptr %a
   %res = sdiv <128 x i8> %op1, shufflevector (<128 x i8> insertelement (<128 x i8> poison, i8 32, i32 0), <128 x i8> poison, <128 x i32> zeroinitializer)
-  store <128 x i8> %res, <128 x i8>* %a
+  store <128 x i8> %res, ptr %a
   ret void
 }
 
-define void @sdiv_v256i8(<256 x i8>* %a) vscale_range(16,0) #0 {
+define void @sdiv_v256i8(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: sdiv_v256i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl256
@@ -91,9 +91,9 @@ define void @sdiv_v256i8(<256 x i8>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    asrd z0.b, p0/m, z0.b, #5
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <256 x i8>, <256 x i8>* %a
+  %op1 = load <256 x i8>, ptr %a
   %res = sdiv <256 x i8> %op1, shufflevector (<256 x i8> insertelement (<256 x i8> poison, i8 32, i32 0), <256 x i8> poison, <256 x i32> zeroinitializer)
-  store <256 x i8> %res, <256 x i8>* %a
+  store <256 x i8> %res, ptr %a
   ret void
 }
 
@@ -121,7 +121,7 @@ define <8 x i16> @sdiv_v8i16(<8 x i16> %op1) vscale_range(2,0) #0 {
   ret <8 x i16> %res
 }
 
-define void @sdiv_v16i16(<16 x i16>* %a) vscale_range(2,0) #0 {
+define void @sdiv_v16i16(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sdiv_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -129,13 +129,13 @@ define void @sdiv_v16i16(<16 x i16>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    asrd z0.h, p0/m, z0.h, #5
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i16>, <16 x i16>* %a
+  %op1 = load <16 x i16>, ptr %a
   %res = sdiv <16 x i16> %op1, shufflevector (<16 x i16> insertelement (<16 x i16> poison, i16 32, i32 0), <16 x i16> poison, <16 x i32> zeroinitializer)
-  store <16 x i16> %res, <16 x i16>* %a
+  store <16 x i16> %res, ptr %a
   ret void
 }
 
-define void @sdiv_v32i16(<32 x i16>* %a) #0 {
+define void @sdiv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: sdiv_v32i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -155,13 +155,13 @@ define void @sdiv_v32i16(<32 x i16>* %a) #0 {
 ; VBITS_GE_512-NEXT:    asrd z0.h, p0/m, z0.h, #5
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <32 x i16>, <32 x i16>* %a
+  %op1 = load <32 x i16>, ptr %a
   %res = sdiv <32 x i16> %op1, shufflevector (<32 x i16> insertelement (<32 x i16> poison, i16 32, i32 0), <32 x i16> poison, <32 x i32> zeroinitializer)
-  store <32 x i16> %res, <32 x i16>* %a
+  store <32 x i16> %res, ptr %a
   ret void
 }
 
-define void @sdiv_v64i16(<64 x i16>* %a) vscale_range(8,0) #0 {
+define void @sdiv_v64i16(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: sdiv_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -169,13 +169,13 @@ define void @sdiv_v64i16(<64 x i16>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    asrd z0.h, p0/m, z0.h, #5
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i16>, <64 x i16>* %a
+  %op1 = load <64 x i16>, ptr %a
   %res = sdiv <64 x i16> %op1, shufflevector (<64 x i16> insertelement (<64 x i16> poison, i16 32, i32 0), <64 x i16> poison, <64 x i32> zeroinitializer)
-  store <64 x i16> %res, <64 x i16>* %a
+  store <64 x i16> %res, ptr %a
   ret void
 }
 
-define void @sdiv_v128i16(<128 x i16>* %a) vscale_range(16,0) #0 {
+define void @sdiv_v128i16(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: sdiv_v128i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -183,9 +183,9 @@ define void @sdiv_v128i16(<128 x i16>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    asrd z0.h, p0/m, z0.h, #5
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <128 x i16>, <128 x i16>* %a
+  %op1 = load <128 x i16>, ptr %a
   %res = sdiv <128 x i16> %op1, shufflevector (<128 x i16> insertelement (<128 x i16> poison, i16 32, i32 0), <128 x i16> poison, <128 x i32> zeroinitializer)
-  store <128 x i16> %res, <128 x i16>* %a
+  store <128 x i16> %res, ptr %a
   ret void
 }
 
@@ -213,7 +213,7 @@ define <4 x i32> @sdiv_v4i32(<4 x i32> %op1) vscale_range(2,0) #0 {
   ret <4 x i32> %res
 }
 
-define void @sdiv_v8i32(<8 x i32>* %a) vscale_range(2,0) #0 {
+define void @sdiv_v8i32(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sdiv_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -221,13 +221,13 @@ define void @sdiv_v8i32(<8 x i32>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    asrd z0.s, p0/m, z0.s, #5
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x i32>, <8 x i32>* %a
+  %op1 = load <8 x i32>, ptr %a
   %res = sdiv <8 x i32> %op1, shufflevector (<8 x i32> insertelement (<8 x i32> poison, i32 32, i32 0), <8 x i32> poison, <8 x i32> zeroinitializer)
-  store <8 x i32> %res, <8 x i32>* %a
+  store <8 x i32> %res, ptr %a
   ret void
 }
 
-define void @sdiv_v16i32(<16 x i32>* %a) #0 {
+define void @sdiv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: sdiv_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -247,13 +247,13 @@ define void @sdiv_v16i32(<16 x i32>* %a) #0 {
 ; VBITS_GE_512-NEXT:    asrd z0.s, p0/m, z0.s, #5
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <16 x i32>, <16 x i32>* %a
+  %op1 = load <16 x i32>, ptr %a
   %res = sdiv <16 x i32> %op1, shufflevector (<16 x i32> insertelement (<16 x i32> poison, i32 32, i32 0), <16 x i32> poison, <16 x i32> zeroinitializer)
-  store <16 x i32> %res, <16 x i32>* %a
+  store <16 x i32> %res, ptr %a
   ret void
 }
 
-define void @sdiv_v32i32(<32 x i32>* %a) vscale_range(8,0) #0 {
+define void @sdiv_v32i32(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: sdiv_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -261,13 +261,13 @@ define void @sdiv_v32i32(<32 x i32>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    asrd z0.s, p0/m, z0.s, #5
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i32>, <32 x i32>* %a
+  %op1 = load <32 x i32>, ptr %a
   %res = sdiv <32 x i32> %op1, shufflevector (<32 x i32> insertelement (<32 x i32> poison, i32 32, i32 0), <32 x i32> poison, <32 x i32> zeroinitializer)
-  store <32 x i32> %res, <32 x i32>* %a
+  store <32 x i32> %res, ptr %a
   ret void
 }
 
-define void @sdiv_v64i32(<64 x i32>* %a) vscale_range(16,0) #0 {
+define void @sdiv_v64i32(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: sdiv_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -275,9 +275,9 @@ define void @sdiv_v64i32(<64 x i32>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    asrd z0.s, p0/m, z0.s, #5
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x i32>, <64 x i32>* %a
+  %op1 = load <64 x i32>, ptr %a
   %res = sdiv <64 x i32> %op1, shufflevector (<64 x i32> insertelement (<64 x i32> poison, i32 32, i32 0), <64 x i32> poison, <64 x i32> zeroinitializer)
-  store <64 x i32> %res, <64 x i32>* %a
+  store <64 x i32> %res, ptr %a
   ret void
 }
 
@@ -306,7 +306,7 @@ define <2 x i64> @sdiv_v2i64(<2 x i64> %op1) vscale_range(2,0) #0 {
   ret <2 x i64> %res
 }
 
-define void @sdiv_v4i64(<4 x i64>* %a) vscale_range(2,0) #0 {
+define void @sdiv_v4i64(ptr %a) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sdiv_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -314,13 +314,13 @@ define void @sdiv_v4i64(<4 x i64>* %a) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    asrd z0.d, p0/m, z0.d, #5
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x i64>, <4 x i64>* %a
+  %op1 = load <4 x i64>, ptr %a
   %res = sdiv <4 x i64> %op1, shufflevector (<4 x i64> insertelement (<4 x i64> poison, i64 32, i32 0), <4 x i64> poison, <4 x i32> zeroinitializer)
-  store <4 x i64> %res, <4 x i64>* %a
+  store <4 x i64> %res, ptr %a
   ret void
 }
 
-define void @sdiv_v8i64(<8 x i64>* %a) #0 {
+define void @sdiv_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: sdiv_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -340,13 +340,13 @@ define void @sdiv_v8i64(<8 x i64>* %a) #0 {
 ; VBITS_GE_512-NEXT:    asrd z0.d, p0/m, z0.d, #5
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x i64>, <8 x i64>* %a
+  %op1 = load <8 x i64>, ptr %a
   %res = sdiv <8 x i64> %op1, shufflevector (<8 x i64> insertelement (<8 x i64> poison, i64 32, i32 0), <8 x i64> poison, <8 x i32> zeroinitializer)
-  store <8 x i64> %res, <8 x i64>* %a
+  store <8 x i64> %res, ptr %a
   ret void
 }
 
-define void @sdiv_v16i64(<16 x i64>* %a) vscale_range(8,0) #0 {
+define void @sdiv_v16i64(ptr %a) vscale_range(8,0) #0 {
 ; CHECK-LABEL: sdiv_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -354,13 +354,13 @@ define void @sdiv_v16i64(<16 x i64>* %a) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    asrd z0.d, p0/m, z0.d, #5
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x i64>, <16 x i64>* %a
+  %op1 = load <16 x i64>, ptr %a
   %res = sdiv <16 x i64> %op1, shufflevector (<16 x i64> insertelement (<16 x i64> poison, i64 32, i32 0), <16 x i64> poison, <16 x i32> zeroinitializer)
-  store <16 x i64> %res, <16 x i64>* %a
+  store <16 x i64> %res, ptr %a
   ret void
 }
 
-define void @sdiv_v32i64(<32 x i64>* %a) vscale_range(16,0) #0 {
+define void @sdiv_v32i64(ptr %a) vscale_range(16,0) #0 {
 ; CHECK-LABEL: sdiv_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -368,9 +368,9 @@ define void @sdiv_v32i64(<32 x i64>* %a) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    asrd z0.d, p0/m, z0.d, #5
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x i64>, <32 x i64>* %a
+  %op1 = load <32 x i64>, ptr %a
   %res = sdiv <32 x i64> %op1, shufflevector (<32 x i64> insertelement (<32 x i64> poison, i64 32, i32 0), <32 x i64> poison, <32 x i32> zeroinitializer)
-  store <32 x i64> %res, <32 x i64>* %a
+  store <32 x i64> %res, ptr %a
   ret void
 }
 

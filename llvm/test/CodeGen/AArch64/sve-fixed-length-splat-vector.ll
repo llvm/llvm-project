@@ -31,7 +31,7 @@ define <16 x i8> @splat_v16i8(i8 %a) vscale_range(2,0) #0 {
   ret <16 x i8> %splat
 }
 
-define void @splat_v32i8(i8 %a, <32 x i8>* %b) vscale_range(2,0) #0 {
+define void @splat_v32i8(i8 %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: splat_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl32
@@ -40,11 +40,11 @@ define void @splat_v32i8(i8 %a, <32 x i8>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <32 x i8> undef, i8 %a, i64 0
   %splat = shufflevector <32 x i8> %insert, <32 x i8> undef, <32 x i32> zeroinitializer
-  store <32 x i8> %splat, <32 x i8>* %b
+  store <32 x i8> %splat, ptr %b
   ret void
 }
 
-define void @splat_v64i8(i8 %a, <64 x i8>* %b) #0 {
+define void @splat_v64i8(i8 %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: splat_v64i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov w8, #32
@@ -62,11 +62,11 @@ define void @splat_v64i8(i8 %a, <64 x i8>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %insert = insertelement <64 x i8> undef, i8 %a, i64 0
   %splat = shufflevector <64 x i8> %insert, <64 x i8> undef, <64 x i32> zeroinitializer
-  store <64 x i8> %splat, <64 x i8>* %b
+  store <64 x i8> %splat, ptr %b
   ret void
 }
 
-define void @splat_v128i8(i8 %a, <128 x i8>* %b) vscale_range(8,0) #0 {
+define void @splat_v128i8(i8 %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: splat_v128i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
@@ -75,11 +75,11 @@ define void @splat_v128i8(i8 %a, <128 x i8>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <128 x i8> undef, i8 %a, i64 0
   %splat = shufflevector <128 x i8> %insert, <128 x i8> undef, <128 x i32> zeroinitializer
-  store <128 x i8> %splat, <128 x i8>* %b
+  store <128 x i8> %splat, ptr %b
   ret void
 }
 
-define void @splat_v256i8(i8 %a, <256 x i8>* %b) vscale_range(16,0) #0 {
+define void @splat_v256i8(i8 %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: splat_v256i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl256
@@ -88,7 +88,7 @@ define void @splat_v256i8(i8 %a, <256 x i8>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <256 x i8> undef, i8 %a, i64 0
   %splat = shufflevector <256 x i8> %insert, <256 x i8> undef, <256 x i32> zeroinitializer
-  store <256 x i8> %splat, <256 x i8>* %b
+  store <256 x i8> %splat, ptr %b
   ret void
 }
 
@@ -114,7 +114,7 @@ define <8 x i16> @splat_v8i16(i16 %a) vscale_range(2,0) #0 {
   ret <8 x i16> %splat
 }
 
-define void @splat_v16i16(i16 %a, <16 x i16>* %b) vscale_range(2,0) #0 {
+define void @splat_v16i16(i16 %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: splat_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -123,11 +123,11 @@ define void @splat_v16i16(i16 %a, <16 x i16>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <16 x i16> undef, i16 %a, i64 0
   %splat = shufflevector <16 x i16> %insert, <16 x i16> undef, <16 x i32> zeroinitializer
-  store <16 x i16> %splat, <16 x i16>* %b
+  store <16 x i16> %splat, ptr %b
   ret void
 }
 
-define void @splat_v32i16(i16 %a, <32 x i16>* %b) #0 {
+define void @splat_v32i16(i16 %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: splat_v32i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -145,11 +145,11 @@ define void @splat_v32i16(i16 %a, <32 x i16>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %insert = insertelement <32 x i16> undef, i16 %a, i64 0
   %splat = shufflevector <32 x i16> %insert, <32 x i16> undef, <32 x i32> zeroinitializer
-  store <32 x i16> %splat, <32 x i16>* %b
+  store <32 x i16> %splat, ptr %b
   ret void
 }
 
-define void @splat_v64i16(i16 %a, <64 x i16>* %b) vscale_range(8,0) #0 {
+define void @splat_v64i16(i16 %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: splat_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -158,11 +158,11 @@ define void @splat_v64i16(i16 %a, <64 x i16>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <64 x i16> undef, i16 %a, i64 0
   %splat = shufflevector <64 x i16> %insert, <64 x i16> undef, <64 x i32> zeroinitializer
-  store <64 x i16> %splat, <64 x i16>* %b
+  store <64 x i16> %splat, ptr %b
   ret void
 }
 
-define void @splat_v128i16(i16 %a, <128 x i16>* %b) vscale_range(16,0) #0 {
+define void @splat_v128i16(i16 %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: splat_v128i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -171,7 +171,7 @@ define void @splat_v128i16(i16 %a, <128 x i16>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <128 x i16> undef, i16 %a, i64 0
   %splat = shufflevector <128 x i16> %insert, <128 x i16> undef, <128 x i32> zeroinitializer
-  store <128 x i16> %splat, <128 x i16>* %b
+  store <128 x i16> %splat, ptr %b
   ret void
 }
 
@@ -197,7 +197,7 @@ define <4 x i32> @splat_v4i32(i32 %a) vscale_range(2,0) #0 {
   ret <4 x i32> %splat
 }
 
-define void @splat_v8i32(i32 %a, <8 x i32>* %b) vscale_range(2,0) #0 {
+define void @splat_v8i32(i32 %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: splat_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -206,11 +206,11 @@ define void @splat_v8i32(i32 %a, <8 x i32>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <8 x i32> undef, i32 %a, i64 0
   %splat = shufflevector <8 x i32> %insert, <8 x i32> undef, <8 x i32> zeroinitializer
-  store <8 x i32> %splat, <8 x i32>* %b
+  store <8 x i32> %splat, ptr %b
   ret void
 }
 
-define void @splat_v16i32(i32 %a, <16 x i32>* %b) #0 {
+define void @splat_v16i32(i32 %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: splat_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -228,11 +228,11 @@ define void @splat_v16i32(i32 %a, <16 x i32>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %insert = insertelement <16 x i32> undef, i32 %a, i64 0
   %splat = shufflevector <16 x i32> %insert, <16 x i32> undef, <16 x i32> zeroinitializer
-  store <16 x i32> %splat, <16 x i32>* %b
+  store <16 x i32> %splat, ptr %b
   ret void
 }
 
-define void @splat_v32i32(i32 %a, <32 x i32>* %b) vscale_range(8,0) #0 {
+define void @splat_v32i32(i32 %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: splat_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -241,11 +241,11 @@ define void @splat_v32i32(i32 %a, <32 x i32>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <32 x i32> undef, i32 %a, i64 0
   %splat = shufflevector <32 x i32> %insert, <32 x i32> undef, <32 x i32> zeroinitializer
-  store <32 x i32> %splat, <32 x i32>* %b
+  store <32 x i32> %splat, ptr %b
   ret void
 }
 
-define void @splat_v64i32(i32 %a, <64 x i32>* %b) vscale_range(16,0) #0 {
+define void @splat_v64i32(i32 %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: splat_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -254,7 +254,7 @@ define void @splat_v64i32(i32 %a, <64 x i32>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <64 x i32> undef, i32 %a, i64 0
   %splat = shufflevector <64 x i32> %insert, <64 x i32> undef, <64 x i32> zeroinitializer
-  store <64 x i32> %splat, <64 x i32>* %b
+  store <64 x i32> %splat, ptr %b
   ret void
 }
 
@@ -280,7 +280,7 @@ define <2 x i64> @splat_v2i64(i64 %a) vscale_range(2,0) #0 {
   ret <2 x i64> %splat
 }
 
-define void @splat_v4i64(i64 %a, <4 x i64>* %b) vscale_range(2,0) #0 {
+define void @splat_v4i64(i64 %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: splat_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -289,11 +289,11 @@ define void @splat_v4i64(i64 %a, <4 x i64>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <4 x i64> undef, i64 %a, i64 0
   %splat = shufflevector <4 x i64> %insert, <4 x i64> undef, <4 x i32> zeroinitializer
-  store <4 x i64> %splat, <4 x i64>* %b
+  store <4 x i64> %splat, ptr %b
   ret void
 }
 
-define void @splat_v8i64(i64 %a, <8 x i64>* %b) #0 {
+define void @splat_v8i64(i64 %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: splat_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -311,11 +311,11 @@ define void @splat_v8i64(i64 %a, <8 x i64>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %insert = insertelement <8 x i64> undef, i64 %a, i64 0
   %splat = shufflevector <8 x i64> %insert, <8 x i64> undef, <8 x i32> zeroinitializer
-  store <8 x i64> %splat, <8 x i64>* %b
+  store <8 x i64> %splat, ptr %b
   ret void
 }
 
-define void @splat_v16i64(i64 %a, <16 x i64>* %b) vscale_range(8,0) #0 {
+define void @splat_v16i64(i64 %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: splat_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -324,11 +324,11 @@ define void @splat_v16i64(i64 %a, <16 x i64>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <16 x i64> undef, i64 %a, i64 0
   %splat = shufflevector <16 x i64> %insert, <16 x i64> undef, <16 x i32> zeroinitializer
-  store <16 x i64> %splat, <16 x i64>* %b
+  store <16 x i64> %splat, ptr %b
   ret void
 }
 
-define void @splat_v32i64(i64 %a, <32 x i64>* %b) vscale_range(16,0) #0 {
+define void @splat_v32i64(i64 %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: splat_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -337,7 +337,7 @@ define void @splat_v32i64(i64 %a, <32 x i64>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <32 x i64> undef, i64 %a, i64 0
   %splat = shufflevector <32 x i64> %insert, <32 x i64> undef, <32 x i32> zeroinitializer
-  store <32 x i64> %splat, <32 x i64>* %b
+  store <32 x i64> %splat, ptr %b
   ret void
 }
 
@@ -369,7 +369,7 @@ define <8 x half> @splat_v8f16(half %a) vscale_range(2,0) #0 {
   ret <8 x half> %splat
 }
 
-define void @splat_v16f16(half %a, <16 x half>* %b) vscale_range(2,0) #0 {
+define void @splat_v16f16(half %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: splat_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
@@ -379,11 +379,11 @@ define void @splat_v16f16(half %a, <16 x half>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <16 x half> undef, half %a, i64 0
   %splat = shufflevector <16 x half> %insert, <16 x half> undef, <16 x i32> zeroinitializer
-  store <16 x half> %splat, <16 x half>* %b
+  store <16 x half> %splat, ptr %b
   ret void
 }
 
-define void @splat_v32f16(half %a, <32 x half>* %b) #0 {
+define void @splat_v32f16(half %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: splat_v32f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -403,11 +403,11 @@ define void @splat_v32f16(half %a, <32 x half>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %insert = insertelement <32 x half> undef, half %a, i64 0
   %splat = shufflevector <32 x half> %insert, <32 x half> undef, <32 x i32> zeroinitializer
-  store <32 x half> %splat, <32 x half>* %b
+  store <32 x half> %splat, ptr %b
   ret void
 }
 
-define void @splat_v64f16(half %a, <64 x half>* %b) vscale_range(8,0) #0 {
+define void @splat_v64f16(half %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: splat_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
@@ -417,11 +417,11 @@ define void @splat_v64f16(half %a, <64 x half>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <64 x half> undef, half %a, i64 0
   %splat = shufflevector <64 x half> %insert, <64 x half> undef, <64 x i32> zeroinitializer
-  store <64 x half> %splat, <64 x half>* %b
+  store <64 x half> %splat, ptr %b
   ret void
 }
 
-define void @splat_v128f16(half %a, <128 x half>* %b) vscale_range(16,0) #0 {
+define void @splat_v128f16(half %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: splat_v128f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $h0 killed $h0 def $z0
@@ -431,7 +431,7 @@ define void @splat_v128f16(half %a, <128 x half>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <128 x half> undef, half %a, i64 0
   %splat = shufflevector <128 x half> %insert, <128 x half> undef, <128 x i32> zeroinitializer
-  store <128 x half> %splat, <128 x half>* %b
+  store <128 x half> %splat, ptr %b
   ret void
 }
 
@@ -459,7 +459,7 @@ define <4 x float> @splat_v4f32(float %a, <4 x float> %op2) vscale_range(2,0) #0
   ret <4 x float> %splat
 }
 
-define void @splat_v8f32(float %a, <8 x float>* %b) vscale_range(2,0) #0 {
+define void @splat_v8f32(float %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: splat_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
@@ -469,11 +469,11 @@ define void @splat_v8f32(float %a, <8 x float>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <8 x float> undef, float %a, i64 0
   %splat = shufflevector <8 x float> %insert, <8 x float> undef, <8 x i32> zeroinitializer
-  store <8 x float> %splat, <8 x float>* %b
+  store <8 x float> %splat, ptr %b
   ret void
 }
 
-define void @splat_v16f32(float %a, <16 x float>* %b) #0 {
+define void @splat_v16f32(float %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: splat_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -493,11 +493,11 @@ define void @splat_v16f32(float %a, <16 x float>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %insert = insertelement <16 x float> undef, float %a, i64 0
   %splat = shufflevector <16 x float> %insert, <16 x float> undef, <16 x i32> zeroinitializer
-  store <16 x float> %splat, <16 x float>* %b
+  store <16 x float> %splat, ptr %b
   ret void
 }
 
-define void @splat_v32f32(float %a, <32 x float>* %b) vscale_range(8,0) #0 {
+define void @splat_v32f32(float %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: splat_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
@@ -507,11 +507,11 @@ define void @splat_v32f32(float %a, <32 x float>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <32 x float> undef, float %a, i64 0
   %splat = shufflevector <32 x float> %insert, <32 x float> undef, <32 x i32> zeroinitializer
-  store <32 x float> %splat, <32 x float>* %b
+  store <32 x float> %splat, ptr %b
   ret void
 }
 
-define void @splat_v64f32(float %a, <64 x float>* %b) vscale_range(16,0) #0 {
+define void @splat_v64f32(float %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: splat_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $s0 killed $s0 def $z0
@@ -521,7 +521,7 @@ define void @splat_v64f32(float %a, <64 x float>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <64 x float> undef, float %a, i64 0
   %splat = shufflevector <64 x float> %insert, <64 x float> undef, <64 x i32> zeroinitializer
-  store <64 x float> %splat, <64 x float>* %b
+  store <64 x float> %splat, ptr %b
   ret void
 }
 
@@ -547,7 +547,7 @@ define <2 x double> @splat_v2f64(double %a, <2 x double> %op2) vscale_range(2,0)
   ret <2 x double> %splat
 }
 
-define void @splat_v4f64(double %a, <4 x double>* %b) vscale_range(2,0) #0 {
+define void @splat_v4f64(double %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: splat_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -557,11 +557,11 @@ define void @splat_v4f64(double %a, <4 x double>* %b) vscale_range(2,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <4 x double> undef, double %a, i64 0
   %splat = shufflevector <4 x double> %insert, <4 x double> undef, <4 x i32> zeroinitializer
-  store <4 x double> %splat, <4 x double>* %b
+  store <4 x double> %splat, ptr %b
   ret void
 }
 
-define void @splat_v8f64(double %a, <8 x double>* %b) #0 {
+define void @splat_v8f64(double %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: splat_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -581,11 +581,11 @@ define void @splat_v8f64(double %a, <8 x double>* %b) #0 {
 ; VBITS_GE_512-NEXT:    ret
   %insert = insertelement <8 x double> undef, double %a, i64 0
   %splat = shufflevector <8 x double> %insert, <8 x double> undef, <8 x i32> zeroinitializer
-  store <8 x double> %splat, <8 x double>* %b
+  store <8 x double> %splat, ptr %b
   ret void
 }
 
-define void @splat_v16f64(double %a, <16 x double>* %b) vscale_range(8,0) #0 {
+define void @splat_v16f64(double %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: splat_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -595,11 +595,11 @@ define void @splat_v16f64(double %a, <16 x double>* %b) vscale_range(8,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <16 x double> undef, double %a, i64 0
   %splat = shufflevector <16 x double> %insert, <16 x double> undef, <16 x i32> zeroinitializer
-  store <16 x double> %splat, <16 x double>* %b
+  store <16 x double> %splat, ptr %b
   ret void
 }
 
-define void @splat_v32f64(double %a, <32 x double>* %b) vscale_range(16,0) #0 {
+define void @splat_v32f64(double %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: splat_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
@@ -609,7 +609,7 @@ define void @splat_v32f64(double %a, <32 x double>* %b) vscale_range(16,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <32 x double> undef, double %a, i64 0
   %splat = shufflevector <32 x double> %insert, <32 x double> undef, <32 x i32> zeroinitializer
-  store <32 x double> %splat, <32 x double>* %b
+  store <32 x double> %splat, ptr %b
   ret void
 }
 
@@ -617,7 +617,7 @@ define void @splat_v32f64(double %a, <32 x double>* %b) vscale_range(16,0) #0 {
 ; DUP (integer immediate)
 ;
 
-define void @splat_imm_v64i8(<64 x i8>* %a) vscale_range(4,0) #0 {
+define void @splat_imm_v64i8(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-LABEL: splat_imm_v64i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.b, #1 // =0x1
@@ -626,11 +626,11 @@ define void @splat_imm_v64i8(<64 x i8>* %a) vscale_range(4,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <64 x i8> undef, i8 1, i64 0
   %splat = shufflevector <64 x i8> %insert, <64 x i8> undef, <64 x i32> zeroinitializer
-  store <64 x i8> %splat, <64 x i8>* %a
+  store <64 x i8> %splat, ptr %a
   ret void
 }
 
-define void @splat_imm_v32i16(<32 x i16>* %a) vscale_range(4,0) #0 {
+define void @splat_imm_v32i16(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-LABEL: splat_imm_v32i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.h, #2 // =0x2
@@ -639,11 +639,11 @@ define void @splat_imm_v32i16(<32 x i16>* %a) vscale_range(4,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <32 x i16> undef, i16 2, i64 0
   %splat = shufflevector <32 x i16> %insert, <32 x i16> undef, <32 x i32> zeroinitializer
-  store <32 x i16> %splat, <32 x i16>* %a
+  store <32 x i16> %splat, ptr %a
   ret void
 }
 
-define void @splat_imm_v16i32(<16 x i32>* %a) vscale_range(4,0) #0 {
+define void @splat_imm_v16i32(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-LABEL: splat_imm_v16i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.s, #3 // =0x3
@@ -652,11 +652,11 @@ define void @splat_imm_v16i32(<16 x i32>* %a) vscale_range(4,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <16 x i32> undef, i32 3, i64 0
   %splat = shufflevector <16 x i32> %insert, <16 x i32> undef, <16 x i32> zeroinitializer
-  store <16 x i32> %splat, <16 x i32>* %a
+  store <16 x i32> %splat, ptr %a
   ret void
 }
 
-define void @splat_imm_v8i64(<8 x i64>* %a) vscale_range(4,0) #0 {
+define void @splat_imm_v8i64(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-LABEL: splat_imm_v8i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, #4 // =0x4
@@ -665,7 +665,7 @@ define void @splat_imm_v8i64(<8 x i64>* %a) vscale_range(4,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <8 x i64> undef, i64 4, i64 0
   %splat = shufflevector <8 x i64> %insert, <8 x i64> undef, <8 x i32> zeroinitializer
-  store <8 x i64> %splat, <8 x i64>* %a
+  store <8 x i64> %splat, ptr %a
   ret void
 }
 
@@ -673,7 +673,7 @@ define void @splat_imm_v8i64(<8 x i64>* %a) vscale_range(4,0) #0 {
 ; DUP (floating-point immediate)
 ;
 
-define void @splat_imm_v32f16(<32 x half>* %a) vscale_range(4,0) #0 {
+define void @splat_imm_v32f16(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-LABEL: splat_imm_v32f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov z0.h, #5.00000000
@@ -682,11 +682,11 @@ define void @splat_imm_v32f16(<32 x half>* %a) vscale_range(4,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <32 x half> undef, half 5.0, i64 0
   %splat = shufflevector <32 x half> %insert, <32 x half> undef, <32 x i32> zeroinitializer
-  store <32 x half> %splat, <32 x half>* %a
+  store <32 x half> %splat, ptr %a
   ret void
 }
 
-define void @splat_imm_v16f32(<16 x float>* %a) vscale_range(4,0) #0 {
+define void @splat_imm_v16f32(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-LABEL: splat_imm_v16f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov z0.s, #6.00000000
@@ -695,11 +695,11 @@ define void @splat_imm_v16f32(<16 x float>* %a) vscale_range(4,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <16 x float> undef, float 6.0, i64 0
   %splat = shufflevector <16 x float> %insert, <16 x float> undef, <16 x i32> zeroinitializer
-  store <16 x float> %splat, <16 x float>* %a
+  store <16 x float> %splat, ptr %a
   ret void
 }
 
-define void @splat_imm_v8f64(<8 x double>* %a) vscale_range(4,0) #0 {
+define void @splat_imm_v8f64(ptr %a) vscale_range(4,0) #0 {
 ; CHECK-LABEL: splat_imm_v8f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov z0.d, #7.00000000
@@ -708,7 +708,7 @@ define void @splat_imm_v8f64(<8 x double>* %a) vscale_range(4,0) #0 {
 ; CHECK-NEXT:    ret
   %insert = insertelement <8 x double> undef, double 7.0, i64 0
   %splat = shufflevector <8 x double> %insert, <8 x double> undef, <8 x i32> zeroinitializer
-  store <8 x double> %splat, <8 x double>* %a
+  store <8 x double> %splat, ptr %a
   ret void
 }
 
