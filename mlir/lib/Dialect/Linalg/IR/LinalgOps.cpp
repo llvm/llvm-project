@@ -1799,7 +1799,8 @@ struct FoldTensorCastProducerOp : public OpInterfaceRewritePattern<LinalgOp> {
       auto tensorCastOp = output->get().getDefiningOp<tensor::CastOp>();
       bool fold = canFoldIntoConsumerOp(tensorCastOp);
       newOperands.push_back(fold ? tensorCastOp.getOperand() : output->get());
-      newResultTypes.push_back(newOperands.back().getType());
+      if (!newOperands.back().getType().isa<MemRefType>())
+        newResultTypes.push_back(newOperands.back().getType());
     }
     // Clone op.
     Operation *newOp =
