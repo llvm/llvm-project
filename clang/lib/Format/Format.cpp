@@ -1269,14 +1269,9 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlwaysBreakBeforeMultilineStrings = false;
   LLVMStyle.AlwaysBreakTemplateDeclarations = FormatStyle::BTDS_MultiLine;
   LLVMStyle.AttributeMacros.push_back("__capability");
+  LLVMStyle.BitFieldColonSpacing = FormatStyle::BFCS_Both;
   LLVMStyle.BinPackArguments = true;
   LLVMStyle.BinPackParameters = true;
-  LLVMStyle.BreakArrays = true;
-  LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
-  LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
-  LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
-  LLVMStyle.BreakBeforeTernaryOperators = true;
-  LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
   LLVMStyle.BraceWrapping = {/*AfterCaseLabel=*/false,
                              /*AfterClass=*/false,
                              /*AfterControlStatement=*/FormatStyle::BWACS_Never,
@@ -1295,8 +1290,13 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
                              /*SplitEmptyFunction=*/true,
                              /*SplitEmptyRecord=*/true,
                              /*SplitEmptyNamespace=*/true};
-  LLVMStyle.BitFieldColonSpacing = FormatStyle::BFCS_Both;
   LLVMStyle.BreakAfterJavaFieldAnnotations = false;
+  LLVMStyle.BreakArrays = true;
+  LLVMStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
+  LLVMStyle.BreakBeforeBraces = FormatStyle::BS_Attach;
+  LLVMStyle.BreakBeforeConceptDeclarations = FormatStyle::BBCDS_Always;
+  LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
+  LLVMStyle.BreakBeforeTernaryOperators = true;
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
   LLVMStyle.BreakStringLiterals = true;
