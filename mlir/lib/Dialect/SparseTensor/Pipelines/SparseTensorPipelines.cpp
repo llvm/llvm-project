@@ -64,7 +64,8 @@ void mlir::sparse_tensor::buildSparseCompiler(
     pm.addPass(createSparseTensorConversionPass(
         options.sparseTensorConversionOptions()));
   else
-    pm.addPass(createSparseTensorCodegenPass());
+    pm.addPass(
+        createSparseTensorCodegenPass(options.enableBufferInitialization));
   pm.addPass(createSparseBufferRewritePass(options.enableBufferInitialization));
   pm.addPass(createDenseBufferizationPass(
       getBufferizationOptions(/*analysisOnly=*/false)));
