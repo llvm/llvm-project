@@ -212,8 +212,8 @@ def : PatStrictFsetccs<SETLT,  FCMP_SLT_D,  FPR64>;
 
 /// Select
 
-def : Pat<(select GPR:$cc, FPR64:$fk, FPR64:$fj),
-          (FSEL_D FPR64:$fj, FPR64:$fk, (MOVGR2CF GPR:$cc))>;
+def : Pat<(select CFR:$cc, FPR64:$fk, FPR64:$fj),
+          (FSEL_D FPR64:$fj, FPR64:$fk, CFR:$cc)>;
 
 /// Selectcc
 
