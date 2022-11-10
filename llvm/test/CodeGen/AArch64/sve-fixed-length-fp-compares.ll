@@ -31,7 +31,7 @@ define <8 x i16> @fcmp_oeq_v8f16(<8 x half> %op1, <8 x half> %op2) vscale_range(
   ret <8 x i16> %sext
 }
 
-define void @fcmp_oeq_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_oeq_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_oeq_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -41,15 +41,15 @@ define void @fcmp_oeq_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp oeq <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
-define void @fcmp_oeq_v32f16(<32 x half>* %a, <32 x half>* %b, <32 x i16>* %c) #0 {
+define void @fcmp_oeq_v32f16(ptr %a, ptr %b, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: fcmp_oeq_v32f16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -75,15 +75,15 @@ define void @fcmp_oeq_v32f16(<32 x half>* %a, <32 x half>* %b, <32 x i16>* %c) #
 ; VBITS_GE_512-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x2]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <32 x half>, <32 x half>* %a
-  %op2 = load <32 x half>, <32 x half>* %b
+  %op1 = load <32 x half>, ptr %a
+  %op2 = load <32 x half>, ptr %b
   %cmp = fcmp oeq <32 x half> %op1, %op2
   %sext = sext <32 x i1> %cmp to <32 x i16>
-  store <32 x i16> %sext, <32 x i16>* %c
+  store <32 x i16> %sext, ptr %c
   ret void
 }
 
-define void @fcmp_oeq_v64f16(<64 x half>* %a, <64 x half>* %b, <64 x i16>* %c) vscale_range(8,0) #0 {
+define void @fcmp_oeq_v64f16(ptr %a, ptr %b, ptr %c) vscale_range(8,0) #0 {
 ; CHECK-LABEL: fcmp_oeq_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
@@ -93,15 +93,15 @@ define void @fcmp_oeq_v64f16(<64 x half>* %a, <64 x half>* %b, <64 x i16>* %c) v
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x half>, <64 x half>* %a
-  %op2 = load <64 x half>, <64 x half>* %b
+  %op1 = load <64 x half>, ptr %a
+  %op2 = load <64 x half>, ptr %b
   %cmp = fcmp oeq <64 x half> %op1, %op2
   %sext = sext <64 x i1> %cmp to <64 x i16>
-  store <64 x i16> %sext, <64 x i16>* %c
+  store <64 x i16> %sext, ptr %c
   ret void
 }
 
-define void @fcmp_oeq_v128f16(<128 x half>* %a, <128 x half>* %b, <128 x i16>* %c) vscale_range(16,0) #0 {
+define void @fcmp_oeq_v128f16(ptr %a, ptr %b, ptr %c) vscale_range(16,0) #0 {
 ; CHECK-LABEL: fcmp_oeq_v128f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
@@ -111,11 +111,11 @@ define void @fcmp_oeq_v128f16(<128 x half>* %a, <128 x half>* %b, <128 x i16>* %
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <128 x half>, <128 x half>* %a
-  %op2 = load <128 x half>, <128 x half>* %b
+  %op1 = load <128 x half>, ptr %a
+  %op2 = load <128 x half>, ptr %b
   %cmp = fcmp oeq <128 x half> %op1, %op2
   %sext = sext <128 x i1> %cmp to <128 x i16>
-  store <128 x i16> %sext, <128 x i16>* %c
+  store <128 x i16> %sext, ptr %c
   ret void
 }
 
@@ -141,7 +141,7 @@ define <4 x i32> @fcmp_oeq_v4f32(<4 x float> %op1, <4 x float> %op2) vscale_rang
   ret <4 x i32> %sext
 }
 
-define void @fcmp_oeq_v8f32(<8 x float>* %a, <8 x float>* %b, <8 x i32>* %c) vscale_range(2,0) #0 {
+define void @fcmp_oeq_v8f32(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_oeq_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -151,15 +151,15 @@ define void @fcmp_oeq_v8f32(<8 x float>* %a, <8 x float>* %b, <8 x i32>* %c) vsc
 ; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <8 x float>, <8 x float>* %a
-  %op2 = load <8 x float>, <8 x float>* %b
+  %op1 = load <8 x float>, ptr %a
+  %op2 = load <8 x float>, ptr %b
   %cmp = fcmp oeq <8 x float> %op1, %op2
   %sext = sext <8 x i1> %cmp to <8 x i32>
-  store <8 x i32> %sext, <8 x i32>* %c
+  store <8 x i32> %sext, ptr %c
   ret void
 }
 
-define void @fcmp_oeq_v16f32(<16 x float>* %a, <16 x float>* %b, <16 x i32>* %c) #0 {
+define void @fcmp_oeq_v16f32(ptr %a, ptr %b, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: fcmp_oeq_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -185,15 +185,15 @@ define void @fcmp_oeq_v16f32(<16 x float>* %a, <16 x float>* %b, <16 x i32>* %c)
 ; VBITS_GE_512-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x2]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <16 x float>, <16 x float>* %a
-  %op2 = load <16 x float>, <16 x float>* %b
+  %op1 = load <16 x float>, ptr %a
+  %op2 = load <16 x float>, ptr %b
   %cmp = fcmp oeq <16 x float> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i32>
-  store <16 x i32> %sext, <16 x i32>* %c
+  store <16 x i32> %sext, ptr %c
   ret void
 }
 
-define void @fcmp_oeq_v32f32(<32 x float>* %a, <32 x float>* %b, <32 x i32>* %c) vscale_range(8,0) #0 {
+define void @fcmp_oeq_v32f32(ptr %a, ptr %b, ptr %c) vscale_range(8,0) #0 {
 ; CHECK-LABEL: fcmp_oeq_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -203,15 +203,15 @@ define void @fcmp_oeq_v32f32(<32 x float>* %a, <32 x float>* %b, <32 x i32>* %c)
 ; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x float>, <32 x float>* %a
-  %op2 = load <32 x float>, <32 x float>* %b
+  %op1 = load <32 x float>, ptr %a
+  %op2 = load <32 x float>, ptr %b
   %cmp = fcmp oeq <32 x float> %op1, %op2
   %sext = sext <32 x i1> %cmp to <32 x i32>
-  store <32 x i32> %sext, <32 x i32>* %c
+  store <32 x i32> %sext, ptr %c
   ret void
 }
 
-define void @fcmp_oeq_v64f32(<64 x float>* %a, <64 x float>* %b, <64 x i32>* %c) vscale_range(16,0) #0 {
+define void @fcmp_oeq_v64f32(ptr %a, ptr %b, ptr %c) vscale_range(16,0) #0 {
 ; CHECK-LABEL: fcmp_oeq_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -221,11 +221,11 @@ define void @fcmp_oeq_v64f32(<64 x float>* %a, <64 x float>* %b, <64 x i32>* %c)
 ; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <64 x float>, <64 x float>* %a
-  %op2 = load <64 x float>, <64 x float>* %b
+  %op1 = load <64 x float>, ptr %a
+  %op2 = load <64 x float>, ptr %b
   %cmp = fcmp oeq <64 x float> %op1, %op2
   %sext = sext <64 x i1> %cmp to <64 x i32>
-  store <64 x i32> %sext, <64 x i32>* %c
+  store <64 x i32> %sext, ptr %c
   ret void
 }
 
@@ -251,7 +251,7 @@ define <2 x i64> @fcmp_oeq_v2f64(<2 x double> %op1, <2 x double> %op2) vscale_ra
   ret <2 x i64> %sext
 }
 
-define void @fcmp_oeq_v4f64(<4 x double>* %a, <4 x double>* %b, <4 x i64>* %c) vscale_range(2,0) #0 {
+define void @fcmp_oeq_v4f64(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_oeq_v4f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl4
@@ -261,15 +261,15 @@ define void @fcmp_oeq_v4f64(<4 x double>* %a, <4 x double>* %b, <4 x i64>* %c) v
 ; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <4 x double>, <4 x double>* %a
-  %op2 = load <4 x double>, <4 x double>* %b
+  %op1 = load <4 x double>, ptr %a
+  %op2 = load <4 x double>, ptr %b
   %cmp = fcmp oeq <4 x double> %op1, %op2
   %sext = sext <4 x i1> %cmp to <4 x i64>
-  store <4 x i64> %sext, <4 x i64>* %c
+  store <4 x i64> %sext, ptr %c
   ret void
 }
 
-define void @fcmp_oeq_v8f64(<8 x double>* %a, <8 x double>* %b, <8 x i64>* %c) #0 {
+define void @fcmp_oeq_v8f64(ptr %a, ptr %b, ptr %c) #0 {
 ; VBITS_GE_256-LABEL: fcmp_oeq_v8f64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -295,15 +295,15 @@ define void @fcmp_oeq_v8f64(<8 x double>* %a, <8 x double>* %b, <8 x i64>* %c) #
 ; VBITS_GE_512-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x2]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load <8 x double>, <8 x double>* %a
-  %op2 = load <8 x double>, <8 x double>* %b
+  %op1 = load <8 x double>, ptr %a
+  %op2 = load <8 x double>, ptr %b
   %cmp = fcmp oeq <8 x double> %op1, %op2
   %sext = sext <8 x i1> %cmp to <8 x i64>
-  store <8 x i64> %sext, <8 x i64>* %c
+  store <8 x i64> %sext, ptr %c
   ret void
 }
 
-define void @fcmp_oeq_v16f64(<16 x double>* %a, <16 x double>* %b, <16 x i64>* %c) vscale_range(8,0) #0 {
+define void @fcmp_oeq_v16f64(ptr %a, ptr %b, ptr %c) vscale_range(8,0) #0 {
 ; CHECK-LABEL: fcmp_oeq_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
@@ -313,15 +313,15 @@ define void @fcmp_oeq_v16f64(<16 x double>* %a, <16 x double>* %b, <16 x i64>* %
 ; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x double>, <16 x double>* %a
-  %op2 = load <16 x double>, <16 x double>* %b
+  %op1 = load <16 x double>, ptr %a
+  %op2 = load <16 x double>, ptr %b
   %cmp = fcmp oeq <16 x double> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i64>
-  store <16 x i64> %sext, <16 x i64>* %c
+  store <16 x i64> %sext, ptr %c
   ret void
 }
 
-define void @fcmp_oeq_v32f64(<32 x double>* %a, <32 x double>* %b, <32 x i64>* %c) vscale_range(16,0) #0 {
+define void @fcmp_oeq_v32f64(ptr %a, ptr %b, ptr %c) vscale_range(16,0) #0 {
 ; CHECK-LABEL: fcmp_oeq_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
@@ -331,11 +331,11 @@ define void @fcmp_oeq_v32f64(<32 x double>* %a, <32 x double>* %b, <32 x i64>* %
 ; CHECK-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <32 x double>, <32 x double>* %a
-  %op2 = load <32 x double>, <32 x double>* %b
+  %op1 = load <32 x double>, ptr %a
+  %op2 = load <32 x double>, ptr %b
   %cmp = fcmp oeq <32 x double> %op1, %op2
   %sext = sext <32 x i1> %cmp to <32 x i64>
-  store <32 x i64> %sext, <32 x i64>* %c
+  store <32 x i64> %sext, ptr %c
   ret void
 }
 
@@ -343,7 +343,7 @@ define void @fcmp_oeq_v32f64(<32 x double>* %a, <32 x double>* %b, <32 x i64>* %
 ; FCMP UEQ
 ;
 
-define void @fcmp_ueq_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_ueq_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_ueq_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -355,11 +355,11 @@ define void @fcmp_ueq_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp ueq <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -367,7 +367,7 @@ define void @fcmp_ueq_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; FCMP ONE
 ;
 
-define void @fcmp_one_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_one_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_one_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -379,11 +379,11 @@ define void @fcmp_one_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp one <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -391,7 +391,7 @@ define void @fcmp_one_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; FCMP UNE
 ;
 
-define void @fcmp_une_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_une_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_une_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -401,11 +401,11 @@ define void @fcmp_une_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp une <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -413,7 +413,7 @@ define void @fcmp_une_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; FCMP OGT
 ;
 
-define void @fcmp_ogt_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_ogt_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_ogt_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -423,11 +423,11 @@ define void @fcmp_ogt_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp ogt <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -435,7 +435,7 @@ define void @fcmp_ogt_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; FCMP UGT
 ;
 
-define void @fcmp_ugt_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_ugt_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_ugt_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -447,11 +447,11 @@ define void @fcmp_ugt_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp ugt <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -459,7 +459,7 @@ define void @fcmp_ugt_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; FCMP OLT
 ;
 
-define void @fcmp_olt_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_olt_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_olt_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -469,11 +469,11 @@ define void @fcmp_olt_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp olt <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -481,7 +481,7 @@ define void @fcmp_olt_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; FCMP ULT
 ;
 
-define void @fcmp_ult_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_ult_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_ult_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -493,11 +493,11 @@ define void @fcmp_ult_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp ult <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -505,7 +505,7 @@ define void @fcmp_ult_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; FCMP OGE
 ;
 
-define void @fcmp_oge_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_oge_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_oge_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -515,11 +515,11 @@ define void @fcmp_oge_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp oge <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -527,7 +527,7 @@ define void @fcmp_oge_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; FCMP UGE
 ;
 
-define void @fcmp_uge_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_uge_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_uge_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -539,11 +539,11 @@ define void @fcmp_uge_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp uge <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -551,7 +551,7 @@ define void @fcmp_uge_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; FCMP OLE
 ;
 
-define void @fcmp_ole_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_ole_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_ole_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -561,11 +561,11 @@ define void @fcmp_ole_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp ole <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -573,7 +573,7 @@ define void @fcmp_ole_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; FCMP ULE
 ;
 
-define void @fcmp_ule_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_ule_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_ule_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -585,11 +585,11 @@ define void @fcmp_ule_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp ule <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -597,7 +597,7 @@ define void @fcmp_ule_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; FCMP UNO
 ;
 
-define void @fcmp_uno_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_uno_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_uno_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -607,11 +607,11 @@ define void @fcmp_uno_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp uno <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -619,7 +619,7 @@ define void @fcmp_uno_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; FCMP ORD
 ;
 
-define void @fcmp_ord_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_ord_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_ord_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -631,11 +631,11 @@ define void @fcmp_ord_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; CHECK-NEXT:    eor z0.d, z0.d, z1.d
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp ord <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -643,7 +643,7 @@ define void @fcmp_ord_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) v
 ; FCMP EQ
 ;
 
-define void @fcmp_eq_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_eq_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_eq_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -653,11 +653,11 @@ define void @fcmp_eq_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vs
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp fast oeq <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -665,7 +665,7 @@ define void @fcmp_eq_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vs
 ; FCMP NE
 ;
 
-define void @fcmp_ne_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_ne_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_ne_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -675,11 +675,11 @@ define void @fcmp_ne_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vs
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp fast one <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -687,7 +687,7 @@ define void @fcmp_ne_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vs
 ; FCMP GT
 ;
 
-define void @fcmp_gt_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_gt_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_gt_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -697,11 +697,11 @@ define void @fcmp_gt_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vs
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp fast ogt <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -709,7 +709,7 @@ define void @fcmp_gt_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vs
 ; FCMP LT
 ;
 
-define void @fcmp_lt_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_lt_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_lt_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -719,11 +719,11 @@ define void @fcmp_lt_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vs
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp fast olt <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -731,7 +731,7 @@ define void @fcmp_lt_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vs
 ; FCMP GE
 ;
 
-define void @fcmp_ge_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_ge_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_ge_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -741,11 +741,11 @@ define void @fcmp_ge_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vs
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp fast oge <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 
@@ -753,7 +753,7 @@ define void @fcmp_ge_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vs
 ; FCMP LE
 ;
 
-define void @fcmp_le_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vscale_range(2,0) #0 {
+define void @fcmp_le_v16f16(ptr %a, ptr %b, ptr %c) vscale_range(2,0) #0 {
 ; CHECK-LABEL: fcmp_le_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl16
@@ -763,11 +763,11 @@ define void @fcmp_le_v16f16(<16 x half>* %a, <16 x half>* %b, <16 x i16>* %c) vs
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
 ; CHECK-NEXT:    ret
-  %op1 = load <16 x half>, <16 x half>* %a
-  %op2 = load <16 x half>, <16 x half>* %b
+  %op1 = load <16 x half>, ptr %a
+  %op2 = load <16 x half>, ptr %b
   %cmp = fcmp fast ole <16 x half> %op1, %op2
   %sext = sext <16 x i1> %cmp to <16 x i16>
-  store <16 x i16> %sext, <16 x i16>* %c
+  store <16 x i16> %sext, ptr %c
   ret void
 }
 

@@ -992,6 +992,43 @@ def PDLInterp_IsNotNullOp
   let assemblyFormat = "$value `:` type($value) attr-dict `->` successors";
 }
 
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::CreateRangeOp
+//===----------------------------------------------------------------------===//
+
+def PDLInterp_CreateRangeOp : PDLInterp_Op<"create_range", [Pure]> {
+  let summary = "Construct a range of PDL entities";
+  let description = [{
+    `pdl_interp.create_range` operations construct a range from a given set of PDL
+    entities, which all share the same underlying element type. For example, a
+    `!pdl.range<value>` may be constructed from a list of `!pdl.value`
+    or `!pdl.range<value>` entities.
+
+    Example:
+
+    ```mlir
+    // Construct a range of values.
+    %valueRange = pdl_interp.create_range %inputValue, %inputRange : !pdl.value, !pdl.range<value>
+
+    // Construct a range of types.
+    %typeRange = pdl_interp.create_range %inputType, %inputRange : !pdl.type, !pdl.range<type>
+    
+    // Construct an empty range of types.
+    %valueRange = pdl_interp.create_range : !pdl.range<type>
+    ```
+  }];
+
+  let arguments = (ins Variadic<PDL_AnyType>:$arguments);
+  let results = (outs PDL_RangeOf<AnyTypeOf<[PDL_Type, PDL_Value]>>:$result);
+  let assemblyFormat = [{
+    ($arguments^ `:` type($arguments))?
+    custom<RangeType>(ref(type($arguments)), type($result))
+    attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // pdl_interp::RecordMatchOp
 //===----------------------------------------------------------------------===//

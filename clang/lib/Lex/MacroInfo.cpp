@@ -118,7 +118,7 @@ bool MacroInfo::isIdenticalTo(const MacroInfo &Other, Preprocessor &PP,
     if (A.getKind() != B.getKind())
       return false;
 
-    // If this isn't the first first token, check that the whitespace and
+    // If this isn't the first token, check that the whitespace and
     // start-of-line characteristics match.
     if (i != 0 &&
         (A.isAtStartOfLine() != B.isAtStartOfLine() ||

@@ -490,20 +490,6 @@ struct FormatStyle {
   /// \version 3.3
   bool AllowAllParametersOfDeclarationOnNextLine;
 
-  /// Allow short enums on a single line.
-  /// \code
-  ///   true:
-  ///   enum { A, B } myEnum;
-  ///
-  ///   false:
-  ///   enum {
-  ///     A,
-  ///     B
-  ///   } myEnum;
-  /// \endcode
-  /// \version 11
-  bool AllowShortEnumsOnASingleLine;
-
   /// Different styles for merging short blocks containing at most one
   /// statement.
   enum ShortBlockStyle : int8_t {
@@ -550,6 +536,20 @@ struct FormatStyle {
   /// \endcode
   /// \version 3.6
   bool AllowShortCaseLabelsOnASingleLine;
+
+  /// Allow short enums on a single line.
+  /// \code
+  ///   true:
+  ///   enum { A, B } myEnum;
+  ///
+  ///   false:
+  ///   enum {
+  ///     A,
+  ///     B
+  ///   } myEnum;
+  /// \endcode
+  /// \version 11
+  bool AllowShortEnumsOnASingleLine;
 
   /// Different styles for merging short functions containing at most one
   /// statement.
@@ -899,36 +899,6 @@ struct FormatStyle {
   /// \version 3.7
   bool BinPackArguments;
 
-  /// The style of inserting trailing commas into container literals.
-  enum TrailingCommaStyle : int8_t {
-    /// Do not insert trailing commas.
-    TCS_None,
-    /// Insert trailing commas in container literals that were wrapped over
-    /// multiple lines. Note that this is conceptually incompatible with
-    /// bin-packing, because the trailing comma is used as an indicator
-    /// that a container should be formatted one-per-line (i.e. not bin-packed).
-    /// So inserting a trailing comma counteracts bin-packing.
-    TCS_Wrapped,
-  };
-
-  /// If set to ``TCS_Wrapped`` will insert trailing commas in container
-  /// literals (arrays and objects) that wrap across multiple lines.
-  /// It is currently only available for JavaScript
-  /// and disabled by default ``TCS_None``.
-  /// ``InsertTrailingCommas`` cannot be used together with ``BinPackArguments``
-  /// as inserting the comma disables bin-packing.
-  /// \code
-  ///   TSC_Wrapped:
-  ///   const someArray = [
-  ///   aaaaaaaaaaaaaaaaaaaaaaaaaa,
-  ///   aaaaaaaaaaaaaaaaaaaaaaaaaa,
-  ///   aaaaaaaaaaaaaaaaaaaaaaaaaa,
-  ///   //                        ^ inserted
-  ///   ]
-  /// \endcode
-  /// \version 11
-  TrailingCommaStyle InsertTrailingCommas;
-
   /// If ``false``, a function declaration's or function definition's
   /// parameters will either all be on the same line or will have one line each.
   /// \code
@@ -943,6 +913,313 @@ struct FormatStyle {
   /// \endcode
   /// \version 3.7
   bool BinPackParameters;
+
+  /// Styles for adding spacing around ``:`` in bitfield definitions.
+  enum BitFieldColonSpacingStyle : int8_t {
+    /// Add one space on each side of the ``:``
+    /// \code
+    ///   unsigned bf : 2;
+    /// \endcode
+    BFCS_Both,
+    /// Add no space around the ``:`` (except when needed for
+    /// ``AlignConsecutiveBitFields``).
+    /// \code
+    ///   unsigned bf:2;
+    /// \endcode
+    BFCS_None,
+    /// Add space before the ``:`` only
+    /// \code
+    ///   unsigned bf :2;
+    /// \endcode
+    BFCS_Before,
+    /// Add space after the ``:`` only (space may be added before if
+    /// needed for ``AlignConsecutiveBitFields``).
+    /// \code
+    ///   unsigned bf: 2;
+    /// \endcode
+    BFCS_After
+  };
+  /// The BitFieldColonSpacingStyle to use for bitfields.
+  /// \version 12
+  BitFieldColonSpacingStyle BitFieldColonSpacing;
+
+  /// Different ways to wrap braces after control statements.
+  enum BraceWrappingAfterControlStatementStyle : int8_t {
+    /// Never wrap braces after a control statement.
+    /// \code
+    ///   if (foo()) {
+    ///   } else {
+    ///   }
+    ///   for (int i = 0; i < 10; ++i) {
+    ///   }
+    /// \endcode
+    BWACS_Never,
+    /// Only wrap braces after a multi-line control statement.
+    /// \code
+    ///   if (foo && bar &&
+    ///       baz)
+    ///   {
+    ///     quux();
+    ///   }
+    ///   while (foo || bar) {
+    ///   }
+    /// \endcode
+    BWACS_MultiLine,
+    /// Always wrap braces after a control statement.
+    /// \code
+    ///   if (foo())
+    ///   {
+    ///   } else
+    ///   {}
+    ///   for (int i = 0; i < 10; ++i)
+    ///   {}
+    /// \endcode
+    BWACS_Always
+  };
+
+  /// Precise control over the wrapping of braces.
+  /// \code
+  ///   # Should be declared this way:
+  ///   BreakBeforeBraces: Custom
+  ///   BraceWrapping:
+  ///       AfterClass: true
+  /// \endcode
+  struct BraceWrappingFlags {
+    /// Wrap case labels.
+    /// \code
+    ///   false:                                true:
+    ///   switch (foo) {                vs.     switch (foo) {
+    ///     case 1: {                             case 1:
+    ///       bar();                              {
+    ///       break;                                bar();
+    ///     }                                       break;
+    ///     default: {                            }
+    ///       plop();                             default:
+    ///     }                                     {
+    ///   }                                         plop();
+    ///                                           }
+    ///                                         }
+    /// \endcode
+    bool AfterCaseLabel;
+    /// Wrap class definitions.
+    /// \code
+    ///   true:
+    ///   class foo
+    ///   {};
+    ///
+    ///   false:
+    ///   class foo {};
+    /// \endcode
+    bool AfterClass;
+
+    /// Wrap control statements (``if``/``for``/``while``/``switch``/..).
+    BraceWrappingAfterControlStatementStyle AfterControlStatement;
+    /// Wrap enum definitions.
+    /// \code
+    ///   true:
+    ///   enum X : int
+    ///   {
+    ///     B
+    ///   };
+    ///
+    ///   false:
+    ///   enum X : int { B };
+    /// \endcode
+    bool AfterEnum;
+    /// Wrap function definitions.
+    /// \code
+    ///   true:
+    ///   void foo()
+    ///   {
+    ///     bar();
+    ///     bar2();
+    ///   }
+    ///
+    ///   false:
+    ///   void foo() {
+    ///     bar();
+    ///     bar2();
+    ///   }
+    /// \endcode
+    bool AfterFunction;
+    /// Wrap namespace definitions.
+    /// \code
+    ///   true:
+    ///   namespace
+    ///   {
+    ///   int foo();
+    ///   int bar();
+    ///   }
+    ///
+    ///   false:
+    ///   namespace {
+    ///   int foo();
+    ///   int bar();
+    ///   }
+    /// \endcode
+    bool AfterNamespace;
+    /// Wrap ObjC definitions (interfaces, implementations...).
+    /// \note @autoreleasepool and @synchronized blocks are wrapped
+    /// according to `AfterControlStatement` flag.
+    bool AfterObjCDeclaration;
+    /// Wrap struct definitions.
+    /// \code
+    ///   true:
+    ///   struct foo
+    ///   {
+    ///     int x;
+    ///   };
+    ///
+    ///   false:
+    ///   struct foo {
+    ///     int x;
+    ///   };
+    /// \endcode
+    bool AfterStruct;
+    /// Wrap union definitions.
+    /// \code
+    ///   true:
+    ///   union foo
+    ///   {
+    ///     int x;
+    ///   }
+    ///
+    ///   false:
+    ///   union foo {
+    ///     int x;
+    ///   }
+    /// \endcode
+    bool AfterUnion;
+    /// Wrap extern blocks.
+    /// \code
+    ///   true:
+    ///   extern "C"
+    ///   {
+    ///     int foo();
+    ///   }
+    ///
+    ///   false:
+    ///   extern "C" {
+    ///   int foo();
+    ///   }
+    /// \endcode
+    bool AfterExternBlock; // Partially superseded by IndentExternBlock
+    /// Wrap before ``catch``.
+    /// \code
+    ///   true:
+    ///   try {
+    ///     foo();
+    ///   }
+    ///   catch () {
+    ///   }
+    ///
+    ///   false:
+    ///   try {
+    ///     foo();
+    ///   } catch () {
+    ///   }
+    /// \endcode
+    bool BeforeCatch;
+    /// Wrap before ``else``.
+    /// \code
+    ///   true:
+    ///   if (foo()) {
+    ///   }
+    ///   else {
+    ///   }
+    ///
+    ///   false:
+    ///   if (foo()) {
+    ///   } else {
+    ///   }
+    /// \endcode
+    bool BeforeElse;
+    /// Wrap lambda block.
+    /// \code
+    ///   true:
+    ///   connect(
+    ///     []()
+    ///     {
+    ///       foo();
+    ///       bar();
+    ///     });
+    ///
+    ///   false:
+    ///   connect([]() {
+    ///     foo();
+    ///     bar();
+    ///   });
+    /// \endcode
+    bool BeforeLambdaBody;
+    /// Wrap before ``while``.
+    /// \code
+    ///   true:
+    ///   do {
+    ///     foo();
+    ///   }
+    ///   while (1);
+    ///
+    ///   false:
+    ///   do {
+    ///     foo();
+    ///   } while (1);
+    /// \endcode
+    bool BeforeWhile;
+    /// Indent the wrapped braces themselves.
+    bool IndentBraces;
+    /// If ``false``, empty function body can be put on a single line.
+    /// This option is used only if the opening brace of the function has
+    /// already been wrapped, i.e. the `AfterFunction` brace wrapping mode is
+    /// set, and the function could/should not be put on a single line (as per
+    /// `AllowShortFunctionsOnASingleLine` and constructor formatting options).
+    /// \code
+    ///   false:          true:
+    ///   int f()   vs.   int f()
+    ///   {}              {
+    ///                   }
+    /// \endcode
+    ///
+    bool SplitEmptyFunction;
+    /// If ``false``, empty record (e.g. class, struct or union) body
+    /// can be put on a single line. This option is used only if the opening
+    /// brace of the record has already been wrapped, i.e. the `AfterClass`
+    /// (for classes) brace wrapping mode is set.
+    /// \code
+    ///   false:           true:
+    ///   class Foo   vs.  class Foo
+    ///   {}               {
+    ///                    }
+    /// \endcode
+    ///
+    bool SplitEmptyRecord;
+    /// If ``false``, empty namespace body can be put on a single line.
+    /// This option is used only if the opening brace of the namespace has
+    /// already been wrapped, i.e. the `AfterNamespace` brace wrapping mode is
+    /// set.
+    /// \code
+    ///   false:               true:
+    ///   namespace Foo   vs.  namespace Foo
+    ///   {}                   {
+    ///                        }
+    /// \endcode
+    ///
+    bool SplitEmptyNamespace;
+  };
+
+  /// Control of individual brace wrapping cases.
+  ///
+  /// If ``BreakBeforeBraces`` is set to ``BS_Custom``, use this to specify how
+  /// each individual brace case should be handled. Otherwise, this is ignored.
+  /// \code{.yaml}
+  ///   # Example of usage:
+  ///   BreakBeforeBraces: Custom
+  ///   BraceWrapping:
+  ///     AfterEnum: true
+  ///     AfterStruct: false
+  ///     SplitEmptyFunction: false
+  /// \endcode
+  /// \version 3.8
+  BraceWrappingFlags BraceWrapping;
 
   /// If ``true``, clang-format will always break after a Json array `[`
   /// otherwise it will scan until the closing `]` to determine if it should add
@@ -1451,284 +1728,6 @@ struct FormatStyle {
   /// \version 3.7
   BraceBreakingStyle BreakBeforeBraces;
 
-  /// Different ways to wrap braces after control statements.
-  enum BraceWrappingAfterControlStatementStyle : int8_t {
-    /// Never wrap braces after a control statement.
-    /// \code
-    ///   if (foo()) {
-    ///   } else {
-    ///   }
-    ///   for (int i = 0; i < 10; ++i) {
-    ///   }
-    /// \endcode
-    BWACS_Never,
-    /// Only wrap braces after a multi-line control statement.
-    /// \code
-    ///   if (foo && bar &&
-    ///       baz)
-    ///   {
-    ///     quux();
-    ///   }
-    ///   while (foo || bar) {
-    ///   }
-    /// \endcode
-    BWACS_MultiLine,
-    /// Always wrap braces after a control statement.
-    /// \code
-    ///   if (foo())
-    ///   {
-    ///   } else
-    ///   {}
-    ///   for (int i = 0; i < 10; ++i)
-    ///   {}
-    /// \endcode
-    BWACS_Always
-  };
-
-  /// Precise control over the wrapping of braces.
-  /// \code
-  ///   # Should be declared this way:
-  ///   BreakBeforeBraces: Custom
-  ///   BraceWrapping:
-  ///       AfterClass: true
-  /// \endcode
-  struct BraceWrappingFlags {
-    /// Wrap case labels.
-    /// \code
-    ///   false:                                true:
-    ///   switch (foo) {                vs.     switch (foo) {
-    ///     case 1: {                             case 1:
-    ///       bar();                              {
-    ///       break;                                bar();
-    ///     }                                       break;
-    ///     default: {                            }
-    ///       plop();                             default:
-    ///     }                                     {
-    ///   }                                         plop();
-    ///                                           }
-    ///                                         }
-    /// \endcode
-    bool AfterCaseLabel;
-    /// Wrap class definitions.
-    /// \code
-    ///   true:
-    ///   class foo
-    ///   {};
-    ///
-    ///   false:
-    ///   class foo {};
-    /// \endcode
-    bool AfterClass;
-
-    /// Wrap control statements (``if``/``for``/``while``/``switch``/..).
-    BraceWrappingAfterControlStatementStyle AfterControlStatement;
-    /// Wrap enum definitions.
-    /// \code
-    ///   true:
-    ///   enum X : int
-    ///   {
-    ///     B
-    ///   };
-    ///
-    ///   false:
-    ///   enum X : int { B };
-    /// \endcode
-    bool AfterEnum;
-    /// Wrap function definitions.
-    /// \code
-    ///   true:
-    ///   void foo()
-    ///   {
-    ///     bar();
-    ///     bar2();
-    ///   }
-    ///
-    ///   false:
-    ///   void foo() {
-    ///     bar();
-    ///     bar2();
-    ///   }
-    /// \endcode
-    bool AfterFunction;
-    /// Wrap namespace definitions.
-    /// \code
-    ///   true:
-    ///   namespace
-    ///   {
-    ///   int foo();
-    ///   int bar();
-    ///   }
-    ///
-    ///   false:
-    ///   namespace {
-    ///   int foo();
-    ///   int bar();
-    ///   }
-    /// \endcode
-    bool AfterNamespace;
-    /// Wrap ObjC definitions (interfaces, implementations...).
-    /// \note @autoreleasepool and @synchronized blocks are wrapped
-    /// according to `AfterControlStatement` flag.
-    bool AfterObjCDeclaration;
-    /// Wrap struct definitions.
-    /// \code
-    ///   true:
-    ///   struct foo
-    ///   {
-    ///     int x;
-    ///   };
-    ///
-    ///   false:
-    ///   struct foo {
-    ///     int x;
-    ///   };
-    /// \endcode
-    bool AfterStruct;
-    /// Wrap union definitions.
-    /// \code
-    ///   true:
-    ///   union foo
-    ///   {
-    ///     int x;
-    ///   }
-    ///
-    ///   false:
-    ///   union foo {
-    ///     int x;
-    ///   }
-    /// \endcode
-    bool AfterUnion;
-    /// Wrap extern blocks.
-    /// \code
-    ///   true:
-    ///   extern "C"
-    ///   {
-    ///     int foo();
-    ///   }
-    ///
-    ///   false:
-    ///   extern "C" {
-    ///   int foo();
-    ///   }
-    /// \endcode
-    bool AfterExternBlock; // Partially superseded by IndentExternBlock
-    /// Wrap before ``catch``.
-    /// \code
-    ///   true:
-    ///   try {
-    ///     foo();
-    ///   }
-    ///   catch () {
-    ///   }
-    ///
-    ///   false:
-    ///   try {
-    ///     foo();
-    ///   } catch () {
-    ///   }
-    /// \endcode
-    bool BeforeCatch;
-    /// Wrap before ``else``.
-    /// \code
-    ///   true:
-    ///   if (foo()) {
-    ///   }
-    ///   else {
-    ///   }
-    ///
-    ///   false:
-    ///   if (foo()) {
-    ///   } else {
-    ///   }
-    /// \endcode
-    bool BeforeElse;
-    /// Wrap lambda block.
-    /// \code
-    ///   true:
-    ///   connect(
-    ///     []()
-    ///     {
-    ///       foo();
-    ///       bar();
-    ///     });
-    ///
-    ///   false:
-    ///   connect([]() {
-    ///     foo();
-    ///     bar();
-    ///   });
-    /// \endcode
-    bool BeforeLambdaBody;
-    /// Wrap before ``while``.
-    /// \code
-    ///   true:
-    ///   do {
-    ///     foo();
-    ///   }
-    ///   while (1);
-    ///
-    ///   false:
-    ///   do {
-    ///     foo();
-    ///   } while (1);
-    /// \endcode
-    bool BeforeWhile;
-    /// Indent the wrapped braces themselves.
-    bool IndentBraces;
-    /// If ``false``, empty function body can be put on a single line.
-    /// This option is used only if the opening brace of the function has
-    /// already been wrapped, i.e. the `AfterFunction` brace wrapping mode is
-    /// set, and the function could/should not be put on a single line (as per
-    /// `AllowShortFunctionsOnASingleLine` and constructor formatting options).
-    /// \code
-    ///   false:          true:
-    ///   int f()   vs.   int f()
-    ///   {}              {
-    ///                   }
-    /// \endcode
-    ///
-    bool SplitEmptyFunction;
-    /// If ``false``, empty record (e.g. class, struct or union) body
-    /// can be put on a single line. This option is used only if the opening
-    /// brace of the record has already been wrapped, i.e. the `AfterClass`
-    /// (for classes) brace wrapping mode is set.
-    /// \code
-    ///   false:           true:
-    ///   class Foo   vs.  class Foo
-    ///   {}               {
-    ///                    }
-    /// \endcode
-    ///
-    bool SplitEmptyRecord;
-    /// If ``false``, empty namespace body can be put on a single line.
-    /// This option is used only if the opening brace of the namespace has
-    /// already been wrapped, i.e. the `AfterNamespace` brace wrapping mode is
-    /// set.
-    /// \code
-    ///   false:               true:
-    ///   namespace Foo   vs.  namespace Foo
-    ///   {}                   {
-    ///                        }
-    /// \endcode
-    ///
-    bool SplitEmptyNamespace;
-  };
-
-  /// Control of individual brace wrapping cases.
-  ///
-  /// If ``BreakBeforeBraces`` is set to ``BS_Custom``, use this to specify how
-  /// each individual brace case should be handled. Otherwise, this is ignored.
-  /// \code{.yaml}
-  ///   # Example of usage:
-  ///   BreakBeforeBraces: Custom
-  ///   BraceWrapping:
-  ///     AfterEnum: true
-  ///     AfterStruct: false
-  ///     SplitEmptyFunction: false
-  /// \endcode
-  /// \version 3.8
-  BraceWrappingFlags BraceWrapping;
-
   /// Different ways to break before concept declarations.
   enum BreakBeforeConceptDeclarationsStyle : int8_t {
     /// Keep the template declaration line together with ``concept``.
@@ -1839,74 +1838,6 @@ struct FormatStyle {
   /// \endcode
   /// \version 3.7
   std::string CommentPragmas;
-
-  /// Different specifiers and qualifiers alignment styles.
-  enum QualifierAlignmentStyle : int8_t {
-    /// Don't change specifiers/qualifiers to either Left or Right alignment
-    /// (default).
-    /// \code
-    ///    int const a;
-    ///    const int *a;
-    /// \endcode
-    QAS_Leave,
-    /// Change specifiers/qualifiers to be left-aligned.
-    /// \code
-    ///    const int a;
-    ///    const int *a;
-    /// \endcode
-    QAS_Left,
-    /// Change specifiers/qualifiers to be right-aligned.
-    /// \code
-    ///    int const a;
-    ///    int const *a;
-    /// \endcode
-    QAS_Right,
-    /// Change specifiers/qualifiers to be aligned based on ``QualifierOrder``.
-    /// With:
-    /// \code{.yaml}
-    ///   QualifierOrder: ['inline', 'static', 'type', 'const']
-    /// \endcode
-    ///
-    /// \code
-    ///
-    ///    int const a;
-    ///    int const *a;
-    /// \endcode
-    QAS_Custom
-  };
-
-  /// Different ways to arrange specifiers and qualifiers (e.g. const/volatile).
-  /// \warning
-  ///  Setting ``QualifierAlignment``  to something other than `Leave`, COULD
-  ///  lead to incorrect code formatting due to incorrect decisions made due to
-  ///  clang-formats lack of complete semantic information.
-  ///  As such extra care should be taken to review code changes made by the use
-  ///  of this option.
-  /// \endwarning
-  /// \version 14
-  QualifierAlignmentStyle QualifierAlignment;
-
-  /// The order in which the qualifiers appear.
-  /// Order is an array that can contain any of the following:
-  ///
-  ///   * const
-  ///   * inline
-  ///   * static
-  ///   * constexpr
-  ///   * volatile
-  ///   * restrict
-  ///   * type
-  ///
-  /// Note: it MUST contain 'type'.
-  /// Items to the left of 'type' will be placed to the left of the type and
-  /// aligned in the order supplied. Items to the right of 'type' will be placed
-  /// to the right of the type and aligned in the order supplied.
-  ///
-  /// \code{.yaml}
-  ///   QualifierOrder: ['inline', 'static', 'type', 'const', 'volatile' ]
-  /// \endcode
-  /// \version 14
-  std::vector<std::string> QualifierOrder;
 
   /// Different ways to break inheritance list.
   enum BreakInheritanceListStyle : int8_t {
@@ -2160,53 +2091,6 @@ struct FormatStyle {
   /// \version 3.7
   bool ExperimentalAutoDetectBinPacking;
 
-  /// Different ways to try to fit all constructor initializers on a line.
-  enum PackConstructorInitializersStyle : int8_t {
-    /// Always put each constructor initializer on its own line.
-    /// \code
-    ///    Constructor()
-    ///        : a(),
-    ///          b()
-    /// \endcode
-    PCIS_Never,
-    /// Bin-pack constructor initializers.
-    /// \code
-    ///    Constructor()
-    ///        : aaaaaaaaaaaaaaaaaaaa(), bbbbbbbbbbbbbbbbbbbb(),
-    ///          cccccccccccccccccccc()
-    /// \endcode
-    PCIS_BinPack,
-    /// Put all constructor initializers on the current line if they fit.
-    /// Otherwise, put each one on its own line.
-    /// \code
-    ///    Constructor() : a(), b()
-    ///
-    ///    Constructor()
-    ///        : aaaaaaaaaaaaaaaaaaaa(),
-    ///          bbbbbbbbbbbbbbbbbbbb(),
-    ///          ddddddddddddd()
-    /// \endcode
-    PCIS_CurrentLine,
-    /// Same as ``PCIS_CurrentLine`` except that if all constructor initializers
-    /// do not fit on the current line, try to fit them on the next line.
-    /// \code
-    ///    Constructor() : a(), b()
-    ///
-    ///    Constructor()
-    ///        : aaaaaaaaaaaaaaaaaaaa(), bbbbbbbbbbbbbbbbbbbb(), ddddddddddddd()
-    ///
-    ///    Constructor()
-    ///        : aaaaaaaaaaaaaaaaaaaa(),
-    ///          bbbbbbbbbbbbbbbbbbbb(),
-    ///          cccccccccccccccccccc()
-    /// \endcode
-    PCIS_NextLine,
-  };
-
-  /// The pack constructor initializers style to use.
-  /// \version 14;
-  PackConstructorInitializersStyle PackConstructorInitializers;
-
   /// If ``true``, clang-format adds missing namespace end comments for
   /// short namespaces and fixes invalid existing ones. Short ones are
   /// controlled by "ShortNamespaceLines".
@@ -2238,6 +2122,8 @@ struct FormatStyle {
   /// \version 3.7
   std::vector<std::string> ForEachMacros;
 
+  tooling::IncludeStyle IncludeStyle;
+
   /// A vector of macros that should be interpreted as conditionals
   /// instead of as function calls.
   ///
@@ -2258,66 +2144,6 @@ struct FormatStyle {
   /// <https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#maybes>`_
   /// \version 13
   std::vector<std::string> IfMacros;
-
-  /// \brief A vector of macros that should be interpreted as type declarations
-  /// instead of as function calls.
-  ///
-  /// These are expected to be macros of the form:
-  /// \code
-  ///   STACK_OF(...)
-  /// \endcode
-  ///
-  /// In the .clang-format configuration file, this can be configured like:
-  /// \code{.yaml}
-  ///   TypenameMacros: ['STACK_OF', 'LIST']
-  /// \endcode
-  ///
-  /// For example: OpenSSL STACK_OF, BSD LIST_ENTRY.
-  /// \version 9
-  std::vector<std::string> TypenameMacros;
-
-  /// A vector of macros that should be interpreted as complete
-  /// statements.
-  ///
-  /// Typical macros are expressions, and require a semi-colon to be
-  /// added; sometimes this is not the case, and this allows to make
-  /// clang-format aware of such cases.
-  ///
-  /// For example: Q_UNUSED
-  /// \version 8
-  std::vector<std::string> StatementMacros;
-
-  /// A vector of macros which are used to open namespace blocks.
-  ///
-  /// These are expected to be macros of the form:
-  /// \code
-  ///   NAMESPACE(<namespace-name>, ...) {
-  ///     <namespace-content>
-  ///   }
-  /// \endcode
-  ///
-  /// For example: TESTSUITE
-  /// \version 9
-  std::vector<std::string> NamespaceMacros;
-
-  /// A vector of macros which are whitespace-sensitive and should not
-  /// be touched.
-  ///
-  /// These are expected to be macros of the form:
-  /// \code
-  ///   STRINGIZE(...)
-  /// \endcode
-  ///
-  /// In the .clang-format configuration file, this can be configured like:
-  /// \code{.yaml}
-  ///   WhitespaceSensitiveMacros: ['STRINGIZE', 'PP_STRINGIZE']
-  /// \endcode
-  ///
-  /// For example: BOOST_PP_STRINGIZE
-  /// \version 11
-  std::vector<std::string> WhitespaceSensitiveMacros;
-
-  tooling::IncludeStyle IncludeStyle;
 
   /// Specify whether access modifiers should have their own indentation level.
   ///
@@ -2346,25 +2172,6 @@ struct FormatStyle {
   /// \version 13
   bool IndentAccessModifiers;
 
-  /// Indent case labels one level from the switch statement.
-  ///
-  /// When ``false``, use the same indentation level as for the switch
-  /// statement. Switch statement body is always indented one level more than
-  /// case labels (except the first block following the case label, which
-  /// itself indents the code - unless IndentCaseBlocks is enabled).
-  /// \code
-  ///    false:                                 true:
-  ///    switch (fool) {                vs.     switch (fool) {
-  ///    case 1:                                  case 1:
-  ///      bar();                                   bar();
-  ///      break;                                   break;
-  ///    default:                                 default:
-  ///      plop();                                  plop();
-  ///    }                                      }
-  /// \endcode
-  /// \version 3.3
-  bool IndentCaseLabels;
-
   /// Indent case label blocks one level from the case label.
   ///
   /// When ``false``, the block following the case label uses the same
@@ -2388,6 +2195,25 @@ struct FormatStyle {
   /// \version 11
   bool IndentCaseBlocks;
 
+  /// Indent case labels one level from the switch statement.
+  ///
+  /// When ``false``, use the same indentation level as for the switch
+  /// statement. Switch statement body is always indented one level more than
+  /// case labels (except the first block following the case label, which
+  /// itself indents the code - unless IndentCaseBlocks is enabled).
+  /// \code
+  ///    false:                                 true:
+  ///    switch (fool) {                vs.     switch (fool) {
+  ///    case 1:                                  case 1:
+  ///      bar();                                   bar();
+  ///      break;                                   break;
+  ///    default:                                 default:
+  ///      plop();                                  plop();
+  ///    }                                      }
+  /// \endcode
+  /// \version 3.3
+  bool IndentCaseLabels;
+
   /// Indent goto labels.
   ///
   /// When ``false``, goto labels are flushed left.
@@ -2404,41 +2230,6 @@ struct FormatStyle {
   /// \endcode
   /// \version 10
   bool IndentGotoLabels;
-
-  /// Options for indenting preprocessor directives.
-  enum PPDirectiveIndentStyle : int8_t {
-    /// Does not indent any directives.
-    /// \code
-    ///    #if FOO
-    ///    #if BAR
-    ///    #include <foo>
-    ///    #endif
-    ///    #endif
-    /// \endcode
-    PPDIS_None,
-    /// Indents directives after the hash.
-    /// \code
-    ///    #if FOO
-    ///    #  if BAR
-    ///    #    include <foo>
-    ///    #  endif
-    ///    #endif
-    /// \endcode
-    PPDIS_AfterHash,
-    /// Indents directives before the hash.
-    /// \code
-    ///    #if FOO
-    ///      #if BAR
-    ///        #include <foo>
-    ///      #endif
-    ///    #endif
-    /// \endcode
-    PPDIS_BeforeHash
-  };
-
-  /// The preprocessor directive indenting style to use.
-  /// \version 6
-  PPDirectiveIndentStyle IndentPPDirectives;
 
   /// Indents extern blocks
   enum IndentExternBlockStyle : int8_t {
@@ -2479,6 +2270,41 @@ struct FormatStyle {
   /// IndentExternBlockStyle is the type of indenting of extern blocks.
   /// \version 11
   IndentExternBlockStyle IndentExternBlock;
+
+  /// Options for indenting preprocessor directives.
+  enum PPDirectiveIndentStyle : int8_t {
+    /// Does not indent any directives.
+    /// \code
+    ///    #if FOO
+    ///    #if BAR
+    ///    #include <foo>
+    ///    #endif
+    ///    #endif
+    /// \endcode
+    PPDIS_None,
+    /// Indents directives after the hash.
+    /// \code
+    ///    #if FOO
+    ///    #  if BAR
+    ///    #    include <foo>
+    ///    #  endif
+    ///    #endif
+    /// \endcode
+    PPDIS_AfterHash,
+    /// Indents directives before the hash.
+    /// \code
+    ///    #if FOO
+    ///      #if BAR
+    ///        #include <foo>
+    ///      #endif
+    ///    #endif
+    /// \endcode
+    PPDIS_BeforeHash
+  };
+
+  /// The preprocessor directive indenting style to use.
+  /// \version 6
+  PPDirectiveIndentStyle IndentPPDirectives;
 
   /// Indent the requires clause in a template. This only applies when
   /// ``RequiresClausePosition`` is ``OwnLine``, or ``WithFollowing``.
@@ -2561,6 +2387,36 @@ struct FormatStyle {
   /// \endcode
   /// \version 15
   bool InsertBraces;
+
+  /// The style of inserting trailing commas into container literals.
+  enum TrailingCommaStyle : int8_t {
+    /// Do not insert trailing commas.
+    TCS_None,
+    /// Insert trailing commas in container literals that were wrapped over
+    /// multiple lines. Note that this is conceptually incompatible with
+    /// bin-packing, because the trailing comma is used as an indicator
+    /// that a container should be formatted one-per-line (i.e. not bin-packed).
+    /// So inserting a trailing comma counteracts bin-packing.
+    TCS_Wrapped,
+  };
+
+  /// If set to ``TCS_Wrapped`` will insert trailing commas in container
+  /// literals (arrays and objects) that wrap across multiple lines.
+  /// It is currently only available for JavaScript
+  /// and disabled by default ``TCS_None``.
+  /// ``InsertTrailingCommas`` cannot be used together with ``BinPackArguments``
+  /// as inserting the comma disables bin-packing.
+  /// \code
+  ///   TSC_Wrapped:
+  ///   const someArray = [
+  ///   aaaaaaaaaaaaaaaaaaaaaaaaaa,
+  ///   aaaaaaaaaaaaaaaaaaaaaaaaaa,
+  ///   aaaaaaaaaaaaaaaaaaaaaaaaaa,
+  ///   //                        ^ inserted
+  ///   ]
+  /// \endcode
+  /// \version 11
+  TrailingCommaStyle InsertTrailingCommas;
 
   /// A vector of prefixes ordered by the desired groups for Java imports.
   ///
@@ -2651,6 +2507,39 @@ struct FormatStyle {
   /// \version 3.7
   bool KeepEmptyLinesAtTheStartOfBlocks;
 
+  /// Indentation logic for lambda bodies.
+  enum LambdaBodyIndentationKind : int8_t {
+    /// Align lambda body relative to the lambda signature. This is the default.
+    /// \code
+    ///    someMethod(
+    ///        [](SomeReallyLongLambdaSignatureArgument foo) {
+    ///          return;
+    ///        });
+    /// \endcode
+    LBI_Signature,
+    /// Align lambda body relative to the indentation level of the outer scope
+    /// the lambda signature resides in.
+    /// \code
+    ///    someMethod(
+    ///        [](SomeReallyLongLambdaSignatureArgument foo) {
+    ///      return;
+    ///    });
+    /// \endcode
+    LBI_OuterScope,
+  };
+
+  /// The indentation style of lambda bodies. ``Signature`` (the default)
+  /// causes the lambda body to be indented one additional level relative to
+  /// the indentation level of the signature. ``OuterScope`` forces the lambda
+  /// body to be indented one additional level relative to the parent scope
+  /// containing the lambda signature. For callback-heavy code, it may improve
+  /// readability to have the signature indented two levels and to use
+  /// ``OuterScope``. The KJ style guide requires ``OuterScope``.
+  /// `KJ style guide
+  /// <https://github.com/capnproto/capnproto/blob/master/style-guide.md>`_
+  /// \version 13
+  LambdaBodyIndentationKind LambdaBodyIndentation;
+
   /// Supported languages.
   ///
   /// When stored in a configuration file, specifies the language, that the
@@ -2695,47 +2584,14 @@ struct FormatStyle {
   /// \version 3.5
   LanguageKind Language;
 
-  /// Indentation logic for lambda bodies.
-  enum LambdaBodyIndentationKind : int8_t {
-    /// Align lambda body relative to the lambda signature. This is the default.
-    /// \code
-    ///    someMethod(
-    ///        [](SomeReallyLongLambdaSignatureArgument foo) {
-    ///          return;
-    ///        });
-    /// \endcode
-    LBI_Signature,
-    /// Align lambda body relative to the indentation level of the outer scope
-    /// the lambda signature resides in.
-    /// \code
-    ///    someMethod(
-    ///        [](SomeReallyLongLambdaSignatureArgument foo) {
-    ///      return;
-    ///    });
-    /// \endcode
-    LBI_OuterScope,
-  };
-
-  /// The indentation style of lambda bodies. ``Signature`` (the default)
-  /// causes the lambda body to be indented one additional level relative to
-  /// the indentation level of the signature. ``OuterScope`` forces the lambda
-  /// body to be indented one additional level relative to the parent scope
-  /// containing the lambda signature. For callback-heavy code, it may improve
-  /// readability to have the signature indented two levels and to use
-  /// ``OuterScope``. The KJ style guide requires ``OuterScope``.
-  /// `KJ style guide
-  /// <https://github.com/capnproto/capnproto/blob/master/style-guide.md>`_
-  /// \version 13
-  LambdaBodyIndentationKind LambdaBodyIndentation;
-
   /// A regular expression matching macros that start a block.
   /// \code
   ///    # With:
   ///    MacroBlockBegin: "^NS_MAP_BEGIN|\
- ///    NS_TABLE_HEAD$"
+  ///    NS_TABLE_HEAD$"
   ///    MacroBlockEnd: "^\
- ///    NS_MAP_END|\
- ///    NS_TABLE_.*_END$"
+  ///    NS_MAP_END|\
+  ///    NS_TABLE_.*_END$"
   ///
   ///    NS_MAP_BEGIN
   ///      foo();
@@ -2813,6 +2669,19 @@ struct FormatStyle {
   /// \version 3.7
   NamespaceIndentationKind NamespaceIndentation;
 
+  /// A vector of macros which are used to open namespace blocks.
+  ///
+  /// These are expected to be macros of the form:
+  /// \code
+  ///   NAMESPACE(<namespace-name>, ...) {
+  ///     <namespace-content>
+  ///   }
+  /// \endcode
+  ///
+  /// For example: TESTSUITE
+  /// \version 9
+  std::vector<std::string> NamespaceMacros;
+
   /// Controls bin-packing Objective-C protocol conformance list
   /// items into as few lines as possible when they go over ``ColumnLimit``.
   ///
@@ -2857,11 +2726,6 @@ struct FormatStyle {
   /// \version 3.7
   unsigned ObjCBlockIndentWidth;
 
-  /// Add a space after ``@property`` in Objective-C, i.e. use
-  /// ``@property (readonly)`` instead of ``@property(readonly)``.
-  /// \version 3.7
-  bool ObjCSpaceAfterProperty;
-
   /// Break parameters list into lines when there is nested block
   /// parameters in a function call.
   /// \code
@@ -2886,10 +2750,62 @@ struct FormatStyle {
   /// \version 11
   bool ObjCBreakBeforeNestedBlockParam;
 
+  /// Add a space after ``@property`` in Objective-C, i.e. use
+  /// ``@property (readonly)`` instead of ``@property(readonly)``.
+  /// \version 3.7
+  bool ObjCSpaceAfterProperty;
+
   /// Add a space in front of an Objective-C protocol list, i.e. use
   /// ``Foo <Protocol>`` instead of ``Foo<Protocol>``.
   /// \version 3.7
   bool ObjCSpaceBeforeProtocolList;
+
+  /// Different ways to try to fit all constructor initializers on a line.
+  enum PackConstructorInitializersStyle : int8_t {
+    /// Always put each constructor initializer on its own line.
+    /// \code
+    ///    Constructor()
+    ///        : a(),
+    ///          b()
+    /// \endcode
+    PCIS_Never,
+    /// Bin-pack constructor initializers.
+    /// \code
+    ///    Constructor()
+    ///        : aaaaaaaaaaaaaaaaaaaa(), bbbbbbbbbbbbbbbbbbbb(),
+    ///          cccccccccccccccccccc()
+    /// \endcode
+    PCIS_BinPack,
+    /// Put all constructor initializers on the current line if they fit.
+    /// Otherwise, put each one on its own line.
+    /// \code
+    ///    Constructor() : a(), b()
+    ///
+    ///    Constructor()
+    ///        : aaaaaaaaaaaaaaaaaaaa(),
+    ///          bbbbbbbbbbbbbbbbbbbb(),
+    ///          ddddddddddddd()
+    /// \endcode
+    PCIS_CurrentLine,
+    /// Same as ``PCIS_CurrentLine`` except that if all constructor initializers
+    /// do not fit on the current line, try to fit them on the next line.
+    /// \code
+    ///    Constructor() : a(), b()
+    ///
+    ///    Constructor()
+    ///        : aaaaaaaaaaaaaaaaaaaa(), bbbbbbbbbbbbbbbbbbbb(), ddddddddddddd()
+    ///
+    ///    Constructor()
+    ///        : aaaaaaaaaaaaaaaaaaaa(),
+    ///          bbbbbbbbbbbbbbbbbbbb(),
+    ///          cccccccccccccccccccc()
+    /// \endcode
+    PCIS_NextLine,
+  };
+
+  /// The pack constructor initializers style to use.
+  /// \version 14;
+  PackConstructorInitializersStyle PackConstructorInitializers;
 
   /// The penalty for breaking around an assignment operator.
   /// \version 5
@@ -2923,15 +2839,14 @@ struct FormatStyle {
   /// \version 3.7
   unsigned PenaltyExcessCharacter;
 
-  /// Penalty for putting the return type of a function onto its own
-  /// line.
-  /// \version 3.7
-  unsigned PenaltyReturnTypeOnItsOwnLine;
-
   /// Penalty for each character of whitespace indentation
   /// (counted relative to leading non-whitespace column).
   /// \version 12
   unsigned PenaltyIndentedWhitespace;
+
+  /// Penalty for putting the return type of a function onto its own line.
+  /// \version 3.7
+  unsigned PenaltyReturnTypeOnItsOwnLine;
 
   /// The ``&``, ``&&`` and ``*`` alignment style.
   enum PointerAlignmentStyle : int8_t {
@@ -2970,6 +2885,74 @@ struct FormatStyle {
   /// \endcode
   /// \version 13
   int PPIndentWidth;
+
+  /// Different specifiers and qualifiers alignment styles.
+  enum QualifierAlignmentStyle : int8_t {
+    /// Don't change specifiers/qualifiers to either Left or Right alignment
+    /// (default).
+    /// \code
+    ///    int const a;
+    ///    const int *a;
+    /// \endcode
+    QAS_Leave,
+    /// Change specifiers/qualifiers to be left-aligned.
+    /// \code
+    ///    const int a;
+    ///    const int *a;
+    /// \endcode
+    QAS_Left,
+    /// Change specifiers/qualifiers to be right-aligned.
+    /// \code
+    ///    int const a;
+    ///    int const *a;
+    /// \endcode
+    QAS_Right,
+    /// Change specifiers/qualifiers to be aligned based on ``QualifierOrder``.
+    /// With:
+    /// \code{.yaml}
+    ///   QualifierOrder: ['inline', 'static', 'type', 'const']
+    /// \endcode
+    ///
+    /// \code
+    ///
+    ///    int const a;
+    ///    int const *a;
+    /// \endcode
+    QAS_Custom
+  };
+
+  /// Different ways to arrange specifiers and qualifiers (e.g. const/volatile).
+  /// \warning
+  ///  Setting ``QualifierAlignment``  to something other than `Leave`, COULD
+  ///  lead to incorrect code formatting due to incorrect decisions made due to
+  ///  clang-formats lack of complete semantic information.
+  ///  As such extra care should be taken to review code changes made by the use
+  ///  of this option.
+  /// \endwarning
+  /// \version 14
+  QualifierAlignmentStyle QualifierAlignment;
+
+  /// The order in which the qualifiers appear.
+  /// Order is an array that can contain any of the following:
+  ///
+  ///   * const
+  ///   * inline
+  ///   * static
+  ///   * constexpr
+  ///   * volatile
+  ///   * restrict
+  ///   * type
+  ///
+  /// Note: it MUST contain 'type'.
+  /// Items to the left of 'type' will be placed to the left of the type and
+  /// aligned in the order supplied. Items to the right of 'type' will be placed
+  /// to the right of the type and aligned in the order supplied.
+  ///
+  /// \code{.yaml}
+  ///   QualifierOrder: ['inline', 'static', 'type', 'const', 'volatile' ]
+  /// \endcode
+  /// \version 14
+  std::vector<std::string> QualifierOrder;
 
   /// See documentation of ``RawStringFormats``.
   struct RawStringFormat {
@@ -3700,6 +3683,16 @@ struct FormatStyle {
   /// \version 14
   SpaceBeforeParensCustom SpaceBeforeParensOptions;
 
+  /// If ``true``, spaces will be before  ``[``.
+  /// Lambdas will not be affected. Only the first ``[`` will get a space added.
+  /// \code
+  ///    true:                                  false:
+  ///    int a [5];                    vs.      int a[5];
+  ///    int a [5][5];                 vs.      int a[5][5];
+  /// \endcode
+  /// \version 10
+  bool SpaceBeforeSquareBrackets;
+
   /// If ``false``, spaces will be removed before range-based for loop
   /// colon.
   /// \code
@@ -3858,45 +3851,6 @@ struct FormatStyle {
   /// \version 3.7
   bool SpacesInSquareBrackets;
 
-  /// If ``true``, spaces will be before  ``[``.
-  /// Lambdas will not be affected. Only the first ``[`` will get a space added.
-  /// \code
-  ///    true:                                  false:
-  ///    int a [5];                    vs.      int a[5];
-  ///    int a [5][5];                 vs.      int a[5][5];
-  /// \endcode
-  /// \version 10
-  bool SpaceBeforeSquareBrackets;
-
-  /// Styles for adding spacing around ``:`` in bitfield definitions.
-  enum BitFieldColonSpacingStyle : int8_t {
-    /// Add one space on each side of the ``:``
-    /// \code
-    ///   unsigned bf : 2;
-    /// \endcode
-    BFCS_Both,
-    /// Add no space around the ``:`` (except when needed for
-    /// ``AlignConsecutiveBitFields``).
-    /// \code
-    ///   unsigned bf:2;
-    /// \endcode
-    BFCS_None,
-    /// Add space before the ``:`` only
-    /// \code
-    ///   unsigned bf :2;
-    /// \endcode
-    BFCS_Before,
-    /// Add space after the ``:`` only (space may be added before if
-    /// needed for ``AlignConsecutiveBitFields``).
-    /// \code
-    ///   unsigned bf: 2;
-    /// \endcode
-    BFCS_After
-  };
-  /// The BitFieldColonSpacingStyle to use for bitfields.
-  /// \version 12
-  BitFieldColonSpacingStyle BitFieldColonSpacing;
-
   /// Supported language standards for parsing and formatting C++ constructs.
   /// \code
   ///    Latest:                                vector<set<int>>
@@ -3949,9 +3903,42 @@ struct FormatStyle {
   /// \version 12
   std::vector<std::string> StatementAttributeLikeMacros;
 
+  /// A vector of macros that should be interpreted as complete
+  /// statements.
+  ///
+  /// Typical macros are expressions, and require a semi-colon to be
+  /// added; sometimes this is not the case, and this allows to make
+  /// clang-format aware of such cases.
+  ///
+  /// For example: Q_UNUSED
+  /// \version 8
+  std::vector<std::string> StatementMacros;
+
   /// The number of columns used for tab stops.
   /// \version 3.7
   unsigned TabWidth;
+
+  /// \brief A vector of macros that should be interpreted as type declarations
+  /// instead of as function calls.
+  ///
+  /// These are expected to be macros of the form:
+  /// \code
+  ///   STACK_OF(...)
+  /// \endcode
+  ///
+  /// In the .clang-format configuration file, this can be configured like:
+  /// \code{.yaml}
+  ///   TypenameMacros: ['STACK_OF', 'LIST']
+  /// \endcode
+  ///
+  /// For example: OpenSSL STACK_OF, BSD LIST_ENTRY.
+  /// \version 9
+  std::vector<std::string> TypenameMacros;
+
+  /// \brief Use ``\r\n`` instead of ``\n`` for line breaks.
+  /// Also used as fallback if ``DeriveLineEnding`` is true.
+  /// \version 10
+  bool UseCRLF;
 
   /// Different ways to use tab in formatting.
   enum UseTabStyle : int8_t {
@@ -3970,14 +3957,26 @@ struct FormatStyle {
     UT_Always
   };
 
-  /// \brief Use ``\r\n`` instead of ``\n`` for line breaks.
-  /// Also used as fallback if ``DeriveLineEnding`` is true.
-  /// \version 10
-  bool UseCRLF;
-
   /// The way to use tab characters in the resulting file.
   /// \version 3.7
   UseTabStyle UseTab;
+
+  /// A vector of macros which are whitespace-sensitive and should not
+  /// be touched.
+  ///
+  /// These are expected to be macros of the form:
+  /// \code
+  ///   STRINGIZE(...)
+  /// \endcode
+  ///
+  /// In the .clang-format configuration file, this can be configured like:
+  /// \code{.yaml}
+  ///   WhitespaceSensitiveMacros: ['STRINGIZE', 'PP_STRINGIZE']
+  /// \endcode
+  ///
+  /// For example: BOOST_PP_STRINGIZE
+  /// \version 11
+  std::vector<std::string> WhitespaceSensitiveMacros;
 
   bool operator==(const FormatStyle &R) const {
     return AccessModifierOffset == R.AccessModifierOffset &&
@@ -3993,10 +3992,10 @@ struct FormatStyle {
            AllowAllArgumentsOnNextLine == R.AllowAllArgumentsOnNextLine &&
            AllowAllParametersOfDeclarationOnNextLine ==
                R.AllowAllParametersOfDeclarationOnNextLine &&
-           AllowShortEnumsOnASingleLine == R.AllowShortEnumsOnASingleLine &&
            AllowShortBlocksOnASingleLine == R.AllowShortBlocksOnASingleLine &&
            AllowShortCaseLabelsOnASingleLine ==
                R.AllowShortCaseLabelsOnASingleLine &&
+           AllowShortEnumsOnASingleLine == R.AllowShortEnumsOnASingleLine &&
            AllowShortFunctionsOnASingleLine ==
                R.AllowShortFunctionsOnASingleLine &&
            AllowShortIfStatementsOnASingleLine ==
@@ -4011,17 +4010,18 @@ struct FormatStyle {
            AttributeMacros == R.AttributeMacros &&
            BinPackArguments == R.BinPackArguments &&
            BinPackParameters == R.BinPackParameters &&
+           BitFieldColonSpacing == R.BitFieldColonSpacing &&
+           BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
            BreakArrays == R.BreakArrays &&
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
            BreakBeforeBraces == R.BreakBeforeBraces &&
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&
            BreakBeforeTernaryOperators == R.BreakBeforeTernaryOperators &&
            BreakConstructorInitializers == R.BreakConstructorInitializers &&
-           CompactNamespaces == R.CompactNamespaces &&
-           BreakAfterJavaFieldAnnotations == R.BreakAfterJavaFieldAnnotations &&
+           BreakInheritanceList == R.BreakInheritanceList &&
            BreakStringLiterals == R.BreakStringLiterals &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&
-           BreakInheritanceList == R.BreakInheritanceList &&
+           CompactNamespaces == R.CompactNamespaces &&
            ConstructorInitializerIndentWidth ==
                R.ConstructorInitializerIndentWidth &&
            ContinuationIndentWidth == R.ContinuationIndentWidth &&
@@ -4033,7 +4033,6 @@ struct FormatStyle {
            EmptyLineBeforeAccessModifier == R.EmptyLineBeforeAccessModifier &&
            ExperimentalAutoDetectBinPacking ==
                R.ExperimentalAutoDetectBinPacking &&
-           PackConstructorInitializers == R.PackConstructorInitializers &&
            FixNamespaceComments == R.FixNamespaceComments &&
            ForEachMacros == R.ForEachMacros &&
            IncludeStyle.IncludeBlocks == R.IncludeStyle.IncludeBlocks &&
@@ -4043,19 +4042,20 @@ struct FormatStyle {
            IncludeStyle.IncludeIsMainSourceRegex ==
                R.IncludeStyle.IncludeIsMainSourceRegex &&
            IndentAccessModifiers == R.IndentAccessModifiers &&
-           IndentCaseLabels == R.IndentCaseLabels &&
            IndentCaseBlocks == R.IndentCaseBlocks &&
+           IndentCaseLabels == R.IndentCaseLabels &&
+           IndentExternBlock == R.IndentExternBlock &&
            IndentGotoLabels == R.IndentGotoLabels &&
            IndentPPDirectives == R.IndentPPDirectives &&
-           IndentExternBlock == R.IndentExternBlock &&
            IndentRequiresClause == R.IndentRequiresClause &&
-           IndentWidth == R.IndentWidth && Language == R.Language &&
+           IndentWidth == R.IndentWidth &&
            IndentWrappedFunctionNames == R.IndentWrappedFunctionNames &&
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
            JavaScriptWrapImports == R.JavaScriptWrapImports &&
            KeepEmptyLinesAtTheStartOfBlocks ==
                R.KeepEmptyLinesAtTheStartOfBlocks &&
+           Language == R.Language &&
            LambdaBodyIndentation == R.LambdaBodyIndentation &&
            MacroBlockBegin == R.MacroBlockBegin &&
            MacroBlockEnd == R.MacroBlockEnd &&
@@ -4068,6 +4068,7 @@ struct FormatStyle {
                R.ObjCBreakBeforeNestedBlockParam &&
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
            ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
+           PackConstructorInitializers == R.PackConstructorInitializers &&
            PenaltyBreakAssignment == R.PenaltyBreakAssignment &&
            PenaltyBreakBeforeFirstCallParameter ==
                R.PenaltyBreakBeforeFirstCallParameter &&
@@ -4075,10 +4076,10 @@ struct FormatStyle {
            PenaltyBreakFirstLessLess == R.PenaltyBreakFirstLessLess &&
            PenaltyBreakOpenParenthesis == R.PenaltyBreakOpenParenthesis &&
            PenaltyBreakString == R.PenaltyBreakString &&
-           PenaltyExcessCharacter == R.PenaltyExcessCharacter &&
-           PenaltyReturnTypeOnItsOwnLine == R.PenaltyReturnTypeOnItsOwnLine &&
            PenaltyBreakTemplateDeclaration ==
                R.PenaltyBreakTemplateDeclaration &&
+           PenaltyExcessCharacter == R.PenaltyExcessCharacter &&
+           PenaltyReturnTypeOnItsOwnLine == R.PenaltyReturnTypeOnItsOwnLine &&
            PointerAlignment == R.PointerAlignment &&
            QualifierAlignment == R.QualifierAlignment &&
            QualifierOrder == R.QualifierOrder &&
@@ -4106,6 +4107,7 @@ struct FormatStyle {
            SpaceAroundPointerQualifiers == R.SpaceAroundPointerQualifiers &&
            SpaceBeforeRangeBasedForLoopColon ==
                R.SpaceBeforeRangeBasedForLoopColon &&
+           SpaceBeforeSquareBrackets == R.SpaceBeforeSquareBrackets &&
            SpaceInEmptyBlock == R.SpaceInEmptyBlock &&
            SpaceInEmptyParentheses == R.SpaceInEmptyParentheses &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
@@ -4119,13 +4121,12 @@ struct FormatStyle {
                R.SpacesInLineCommentPrefix.Maximum &&
            SpacesInParentheses == R.SpacesInParentheses &&
            SpacesInSquareBrackets == R.SpacesInSquareBrackets &&
-           SpaceBeforeSquareBrackets == R.SpaceBeforeSquareBrackets &&
-           BitFieldColonSpacing == R.BitFieldColonSpacing &&
            Standard == R.Standard &&
            StatementAttributeLikeMacros == R.StatementAttributeLikeMacros &&
            StatementMacros == R.StatementMacros && TabWidth == R.TabWidth &&
-           UseTab == R.UseTab && UseCRLF == R.UseCRLF &&
-           TypenameMacros == R.TypenameMacros;
+           TypenameMacros == R.TypenameMacros && UseCRLF == R.UseCRLF &&
+           UseTab == R.UseTab &&
+           WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros;
   }
 
   llvm::Optional<FormatStyle> GetLanguageStyle(LanguageKind Language) const;

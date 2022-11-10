@@ -49,14 +49,14 @@ define void @test_bcc_fallthrough_nottaken(i64 %in) nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; CHECK-NEXT:    ori $a1, $zero, 42
-; CHECK-NEXT:    beq $a0, $a1, .LBB1_1
-; CHECK-NEXT:  # %bb.3: # %false
+; CHECK-NEXT:    beq $a0, $a1, .LBB1_3
+; CHECK-NEXT:  # %bb.1: # %false
 ; CHECK-NEXT:    bl %plt(test_false)
 ; CHECK-NEXT:  .LBB1_2: # %true
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_1: # %true
+; CHECK-NEXT:  .LBB1_3: # %true
 ; CHECK-NEXT:    bl %plt(test_true)
 ; CHECK-NEXT:    b .LBB1_2
   %tst = icmp eq i64 %in, 42

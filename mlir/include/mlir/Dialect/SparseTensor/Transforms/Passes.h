@@ -153,8 +153,10 @@ std::unique_ptr<Pass> createSparseTensorRewritePass(bool enableRT,
 std::unique_ptr<Pass> createDenseBufferizationPass(
     const bufferization::OneShotBufferizationOptions &options);
 
-void populateSparseBufferRewriting(RewritePatternSet &patterns);
-std::unique_ptr<Pass> createSparseBufferRewritePass();
+void populateSparseBufferRewriting(RewritePatternSet &patterns,
+                                   bool enableBufferInitialization);
+std::unique_ptr<Pass>
+createSparseBufferRewritePass(bool enableBufferInitialization = false);
 
 //===----------------------------------------------------------------------===//
 // Registration.

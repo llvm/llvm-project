@@ -549,7 +549,7 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 // Specialized unaligned load.
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_sse3_ldu_dq : ClangBuiltin<"__builtin_ia32_lddqu">,
-              Intrinsic<[llvm_v16i8_ty], [llvm_ptr_ty], [IntrReadMem]>;
+      DefaultAttrsIntrinsic<[llvm_v16i8_ty], [llvm_ptr_ty], [IntrReadMem]>;
 }
 
 // Thread synchronization ops.
@@ -1334,23 +1334,23 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 // SIMD load ops
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx_ldu_dq_256 : ClangBuiltin<"__builtin_ia32_lddqu256">,
-        Intrinsic<[llvm_v32i8_ty], [llvm_ptr_ty], [IntrReadMem]>;
+      DefaultAttrsIntrinsic<[llvm_v32i8_ty], [llvm_ptr_ty], [IntrReadMem]>;
 }
 
 // Conditional load ops
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx_maskload_pd : ClangBuiltin<"__builtin_ia32_maskloadpd">,
-        Intrinsic<[llvm_v2f64_ty], [llvm_ptr_ty, llvm_v2i64_ty],
-                  [IntrReadMem, IntrArgMemOnly]>;
+      DefaultAttrsIntrinsic<[llvm_v2f64_ty], [llvm_ptr_ty, llvm_v2i64_ty],
+                            [IntrReadMem, IntrArgMemOnly]>;
   def int_x86_avx_maskload_ps : ClangBuiltin<"__builtin_ia32_maskloadps">,
-        Intrinsic<[llvm_v4f32_ty], [llvm_ptr_ty, llvm_v4i32_ty],
-                  [IntrReadMem, IntrArgMemOnly]>;
+      DefaultAttrsIntrinsic<[llvm_v4f32_ty], [llvm_ptr_ty, llvm_v4i32_ty],
+                            [IntrReadMem, IntrArgMemOnly]>;
   def int_x86_avx_maskload_pd_256 : ClangBuiltin<"__builtin_ia32_maskloadpd256">,
-        Intrinsic<[llvm_v4f64_ty], [llvm_ptr_ty, llvm_v4i64_ty],
-                  [IntrReadMem, IntrArgMemOnly]>;
+      DefaultAttrsIntrinsic<[llvm_v4f64_ty], [llvm_ptr_ty, llvm_v4i64_ty],
+                            [IntrReadMem, IntrArgMemOnly]>;
   def int_x86_avx_maskload_ps_256 : ClangBuiltin<"__builtin_ia32_maskloadps256">,
-        Intrinsic<[llvm_v8f32_ty], [llvm_ptr_ty, llvm_v8i32_ty],
-                  [IntrReadMem, IntrArgMemOnly]>;
+      DefaultAttrsIntrinsic<[llvm_v8f32_ty], [llvm_ptr_ty, llvm_v8i32_ty],
+                            [IntrReadMem, IntrArgMemOnly]>;
 }
 
 // Conditional store ops
@@ -1633,17 +1633,17 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 // Conditional load ops
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_avx2_maskload_d : ClangBuiltin<"__builtin_ia32_maskloadd">,
-        Intrinsic<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_v4i32_ty],
-                  [IntrReadMem, IntrArgMemOnly]>;
+      DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_ptr_ty, llvm_v4i32_ty],
+                            [IntrReadMem, IntrArgMemOnly]>;
   def int_x86_avx2_maskload_q : ClangBuiltin<"__builtin_ia32_maskloadq">,
-        Intrinsic<[llvm_v2i64_ty], [llvm_ptr_ty, llvm_v2i64_ty],
-                  [IntrReadMem, IntrArgMemOnly]>;
+      DefaultAttrsIntrinsic<[llvm_v2i64_ty], [llvm_ptr_ty, llvm_v2i64_ty],
+                            [IntrReadMem, IntrArgMemOnly]>;
   def int_x86_avx2_maskload_d_256 : ClangBuiltin<"__builtin_ia32_maskloadd256">,
-        Intrinsic<[llvm_v8i32_ty], [llvm_ptr_ty, llvm_v8i32_ty],
-                  [IntrReadMem, IntrArgMemOnly]>;
+      DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_ptr_ty, llvm_v8i32_ty],
+                            [IntrReadMem, IntrArgMemOnly]>;
   def int_x86_avx2_maskload_q_256 : ClangBuiltin<"__builtin_ia32_maskloadq256">,
-        Intrinsic<[llvm_v4i64_ty], [llvm_ptr_ty, llvm_v4i64_ty],
-                  [IntrReadMem, IntrArgMemOnly]>;
+      DefaultAttrsIntrinsic<[llvm_v4i64_ty], [llvm_ptr_ty, llvm_v4i64_ty],
+                            [IntrReadMem, IntrArgMemOnly]>;
 }
 
 // Conditional store ops
@@ -1762,68 +1762,68 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   // NOTE: These can't be ArgMemOnly because you can put the address completely
   // in the index register.
   def int_x86_avx2_gather_d_pd : ClangBuiltin<"__builtin_ia32_gatherd_pd">,
-      Intrinsic<[llvm_v2f64_ty],
+      DefaultAttrsIntrinsic<[llvm_v2f64_ty],
         [llvm_v2f64_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_v2f64_ty, llvm_i8_ty],
         [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx2_gather_d_pd_256 : ClangBuiltin<"__builtin_ia32_gatherd_pd256">,
-      Intrinsic<[llvm_v4f64_ty],
+      DefaultAttrsIntrinsic<[llvm_v4f64_ty],
         [llvm_v4f64_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_v4f64_ty, llvm_i8_ty],
         [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx2_gather_q_pd : ClangBuiltin<"__builtin_ia32_gatherq_pd">,
-      Intrinsic<[llvm_v2f64_ty],
+      DefaultAttrsIntrinsic<[llvm_v2f64_ty],
         [llvm_v2f64_ty, llvm_ptr_ty, llvm_v2i64_ty, llvm_v2f64_ty, llvm_i8_ty],
         [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx2_gather_q_pd_256 : ClangBuiltin<"__builtin_ia32_gatherq_pd256">,
-      Intrinsic<[llvm_v4f64_ty],
+      DefaultAttrsIntrinsic<[llvm_v4f64_ty],
         [llvm_v4f64_ty, llvm_ptr_ty, llvm_v4i64_ty, llvm_v4f64_ty, llvm_i8_ty],
         [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx2_gather_d_ps : ClangBuiltin<"__builtin_ia32_gatherd_ps">,
-      Intrinsic<[llvm_v4f32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4f32_ty],
         [llvm_v4f32_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_v4f32_ty, llvm_i8_ty],
         [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx2_gather_d_ps_256 : ClangBuiltin<"__builtin_ia32_gatherd_ps256">,
-      Intrinsic<[llvm_v8f32_ty],
+      DefaultAttrsIntrinsic<[llvm_v8f32_ty],
         [llvm_v8f32_ty, llvm_ptr_ty, llvm_v8i32_ty, llvm_v8f32_ty, llvm_i8_ty],
         [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx2_gather_q_ps : ClangBuiltin<"__builtin_ia32_gatherq_ps">,
-      Intrinsic<[llvm_v4f32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4f32_ty],
         [llvm_v4f32_ty, llvm_ptr_ty, llvm_v2i64_ty, llvm_v4f32_ty, llvm_i8_ty],
         [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx2_gather_q_ps_256 : ClangBuiltin<"__builtin_ia32_gatherq_ps256">,
-      Intrinsic<[llvm_v4f32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4f32_ty],
         [llvm_v4f32_ty, llvm_ptr_ty, llvm_v4i64_ty, llvm_v4f32_ty, llvm_i8_ty],
         [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx2_gather_d_q : ClangBuiltin<"__builtin_ia32_gatherd_q">,
-      Intrinsic<[llvm_v2i64_ty],
+      DefaultAttrsIntrinsic<[llvm_v2i64_ty],
         [llvm_v2i64_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_v2i64_ty, llvm_i8_ty],
         [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx2_gather_d_q_256 : ClangBuiltin<"__builtin_ia32_gatherd_q256">,
-      Intrinsic<[llvm_v4i64_ty],
+      DefaultAttrsIntrinsic<[llvm_v4i64_ty],
         [llvm_v4i64_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_v4i64_ty, llvm_i8_ty],
         [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx2_gather_q_q : ClangBuiltin<"__builtin_ia32_gatherq_q">,
-      Intrinsic<[llvm_v2i64_ty],
+      DefaultAttrsIntrinsic<[llvm_v2i64_ty],
         [llvm_v2i64_ty, llvm_ptr_ty, llvm_v2i64_ty, llvm_v2i64_ty, llvm_i8_ty],
         [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx2_gather_q_q_256 : ClangBuiltin<"__builtin_ia32_gatherq_q256">,
-      Intrinsic<[llvm_v4i64_ty],
+      DefaultAttrsIntrinsic<[llvm_v4i64_ty],
         [llvm_v4i64_ty, llvm_ptr_ty, llvm_v4i64_ty, llvm_v4i64_ty, llvm_i8_ty],
         [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx2_gather_d_d : ClangBuiltin<"__builtin_ia32_gatherd_d">,
-      Intrinsic<[llvm_v4i32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4i32_ty],
         [llvm_v4i32_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_v4i32_ty, llvm_i8_ty],
         [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx2_gather_d_d_256 : ClangBuiltin<"__builtin_ia32_gatherd_d256">,
-      Intrinsic<[llvm_v8i32_ty],
+      DefaultAttrsIntrinsic<[llvm_v8i32_ty],
         [llvm_v8i32_ty, llvm_ptr_ty, llvm_v8i32_ty, llvm_v8i32_ty, llvm_i8_ty],
         [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx2_gather_q_d : ClangBuiltin<"__builtin_ia32_gatherq_d">,
-      Intrinsic<[llvm_v4i32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4i32_ty],
         [llvm_v4i32_ty, llvm_ptr_ty, llvm_v2i64_ty, llvm_v4i32_ty, llvm_i8_ty],
         [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx2_gather_q_d_256 : ClangBuiltin<"__builtin_ia32_gatherq_d256">,
-      Intrinsic<[llvm_v4i32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4i32_ty],
         [llvm_v4i32_ty, llvm_ptr_ty, llvm_v4i64_ty, llvm_v4i32_ty, llvm_i8_ty],
         [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 }
@@ -3862,117 +3862,117 @@ let TargetPrefix = "x86" in {
   // NOTE: These can't be ArgMemOnly because you can put the address completely
   // in the index register.
   def int_x86_avx512_gather_dpd_512  :
-          Intrinsic<[llvm_v8f64_ty], [llvm_v8f64_ty, llvm_ptr_ty,
-                     llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
-                    [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+      DefaultAttrsIntrinsic<[llvm_v8f64_ty], [llvm_v8f64_ty, llvm_ptr_ty,
+                             llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx512_gather_dps_512  :
-          Intrinsic<[llvm_v16f32_ty], [llvm_v16f32_ty, llvm_ptr_ty,
-                     llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],
-                    [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+      DefaultAttrsIntrinsic<[llvm_v16f32_ty], [llvm_v16f32_ty, llvm_ptr_ty,
+                             llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx512_gather_qpd_512  :
-          Intrinsic<[llvm_v8f64_ty], [llvm_v8f64_ty, llvm_ptr_ty,
-                     llvm_v8i64_ty, llvm_i8_ty, llvm_i32_ty],
-                    [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+      DefaultAttrsIntrinsic<[llvm_v8f64_ty], [llvm_v8f64_ty, llvm_ptr_ty,
+                             llvm_v8i64_ty, llvm_i8_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx512_gather_qps_512  :
-          Intrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_ptr_ty,
-                     llvm_v8i64_ty, llvm_i8_ty, llvm_i32_ty],
-                    [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+      DefaultAttrsIntrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_ptr_ty,
+                             llvm_v8i64_ty, llvm_i8_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
 
   def int_x86_avx512_gather_dpq_512  :
-          Intrinsic<[llvm_v8i64_ty], [llvm_v8i64_ty, llvm_ptr_ty,
-                     llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
-                    [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+      DefaultAttrsIntrinsic<[llvm_v8i64_ty], [llvm_v8i64_ty, llvm_ptr_ty,
+                             llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx512_gather_dpi_512  :
-          Intrinsic<[llvm_v16i32_ty], [llvm_v16i32_ty, llvm_ptr_ty,
-                     llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],
-                    [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_v16i32_ty, llvm_ptr_ty,
+                             llvm_v16i32_ty, llvm_i16_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx512_gather_qpq_512  :
-          Intrinsic<[llvm_v8i64_ty], [llvm_v8i64_ty, llvm_ptr_ty,
-                     llvm_v8i64_ty, llvm_i8_ty, llvm_i32_ty],
-                    [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+      DefaultAttrsIntrinsic<[llvm_v8i64_ty], [llvm_v8i64_ty, llvm_ptr_ty,
+                             llvm_v8i64_ty, llvm_i8_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx512_gather_qpi_512  :
-          Intrinsic<[llvm_v8i32_ty], [llvm_v8i32_ty, llvm_ptr_ty,
-                     llvm_v8i64_ty, llvm_i8_ty, llvm_i32_ty],
-                    [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+      DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8i32_ty, llvm_ptr_ty,
+                             llvm_v8i64_ty, llvm_i8_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_gather3div2_df :
-          Intrinsic<[llvm_v2f64_ty],
+      DefaultAttrsIntrinsic<[llvm_v2f64_ty],
           [llvm_v2f64_ty, llvm_ptr_ty, llvm_v2i64_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_gather3div2_di :
-          Intrinsic<[llvm_v2i64_ty],
+      DefaultAttrsIntrinsic<[llvm_v2i64_ty],
           [llvm_v2i64_ty, llvm_ptr_ty, llvm_v2i64_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_gather3div4_df :
-          Intrinsic<[llvm_v4f64_ty],
+      DefaultAttrsIntrinsic<[llvm_v4f64_ty],
           [llvm_v4f64_ty, llvm_ptr_ty, llvm_v4i64_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_gather3div4_di :
-          Intrinsic<[llvm_v4i64_ty],
+      DefaultAttrsIntrinsic<[llvm_v4i64_ty],
           [llvm_v4i64_ty, llvm_ptr_ty, llvm_v4i64_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_gather3div4_sf :
-          Intrinsic<[llvm_v4f32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4f32_ty],
           [llvm_v4f32_ty, llvm_ptr_ty, llvm_v2i64_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_gather3div4_si :
-          Intrinsic<[llvm_v4i32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4i32_ty],
           [llvm_v4i32_ty, llvm_ptr_ty, llvm_v2i64_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_gather3div8_sf :
-          Intrinsic<[llvm_v4f32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4f32_ty],
           [llvm_v4f32_ty, llvm_ptr_ty, llvm_v4i64_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_gather3div8_si :
-          Intrinsic<[llvm_v4i32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4i32_ty],
           [llvm_v4i32_ty, llvm_ptr_ty, llvm_v4i64_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_gather3siv2_df :
-          Intrinsic<[llvm_v2f64_ty],
+      DefaultAttrsIntrinsic<[llvm_v2f64_ty],
           [llvm_v2f64_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
-  def int_x86_avx512_gather3siv2_di :
-          Intrinsic<[llvm_v2i64_ty],
+  def int_x86_avx512_gather3siv2_di:
+      DefaultAttrsIntrinsic<[llvm_v2i64_ty],
           [llvm_v2i64_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_gather3siv4_df :
-          Intrinsic<[llvm_v4f64_ty],
+      DefaultAttrsIntrinsic<[llvm_v4f64_ty],
           [llvm_v4f64_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_gather3siv4_di :
-          Intrinsic<[llvm_v4i64_ty],
+      DefaultAttrsIntrinsic<[llvm_v4i64_ty],
           [llvm_v4i64_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_gather3siv4_sf :
-          Intrinsic<[llvm_v4f32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4f32_ty],
           [llvm_v4f32_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_gather3siv4_si :
-          Intrinsic<[llvm_v4i32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4i32_ty],
           [llvm_v4i32_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_gather3siv8_sf :
-          Intrinsic<[llvm_v8f32_ty],
+      DefaultAttrsIntrinsic<[llvm_v8f32_ty],
           [llvm_v8f32_ty, llvm_ptr_ty, llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_gather3siv8_si :
-          Intrinsic<[llvm_v8i32_ty],
+      DefaultAttrsIntrinsic<[llvm_v8i32_ty],
           [llvm_v8i32_ty, llvm_ptr_ty, llvm_v8i32_ty, llvm_i8_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
@@ -4133,117 +4133,117 @@ let TargetPrefix = "x86" in {
   // NOTE: These can't be ArgMemOnly because you can put the address completely
   // in the index register.
   def int_x86_avx512_mask_gather_dpd_512  :
-          Intrinsic<[llvm_v8f64_ty], [llvm_v8f64_ty, llvm_ptr_ty,
-                     llvm_v8i32_ty, llvm_v8i1_ty, llvm_i32_ty],
-                    [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+      DefaultAttrsIntrinsic<[llvm_v8f64_ty], [llvm_v8f64_ty, llvm_ptr_ty,
+                             llvm_v8i32_ty, llvm_v8i1_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx512_mask_gather_dps_512  :
-          Intrinsic<[llvm_v16f32_ty], [llvm_v16f32_ty, llvm_ptr_ty,
-                     llvm_v16i32_ty, llvm_v16i1_ty, llvm_i32_ty],
-                    [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+      DefaultAttrsIntrinsic<[llvm_v16f32_ty], [llvm_v16f32_ty, llvm_ptr_ty,
+                             llvm_v16i32_ty, llvm_v16i1_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx512_mask_gather_qpd_512  :
-          Intrinsic<[llvm_v8f64_ty], [llvm_v8f64_ty, llvm_ptr_ty,
-                     llvm_v8i64_ty, llvm_v8i1_ty, llvm_i32_ty],
-                    [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+      DefaultAttrsIntrinsic<[llvm_v8f64_ty], [llvm_v8f64_ty, llvm_ptr_ty,
+                             llvm_v8i64_ty, llvm_v8i1_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx512_mask_gather_qps_512  :
-          Intrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_ptr_ty,
-                     llvm_v8i64_ty, llvm_v8i1_ty, llvm_i32_ty],
-                    [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+      DefaultAttrsIntrinsic<[llvm_v8f32_ty], [llvm_v8f32_ty, llvm_ptr_ty,
+                             llvm_v8i64_ty, llvm_v8i1_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
 
   def int_x86_avx512_mask_gather_dpq_512  :
-          Intrinsic<[llvm_v8i64_ty], [llvm_v8i64_ty, llvm_ptr_ty,
-                     llvm_v8i32_ty, llvm_v8i1_ty, llvm_i32_ty],
-                    [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+      DefaultAttrsIntrinsic<[llvm_v8i64_ty], [llvm_v8i64_ty, llvm_ptr_ty,
+                             llvm_v8i32_ty, llvm_v8i1_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx512_mask_gather_dpi_512  :
-          Intrinsic<[llvm_v16i32_ty], [llvm_v16i32_ty, llvm_ptr_ty,
-                     llvm_v16i32_ty, llvm_v16i1_ty, llvm_i32_ty],
-                    [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+      DefaultAttrsIntrinsic<[llvm_v16i32_ty], [llvm_v16i32_ty, llvm_ptr_ty,
+                             llvm_v16i32_ty, llvm_v16i1_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx512_mask_gather_qpq_512  :
-          Intrinsic<[llvm_v8i64_ty], [llvm_v8i64_ty, llvm_ptr_ty,
-                     llvm_v8i64_ty, llvm_v8i1_ty, llvm_i32_ty],
-                    [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+      DefaultAttrsIntrinsic<[llvm_v8i64_ty], [llvm_v8i64_ty, llvm_ptr_ty,
+                             llvm_v8i64_ty, llvm_v8i1_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
   def int_x86_avx512_mask_gather_qpi_512  :
-          Intrinsic<[llvm_v8i32_ty], [llvm_v8i32_ty, llvm_ptr_ty,
-                     llvm_v8i64_ty, llvm_v8i1_ty, llvm_i32_ty],
-                    [IntrReadMem, ImmArg<ArgIndex<4>>]>;
+      DefaultAttrsIntrinsic<[llvm_v8i32_ty], [llvm_v8i32_ty, llvm_ptr_ty,
+                             llvm_v8i64_ty, llvm_v8i1_ty, llvm_i32_ty],
+                            [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_mask_gather3div2_df :
-          Intrinsic<[llvm_v2f64_ty],
+      DefaultAttrsIntrinsic<[llvm_v2f64_ty],
           [llvm_v2f64_ty, llvm_ptr_ty, llvm_v2i64_ty, llvm_v2i1_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_mask_gather3div2_di :
-          Intrinsic<[llvm_v2i64_ty],
+      DefaultAttrsIntrinsic<[llvm_v2i64_ty],
           [llvm_v2i64_ty, llvm_ptr_ty, llvm_v2i64_ty, llvm_v2i1_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_mask_gather3div4_df :
-          Intrinsic<[llvm_v4f64_ty],
+      DefaultAttrsIntrinsic<[llvm_v4f64_ty],
           [llvm_v4f64_ty, llvm_ptr_ty, llvm_v4i64_ty, llvm_v4i1_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_mask_gather3div4_di :
-          Intrinsic<[llvm_v4i64_ty],
+      DefaultAttrsIntrinsic<[llvm_v4i64_ty],
           [llvm_v4i64_ty, llvm_ptr_ty, llvm_v4i64_ty, llvm_v4i1_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_mask_gather3div4_sf :
-          Intrinsic<[llvm_v4f32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4f32_ty],
           [llvm_v4f32_ty, llvm_ptr_ty, llvm_v2i64_ty, llvm_v2i1_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_mask_gather3div4_si :
-          Intrinsic<[llvm_v4i32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4i32_ty],
           [llvm_v4i32_ty, llvm_ptr_ty, llvm_v2i64_ty, llvm_v2i1_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_mask_gather3div8_sf :
-          Intrinsic<[llvm_v4f32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4f32_ty],
           [llvm_v4f32_ty, llvm_ptr_ty, llvm_v4i64_ty, llvm_v4i1_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_mask_gather3div8_si :
-          Intrinsic<[llvm_v4i32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4i32_ty],
           [llvm_v4i32_ty, llvm_ptr_ty, llvm_v4i64_ty, llvm_v4i1_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_mask_gather3siv2_df :
-          Intrinsic<[llvm_v2f64_ty],
+      DefaultAttrsIntrinsic<[llvm_v2f64_ty],
           [llvm_v2f64_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_v2i1_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_mask_gather3siv2_di :
-          Intrinsic<[llvm_v2i64_ty],
+      DefaultAttrsIntrinsic<[llvm_v2i64_ty],
           [llvm_v2i64_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_v2i1_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_mask_gather3siv4_df :
-          Intrinsic<[llvm_v4f64_ty],
+      DefaultAttrsIntrinsic<[llvm_v4f64_ty],
           [llvm_v4f64_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_v4i1_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_mask_gather3siv4_di :
-          Intrinsic<[llvm_v4i64_ty],
+      DefaultAttrsIntrinsic<[llvm_v4i64_ty],
           [llvm_v4i64_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_v4i1_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_mask_gather3siv4_sf :
-          Intrinsic<[llvm_v4f32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4f32_ty],
           [llvm_v4f32_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_v4i1_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_mask_gather3siv4_si :
-          Intrinsic<[llvm_v4i32_ty],
+      DefaultAttrsIntrinsic<[llvm_v4i32_ty],
           [llvm_v4i32_ty, llvm_ptr_ty, llvm_v4i32_ty, llvm_v4i1_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_mask_gather3siv8_sf :
-          Intrinsic<[llvm_v8f32_ty],
+      DefaultAttrsIntrinsic<[llvm_v8f32_ty],
           [llvm_v8f32_ty, llvm_ptr_ty, llvm_v8i32_ty, llvm_v8i1_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 
   def int_x86_avx512_mask_gather3siv8_si :
-          Intrinsic<[llvm_v8i32_ty],
+      DefaultAttrsIntrinsic<[llvm_v8i32_ty],
           [llvm_v8i32_ty, llvm_ptr_ty, llvm_v8i32_ty, llvm_v8i1_ty, llvm_i32_ty],
           [IntrReadMem, ImmArg<ArgIndex<4>>]>;
 

@@ -19,8 +19,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 
-namespace fir {
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h.inc"
-} // namespace fir
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FORTRANVARIABLEINTERFACE_H

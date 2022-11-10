@@ -296,6 +296,12 @@ unsigned parseArchVersion(StringRef Arch);
 void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values);
 StringRef computeDefaultTargetABI(const Triple &TT, StringRef CPU);
 
+/// Get the (LLVM) name of the minimum ARM CPU for the arch we are targeting.
+///
+/// \param Arch the architecture name (e.g., "armv7s"). If it is an empty
+/// string then the triple's arch name is used.
+StringRef getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch = {});
+
 } // namespace ARM
 } // namespace llvm
 

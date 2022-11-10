@@ -176,6 +176,8 @@ def LLVM_DICompositeTypeAttr : LLVM_Attr<"DICompositeType", "di_composite_type",
     OptionalParameter<"DIFileAttr">:$file,
     "uint32_t":$line,
     OptionalParameter<"DIScopeAttr">:$scope,
+    OptionalParameter<"DITypeAttr">:$baseType,
+    OptionalParameter<"DIFlags", "DIFlags::Zero">:$flags,
     "uint64_t":$sizeInBits,
     "uint64_t":$alignInBits,
     OptionalArrayRefParameter<"DINodeAttr">:$elements

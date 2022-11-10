@@ -1,6 +1,5 @@
-; Diff file with itself
-; Due to a current limitation in llvm-diff, a diff is reported here.
-; RUN: not llvm-diff %s %s 2>&1 | FileCheck --check-prefix=SAME-FILE %s
+; Diff file with itself, assert no difference by return code
+; RUN: llvm-diff %s %s
 
 ; Replace %newvar1 with %newvar2 in the phi node. This can only
 ; be detected to be different once BB1 has been processed.
@@ -8,23 +7,10 @@
 ; RUN: cat %s | sed -e 's/ %newvar1, %BB1 / %newvar2, %BB1 /' > %t.ll
 ; RUN: not llvm-diff %s %t.ll 2>&1 | FileCheck --check-prefix DIFFERENT-VAR %s
 
-; SAME-FILE:      in function func:
-; SAME-FILE-NEXT:   in block %BB0:
-; SAME-FILE-NEXT:     >   %var = phi i32 [ 0, %ENTRY ], [ %newvar1, %BB1 ]
-; SAME-FILE-NEXT:     >   %cnd = icmp eq i32 %var, 0
-; SAME-FILE-NEXT:     >   br i1 %cnd, label %BB1, label %END
-; SAME-FILE-NEXT:     <   %var = phi i32 [ 0, %ENTRY ], [ %newvar1, %BB1 ]
-; SAME-FILE-NEXT:     <   %cnd = icmp eq i32 %var, 0
-; SAME-FILE-NEXT:     <   br i1 %cnd, label %BB1, label %END
-
 ; DIFFERENT-VAR:      in function func:
 ; DIFFERENT-VAR-NEXT:   in block %BB0:
 ; DIFFERENT-VAR-NEXT:     >   %var = phi i32 [ 0, %ENTRY ], [ %newvar2, %BB1 ]
-; DIFFERENT-VAR-NEXT:     >   %cnd = icmp eq i32 %var, 0
-; DIFFERENT-VAR-NEXT:     >   br i1 %cnd, label %BB1, label %END
 ; DIFFERENT-VAR-NEXT:     <   %var = phi i32 [ 0, %ENTRY ], [ %newvar1, %BB1 ]
-; DIFFERENT-VAR-NEXT:     <   %cnd = icmp eq i32 %var, 0
-; DIFFERENT-VAR-NEXT:     <   br i1 %cnd, label %BB1, label %END
 define i32 @func() {
 ENTRY:
   br label %BB0

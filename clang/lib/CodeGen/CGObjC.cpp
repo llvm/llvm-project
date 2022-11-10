@@ -1228,7 +1228,7 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     llvm::Value *cmd = emitCmdValueForGetterSetterBody(*this, getterMethod);
     llvm::Value *self = Builder.CreateBitCast(LoadObjCSelf(), VoidPtrTy);
     llvm::Value *ivarOffset =
-      EmitIvarOffset(classImpl->getClassInterface(), ivar);
+        EmitIvarOffsetAsPointerDiff(classImpl->getClassInterface(), ivar);
 
     CallArgList args;
     args.add(RValue::get(self), getContext().getObjCIdType());
@@ -1532,7 +1532,7 @@ CodeGenFunction::generateObjCSetterBody(const ObjCImplementationDecl *classImpl,
     llvm::Value *self =
       Builder.CreateBitCast(LoadObjCSelf(), VoidPtrTy);
     llvm::Value *ivarOffset =
-      EmitIvarOffset(classImpl->getClassInterface(), ivar);
+        EmitIvarOffsetAsPointerDiff(classImpl->getClassInterface(), ivar);
     Address argAddr = GetAddrOfLocalVar(*setterMethod->param_begin());
     llvm::Value *arg = Builder.CreateLoad(argAddr, "arg");
     arg = Builder.CreateBitCast(arg, VoidPtrTy);

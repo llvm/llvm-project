@@ -195,6 +195,8 @@ static SmallVector<std::string, 0> getHeaders() {
   uint64_t LineNumber = 0;
   for (StringRef Line : llvm::split((*HeadersFile)->getBuffer(), '\n')) {
     LineNumber++;
+    if (!Line.empty() && Line.back() == '\r')
+      Line = Line.drop_back();
     if (!isHeader(Line)) {
       if (!all_of(Line, llvm::isSpace))
         WithColor::warning()
@@ -202,8 +204,6 @@ static SmallVector<std::string, 0> getHeaders() {
             << LineNumber << '\n';
       continue;
     }
-    if (Line.back() == '\r')
-      Line = Line.drop_back();
     Headers.emplace_back(Line);
   }
   return Headers;

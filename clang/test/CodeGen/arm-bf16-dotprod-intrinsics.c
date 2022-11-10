@@ -2,11 +2,11 @@
 // RUN: %clang_cc1 -triple armv8-arm-none-eabi \
 // RUN:   -target-feature +neon -target-feature +bf16 -mfloat-abi soft \
 // RUN:   -disable-O0-optnone -S -emit-llvm -o - %s \
-// RUN: | opt -S -mem2reg | FileCheck %s
+// RUN: | opt -S -passes=mem2reg | FileCheck %s
 // RUN: %clang_cc1 -triple armv8-arm-none-eabi \
 // RUN:   -target-feature +neon -target-feature +bf16 -mfloat-abi hard \
 // RUN:   -disable-O0-optnone -S -emit-llvm -o - %s \
-// RUN: | opt -S -mem2reg | FileCheck %s
+// RUN: | opt -S -passes=mem2reg | FileCheck %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 

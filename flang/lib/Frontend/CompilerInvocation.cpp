@@ -688,7 +688,7 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
       fpContractMode = LangOptions::FPM_Fast;
     else {
       diags.Report(clang::diag::err_drv_unsupported_option_argument)
-          << a->getOption().getName() << val;
+          << a->getSpelling() << val;
       return false;
     }
 
@@ -957,5 +957,10 @@ void CompilerInvocation::setLoweringOptions() {
   mathOpts
       .setFPContractEnabled(langOptions.getFPContractMode() ==
                             LangOptions::FPM_Fast)
-      .setNoHonorInfs(langOptions.NoHonorInfs);
+      .setNoHonorInfs(langOptions.NoHonorInfs)
+      .setNoHonorNaNs(langOptions.NoHonorNaNs)
+      .setApproxFunc(langOptions.ApproxFunc)
+      .setNoSignedZeros(langOptions.NoSignedZeros)
+      .setAssociativeMath(langOptions.AssociativeMath)
+      .setReciprocalMath(langOptions.ReciprocalMath);
 }

@@ -1172,7 +1172,7 @@ public:
 
   /// Determine whether this class has a pure virtual function.
   ///
-  /// The class is is abstract per (C++ [class.abstract]p2) if it declares
+  /// The class is abstract per (C++ [class.abstract]p2) if it declares
   /// a pure virtual function or inherits a pure virtual function that is
   /// not overridden.
   bool isAbstract() const { return data().Abstract; }

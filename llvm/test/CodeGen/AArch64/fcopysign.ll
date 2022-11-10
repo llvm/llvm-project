@@ -63,8 +63,8 @@ define fp128@copysign1() {
 ; CHECK-NEXT:    ldr w8, [x8, :lo12:val_float]
 ; CHECK-NEXT:    ldrb w9, [sp, #15]
 ; CHECK-NEXT:    and w8, w8, #0x80000000
-; CHECK-NEXT:    lsr w8, w8, #24
-; CHECK-NEXT:    bfxil w8, w9, #0, #7
+; CHECK-NEXT:    and w9, w9, #0x7f
+; CHECK-NEXT:    orr w8, w9, w8, lsr #24
 ; CHECK-NEXT:    strb w8, [sp, #15]
 ; CHECK-NEXT:    ldr q0, [sp], #16
 ; CHECK-NEXT:    ret
@@ -79,8 +79,8 @@ define fp128@copysign1() {
 ; CHECK-NONEON-NEXT:    ldr w8, [x8, :lo12:val_float]
 ; CHECK-NONEON-NEXT:    ldrb w9, [sp, #15]
 ; CHECK-NONEON-NEXT:    and w8, w8, #0x80000000
-; CHECK-NONEON-NEXT:    lsr w8, w8, #24
-; CHECK-NONEON-NEXT:    bfxil w8, w9, #0, #7
+; CHECK-NONEON-NEXT:    and w9, w9, #0x7f
+; CHECK-NONEON-NEXT:    orr w8, w9, w8, lsr #24
 ; CHECK-NONEON-NEXT:    strb w8, [sp, #15]
 ; CHECK-NONEON-NEXT:    ldr q0, [sp], #16
 ; CHECK-NONEON-NEXT:    ret

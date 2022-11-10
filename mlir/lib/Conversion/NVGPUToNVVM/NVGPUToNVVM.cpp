@@ -438,7 +438,8 @@ buildMmaSparseAsmString(const std::array<int64_t, 3> &shape, unsigned matASize,
       ss << "$" << asmArgIdx++ << (i < arrSize - 1 ? "," : "");
     ss << "},";
   }
-  ss << "$" << asmArgIdx++ << ",$" << asmArgIdx++ << ";";
+  ss << "$" << asmArgIdx++ << ",";
+  ss << "$" << asmArgIdx++ << ";";
   ss.flush();
   return asmStr;
 }
