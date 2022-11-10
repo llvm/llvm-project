@@ -353,7 +353,12 @@ public:
         assert(func.getFunctionType() ==
                getNewFunctionType(funcTy, shouldBoxResult));
       } else {
+        llvm::SmallVector<mlir::DictionaryAttr> allArgs;
+        func.getAllArgAttrs(allArgs);
+        allArgs.insert(allArgs.begin(),
+                       mlir::DictionaryAttr::get(func->getContext()));
         func.setType(getNewFunctionType(funcTy, shouldBoxResult));
+        func.setAllArgAttrs(allArgs);
       }
     }
   }
