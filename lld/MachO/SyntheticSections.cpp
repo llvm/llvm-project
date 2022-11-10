@@ -1899,6 +1899,7 @@ void ObjCImageInfoSection::writeTo(uint8_t *buf) const {
 InitOffsetsSection::InitOffsetsSection()
     : SyntheticSection(segment_names::text, section_names::initOffsets) {
   flags = S_INIT_FUNC_OFFSETS;
+  align = 4; // This section contains 32-bit integers.
 }
 
 uint64_t InitOffsetsSection::getSize() const {
