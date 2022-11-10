@@ -24,9 +24,24 @@ void FoldInitTypeCheck::registerMatchers(MatchFinder *Finder) {
     return anyOf(
         // Pointer types.
         pointsTo(BuiltinTypeWithId(ID)),
-        // Iterator types.
-        recordType(hasDeclaration(has(typedefNameDecl(
-            hasName("value_type"), hasType(BuiltinTypeWithId(ID)))))));
+        // Iterator types have an `operator*` whose return type is the type we
+        // care about.
+        // Notes:
+        //   - `operator*` can be in one of the bases of the iterator class.
+        //   - this does not handle cases when the `operator*` is defined
+        //     outside the iterator class.
+        recordType(
+            hasDeclaration(cxxRecordDecl(isSameOrDerivedFrom(has(functionDecl(
+                hasOverloadedOperatorName("*"),
+                returns(qualType(hasCanonicalType(anyOf(
+                    // `value_type& operator*();`
+                    references(BuiltinTypeWithId(ID)),
+                    // `value_type operator*();`
+                    BuiltinTypeWithId(ID),
+                    // `auto operator*();`, `decltype(auto) operator*();`
+                    autoType(hasDeducedType(BuiltinTypeWithId(ID)))
+                    //
+                    )))))))))));
   };
 
   const auto IteratorParam = parmVarDecl(
