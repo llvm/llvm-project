@@ -237,6 +237,7 @@ public:
   MaybeExpr Analyze(const parser::StructureConstructor &);
   MaybeExpr Analyze(const parser::InitialDataTarget &);
   MaybeExpr Analyze(const parser::NullInit &);
+  MaybeExpr Analyze(const parser::StmtFunctionStmt &);
 
   void Analyze(const parser::CallStmt &);
   const Assignment *Analyze(const parser::AssignmentStmt &);
@@ -385,6 +386,7 @@ private:
   bool useSavedTypedExprs_{true};
   bool inWhereBody_{false};
   bool inDataStmtConstant_{false};
+  bool inStmtFunctionDefinition_{false};
   friend class ArgumentAnalyzer;
 };
 
