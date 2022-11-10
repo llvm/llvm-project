@@ -1092,9 +1092,14 @@ getAMDProcessorTypeAndSubtype(unsigned Family, unsigned Model,
   case 25:
     CPU = "znver3";
     *Type = X86::AMDFAM19H;
-    if (Model <= 0x0f || Model == 0x21) {
+    if (Model <= 0x0f || (Model >= 0x20 && Model <= 0x5f)) {
+      // Family 19h Models 00h-0Fh - Zen3
+      // Family 19h Models 20h-2Fh - Zen3
+      // Family 19h Models 30h-3Fh - Zen3
+      // Family 19h Models 40h-4Fh - Zen3+
+      // Family 19h Models 50h-5Fh - Zen3+
       *Subtype = X86::AMDFAM19H_ZNVER3;
-      break; // 00h-0Fh, 21h: Zen3
+      break;
     }
     break;
   default:
