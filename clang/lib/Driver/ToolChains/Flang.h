@@ -45,15 +45,16 @@ private:
   ///
   /// \param [in] Args The list of input driver arguments
   /// \param [out] CmdArgs The list of output command arguments
-  void AddPicOptions(const llvm::opt::ArgList &Args,
+  void addPicOptions(const llvm::opt::ArgList &Args,
                      llvm::opt::ArgStringList &CmdArgs) const;
 
-  /// This method will effectively copy options from \a Args into \a CmdArgs.
+  /// Extract other compilation options from the driver arguments and add them
+  /// to the command arguments.
   ///
   /// \param [in] Args The list of input driver arguments
   /// \param [out] CmdArgs The list of output command arguments
-  void forwardOptions(const llvm::opt::ArgList &Args,
-                      llvm::opt::ArgStringList &CmdArgs) const;
+  void addOtherOptions(const llvm::opt::ArgList &Args,
+                       llvm::opt::ArgStringList &CmdArgs) const;
 
 public:
   Flang(const ToolChain &TC);

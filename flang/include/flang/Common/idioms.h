@@ -24,6 +24,7 @@
 #endif
 
 #include "visit.h"
+#include <array>
 #include <functional>
 #include <list>
 #include <memory>
@@ -110,12 +111,14 @@ template <typename... LAMBDAS> visitors(LAMBDAS... x) -> visitors<LAMBDAS...>;
   } \
   template <typename A> constexpr bool T{class_trait_ns_##T::trait_value<A>()};
 
-// Define enum class NAME with the given enumerators, a static
-// function EnumToString() that maps enumerators to std::string,
-// and a constant NAME_enumSize that captures the number of items
-// in the enum class.
+// Define enum class NAME with the given enumerators,
+// - a static function EnumToString() that maps enumerators to std::string,
+// - a constant NAME_enumSize that captures the number of items in the enum,
+// - a struct NAME_struct that implements a Meyers singleton to hold the mapping
+// from index to names
 
-std::string EnumIndexToString(int index, const char *names);
+void BuildIndexToString(
+    const char *commaSeparated, std::string enumNames[], int enumSize);
 
 template <typename A> struct ListItemCount {
   constexpr ListItemCount(std::initializer_list<A> list) : value{list.size()} {}
@@ -128,9 +131,24 @@ template <typename A> struct ListItemCount {
     enum { __VA_ARGS__ }; \
     return Fortran::common::ListItemCount{__VA_ARGS__}.value; \
   }()}; \
-  [[maybe_unused]] static inline std::string EnumToString(NAME e) { \
-    return Fortran::common::EnumIndexToString( \
-        static_cast<int>(e), #__VA_ARGS__); \
+  struct NAME##_struct { \
+    NAME##_struct(const NAME##_struct &) = delete; \
+    NAME##_struct &operator=(const NAME##_struct &) = delete; \
+    static NAME##_struct &instance() { \
+      static NAME##_struct s; \
+      return s; \
+    } \
+    std::array<std::string, NAME##_enumSize> _enumNames; \
+\
+  private: \
+    NAME##_struct() { \
+      Fortran::common::BuildIndexToString( \
+          #__VA_ARGS__, _enumNames.data(), NAME##_enumSize); \
+    } \
+    ~NAME##_struct() {} \
+  }; \
+  [[maybe_unused]] static inline const std::string &EnumToString(NAME e) { \
+    return NAME##_struct::instance()._enumNames[static_cast<int>(e)]; \
   }
 
 // Check that a pointer is non-null and dereference it
