@@ -35,6 +35,8 @@ def SDT_LoongArchBStrPick: SDTypeProfile<1, 3, [
   SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisSameAs<2, 3>
 ]>;
 
+def SDT_LoongArchDBAR : SDTypeProfile<0, 1, [SDTCisVT<0, GRLenVT>]>;
+
 // TODO: Add LoongArch specific DAG Nodes
 // Target-independent nodes, but with target-specific formats.
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
@@ -63,6 +65,8 @@ def loongarch_bitrev_4b : SDNode<"LoongArchISD::BITREV_4B", SDTUnaryOp>;
 def loongarch_bitrev_w : SDNode<"LoongArchISD::BITREV_W", SDTUnaryOp>;
 def loongarch_clzw : SDNode<"LoongArchISD::CLZ_W", SDTIntBitCountUnaryOp>;
 def loongarch_ctzw : SDNode<"LoongArchISD::CTZ_W", SDTIntBitCountUnaryOp>;
+def loongarch_dbar : SDNode<"LoongArchISD::DBAR", SDT_LoongArchDBAR,
+                             [SDNPHasChain, SDNPSideEffect]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -130,7 +134,8 @@ def uimm14 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<14>;
 }
 
-def uimm15 : Operand<GRLenVT> {
+def uimm15 : Operand<GRLenVT>,
+             ImmLeaf <GRLenVT, [{return isUInt<15>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<15>;
 }
 
@@ -1303,6 +1308,16 @@ def : Pat<(atomic_load_or_32 GPR:$addr, GPR:$incr),
 def : Pat<(atomic_load_xor_32 GPR:$addr, GPR:$incr),
           (PseudoAtomicLoadXor32 GPR:$incr, GPR:$addr)>;
 } // Predicates = [IsLA32]
+
+/// Intrinsics
+
+let Predicates = [IsLA32] in {
+def : Pat<(int_loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
+} // Predicates = [IsLA32]
+
+let Predicates = [IsLA64] in {
+def : Pat<(loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
+} // Predicates = [IsLA64]
 
 /// Other pseudo-instructions
 
