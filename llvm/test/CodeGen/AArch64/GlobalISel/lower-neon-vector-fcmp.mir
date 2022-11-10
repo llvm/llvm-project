@@ -9,11 +9,13 @@ body:             |
   bb.0:
     liveins: $q0, $q1
     ; CHECK-LABEL: name: oeq
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %rhs:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[FCMEQ:%[0-9]+]]:_(<2 x s64>) = G_FCMEQ %lhs, %rhs(<2 x s64>)
-    ; CHECK: $q0 = COPY [[FCMEQ]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %rhs:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[FCMEQ:%[0-9]+]]:_(<2 x s64>) = G_FCMEQ %lhs, %rhs(<2 x s64>)
+    ; CHECK-NEXT: $q0 = COPY [[FCMEQ]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %rhs:_(<2 x s64>) = COPY $q1
     %fcmp:_(<2 x s64>) = G_FCMP floatpred(oeq), %lhs(<2 x s64>), %rhs
@@ -32,12 +34,14 @@ body:             |
     ; Should be inverted. Needs two compares.
 
     ; CHECK-LABEL: name: oeq_zero
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    ; CHECK: [[FCMEQZ:%[0-9]+]]:_(<2 x s64>) = G_FCMEQZ %lhs
-    ; CHECK: $q0 = COPY [[FCMEQZ]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
+    ; CHECK-NEXT: [[FCMEQZ:%[0-9]+]]:_(<2 x s64>) = G_FCMEQZ %lhs
+    ; CHECK-NEXT: $q0 = COPY [[FCMEQZ]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %zero:_(s64) = G_CONSTANT i64 0
     %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero, %zero
@@ -55,11 +59,13 @@ body:             |
   bb.0:
     liveins: $q0, $q1
     ; CHECK-LABEL: name: ogt
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %rhs:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[FCMGT:%[0-9]+]]:_(<2 x s64>) = G_FCMGT %lhs, %rhs(<2 x s64>)
-    ; CHECK: $q0 = COPY [[FCMGT]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %rhs:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[FCMGT:%[0-9]+]]:_(<2 x s64>) = G_FCMGT %lhs, %rhs(<2 x s64>)
+    ; CHECK-NEXT: $q0 = COPY [[FCMGT]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %rhs:_(<2 x s64>) = COPY $q1
     %fcmp:_(<2 x s64>) = G_FCMP floatpred(ogt), %lhs(<2 x s64>), %rhs
@@ -75,12 +81,14 @@ body:             |
   bb.0:
     liveins: $q0, $q1
     ; CHECK-LABEL: name: ogt_zero
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    ; CHECK: [[FCMGTZ:%[0-9]+]]:_(<2 x s64>) = G_FCMGTZ %lhs
-    ; CHECK: $q0 = COPY [[FCMGTZ]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
+    ; CHECK-NEXT: [[FCMGTZ:%[0-9]+]]:_(<2 x s64>) = G_FCMGTZ %lhs
+    ; CHECK-NEXT: $q0 = COPY [[FCMGTZ]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %zero:_(s64) = G_CONSTANT i64 0
     %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero, %zero
@@ -97,11 +105,13 @@ body:             |
   bb.0:
     liveins: $q0, $q1
     ; CHECK-LABEL: name: oge
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %rhs:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[FCMGE:%[0-9]+]]:_(<2 x s64>) = G_FCMGE %lhs, %rhs(<2 x s64>)
-    ; CHECK: $q0 = COPY [[FCMGE]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %rhs:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[FCMGE:%[0-9]+]]:_(<2 x s64>) = G_FCMGE %lhs, %rhs(<2 x s64>)
+    ; CHECK-NEXT: $q0 = COPY [[FCMGE]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %rhs:_(<2 x s64>) = COPY $q1
     %fcmp:_(<2 x s64>) = G_FCMP floatpred(oge), %lhs(<2 x s64>), %rhs
@@ -120,12 +130,14 @@ body:             |
     ; Should be inverted. Needs two compares.
 
     ; CHECK-LABEL: name: oge_zero
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    ; CHECK: [[FCMGEZ:%[0-9]+]]:_(<2 x s64>) = G_FCMGEZ %lhs
-    ; CHECK: $q0 = COPY [[FCMGEZ]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
+    ; CHECK-NEXT: [[FCMGEZ:%[0-9]+]]:_(<2 x s64>) = G_FCMGEZ %lhs
+    ; CHECK-NEXT: $q0 = COPY [[FCMGEZ]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %zero:_(s64) = G_CONSTANT i64 0
     %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero, %zero
@@ -143,11 +155,13 @@ body:             |
   bb.0:
     liveins: $q0, $q1
     ; CHECK-LABEL: name: olt
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %rhs:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[FCMGT:%[0-9]+]]:_(<2 x s64>) = G_FCMGT %rhs, %lhs(<2 x s64>)
-    ; CHECK: $q0 = COPY [[FCMGT]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %rhs:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[FCMGT:%[0-9]+]]:_(<2 x s64>) = G_FCMGT %rhs, %lhs(<2 x s64>)
+    ; CHECK-NEXT: $q0 = COPY [[FCMGT]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %rhs:_(<2 x s64>) = COPY $q1
     %fcmp:_(<2 x s64>) = G_FCMP floatpred(olt), %lhs(<2 x s64>), %rhs
@@ -163,12 +177,14 @@ body:             |
   bb.0:
     liveins: $q0, $q1
     ; CHECK-LABEL: name: olt_zero
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    ; CHECK: [[FCMLTZ:%[0-9]+]]:_(<2 x s64>) = G_FCMLTZ %lhs
-    ; CHECK: $q0 = COPY [[FCMLTZ]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
+    ; CHECK-NEXT: [[FCMLTZ:%[0-9]+]]:_(<2 x s64>) = G_FCMLTZ %lhs
+    ; CHECK-NEXT: $q0 = COPY [[FCMLTZ]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %zero:_(s64) = G_CONSTANT i64 0
     %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero, %zero
@@ -185,11 +201,13 @@ body:             |
   bb.0:
     liveins: $q0, $q1
     ; CHECK-LABEL: name: ole
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %rhs:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[FCMGE:%[0-9]+]]:_(<2 x s64>) = G_FCMGE %rhs, %lhs(<2 x s64>)
-    ; CHECK: $q0 = COPY [[FCMGE]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %rhs:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[FCMGE:%[0-9]+]]:_(<2 x s64>) = G_FCMGE %rhs, %lhs(<2 x s64>)
+    ; CHECK-NEXT: $q0 = COPY [[FCMGE]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %rhs:_(<2 x s64>) = COPY $q1
     %fcmp:_(<2 x s64>) = G_FCMP floatpred(ole), %lhs(<2 x s64>), %rhs
@@ -205,12 +223,14 @@ body:             |
   bb.0:
     liveins: $q0, $q1
     ; CHECK-LABEL: name: ole_zero
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    ; CHECK: [[FCMLEZ:%[0-9]+]]:_(<2 x s64>) = G_FCMLEZ %lhs
-    ; CHECK: $q0 = COPY [[FCMLEZ]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
+    ; CHECK-NEXT: [[FCMLEZ:%[0-9]+]]:_(<2 x s64>) = G_FCMLEZ %lhs
+    ; CHECK-NEXT: $q0 = COPY [[FCMLEZ]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %zero:_(s64) = G_CONSTANT i64 0
     %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero, %zero
@@ -230,13 +250,15 @@ body:             |
     ; Two compares.
 
     ; CHECK-LABEL: name: one
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %rhs:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[FCMGT:%[0-9]+]]:_(<2 x s64>) = G_FCMGT %lhs, %rhs(<2 x s64>)
-    ; CHECK: [[FCMGT1:%[0-9]+]]:_(<2 x s64>) = G_FCMGT %rhs, %lhs(<2 x s64>)
-    ; CHECK: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[FCMGT1]], [[FCMGT]]
-    ; CHECK: $q0 = COPY [[OR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %rhs:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[FCMGT:%[0-9]+]]:_(<2 x s64>) = G_FCMGT %lhs, %rhs(<2 x s64>)
+    ; CHECK-NEXT: [[FCMGT1:%[0-9]+]]:_(<2 x s64>) = G_FCMGT %rhs, %lhs(<2 x s64>)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[FCMGT1]], [[FCMGT]]
+    ; CHECK-NEXT: $q0 = COPY [[OR]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %rhs:_(<2 x s64>) = COPY $q1
     %fcmp:_(<2 x s64>) = G_FCMP floatpred(one), %lhs(<2 x s64>), %rhs
@@ -255,14 +277,16 @@ body:             |
     ; Two compares.
 
     ; CHECK-LABEL: name: one_zero
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    ; CHECK: [[FCMGTZ:%[0-9]+]]:_(<2 x s64>) = G_FCMGTZ %lhs
-    ; CHECK: [[FCMLTZ:%[0-9]+]]:_(<2 x s64>) = G_FCMLTZ %lhs
-    ; CHECK: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[FCMLTZ]], [[FCMGTZ]]
-    ; CHECK: $q0 = COPY [[OR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
+    ; CHECK-NEXT: [[FCMGTZ:%[0-9]+]]:_(<2 x s64>) = G_FCMGTZ %lhs
+    ; CHECK-NEXT: [[FCMLTZ:%[0-9]+]]:_(<2 x s64>) = G_FCMLTZ %lhs
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[FCMLTZ]], [[FCMGTZ]]
+    ; CHECK-NEXT: $q0 = COPY [[OR]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %zero:_(s64) = G_CONSTANT i64 0
     %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero, %zero
@@ -282,16 +306,18 @@ body:             |
     ; Should be inverted. Needs two compares.
 
     ; CHECK-LABEL: name: uno
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %rhs:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[FCMGE:%[0-9]+]]:_(<2 x s64>) = G_FCMGE %lhs, %rhs(<2 x s64>)
-    ; CHECK: [[FCMGT:%[0-9]+]]:_(<2 x s64>) = G_FCMGT %rhs, %lhs(<2 x s64>)
-    ; CHECK: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[FCMGT]], [[FCMGE]]
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[OR]], [[BUILD_VECTOR]]
-    ; CHECK: $q0 = COPY [[XOR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %rhs:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[FCMGE:%[0-9]+]]:_(<2 x s64>) = G_FCMGE %lhs, %rhs(<2 x s64>)
+    ; CHECK-NEXT: [[FCMGT:%[0-9]+]]:_(<2 x s64>) = G_FCMGT %rhs, %lhs(<2 x s64>)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[FCMGT]], [[FCMGE]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[OR]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: $q0 = COPY [[XOR]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %rhs:_(<2 x s64>) = COPY $q1
     %fcmp:_(<2 x s64>) = G_FCMP floatpred(uno), %lhs(<2 x s64>), %rhs
@@ -310,17 +336,19 @@ body:             |
     ; Should be inverted. Needs two compares.
 
     ; CHECK-LABEL: name: uno_zero
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    ; CHECK: [[FCMGEZ:%[0-9]+]]:_(<2 x s64>) = G_FCMGEZ %lhs
-    ; CHECK: [[FCMLTZ:%[0-9]+]]:_(<2 x s64>) = G_FCMLTZ %lhs
-    ; CHECK: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[FCMLTZ]], [[FCMGEZ]]
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[OR]], [[BUILD_VECTOR]]
-    ; CHECK: $q0 = COPY [[XOR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
+    ; CHECK-NEXT: [[FCMGEZ:%[0-9]+]]:_(<2 x s64>) = G_FCMGEZ %lhs
+    ; CHECK-NEXT: [[FCMLTZ:%[0-9]+]]:_(<2 x s64>) = G_FCMLTZ %lhs
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[FCMLTZ]], [[FCMGEZ]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[OR]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: $q0 = COPY [[XOR]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %zero:_(s64) = G_CONSTANT i64 0
     %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero, %zero
@@ -340,13 +368,15 @@ body:             |
     ; Needs two compares. No invert.
 
     ; CHECK-LABEL: name: ord
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %rhs:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[FCMGE:%[0-9]+]]:_(<2 x s64>) = G_FCMGE %lhs, %rhs(<2 x s64>)
-    ; CHECK: [[FCMGT:%[0-9]+]]:_(<2 x s64>) = G_FCMGT %rhs, %lhs(<2 x s64>)
-    ; CHECK: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[FCMGT]], [[FCMGE]]
-    ; CHECK: $q0 = COPY [[OR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %rhs:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[FCMGE:%[0-9]+]]:_(<2 x s64>) = G_FCMGE %lhs, %rhs(<2 x s64>)
+    ; CHECK-NEXT: [[FCMGT:%[0-9]+]]:_(<2 x s64>) = G_FCMGT %rhs, %lhs(<2 x s64>)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[FCMGT]], [[FCMGE]]
+    ; CHECK-NEXT: $q0 = COPY [[OR]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %rhs:_(<2 x s64>) = COPY $q1
     %fcmp:_(<2 x s64>) = G_FCMP floatpred(ord), %lhs(<2 x s64>), %rhs
@@ -365,14 +395,14 @@ body:             |
     ; Needs two compares. No invert.
 
     ; CHECK-LABEL: name: ord_zero
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    ; CHECK: [[FCMGEZ:%[0-9]+]]:_(<2 x s64>) = G_FCMGEZ %lhs
-    ; CHECK: [[FCMLTZ:%[0-9]+]]:_(<2 x s64>) = G_FCMLTZ %lhs
-    ; CHECK: [[OR:%[0-9]+]]:_(<2 x s64>) = G_OR [[FCMLTZ]], [[FCMGEZ]]
-    ; CHECK: $q0 = COPY [[OR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
+    ; CHECK-NEXT: [[FCMEQ:%[0-9]+]]:_(<2 x s64>) = G_FCMEQ %lhs, %lhs(<2 x s64>)
+    ; CHECK-NEXT: $q0 = COPY [[FCMEQ]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %zero:_(s64) = G_CONSTANT i64 0
     %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero, %zero
@@ -392,14 +422,16 @@ body:             |
     ; Should be inverted. Needs two compares.
 
     ; CHECK-LABEL: name: ult
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %rhs:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[FCMGE:%[0-9]+]]:_(<2 x s64>) = G_FCMGE %lhs, %rhs(<2 x s64>)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMGE]], [[BUILD_VECTOR]]
-    ; CHECK: $q0 = COPY [[XOR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %rhs:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[FCMGE:%[0-9]+]]:_(<2 x s64>) = G_FCMGE %lhs, %rhs(<2 x s64>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMGE]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: $q0 = COPY [[XOR]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %rhs:_(<2 x s64>) = COPY $q1
     %fcmp:_(<2 x s64>) = G_FCMP floatpred(ult), %lhs(<2 x s64>), %rhs
@@ -418,15 +450,17 @@ body:             |
     ; Should be inverted. Needs two compares.
 
     ; CHECK-LABEL: name: ueq_zero
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    ; CHECK: [[FCMGEZ:%[0-9]+]]:_(<2 x s64>) = G_FCMGEZ %lhs
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMGEZ]], [[BUILD_VECTOR]]
-    ; CHECK: $q0 = COPY [[XOR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
+    ; CHECK-NEXT: [[FCMGEZ:%[0-9]+]]:_(<2 x s64>) = G_FCMGEZ %lhs
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMGEZ]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: $q0 = COPY [[XOR]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %zero:_(s64) = G_CONSTANT i64 0
     %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero, %zero
@@ -446,14 +480,16 @@ body:             |
     ; Should be inverted. Needs two compares.
 
     ; CHECK-LABEL: name: ule
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %rhs:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[FCMGT:%[0-9]+]]:_(<2 x s64>) = G_FCMGT %lhs, %rhs(<2 x s64>)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMGT]], [[BUILD_VECTOR]]
-    ; CHECK: $q0 = COPY [[XOR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %rhs:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[FCMGT:%[0-9]+]]:_(<2 x s64>) = G_FCMGT %lhs, %rhs(<2 x s64>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMGT]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: $q0 = COPY [[XOR]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %rhs:_(<2 x s64>) = COPY $q1
     %fcmp:_(<2 x s64>) = G_FCMP floatpred(ule), %lhs(<2 x s64>), %rhs
@@ -472,15 +508,17 @@ body:             |
     ; Should be inverted. Needs two compares.
 
     ; CHECK-LABEL: name: ule_zero
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    ; CHECK: [[FCMGTZ:%[0-9]+]]:_(<2 x s64>) = G_FCMGTZ %lhs
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMGTZ]], [[BUILD_VECTOR]]
-    ; CHECK: $q0 = COPY [[XOR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
+    ; CHECK-NEXT: [[FCMGTZ:%[0-9]+]]:_(<2 x s64>) = G_FCMGTZ %lhs
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMGTZ]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: $q0 = COPY [[XOR]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %zero:_(s64) = G_CONSTANT i64 0
     %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero, %zero
@@ -500,14 +538,16 @@ body:             |
     ; Should be inverted. Needs two compares.
 
     ; CHECK-LABEL: name: ugt
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %rhs:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[FCMGE:%[0-9]+]]:_(<2 x s64>) = G_FCMGE %rhs, %lhs(<2 x s64>)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMGE]], [[BUILD_VECTOR]]
-    ; CHECK: $q0 = COPY [[XOR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %rhs:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[FCMGE:%[0-9]+]]:_(<2 x s64>) = G_FCMGE %rhs, %lhs(<2 x s64>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMGE]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: $q0 = COPY [[XOR]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %rhs:_(<2 x s64>) = COPY $q1
     %fcmp:_(<2 x s64>) = G_FCMP floatpred(ugt), %lhs(<2 x s64>), %rhs
@@ -526,15 +566,17 @@ body:             |
     ; Should be inverted. Needs two compares.
 
     ; CHECK-LABEL: name: ugt_zero
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    ; CHECK: [[FCMLEZ:%[0-9]+]]:_(<2 x s64>) = G_FCMLEZ %lhs
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMLEZ]], [[BUILD_VECTOR]]
-    ; CHECK: $q0 = COPY [[XOR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
+    ; CHECK-NEXT: [[FCMLEZ:%[0-9]+]]:_(<2 x s64>) = G_FCMLEZ %lhs
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMLEZ]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: $q0 = COPY [[XOR]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %zero:_(s64) = G_CONSTANT i64 0
     %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero, %zero
@@ -554,14 +596,16 @@ body:             |
     ; Should be inverted. Needs two compares.
 
     ; CHECK-LABEL: name: uge
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %rhs:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[FCMGT:%[0-9]+]]:_(<2 x s64>) = G_FCMGT %rhs, %lhs(<2 x s64>)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMGT]], [[BUILD_VECTOR]]
-    ; CHECK: $q0 = COPY [[XOR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %rhs:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[FCMGT:%[0-9]+]]:_(<2 x s64>) = G_FCMGT %rhs, %lhs(<2 x s64>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMGT]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: $q0 = COPY [[XOR]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %rhs:_(<2 x s64>) = COPY $q1
     %fcmp:_(<2 x s64>) = G_FCMP floatpred(uge), %lhs(<2 x s64>), %rhs
@@ -580,15 +624,17 @@ body:             |
     ; Should be inverted. Needs two compares.
 
     ; CHECK-LABEL: name: uge_zero
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    ; CHECK: [[FCMLTZ:%[0-9]+]]:_(<2 x s64>) = G_FCMLTZ %lhs
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMLTZ]], [[BUILD_VECTOR]]
-    ; CHECK: $q0 = COPY [[XOR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
+    ; CHECK-NEXT: [[FCMLTZ:%[0-9]+]]:_(<2 x s64>) = G_FCMLTZ %lhs
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMLTZ]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: $q0 = COPY [[XOR]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %zero:_(s64) = G_CONSTANT i64 0
     %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero, %zero
@@ -608,14 +654,16 @@ body:             |
     ; Negated EQ.
 
     ; CHECK-LABEL: name: une
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %rhs:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[FCMEQ:%[0-9]+]]:_(<2 x s64>) = G_FCMEQ %lhs, %rhs(<2 x s64>)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMEQ]], [[BUILD_VECTOR]]
-    ; CHECK: $q0 = COPY [[XOR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %rhs:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[FCMEQ:%[0-9]+]]:_(<2 x s64>) = G_FCMEQ %lhs, %rhs(<2 x s64>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMEQ]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: $q0 = COPY [[XOR]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %rhs:_(<2 x s64>) = COPY $q1
     %fcmp:_(<2 x s64>) = G_FCMP floatpred(une), %lhs(<2 x s64>), %rhs
@@ -634,15 +682,17 @@ body:             |
     ; Negated EQ.
 
     ; CHECK-LABEL: name: une_zero
-    ; CHECK: %lhs:_(<2 x s64>) = COPY $q0
-    ; CHECK: %zero:_(s64) = G_CONSTANT i64 0
-    ; CHECK: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
-    ; CHECK: [[FCMEQZ:%[0-9]+]]:_(<2 x s64>) = G_FCMEQZ %lhs
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMEQZ]], [[BUILD_VECTOR]]
-    ; CHECK: $q0 = COPY [[XOR]](<2 x s64>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero(s64), %zero(s64)
+    ; CHECK-NEXT: [[FCMEQZ:%[0-9]+]]:_(<2 x s64>) = G_FCMEQZ %lhs
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<2 x s64>) = G_XOR [[FCMEQZ]], [[BUILD_VECTOR]]
+    ; CHECK-NEXT: $q0 = COPY [[XOR]](<2 x s64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<2 x s64>) = COPY $q0
     %zero:_(s64) = G_CONSTANT i64 0
     %zero_vec:_(<2 x s64>) = G_BUILD_VECTOR %zero, %zero
@@ -660,13 +710,38 @@ body:             |
     liveins: $q0, $q1
 
     ; CHECK-LABEL: name: dont_lower_s16
-    ; CHECK: %lhs:_(<8 x s16>) = COPY $q0
-    ; CHECK: %rhs:_(<8 x s16>) = COPY $q1
-    ; CHECK: %fcmp:_(<8 x s16>) = G_FCMP floatpred(oeq), %lhs(<8 x s16>), %rhs
-    ; CHECK: $q0 = COPY %fcmp(<8 x s16>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: %rhs:_(<8 x s16>) = COPY $q1
+    ; CHECK-NEXT: %fcmp:_(<8 x s16>) = G_FCMP floatpred(oeq), %lhs(<8 x s16>), %rhs
+    ; CHECK-NEXT: $q0 = COPY %fcmp(<8 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %lhs:_(<8 x s16>) = COPY $q0
     %rhs:_(<8 x s16>) = COPY $q1
     %fcmp:_(<8 x s16>) = G_FCMP floatpred(oeq), %lhs(<8 x s16>), %rhs
     $q0 = COPY %fcmp(<8 x s16>)
+    RET_ReallyLR implicit $q0
+
+...
+---
+name:            is_not_nan
+alignment:       4
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $q0, $q1
+
+    ; CHECK-LABEL: name: is_not_nan
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lhs:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[FCMEQ:%[0-9]+]]:_(<4 x s32>) = G_FCMEQ %lhs, %lhs(<4 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[FCMEQ]](<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %lhs:_(<4 x s32>) = COPY $q0
+    %zero:_(s32) = G_FCONSTANT float 0.000000e+00
+    %veczero:_(<4 x s32>) = G_BUILD_VECTOR %zero, %zero, %zero, %zero
+    %fcmp:_(<4 x s32>) = G_FCMP floatpred(ord), %lhs(<4 x s32>), %veczero
+    $q0 = COPY %fcmp(<4 x s32>)
     RET_ReallyLR implicit $q0
