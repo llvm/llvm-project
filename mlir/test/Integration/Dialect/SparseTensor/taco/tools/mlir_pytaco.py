@@ -909,7 +909,7 @@ class _StructOpInfo:
     mlir_type = _mlir_tensor_type(self.dst_dtype, self.dst_dims,
                                   self.dst_format.mlir_tensor_attr())
     index_type = ir.IndexType.get()
-    return bufferization.AllocTensorOp(mlir_type, [], None, None)
+    return bufferization.AllocTensorOp(mlir_type, [], None, None, None)
 
 
 class _Stats:
