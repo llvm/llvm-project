@@ -862,7 +862,7 @@ buffer_store_lds_dword s[4:7], s8 offset:4 tfe lds
 // NOVI:   error: invalid operand for instruction
 
 buffer_load_dword off, s[8:11], s3
-// NOSICIVI: error: missing dst operand or lds modifier
+// NOSICIVI: error: too few operands for instruction
 
 buffer_load_dword off, s[8:11], s3 offset:1
-// NOSICIVI: error: missing dst operand or lds modifier
+// NOSICIVI: error: too few operands for instruction
