@@ -965,6 +965,12 @@ void CheckHelper::CheckSubprogram(
       }
     }
   }
+  if (const MaybeExpr & stmtFunction{details.stmtFunction()}) {
+    if (auto msg{evaluate::CheckStatementFunction(
+            symbol, *stmtFunction, context_.foldingContext())}) {
+      SayWithDeclaration(symbol, std::move(*msg));
+    }
+  }
   if (IsElementalProcedure(symbol)) {
     // See comment on the similar check in CheckProcEntity()
     if (details.isDummy()) {
