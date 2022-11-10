@@ -109,8 +109,14 @@ func.func @sparse_convert_complex(%arg0: tensor<100xcomplex<f64>>) -> tensor<100
 //       CHECK-RWT:     %[[VAL_2:.*]] = bufferization.alloc_tensor()
 //       CHECK-RWT:     %[[VAL_3:.*]] = sparse_tensor.foreach in %[[T0]] init(%[[VAL_2]])
 //       CHECK-RWT:     ^bb0(%[[VAL_4:.*]]: index, %[[VAL_5:.*]]: index, %[[VAL_6:.*]]: f64, %[[VAL_7:.*]]: tensor
-//       CHECK-RWT:       %[[VAL_8:.*]] = sparse_tensor.insert %[[VAL_6]] into %[[VAL_7]]{{\[}}%[[VAL_4]], %[[VAL_5]]]
-//       CHECK-RWT:       sparse_tensor.yield %[[VAL_8]]
+//       CHECK-RWT:        %[[CMP:.*]] = arith.cmpf une, %[[VAL_6]]
+//       CHECK-RWT:        %[[IFR:.*]] = scf.if %[[CMP]]
+//       CHECK-RWT:          %[[Y1:.*]] = sparse_tensor.insert %[[VAL_6]] into %[[VAL_7]]
+//       CHECK-RWT:          scf.yield %[[Y1]]
+//       CHECK-RWT:        } else {
+//       CHECK-RWT:          scf.yield %[[VAL_7]]
+//       CHECK-RWT:        }
+//       CHECK-RWT:        sparse_tensor.yield %[[IFR]]
 //       CHECK-RWT:     }
 //       CHECK-RWT:     %[[COO:.*]] = sparse_tensor.load %[[VAL_3]] hasInserts
 //       CHECK-RWT:     %[[I0:.*]] = sparse_tensor.indices %[[COO]] {dimension = 0 : index}
@@ -166,7 +172,7 @@ func.func @sparse_convert_2d(%arg0: tensor<2x4xf64>) -> tensor<2x4xf64, #CSR> {
 //       CHECK-RWT:     %[[VAL_0:.*]] = arith.constant 1 : index
 //       CHECK-RWT:     %[[VAL_1:.*]] = arith.constant sparse<{{\[\[}}0, 0], [1, 6]], [1.000000e+00, 5.000000e+00]> : tensor<8x7xf32>
 //       CHECK-RWT:     %[[T0:.*]] = bufferization.alloc_tensor()
-//       CHECK-RWT:     %[[T1:.*]] = sparse_tensor.foreach in %[[VAL_1]] init(%[[T0]]) 
+//       CHECK-RWT:     %[[T1:.*]] = sparse_tensor.foreach in %[[VAL_1]] init(%[[T0]])
 //       CHECK-RWT:     ^bb0(%[[VAL_4:.*]]: index, %[[VAL_5:.*]]: index, %[[VAL_6:.*]]: f32, %[[VAL_7:.*]]: tensor
 //       CHECK-RWT:       %[[T2:.*]] = sparse_tensor.insert %[[VAL_6]] into %[[VAL_7]]{{\[}}%[[VAL_4]], %[[VAL_5]]]
 //       CHECK-RWT:       sparse_tensor.yield %[[T2]]
