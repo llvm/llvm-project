@@ -434,3 +434,28 @@ bool LoongArchInstrInfo::reverseBranchCondition(
   Cond[0].setImm(getOppositeBranchOpc(Cond[0].getImm()));
   return false;
 }
+
+std::pair<unsigned, unsigned>
+LoongArchInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
+  return std::make_pair(TF, 0u);
+}
+
+ArrayRef<std::pair<unsigned, const char *>>
+LoongArchInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
+  using namespace LoongArchII;
+  // TODO: Add more target flags.
+  static const std::pair<unsigned, const char *> TargetFlags[] = {
+      {MO_CALL, "loongarch-call"},
+      {MO_CALL_PLT, "loongarch-call-plt"},
+      {MO_PCREL_HI, "loongarch-pcrel-hi"},
+      {MO_PCREL_LO, "loongarch-pcrel-lo"},
+      {MO_GOT_PC_HI, "loongarch-got-pc-hi"},
+      {MO_GOT_PC_LO, "loongarch-got-pc-lo"},
+      {MO_LE_HI, "loongarch-le-hi"},
+      {MO_LE_LO, "loongarch-le-lo"},
+      {MO_IE_PC_HI, "loongarch-ie-pc-hi"},
+      {MO_IE_PC_LO, "loongarch-ie-pc-lo"},
+      {MO_LD_PC_HI, "loongarch-ld-pc-hi"},
+      {MO_GD_PC_HI, "loongarch-gd-pc-hi"}};
+  return makeArrayRef(TargetFlags);
+}
