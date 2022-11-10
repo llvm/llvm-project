@@ -928,3 +928,22 @@ func.func @bad_array_declare_unlimited_polymorphic_boxaddr(%arg0: !fir.ref<!fir.
   %0 = fir.declare %arg0(%shape) {uniq_name = "x"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x?xnone>>>>, !fir.shift<2>) -> !fir.ref<!fir.class<!fir.ptr<!fir.array<?x?xnone>>>>
   return
 }
+
+// -----
+
+func.func @invalid_selector(%arg : !fir.box<!fir.ref<i32>>) -> i32 {
+  %0 = arith.constant 1 : i32
+  %2 = arith.constant 3 : i32
+  // expected-error@+1{{'fir.select_type' op selector must be polymorphic}}
+  fir.select_type %arg : !fir.box<!fir.ref<i32>> [
+    #fir.type_is<!fir.int<4>>,^bb1(%0:i32),
+    #fir.type_is<!fir.int<8>>,^bb2(%2:i32),
+    unit,^bb5 ]
+^bb1(%a : i32) :
+  return %a : i32
+^bb2(%b : i32) :
+  return %b : i32
+^bb5 :
+  %zero = arith.constant 0 : i32
+  return %zero : i32
+}

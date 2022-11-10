@@ -101,6 +101,20 @@ void mlir::python::populatePassManagerSubmodule(py::module &m) {
           "that can be applied on a Module. Throw a ValueError if the pipeline "
           "can't be parsed")
       .def(
+          "add",
+          [](PyPassManager &passManager, const std::string &pipeline) {
+            PyPrintAccumulator errorMsg;
+            MlirLogicalResult status = mlirOpPassManagerAddPipeline(
+                mlirPassManagerGetAsOpPassManager(passManager.get()),
+                mlirStringRefCreate(pipeline.data(), pipeline.size()),
+                errorMsg.getCallback(), errorMsg.getUserData());
+            if (mlirLogicalResultIsFailure(status))
+              throw SetPyError(PyExc_ValueError, std::string(errorMsg.join()));
+          },
+          py::arg("pipeline"),
+          "Add textual pipeline elements to the pass manager. Throws a "
+          "ValueError if the pipeline can't be parsed.")
+      .def(
           "run",
           [](PyPassManager &passManager, PyModule &module) {
             MlirLogicalResult status =
