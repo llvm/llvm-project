@@ -13,7 +13,7 @@
 ! CHECK:  return
 
 ! CHECK-LABEL: func @_QPext_func(
-! CEHCK: %[[ARG_0:.*]]: !fir.ref<!fir.char<1,?>>, %[[ARG_1:.*]]: index) -> !fir.boxchar<1> {
+! CHECK: %[[ARG_0:.*]]: !fir.ref<!fir.char<1,?>>, %[[ARG_1:.*]]: index) -> !fir.boxchar<1> {
 program m
   external :: ext_func
   call sub(ext_func)

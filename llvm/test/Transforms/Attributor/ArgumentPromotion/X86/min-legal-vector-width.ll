@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; This should promote
 define internal fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #0 {
 ;
-; CHECK: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; CHECK: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer512
 ; CHECK-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  bb:
@@ -27,7 +27,7 @@ bb:
 
 define void @avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>* %arg) #0 {
 ;
-; TUNIT: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; TUNIT: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@avx512_legal512_prefer512_call_avx512_legal512_prefer512
 ; TUNIT-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  bb:
@@ -41,7 +41,7 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer512(<8 x i64>*
 ; TUNIT-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; CGSCC: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@avx512_legal512_prefer512_call_avx512_legal512_prefer512
 ; CGSCC-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:  bb:
@@ -69,7 +69,7 @@ bb:
 ; This should promote
 define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #1 {
 ;
-; CHECK: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; CHECK: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer256
 ; CHECK-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  bb:
@@ -87,7 +87,7 @@ bb:
 
 define void @avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>* %arg) #1 {
 ;
-; TUNIT: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; TUNIT: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal512_prefer256
 ; TUNIT-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:  bb:
@@ -101,7 +101,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; TUNIT-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; CGSCC: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal512_prefer256
 ; CGSCC-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:  bb:
@@ -129,7 +129,7 @@ bb:
 ; This should promote
 define internal fastcc void @callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #1 {
 ;
-; CHECK: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; CHECK: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer512_call_avx512_legal512_prefer256
 ; CHECK-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  bb:
@@ -147,7 +147,7 @@ bb:
 
 define void @avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>* %arg) #0 {
 ;
-; TUNIT: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; TUNIT: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@avx512_legal512_prefer512_call_avx512_legal512_prefer256
 ; TUNIT-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  bb:
@@ -161,7 +161,7 @@ define void @avx512_legal512_prefer512_call_avx512_legal512_prefer256(<8 x i64>*
 ; TUNIT-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; CGSCC: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@avx512_legal512_prefer512_call_avx512_legal512_prefer256
 ; CGSCC-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:  bb:
@@ -189,7 +189,7 @@ bb:
 ; This should promote
 define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #0 {
 ;
-; CHECK: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; CHECK: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal512_prefer512
 ; CHECK-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  bb:
@@ -207,7 +207,7 @@ bb:
 
 define void @avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>* %arg) #1 {
 ;
-; TUNIT: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; TUNIT: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal512_prefer512
 ; TUNIT-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:  bb:
@@ -221,7 +221,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal512_prefer512(<8 x i64>*
 ; TUNIT-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; CGSCC: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal512_prefer512
 ; CGSCC-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:  bb:
@@ -249,7 +249,7 @@ bb:
 ; This should not promote
 define internal fastcc void @callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #1 {
 ;
-; CHECK: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; CHECK: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@callee_avx512_legal256_prefer256_call_avx512_legal512_prefer256
 ; CHECK-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  bb:
@@ -265,7 +265,7 @@ bb:
 
 define void @avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>* %arg) #2 {
 ;
-; TUNIT: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; TUNIT: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@avx512_legal256_prefer256_call_avx512_legal512_prefer256
 ; TUNIT-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
 ; TUNIT-NEXT:  bb:
@@ -278,7 +278,7 @@ define void @avx512_legal256_prefer256_call_avx512_legal512_prefer256(<8 x i64>*
 ; TUNIT-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; CGSCC: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@avx512_legal256_prefer256_call_avx512_legal512_prefer256
 ; CGSCC-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:  bb:
@@ -305,7 +305,7 @@ bb:
 ; This should not promote
 define internal fastcc void @callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #2 {
 ;
-; CHECK: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; CHECK: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@callee_avx512_legal512_prefer256_call_avx512_legal256_prefer256
 ; CHECK-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64>* noalias nocapture nofree noundef nonnull readonly align 64 dereferenceable(64) [[ARG1:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  bb:
@@ -321,7 +321,7 @@ bb:
 
 define void @avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>* %arg) #1 {
 ;
-; TUNIT: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; TUNIT: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal256_prefer256
 ; TUNIT-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:  bb:
@@ -334,7 +334,7 @@ define void @avx512_legal512_prefer256_call_avx512_legal256_prefer256(<8 x i64>*
 ; TUNIT-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; CGSCC: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@avx512_legal512_prefer256_call_avx512_legal256_prefer256
 ; CGSCC-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:  bb:
@@ -361,7 +361,7 @@ bb:
 ; This should promote
 define internal fastcc void @callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #3 {
 ;
-; CHECK: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; CHECK: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@callee_avx2_legal256_prefer256_call_avx2_legal512_prefer256
 ; CHECK-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  bb:
@@ -379,7 +379,7 @@ bb:
 
 define void @avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* %arg) #4 {
 ;
-; TUNIT: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; TUNIT: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@avx2_legal256_prefer256_call_avx2_legal512_prefer256
 ; TUNIT-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:  bb:
@@ -393,7 +393,7 @@ define void @avx2_legal256_prefer256_call_avx2_legal512_prefer256(<8 x i64>* %ar
 ; TUNIT-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; CGSCC: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@avx2_legal256_prefer256_call_avx2_legal512_prefer256
 ; CGSCC-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR3]] {
 ; CGSCC-NEXT:  bb:
@@ -421,7 +421,7 @@ bb:
 ; This should promote
 define internal fastcc void @callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* %arg, <8 x i64>* readonly %arg1) #4 {
 ;
-; CHECK: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; CHECK: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@callee_avx2_legal512_prefer256_call_avx2_legal256_prefer256
 ; CHECK-SAME: (<8 x i64>* noalias nocapture nofree noundef nonnull writeonly align 64 dereferenceable(64) [[ARG:%.*]], <8 x i64> [[TMP0:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:  bb:
@@ -439,7 +439,7 @@ bb:
 
 define void @avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* %arg) #3 {
 ;
-; TUNIT: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; TUNIT: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@avx2_legal512_prefer256_call_avx2_legal256_prefer256
 ; TUNIT-SAME: (<8 x i64>* nocapture nofree writeonly [[ARG:%.*]]) #[[ATTR3]] {
 ; TUNIT-NEXT:  bb:
@@ -453,7 +453,7 @@ define void @avx2_legal512_prefer256_call_avx2_legal256_prefer256(<8 x i64>* %ar
 ; TUNIT-NEXT:    store <8 x i64> [[TMP4]], <8 x i64>* [[ARG]], align 2
 ; TUNIT-NEXT:    ret void
 ;
-; CGSCC: Function Attrs: argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable
+; CGSCC: Function Attrs: inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@avx2_legal512_prefer256_call_avx2_legal256_prefer256
 ; CGSCC-SAME: (<8 x i64>* nocapture nofree noundef nonnull writeonly align 2 dereferenceable(64) [[ARG:%.*]]) #[[ATTR3]] {
 ; CGSCC-NEXT:  bb:
@@ -488,19 +488,19 @@ attributes #3 = { inlinehint norecurse nounwind uwtable "target-features"="+avx2
 attributes #4 = { inlinehint norecurse nounwind uwtable "target-features"="+avx2" "min-legal-vector-width"="256" "prefer-vector-width"="256" }
 attributes #5 = { argmemonly nounwind }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="512" "target-features"="+avx512vl" }
-; TUNIT: attributes #[[ATTR1]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx512vl" }
-; TUNIT: attributes #[[ATTR2]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx512vl" }
-; TUNIT: attributes #[[ATTR3]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
-; TUNIT: attributes #[[ATTR4:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
-; TUNIT: attributes #[[ATTR5]] = { willreturn writeonly }
+; TUNIT: attributes #[[ATTR0]] = { inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="512" "target-features"="+avx512vl" }
+; TUNIT: attributes #[[ATTR1]] = { inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx512vl" }
+; TUNIT: attributes #[[ATTR2]] = { inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx512vl" }
+; TUNIT: attributes #[[ATTR3]] = { inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
+; TUNIT: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; TUNIT: attributes #[[ATTR5]] = { willreturn }
 ; TUNIT: attributes #[[ATTR6]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="512" "target-features"="+avx512vl" }
-; CGSCC: attributes #[[ATTR1]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx512vl" }
-; CGSCC: attributes #[[ATTR2]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx512vl" }
-; CGSCC: attributes #[[ATTR3]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
-; CGSCC: attributes #[[ATTR4:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
-; CGSCC: attributes #[[ATTR5]] = { willreturn writeonly }
+; CGSCC: attributes #[[ATTR0]] = { inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="512" "target-features"="+avx512vl" }
+; CGSCC: attributes #[[ATTR1]] = { inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx512vl" }
+; CGSCC: attributes #[[ATTR2]] = { inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="256" "prefer-vector-width"="256" "target-features"="+avx512vl" }
+; CGSCC: attributes #[[ATTR3]] = { inlinehint nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable "min-legal-vector-width"="512" "prefer-vector-width"="256" "target-features"="+avx2" }
+; CGSCC: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+; CGSCC: attributes #[[ATTR5]] = { willreturn }
 ; CGSCC: attributes #[[ATTR6]] = { nounwind willreturn }
 ;.

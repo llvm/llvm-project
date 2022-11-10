@@ -1888,11 +1888,11 @@ def fassociative_math : Flag<["-"], "fassociative-math">, Group<f_Group>;
 def fno_associative_math : Flag<["-"], "fno-associative-math">, Group<f_Group>;
 defm reciprocal_math : BoolFOption<"reciprocal-math",
   LangOpts<"AllowRecip">, DefaultFalse,
-  PosFlag<SetTrue, [CC1Option], "Allow division operations to be reassociated",
+  PosFlag<SetTrue, [CC1Option, FC1Option, FlangOption], "Allow division operations to be reassociated",
           [funsafe_math_optimizations.KeyPath]>,
   NegFlag<SetFalse>>;
 defm approx_func : BoolFOption<"approx-func", LangOpts<"ApproxFunc">, DefaultFalse,
-   PosFlag<SetTrue, [CC1Option], "Allow certain math function calls to be replaced "
+   PosFlag<SetTrue, [CC1Option, FC1Option, FlangOption], "Allow certain math function calls to be replaced "
            "with an approximately equivalent calculation",
            [funsafe_math_optimizations.KeyPath]>,
    NegFlag<SetFalse>>;
@@ -1902,7 +1902,7 @@ defm finite_math_only : BoolFOption<"finite-math-only",
   NegFlag<SetFalse>>;
 defm signed_zeros : BoolFOption<"signed-zeros",
   LangOpts<"NoSignedZero">, DefaultFalse,
-  NegFlag<SetTrue, [CC1Option], "Allow optimizations that ignore the sign of floating point zeros",
+  NegFlag<SetTrue, [CC1Option, FC1Option, FlangOption], "Allow optimizations that ignore the sign of floating point zeros",
             [cl_no_signed_zeros.KeyPath, funsafe_math_optimizations.KeyPath]>,
   PosFlag<SetFalse>>;
 def fhonor_nans : Flag<["-"], "fhonor-nans">, Group<f_Group>;
@@ -5444,12 +5444,6 @@ def mframe_pointer_EQ : Joined<["-"], "mframe-pointer=">,
   HelpText<"Specify which frame pointers to retain.">, Values<"all,non-leaf,none">,
   NormalizedValuesScope<"CodeGenOptions::FramePointerKind">, NormalizedValues<["All", "NonLeaf", "None"]>,
   MarshallingInfoEnum<CodeGenOpts<"FramePointer">, "None">;
-def menable_no_nans : Flag<["-"], "menable-no-nans">,
-  HelpText<"Allow optimization to assume there are no NaNs.">,
-  MarshallingInfoFlag<LangOpts<"NoHonorNaNs">>, ImpliedByAnyOf<[ffinite_math_only.KeyPath]>;
-def mreassociate : Flag<["-"], "mreassociate">,
-  HelpText<"Allow reassociation transformations for floating-point instructions">,
-  MarshallingInfoFlag<LangOpts<"AllowFPReassoc">>, ImpliedByAnyOf<[funsafe_math_optimizations.KeyPath]>;
 def mabi_EQ_ieeelongdouble : Flag<["-"], "mabi=ieeelongdouble">,
   HelpText<"Use IEEE 754 quadruple-precision for long double">,
   MarshallingInfoFlag<LangOpts<"PPCIEEELongDouble">>;
@@ -6057,6 +6051,12 @@ def split_dwarf_output : Separate<["-"], "split-dwarf-output">,
 
 let Flags = [CC1Option, FC1Option, NoDriverOption] in {
 
+def mreassociate : Flag<["-"], "mreassociate">,
+  HelpText<"Allow reassociation transformations for floating-point instructions">,
+  MarshallingInfoFlag<LangOpts<"AllowFPReassoc">>, ImpliedByAnyOf<[funsafe_math_optimizations.KeyPath]>;
+def menable_no_nans : Flag<["-"], "menable-no-nans">,
+  HelpText<"Allow optimization to assume there are no NaNs.">,
+  MarshallingInfoFlag<LangOpts<"NoHonorNaNs">>, ImpliedByAnyOf<[ffinite_math_only.KeyPath]>;
 def menable_no_infinities : Flag<["-"], "menable-no-infs">,
   HelpText<"Allow optimization to assume there are no infinities.">,
   MarshallingInfoFlag<LangOpts<"NoHonorInfs">>, ImpliedByAnyOf<[ffinite_math_only.KeyPath]>;

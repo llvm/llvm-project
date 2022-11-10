@@ -472,6 +472,16 @@ OpFoldResult transform::MergeHandlesOp::fold(ArrayRef<Attribute> operands) {
 // SplitHandlesOp
 //===----------------------------------------------------------------------===//
 
+void transform::SplitHandlesOp::build(OpBuilder &builder,
+                                      OperationState &result, Value target,
+                                      int64_t numResultHandles) {
+  result.addOperands(target);
+  result.addAttribute(SplitHandlesOp::getNumResultHandlesAttrName(result.name),
+                      builder.getI64IntegerAttr(numResultHandles));
+  auto pdlOpType = pdl::OperationType::get(builder.getContext());
+  result.addTypes(SmallVector<pdl::OperationType>(numResultHandles, pdlOpType));
+}
+
 DiagnosedSilenceableFailure
 transform::SplitHandlesOp::apply(transform::TransformResults &results,
                                  transform::TransformState &state) {
@@ -811,6 +821,20 @@ LogicalResult transform::WithPDLPatternsOp::verify() {
 //===----------------------------------------------------------------------===//
 // PrintOp
 //===----------------------------------------------------------------------===//
+
+void transform::PrintOp::build(OpBuilder &builder, OperationState &result,
+                               StringRef name) {
+  if (!name.empty()) {
+    result.addAttribute(PrintOp::getNameAttrName(result.name),
+                        builder.getStrArrayAttr(name));
+  }
+}
+
+void transform::PrintOp::build(OpBuilder &builder, OperationState &result,
+                               Value target, StringRef name) {
+  result.addOperands({target});
+  build(builder, result, name);
+}
 
 DiagnosedSilenceableFailure
 transform::PrintOp::apply(transform::TransformResults &results,

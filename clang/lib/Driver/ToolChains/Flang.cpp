@@ -84,6 +84,11 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
                                     ArgStringList &CmdArgs) {
   StringRef FPContract;
   bool HonorINFs = true;
+  bool HonorNaNs = true;
+  bool ApproxFunc = false;
+  bool SignedZeros = true;
+  bool AssociativeMath = false;
+  bool ReciprocalMath = false;
 
   if (const Arg *A = Args.getLastArg(options::OPT_ffp_contract)) {
     const StringRef Val = A->getValue();
@@ -115,6 +120,36 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     case options::OPT_fno_honor_infinities:
       HonorINFs = false;
       break;
+    case options::OPT_fhonor_nans:
+      HonorNaNs = true;
+      break;
+    case options::OPT_fno_honor_nans:
+      HonorNaNs = false;
+      break;
+    case options::OPT_fapprox_func:
+      ApproxFunc = true;
+      break;
+    case options::OPT_fno_approx_func:
+      ApproxFunc = false;
+      break;
+    case options::OPT_fsigned_zeros:
+      SignedZeros = true;
+      break;
+    case options::OPT_fno_signed_zeros:
+      SignedZeros = false;
+      break;
+    case options::OPT_fassociative_math:
+      AssociativeMath = true;
+      break;
+    case options::OPT_fno_associative_math:
+      AssociativeMath = false;
+      break;
+    case options::OPT_freciprocal_math:
+      ReciprocalMath = true;
+      break;
+    case options::OPT_fno_reciprocal_math:
+      ReciprocalMath = false;
+      break;
     }
 
     // If we handled this option claim it
@@ -126,6 +161,21 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
 
   if (!HonorINFs)
     CmdArgs.push_back("-menable-no-infs");
+
+  if (!HonorNaNs)
+    CmdArgs.push_back("-menable-no-nans");
+
+  if (ApproxFunc)
+    CmdArgs.push_back("-fapprox-func");
+
+  if (!SignedZeros)
+    CmdArgs.push_back("-fno-signed-zeros");
+
+  if (AssociativeMath && !SignedZeros)
+    CmdArgs.push_back("-mreassociate");
+
+  if (ReciprocalMath)
+    CmdArgs.push_back("-freciprocal-math");
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,

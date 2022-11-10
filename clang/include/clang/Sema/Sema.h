@@ -1330,6 +1330,25 @@ public:
     bool InDiscardedStatement;
     bool InImmediateFunctionContext;
 
+    bool IsCurrentlyCheckingDefaultArgumentOrInitializer = false;
+
+    // When evaluating immediate functions in the initializer of a default
+    // argument or default member initializer, this is the declaration whose
+    // default initializer is being evaluated and the location of the call
+    // or constructor definition.
+    struct InitializationContext {
+      InitializationContext(SourceLocation Loc, ValueDecl *Decl,
+                            DeclContext *Context)
+          : Loc(Loc), Decl(Decl), Context(Context) {
+        assert(Decl && Context && "invalid initialization context");
+      };
+
+      SourceLocation Loc;
+      ValueDecl *Decl = nullptr;
+      DeclContext *Context = nullptr;
+    };
+    llvm::Optional<InitializationContext> DelayedDefaultInitializationContext;
+
     ExpressionEvaluationContextRecord(ExpressionEvaluationContext Context,
                                       unsigned NumCleanupObjects,
                                       CleanupInfo ParentCleanup,
@@ -6196,19 +6215,22 @@ public:
                         bool IsStdInitListInitialization, bool RequiresZeroInit,
                         unsigned ConstructKind, SourceRange ParenRange);
 
+  ExprResult ConvertMemberDefaultInitExpression(FieldDecl *FD, Expr *InitExpr,
+                                                SourceLocation InitLoc);
+
   ExprResult BuildCXXDefaultInitExpr(SourceLocation Loc, FieldDecl *Field);
 
 
   /// Instantiate or parse a C++ default argument expression as necessary.
   /// Return true on error.
   bool CheckCXXDefaultArgExpr(SourceLocation CallLoc, FunctionDecl *FD,
-                              ParmVarDecl *Param);
+                              ParmVarDecl *Param, Expr *Init = nullptr,
+                              bool SkipImmediateInvocations = true);
 
   /// BuildCXXDefaultArgExpr - Creates a CXXDefaultArgExpr, instantiating
   /// the default expr if needed.
-  ExprResult BuildCXXDefaultArgExpr(SourceLocation CallLoc,
-                                    FunctionDecl *FD,
-                                    ParmVarDecl *Param);
+  ExprResult BuildCXXDefaultArgExpr(SourceLocation CallLoc, FunctionDecl *FD,
+                                    ParmVarDecl *Param, Expr *Init = nullptr);
 
   /// FinalizeVarWithDestructor - Prepare for calling destructor on the
   /// constructed variable.
@@ -9610,6 +9632,63 @@ public:
     assert(!ExprEvalContexts.empty() &&
            "Must be in an expression evaluation context");
     return ExprEvalContexts.back().isImmediateFunctionContext();
+  }
+
+  bool isCheckingDefaultArgumentOrInitializer() const {
+    assert(!ExprEvalContexts.empty() &&
+           "Must be in an expression evaluation context");
+    const ExpressionEvaluationContextRecord &Ctx = ExprEvalContexts.back();
+    return (Ctx.Context ==
+            ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed) ||
+           Ctx.IsCurrentlyCheckingDefaultArgumentOrInitializer;
+  }
+
+  bool isCheckingDefaultArgumentOrInitializerOfOuterEntity() const {
+    assert(!ExprEvalContexts.empty() &&
+           "Must be in an expression evaluation context");
+    for (const auto &Ctx : llvm::reverse(ExprEvalContexts)) {
+      if ((Ctx.Context ==
+           ExpressionEvaluationContext::PotentiallyEvaluatedIfUsed) ||
+          Ctx.IsCurrentlyCheckingDefaultArgumentOrInitializer)
+        return true;
+      if (Ctx.isConstantEvaluated() || Ctx.isImmediateFunctionContext() ||
+          Ctx.isUnevaluated())
+        return false;
+    }
+    return false;
+  }
+
+  llvm::Optional<ExpressionEvaluationContextRecord::InitializationContext>
+  InnermostDeclarationWithDelayedImmediateInvocations() const {
+    assert(!ExprEvalContexts.empty() &&
+           "Must be in an expression evaluation context");
+    for (const auto &Ctx : llvm::reverse(ExprEvalContexts)) {
+      if (Ctx.Context == ExpressionEvaluationContext::PotentiallyEvaluated &&
+          Ctx.DelayedDefaultInitializationContext)
+        return Ctx.DelayedDefaultInitializationContext;
+      if (Ctx.isConstantEvaluated() || Ctx.isImmediateFunctionContext() ||
+          Ctx.isUnevaluated())
+        break;
+    }
+    return llvm::None;
+  }
+
+  llvm::Optional<ExpressionEvaluationContextRecord::InitializationContext>
+  OutermostDeclarationWithDelayedImmediateInvocations() const {
+    assert(!ExprEvalContexts.empty() &&
+           "Must be in an expression evaluation context");
+    llvm::Optional<ExpressionEvaluationContextRecord::InitializationContext>
+        Res;
+    for (auto &Ctx : llvm::reverse(ExprEvalContexts)) {
+      if (Ctx.Context == ExpressionEvaluationContext::PotentiallyEvaluated &&
+          !Ctx.DelayedDefaultInitializationContext && Res)
+        break;
+      if (Ctx.isConstantEvaluated() || Ctx.isImmediateFunctionContext() ||
+          Ctx.isUnevaluated())
+        break;
+      Res = Ctx.DelayedDefaultInitializationContext;
+    }
+    return Res;
   }
 
   /// RAII class used to determine whether SFINAE has

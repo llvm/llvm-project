@@ -75,6 +75,20 @@ def testParseFail():
       log("Exception not produced")
 run(testParseFail)
 
+# Check that adding to a pass manager works
+# CHECK-LABEL: TEST: testAdd
+@run
+def testAdd():
+  pm = PassManager("any", Context())
+  # CHECK: pm: 'any()'
+  log(f"pm: '{pm}'")
+  # CHECK: pm: 'any(cse)'
+  pm.add("cse")
+  log(f"pm: '{pm}'")
+  # CHECK: pm: 'any(cse,cse)'
+  pm.add("cse")
+  log(f"pm: '{pm}'")
+
 
 # Verify failure on incorrect level of nesting.
 # CHECK-LABEL: TEST: testInvalidNesting

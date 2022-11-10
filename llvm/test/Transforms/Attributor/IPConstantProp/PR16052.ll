@@ -7,13 +7,13 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define i64 @fn2() {
 ;
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@fn2
 ; TUNIT-SAME: () #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    ret i64 undef
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@fn2
 ; CGSCC-SAME: () #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -31,7 +31,7 @@ entry:
 
 define i64 @fn2b(i32 %arg) {
 ;
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@fn2b
 ; TUNIT-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
@@ -39,7 +39,7 @@ define i64 @fn2b(i32 %arg) {
 ; TUNIT-NEXT:    [[DIV:%.*]] = sdiv i64 8, [[CONV]]
 ; TUNIT-NEXT:    ret i64 [[DIV]]
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@fn2b
 ; CGSCC-SAME: (i32 [[ARG:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:  entry:
@@ -56,13 +56,13 @@ entry:
 }
 
 define i64 @fn2c() {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@fn2c
 ; TUNIT-SAME: () #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    ret i64 42
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@fn2c
 ; CGSCC-SAME: () #[[ATTR0]] {
 ; CGSCC-NEXT:  entry:
@@ -79,7 +79,7 @@ entry:
 }
 
 define internal i64 @fn1(i64 %p1) {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@fn1
 ; CGSCC-SAME: (i64 returned [[P1:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -91,9 +91,9 @@ entry:
   ret i64 %cond
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR2]] = { readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR2]] = { willreturn }
 ;.
