@@ -2229,6 +2229,21 @@ public:
       break;
     }
   }
+
+  void Unparse(const OmpAtomicDefaultMemOrderClause &x) {
+    switch (x.v) {
+    case OmpAtomicDefaultMemOrderClause::Type::SeqCst:
+      Word("SEQ_CST");
+      break;
+    case OmpAtomicDefaultMemOrderClause::Type::AcqRel:
+      Word("ACQ_REL");
+      break;
+    case OmpAtomicDefaultMemOrderClause::Type::Relaxed:
+      Word("RELAXED");
+      break;
+    }
+  }
+
   void Unparse(const OmpAtomicClauseList &x) { Walk(" ", x.v, " "); }
 
   void Unparse(const OmpAtomic &x) {
@@ -2392,6 +2407,13 @@ public:
             [&](const OpenMPDeclareTargetConstruct &) {
               Word("DECLARE TARGET ");
               return true;
+            },
+            [&](const OpenMPRequiresConstruct &y) {
+              Word("REQUIRES ");
+              Walk(std::get<OmpClauseList>(y.t));
+              Put("\n");
+              EndOpenMP();
+              return false;
             },
             [&](const OpenMPThreadprivate &) {
               Word("THREADPRIVATE (");
