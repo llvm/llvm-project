@@ -12,6 +12,7 @@
 #include "clang/Testing/TestAST.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Annotations.h"
 #include "gmock/gmock.h"
@@ -33,6 +34,13 @@ MATCHER_P(named, N, "") {
   llvm::raw_string_ostream OS(S);
   arg->dump(OS);
   *result_listener << S;
+  return false;
+}
+
+MATCHER_P(FileNamed, N, "") {
+  if (arg->tryGetRealPathName() == N)
+    return true;
+  *result_listener << arg->tryGetRealPathName().str();
   return false;
 }
 
@@ -257,22 +265,43 @@ protected:
   }
 
   TestAST build() { return TestAST(Inputs); }
+
+  void createEmptyFiles(llvm::ArrayRef<StringRef> FileNames) {
+    for (llvm::StringRef File : FileNames)
+      Inputs.ExtraFiles[File] = "";
+  }
 };
 
 TEST_F(PragmaIncludeTest, IWYUKeep) {
   Inputs.Code = R"cpp(// Line 1
     #include "keep1.h" // IWYU pragma: keep
     #include "keep2.h" /* IWYU pragma: keep */
-    #include "normal.h"
+
+    #include "export1.h" // IWYU pragma: export // line 5
+    // IWYU pragma: begin_exports
+    #include "export2.h" // Line 7
+    #include "export3.h"
+    // IWYU pragma: end_exports
+
+    #include "normal.h" // Line 11
   )cpp";
-  Inputs.ExtraFiles["keep1.h"] = Inputs.ExtraFiles["keep2.h"] =
-      Inputs.ExtraFiles["normal.h"] = "";
+  createEmptyFiles({"keep1.h", "keep2.h", "export1.h", "export2.h", "export3.h",
+                    "normal.h"});
 
   TestAST Processed = build();
   EXPECT_FALSE(PI.shouldKeep(1));
+  // Keep
   EXPECT_TRUE(PI.shouldKeep(2));
   EXPECT_TRUE(PI.shouldKeep(3));
-  EXPECT_FALSE(PI.shouldKeep(4));
+
+  // Exports
+  EXPECT_TRUE(PI.shouldKeep(5));
+  EXPECT_TRUE(PI.shouldKeep(7));
+  EXPECT_TRUE(PI.shouldKeep(8));
+  EXPECT_FALSE(PI.shouldKeep(6)); // no # directive
+  EXPECT_FALSE(PI.shouldKeep(9)); // no # directive
+
+  EXPECT_FALSE(PI.shouldKeep(11));
 }
 
 TEST_F(PragmaIncludeTest, IWYUPrivate) {
@@ -291,6 +320,74 @@ TEST_F(PragmaIncludeTest, IWYUPrivate) {
   auto PublicFE = Processed.fileManager().getFile("public.h");
   assert(PublicFE);
   EXPECT_EQ(PI.getPublic(PublicFE.get()), ""); // no mapping.
+}
+
+TEST_F(PragmaIncludeTest, IWYUExport) {
+  Inputs.Code = R"cpp(// Line 1
+    #include "export1.h"
+    #include "export2.h"
+  )cpp";
+  Inputs.ExtraFiles["export1.h"] = R"cpp(
+    #include "private.h" // IWYU pragma: export
+  )cpp";
+  Inputs.ExtraFiles["export2.h"] = R"cpp(
+    #include "export3.h"
+  )cpp";
+  Inputs.ExtraFiles["export3.h"] = R"cpp(
+    #include "private.h" // IWYU pragma: export
+  )cpp";
+  Inputs.ExtraFiles["private.h"] = "";
+  TestAST Processed = build();
+  const auto &SM = Processed.sourceManager();
+  auto &FM = Processed.fileManager();
+
+  EXPECT_THAT(PI.getExporters(FM.getFile("private.h").get(), FM),
+              testing::UnorderedElementsAre(FileNamed("export1.h"),
+                                            FileNamed("export3.h")));
+
+  EXPECT_TRUE(PI.getExporters(FM.getFile("export1.h").get(), FM).empty());
+  EXPECT_TRUE(PI.getExporters(FM.getFile("export2.h").get(), FM).empty());
+  EXPECT_TRUE(PI.getExporters(FM.getFile("export3.h").get(), FM).empty());
+  EXPECT_TRUE(
+      PI.getExporters(SM.getFileEntryForID(SM.getMainFileID()), FM).empty());
+}
+
+TEST_F(PragmaIncludeTest, IWYUExportBlock) {
+  Inputs.Code = R"cpp(// Line 1
+   #include "normal.h"
+  )cpp";
+  Inputs.ExtraFiles["normal.h"] = R"cpp(
+    #include "foo.h"
+
+    // IWYU pragma: begin_exports
+    #include "export1.h"
+    #include "private1.h"
+    // IWYU pragma: end_exports
+  )cpp";
+  Inputs.ExtraFiles["export1.h"] = R"cpp(
+    // IWYU pragma: begin_exports
+    #include "private1.h"
+    #include "private2.h"
+    // IWYU pragma: end_exports
+
+    #include "bar.h"
+    #include "private3.h" // IWYU pragma: export
+  )cpp";
+  createEmptyFiles(
+      {"private1.h", "private2.h", "private3.h", "foo.h", "bar.h"});
+  TestAST Processed = build();
+  auto &FM = Processed.fileManager();
+
+  EXPECT_THAT(PI.getExporters(FM.getFile("private1.h").get(), FM),
+              testing::UnorderedElementsAre(FileNamed("export1.h"),
+                                            FileNamed("normal.h")));
+  EXPECT_THAT(PI.getExporters(FM.getFile("private2.h").get(), FM),
+              testing::UnorderedElementsAre(FileNamed("export1.h")));
+  EXPECT_THAT(PI.getExporters(FM.getFile("private3.h").get(), FM),
+              testing::UnorderedElementsAre(FileNamed("export1.h")));
+
+  EXPECT_TRUE(PI.getExporters(FM.getFile("foo.h").get(), FM).empty());
+  EXPECT_TRUE(PI.getExporters(FM.getFile("bar.h").get(), FM).empty());
 }
 
 } // namespace
