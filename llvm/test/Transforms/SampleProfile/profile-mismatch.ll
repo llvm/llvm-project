@@ -1,3 +1,4 @@
+; REQUIRES: x86_64-linux
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-mismatch.prof -report-profile-staleness -persist-profile-staleness -S 2>%t -o %t.ll
 ; RUN: FileCheck %s --input-file %t
 ; RUN: FileCheck %s --input-file %t.ll -check-prefix=CHECK-MD
