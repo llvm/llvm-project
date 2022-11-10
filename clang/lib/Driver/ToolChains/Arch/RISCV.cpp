@@ -73,7 +73,7 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       CPU = llvm::sys::getHostCPUName();
     if (!getRISCFeaturesFromMcpu(Triple, CPU, Features))
       D.Diag(clang::diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << CPU;
+          << A->getSpelling() << CPU;
   }
 
   // Handle features corresponding to "-ffixed-X" options

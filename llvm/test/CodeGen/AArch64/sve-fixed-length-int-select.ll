@@ -31,7 +31,7 @@ define <16 x i8> @select_v16i8(<16 x i8> %op1, <16 x i8> %op2, i1 %mask) vscale_
   ret <16 x i8> %sel
 }
 
-define void @select_v32i8(<32 x i8>* %a, <32 x i8>* %b, i1 %mask) vscale_range(2,0) #0 {
+define void @select_v32i8(ptr %a, ptr %b, i1 %mask) vscale_range(2,0) #0 {
 ; CHECK-LABEL: select_v32i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w2, #0x1
@@ -45,14 +45,14 @@ define void @select_v32i8(<32 x i8>* %a, <32 x i8>* %b, i1 %mask) vscale_range(2
 ; CHECK-NEXT:    sel z0.b, p1, z0.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load volatile <32 x i8>, <32 x i8>* %a
-  %op2 = load volatile <32 x i8>, <32 x i8>* %b
+  %op1 = load volatile <32 x i8>, ptr %a
+  %op2 = load volatile <32 x i8>, ptr %b
   %sel = select i1 %mask, <32 x i8> %op1, <32 x i8> %op2
-  store <32 x i8> %sel, <32 x i8>* %a
+  store <32 x i8> %sel, ptr %a
   ret void
 }
 
-define void @select_v64i8(<64 x i8>* %a, <64 x i8>* %b, i1 %mask) #0 {
+define void @select_v64i8(ptr %a, ptr %b, i1 %mask) #0 {
 ; VBITS_GE_256-LABEL: select_v64i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov w8, #32
@@ -85,14 +85,14 @@ define void @select_v64i8(<64 x i8>* %a, <64 x i8>* %b, i1 %mask) #0 {
 ; VBITS_GE_512-NEXT:    sel z0.b, p1, z0.b, z1.b
 ; VBITS_GE_512-NEXT:    st1b { z0.b }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load volatile <64 x i8>, <64 x i8>* %a
-  %op2 = load volatile <64 x i8>, <64 x i8>* %b
+  %op1 = load volatile <64 x i8>, ptr %a
+  %op2 = load volatile <64 x i8>, ptr %b
   %sel = select i1 %mask, <64 x i8> %op1, <64 x i8> %op2
-  store <64 x i8> %sel, <64 x i8>* %a
+  store <64 x i8> %sel, ptr %a
   ret void
 }
 
-define void @select_v128i8(<128 x i8>* %a, <128 x i8>* %b, i1 %mask) vscale_range(8,0) #0 {
+define void @select_v128i8(ptr %a, ptr %b, i1 %mask) vscale_range(8,0) #0 {
 ; CHECK-LABEL: select_v128i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w2, #0x1
@@ -106,14 +106,14 @@ define void @select_v128i8(<128 x i8>* %a, <128 x i8>* %b, i1 %mask) vscale_rang
 ; CHECK-NEXT:    sel z0.b, p1, z0.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load volatile <128 x i8>, <128 x i8>* %a
-  %op2 = load volatile <128 x i8>, <128 x i8>* %b
+  %op1 = load volatile <128 x i8>, ptr %a
+  %op2 = load volatile <128 x i8>, ptr %b
   %sel = select i1 %mask, <128 x i8> %op1, <128 x i8> %op2
-  store <128 x i8> %sel, <128 x i8>* %a
+  store <128 x i8> %sel, ptr %a
   ret void
 }
 
-define void @select_v256i8(<256 x i8>* %a, <256 x i8>* %b, i1 %mask) vscale_range(16,0) #0 {
+define void @select_v256i8(ptr %a, ptr %b, i1 %mask) vscale_range(16,0) #0 {
 ; CHECK-LABEL: select_v256i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w2, #0x1
@@ -127,10 +127,10 @@ define void @select_v256i8(<256 x i8>* %a, <256 x i8>* %b, i1 %mask) vscale_rang
 ; CHECK-NEXT:    sel z0.b, p1, z0.b, z1.b
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load volatile <256 x i8>, <256 x i8>* %a
-  %op2 = load volatile <256 x i8>, <256 x i8>* %b
+  %op1 = load volatile <256 x i8>, ptr %a
+  %op2 = load volatile <256 x i8>, ptr %b
   %sel = select i1 %mask, <256 x i8> %op1, <256 x i8> %op2
-  store <256 x i8> %sel, <256 x i8>* %a
+  store <256 x i8> %sel, ptr %a
   ret void
 }
 
@@ -160,7 +160,7 @@ define <8 x i16> @select_v8i16(<8 x i16> %op1, <8 x i16> %op2, i1 %mask) vscale_
   ret <8 x i16> %sel
 }
 
-define void @select_v16i16(<16 x i16>* %a, <16 x i16>* %b, i1 %mask) vscale_range(2,0) #0 {
+define void @select_v16i16(ptr %a, ptr %b, i1 %mask) vscale_range(2,0) #0 {
 ; CHECK-LABEL: select_v16i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w2, #0x1
@@ -174,14 +174,14 @@ define void @select_v16i16(<16 x i16>* %a, <16 x i16>* %b, i1 %mask) vscale_rang
 ; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load volatile <16 x i16>, <16 x i16>* %a
-  %op2 = load volatile <16 x i16>, <16 x i16>* %b
+  %op1 = load volatile <16 x i16>, ptr %a
+  %op2 = load volatile <16 x i16>, ptr %b
   %sel = select i1 %mask, <16 x i16> %op1, <16 x i16> %op2
-  store <16 x i16> %sel, <16 x i16>* %a
+  store <16 x i16> %sel, ptr %a
   ret void
 }
 
-define void @select_v32i16(<32 x i16>* %a, <32 x i16>* %b, i1 %mask) #0 {
+define void @select_v32i16(ptr %a, ptr %b, i1 %mask) #0 {
 ; VBITS_GE_256-LABEL: select_v32i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -214,14 +214,14 @@ define void @select_v32i16(<32 x i16>* %a, <32 x i16>* %b, i1 %mask) #0 {
 ; VBITS_GE_512-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; VBITS_GE_512-NEXT:    st1h { z0.h }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load volatile <32 x i16>, <32 x i16>* %a
-  %op2 = load volatile <32 x i16>, <32 x i16>* %b
+  %op1 = load volatile <32 x i16>, ptr %a
+  %op2 = load volatile <32 x i16>, ptr %b
   %sel = select i1 %mask, <32 x i16> %op1, <32 x i16> %op2
-  store <32 x i16> %sel, <32 x i16>* %a
+  store <32 x i16> %sel, ptr %a
   ret void
 }
 
-define void @select_v64i16(<64 x i16>* %a, <64 x i16>* %b, i1 %mask) vscale_range(8,0) #0 {
+define void @select_v64i16(ptr %a, ptr %b, i1 %mask) vscale_range(8,0) #0 {
 ; CHECK-LABEL: select_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w2, #0x1
@@ -235,14 +235,14 @@ define void @select_v64i16(<64 x i16>* %a, <64 x i16>* %b, i1 %mask) vscale_rang
 ; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load volatile <64 x i16>, <64 x i16>* %a
-  %op2 = load volatile <64 x i16>, <64 x i16>* %b
+  %op1 = load volatile <64 x i16>, ptr %a
+  %op2 = load volatile <64 x i16>, ptr %b
   %sel = select i1 %mask, <64 x i16> %op1, <64 x i16> %op2
-  store <64 x i16> %sel, <64 x i16>* %a
+  store <64 x i16> %sel, ptr %a
   ret void
 }
 
-define void @select_v128i16(<128 x i16>* %a, <128 x i16>* %b, i1 %mask) vscale_range(16,0) #0 {
+define void @select_v128i16(ptr %a, ptr %b, i1 %mask) vscale_range(16,0) #0 {
 ; CHECK-LABEL: select_v128i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w2, #0x1
@@ -256,10 +256,10 @@ define void @select_v128i16(<128 x i16>* %a, <128 x i16>* %b, i1 %mask) vscale_r
 ; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load volatile <128 x i16>, <128 x i16>* %a
-  %op2 = load volatile <128 x i16>, <128 x i16>* %b
+  %op1 = load volatile <128 x i16>, ptr %a
+  %op2 = load volatile <128 x i16>, ptr %b
   %sel = select i1 %mask, <128 x i16> %op1, <128 x i16> %op2
-  store <128 x i16> %sel, <128 x i16>* %a
+  store <128 x i16> %sel, ptr %a
   ret void
 }
 
@@ -289,7 +289,7 @@ define <4 x i32> @select_v4i32(<4 x i32> %op1, <4 x i32> %op2, i1 %mask) vscale_
   ret <4 x i32> %sel
 }
 
-define void @select_v8i32(<8 x i32>* %a, <8 x i32>* %b, i1 %mask) vscale_range(2,0) #0 {
+define void @select_v8i32(ptr %a, ptr %b, i1 %mask) vscale_range(2,0) #0 {
 ; CHECK-LABEL: select_v8i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w2, #0x1
@@ -302,14 +302,14 @@ define void @select_v8i32(<8 x i32>* %a, <8 x i32>* %b, i1 %mask) vscale_range(2
 ; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load volatile <8 x i32>, <8 x i32>* %a
-  %op2 = load volatile <8 x i32>, <8 x i32>* %b
+  %op1 = load volatile <8 x i32>, ptr %a
+  %op2 = load volatile <8 x i32>, ptr %b
   %sel = select i1 %mask, <8 x i32> %op1, <8 x i32> %op2
-  store <8 x i32> %sel, <8 x i32>* %a
+  store <8 x i32> %sel, ptr %a
   ret void
 }
 
-define void @select_v16i32(<16 x i32>* %a, <16 x i32>* %b, i1 %mask) #0 {
+define void @select_v16i32(ptr %a, ptr %b, i1 %mask) #0 {
 ; VBITS_GE_256-LABEL: select_v16i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -340,14 +340,14 @@ define void @select_v16i32(<16 x i32>* %a, <16 x i32>* %b, i1 %mask) #0 {
 ; VBITS_GE_512-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load volatile <16 x i32>, <16 x i32>* %a
-  %op2 = load volatile <16 x i32>, <16 x i32>* %b
+  %op1 = load volatile <16 x i32>, ptr %a
+  %op2 = load volatile <16 x i32>, ptr %b
   %sel = select i1 %mask, <16 x i32> %op1, <16 x i32> %op2
-  store <16 x i32> %sel, <16 x i32>* %a
+  store <16 x i32> %sel, ptr %a
   ret void
 }
 
-define void @select_v32i32(<32 x i32>* %a, <32 x i32>* %b, i1 %mask) vscale_range(8,0) #0 {
+define void @select_v32i32(ptr %a, ptr %b, i1 %mask) vscale_range(8,0) #0 {
 ; CHECK-LABEL: select_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w2, #0x1
@@ -360,14 +360,14 @@ define void @select_v32i32(<32 x i32>* %a, <32 x i32>* %b, i1 %mask) vscale_rang
 ; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load volatile <32 x i32>, <32 x i32>* %a
-  %op2 = load volatile <32 x i32>, <32 x i32>* %b
+  %op1 = load volatile <32 x i32>, ptr %a
+  %op2 = load volatile <32 x i32>, ptr %b
   %sel = select i1 %mask, <32 x i32> %op1, <32 x i32> %op2
-  store <32 x i32> %sel, <32 x i32>* %a
+  store <32 x i32> %sel, ptr %a
   ret void
 }
 
-define void @select_v64i32(<64 x i32>* %a, <64 x i32>* %b, i1 %mask) vscale_range(16,0) #0 {
+define void @select_v64i32(ptr %a, ptr %b, i1 %mask) vscale_range(16,0) #0 {
 ; CHECK-LABEL: select_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w2, #0x1
@@ -380,10 +380,10 @@ define void @select_v64i32(<64 x i32>* %a, <64 x i32>* %b, i1 %mask) vscale_rang
 ; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load volatile <64 x i32>, <64 x i32>* %a
-  %op2 = load volatile <64 x i32>, <64 x i32>* %b
+  %op1 = load volatile <64 x i32>, ptr %a
+  %op2 = load volatile <64 x i32>, ptr %b
   %sel = select i1 %mask, <64 x i32> %op1, <64 x i32> %op2
-  store <64 x i32> %sel, <64 x i32>* %a
+  store <64 x i32> %sel, ptr %a
   ret void
 }
 
@@ -413,7 +413,7 @@ define <2 x i64> @select_v2i64(<2 x i64> %op1, <2 x i64> %op2, i1 %mask) vscale_
   ret <2 x i64> %sel
 }
 
-define void @select_v4i64(<4 x i64>* %a, <4 x i64>* %b, i1 %mask) vscale_range(2,0) #0 {
+define void @select_v4i64(ptr %a, ptr %b, i1 %mask) vscale_range(2,0) #0 {
 ; CHECK-LABEL: select_v4i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w2, #0x1
@@ -426,14 +426,14 @@ define void @select_v4i64(<4 x i64>* %a, <4 x i64>* %b, i1 %mask) vscale_range(2
 ; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load volatile <4 x i64>, <4 x i64>* %a
-  %op2 = load volatile <4 x i64>, <4 x i64>* %b
+  %op1 = load volatile <4 x i64>, ptr %a
+  %op2 = load volatile <4 x i64>, ptr %b
   %sel = select i1 %mask, <4 x i64> %op1, <4 x i64> %op2
-  store <4 x i64> %sel, <4 x i64>* %a
+  store <4 x i64> %sel, ptr %a
   ret void
 }
 
-define void @select_v8i64(<8 x i64>* %a, <8 x i64>* %b, i1 %mask) #0 {
+define void @select_v8i64(ptr %a, ptr %b, i1 %mask) #0 {
 ; VBITS_GE_256-LABEL: select_v8i64:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -464,14 +464,14 @@ define void @select_v8i64(<8 x i64>* %a, <8 x i64>* %b, i1 %mask) #0 {
 ; VBITS_GE_512-NEXT:    sel z0.d, p1, z0.d, z1.d
 ; VBITS_GE_512-NEXT:    st1d { z0.d }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %op1 = load volatile <8 x i64>, <8 x i64>* %a
-  %op2 = load volatile <8 x i64>, <8 x i64>* %b
+  %op1 = load volatile <8 x i64>, ptr %a
+  %op2 = load volatile <8 x i64>, ptr %b
   %sel = select i1 %mask, <8 x i64> %op1, <8 x i64> %op2
-  store <8 x i64> %sel, <8 x i64>* %a
+  store <8 x i64> %sel, ptr %a
   ret void
 }
 
-define void @select_v16i64(<16 x i64>* %a, <16 x i64>* %b, i1 %mask) vscale_range(8,0) #0 {
+define void @select_v16i64(ptr %a, ptr %b, i1 %mask) vscale_range(8,0) #0 {
 ; CHECK-LABEL: select_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w2, #0x1
@@ -484,14 +484,14 @@ define void @select_v16i64(<16 x i64>* %a, <16 x i64>* %b, i1 %mask) vscale_rang
 ; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load volatile <16 x i64>, <16 x i64>* %a
-  %op2 = load volatile <16 x i64>, <16 x i64>* %b
+  %op1 = load volatile <16 x i64>, ptr %a
+  %op2 = load volatile <16 x i64>, ptr %b
   %sel = select i1 %mask, <16 x i64> %op1, <16 x i64> %op2
-  store <16 x i64> %sel, <16 x i64>* %a
+  store <16 x i64> %sel, ptr %a
   ret void
 }
 
-define void @select_v32i64(<32 x i64>* %a, <32 x i64>* %b, i1 %mask) vscale_range(16,0) #0 {
+define void @select_v32i64(ptr %a, ptr %b, i1 %mask) vscale_range(16,0) #0 {
 ; CHECK-LABEL: select_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w2, #0x1
@@ -504,10 +504,10 @@ define void @select_v32i64(<32 x i64>* %a, <32 x i64>* %b, i1 %mask) vscale_rang
 ; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %op1 = load volatile <32 x i64>, <32 x i64>* %a
-  %op2 = load volatile <32 x i64>, <32 x i64>* %b
+  %op1 = load volatile <32 x i64>, ptr %a
+  %op2 = load volatile <32 x i64>, ptr %b
   %sel = select i1 %mask, <32 x i64> %op1, <32 x i64> %op2
-  store <32 x i64> %sel, <32 x i64>* %a
+  store <32 x i64> %sel, ptr %a
   ret void
 }
 

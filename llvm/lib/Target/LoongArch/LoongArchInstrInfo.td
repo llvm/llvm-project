@@ -35,6 +35,8 @@ def SDT_LoongArchBStrPick: SDTypeProfile<1, 3, [
   SDTCisInt<0>, SDTCisSameAs<0, 1>, SDTCisInt<2>, SDTCisSameAs<2, 3>
 ]>;
 
+def SDT_LoongArchDBAR : SDTypeProfile<0, 1, [SDTCisVT<0, GRLenVT>]>;
+
 // TODO: Add LoongArch specific DAG Nodes
 // Target-independent nodes, but with target-specific formats.
 def callseq_start : SDNode<"ISD::CALLSEQ_START", SDT_CallSeqStart,
@@ -63,6 +65,8 @@ def loongarch_bitrev_4b : SDNode<"LoongArchISD::BITREV_4B", SDTUnaryOp>;
 def loongarch_bitrev_w : SDNode<"LoongArchISD::BITREV_W", SDTUnaryOp>;
 def loongarch_clzw : SDNode<"LoongArchISD::CLZ_W", SDTIntBitCountUnaryOp>;
 def loongarch_ctzw : SDNode<"LoongArchISD::CTZ_W", SDTIntBitCountUnaryOp>;
+def loongarch_dbar : SDNode<"LoongArchISD::DBAR", SDT_LoongArchDBAR,
+                             [SDNPHasChain, SDNPSideEffect]>;
 
 //===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
@@ -130,7 +134,8 @@ def uimm14 : Operand<GRLenVT> {
   let ParserMatchClass = UImmAsmOperand<14>;
 }
 
-def uimm15 : Operand<GRLenVT> {
+def uimm15 : Operand<GRLenVT>,
+             ImmLeaf <GRLenVT, [{return isUInt<15>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<15>;
 }
 
@@ -1108,10 +1113,20 @@ def atomic_store_unordered_monotonic_32
 def atomic_store_unordered_monotonic_64
     : unordered_monotonic_store<atomic_store_64>;
 
-defm : StPat<atomic_store_8, ST_B, GPR, GRLenVT>;
-defm : StPat<atomic_store_16, ST_H, GPR, GRLenVT>;
-defm : StPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i32>,
-             Requires<[IsLA32]>;
+/// AtomicStores
+
+multiclass AtomicStPat<PatFrag StoreOp, LAInst Inst, RegisterClass StTy,
+                       ValueType vt> {
+  def : Pat<(StoreOp BaseAddr:$ptr, (vt StTy:$val)),
+            (Inst StTy:$val, BaseAddr:$ptr, 0)>;
+  def : Pat<(StoreOp (AddLike BaseAddr:$ptr, simm12:$imm12), (vt StTy:$val)),
+            (Inst StTy:$val, BaseAddr:$ptr, simm12:$imm12)>;
+}
+
+defm : AtomicStPat<atomic_store_8, ST_B, GPR, GRLenVT>;
+defm : AtomicStPat<atomic_store_16, ST_H, GPR, GRLenVT>;
+defm : AtomicStPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i32>,
+                   Requires<[IsLA32]>;
 
 def PseudoAtomicStoreW : Pseudo<(outs GPR:$dst), (ins GPR:$rj, GPR:$rk)>,
                                  PseudoInstExpansion<(AMSWAP_DB_W R0,
@@ -1129,8 +1144,8 @@ def : Pat<(atomic_store_release_seqcst_64 GPR:$rj, GPR:$rk),
           (PseudoAtomicStoreD GPR:$rj, GPR:$rk)>;
 
 defm : LdPat<atomic_load_64, LD_D>;
-defm : StPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i64>;
-defm : StPat<atomic_store_unordered_monotonic_64, ST_D, GPR, i64>;
+defm : AtomicStPat<atomic_store_unordered_monotonic_32, ST_W, GPR, i64>;
+defm : AtomicStPat<atomic_store_unordered_monotonic_64, ST_D, GPR, i64>;
 } // Predicates = [IsLA64]
 
 /// Atomic Ops
@@ -1293,6 +1308,16 @@ def : Pat<(atomic_load_or_32 GPR:$addr, GPR:$incr),
 def : Pat<(atomic_load_xor_32 GPR:$addr, GPR:$incr),
           (PseudoAtomicLoadXor32 GPR:$incr, GPR:$addr)>;
 } // Predicates = [IsLA32]
+
+/// Intrinsics
+
+let Predicates = [IsLA32] in {
+def : Pat<(int_loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
+} // Predicates = [IsLA32]
+
+let Predicates = [IsLA64] in {
+def : Pat<(loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
+} // Predicates = [IsLA64]
 
 /// Other pseudo-instructions
 

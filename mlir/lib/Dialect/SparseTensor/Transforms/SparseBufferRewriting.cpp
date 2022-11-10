@@ -635,6 +635,8 @@ namespace {
 struct PushBackRewriter : OpRewritePattern<PushBackOp> {
 public:
   using OpRewritePattern<PushBackOp>::OpRewritePattern;
+  PushBackRewriter(MLIRContext *context, bool enableInit)
+      : OpRewritePattern(context), enableBufferInitialization(enableInit) {}
   LogicalResult matchAndRewrite(PushBackOp op,
                                 PatternRewriter &rewriter) const override {
     // Rewrite push_back(buffer, value, n) to:
@@ -705,6 +707,16 @@ public:
 
       Value newBuffer =
           rewriter.create<memref::ReallocOp>(loc, bufferType, buffer, capacity);
+      if (enableBufferInitialization) {
+        Value fillSize = rewriter.create<arith::SubIOp>(loc, capacity, newSize);
+        Value fillValue = rewriter.create<arith::ConstantOp>(
+            loc, value.getType(), rewriter.getZeroAttr(value.getType()));
+        Value subBuffer = rewriter.create<memref::SubViewOp>(
+            loc, newBuffer, /*offset=*/ValueRange{newSize},
+            /*size=*/ValueRange{fillSize},
+            /*step=*/ValueRange{constantIndex(rewriter, loc, 1)});
+        rewriter.create<linalg::FillOp>(loc, fillValue, subBuffer);
+      }
       rewriter.create<scf::YieldOp>(loc, newBuffer);
 
       // False branch.
@@ -731,6 +743,9 @@ public:
     rewriter.replaceOp(op, buffer);
     return success();
   }
+
+private:
+  bool enableBufferInitialization;
 };
 
 /// Sparse rewriting rule for the sort operator.
@@ -777,6 +792,9 @@ public:
 // Methods that add patterns described in this file to a pattern list.
 //===---------------------------------------------------------------------===//
 
-void mlir::populateSparseBufferRewriting(RewritePatternSet &patterns) {
-  patterns.add<PushBackRewriter, SortRewriter>(patterns.getContext());
+void mlir::populateSparseBufferRewriting(RewritePatternSet &patterns,
+                                         bool enableBufferInitialization) {
+  patterns.add<PushBackRewriter>(patterns.getContext(),
+                                 enableBufferInitialization);
+  patterns.add<SortRewriter>(patterns.getContext());
 }

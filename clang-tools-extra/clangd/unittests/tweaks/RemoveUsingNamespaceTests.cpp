@@ -249,6 +249,21 @@ TEST_F(RemoveUsingNamespaceTest, All) {
         ns::Foo foo;
         foo + 10;
       }
+    )cpp"},
+      {// Does not qualify user-defined literals
+       R"cpp(
+      namespace ns {
+      long double operator "" _w(long double);
+      }
+      using namespace n^s;
+      int main() { 1.5_w; }
+    )cpp",
+       R"cpp(
+      namespace ns {
+      long double operator "" _w(long double);
+      }
+      
+      int main() { 1.5_w; }
     )cpp"}};
   for (auto C : Cases)
     EXPECT_EQ(C.second, apply(C.first)) << C.first;

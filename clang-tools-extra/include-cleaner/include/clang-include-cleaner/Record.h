@@ -20,6 +20,10 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
+#include "clang-include-cleaner/Types.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include <memory>
 #include <vector>
 
@@ -29,6 +33,8 @@ class ASTContext;
 class CompilerInstance;
 class Decl;
 class FileEntry;
+class Preprocessor;
+class PPCallbacks;
 
 namespace include_cleaner {
 
@@ -75,17 +81,53 @@ private:
   // FIXME: add selfcontained file.
 };
 
-// Contains recorded parser events relevant to include-cleaner.
+/// Recorded main-file parser events relevant to include-cleaner.
 struct RecordedAST {
-  // The consumer (when installed into clang) tracks declarations in this.
+  /// The consumer (when installed into clang) tracks declarations in `*this`.
   std::unique_ptr<ASTConsumer> record();
 
   ASTContext *Ctx = nullptr;
-  // The set of declarations written at file scope inside the main file.
-  //
-  // These are the roots of the subtrees that should be traversed to find uses.
-  // (Traversing the TranslationUnitDecl would find uses inside headers!)
+  /// The set of declarations written at file scope inside the main file.
+  ///
+  /// These are the roots of the subtrees that should be traversed to find uses.
+  /// (Traversing the TranslationUnitDecl would find uses inside headers!)
   std::vector<Decl *> Roots;
+};
+
+/// Recorded main-file preprocessor events relevant to include-cleaner.
+///
+/// This doesn't include facts that we record globally for the whole TU, even
+/// when they occur in the main file (e.g. IWYU pragmas).
+struct RecordedPP {
+  /// The callback (when installed into clang) tracks macros/includes in this.
+  std::unique_ptr<PPCallbacks> record(const Preprocessor &PP);
+
+  /// Describes where macros were used in the main file.
+  std::vector<SymbolReference> MacroReferences;
+
+  /// A container for all includes present in the main file.
+  /// Supports efficiently hit-testing Headers against Includes.
+  /// FIXME: is there a more natural header for this class?
+  class RecordedIncludes {
+  public:
+    void add(const Include &);
+
+    /// All #includes seen, in the order they appear.
+    llvm::ArrayRef<Include> all() const { return All; }
+
+    /// Determine #includes that match a header (that provides a used symbol).
+    ///
+    /// Matching is based on the type of Header specified:
+    ///  - for a physical file like /path/to/foo.h, we check Resolved
+    ///  - for a logical file like <vector>, we check Spelled
+    llvm::SmallVector<const Include *> match(Header H) const;
+
+  private:
+    std::vector<Include> All;
+    // Lookup structures for match(), values are index into All.
+    llvm::StringMap<llvm::SmallVector<unsigned>> BySpelling;
+    llvm::DenseMap<const FileEntry *, llvm::SmallVector<unsigned>> ByFile;
+  } Includes;
 };
 
 } // namespace include_cleaner

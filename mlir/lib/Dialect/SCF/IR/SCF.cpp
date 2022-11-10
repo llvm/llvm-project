@@ -3416,8 +3416,7 @@ parseSwitchCases(OpAsmParser &p, DenseI64ArrayAttr &cases,
   SmallVector<int64_t> caseValues;
   while (succeeded(p.parseOptionalKeyword("case"))) {
     int64_t value;
-    Region &region =
-        *caseRegions.emplace_back(std::make_unique<Region>()).get();
+    Region &region = *caseRegions.emplace_back(std::make_unique<Region>());
     if (p.parseInteger(value) || p.parseRegion(region, /*arguments=*/{}))
       return failure();
     caseValues.push_back(value);
@@ -3529,7 +3528,7 @@ void IndexSwitchOp::getRegionInvocationBounds(
   }
 
   unsigned liveIndex = getNumRegions() - 1;
-  auto it = llvm::find(getCases(), operandValue.getInt());
+  const auto *it = llvm::find(getCases(), operandValue.getInt());
   if (it != getCases().end())
     liveIndex = std::distance(getCases().begin(), it);
   for (unsigned i = 0, e = getNumRegions(); i < e; ++i)

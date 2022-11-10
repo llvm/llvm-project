@@ -296,7 +296,7 @@ void tools::addLinkerCompressDebugSectionsOption(
       CmdArgs.push_back(Args.MakeArgString("--compress-debug-sections=" + V));
     else
       TC.getDriver().Diag(diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << V;
+          << A->getSpelling() << V;
   }
 }
 

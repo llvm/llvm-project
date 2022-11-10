@@ -891,7 +891,7 @@ TEST_F(TUSchedulerTests, MissingHeader) {
                         << "Didn't expect new diagnostics when adding a/foo.h";
                   });
 
-  // Forcing the reload should should cause a rebuild.
+  // Forcing the reload should cause a rebuild.
   Inputs.ForceRebuild = true;
   updateWithDiags(
       S, Source, Inputs, WantDiagnostics::Yes,

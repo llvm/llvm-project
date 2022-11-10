@@ -41,6 +41,7 @@
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
+#include "llvm/IR/IntrinsicsLoongArch.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -5447,6 +5448,9 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
     return CGF->EmitRISCVBuiltinExpr(BuiltinID, E, ReturnValue);
+  case llvm::Triple::loongarch32:
+  case llvm::Triple::loongarch64:
+    return CGF->EmitLoongArchBuiltinExpr(BuiltinID, E);
   default:
     return nullptr;
   }
@@ -19617,4 +19621,28 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
 
   llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
   return Builder.CreateCall(F, Ops, "");
+}
+
+Value *CodeGenFunction::EmitLoongArchBuiltinExpr(unsigned BuiltinID,
+                                                 const CallExpr *E) {
+  SmallVector<Value *, 4> Ops;
+
+  for (unsigned i = 0, e = E->getNumArgs(); i != e; i++)
+    Ops.push_back(EmitScalarExpr(E->getArg(i)));
+
+  Intrinsic::ID ID = Intrinsic::not_intrinsic;
+
+  switch (BuiltinID) {
+  default:
+    llvm_unreachable("unexpected builtin ID.");
+  case LoongArch::BI__builtin_loongarch_dbar:
+    ID = Intrinsic::loongarch_dbar;
+    break;
+    // TODO: Support more Intrinsics.
+  }
+
+  assert(ID != Intrinsic::not_intrinsic);
+
+  llvm::Function *F = CGM.getIntrinsic(ID);
+  return Builder.CreateCall(F, Ops);
 }

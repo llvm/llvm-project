@@ -1084,13 +1084,13 @@ void Writer::createInitMemoryFunction() {
   {
     raw_string_ostream os(bodyContent);
     // Initialize memory in a thread-safe manner. The thread that successfully
-    // increments the flag from 0 to 1 is is responsible for performing the
-    // memory initialization. Other threads go sleep on the flag until the
-    // first thread finishing initializing memory, increments the flag to 2,
-    // and wakes all the other threads. Once the flag has been set to 2,
-    // subsequently started threads will skip the sleep. All threads
-    // unconditionally drop their passive data segments once memory has been
-    // initialized. The generated code is as follows:
+    // increments the flag from 0 to 1 is responsible for performing the memory
+    // initialization. Other threads go sleep on the flag until the first thread
+    // finishing initializing memory, increments the flag to 2, and wakes all
+    // the other threads. Once the flag has been set to 2, subsequently started
+    // threads will skip the sleep. All threads unconditionally drop their
+    // passive data segments once memory has been initialized. The generated
+    // code is as follows:
     //
     // (func $__wasm_init_memory
     //  (block $drop

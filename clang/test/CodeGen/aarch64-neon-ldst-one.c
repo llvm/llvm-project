@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -no-opaque-pointers -triple arm64-none-linux-gnu -target-feature +neon \
 // RUN:  -disable-O0-optnone -emit-llvm -o - %s \
-// RUN: | opt -S -mem2reg | FileCheck %s
+// RUN: | opt -S -passes=mem2reg | FileCheck %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 

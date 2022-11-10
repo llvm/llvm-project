@@ -764,7 +764,7 @@ StmtResult Parser::ParseCaseStatement(ParsedStmtContext StmtCtx,
   // otherwise in the same context as the labeled-statement.
   StmtCtx &= ~ParsedStmtContext::AllowDeclarationsInC;
 
-  // It is very very common for code to contain many case statements recursively
+  // It is very common for code to contain many case statements recursively
   // nested, as in (but usually without indentation):
   //  case 1:
   //    case 2:

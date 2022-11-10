@@ -1,4 +1,4 @@
-// RUN: mlir-translate -test-spirv-roundtrip %s | FileCheck %s
+// RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip %s | FileCheck %s
 
 spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses], []> {
   spirv.func @float_insts(%arg0 : f32) "None" {

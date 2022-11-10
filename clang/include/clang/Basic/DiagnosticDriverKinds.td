@@ -19,7 +19,7 @@ def err_drv_unsupported_opt_for_target : Error<
 def err_drv_unsupported_opt_for_language_mode : Error<
   "unsupported option '%0' for language mode '%1'">;
 def err_drv_unsupported_option_argument : Error<
-  "unsupported argument '%1' to option '-%0'">;
+  "unsupported argument '%1' to option '%0'">;
 def err_drv_unknown_stdin_type : Error<
   "-E or -x required when input is from standard input">;
 def err_drv_unknown_stdin_type_clang_cl : Error<
@@ -691,4 +691,7 @@ def warn_drv_sarif_format_unstable : Warning<
 
 def err_drv_riscv_unsupported_with_linker_relaxation : Error<
   "%0 is unsupported with RISC-V linker relaxation (-mrelax)">;
+
+def err_drv_loongarch_invalid_mfpu_EQ : Error<
+  "invalid argument '%0' to -mfpu=; must be one of: 64, 32, 0, none">;
 }

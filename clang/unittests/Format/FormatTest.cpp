@@ -23320,7 +23320,10 @@ TEST(FormatStyle, GetStyleOfFile) {
                          llvm::MemoryBuffer::getMemBuffer(
                              "BasedOnStyle: InheritParentConfig\n"
                              "WhitespaceSensitiveMacros: ['FOO', 'BAR']")));
-  std::vector<std::string> NonDefaultWhiteSpaceMacros{"FOO", "BAR"};
+  std::vector<std::string> NonDefaultWhiteSpaceMacros =
+      Style9->WhitespaceSensitiveMacros;
+  NonDefaultWhiteSpaceMacros[0] = "FOO";
+  NonDefaultWhiteSpaceMacros[1] = "BAR";
 
   ASSERT_NE(Style9->WhitespaceSensitiveMacros, NonDefaultWhiteSpaceMacros);
   Style9 = getStyle("file", "/e/sub/sub/code.cpp", "none", "", &FS);
@@ -23376,8 +23379,8 @@ TEST(FormatStyle, GetStyleOfFile) {
   ASSERT_EQ(*Style9, SubSubStyle);
 
   // Test 9.6: use command line style with inheritance
-  Style9 = getStyle("{BasedOnStyle: InheritParentConfig}", "/e/sub/code.cpp",
-                    "none", "", &FS);
+  Style9 = getStyle("{BasedOnStyle: InheritParentConfig}",
+                    "/e/sub/sub/code.cpp", "none", "", &FS);
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, SubSubStyle);
 

@@ -198,6 +198,10 @@ def SparseBufferRewrite : Pass<"sparse-buffer-rewrite", "ModuleOp"> {
     "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",
   ];
+  let options = [
+    Option<"enableBufferInitialization", "enable-buffer-initialization", "bool",
+           "false", "Enable zero-initialization of the memory buffers">,
+  ];
 }
 
 #endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_PASSES

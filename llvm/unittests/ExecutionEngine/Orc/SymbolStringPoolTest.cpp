@@ -26,7 +26,7 @@ TEST(SymbolStringPool, UniquingAndComparisons) {
   auto P3 = SP.intern("goodbye");
 
   EXPECT_EQ(P1, P2) << "Failed to unique entries";
-  EXPECT_NE(P1, P3) << "Inequal pooled symbol strings comparing equal";
+  EXPECT_NE(P1, P3) << "Unequal pooled symbol strings comparing equal";
 
   // We want to test that less-than comparison of SymbolStringPtrs compiles,
   // however we can't test the actual result as this is a pointer comparison and

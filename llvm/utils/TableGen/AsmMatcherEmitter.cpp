@@ -3666,7 +3666,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "      else\n";
   OS << "        DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \": \");\n";
   OS << "      if (ActualIdx >= Operands.size()) {\n";
-  OS << "        DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"actual operand index out of range \");\n";
+  OS << "        DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"actual operand "
+        "index out of range\\n\");\n";
   if (ReportMultipleNearMisses) {
     OS << "        bool ThisOperandValid = (Formal == " <<"InvalidMatchClass) || "
                                    "isSubclass(Formal, OptionalMatchClass);\n";
@@ -3685,17 +3686,26 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "            break;\n";
     OS << "          }\n";
     OS << "        } else {\n";
-    OS << "          DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"but formal operand not required\\n\");\n";
-    OS << "          break;\n";
+    OS << "          DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"but formal "
+          "operand not required\\n\");\n";
     OS << "        }\n";
     OS << "        continue;\n";
   } else {
-    OS << "        OperandsValid = (Formal == InvalidMatchClass) || isSubclass(Formal, OptionalMatchClass);\n";
-    OS << "        if (!OperandsValid) ErrorInfo = ActualIdx;\n";
+    OS << "        if (Formal == InvalidMatchClass) {\n";
     if (HasOptionalOperands) {
-      OS << "        OptionalOperandsMask.set(FormalIdx, " << MaxNumOperands
+      OS << "          OptionalOperandsMask.set(FormalIdx, " << MaxNumOperands
          << ");\n";
     }
+    OS << "          break;\n";
+    OS << "        }\n";
+    OS << "        if (isSubclass(Formal, OptionalMatchClass)) {\n";
+    if (HasOptionalOperands) {
+      OS << "          OptionalOperandsMask.set(FormalIdx);\n";
+    }
+    OS << "          continue;\n";
+    OS << "        }\n";
+    OS << "        OperandsValid = false;\n";
+    OS << "        ErrorInfo = ActualIdx;\n";
     OS << "        break;\n";
   }
   OS << "      }\n";

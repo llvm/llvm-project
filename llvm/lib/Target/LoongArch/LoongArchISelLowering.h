@@ -56,6 +56,9 @@ enum NodeType : unsigned {
   REVB_2W,
   BITREV_4B,
   BITREV_W,
+
+  // Intrinsic operations
+  DBAR,
 };
 } // end namespace LoongArchISD
 
@@ -174,6 +177,7 @@ private:
   SDValue lowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
 

@@ -86,7 +86,10 @@
 
 /* Characteristics of floating point types, C99 5.2.4.2.2 */
 
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) ||              \
+    (defined(__cplusplus) && __cplusplus >= 201103L)
 #define FLT_EVAL_METHOD __FLT_EVAL_METHOD__
+#endif
 #define FLT_ROUNDS (__builtin_flt_rounds())
 #define FLT_RADIX __FLT_RADIX__
 
