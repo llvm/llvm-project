@@ -57,6 +57,11 @@
 
 using namespace Fortran::frontend;
 
+// Declare plugin extension function declarations.
+#define HANDLE_EXTENSION(Ext)                                                  \
+  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+#include "llvm/Support/Extension.def"
+
 //===----------------------------------------------------------------------===//
 // Custom BeginSourceFileAction
 //===----------------------------------------------------------------------===//
@@ -703,6 +708,10 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
           << pluginFile << passPlugin.takeError();
     }
   }
+  // Register static plugin extensions.
+#define HANDLE_EXTENSION(Ext)                                                  \
+  get##Ext##PluginInfo().RegisterPassBuilderCallbacks(pb);
+#include "llvm/Support/Extension.def"
 
   // Register all the basic analyses with the managers.
   pb.registerModuleAnalyses(mam);
