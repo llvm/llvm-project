@@ -56,7 +56,7 @@ struct A {
   const static auto wchar_min = std::numeric_limits<wchar_t>::min();
 
   const static Enum enum_val = enum_case2;
-  const static EnumBool enum_bool_val = enum_bool_case2;
+  const static EnumBool enum_bool_val = enum_bool_case1;
   const static ScopedEnum scoped_enum_val = ScopedEnum::scoped_enum_case2;
   const static ScopedEnum not_enumerator_scoped_enum_val = static_cast<ScopedEnum>(5);
   const static ScopedEnum not_enumerator_scoped_enum_val_2 =
