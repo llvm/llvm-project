@@ -86,7 +86,7 @@ struct thread_func_info_t {
 };
 
 // call the void* start_routine(void*);
-static DWORD __thread_func_wrapper(LPVOID lpParameter) {
+static DWORD WINAPI __thread_func_wrapper(LPVOID lpParameter) {
   struct thread_func_info_t* function_information;
   function_information = (struct thread_func_info_t*)lpParameter;
   function_information->start_routine(function_information->arg);
