@@ -130,9 +130,11 @@ public:
 
 /// Sets up sparse tensor conversion rules.
 void populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
-                                         RewritePatternSet &patterns);
+                                         RewritePatternSet &patterns,
+                                         bool enableBufferInitialization);
 
-std::unique_ptr<Pass> createSparseTensorCodegenPass();
+std::unique_ptr<Pass>
+createSparseTensorCodegenPass(bool enableBufferInitialization = false);
 
 //===----------------------------------------------------------------------===//
 // The SparseTensorRewriting pass.

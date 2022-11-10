@@ -287,9 +287,15 @@ static void allocSchemeForRank(OpBuilder &builder, Location loc,
 
 /// Creates allocation operation.
 static Value createAllocation(OpBuilder &builder, Location loc, Type type,
-                              Value sz) {
+                              Value sz, bool enableInit) {
   auto memType = MemRefType::get({ShapedType::kDynamicSize}, type);
-  return builder.create<memref::AllocOp>(loc, memType, sz);
+  Value buffer = builder.create<memref::AllocOp>(loc, memType, sz);
+  if (enableInit) {
+    Value fillValue =
+        builder.create<arith::ConstantOp>(loc, type, builder.getZeroAttr(type));
+    builder.create<linalg::FillOp>(loc, fillValue, buffer);
+  }
+  return buffer;
 }
 
 /// Creates allocation for each field in sparse tensor type. Note that
@@ -300,7 +306,7 @@ static Value createAllocation(OpBuilder &builder, Location loc, Type type,
 ///       on the required capacities (see heuristic variable).
 ///
 static void createAllocFields(OpBuilder &builder, Location loc, Type type,
-                              ValueRange dynSizes,
+                              ValueRange dynSizes, bool enableInit,
                               SmallVectorImpl<Value> &fields) {
   auto enc = getSparseTensorEncoding(type);
   assert(enc);
@@ -334,16 +340,20 @@ static void createAllocFields(OpBuilder &builder, Location loc, Type type,
   // Per-dimension storage.
   for (unsigned r = 0; r < rank; r++) {
     if (isCompressedDim(rtp, r)) {
-      fields.push_back(createAllocation(builder, loc, ptrType, heuristic));
-      fields.push_back(createAllocation(builder, loc, idxType, heuristic));
+      fields.push_back(
+          createAllocation(builder, loc, ptrType, heuristic, enableInit));
+      fields.push_back(
+          createAllocation(builder, loc, idxType, heuristic, enableInit));
     } else if (isSingletonDim(rtp, r)) {
-      fields.push_back(createAllocation(builder, loc, idxType, heuristic));
+      fields.push_back(
+          createAllocation(builder, loc, idxType, heuristic, enableInit));
     } else {
       assert(isDenseDim(rtp, r)); // no fields
     }
   }
   // The values array.
-  fields.push_back(createAllocation(builder, loc, eltType, heuristic));
+  fields.push_back(
+      createAllocation(builder, loc, eltType, heuristic, enableInit));
   assert(fields.size() == lastField);
   // Initialize the storage scheme to an empty tensor. Initialized memSizes
   // to all zeros, sets the dimSizes to known values and gives all pointer
@@ -685,6 +695,10 @@ class SparseTensorAllocConverter
     : public OpConversionPattern<bufferization::AllocTensorOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
+  SparseTensorAllocConverter(TypeConverter &typeConverter, MLIRContext *context,
+                             bool enableInit)
+      : OpConversionPattern(typeConverter, context),
+        enableBufferInitialization(enableInit) {}
   LogicalResult
   matchAndRewrite(bufferization::AllocTensorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -698,11 +712,15 @@ public:
     // Construct allocation for each field.
     Location loc = op.getLoc();
     SmallVector<Value, 8> fields;
-    createAllocFields(rewriter, loc, resType, adaptor.getOperands(), fields);
+    createAllocFields(rewriter, loc, resType, adaptor.getOperands(),
+                      enableBufferInitialization, fields);
     // Replace operation with resulting memrefs.
     rewriter.replaceOp(op, genTuple(rewriter, loc, resType, fields));
     return success();
   }
+
+private:
+  bool enableBufferInitialization;
 };
 
 /// Sparse codegen rule for the dealloc operator.
@@ -1014,8 +1032,9 @@ mlir::SparseTensorTypeToBufferConverter::SparseTensorTypeToBufferConverter() {
 
 /// Populates the given patterns list with conversion rules required for
 /// the sparsification of linear algebra operations.
-void mlir::populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
-                                               RewritePatternSet &patterns) {
+void mlir::populateSparseTensorCodegenPatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    bool enableBufferInitialization) {
   patterns.add<SparseReturnConverter, SparseCallConverter, SparseDimOpConverter,
                SparseCastConverter, SparseTensorAllocConverter,
                SparseTensorDeallocConverter, SparseTensorLoadConverter,
@@ -1024,4 +1043,6 @@ void mlir::populateSparseTensorCodegenPatterns(TypeConverter &typeConverter,
                SparseToIndicesConverter, SparseToValuesConverter,
                SparseConvertConverter, SparseNumberOfEntriesConverter>(
       typeConverter, patterns.getContext());
+  patterns.add<SparseTensorAllocConverter>(typeConverter, patterns.getContext(),
+                                           enableBufferInitialization);
 }

@@ -161,6 +161,9 @@ struct SparseTensorCodegenPass
 
   SparseTensorCodegenPass() = default;
   SparseTensorCodegenPass(const SparseTensorCodegenPass &pass) = default;
+  SparseTensorCodegenPass(bool enableInit) {
+    enableBufferInitialization = enableInit;
+  }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
@@ -203,7 +206,8 @@ struct SparseTensorCodegenPass
                                                                    converter);
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                          target);
-    populateSparseTensorCodegenPatterns(converter, patterns);
+    populateSparseTensorCodegenPatterns(converter, patterns,
+                                        enableBufferInitialization);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
@@ -278,8 +282,9 @@ std::unique_ptr<Pass> mlir::createSparseTensorConversionPass(
   return std::make_unique<SparseTensorConversionPass>(options);
 }
 
-std::unique_ptr<Pass> mlir::createSparseTensorCodegenPass() {
-  return std::make_unique<SparseTensorCodegenPass>();
+std::unique_ptr<Pass>
+mlir::createSparseTensorCodegenPass(bool enableBufferInitialization) {
+  return std::make_unique<SparseTensorCodegenPass>(enableBufferInitialization);
 }
 
 std::unique_ptr<Pass>
