@@ -291,6 +291,10 @@ Changes in existing checks
   <clang-tidy/checks/performance/no-automatic-move>` when warning would be
   emitted for a const local variable to which NRVO is applied.
 
+- Improved :doc:`bugprone-fold-init-type
+  <clang-tidy/checks/bugprone/fold-init-type>` to handle iterators that do not
+  define `value_type` type aliases.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
