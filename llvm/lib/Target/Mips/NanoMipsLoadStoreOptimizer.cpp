@@ -226,13 +226,18 @@ bool NMLoadStoreOpt::generateSaveOrRestore(MachineBasicBlock &MBB,
         continue;
       }
 
-      if (!AdjustStack && isStackPointerAdjustment(MI, IsRestore))
+      if (!AdjustStack && isStackPointerAdjustment(MI, IsRestore)) {
         AdjustStack = &MI;
+        continue;
+      }
 
       // There's no need to look for loads, if we haven't found addiu.
-      if (!AdjustStack)
+      if (!AdjustStack) {
+        // Drop the return if sequence is broken before the addiu is found.
+        if (!MI.isCFIInstruction() && !MI.isDebugInstr())
+           Return = nullptr;
         continue;
-
+      }
       // Since we are looking for a contguous list, we should stop searching for
       // more loads once the end of the list has been reached. Both return and
       // stack adjustment should be found by now, since we're iterating from the
@@ -248,13 +253,15 @@ bool NMLoadStoreOpt::generateSaveOrRestore(MachineBasicBlock &MBB,
 
       // Sequence has been broken, no need to continue. We either reached the
       // end or found nothing.
-      if (!LoadStoreList.empty())
+      if (!LoadStoreList.empty() || AdjustStack)
         break;
     }
   } else {
     for (auto &MI : MBB) {
-      if (!AdjustStack && isStackPointerAdjustment(MI, IsRestore))
+      if (!AdjustStack && isStackPointerAdjustment(MI, IsRestore)) {
         AdjustStack = &MI;
+        continue;
+      }
 
       // There's no need to look for stores, if we haven't found addiu.
       if (!AdjustStack)
@@ -273,7 +280,7 @@ bool NMLoadStoreOpt::generateSaveOrRestore(MachineBasicBlock &MBB,
 
       // Sequence has been broken, no need to continue. We either reached the
       // end or found nothing.
-      if (!LoadStoreList.empty())
+      if (!LoadStoreList.empty() || AdjustStack)
         break;
     }
   }

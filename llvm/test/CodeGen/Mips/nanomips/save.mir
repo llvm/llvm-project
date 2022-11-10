@@ -1,0 +1,96 @@
+# RUN: llc -mtriple=nanomips-unknown=elf -start-after=prologepilog %s -o - | FileCheck %s
+
+# Test that the we are not creating save instruction which moves reg use before the def
+
+# CHECK-LABEL: foo
+# CHECK-NOT:   save	{{[0-9]+}}, $s0
+--- |
+
+  define dso_local void @foo(i32 signext %a) local_unnamed_addr {
+  entry:
+    %tmp = alloca [512 x i32], align 4
+    %0 = bitcast [512 x i32]* %tmp to i8*
+    %arrayidx = getelementptr inbounds [512 x i32], [512 x i32]* %tmp, i32 0, i32 511
+    store i32 %a, i32* %arrayidx, align 4
+    call void @sink(i8* nonnull %0)
+    ret void
+  }
+  
+  declare dso_local void @sink(i8*) local_unnamed_addr
+
+...
+---
+name:            foo
+alignment:       2
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:
+  - { reg: '$a0_nm', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       2064
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: tmp, type: default, offset: -2056, size: 2048, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: default, offset: -2064, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$ra_nm', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$s0_nm', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    liveins: $a0_nm, $ra_nm, $s0_nm
+  
+    $sp_nm = ADDiu_NM $sp_nm, -2064
+    CFI_INSTRUCTION def_cfa_offset 2064
+    $a1_nm = ADDiu_NM $sp_nm, 2060
+    SW_NM killed $ra_nm, killed $a1_nm, 0 :: (store (s32) into %stack.2)
+    $a1_nm = ADDiu_NM $sp_nm, 2056
+    SW_NM killed $s0_nm, killed $a1_nm, 0 :: (store (s32) into %stack.3)
+    CFI_INSTRUCTION offset $ra_64, -4
+    CFI_INSTRUCTION offset $s0_64, -8
+    $s0_nm = COPY killed renamable $a0_nm
+    SW_NM killed $s0_nm, $sp_nm, 2052 :: (store (s32) into %ir.arrayidx)
+    renamable $a0_nm = LEA_ADDiu_NM $sp_nm, 8
+    BALC_NM @sink, csr_p32, implicit-def dead $ra_nm, implicit $a0_nm, implicit-def $sp_nm
+    $a0_nm = ADDiu_NM $sp_nm, 2056
+    $s0_nm = LW_NM killed $a0_nm, 0 :: (load (s32) from %stack.3)
+    $a0_nm = ADDiu_NM $sp_nm, 2060
+    $ra_nm = LW_NM killed $a0_nm, 0 :: (load (s32) from %stack.2)
+    $sp_nm = ADDiu_NM $sp_nm, 2064
+    RetRA
+
+...
