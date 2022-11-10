@@ -15,7 +15,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; }
 ;
 define void @srec0() #0 {
-; CHECK: Function Attrs: nofree noinline nosync nounwind readnone willreturn uwtable
+; CHECK: Function Attrs: nofree noinline nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@srec0
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -34,7 +34,7 @@ entry:
 ; }
 ;
 define i32 @srec16(i32 %a) #0 {
-; CHECK: Function Attrs: nofree noinline noreturn nosync nounwind readnone willreturn uwtable
+; CHECK: Function Attrs: nofree noinline noreturn nosync nounwind willreturn memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@srec16
 ; CHECK-SAME: (i32 [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -73,7 +73,7 @@ exit:
 ; }
 ;
 define i32 @endless_loop(i32 %a) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable
+; CHECK: Function Attrs: nofree noinline norecurse noreturn nosync nounwind memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@endless_loop
 ; CHECK-SAME: (i32 [[A:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -98,7 +98,7 @@ while.body:                                       ; preds = %entry, %while.body
 ;
 ; FIXME: no-return missing (D65243 should fix this)
 define i32 @dead_return(i32 %a) #0 {
-; CHECK: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone uwtable
+; CHECK: Function Attrs: nofree noinline norecurse noreturn nosync nounwind memory(none) uwtable
 ; CHECK-LABEL: define {{[^@]+}}@dead_return
 ; CHECK-SAME: (i32 [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
@@ -126,7 +126,7 @@ return:                                           ; No predecessors!
 ; }
 ;
 define i32 @multiple_noreturn_calls(i32 %a) #0 {
-; TUNIT: Function Attrs: nofree noinline norecurse noreturn nosync nounwind readnone willreturn uwtable
+; TUNIT: Function Attrs: nofree noinline norecurse noreturn nosync nounwind willreturn memory(none) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@multiple_noreturn_calls
 ; TUNIT-SAME: (i32 [[A:%.*]]) #[[ATTR3:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
@@ -139,7 +139,7 @@ define i32 @multiple_noreturn_calls(i32 %a) #0 {
 ; TUNIT:       cond.end:
 ; TUNIT-NEXT:    unreachable
 ;
-; CGSCC: Function Attrs: nofree noinline noreturn nosync nounwind readnone willreturn uwtable
+; CGSCC: Function Attrs: nofree noinline noreturn nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@multiple_noreturn_calls
 ; CGSCC-SAME: (i32 [[A:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:  entry:
@@ -174,7 +174,7 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 ; FIXME: we should derive "UB" as an argument and report it to the user on request.
 
 define i32 @endless_loop_but_willreturn() willreturn {
-; TUNIT: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse noreturn nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@endless_loop_but_willreturn
 ; TUNIT-SAME: () #[[ATTR4:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
@@ -182,7 +182,7 @@ define i32 @endless_loop_but_willreturn() willreturn {
 ; TUNIT:       while.body:
 ; TUNIT-NEXT:    br label [[WHILE_BODY]]
 ;
-; CGSCC: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse noreturn nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@endless_loop_but_willreturn
 ; CGSCC-SAME: () #[[ATTR3:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -199,13 +199,13 @@ while.body:                                       ; preds = %entry, %while.body
 
 ; TEST 6b: willreturn means *not* no-return or UB
 define i32 @UB_and_willreturn() willreturn {
-; TUNIT: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse noreturn nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@UB_and_willreturn
 ; TUNIT-SAME: () #[[ATTR4]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    unreachable
 ;
-; CGSCC: Function Attrs: nofree norecurse noreturn nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse noreturn nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@UB_and_willreturn
 ; CGSCC-SAME: () #[[ATTR3]] {
 ; CGSCC-NEXT:  entry:
@@ -217,14 +217,14 @@ entry:
 
 attributes #0 = { noinline nounwind uwtable }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree noinline nosync nounwind readnone willreturn uwtable }
-; TUNIT: attributes #[[ATTR1]] = { nofree noinline noreturn nosync nounwind readnone willreturn uwtable }
-; TUNIT: attributes #[[ATTR2]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
-; TUNIT: attributes #[[ATTR3]] = { nofree noinline norecurse noreturn nosync nounwind readnone willreturn uwtable }
-; TUNIT: attributes #[[ATTR4]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree noinline nosync nounwind willreturn memory(none) uwtable }
+; TUNIT: attributes #[[ATTR1]] = { nofree noinline noreturn nosync nounwind willreturn memory(none) uwtable }
+; TUNIT: attributes #[[ATTR2]] = { nofree noinline norecurse noreturn nosync nounwind memory(none) uwtable }
+; TUNIT: attributes #[[ATTR3]] = { nofree noinline norecurse noreturn nosync nounwind willreturn memory(none) uwtable }
+; TUNIT: attributes #[[ATTR4]] = { nofree norecurse noreturn nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree noinline nosync nounwind readnone willreturn uwtable }
-; CGSCC: attributes #[[ATTR1]] = { nofree noinline noreturn nosync nounwind readnone willreturn uwtable }
-; CGSCC: attributes #[[ATTR2]] = { nofree noinline norecurse noreturn nosync nounwind readnone uwtable }
-; CGSCC: attributes #[[ATTR3]] = { nofree norecurse noreturn nosync nounwind readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree noinline nosync nounwind willreturn memory(none) uwtable }
+; CGSCC: attributes #[[ATTR1]] = { nofree noinline noreturn nosync nounwind willreturn memory(none) uwtable }
+; CGSCC: attributes #[[ATTR2]] = { nofree noinline norecurse noreturn nosync nounwind memory(none) uwtable }
+; CGSCC: attributes #[[ATTR3]] = { nofree norecurse noreturn nosync nounwind willreturn memory(none) }
 ;.

@@ -18,7 +18,7 @@ define void @test1_2(ptr %x1_2, ptr %y1_2, ptr %z1_2) {
 }
 
 define ptr @test2(ptr %p) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn writeonly
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none)
 ; CHECK-LABEL: define {{[^@]+}}@test2
 ; CHECK-SAME: (ptr readnone returned [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    store i32 0, ptr @x, align 4
@@ -29,7 +29,7 @@ define ptr @test2(ptr %p) {
 }
 
 define i1 @test3(ptr %p, ptr %q) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@test3
 ; CHECK-SAME: (ptr readnone [[P:%.*]], ptr readnone [[Q:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[A:%.*]] = icmp ult ptr [[P]], [[Q]]
@@ -42,7 +42,7 @@ define i1 @test3(ptr %p, ptr %q) {
 declare void @test4_1(ptr nocapture) readonly
 
 define void @test4_2(ptr %p) {
-; CHECK: Function Attrs: nofree readonly
+; CHECK: Function Attrs: nofree memory(read)
 ; CHECK-LABEL: define {{[^@]+}}@test4_2
 ; CHECK-SAME: (ptr nocapture readonly [[P:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    call void @test4_1(ptr [[P]])
@@ -54,7 +54,7 @@ define void @test4_2(ptr %p) {
 
 ; Missed optz'n: we could make %q readnone, but don't break test6!
 define void @test5(ptr %p, ptr %q) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind willreturn writeonly
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@test5
 ; CHECK-SAME: (ptr nocapture writeonly [[P:%.*]], ptr [[Q:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    store ptr [[Q]], ptr [[P]], align 8
@@ -81,7 +81,7 @@ define void @test6_2(ptr %p, ptr %q) {
 
 ; inalloca parameters are always considered written
 define void @test7_1(ptr inalloca(i32) %a) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@test7_1
 ; CHECK-SAME: (ptr nocapture inalloca(i32) [[A:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    ret void
@@ -91,7 +91,7 @@ define void @test7_1(ptr inalloca(i32) %a) {
 
 ; preallocated parameters are always considered written
 define void @test7_2(ptr preallocated(i32) %a) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@test7_2
 ; CHECK-SAME: (ptr nocapture preallocated(i32) [[A:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    ret void
@@ -100,7 +100,7 @@ define void @test7_2(ptr preallocated(i32) %a) {
 }
 
 define ptr @test8_1(ptr %p) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@test8_1
 ; CHECK-SAME: (ptr readnone returned [[P:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
@@ -111,7 +111,7 @@ entry:
 }
 
 define void @test8_2(ptr %p) {
-; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind willreturn writeonly
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@test8_2
 ; CHECK-SAME: (ptr writeonly [[P:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:  entry:
@@ -128,7 +128,7 @@ entry:
 declare void @llvm.masked.scatter.v4i32.v4p0(<4 x i32>%val, <4 x ptr>, i32, <4 x i1>)
 
 define void @test9(<4 x ptr> %ptrs, <4 x i32>%val) {
-; CHECK: Function Attrs: mustprogress nofree nosync nounwind willreturn writeonly
+; CHECK: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(write)
 ; CHECK-LABEL: define {{[^@]+}}@test9
 ; CHECK-SAME: (<4 x ptr> [[PTRS:%.*]], <4 x i32> [[VAL:%.*]]) #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[VAL]], <4 x ptr> [[PTRS]], i32 4, <4 x i1> <i1 true, i1 false, i1 true, i1 false>)
@@ -140,7 +140,7 @@ define void @test9(<4 x ptr> %ptrs, <4 x i32>%val) {
 
 declare <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr>, i32, <4 x i1>, <4 x i32>)
 define <4 x i32> @test10(<4 x ptr> %ptrs) {
-; CHECK: Function Attrs: mustprogress nofree nosync nounwind readonly willreturn
+; CHECK: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(read)
 ; CHECK-LABEL: define {{[^@]+}}@test10
 ; CHECK-SAME: (<4 x ptr> [[PTRS:%.*]]) #[[ATTR9:[0-9]+]] {
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[PTRS]], i32 4, <4 x i1> <i1 true, i1 false, i1 true, i1 false>, <4 x i32> undef)
@@ -152,7 +152,7 @@ define <4 x i32> @test10(<4 x ptr> %ptrs) {
 
 declare <4 x i32> @test11_1(<4 x ptr>) argmemonly nounwind readonly
 define <4 x i32> @test11_2(<4 x ptr> %ptrs) {
-; CHECK: Function Attrs: argmemonly nofree nounwind readonly
+; CHECK: Function Attrs: nofree nounwind memory(argmem: read)
 ; CHECK-LABEL: define {{[^@]+}}@test11_2
 ; CHECK-SAME: (<4 x ptr> [[PTRS:%.*]]) #[[ATTR11:[0-9]+]] {
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @test11_1(<4 x ptr> [[PTRS]])
@@ -164,7 +164,7 @@ define <4 x i32> @test11_2(<4 x ptr> %ptrs) {
 
 declare <4 x i32> @test12_1(<4 x ptr>) argmemonly nounwind
 define <4 x i32> @test12_2(<4 x ptr> %ptrs) {
-; CHECK: Function Attrs: argmemonly nounwind
+; CHECK: Function Attrs: nounwind memory(argmem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@test12_2
 ; CHECK-SAME: (<4 x ptr> [[PTRS:%.*]]) #[[ATTR12:[0-9]+]] {
 ; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @test12_1(<4 x ptr> [[PTRS]])
@@ -175,7 +175,7 @@ define <4 x i32> @test12_2(<4 x ptr> %ptrs) {
 }
 
 define i32 @volatile_load(ptr %p) {
-; CHECK: Function Attrs: inaccessiblemem_or_argmemonly mustprogress nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; CHECK-LABEL: define {{[^@]+}}@volatile_load
 ; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR13:[0-9]+]] {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load volatile i32, ptr [[P]], align 4
@@ -246,7 +246,7 @@ define void @fptr_test1b(ptr %p, ptr %f) {
 }
 
 define void @fptr_test1c(ptr %p, ptr %f) {
-; CHECK: Function Attrs: nofree readonly
+; CHECK: Function Attrs: nofree memory(read)
 ; CHECK-LABEL: define {{[^@]+}}@fptr_test1c
 ; CHECK-SAME: (ptr readnone [[P:%.*]], ptr nocapture readonly [[F:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    call void [[F]](ptr readnone [[P]]) #[[ATTR2:[0-9]+]]
@@ -278,7 +278,7 @@ define void @fptr_test2b(ptr %p, ptr %f) {
 }
 
 define void @fptr_test2c(ptr %p, ptr %f) {
-; CHECK: Function Attrs: nofree readonly
+; CHECK: Function Attrs: nofree memory(read)
 ; CHECK-LABEL: define {{[^@]+}}@fptr_test2c
 ; CHECK-SAME: (ptr readonly [[P:%.*]], ptr nocapture readonly [[F:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    call void [[F]](ptr readonly [[P]]) #[[ATTR2]]
@@ -289,7 +289,7 @@ define void @fptr_test2c(ptr %p, ptr %f) {
 }
 
 define void @alloca_recphi() {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone
+; CHECK: Function Attrs: nofree norecurse nosync nounwind memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@alloca_recphi
 ; CHECK-SAME: () #[[ATTR14:[0-9]+]] {
 ; CHECK-NEXT:  entry:

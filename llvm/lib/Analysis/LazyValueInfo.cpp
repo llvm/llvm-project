@@ -701,7 +701,8 @@ Optional<ValueLatticeElement> LazyValueInfoImpl::solveBlockValueNonLocal(
     // to overdefined.
     if (Result.isOverdefined()) {
       LLVM_DEBUG(dbgs() << " compute BB '" << BB->getName()
-                        << "' - overdefined because of pred (non local).\n");
+                        << "' - overdefined because of pred '"
+                        << Pred->getName() << "' (non local).\n");
       return Result;
     }
   }

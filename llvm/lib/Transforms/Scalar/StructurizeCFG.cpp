@@ -856,7 +856,12 @@ BasicBlock *StructurizeCFG::getNextFlow(BasicBlock *Dominator) {
   BasicBlock *Flow = BasicBlock::Create(Context, FlowBlockName,
                                         Func, Insert);
   FlowSet.insert(Flow);
-  TermDL[Flow] = TermDL[Dominator];
+
+  // use a temporary variable to avoid a use-after-free if the map's storage is
+  // reallocated
+  DebugLoc DL = TermDL[Dominator];
+  TermDL[Flow] = std::move(DL);
+
   DT->addNewBlock(Flow, Dominator);
   ParentRegion->getRegionInfo()->setRegionFor(Flow, ParentRegion);
   return Flow;

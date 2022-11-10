@@ -263,21 +263,33 @@ define float @test_atomicrmw_fadd_f32_flat_unsafe(float* %ptr, float %value) #0 
 ; GFX908-NEXT:    ret float [[TMP6]]
 ;
 ; GFX90A-LABEL: @test_atomicrmw_fadd_f32_flat_unsafe(
-; GFX90A-NEXT:    [[TMP1:%.*]] = load float, float* [[PTR:%.*]], align 4
-; GFX90A-NEXT:    br label [[ATOMICRMW_START:%.*]]
-; GFX90A:       atomicrmw.start:
-; GFX90A-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
-; GFX90A-NEXT:    [[NEW:%.*]] = fadd float [[LOADED]], [[VALUE:%.*]]
-; GFX90A-NEXT:    [[TMP2:%.*]] = bitcast float* [[PTR]] to i32*
-; GFX90A-NEXT:    [[TMP3:%.*]] = bitcast float [[NEW]] to i32
-; GFX90A-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GFX90A-NEXT:    [[TMP5:%.*]] = cmpxchg i32* [[TMP2]], i32 [[TMP4]], i32 [[TMP3]] syncscope("wavefront") monotonic monotonic, align 4
-; GFX90A-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GFX90A-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GFX90A-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
-; GFX90A-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GFX90A-NEXT:    [[TMP1:%.*]] = bitcast float* [[PTR:%.*]] to i8*
+; GFX90A-NEXT:    br label [[ATOMICRMW_CHECK_SHARED:%.*]]
+; GFX90A:       atomicrmw.check.shared:
+; GFX90A-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(i8* [[TMP1]])
+; GFX90A-NEXT:    br i1 [[IS_SHARED]], label [[ATOMICRMW_SHARED:%.*]], label [[ATOMICRMW_CHECK_PRIVATE:%.*]]
+; GFX90A:       atomicrmw.shared:
+; GFX90A-NEXT:    [[TMP2:%.*]] = addrspacecast float* [[PTR]] to float addrspace(3)*
+; GFX90A-NEXT:    [[TMP3:%.*]] = atomicrmw fadd float addrspace(3)* [[TMP2]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_PHI:%.*]]
+; GFX90A:       atomicrmw.check.private:
+; GFX90A-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(i8* [[TMP1]])
+; GFX90A-NEXT:    br i1 [[IS_PRIVATE]], label [[ATOMICRMW_PRIVATE:%.*]], label [[ATOMICRMW_GLOBAL:%.*]]
+; GFX90A:       atomicrmw.private:
+; GFX90A-NEXT:    [[TMP4:%.*]] = addrspacecast float* [[PTR]] to float addrspace(5)*
+; GFX90A-NEXT:    [[LOADED_PRIVATE:%.*]] = load float, float addrspace(5)* [[TMP4]], align 4
+; GFX90A-NEXT:    [[VAL_NEW:%.*]] = fadd float [[LOADED_PRIVATE]], [[VALUE]]
+; GFX90A-NEXT:    store float [[VAL_NEW]], float addrspace(5)* [[TMP4]], align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
+; GFX90A:       atomicrmw.global:
+; GFX90A-NEXT:    [[TMP5:%.*]] = addrspacecast float* [[PTR]] to float addrspace(1)*
+; GFX90A-NEXT:    [[TMP6:%.*]] = atomicrmw fadd float addrspace(1)* [[TMP5]], float [[VALUE]] syncscope("wavefront") monotonic, align 4
+; GFX90A-NEXT:    br label [[ATOMICRMW_PHI]]
+; GFX90A:       atomicrmw.phi:
+; GFX90A-NEXT:    [[LOADED_PHI:%.*]] = phi float [ [[TMP3]], [[ATOMICRMW_SHARED]] ], [ [[LOADED_PRIVATE]], [[ATOMICRMW_PRIVATE]] ], [ [[TMP6]], [[ATOMICRMW_GLOBAL]] ]
+; GFX90A-NEXT:    br label [[ATOMICRMW_END:%.*]]
 ; GFX90A:       atomicrmw.end:
-; GFX90A-NEXT:    ret float [[TMP6]]
+; GFX90A-NEXT:    ret float [[LOADED_PHI]]
 ;
 ; GFX940-LABEL: @test_atomicrmw_fadd_f32_flat_unsafe(
 ; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd float* [[PTR:%.*]], float [[VALUE:%.*]] syncscope("wavefront") monotonic, align 4
@@ -912,6 +924,18 @@ define half @test_atomicrmw_fadd_f16_global_align4(half addrspace(1)* %ptr, half
 ; GFX908-LABEL: @test_atomicrmw_fadd_f16_global_align4(
 ; GFX908-NEXT:    [[RES:%.*]] = atomicrmw fadd half addrspace(1)* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst, align 4
 ; GFX908-NEXT:    ret half [[RES]]
+;
+; GFX90A-LABEL: @test_atomicrmw_fadd_f16_global_align4(
+; GFX90A-NEXT:    [[RES:%.*]] = atomicrmw fadd half addrspace(1)* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst, align 4
+; GFX90A-NEXT:    ret half [[RES]]
+;
+; GFX940-LABEL: @test_atomicrmw_fadd_f16_global_align4(
+; GFX940-NEXT:    [[RES:%.*]] = atomicrmw fadd half addrspace(1)* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst, align 4
+; GFX940-NEXT:    ret half [[RES]]
+;
+; GFX11-LABEL: @test_atomicrmw_fadd_f16_global_align4(
+; GFX11-NEXT:    [[RES:%.*]] = atomicrmw fadd half addrspace(1)* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst, align 4
+; GFX11-NEXT:    ret half [[RES]]
 ;
   %res = atomicrmw fadd half addrspace(1)* %ptr, half %value seq_cst, align 4
   ret half %res

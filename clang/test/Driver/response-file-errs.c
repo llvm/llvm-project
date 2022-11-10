@@ -1,3 +1,6 @@
+// AIX reacts on opening directory differently than other systems.
+// XFAIL: system-aix
+
 // If response file does not exist, '@file; directive remains unexpanded in
 // command line.
 //

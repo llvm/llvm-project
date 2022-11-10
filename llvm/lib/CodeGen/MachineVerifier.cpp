@@ -61,6 +61,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/ModRef.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -1474,10 +1475,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     bool NoSideEffects = MI->getOpcode() == TargetOpcode::G_INTRINSIC;
     unsigned IntrID = IntrIDOp.getIntrinsicID();
     if (IntrID != 0 && IntrID < Intrinsic::num_intrinsics) {
-      AttributeList Attrs
-        = Intrinsic::getAttributes(MF->getFunction().getContext(),
-                                   static_cast<Intrinsic::ID>(IntrID));
-      bool DeclHasSideEffects = !Attrs.hasFnAttr(Attribute::ReadNone);
+      AttributeList Attrs = Intrinsic::getAttributes(
+          MF->getFunction().getContext(), static_cast<Intrinsic::ID>(IntrID));
+      bool DeclHasSideEffects = !Attrs.getMemoryEffects().doesNotAccessMemory();
       if (NoSideEffects && DeclHasSideEffects) {
         report("G_INTRINSIC used with intrinsic that accesses memory", MI);
         break;

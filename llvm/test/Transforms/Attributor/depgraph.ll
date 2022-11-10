@@ -14,7 +14,7 @@
 ; }
 ;
 define i32* @checkAndAdvance(i32* align 16 %0) {
-; CHECK: Function Attrs: argmemonly nofree nosync nounwind readonly
+; CHECK: Function Attrs: nofree nosync nounwind memory(argmem: read)
 ; CHECK-LABEL: define {{[^@]+}}@checkAndAdvance
 ; CHECK-SAME: (i32* nofree noundef nonnull readonly align 16 dereferenceable(4) [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[TMP0]], align 16
@@ -380,6 +380,6 @@ define i32* @checkAndAdvance(i32* align 16 %0) {
 ; DOT-DAG: Node[[Node44]] -> Node[[Node43]];
 ; DOT-DAG: Node[[Node43]] -> Node[[Node44]];
 ;.
-; CHECK: attributes #[[ATTR0]] = { argmemonly nofree nosync nounwind readonly }
-; CHECK: attributes #[[ATTR1]] = { nofree nosync nounwind readonly }
+; CHECK: attributes #[[ATTR0]] = { nofree nosync nounwind memory(argmem: read) }
+; CHECK: attributes #[[ATTR1]] = { nofree nosync nounwind }
 ;.

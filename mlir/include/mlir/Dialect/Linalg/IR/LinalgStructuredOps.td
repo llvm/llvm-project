@@ -440,10 +440,85 @@ def TransposeOp : LinalgStructuredBase_Op<"transpose", [
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
         mlir::ArrayRef<mlir::NamedAttribute>)>
-      getRegionBuilder();
+      getRegionBuilder() {
+      return nullptr;
+    }
 
     static void createRegion(::mlir::OpBuilder &opBuilder,
                              ::mlir::OperationState & odsState);
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
+
+//===----------------------------------------------------------------------===//
+// Broadcast op.
+//===----------------------------------------------------------------------===//
+
+def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    SameVariadicOperandSize,
+    SingleBlockImplicitTerminator<"YieldOp">]> {
+  let summary = "Static broadcast operator";
+  let description = [{
+    Broadcast the input into the given shape by adding dimensions.
+
+    Each index in `dimensions` attribute maps input dimension into the
+    corresponding target dimension. The length of the `dimensions` list should
+    match the `input` rank and dimensions should be in sorted order. There is no
+    ambiguity at compile-time about shape information.
+
+    Example:
+    ```
+      %bcast = linalg.broadcast
+          ins(%input:tensor<16xf32>)
+          inits(%init:tensor<16x64xf32>)
+          dimensions = [0]
+    ```
+  }];
+
+  let arguments = (ins
+    // Input arg
+    TensorOrMemref:$input,
+    // Output arg
+    TensorOrMemref:$init,
+
+    DenseI64ArrayAttr:$dimensions
+  );
+  let results = (outs Variadic<AnyTensor>:$result);
+  let regions = (region SizedRegion<1>:$region);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$input, "Value":$init,
+        "DenseI64ArrayAttr":$dimensions, CArg<"ArrayRef<NamedAttribute>",
+        "{}">:$attributes)>,
+    OpBuilder<(ins "Value":$input, "Value":$init,
+        "ArrayRef<int64_t>":$dimensions, CArg<"ArrayRef<NamedAttribute>",
+        "{}">:$attributes)>,
+  ];
+
+  let extraClassDeclaration = structuredOpsBaseDecls # [{
+    // Declare functions necessary for LinalgStructuredInterface.
+    SmallVector<StringRef> getIteratorTypesArray();
+    ArrayAttr getIndexingMaps();
+    std::string getLibraryCallName() {
+      return "op_has_no_registered_library_name";
+    }
+
+    // Implement functions necessary for DestinationStyleOpInterface.
+    std::pair<int64_t, int64_t> getDpsInitsPositionRange() {
+      int64_t getNumOperands = this->getNumOperands();
+      return {getNumOperands - 1, getNumOperands};
+    }
+
+    static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
+        mlir::ArrayRef<mlir::NamedAttribute>)>
+      getRegionBuilder() {
+      return nullptr;
+    }
   }];
 
   let hasCustomAssemblyFormat = 1;

@@ -27,10 +27,11 @@ set(BOLT_RT_FLAGS
   -fno-exceptions
   -fno-rtti
   -fno-stack-protector
-  -mno-sse)
+  -mno-sse
+  -fPIE)
 
 # Don't let the compiler think it can create calls to standard libs
-target_compile_options(bolt_rt_instr PRIVATE ${BOLT_RT_FLAGS} -fPIE)
+target_compile_options(bolt_rt_instr PRIVATE ${BOLT_RT_FLAGS})
 target_include_directories(bolt_rt_instr PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_options(bolt_rt_hugify PRIVATE ${BOLT_RT_FLAGS})
 target_include_directories(bolt_rt_hugify PRIVATE ${CMAKE_CURRENT_BINARY_DIR})

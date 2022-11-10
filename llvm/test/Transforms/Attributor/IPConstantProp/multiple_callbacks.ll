@@ -38,7 +38,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 define internal i32 @cb0(i32 %zero) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@cb0
 ; CHECK-SAME: (i32 [[ZERO:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -49,7 +49,7 @@ entry:
 }
 
 define internal i32 @cb1(i32 %unknown) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@cb1
 ; CHECK-SAME: (i32 noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -60,13 +60,13 @@ entry:
 }
 
 define internal i32 @cb2(i32 %unknown) {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@cb2
 ; TUNIT-SAME: (i32 noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    ret i32 [[UNKNOWN]]
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@cb2
 ; CGSCC-SAME: (i32 noundef [[UNKNOWN:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -78,7 +78,7 @@ entry:
 }
 
 define internal i32 @cb3(i32 %unknown) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@cb3
 ; CHECK-SAME: (i32 noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -89,7 +89,7 @@ entry:
 }
 
 define internal i32 @cb4(i32 %unknown) {
-; CHECK: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CHECK-LABEL: define {{[^@]+}}@cb4
 ; CHECK-SAME: (i32 noundef [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
@@ -125,10 +125,10 @@ declare !callback !3 void @broker(i32 (i32)*, i32 (i32)*, i32 (i32)*, i32, i32)
 !2 = !{i64 2, i64 3, i1 false}
 !3 = !{!0, !2, !1}
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn memory(none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{!1, !2, !3}
 ; CHECK: [[META1:![0-9]+]] = !{i64 0, i64 3, i1 false}
