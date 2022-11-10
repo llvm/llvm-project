@@ -4,10 +4,10 @@ Summaries:
   - Name: "fread"
     Signature:
       ArgTypes:
+        - "void*"
         - "size_t"
         - "size_t"
-        - "size_t"
-        - "FILE *restrict"
+        - "FILE*"
       RetType: "size_t"
     EvaluationType: "NoEvalCall"
     ArgConstraints: # We give an error if this is violated

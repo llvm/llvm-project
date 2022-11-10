@@ -1457,23 +1457,39 @@ std::string Option{"Config"};
       Mgr->getAnalyzerOptions().getCheckerStringOption(this, Option);*/
 StringRef ConfigFile = "/local/workspace/llvm-project/clang/test/Analysis/Inputs/fread-summary.yaml";
 llvm::Optional<SummaryConfiguration> Config =
-      getConfiguration<SummaryConfiguration>(*Mgr, this, Option, ConfigFile);
-llvm::errs()<<"Config :"<<Config.hasValue()<<"\n";
-if (Config.has_value()){
-  for (const SummaryConfiguration::Summary &s : Config->summaries){
-    llvm::errs()<<"Config :"<<s.name<<"\n";
+    getConfiguration<SummaryConfiguration>(*Mgr, this, Option, ConfigFile);
+llvm::errs() << "Config :" << Config.has_value() << "\n";
 
-    ArgTypes args;
-    for (const std::string &t: s.signature.argTypes){
-      auto ltype = lookupTy(t);
-      if (ltype.has_value()){
-        llvm::errs()<<"type string:"<<t<<"\n";
-        ltype->dump();
-        args.push_back(lookupTy(t));
-      }
+auto GetTypeFromStr = [&](StringRef TypeName) {
+  Optional<QualType> LType = lookupTy(TypeName);
+  if (LType)
+    return *LType;
+
+  return llvm::StringSwitch<QualType>(TypeName)
+      .Case("void *", VoidPtrTy)
+      .Case("void * restrict", VoidPtrRestrictTy)
+      .Default(Irrelevant);
+};
+
+if (Config.has_value()) {
+  for (const SummaryConfiguration::Summary &s : Config->summaries) {
+    ArgTypes Args;
+    for (const std::string &TypeName : s.signature.argTypes) {
+      llvm::errs() << "arg type string:" << TypeName << "\n";
+      QualType Type = GetTypeFromStr(TypeName);
+      llvm::errs() << "arg type dump:";
+      Type.dump();
+      llvm::errs() << "\n";
+
+      Args.push_back(Type);
     }
-    RetType rt = lookupTy(s.signature.returnType);
-    auto GetSummary = [s]() {
+
+    const std::string &RetTypeName = s.signature.returnType;
+    llvm::errs() << "ret type string:" << RetTypeName << "\n";
+    QualType RetType = GetTypeFromStr(RetTypeName);
+    llvm::errs() << "ret type dump:";
+
+    auto GetSummary = [&s]() {
       switch (s.evaluationType) {
       case SummaryConfiguration::EvaluationType::NoEvalCall:
         return Summary(NoEvalCall);
@@ -1481,24 +1497,22 @@ if (Config.has_value()){
         return Summary(EvalCallAsPure);
       }
     };
+
     Summary summary = GetSummary();
 
-    for (const SummaryConfiguration::ArgConstraint &ac: s.argConstraints){
-      switch (ac.type){
-        case SummaryConfiguration::ArgConstraintType::NotNull:
-          summary.ArgConstraint(NotNull(ac.arg));
-          break;
-        case SummaryConfiguration::ArgConstraintType::BufferSize:
-          summary.ArgConstraint(BufferSize(ac.bufferArg,ac.sizeArg, ac.countArg));
-          break;
+    for (const SummaryConfiguration::ArgConstraint &AC : s.argConstraints) {
+      switch (AC.type) {
+      case SummaryConfiguration::ArgConstraintType::NotNull:
+        summary.ArgConstraint(NotNull(AC.arg));
+        break;
+      case SummaryConfiguration::ArgConstraintType::BufferSize:
+        summary.ArgConstraint(
+            BufferSize(AC.bufferArg, AC.sizeArg, AC.countArg));
+        break;
       }
     }
 
-    addToFunctionSummaryMap(
-      s.name,
-      Signature(args,
-                rt),
-      summary);
+    addToFunctionSummaryMap(s.name, Signature(Args, RetType), summary);
   }
 }
  /*
