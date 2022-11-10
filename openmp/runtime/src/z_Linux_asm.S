@@ -108,7 +108,7 @@ KMP_PREFIX_UNDERSCORE(\proc):
 # endif // KMP_OS_DARWIN
 #endif // KMP_ARCH_X86 || KMP_ARCH_x86_64
 
-#if (KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64
+#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_AARCH64
 
 # if KMP_OS_DARWIN
 #  define KMP_PREFIX_UNDERSCORE(x) _##x  // extra underscore for OS X* symbols
@@ -117,6 +117,9 @@ KMP_PREFIX_UNDERSCORE(\proc):
 .macro ALIGN
 	.align $0
 .endmacro
+.macro COMMON name, size, align_power
+	.comm \name, \size
+.endm
 
 .macro DEBUG_INFO
 /* Not sure what .size does in icc, not sure if we need to do something
@@ -129,13 +132,37 @@ KMP_PREFIX_UNDERSCORE(\proc):
 	.globl KMP_PREFIX_UNDERSCORE($0)
 KMP_PREFIX_UNDERSCORE($0):
 .endmacro
-# else // KMP_OS_DARWIN
+# elif KMP_OS_WINDOWS
+#  define KMP_PREFIX_UNDERSCORE(x) x  // no extra underscore for Windows/ARM64 symbols
+// Format labels so that they don't override function names in gdb's backtraces
+#  define KMP_LABEL(x) .L_##x         // local label hidden from backtraces
+
+.macro ALIGN size
+	.align 1<<(\size)
+.endm
+.macro COMMON name, size, align_power
+	.comm \name, \size, \align_power
+.endm
+
+.macro DEBUG_INFO proc
+	ALIGN 2
+.endm
+
+.macro PROC proc
+	ALIGN 2
+	.globl KMP_PREFIX_UNDERSCORE(\proc)
+KMP_PREFIX_UNDERSCORE(\proc):
+.endm
+# else // KMP_OS_DARWIN || KMP_OS_WINDOWS
 #  define KMP_PREFIX_UNDERSCORE(x) x  // no extra underscore for Linux* OS symbols
 // Format labels so that they don't override function names in gdb's backtraces
 #  define KMP_LABEL(x) .L_##x         // local label hidden from backtraces
 
 .macro ALIGN size
 	.align 1<<(\size)
+.endm
+.macro COMMON name, size, align_power
+	.comm \name, \size, (1<<(\align_power))
 .endm
 
 .macro DEBUG_INFO proc
@@ -154,7 +181,7 @@ KMP_PREFIX_UNDERSCORE(\proc):
 .endm
 # endif // KMP_OS_DARWIN
 
-#endif // (KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64
+#endif // (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_AARCH64
 
 // -----------------------------------------------------------------------
 // data
@@ -1204,7 +1231,7 @@ KMP_LABEL(kmp_1_exit):
 #endif /* KMP_ARCH_X86_64 */
 
 // '
-#if (KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64
+#if (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_AARCH64
 
 //------------------------------------------------------------------------
 // int
@@ -1328,7 +1355,7 @@ KMP_LABEL(kmp_1):
 	DEBUG_INFO __kmp_invoke_microtask
 // -- End  __kmp_invoke_microtask
 
-#endif /* (KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64 */
+#endif /* (KMP_OS_LINUX || KMP_OS_DARWIN || KMP_OS_WINDOWS) && KMP_ARCH_AARCH64 */
 
 #if KMP_ARCH_PPC64
 
@@ -1885,7 +1912,7 @@ __kmp_invoke_microtask:
 
 #if KMP_ARCH_ARM || KMP_ARCH_MIPS
     .data
-    .comm .gomp_critical_user_,32,8
+    COMMON .gomp_critical_user_, 32, 3
     .data
     .align 4
     .global __kmp_unnamed_critical_addr
@@ -1899,7 +1926,7 @@ __kmp_unnamed_critical_addr:
 # define KMP_PREFIX_UNDERSCORE(x) x
 #endif
     .data
-    .comm .gomp_critical_user_,32,8
+    COMMON .gomp_critical_user_, 32, 3
     .data
     .align 8
     .global KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr)
