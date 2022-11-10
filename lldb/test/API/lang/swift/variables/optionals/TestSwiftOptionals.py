@@ -62,6 +62,10 @@ class TestSwiftOptionalType(TestBase):
         self.expect("frame variable optString_None", substrs=['nil'])
         self.expect("frame variable uoptString_None", substrs=['nil'])
 
+        self.expect("frame variable optTrue", substrs=['Bool?', 'true'])
+        self.expect("frame variable optFalse", substrs=['Bool?','false'])
+        self.expect("frame variable optNil", substrs=['Bool?', 'nil'])
+
     def do_check_api(self):
         """Check formatting for T? and T!"""
         optS_Some = self.frame().FindVariable("optS_Some")
@@ -103,6 +107,30 @@ class TestSwiftOptionalType(TestBase):
             use_dynamic=False,
             num_children=1)
         uoptString_Some.GetChildAtIndex(99)
+
+        optTrue = self.frame().FindVariable("optTrue")
+        lldbutil.check_variable(
+            self,
+            optTrue,
+            use_dynamic=False,
+            num_children=1,
+            summary='true')
+
+        optFalse = self.frame().FindVariable("optFalse")
+        lldbutil.check_variable(
+            self,
+            optFalse,
+            use_dynamic=False,
+            num_children=1,
+            summary='false')
+
+        optNil = self.frame().FindVariable("optNil")
+        lldbutil.check_variable(
+            self,
+            optNil,
+            use_dynamic=False,
+            num_children=0,
+            summary='nil')
 
         # Querying a non-existing child should not crash.
         synth_valobj = self.frame().FindVariable("optString_Some")
