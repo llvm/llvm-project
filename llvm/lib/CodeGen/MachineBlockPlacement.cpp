@@ -201,6 +201,18 @@ static cl::opt<unsigned> TriangleChainCount(
     cl::init(2),
     cl::Hidden);
 
+// Use case: When block layout is visualized after MBP pass, the basic blocks
+// are labeled in layout order; meanwhile blocks could be numbered in a
+// different order. It's hard to map between the graph and pass output.
+// With this option on, the basic blocks are renumbered in function layout
+// order. For debugging only.
+static cl::opt<bool> RenumberBlocksBeforeView(
+    "renumber-blocks-before-view",
+    cl::desc(
+        "If true, basic blocks are re-numbered before MBP layout is printed "
+        "into a dot graph. Only used when a function is being printed."),
+    cl::init(false), cl::Hidden);
+
 extern cl::opt<bool> EnableExtTspBlockPlacement;
 extern cl::opt<bool> ApplyExtTspWithoutProfile;
 
@@ -3466,6 +3478,8 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   if (ViewBlockLayoutWithBFI != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
        F->getFunction().getName().equals(ViewBlockFreqFuncName))) {
+    if (RenumberBlocksBeforeView)
+      MF.RenumberBlocks();
     MBFI->view("MBP." + MF.getName(), false);
   }
 

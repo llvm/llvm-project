@@ -1251,7 +1251,7 @@ StringRef sys::getHostCPUName() {
   return "generic";
 }
 
-#elif defined(__APPLE__) && (defined(__ppc__) || defined(__powerpc__))
+#elif defined(__APPLE__) && defined(__powerpc__)
 StringRef sys::getHostCPUName() {
   host_basic_info_data_t hostInfo;
   mach_msg_type_number_t infoCount;
@@ -1295,7 +1295,7 @@ StringRef sys::getHostCPUName() {
 
   return "generic";
 }
-#elif defined(__linux__) && (defined(__ppc__) || defined(__powerpc__))
+#elif defined(__linux__) && defined(__powerpc__)
 StringRef sys::getHostCPUName() {
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
   StringRef Content = P ? P->getBuffer() : "";

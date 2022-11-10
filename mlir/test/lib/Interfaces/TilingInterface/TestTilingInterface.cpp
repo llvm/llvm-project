@@ -193,7 +193,8 @@ struct TestTileUsingSCFForOp
       rewriter.eraseOp(op);
     }
 
-    filter.replaceLinalgTransformationFilter(rewriter, tilingResult->tiledOp);
+    for (auto tiledOp : tilingResult->tiledOps)
+      filter.replaceLinalgTransformationFilter(rewriter, tiledOp);
     return success();
   }
 

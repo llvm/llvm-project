@@ -22,6 +22,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Debuginfod/Debuginfod.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -34,6 +35,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/xxhash.h"
@@ -169,6 +171,44 @@ Error StreamedHTTPResponseHandler::handleBodyChunk(StringRef BodyChunk) {
   return Error::success();
 }
 
+// An over-accepting simplification of the HTTP RFC 7230 spec.
+static bool isHeader(StringRef S) {
+  StringRef Name;
+  StringRef Value;
+  std::tie(Name, Value) = S.split(':');
+  if (Name.empty() || Value.empty())
+    return false;
+  return all_of(Name, [](char C) { return llvm::isPrint(C) && C != ' '; }) &&
+         all_of(Value, [](char C) { return llvm::isPrint(C) || C == '\t'; });
+}
+
+static SmallVector<std::string, 0> getHeaders() {
+  const char *Filename = getenv("DEBUGINFOD_HEADERS_FILE");
+  if (!Filename)
+    return {};
+  ErrorOr<std::unique_ptr<MemoryBuffer>> HeadersFile =
+      MemoryBuffer::getFile(Filename, /*IsText=*/true);
+  if (!HeadersFile)
+    return {};
+
+  SmallVector<std::string, 0> Headers;
+  uint64_t LineNumber = 0;
+  for (StringRef Line : llvm::split((*HeadersFile)->getBuffer(), '\n')) {
+    LineNumber++;
+    if (!isHeader(Line)) {
+      if (!all_of(Line, llvm::isSpace))
+        WithColor::warning()
+            << "could not parse debuginfod header: " << Filename << ':'
+            << LineNumber << '\n';
+      continue;
+    }
+    if (Line.back() == '\r')
+      Line = Line.drop_back();
+    Headers.emplace_back(Line);
+  }
+  return Headers;
+}
+
 Expected<std::string> getCachedOrDownloadArtifact(
     StringRef UniqueKey, StringRef UrlPath, StringRef CacheDirectoryPath,
     ArrayRef<StringRef> DebuginfodUrls, std::chrono::milliseconds Timeout) {
@@ -214,6 +254,7 @@ Expected<std::string> getCachedOrDownloadArtifact(
     StreamedHTTPResponseHandler Handler([&]() { return CacheAddStream(Task); },
                                         Client);
     HTTPRequest Request(ArtifactUrl);
+    Request.Headers = getHeaders();
     Error Err = Client.perform(Request, Handler);
     if (Err)
       return std::move(Err);

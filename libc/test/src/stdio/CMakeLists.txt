@@ -216,6 +216,29 @@ add_libc_unittest(
     libc.src.stdio.fgetc
     libc.src.stdio.fopen
     libc.src.stdio.fwrite
+    libc.src.stdio.getc
+)
+
+add_libc_unittest(
+  fgetc_unlocked_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fgetc_unlocked_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.stdio
+    libc.src.stdio.fclose
+    libc.src.stdio.ferror
+    libc.src.stdio.ferror_unlocked
+    libc.src.stdio.feof
+    libc.src.stdio.feof_unlocked
+    libc.src.stdio.fgetc_unlocked
+    libc.src.stdio.flockfile
+    libc.src.stdio.fopen
+    libc.src.stdio.funlockfile
+    libc.src.stdio.fwrite
+    libc.src.stdio.getc_unlocked
 )
 
 add_libc_unittest(
@@ -233,6 +256,25 @@ add_libc_unittest(
     libc.src.stdio.fgets
     libc.src.stdio.fopen
     libc.src.stdio.fwrite
+)
+
+add_libc_unittest(
+  ftell_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    ftell_test.cpp
+  DEPENDS
+    libc.include.errno
+    libc.include.stdio
+    libc.src.stdio.fclose
+    libc.src.stdio.fflush
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.fseek
+    libc.src.stdio.ftell
+    libc.src.stdio.fwrite
+    libc.src.stdio.setvbuf
 )
 
 add_subdirectory(printf_core)

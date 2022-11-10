@@ -21,14 +21,14 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-  std::ranges::clamp(1, 2, 0, std::ranges::greater{});
+  (void)std::ranges::clamp(1, 2, 0, std::ranges::greater{});
   TEST_LIBCPP_ASSERT_FAILURE(std::ranges::clamp(1, 2, 0), "Bad bounds passed to std::ranges::clamp");
 
-  std::ranges::clamp(1, 0, 2);
-  TEST_LIBCPP_ASSERT_FAILURE(std::ranges::clamp(1, 0, 2, std::ranges::greater{}),
-      "Bad bounds passed to std::ranges::clamp");
+  (void)std::ranges::clamp(1, 0, 2);
+  TEST_LIBCPP_ASSERT_FAILURE(
+      std::ranges::clamp(1, 0, 2, std::ranges::greater{}), "Bad bounds passed to std::ranges::clamp");
 
-  std::ranges::clamp(1, 1, 1); // Equal bounds should be fine.
+  (void)std::ranges::clamp(1, 1, 1); // Equal bounds should be fine.
 
   return 0;
 }

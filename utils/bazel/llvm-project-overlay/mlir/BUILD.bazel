@@ -4000,11 +4000,10 @@ cc_library(
         ":GPUDialect",
         ":IR",
         ":LLVMCommonConversion",
+        ":LLVMDialect",
         ":NVGPUDialect",
         ":NVVMDialect",
         ":Pass",
-        ":Transforms",
-        "//llvm:Support",
     ],
 )
 

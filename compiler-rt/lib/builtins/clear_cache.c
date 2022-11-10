@@ -93,12 +93,29 @@ void __clear_cache(void *start, void *end) {
 #endif
 #elif defined(__linux__) && defined(__loongarch__)
   __asm__ volatile("ibar 0");
-#elif defined(__linux__) && defined(__mips__)
+#elif defined(__mips__)
   const uintptr_t start_int = (uintptr_t)start;
   const uintptr_t end_int = (uintptr_t)end;
-  syscall(__NR_cacheflush, start, (end_int - start_int), BCACHE);
-#elif defined(__mips__) && defined(__OpenBSD__)
-  cacheflush(start, (uintptr_t)end - (uintptr_t)start, BCACHE);
+  uintptr_t synci_step;
+  __asm__ volatile("rdhwr %0, $1" : "=r"(synci_step));
+  if (synci_step != 0) {
+#if __mips_isa_rev >= 6
+    for (uintptr_t p = start_int; p < end_int; p += synci_step)
+      __asm__ volatile("synci 0(%0)" : : "r"(p));
+
+    // The last "move $at, $0" is the target of jr.hb instead of delay slot.
+    __asm__ volatile(".set noat\n"
+                     "sync\n"
+                     "addiupc $at, 12\n"
+                     "jr.hb $at\n"
+                     "move $at, $0\n"
+                     ".set at");
+#else
+    // Pre-R6 may not be globalized. And some implementations may give strange
+    // synci_step. So, let's use libc call for it.
+    cacheflush(start, end_int - start_int, BCACHE);
+#endif
+  }
 #elif defined(__aarch64__) && !defined(__APPLE__)
   uint64_t xstart = (uint64_t)(uintptr_t)start;
   uint64_t xend = (uint64_t)(uintptr_t)end;

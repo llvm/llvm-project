@@ -1102,6 +1102,8 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
   CompilerInstance &CI = getCompilerInstance();
   SourceManager &SM = CI.getSourceManager();
 
+  VMContext->setOpaquePointers(CI.getCodeGenOpts().OpaquePointers);
+
   // For ThinLTO backend invocations, ensure that the context
   // merges types based on ODR identifiers. We also need to read
   // the correct module out of a multi-module bitcode file.

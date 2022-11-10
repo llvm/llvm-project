@@ -200,8 +200,8 @@ namespace clang {
     // cast the return value to `T`.
     template <typename T>
     auto import(T *From)
-        -> std::conditional_t<std::is_base_of<Type, T>::value,
-                              Expected<const T *>, Expected<T *>> {
+        -> std::conditional_t<std::is_base_of_v<Type, T>, Expected<const T *>,
+                              Expected<T *>> {
       auto ToOrErr = Importer.Import(From);
       if (!ToOrErr)
         return ToOrErr.takeError();
@@ -7687,16 +7687,9 @@ ExpectedStmt ASTNodeImporter::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
     if (Error Err = ImportDefaultArgOfParmVarDecl(*FromParam, ToParam))
       return std::move(Err);
   }
-  Expr *RewrittenInit = nullptr;
-  if (E->hasRewrittenInit()) {
-    ExpectedExpr ExprOrErr = import(E->getExpr());
-    if (!ExprOrErr)
-      return ExprOrErr.takeError();
-    RewrittenInit = ExprOrErr.get();
-  }
+
   return CXXDefaultArgExpr::Create(Importer.getToContext(), *ToUsedLocOrErr,
-                                   *ToParamOrErr, RewrittenInit,
-                                   *UsedContextOrErr);
+                                   *ToParamOrErr, *UsedContextOrErr);
 }
 
 ExpectedStmt
@@ -8388,16 +8381,8 @@ ExpectedStmt ASTNodeImporter::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
     ToField->setInClassInitializer(*ToInClassInitializerOrErr);
   }
 
-  Expr *RewrittenInit = nullptr;
-  if (E->hasRewrittenInit()) {
-    ExpectedExpr ExprOrErr = import(E->getExpr());
-    if (!ExprOrErr)
-      return ExprOrErr.takeError();
-    RewrittenInit = ExprOrErr.get();
-  }
-
   return CXXDefaultInitExpr::Create(Importer.getToContext(), *ToBeginLocOrErr,
-                                    ToField, *UsedContextOrErr, RewrittenInit);
+                                    ToField, *UsedContextOrErr);
 }
 
 ExpectedStmt ASTNodeImporter::VisitCXXNamedCastExpr(CXXNamedCastExpr *E) {

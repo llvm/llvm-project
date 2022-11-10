@@ -102,6 +102,19 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArg) {
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
+TEST(LlvmLibcPrintfParserTest, EvalBadArg) {
+  __llvm_libc::printf_core::FormatSection format_arr[10];
+  const char *str = "%\0abc";
+  int arg1 = 12345;
+  evaluate(format_arr, str, arg1);
+
+  __llvm_libc::printf_core::FormatSection expected;
+  expected.has_conv = false;
+  expected.raw_string = {str, 1};
+
+  ASSERT_PFORMAT_EQ(expected, format_arr[0]);
+}
+
 TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFlags) {
   __llvm_libc::printf_core::FormatSection format_arr[10];
   const char *str = "%+-0 #d";

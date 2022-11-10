@@ -29,7 +29,7 @@ class Builtin_LocationAttr<string name, list<Trait> traits = []>
 //===----------------------------------------------------------------------===//
 
 def CallSiteLoc : Builtin_LocationAttr<"CallSiteLoc", [
-    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+    SubElementAttrInterface
   ]> {
   let summary = "A callsite source location";
   let description = [{
@@ -108,7 +108,7 @@ def FileLineColLoc : Builtin_LocationAttr<"FileLineColLoc"> {
 //===----------------------------------------------------------------------===//
 
 def FusedLoc : Builtin_LocationAttr<"FusedLoc", [
-    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+    SubElementAttrInterface
   ]> {
   let summary = "A tuple of other source locations";
   let description = [{
@@ -149,7 +149,7 @@ def FusedLoc : Builtin_LocationAttr<"FusedLoc", [
 //===----------------------------------------------------------------------===//
 
 def NameLoc : Builtin_LocationAttr<"NameLoc", [
-    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+    SubElementAttrInterface
   ]> {
   let summary = "A named source location";
   let description = [{
@@ -188,7 +188,7 @@ def NameLoc : Builtin_LocationAttr<"NameLoc", [
 //===----------------------------------------------------------------------===//
 
 def OpaqueLoc : Builtin_LocationAttr<"OpaqueLoc", [
-    DeclareAttrInterfaceMethods<SubElementAttrInterface>
+    SubElementAttrInterface
   ]> {
   let summary = "An opaque source location";
   let description = [{

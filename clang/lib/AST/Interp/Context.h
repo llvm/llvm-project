@@ -18,7 +18,6 @@
 
 #include "InterpStack.h"
 #include "clang/AST/APValue.h"
-#include "llvm/ADT/PointerIntPair.h"
 
 namespace clang {
 class ASTContext;
@@ -69,7 +68,6 @@ private:
   /// Checks a result from the interpreter.
   bool Check(State &Parent, llvm::Expected<bool> &&R);
 
-private:
   /// Current compilation context.
   ASTContext &Ctx;
   /// Interpreter stack, shared across invocations.

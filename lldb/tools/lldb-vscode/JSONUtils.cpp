@@ -19,8 +19,6 @@
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBDeclaration.h"
-#include "lldb/API/SBStringList.h"
-#include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/Host/PosixApi.h"
 
@@ -1140,73 +1138,6 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
   reverse_request.try_emplace(
       "arguments", llvm::json::Value(std::move(run_in_terminal_args)));
   return reverse_request;
-}
-
-// Keep all the top level items from the statistics dump, except for the
-// "modules" array. It can be huge and cause delay
-// Array and dictionary value will return as <key, JSON string> pairs
-void FilterAndGetValueForKey(const lldb::SBStructuredData data, const char *key,
-                             llvm::json::Object &out) {
-  lldb::SBStructuredData value = data.GetValueForKey(key);
-  std::string key_utf8 = llvm::json::fixUTF8(key);
-  if (strcmp(key, "modules") == 0)
-    return;
-  switch (value.GetType()) {
-  case lldb::eStructuredDataTypeFloat:
-    out.try_emplace(key_utf8, value.GetFloatValue());
-    break;
-  case lldb::eStructuredDataTypeInteger:
-    out.try_emplace(key_utf8, value.GetIntegerValue());
-    break;
-  case lldb::eStructuredDataTypeArray: {
-    lldb::SBStream contents;
-    value.GetAsJSON(contents);
-    EmplaceSafeString(out, key, contents.GetData());
-  } break;
-  case lldb::eStructuredDataTypeBoolean:
-    out.try_emplace(key_utf8, value.GetBooleanValue());
-    break;
-  case lldb::eStructuredDataTypeString: {
-    // Get the string size before reading
-    const size_t str_length = value.GetStringValue(nullptr, 0);
-    std::string str(str_length + 1, 0);
-    value.GetStringValue(&str[0], str_length);
-    EmplaceSafeString(out, key, str);
-  } break;
-  case lldb::eStructuredDataTypeDictionary: {
-    lldb::SBStream contents;
-    value.GetAsJSON(contents);
-    EmplaceSafeString(out, key, contents.GetData());
-  } break;
-  case lldb::eStructuredDataTypeNull:
-  case lldb::eStructuredDataTypeGeneric:
-  case lldb::eStructuredDataTypeInvalid:
-    break;
-  }
-}
-
-void addStatistic(llvm::json::Object &event) {
-  lldb::SBStructuredData statistics = g_vsc.target.GetStatistics();
-  bool is_dictionary =
-      statistics.GetType() == lldb::eStructuredDataTypeDictionary;
-  if (!is_dictionary)
-    return;
-  llvm::json::Object stats_body;
-
-  lldb::SBStringList keys;
-  if (!statistics.GetKeys(keys))
-    return;
-  for (size_t i = 0; i < keys.GetSize(); i++) {
-    const char *key = keys.GetStringAtIndex(i);
-    FilterAndGetValueForKey(statistics, key, stats_body);
-  }
-  event.try_emplace("statistics", std::move(stats_body));
-}
-
-llvm::json::Object CreateTerminatedEventObject() {
-  llvm::json::Object event(CreateEventObject("terminated"));
-  addStatistic(event);
-  return event;
 }
 
 std::string JSONToString(const llvm::json::Value &json) {

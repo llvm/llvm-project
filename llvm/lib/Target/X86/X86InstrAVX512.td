@@ -9926,7 +9926,7 @@ multiclass avx512_trunc<bits<8> opc, string OpcodeStr, SDNode OpNode128,
                         SDPatternOperator MaskNode128,
                         SDPatternOperator MaskNode256,
                         SDPatternOperator MaskNode512,
-                        X86FoldableSchedWrite sched,
+                        X86SchedWriteWidths sched,
                         AVX512VLVectorVTInfo VTSrcInfo,
                         X86VectorVTInfo DestInfoZ128,
                         X86VectorVTInfo DestInfoZ256, X86VectorVTInfo DestInfoZ,
@@ -9935,25 +9935,25 @@ multiclass avx512_trunc<bits<8> opc, string OpcodeStr, SDNode OpNode128,
                         PatFrag mtruncFrag, Predicate prd = HasAVX512>{
 
   let Predicates = [HasVLX, prd] in {
-    defm Z128:  avx512_trunc_common<opc, OpcodeStr, OpNode128, MaskNode128, sched,
+    defm Z128:  avx512_trunc_common<opc, OpcodeStr, OpNode128, MaskNode128, sched.XMM,
                              VTSrcInfo.info128, DestInfoZ128, x86memopZ128>,
                 avx512_trunc_mr_lowering<VTSrcInfo.info128, truncFrag,
                                          mtruncFrag, NAME>, EVEX_V128;
 
-    defm Z256:  avx512_trunc_common<opc, OpcodeStr, OpNode256, MaskNode256, sched,
+    defm Z256:  avx512_trunc_common<opc, OpcodeStr, OpNode256, MaskNode256, sched.YMM,
                              VTSrcInfo.info256, DestInfoZ256, x86memopZ256>,
                 avx512_trunc_mr_lowering<VTSrcInfo.info256, truncFrag,
                                          mtruncFrag, NAME>, EVEX_V256;
   }
   let Predicates = [prd] in
-    defm Z:     avx512_trunc_common<opc, OpcodeStr, OpNode512, MaskNode512, sched,
+    defm Z:     avx512_trunc_common<opc, OpcodeStr, OpNode512, MaskNode512, sched.ZMM,
                              VTSrcInfo.info512, DestInfoZ, x86memopZ>,
                 avx512_trunc_mr_lowering<VTSrcInfo.info512, truncFrag,
                                          mtruncFrag, NAME>, EVEX_V512;
 }
 
 multiclass avx512_trunc_qb<bits<8> opc, string OpcodeStr,
-                           X86FoldableSchedWrite sched, PatFrag StoreNode,
+                           X86SchedWriteWidths sched, PatFrag StoreNode,
                            PatFrag MaskedStoreNode, SDNode InVecNode,
                            SDPatternOperator InVecMaskNode> {
   defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, InVecNode, InVecNode,
@@ -9965,7 +9965,7 @@ multiclass avx512_trunc_qb<bits<8> opc, string OpcodeStr,
 
 multiclass avx512_trunc_qw<bits<8> opc, string OpcodeStr, SDNode OpNode,
                            SDPatternOperator MaskNode,
-                           X86FoldableSchedWrite sched, PatFrag StoreNode,
+                           X86SchedWriteWidths sched, PatFrag StoreNode,
                            PatFrag MaskedStoreNode, SDNode InVecNode,
                            SDPatternOperator InVecMaskNode> {
   defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, InVecNode, OpNode,
@@ -9977,7 +9977,7 @@ multiclass avx512_trunc_qw<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
 multiclass avx512_trunc_qd<bits<8> opc, string OpcodeStr, SDNode OpNode,
                            SDPatternOperator MaskNode,
-                           X86FoldableSchedWrite sched, PatFrag StoreNode,
+                           X86SchedWriteWidths sched, PatFrag StoreNode,
                            PatFrag MaskedStoreNode, SDNode InVecNode,
                            SDPatternOperator InVecMaskNode> {
   defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, OpNode, OpNode,
@@ -9989,7 +9989,7 @@ multiclass avx512_trunc_qd<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
 multiclass avx512_trunc_db<bits<8> opc, string OpcodeStr, SDNode OpNode,
                            SDPatternOperator MaskNode,
-                           X86FoldableSchedWrite sched, PatFrag StoreNode,
+                           X86SchedWriteWidths sched, PatFrag StoreNode,
                            PatFrag MaskedStoreNode, SDNode InVecNode,
                            SDPatternOperator InVecMaskNode> {
   defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, InVecNode, OpNode,
@@ -10001,7 +10001,7 @@ multiclass avx512_trunc_db<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
 multiclass avx512_trunc_dw<bits<8> opc, string OpcodeStr, SDNode OpNode,
                            SDPatternOperator MaskNode,
-                           X86FoldableSchedWrite sched, PatFrag StoreNode,
+                           X86SchedWriteWidths sched, PatFrag StoreNode,
                            PatFrag MaskedStoreNode, SDNode InVecNode,
                            SDPatternOperator InVecMaskNode> {
   defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, OpNode, OpNode,
@@ -10013,7 +10013,7 @@ multiclass avx512_trunc_dw<bits<8> opc, string OpcodeStr, SDNode OpNode,
 
 multiclass avx512_trunc_wb<bits<8> opc, string OpcodeStr, SDNode OpNode,
                            SDPatternOperator MaskNode,
-                           X86FoldableSchedWrite sched, PatFrag StoreNode,
+                           X86SchedWriteWidths sched, PatFrag StoreNode,
                            PatFrag MaskedStoreNode, SDNode InVecNode,
                            SDPatternOperator InVecMaskNode> {
   defm NAME: avx512_trunc<opc, OpcodeStr, InVecNode, OpNode, OpNode,
@@ -10024,74 +10024,74 @@ multiclass avx512_trunc_wb<bits<8> opc, string OpcodeStr, SDNode OpNode,
 }
 
 defm VPMOVQB    : avx512_trunc_qb<0x32, "vpmovqb",
-                                  WriteVPMOV256, truncstorevi8,
+                                  SchedWriteVecTruncate, truncstorevi8,
                                   masked_truncstorevi8, X86vtrunc, X86vmtrunc>;
 defm VPMOVSQB   : avx512_trunc_qb<0x22, "vpmovsqb",
-                                  WriteVPMOV256, truncstore_s_vi8,
+                                  SchedWriteVecTruncate, truncstore_s_vi8,
                                   masked_truncstore_s_vi8, X86vtruncs,
                                   X86vmtruncs>;
 defm VPMOVUSQB  : avx512_trunc_qb<0x12, "vpmovusqb",
-                                  WriteVPMOV256, truncstore_us_vi8,
+                                  SchedWriteVecTruncate, truncstore_us_vi8,
                                   masked_truncstore_us_vi8, X86vtruncus, X86vmtruncus>;
 
 defm VPMOVQW    : avx512_trunc_qw<0x34, "vpmovqw", trunc, select_trunc,
-                                  WriteVPMOV256, truncstorevi16,
+                                  SchedWriteVecTruncate, truncstorevi16,
                                   masked_truncstorevi16, X86vtrunc, X86vmtrunc>;
 defm VPMOVSQW   : avx512_trunc_qw<0x24, "vpmovsqw",  X86vtruncs, select_truncs,
-                                  WriteVPMOV256, truncstore_s_vi16,
+                                  SchedWriteVecTruncate, truncstore_s_vi16,
                                   masked_truncstore_s_vi16, X86vtruncs,
                                   X86vmtruncs>;
 defm VPMOVUSQW  : avx512_trunc_qw<0x14, "vpmovusqw", X86vtruncus,
-                                  select_truncus, WriteVPMOV256,
+                                  select_truncus, SchedWriteVecTruncate,
                                   truncstore_us_vi16, masked_truncstore_us_vi16,
                                   X86vtruncus, X86vmtruncus>;
 
 defm VPMOVQD    : avx512_trunc_qd<0x35, "vpmovqd", trunc, select_trunc,
-                                  WriteVPMOV256, truncstorevi32,
+                                  SchedWriteVecTruncate, truncstorevi32,
                                   masked_truncstorevi32, X86vtrunc, X86vmtrunc>;
 defm VPMOVSQD   : avx512_trunc_qd<0x25, "vpmovsqd",  X86vtruncs, select_truncs,
-                                  WriteVPMOV256, truncstore_s_vi32,
+                                  SchedWriteVecTruncate, truncstore_s_vi32,
                                   masked_truncstore_s_vi32, X86vtruncs,
                                   X86vmtruncs>;
 defm VPMOVUSQD  : avx512_trunc_qd<0x15, "vpmovusqd", X86vtruncus,
-                                  select_truncus, WriteVPMOV256,
+                                  select_truncus, SchedWriteVecTruncate,
                                   truncstore_us_vi32, masked_truncstore_us_vi32,
                                   X86vtruncus, X86vmtruncus>;
 
 defm VPMOVDB    : avx512_trunc_db<0x31, "vpmovdb", trunc, select_trunc,
-                                  WriteVPMOV256, truncstorevi8,
+                                  SchedWriteVecTruncate, truncstorevi8,
                                   masked_truncstorevi8, X86vtrunc, X86vmtrunc>;
 defm VPMOVSDB   : avx512_trunc_db<0x21, "vpmovsdb", X86vtruncs, select_truncs,
-                                  WriteVPMOV256, truncstore_s_vi8,
+                                  SchedWriteVecTruncate, truncstore_s_vi8,
                                   masked_truncstore_s_vi8, X86vtruncs,
                                   X86vmtruncs>;
 defm VPMOVUSDB  : avx512_trunc_db<0x11, "vpmovusdb",  X86vtruncus,
-                                  select_truncus, WriteVPMOV256,
+                                  select_truncus, SchedWriteVecTruncate,
                                   truncstore_us_vi8, masked_truncstore_us_vi8,
                                   X86vtruncus, X86vmtruncus>;
 
 defm VPMOVDW    : avx512_trunc_dw<0x33, "vpmovdw", trunc, select_trunc,
-                                  WriteVPMOV256, truncstorevi16,
+                                  SchedWriteVecTruncate, truncstorevi16,
                                   masked_truncstorevi16, X86vtrunc, X86vmtrunc>;
 defm VPMOVSDW   : avx512_trunc_dw<0x23, "vpmovsdw", X86vtruncs, select_truncs,
-                                  WriteVPMOV256, truncstore_s_vi16,
+                                  SchedWriteVecTruncate, truncstore_s_vi16,
                                   masked_truncstore_s_vi16, X86vtruncs,
                                   X86vmtruncs>;
 defm VPMOVUSDW  : avx512_trunc_dw<0x13, "vpmovusdw", X86vtruncus,
-                                  select_truncus, WriteVPMOV256,
+                                  select_truncus, SchedWriteVecTruncate,
                                   truncstore_us_vi16, masked_truncstore_us_vi16,
                                   X86vtruncus, X86vmtruncus>;
 
 defm VPMOVWB    : avx512_trunc_wb<0x30, "vpmovwb", trunc, select_trunc,
-                                  WriteVPMOV256, truncstorevi8,
+                                  SchedWriteVecTruncate, truncstorevi8,
                                   masked_truncstorevi8, X86vtrunc,
                                   X86vmtrunc>;
 defm VPMOVSWB   : avx512_trunc_wb<0x20, "vpmovswb", X86vtruncs, select_truncs,
-                                  WriteVPMOV256, truncstore_s_vi8,
+                                  SchedWriteVecTruncate, truncstore_s_vi8,
                                   masked_truncstore_s_vi8, X86vtruncs,
                                   X86vmtruncs>;
 defm VPMOVUSWB  : avx512_trunc_wb<0x10, "vpmovuswb", X86vtruncus,
-                                  select_truncus, WriteVPMOV256,
+                                  select_truncus, SchedWriteVecTruncate,
                                   truncstore_us_vi8, masked_truncstore_us_vi8,
                                   X86vtruncus, X86vmtruncus>;
 

@@ -339,3 +339,14 @@ define <4 x i32> @load_v2i32_v4i32_non_canonical_mask(ptr dereferenceable(16) %p
   %s = shufflevector <2 x i32> %l, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
   ret <4 x i32> %s
 }
+
+define <4 x i32> @load_v2i32_v4i32_non_canonical_mask_commute(ptr dereferenceable(16) %p) {
+; CHECK-LABEL: @load_v2i32_v4i32_non_canonical_mask_commute(
+; CHECK-NEXT:    [[L:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x i32> poison, <2 x i32> [[L]], <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %l = load <2 x i32>, ptr %p, align 1
+  %s = shufflevector <2 x i32> poison, <2 x i32> %l, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  ret <4 x i32> %s
+}
