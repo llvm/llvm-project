@@ -42,10 +42,10 @@ bool hasOnlyScalarElementwiseOp(Region &r);
 bool isElementwise(LinalgOp op);
 
 /// Check if iterator type has "parallel" semantics.
-bool isParallelIterator(StringRef iteratorType);
+bool isParallelIterator(utils::IteratorType iteratorType);
 
 /// Check if iterator type  has "reduction" semantics.
-bool isReductionIterator(StringRef iteratorType);
+bool isReductionIterator(utils::IteratorType iteratorType);
 
 /// Helper function that creates a memref::DimOp or tensor::DimOp depending on
 /// the type of `source`.
@@ -480,7 +480,8 @@ struct RegionMatcher {
 template <typename LoopTy>
 struct GenerateLoopNest {
   static void doit(OpBuilder &b, Location loc, ArrayRef<Range> loopRanges,
-                   LinalgOp linalgOp, ArrayRef<StringRef> iteratorTypes,
+                   LinalgOp linalgOp,
+                   ArrayRef<utils::IteratorType> iteratorTypes,
                    function_ref<scf::ValueVector(OpBuilder &, Location,
                                                  ValueRange, ValueRange)>
                        bodyBuilderFn,

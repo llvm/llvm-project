@@ -269,12 +269,11 @@ def Vector_ContractionOp :
       return CombiningKind::ADD;
     }
 
-    // Returns iterator types in string format.
-    SmallVector<StringRef> getIteratorTypeNames() {
-      return llvm::to_vector(
-          llvm::map_range(getIteratorTypes(), [](Attribute a) {
-            return stringifyIteratorType(a.cast<IteratorTypeAttr>().getValue());
-          }));
+    SmallVector<IteratorType> getIteratorTypesArray() {
+      auto range =
+          getIteratorTypes()
+              .template getAsValueRange<IteratorTypeAttr, IteratorType>();
+      return {range.begin(), range.end()};
     }
   }];
 
