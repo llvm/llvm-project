@@ -2,7 +2,7 @@
 
 ! UNSUPPORTED: system-windows
 
-! REQUIRES: plugins, shell
+! REQUIRES: plugins, shell, examples
 
 ! RUN: %flang -S %s -fpass-plugin=%llvmshlibdir/Bye%pluginext -Xflang -fdebug-pass-manager -o /dev/null 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -S %s -fpass-plugin=%llvmshlibdir/Bye%pluginext -fdebug-pass-manager -o /dev/null 2>&1 | FileCheck %s
