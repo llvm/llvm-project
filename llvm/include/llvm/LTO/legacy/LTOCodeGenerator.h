@@ -24,6 +24,7 @@
 //   As of this writing, we don't separate IPO and the Post-IPO SOPT. They
 // are intermingled together, and are driven by a single pass manager (see
 // PassManagerBuilder::populateLTOPassManager()).
+//   FIXME: populateLTOPassManager no longer exists.
 //
 //   The "LTOCodeGenerator" is the driver for the IPO and Post-IPO stages.
 // The "CodeGenerator" here is bit confusing. Don't confuse the "CodeGenerator"
