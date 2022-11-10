@@ -5,6 +5,7 @@ add_subdirectory(lib)
 llvm_canonicalize_cmake_booleans(
   FLANG_BUILD_EXAMPLES
   FLANG_STANDALONE_BUILD
+  LLVM_BYE_LINK_INTO_TOOLS
   LLVM_ENABLE_PLUGINS
 )
 

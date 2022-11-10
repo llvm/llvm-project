@@ -58,6 +58,13 @@ if config.flang_examples:
 if config.has_plugins:
     config.available_features.add('plugins')
 
+if config.linked_bye_extension:
+    config.substitutions.append(('%loadbye', ''))
+else:
+    config.substitutions.append(('%loadbye',
+                                 '-fpass-plugin={}/Bye{}'.format(config.llvm_shlib_dir,
+                                                                 config.llvm_plugin_ext)))
+
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
 
