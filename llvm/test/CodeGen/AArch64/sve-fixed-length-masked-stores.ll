@@ -9,7 +9,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; Masked Stores
 ;
 
-define void @masked_store_v2f16(<2 x half>* %ap, <2 x half>* %bp) vscale_range(2,0) #0 {
+define void @masked_store_v2f16(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_store_v2f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr s1, [x0]
@@ -27,14 +27,14 @@ define void @masked_store_v2f16(<2 x half>* %ap, <2 x half>* %bp) vscale_range(2
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <2 x half>, <2 x half>* %ap
-  %b = load <2 x half>, <2 x half>* %bp
+  %a = load <2 x half>, ptr %ap
+  %b = load <2 x half>, ptr %bp
   %mask = fcmp oeq <2 x half> %a, %b
-  call void @llvm.masked.store.v2f16(<2 x half> %a, <2 x half>* %bp, i32 8, <2 x i1> %mask)
+  call void @llvm.masked.store.v2f16(<2 x half> %a, ptr %bp, i32 8, <2 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v2f32(<2 x float>* %ap, <2 x float>* %bp) vscale_range(2,0) #0 {
+define void @masked_store_v2f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_store_v2f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr d0, [x0]
@@ -44,14 +44,14 @@ define void @masked_store_v2f32(<2 x float>* %ap, <2 x float>* %bp) vscale_range
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <2 x float>, <2 x float>* %ap
-  %b = load <2 x float>, <2 x float>* %bp
+  %a = load <2 x float>, ptr %ap
+  %b = load <2 x float>, ptr %bp
   %mask = fcmp oeq <2 x float> %a, %b
-  call void @llvm.masked.store.v2f32(<2 x float> %a, <2 x float>* %bp, i32 8, <2 x i1> %mask)
+  call void @llvm.masked.store.v2f32(<2 x float> %a, ptr %bp, i32 8, <2 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v4f32(<4 x float>* %ap, <4 x float>* %bp) vscale_range(2,0) #0 {
+define void @masked_store_v4f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_store_v4f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr q0, [x0]
@@ -61,14 +61,14 @@ define void @masked_store_v4f32(<4 x float>* %ap, <4 x float>* %bp) vscale_range
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z1.s, #0
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <4 x float>, <4 x float>* %ap
-  %b = load <4 x float>, <4 x float>* %bp
+  %a = load <4 x float>, ptr %ap
+  %b = load <4 x float>, ptr %bp
   %mask = fcmp oeq <4 x float> %a, %b
-  call void @llvm.masked.store.v4f32(<4 x float> %a, <4 x float>* %bp, i32 8, <4 x i1> %mask)
+  call void @llvm.masked.store.v4f32(<4 x float> %a, ptr %bp, i32 8, <4 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v8f32(<8 x float>* %ap, <8 x float>* %bp) vscale_range(2,0) #0 {
+define void @masked_store_v8f32(ptr %ap, ptr %bp) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_store_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl8
@@ -77,14 +77,14 @@ define void @masked_store_v8f32(<8 x float>* %ap, <8 x float>* %bp) vscale_range
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
-  %a = load <8 x float>, <8 x float>* %ap
-  %b = load <8 x float>, <8 x float>* %bp
+  %a = load <8 x float>, ptr %ap
+  %b = load <8 x float>, ptr %bp
   %mask = fcmp oeq <8 x float> %a, %b
-  call void @llvm.masked.store.v8f32(<8 x float> %a, <8 x float>* %bp, i32 8, <8 x i1> %mask)
+  call void @llvm.masked.store.v8f32(<8 x float> %a, ptr %bp, i32 8, <8 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v16f32(<16 x float>* %ap, <16 x float>* %bp) #0 {
+define void @masked_store_v16f32(ptr %ap, ptr %bp) #0 {
 ; VBITS_GE_256-LABEL: masked_store_v16f32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -107,14 +107,14 @@ define void @masked_store_v16f32(<16 x float>* %ap, <16 x float>* %bp) #0 {
 ; VBITS_GE_512-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
-  %a = load <16 x float>, <16 x float>* %ap
-  %b = load <16 x float>, <16 x float>* %bp
+  %a = load <16 x float>, ptr %ap
+  %b = load <16 x float>, ptr %bp
   %mask = fcmp oeq <16 x float> %a, %b
-  call void @llvm.masked.store.v16f32(<16 x float> %a, <16 x float>* %ap, i32 8, <16 x i1> %mask)
+  call void @llvm.masked.store.v16f32(<16 x float> %a, ptr %ap, i32 8, <16 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v32f32(<32 x float>* %ap, <32 x float>* %bp) vscale_range(8,0) #0 {
+define void @masked_store_v32f32(ptr %ap, ptr %bp) vscale_range(8,0) #0 {
 ; CHECK-LABEL: masked_store_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
@@ -123,14 +123,14 @@ define void @masked_store_v32f32(<32 x float>* %ap, <32 x float>* %bp) vscale_ra
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %a = load <32 x float>, <32 x float>* %ap
-  %b = load <32 x float>, <32 x float>* %bp
+  %a = load <32 x float>, ptr %ap
+  %b = load <32 x float>, ptr %bp
   %mask = fcmp oeq <32 x float> %a, %b
-  call void @llvm.masked.store.v32f32(<32 x float> %a, <32 x float>* %ap, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.store.v32f32(<32 x float> %a, ptr %ap, i32 8, <32 x i1> %mask)
   ret void
 }
 
-define void @masked_store_v64f32(<64 x float>* %ap, <64 x float>* %bp) vscale_range(16,0) #0 {
+define void @masked_store_v64f32(ptr %ap, ptr %bp) vscale_range(16,0) #0 {
 ; CHECK-LABEL: masked_store_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
@@ -139,14 +139,14 @@ define void @masked_store_v64f32(<64 x float>* %ap, <64 x float>* %bp) vscale_ra
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %a = load <64 x float>, <64 x float>* %ap
-  %b = load <64 x float>, <64 x float>* %bp
+  %a = load <64 x float>, ptr %ap
+  %b = load <64 x float>, ptr %bp
   %mask = fcmp oeq <64 x float> %a, %b
-  call void @llvm.masked.store.v64f32(<64 x float> %a, <64 x float>* %ap, i32 8, <64 x i1> %mask)
+  call void @llvm.masked.store.v64f32(<64 x float> %a, ptr %ap, i32 8, <64 x i1> %mask)
   ret void
 }
 
-define void @masked_store_trunc_v8i64i8(<8 x i64>* %ap, <8 x i64>* %bp, <8 x i8>* %dest) #0 {
+define void @masked_store_trunc_v8i64i8(ptr %ap, ptr %bp, ptr %dest) #0 {
 ; VBITS_GE_256-LABEL: masked_store_trunc_v8i64i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -179,15 +179,15 @@ define void @masked_store_trunc_v8i64i8(<8 x i64>* %ap, <8 x i64>* %bp, <8 x i8>
 ; VBITS_GE_512-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
 ; VBITS_GE_512-NEXT:    st1b { z0.d }, p0, [x2]
 ; VBITS_GE_512-NEXT:    ret
-  %a = load <8 x i64>, <8 x i64>* %ap
-  %b = load <8 x i64>, <8 x i64>* %bp
+  %a = load <8 x i64>, ptr %ap
+  %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %a, %b
   %val = trunc <8 x i64> %a to <8 x i8>
-  call void @llvm.masked.store.v8i8(<8 x i8> %val, <8 x i8>* %dest, i32 8, <8 x i1> %mask)
+  call void @llvm.masked.store.v8i8(<8 x i8> %val, ptr %dest, i32 8, <8 x i1> %mask)
   ret void
 }
 
-define void @masked_store_trunc_v8i64i16(<8 x i64>* %ap, <8 x i64>* %bp, <8 x i16>* %dest) #0 {
+define void @masked_store_trunc_v8i64i16(ptr %ap, ptr %bp, ptr %dest) #0 {
 ; VBITS_GE_256-LABEL: masked_store_trunc_v8i64i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -223,15 +223,15 @@ define void @masked_store_trunc_v8i64i16(<8 x i64>* %ap, <8 x i64>* %bp, <8 x i1
 ; VBITS_GE_512-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
 ; VBITS_GE_512-NEXT:    st1h { z0.d }, p0, [x2]
 ; VBITS_GE_512-NEXT:    ret
-  %a = load <8 x i64>, <8 x i64>* %ap
-  %b = load <8 x i64>, <8 x i64>* %bp
+  %a = load <8 x i64>, ptr %ap
+  %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %a, %b
   %val = trunc <8 x i64> %a to <8 x i16>
-  call void @llvm.masked.store.v8i16(<8 x i16> %val, <8 x i16>* %dest, i32 8, <8 x i1> %mask)
+  call void @llvm.masked.store.v8i16(<8 x i16> %val, ptr %dest, i32 8, <8 x i1> %mask)
   ret void
 }
 
-define void @masked_store_trunc_v8i64i32(<8 x i64>* %ap, <8 x i64>* %bp, <8 x i32>* %dest) #0 {
+define void @masked_store_trunc_v8i64i32(ptr %ap, ptr %bp, ptr %dest) #0 {
 ; VBITS_GE_256-LABEL: masked_store_trunc_v8i64i32:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #4
@@ -264,15 +264,15 @@ define void @masked_store_trunc_v8i64i32(<8 x i64>* %ap, <8 x i64>* %bp, <8 x i3
 ; VBITS_GE_512-NEXT:    cmpeq p0.d, p0/z, z0.d, z1.d
 ; VBITS_GE_512-NEXT:    st1w { z0.d }, p0, [x2]
 ; VBITS_GE_512-NEXT:    ret
-  %a = load <8 x i64>, <8 x i64>* %ap
-  %b = load <8 x i64>, <8 x i64>* %bp
+  %a = load <8 x i64>, ptr %ap
+  %b = load <8 x i64>, ptr %bp
   %mask = icmp eq <8 x i64> %a, %b
   %val = trunc <8 x i64> %a to <8 x i32>
-  call void @llvm.masked.store.v8i32(<8 x i32> %val, <8 x i32>* %dest, i32 8, <8 x i1> %mask)
+  call void @llvm.masked.store.v8i32(<8 x i32> %val, ptr %dest, i32 8, <8 x i1> %mask)
   ret void
 }
 
-define void @masked_store_trunc_v16i32i8(<16 x i32>* %ap, <16 x i32>* %bp, <16 x i8>* %dest) #0 {
+define void @masked_store_trunc_v16i32i8(ptr %ap, ptr %bp, ptr %dest) #0 {
 ; VBITS_GE_256-LABEL: masked_store_trunc_v16i32i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -308,15 +308,15 @@ define void @masked_store_trunc_v16i32i8(<16 x i32>* %ap, <16 x i32>* %bp, <16 x
 ; VBITS_GE_512-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
 ; VBITS_GE_512-NEXT:    st1b { z0.s }, p0, [x2]
 ; VBITS_GE_512-NEXT:    ret
-  %a = load <16 x i32>, <16 x i32>* %ap
-  %b = load <16 x i32>, <16 x i32>* %bp
+  %a = load <16 x i32>, ptr %ap
+  %b = load <16 x i32>, ptr %bp
   %mask = icmp eq <16 x i32> %a, %b
   %val = trunc <16 x i32> %a to <16 x i8>
-  call void @llvm.masked.store.v16i8(<16 x i8> %val, <16 x i8>* %dest, i32 8, <16 x i1> %mask)
+  call void @llvm.masked.store.v16i8(<16 x i8> %val, ptr %dest, i32 8, <16 x i1> %mask)
   ret void
 }
 
-define void @masked_store_trunc_v16i32i16(<16 x i32>* %ap, <16 x i32>* %bp, <16 x i16>* %dest) #0 {
+define void @masked_store_trunc_v16i32i16(ptr %ap, ptr %bp, ptr %dest) #0 {
 ; VBITS_GE_256-LABEL: masked_store_trunc_v16i32i16:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #8
@@ -352,15 +352,15 @@ define void @masked_store_trunc_v16i32i16(<16 x i32>* %ap, <16 x i32>* %bp, <16 
 ; VBITS_GE_512-NEXT:    cmpeq p0.s, p0/z, z0.s, z1.s
 ; VBITS_GE_512-NEXT:    st1h { z0.s }, p0, [x2]
 ; VBITS_GE_512-NEXT:    ret
-  %a = load <16 x i32>, <16 x i32>* %ap
-  %b = load <16 x i32>, <16 x i32>* %bp
+  %a = load <16 x i32>, ptr %ap
+  %b = load <16 x i32>, ptr %bp
   %mask = icmp eq <16 x i32> %a, %b
   %val = trunc <16 x i32> %a to <16 x i16>
-  call void @llvm.masked.store.v16i16(<16 x i16> %val, <16 x i16>* %dest, i32 8, <16 x i1> %mask)
+  call void @llvm.masked.store.v16i16(<16 x i16> %val, ptr %dest, i32 8, <16 x i1> %mask)
   ret void
 }
 
-define void @masked_store_trunc_v32i16i8(<32 x i16>* %ap, <32 x i16>* %bp, <32 x i8>* %dest) #0 {
+define void @masked_store_trunc_v32i16i8(ptr %ap, ptr %bp, ptr %dest) #0 {
 ; VBITS_GE_256-LABEL: masked_store_trunc_v32i16i8:
 ; VBITS_GE_256:       // %bb.0:
 ; VBITS_GE_256-NEXT:    mov x8, #16
@@ -393,27 +393,27 @@ define void @masked_store_trunc_v32i16i8(<32 x i16>* %ap, <32 x i16>* %bp, <32 x
 ; VBITS_GE_512-NEXT:    cmpeq p0.h, p0/z, z0.h, z1.h
 ; VBITS_GE_512-NEXT:    st1b { z0.h }, p0, [x2]
 ; VBITS_GE_512-NEXT:    ret
-  %a = load <32 x i16>, <32 x i16>* %ap
-  %b = load <32 x i16>, <32 x i16>* %bp
+  %a = load <32 x i16>, ptr %ap
+  %b = load <32 x i16>, ptr %bp
   %mask = icmp eq <32 x i16> %a, %b
   %val = trunc <32 x i16> %a to <32 x i8>
-  call void @llvm.masked.store.v32i8(<32 x i8> %val, <32 x i8>* %dest, i32 8, <32 x i1> %mask)
+  call void @llvm.masked.store.v32i8(<32 x i8> %val, ptr %dest, i32 8, <32 x i1> %mask)
   ret void
 }
 
-declare void @llvm.masked.store.v2f16(<2 x half>, <2 x half>*, i32, <2 x i1>)
-declare void @llvm.masked.store.v2f32(<2 x float>, <2 x float>*, i32, <2 x i1>)
-declare void @llvm.masked.store.v4f32(<4 x float>, <4 x float>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v8f32(<8 x float>, <8 x float>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v16f32(<16 x float>, <16 x float>*, i32, <16 x i1>)
-declare void @llvm.masked.store.v32f32(<32 x float>, <32 x float>*, i32, <32 x i1>)
-declare void @llvm.masked.store.v64f32(<64 x float>, <64 x float>*, i32, <64 x i1>)
+declare void @llvm.masked.store.v2f16(<2 x half>, ptr, i32, <2 x i1>)
+declare void @llvm.masked.store.v2f32(<2 x float>, ptr, i32, <2 x i1>)
+declare void @llvm.masked.store.v4f32(<4 x float>, ptr, i32, <4 x i1>)
+declare void @llvm.masked.store.v8f32(<8 x float>, ptr, i32, <8 x i1>)
+declare void @llvm.masked.store.v16f32(<16 x float>, ptr, i32, <16 x i1>)
+declare void @llvm.masked.store.v32f32(<32 x float>, ptr, i32, <32 x i1>)
+declare void @llvm.masked.store.v64f32(<64 x float>, ptr, i32, <64 x i1>)
 
-declare void @llvm.masked.store.v8i8(<8 x i8>, <8 x i8>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v8i16(<8 x i16>, <8 x i16>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v8i32(<8 x i32>, <8 x i32>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v16i8(<16 x i8>, <16 x i8>*, i32, <16 x i1>)
-declare void @llvm.masked.store.v16i16(<16 x i16>, <16 x i16>*, i32, <16 x i1>)
-declare void @llvm.masked.store.v32i8(<32 x i8>, <32 x i8>*, i32, <32 x i1>)
+declare void @llvm.masked.store.v8i8(<8 x i8>, ptr, i32, <8 x i1>)
+declare void @llvm.masked.store.v8i16(<8 x i16>, ptr, i32, <8 x i1>)
+declare void @llvm.masked.store.v8i32(<8 x i32>, ptr, i32, <8 x i1>)
+declare void @llvm.masked.store.v16i8(<16 x i8>, ptr, i32, <16 x i1>)
+declare void @llvm.masked.store.v16i16(<16 x i16>, ptr, i32, <16 x i1>)
+declare void @llvm.masked.store.v32i8(<32 x i8>, ptr, i32, <32 x i1>)
 
 attributes #0 = { "target-features"="+sve" }
