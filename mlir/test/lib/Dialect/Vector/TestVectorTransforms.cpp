@@ -20,6 +20,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -785,6 +786,26 @@ struct TestVectorDistribution
   }
 };
 
+struct TestVectorExtractStridedSliceLowering
+    : public PassWrapper<TestVectorExtractStridedSliceLowering,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestVectorExtractStridedSliceLowering)
+
+  StringRef getArgument() const final {
+    return "test-vector-extract-strided-slice-lowering";
+  }
+  StringRef getDescription() const final {
+    return "Test lowering patterns that converts vector.extract_strided_slice "
+           "into a chain of vector.extract and vector.insert ops";
+  }
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    populateVectorExtractStridedSliceToExtractInsertChainPatterns(patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
 } // namespace
 
 namespace mlir {
@@ -819,6 +840,8 @@ void registerTestVectorLowerings() {
   PassRegistration<TestVectorScanLowering>();
 
   PassRegistration<TestVectorDistribution>();
+
+  PassRegistration<TestVectorExtractStridedSliceLowering>();
 }
 } // namespace test
 } // namespace mlir
