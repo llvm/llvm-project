@@ -518,10 +518,10 @@ define void @select_uniform_eq_2xi32(i32* %ptr, i32 %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, <2 x i32>* [[TMP0]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 16383, i32 16383>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> [[TMP3]], i32 [[X]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[TMP1]], <2 x i32> [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32* [[PTR]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> [[TMP5]], <2 x i32>* [[TMP6]], align 2
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> [[TMP1]], <2 x i32> [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[PTR]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], <2 x i32>* [[TMP5]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -585,10 +585,10 @@ define void @select_uniform_ne_2xi64(i64* %ptr, i64 %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[TMP0]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i64> [[TMP1]], <i64 16383, i64 16383>
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[X:%.*]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> [[TMP3]], i64 [[X]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
-; CHECK-NEXT:    store <2 x i64> [[TMP5]], <2 x i64>* [[TMP6]], align 2
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP2]], <2 x i64> [[TMP1]], <2 x i64> [[SHUFFLE]]
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i64* [[PTR]] to <2 x i64>*
+; CHECK-NEXT:    store <2 x i64> [[TMP4]], <2 x i64>* [[TMP5]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
