@@ -55,6 +55,8 @@ def loongarch_sra_w : SDNode<"LoongArchISD::SRA_W", SDT_LoongArchIntBinOpW>;
 def loongarch_srl_w : SDNode<"LoongArchISD::SRL_W", SDT_LoongArchIntBinOpW>;
 def loongarch_rotr_w : SDNode<"LoongArchISD::ROTR_W", SDT_LoongArchIntBinOpW>;
 def loongarch_rotl_w : SDNode<"LoongArchISD::ROTL_W", SDT_LoongArchIntBinOpW>;
+def loongarch_crc_w_d_w
+    : SDNode<"LoongArchISD::CRC_W_D_W", SDT_LoongArchIntBinOpW>;
 def loongarch_bstrins
     : SDNode<"LoongArchISD::BSTRINS", SDT_LoongArchBStrIns>;
 def loongarch_bstrpick
@@ -1317,6 +1319,9 @@ def : Pat<(int_loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
 
 let Predicates = [IsLA64] in {
 def : Pat<(loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
+
+// CRC Check Instructions
+def : PatGprGpr<loongarch_crc_w_d_w, CRC_W_D_W>;
 } // Predicates = [IsLA64]
 
 /// Other pseudo-instructions

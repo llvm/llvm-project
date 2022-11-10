@@ -19,5 +19,7 @@
 // TODO: Added feature constraints.
 TARGET_BUILTIN(__builtin_loongarch_dbar, "vIUi", "nc", "")
 
+TARGET_BUILTIN(__builtin_loongarch_crc_w_d_w, "iLii", "nc", "64bit")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN
