@@ -6458,6 +6458,8 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
               Mask[I] = I + VecSz;
           for (unsigned I = OffsetEnd + 1 - Offset; I < VecSz; ++I)
             Mask[I] = InMask.test(I) ? UndefMaskElem : I;
+            Mask[I] =
+                ((I >= InMask.size()) || InMask.test(I)) ? UndefMaskElem : I;
           Cost += TTI->getShuffleCost(TTI::SK_PermuteTwoSrc, InsertVecTy, Mask);
         }
       }
