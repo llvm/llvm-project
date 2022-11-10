@@ -815,3 +815,93 @@ define float @maxnum_with_pos_one_op(float %a) {
   %fabs = call float @llvm.fabs.f32(float %max)
   ret float %fabs
 }
+
+define double @fadd_nnan_inf_op0(double %x) {
+; CHECK-LABEL: @fadd_nnan_inf_op0(
+; CHECK-NEXT:    [[R:%.*]] = fadd nnan double 0x7FF0000000000000, [[X:%.*]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = fadd nnan double 0x7ff0000000000000, %x
+  ret double %r
+}
+
+define double @fadd_nnan_inf_op1(double %x) {
+; CHECK-LABEL: @fadd_nnan_inf_op1(
+; CHECK-NEXT:    [[R:%.*]] = fadd nnan double [[X:%.*]], 0x7FF0000000000000
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = fadd nnan double %x, 0x7ff0000000000000
+  ret double %r
+}
+
+define <2 x double> @fadd_nnan_neginf_op1(<2 x double> %x) {
+; CHECK-LABEL: @fadd_nnan_neginf_op1(
+; CHECK-NEXT:    [[R:%.*]] = fadd nnan <2 x double> [[X:%.*]], <double 0xFFF0000000000000, double poison>
+; CHECK-NEXT:    ret <2 x double> [[R]]
+;
+  %r = fadd nnan <2 x double> %x, <double 0xfff0000000000000, double poison>
+  ret <2 x double> %r
+}
+
+define double @fadd_nnan_neginf_op0(double %x) {
+; CHECK-LABEL: @fadd_nnan_neginf_op0(
+; CHECK-NEXT:    [[R:%.*]] = fadd nnan double 0xFFF0000000000000, [[X:%.*]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = fadd nnan double 0xfff0000000000000, %x
+  ret double %r
+}
+
+define double @fadd_inf_op0(double %x) {
+; CHECK-LABEL: @fadd_inf_op0(
+; CHECK-NEXT:    [[R:%.*]] = fadd double 0x7FF0000000000000, [[X:%.*]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = fadd double 0x7ff0000000000000, %x
+  ret double %r
+}
+
+define double @fsub_nnan_inf_op0(double %x) {
+; CHECK-LABEL: @fsub_nnan_inf_op0(
+; CHECK-NEXT:    [[R:%.*]] = fsub nnan double 0x7FF0000000000000, [[X:%.*]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = fsub nnan double 0x7ff0000000000000, %x
+  ret double %r
+}
+
+define double @fsub_nnan_inf_op1(double %x) {
+; CHECK-LABEL: @fsub_nnan_inf_op1(
+; CHECK-NEXT:    [[R:%.*]] = fsub nnan double [[X:%.*]], 0x7FF0000000000000
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = fsub nnan double %x, 0x7ff0000000000000
+  ret double %r
+}
+
+define <2 x double> @fsub_nnan_neginf_op0(<2 x double> %x) {
+; CHECK-LABEL: @fsub_nnan_neginf_op0(
+; CHECK-NEXT:    [[R:%.*]] = fsub nnan <2 x double> <double 0xFFF0000000000000, double poison>, [[X:%.*]]
+; CHECK-NEXT:    ret <2 x double> [[R]]
+;
+  %r = fsub nnan <2 x double> <double 0xfff0000000000000, double poison>, %x
+  ret <2 x double> %r
+}
+
+define double @fsub_nnan_neginf_op1(double %x) {
+; CHECK-LABEL: @fsub_nnan_neginf_op1(
+; CHECK-NEXT:    [[R:%.*]] = fsub nnan double [[X:%.*]], 0xFFF0000000000000
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = fsub nnan double %x, 0xfff0000000000000
+  ret double %r
+}
+
+define double @fsub_inf_op0(double %x) {
+; CHECK-LABEL: @fsub_inf_op0(
+; CHECK-NEXT:    [[R:%.*]] = fsub double 0x7FF0000000000000, [[X:%.*]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %r = fsub double 0x7ff0000000000000, %x
+  ret double %r
+}
