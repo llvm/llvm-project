@@ -26,6 +26,7 @@ protected:
   std::string ABI;
   bool HasFeatureD;
   bool HasFeatureF;
+  static const Builtin::Info BuiltinInfo[];
 
 public:
   LoongArchTargetInfo(const llvm::Triple &Triple, const TargetOptions &)

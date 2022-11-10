@@ -160,9 +160,17 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
+const Builtin::Info LoongArchTargetInfo::BuiltinInfo[] = {
+#define BUILTIN(ID, TYPE, ATTRS)                                               \
+  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE},
+#include "clang/Basic/BuiltinsLoongArch.def"
+};
+
 ArrayRef<Builtin::Info> LoongArchTargetInfo::getTargetBuiltins() const {
-  // TODO: To be implemented in future.
-  return {};
+  return llvm::makeArrayRef(BuiltinInfo, clang::LoongArch::LastTSBuiltin -
+                                             Builtin::FirstTSBuiltin);
 }
 
 bool LoongArchTargetInfo::handleTargetFeatures(
