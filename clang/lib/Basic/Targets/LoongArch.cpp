@@ -131,10 +131,50 @@ LoongArchTargetInfo::convertConstraint(const char *&Constraint) const {
 void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
                                            MacroBuilder &Builder) const {
   Builder.defineMacro("__loongarch__");
-  // TODO: Define more macros.
+  unsigned GRLen = getRegisterWidth();
+  Builder.defineMacro("__loongarch_grlen", Twine(GRLen));
+  if (GRLen == 64)
+    Builder.defineMacro("__loongarch64");
+
+  if (HasFeatureD)
+    Builder.defineMacro("__loongarch_frlen", "64");
+  else if (HasFeatureF)
+    Builder.defineMacro("__loongarch_frlen", "32");
+  else
+    Builder.defineMacro("__loongarch_frlen", "0");
+
+  // TODO: define __loongarch_arch and __loongarch_tune.
+
+  StringRef ABI = getABI();
+  if (ABI == "lp64d" || ABI == "lp64f" || ABI == "lp64s")
+    Builder.defineMacro("__loongarch_lp64");
+
+  if (ABI == "lp64d" || ABI == "ilp32d") {
+    Builder.defineMacro("__loongarch_hard_float");
+    Builder.defineMacro("__loongarch_double_float");
+  } else if (ABI == "lp64f" || ABI == "ilp32f") {
+    Builder.defineMacro("__loongarch_hard_float");
+    Builder.defineMacro("__loongarch_single_float");
+  } else if (ABI == "lp64s" || ABI == "ilp32s") {
+    Builder.defineMacro("__loongarch_soft_float");
+  }
 }
 
 ArrayRef<Builtin::Info> LoongArchTargetInfo::getTargetBuiltins() const {
   // TODO: To be implemented in future.
   return {};
+}
+
+bool LoongArchTargetInfo::handleTargetFeatures(
+    std::vector<std::string> &Features, DiagnosticsEngine &Diags) {
+  for (const auto &Feature : Features) {
+    if (Feature == "+d" || Feature == "+f") {
+      // "d" implies "f".
+      HasFeatureF = true;
+      if (Feature == "+d") {
+        HasFeatureD = true;
+      }
+    }
+  }
+  return true;
 }
