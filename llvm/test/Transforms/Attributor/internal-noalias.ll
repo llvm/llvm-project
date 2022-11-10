@@ -3,7 +3,7 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor-cgscc -attributor-manifest-internal  -attributor-annotate-decl-cs -S < %s | FileCheck %s --check-prefixes=CHECK,CGSCC
 
 define dso_local i32 @visible(i32* noalias %A, i32* noalias %B) #0 {
-; TUNIT: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable
+; TUNIT: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(argmem: read) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@visible
 ; TUNIT-SAME: (i32* noalias nocapture nofree readonly [[A:%.*]], i32* noalias nocapture nofree readonly align 4 [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
@@ -12,12 +12,12 @@ define dso_local i32 @visible(i32* noalias %A, i32* noalias %B) #0 {
 ; TUNIT-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL1]], [[CALL2]]
 ; TUNIT-NEXT:    ret i32 [[ADD]]
 ;
-; CGSCC: Function Attrs: argmemonly nofree noinline nosync nounwind readonly willreturn uwtable
+; CGSCC: Function Attrs: nofree noinline nosync nounwind willreturn memory(argmem: read) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@visible
 ; CGSCC-SAME: (i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CALL1:%.*]] = call i32 @noalias_args(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR5:[0-9]+]]
-; CGSCC-NEXT:    [[CALL2:%.*]] = call i32 @noalias_args_argmem(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[CALL1:%.*]] = call i32 @noalias_args(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]])
+; CGSCC-NEXT:    [[CALL2:%.*]] = call i32 @noalias_args_argmem(i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]])
 ; CGSCC-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL1]], [[CALL2]]
 ; CGSCC-NEXT:    ret i32 [[ADD]]
 ;
@@ -29,7 +29,7 @@ entry:
 }
 
 define private i32 @noalias_args(i32* %A, i32* %B) #0 {
-; TUNIT: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable
+; TUNIT: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(argmem: read) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@noalias_args
 ; TUNIT-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
@@ -40,14 +40,14 @@ define private i32 @noalias_args(i32* %A, i32* %B) #0 {
 ; TUNIT-NEXT:    [[ADD2:%.*]] = add nsw i32 [[ADD]], [[CALL]]
 ; TUNIT-NEXT:    ret i32 [[ADD2]]
 ;
-; CGSCC: Function Attrs: argmemonly nofree noinline nosync nounwind readonly willreturn uwtable
+; CGSCC: Function Attrs: nofree noinline nosync nounwind willreturn memory(argmem: read) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@noalias_args
 ; CGSCC-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A]], align 4
 ; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, i32* [[B]], align 4
 ; CGSCC-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[TMP1]]
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR5:[0-9]+]]
 ; CGSCC-NEXT:    [[ADD2:%.*]] = add nsw i32 [[ADD]], [[CALL]]
 ; CGSCC-NEXT:    ret i32 [[ADD2]]
 ;
@@ -62,7 +62,7 @@ entry:
 
 
 define internal i32 @noalias_args_argmem(i32* %A, i32* %B) #1 {
-; TUNIT: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable
+; TUNIT: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(argmem: read) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@noalias_args_argmem
 ; TUNIT-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0]] {
 ; TUNIT-NEXT:  entry:
@@ -71,7 +71,7 @@ define internal i32 @noalias_args_argmem(i32* %A, i32* %B) #1 {
 ; TUNIT-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[TMP1]]
 ; TUNIT-NEXT:    ret i32 [[ADD]]
 ;
-; CGSCC: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable
+; CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(argmem: read) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@noalias_args_argmem
 ; CGSCC-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]], i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
@@ -88,7 +88,7 @@ entry:
 }
 
 define dso_local i32 @visible_local(i32* %A) #0 {
-; TUNIT: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind willreturn uwtable
+; TUNIT: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@visible_local
 ; TUNIT-SAME: (i32* nocapture nofree readonly [[A:%.*]]) #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
@@ -99,13 +99,13 @@ define dso_local i32 @visible_local(i32* %A) #0 {
 ; TUNIT-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL1]], [[CALL2]]
 ; TUNIT-NEXT:    ret i32 [[ADD]]
 ;
-; CGSCC: Function Attrs: argmemonly nofree noinline nosync nounwind willreturn uwtable
+; CGSCC: Function Attrs: nofree noinline nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@visible_local
 ; CGSCC-SAME: (i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    store i32 5, i32* [[B]], align 4
-; CGSCC-NEXT:    [[CALL1:%.*]] = call i32 @noalias_args(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[CALL1:%.*]] = call i32 @noalias_args(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]])
 ; CGSCC-NEXT:    [[CALL2:%.*]] = call i32 @noalias_args_argmem(i32* nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], i32* noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]])
 ; CGSCC-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL1]], [[CALL2]]
 ; CGSCC-NEXT:    ret i32 [[ADD]]
@@ -120,7 +120,7 @@ entry:
 }
 
 define internal i32 @noalias_args_argmem_ro(i32* %A, i32* %B) #1 {
-; CGSCC: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable
+; CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(argmem: read) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@noalias_args_argmem_ro
 ; CGSCC-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:    [[B_PRIV:%.*]] = alloca i32, align 4
@@ -139,13 +139,13 @@ define internal i32 @noalias_args_argmem_ro(i32* %A, i32* %B) #1 {
 }
 
 define i32 @visible_local_2() {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@visible_local_2
 ; TUNIT-SAME: () #[[ATTR2:[0-9]+]] {
 ; TUNIT-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    ret i32 10
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@visible_local_2
 ; CGSCC-SAME: () #[[ATTR3:[0-9]+]] {
 ; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_ro(i32 noundef 5, i32 noundef 5) #[[ATTR6:[0-9]+]]
@@ -158,13 +158,13 @@ define i32 @visible_local_2() {
 }
 
 define internal i32 @noalias_args_argmem_rn(i32* %A, i32* %B) #1 {
-; TUNIT: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind willreturn uwtable
+; TUNIT: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; TUNIT-LABEL: define {{[^@]+}}@noalias_args_argmem_rn
 ; TUNIT-SAME: (i32* noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:    [[T0:%.*]] = load i32, i32* [[B]], align 4
 ; TUNIT-NEXT:    ret i32 [[T0]]
 ;
-; CGSCC: Function Attrs: argmemonly nofree noinline norecurse nosync nounwind willreturn uwtable
+; CGSCC: Function Attrs: nofree noinline norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@noalias_args_argmem_rn
 ; CGSCC-SAME: (i32* noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR4:[0-9]+]] {
 ; CGSCC-NEXT:    [[T0:%.*]] = load i32, i32* [[B]], align 4
@@ -177,7 +177,7 @@ define internal i32 @noalias_args_argmem_rn(i32* %A, i32* %B) #1 {
 }
 
 define i32 @visible_local_3() {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@visible_local_3
 ; TUNIT-SAME: () #[[ATTR2]] {
 ; TUNIT-NEXT:    [[B:%.*]] = alloca i32, align 4
@@ -185,7 +185,7 @@ define i32 @visible_local_3() {
 ; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_rn(i32* noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[B]]) #[[ATTR4:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[CALL]]
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@visible_local_3
 ; CGSCC-SAME: () #[[ATTR3]] {
 ; CGSCC-NEXT:    [[B:%.*]] = alloca i32, align 4
@@ -202,18 +202,18 @@ define i32 @visible_local_3() {
 attributes #0 = { noinline nounwind uwtable willreturn }
 attributes #1 = { argmemonly noinline nounwind uwtable willreturn}
 ;.
-; TUNIT: attributes #[[ATTR0]] = { argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable }
-; TUNIT: attributes #[[ATTR1]] = { argmemonly nofree noinline norecurse nosync nounwind willreturn uwtable }
-; TUNIT: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind readnone willreturn }
-; TUNIT: attributes #[[ATTR3]] = { nofree nosync nounwind readonly }
+; TUNIT: attributes #[[ATTR0]] = { nofree noinline norecurse nosync nounwind willreturn memory(argmem: read) uwtable }
+; TUNIT: attributes #[[ATTR1]] = { nofree noinline norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable }
+; TUNIT: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; TUNIT: attributes #[[ATTR3]] = { nofree nosync nounwind }
 ; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { argmemonly nofree noinline nosync nounwind readonly willreturn uwtable }
-; CGSCC: attributes #[[ATTR1]] = { argmemonly nofree noinline norecurse nosync nounwind readonly willreturn uwtable }
-; CGSCC: attributes #[[ATTR2]] = { argmemonly nofree noinline nosync nounwind willreturn uwtable }
-; CGSCC: attributes #[[ATTR3]] = { nofree nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR4]] = { argmemonly nofree noinline norecurse nosync nounwind willreturn uwtable }
-; CGSCC: attributes #[[ATTR5]] = { readonly }
-; CGSCC: attributes #[[ATTR6]] = { readonly willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree noinline nosync nounwind willreturn memory(argmem: read) uwtable }
+; CGSCC: attributes #[[ATTR1]] = { nofree noinline norecurse nosync nounwind willreturn memory(argmem: read) uwtable }
+; CGSCC: attributes #[[ATTR2]] = { nofree noinline nosync nounwind willreturn memory(argmem: readwrite) uwtable }
+; CGSCC: attributes #[[ATTR3]] = { nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR4]] = { nofree noinline norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable }
+; CGSCC: attributes #[[ATTR5]] = { memory(read) }
+; CGSCC: attributes #[[ATTR6]] = { willreturn }
 ; CGSCC: attributes #[[ATTR7]] = { nounwind willreturn }
 ;.

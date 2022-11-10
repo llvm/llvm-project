@@ -20,5 +20,5 @@ const B& f(A *a) {
 
 // CHECK: declare ptr @__dynamic_cast(ptr, ptr, ptr, i64) [[NUW_RO:#[0-9]+]]
 
-// CHECK: attributes [[NUW_RO]] = { nounwind readonly }
+// CHECK: attributes [[NUW_RO]] = { nounwind memory(read) }
 // CHECK: attributes [[NR]] = { noreturn }

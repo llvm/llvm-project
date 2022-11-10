@@ -1718,8 +1718,8 @@ static uint64_t getRawAttributeMask(Attribute::AttrKind Val) {
   case Attribute::Convergent:      return 1ULL << 46;
   case Attribute::SafeStack:       return 1ULL << 47;
   case Attribute::NoRecurse:       return 1ULL << 48;
-  case Attribute::InaccessibleMemOnly:         return 1ULL << 49;
-  case Attribute::InaccessibleMemOrArgMemOnly: return 1ULL << 50;
+  // 1ULL << 49 is InaccessibleMemOnly, which is upgraded separately.
+  // 1ULL << 50 is InaccessibleMemOrArgMemOnly, which is upgraded separately.
   case Attribute::SwiftSelf:       return 1ULL << 51;
   case Attribute::SwiftError:      return 1ULL << 52;
   case Attribute::WriteOnly:       return 1ULL << 53;
@@ -1767,7 +1767,8 @@ static void addRawAttributeValue(AttrBuilder &B, uint64_t Val) {
 /// been decoded from the given integer. This function must stay in sync with
 /// 'encodeLLVMAttributesForBitcode'.
 static void decodeLLVMAttributesForBitcode(AttrBuilder &B,
-                                           uint64_t EncodedAttrs) {
+                                           uint64_t EncodedAttrs,
+                                           uint64_t AttrIdx) {
   // The alignment is stored as a 16-bit raw value from bits 31--16.  We shift
   // the bits above 31 down by 11 bits.
   unsigned Alignment = (EncodedAttrs & (0xffffULL << 16)) >> 16;
@@ -1776,8 +1777,43 @@ static void decodeLLVMAttributesForBitcode(AttrBuilder &B,
 
   if (Alignment)
     B.addAlignmentAttr(Alignment);
-  addRawAttributeValue(B, ((EncodedAttrs & (0xfffffULL << 32)) >> 11) |
-                          (EncodedAttrs & 0xffff));
+
+  uint64_t Attrs = ((EncodedAttrs & (0xfffffULL << 32)) >> 11) |
+                   (EncodedAttrs & 0xffff);
+
+  if (AttrIdx == AttributeList::FunctionIndex) {
+    // Upgrade old memory attributes.
+    MemoryEffects ME = MemoryEffects::unknown();
+    if (Attrs & (1ULL << 9)) {
+      // ReadNone
+      Attrs &= ~(1ULL << 9);
+      ME &= MemoryEffects::none();
+    }
+    if (Attrs & (1ULL << 10)) {
+      // ReadOnly
+      Attrs &= ~(1ULL << 10);
+      ME &= MemoryEffects::readOnly();
+    }
+    if (Attrs & (1ULL << 49)) {
+      // InaccessibleMemOnly
+      Attrs &= ~(1ULL << 49);
+      ME &= MemoryEffects::inaccessibleMemOnly();
+    }
+    if (Attrs & (1ULL << 50)) {
+      // InaccessibleMemOrArgMemOnly
+      Attrs &= ~(1ULL << 50);
+      ME &= MemoryEffects::inaccessibleOrArgMemOnly();
+    }
+    if (Attrs & (1ULL << 53)) {
+      // WriteOnly
+      Attrs &= ~(1ULL << 53);
+      ME &= MemoryEffects::writeOnly();
+    }
+    if (ME != MemoryEffects::unknown())
+      B.addMemoryAttr(ME);
+  }
+
+  addRawAttributeValue(B, Attrs);
 }
 
 Error BitcodeReader::parseAttributeBlock() {
@@ -1824,7 +1860,7 @@ Error BitcodeReader::parseAttributeBlock() {
 
       for (unsigned i = 0, e = Record.size(); i != e; i += 2) {
         AttrBuilder B(Context);
-        decodeLLVMAttributesForBitcode(B, Record[i+1]);
+        decodeLLVMAttributesForBitcode(B, Record[i+1], Record[i]);
         Attrs.push_back(AttributeList::get(Context, Record[i], B));
       }
 
@@ -1851,8 +1887,6 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::Alignment;
   case bitc::ATTR_KIND_ALWAYS_INLINE:
     return Attribute::AlwaysInline;
-  case bitc::ATTR_KIND_ARGMEMONLY:
-    return Attribute::ArgMemOnly;
   case bitc::ATTR_KIND_BUILTIN:
     return Attribute::Builtin;
   case bitc::ATTR_KIND_BY_VAL:
@@ -1869,10 +1903,6 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::ElementType;
   case bitc::ATTR_KIND_FNRETTHUNK_EXTERN:
     return Attribute::FnRetThunkExtern;
-  case bitc::ATTR_KIND_INACCESSIBLEMEM_ONLY:
-    return Attribute::InaccessibleMemOnly;
-  case bitc::ATTR_KIND_INACCESSIBLEMEM_OR_ARGMEMONLY:
-    return Attribute::InaccessibleMemOrArgMemOnly;
   case bitc::ATTR_KIND_INLINE_HINT:
     return Attribute::InlineHint;
   case bitc::ATTR_KIND_IN_REG:
@@ -2039,6 +2069,31 @@ Error BitcodeReader::parseAttrKind(uint64_t Code, Attribute::AttrKind *Kind) {
   return Error::success();
 }
 
+static bool upgradeOldMemoryAttribute(MemoryEffects &ME, uint64_t EncodedKind) {
+  switch (EncodedKind) {
+  case bitc::ATTR_KIND_READ_NONE:
+    ME &= MemoryEffects::none();
+    return true;
+  case bitc::ATTR_KIND_READ_ONLY:
+    ME &= MemoryEffects::readOnly();
+    return true;
+  case bitc::ATTR_KIND_WRITEONLY:
+    ME &= MemoryEffects::writeOnly();
+    return true;
+  case bitc::ATTR_KIND_ARGMEMONLY:
+    ME &= MemoryEffects::argMemOnly();
+    return true;
+  case bitc::ATTR_KIND_INACCESSIBLEMEM_ONLY:
+    ME &= MemoryEffects::inaccessibleMemOnly();
+    return true;
+  case bitc::ATTR_KIND_INACCESSIBLEMEM_OR_ARGMEMONLY:
+    ME &= MemoryEffects::inaccessibleOrArgMemOnly();
+    return true;
+  default:
+    return false;
+  }
+}
+
 Error BitcodeReader::parseAttributeGroupBlock() {
   if (Error Err = Stream.EnterSubBlock(bitc::PARAMATTR_GROUP_BLOCK_ID))
     return Err;
@@ -2082,10 +2137,16 @@ Error BitcodeReader::parseAttributeGroupBlock() {
       uint64_t Idx = Record[1]; // Index of the object this attribute refers to.
 
       AttrBuilder B(Context);
+      MemoryEffects ME = MemoryEffects::unknown();
       for (unsigned i = 2, e = Record.size(); i != e; ++i) {
         if (Record[i] == 0) {        // Enum attribute
           Attribute::AttrKind Kind;
-          if (Error Err = parseAttrKind(Record[++i], &Kind))
+          uint64_t EncodedKind = Record[++i];
+          if (Idx == AttributeList::FunctionIndex &&
+              upgradeOldMemoryAttribute(ME, EncodedKind))
+            continue;
+
+          if (Error Err = parseAttrKind(EncodedKind, &Kind))
             return Err;
 
           // Upgrade old-style byval attribute to one with a type, even if it's
@@ -2158,6 +2219,9 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           return error("Invalid attribute group entry");
         }
       }
+
+      if (ME != MemoryEffects::unknown())
+        B.addMemoryAttr(ME);
 
       UpgradeAttributes(B);
       MAttributeGroups[GrpID] = AttributeList::get(Context, Idx, B);

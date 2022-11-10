@@ -752,30 +752,10 @@ static bool isIntrinsicCall(const CallBase *Call, Intrinsic::ID IID) {
   return II && II->getIntrinsicID() == IID;
 }
 
-static MemoryEffects getMemoryEffectsFromAttrs(AttributeSet Attrs) {
-  if (Attrs.hasAttribute(Attribute::ReadNone))
-    return MemoryEffects::none();
-
-  ModRefInfo MR = ModRefInfo::ModRef;
-  if (Attrs.hasAttribute(Attribute::ReadOnly))
-    MR = ModRefInfo::Ref;
-  else if (Attrs.hasAttribute(Attribute::WriteOnly))
-    MR = ModRefInfo::Mod;
-
-  if (Attrs.hasAttribute(Attribute::ArgMemOnly))
-    return MemoryEffects::argMemOnly(MR);
-  if (Attrs.hasAttribute(Attribute::InaccessibleMemOnly))
-    return MemoryEffects::inaccessibleMemOnly(MR);
-  if (Attrs.hasAttribute(Attribute::InaccessibleMemOrArgMemOnly))
-    return MemoryEffects::inaccessibleOrArgMemOnly(MR);
-  return MemoryEffects(MR);
-}
-
 /// Returns the behavior when calling the given call site.
 MemoryEffects BasicAAResult::getMemoryEffects(const CallBase *Call,
                                               AAQueryInfo &AAQI) {
-  MemoryEffects Min =
-      getMemoryEffectsFromAttrs(Call->getAttributes().getFnAttrs());
+  MemoryEffects Min = Call->getAttributes().getMemoryEffects();
 
   if (const Function *F = dyn_cast<Function>(Call->getCalledOperand())) {
     MemoryEffects FuncME = AAQI.AAR.getMemoryEffects(F);
@@ -803,7 +783,7 @@ MemoryEffects BasicAAResult::getMemoryEffects(const Function *F) {
            MemoryEffects::inaccessibleMemOnly(ModRefInfo::ModRef);
   }
 
-  return getMemoryEffectsFromAttrs(F->getAttributes().getFnAttrs());
+  return F->getMemoryEffects();
 }
 
 ModRefInfo BasicAAResult::getArgModRefInfo(const CallBase *Call,

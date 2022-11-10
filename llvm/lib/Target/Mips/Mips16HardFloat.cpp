@@ -12,6 +12,7 @@
 
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/ModRef.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Debug.h"
@@ -409,7 +410,8 @@ static bool fixupFPReturnAndCall(Function &F, Module *M,
         // functions will take place.
         //
         A = A.addFnAttribute(C, "__Mips16RetHelper");
-        A = A.addFnAttribute(C, Attribute::ReadNone);
+        A = A.addFnAttribute(
+            C, Attribute::getWithMemoryEffects(C, MemoryEffects::none()));
         A = A.addFnAttribute(C, Attribute::NoInline);
         FunctionCallee F = (M->getOrInsertFunction(Name, A, MyVoid, T));
         CallInst::Create(F, Params, "", &I);

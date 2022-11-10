@@ -6,13 +6,13 @@
 %"b" = type { i8 }
 
 define hidden i64 @f1() align 2 {
-; TUNIT: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; TUNIT-LABEL: define {{[^@]+}}@f1
 ; TUNIT-SAME: () #[[ATTR0:[0-9]+]] align 2 {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    ret i64 undef
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@f1
 ; CGSCC-SAME: () #[[ATTR0:[0-9]+]] align 2 {
 ; CGSCC-NEXT:  entry:
@@ -27,7 +27,7 @@ entry:
 }
 
 define internal i64 @f2(%"a"* %this) align 2 {
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@f2
 ; CGSCC-SAME: () #[[ATTR0]] align 2 {
 ; CGSCC-NEXT:  entry:
@@ -43,7 +43,7 @@ entry:
 }
 
 define internal void @f3(%"b"* %this) align 2 {
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@f3
 ; CGSCC-SAME: () #[[ATTR0]] align 2 {
 ; CGSCC-NEXT:  entry:
@@ -58,7 +58,7 @@ entry:
 }
 
 define internal i1 @f4(%"b"* %this) align 2 {
-; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@f4
 ; CGSCC-SAME: () #[[ATTR0]] align 2 {
 ; CGSCC-NEXT:  entry:
@@ -73,7 +73,7 @@ entry:
 }
 
 define internal %"a"* @f5(%"b"* %this) align 2 {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind readnone willreturn
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@f5
 ; CGSCC-SAME: () #[[ATTR1:[0-9]+]] align 2 {
 ; CGSCC-NEXT:  entry:
@@ -87,9 +87,9 @@ entry:
   ret %"a"* %0
 }
 ;.
-; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(none) }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR2]] = { readnone willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR2]] = { willreturn }
 ;.

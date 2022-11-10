@@ -67,7 +67,7 @@ define void @external(void (i8*)* %fp) {
 ; CGSCC-SAME: (void (i8*)* [[FP:%.*]]) {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    call void @foo(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR1]]
+; CGSCC-NEXT:    call void @foo(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    call void @callback1(void (i32*)* noundef nonnull @foo)
 ; CGSCC-NEXT:    call void @callback2(void (i8*)* noundef bitcast (void (i32*)* @foo to void (i8*)*))
 ; CGSCC-NEXT:    call void @callback2(void (i8*)* [[FP]])
@@ -93,7 +93,7 @@ entry:
 
 define internal void @foo(i32* %a) {
 ;
-; CHECK: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn writeonly
+; CHECK: Function Attrs: nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CHECK-LABEL: define {{[^@]+}}@foo
 ; CHECK-SAME: (i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -108,9 +108,10 @@ entry:
 declare void @callback1(void (i32*)*)
 declare void @callback2(void (i8*)*)
 ;.
-; TUNIT: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
-; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn writeonly }
+; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: write) }
+; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
-; CGSCC: attributes #[[ATTR1]] = { nounwind willreturn writeonly }
+; CGSCC: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind willreturn memory(argmem: write) }
+; CGSCC: attributes #[[ATTR1]] = { nounwind willreturn memory(write) }
+; CGSCC: attributes #[[ATTR2]] = { nounwind willreturn }
 ;.
