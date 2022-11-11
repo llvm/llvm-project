@@ -7,9 +7,7 @@
 
 define i1 @canonicalize_oeq_canonicalize_f32(float %x, float %y) {
 ; CHECK-LABEL: @canonicalize_oeq_canonicalize_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call float @llvm.canonicalize.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -20,9 +18,7 @@ define i1 @canonicalize_oeq_canonicalize_f32(float %x, float %y) {
 
 define i1 @canonicalize_oeq_canonicalize_f32_flags(float %x, float %y) {
 ; CHECK-LABEL: @canonicalize_oeq_canonicalize_f32_flags(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call float @llvm.canonicalize.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp nsz oeq float [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nsz oeq float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -33,9 +29,7 @@ define i1 @canonicalize_oeq_canonicalize_f32_flags(float %x, float %y) {
 
 define <2 x i1> @canonicalize_oeq_canonicalize_v2f32(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @canonicalize_oeq_canonicalize_v2f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %canon.x = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %x)
@@ -46,9 +40,7 @@ define <2 x i1> @canonicalize_oeq_canonicalize_v2f32(<2 x float> %x, <2 x float>
 
 define i1 @canonicalize_ueq_canonicalize_f32(float %x, float %y) {
 ; CHECK-LABEL: @canonicalize_ueq_canonicalize_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call float @llvm.canonicalize.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -59,9 +51,7 @@ define i1 @canonicalize_ueq_canonicalize_f32(float %x, float %y) {
 
 define <2 x i1> @canonicalize_ueq_canonicalize_v2f32(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @canonicalize_ueq_canonicalize_v2f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq <2 x float> [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %canon.x = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %x)
@@ -72,9 +62,7 @@ define <2 x i1> @canonicalize_ueq_canonicalize_v2f32(<2 x float> %x, <2 x float>
 
 define i1 @canonicalize_one_canonicalize_f32(float %x, float %y) {
 ; CHECK-LABEL: @canonicalize_one_canonicalize_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call float @llvm.canonicalize.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -85,9 +73,7 @@ define i1 @canonicalize_one_canonicalize_f32(float %x, float %y) {
 
 define <2 x i1> @canonicalize_one_canonicalize_v2f32(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @canonicalize_one_canonicalize_v2f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one <2 x float> [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp one <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %canon.x = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %x)
@@ -98,9 +84,7 @@ define <2 x i1> @canonicalize_one_canonicalize_v2f32(<2 x float> %x, <2 x float>
 
 define i1 @canonicalize_une_canonicalize_f32(float %x, float %y) {
 ; CHECK-LABEL: @canonicalize_une_canonicalize_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call float @llvm.canonicalize.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -111,9 +95,7 @@ define i1 @canonicalize_une_canonicalize_f32(float %x, float %y) {
 
 define <2 x i1> @canonicalize_une_canonicalize_v2f32(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @canonicalize_une_canonicalize_v2f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <2 x float> [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %canon.x = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %x)
@@ -124,9 +106,7 @@ define <2 x i1> @canonicalize_une_canonicalize_v2f32(<2 x float> %x, <2 x float>
 
 define i1 @canonicalize_ogt_canonicalize_f32(float %x, float %y) {
 ; CHECK-LABEL: @canonicalize_ogt_canonicalize_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call float @llvm.canonicalize.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -137,9 +117,7 @@ define i1 @canonicalize_ogt_canonicalize_f32(float %x, float %y) {
 
 define i1 @canonicalize_oge_canonicalize_f32(float %x, float %y) {
 ; CHECK-LABEL: @canonicalize_oge_canonicalize_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call float @llvm.canonicalize.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -150,9 +128,7 @@ define i1 @canonicalize_oge_canonicalize_f32(float %x, float %y) {
 
 define i1 @canonicalize_olt_canonicalize_f32(float %x, float %y) {
 ; CHECK-LABEL: @canonicalize_olt_canonicalize_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call float @llvm.canonicalize.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -163,9 +139,7 @@ define i1 @canonicalize_olt_canonicalize_f32(float %x, float %y) {
 
 define i1 @canonicalize_ole_canonicalize_f32(float %x, float %y) {
 ; CHECK-LABEL: @canonicalize_ole_canonicalize_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call float @llvm.canonicalize.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -176,9 +150,7 @@ define i1 @canonicalize_ole_canonicalize_f32(float %x, float %y) {
 
 define i1 @canonicalize_ord_canonicalize_f32(float %x, float %y) {
 ; CHECK-LABEL: @canonicalize_ord_canonicalize_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call float @llvm.canonicalize.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -189,9 +161,7 @@ define i1 @canonicalize_ord_canonicalize_f32(float %x, float %y) {
 
 define i1 @canonicalize_ugt_canonicalize_f32(float %x, float %y) {
 ; CHECK-LABEL: @canonicalize_ugt_canonicalize_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call float @llvm.canonicalize.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -202,9 +172,7 @@ define i1 @canonicalize_ugt_canonicalize_f32(float %x, float %y) {
 
 define i1 @canonicalize_uge_canonicalize_f32(float %x, float %y) {
 ; CHECK-LABEL: @canonicalize_uge_canonicalize_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call float @llvm.canonicalize.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -215,9 +183,7 @@ define i1 @canonicalize_uge_canonicalize_f32(float %x, float %y) {
 
 define i1 @canonicalize_ult_canonicalize_f32(float %x, float %y) {
 ; CHECK-LABEL: @canonicalize_ult_canonicalize_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call float @llvm.canonicalize.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -228,9 +194,7 @@ define i1 @canonicalize_ult_canonicalize_f32(float %x, float %y) {
 
 define i1 @canonicalize_ule_canonicalize_f32(float %x, float %y) {
 ; CHECK-LABEL: @canonicalize_ule_canonicalize_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call float @llvm.canonicalize.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -241,9 +205,7 @@ define i1 @canonicalize_ule_canonicalize_f32(float %x, float %y) {
 
 define i1 @canonicalize_uno_canonicalize_f32(float %x, float %y) {
 ; CHECK-LABEL: @canonicalize_uno_canonicalize_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CANON_Y:%.*]] = call float @llvm.canonicalize.f32(float [[Y:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[CANON_X]], [[CANON_Y]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -288,8 +250,7 @@ define i1 @canonicalize_oeq_y_commute_f32() {
 
 define i1 @canonicalize_oeq_arg_f32(float %x) {
 ; CHECK-LABEL: @canonicalize_oeq_arg_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[CANON_X]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -299,8 +260,7 @@ define i1 @canonicalize_oeq_arg_f32(float %x) {
 
 define i1 @canonicalize_oeq_arg_f32_flags(float %x) {
 ; CHECK-LABEL: @canonicalize_oeq_arg_f32_flags(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp nsz oeq float [[CANON_X]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nsz ord float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -314,8 +274,7 @@ declare <2 x float> @gen_v2f32()
 define i1 @canonicalize_oeq_arg_f32_commute() {
 ; CHECK-LABEL: @canonicalize_oeq_arg_f32_commute(
 ; CHECK-NEXT:    [[X:%.*]] = call float @gen_f32()
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp nsz oeq float [[X]], [[CANON_X]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nsz ord float [[X]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %x = call float @gen_f32() ; thwart complexity-based canonicalization
@@ -326,8 +285,7 @@ define i1 @canonicalize_oeq_arg_f32_commute() {
 
 define <2 x i1> @canonicalize_oeq_arg_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @canonicalize_oeq_arg_v2f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[CANON_X]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord <2 x float> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %canon.x = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %x)
@@ -338,8 +296,7 @@ define <2 x i1> @canonicalize_oeq_arg_v2f32(<2 x float> %x) {
 define <2 x i1> @canonicalize_oeq_arg_v2f32_commute() {
 ; CHECK-LABEL: @canonicalize_oeq_arg_v2f32_commute(
 ; CHECK-NEXT:    [[X:%.*]] = call <2 x float> @gen_v2f32()
-; CHECK-NEXT:    [[CANON_X:%.*]] = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[X]], [[CANON_X]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord <2 x float> [[X]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %x = call <2 x float> @gen_v2f32() ; thwart complexity-based canonicalization
@@ -350,9 +307,7 @@ define <2 x i1> @canonicalize_oeq_arg_v2f32_commute() {
 
 define i1 @canonicalize_ueq_arg_f32(float %x) {
 ; CHECK-LABEL: @canonicalize_ueq_arg_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq float [[CANON_X]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
   %cmp = fcmp ueq float %canon.x, %x
@@ -361,9 +316,7 @@ define i1 @canonicalize_ueq_arg_f32(float %x) {
 
 define <2 x i1> @canonicalize_ueq_arg_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @canonicalize_ueq_arg_v2f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq <2 x float> [[CANON_X]], [[X]]
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
 ;
   %canon.x = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %x)
   %cmp = fcmp ueq <2 x float> %canon.x, %x
@@ -372,9 +325,7 @@ define <2 x i1> @canonicalize_ueq_arg_v2f32(<2 x float> %x) {
 
 define i1 @canonicalize_one_arg_f32(float %x) {
 ; CHECK-LABEL: @canonicalize_one_arg_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one float [[CANON_X]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
   %cmp = fcmp one float %canon.x, %x
@@ -383,9 +334,7 @@ define i1 @canonicalize_one_arg_f32(float %x) {
 
 define <2 x i1> @canonicalize_one_arg_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @canonicalize_one_arg_v2f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp one <2 x float> [[CANON_X]], [[X]]
-; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %canon.x = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %x)
   %cmp = fcmp one <2 x float> %canon.x, %x
@@ -394,8 +343,7 @@ define <2 x i1> @canonicalize_one_arg_v2f32(<2 x float> %x) {
 
 define i1 @canonicalize_une_arg_f32(float %x) {
 ; CHECK-LABEL: @canonicalize_une_arg_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[CANON_X]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -405,8 +353,7 @@ define i1 @canonicalize_une_arg_f32(float %x) {
 
 define <2 x i1> @canonicalize_une_arg_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @canonicalize_une_arg_v2f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp une <2 x float> [[CANON_X]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno <2 x float> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %canon.x = call <2 x float> @llvm.canonicalize.v2f32(<2 x float> %x)
@@ -416,9 +363,7 @@ define <2 x i1> @canonicalize_une_arg_v2f32(<2 x float> %x) {
 
 define i1 @canonicalize_ogt_arg_f32(float %x) {
 ; CHECK-LABEL: @canonicalize_ogt_arg_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[CANON_X]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
   %cmp = fcmp ogt float %canon.x, %x
@@ -427,8 +372,7 @@ define i1 @canonicalize_ogt_arg_f32(float %x) {
 
 define i1 @canonicalize_oge_arg_f32(float %x) {
 ; CHECK-LABEL: @canonicalize_oge_arg_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[CANON_X]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -438,9 +382,7 @@ define i1 @canonicalize_oge_arg_f32(float %x) {
 
 define i1 @canonicalize_olt_arg_f32(float %x) {
 ; CHECK-LABEL: @canonicalize_olt_arg_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[CANON_X]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
   %cmp = fcmp olt float %canon.x, %x
@@ -449,8 +391,7 @@ define i1 @canonicalize_olt_arg_f32(float %x) {
 
 define i1 @canonicalize_ole_arg_f32(float %x) {
 ; CHECK-LABEL: @canonicalize_ole_arg_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ole float [[CANON_X]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -460,8 +401,7 @@ define i1 @canonicalize_ole_arg_f32(float %x) {
 
 define i1 @canonicalize_ord_arg_f32(float %x) {
 ; CHECK-LABEL: @canonicalize_ord_arg_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[CANON_X]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ord float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -471,8 +411,7 @@ define i1 @canonicalize_ord_arg_f32(float %x) {
 
 define i1 @canonicalize_ugt_arg_f32(float %x) {
 ; CHECK-LABEL: @canonicalize_ugt_arg_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ugt float [[CANON_X]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -482,9 +421,7 @@ define i1 @canonicalize_ugt_arg_f32(float %x) {
 
 define i1 @canonicalize_uge_arg_f32(float %x) {
 ; CHECK-LABEL: @canonicalize_uge_arg_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[CANON_X]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
   %cmp = fcmp uge float %canon.x, %x
@@ -493,8 +430,7 @@ define i1 @canonicalize_uge_arg_f32(float %x) {
 
 define i1 @canonicalize_ult_arg_f32(float %x) {
 ; CHECK-LABEL: @canonicalize_ult_arg_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ult float [[CANON_X]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
@@ -504,9 +440,7 @@ define i1 @canonicalize_ult_arg_f32(float %x) {
 
 define i1 @canonicalize_ule_arg_f32(float %x) {
 ; CHECK-LABEL: @canonicalize_ule_arg_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[CANON_X]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
   %cmp = fcmp ule float %canon.x, %x
@@ -515,8 +449,7 @@ define i1 @canonicalize_ule_arg_f32(float %x) {
 
 define i1 @canonicalize_uno_arg_f32(float %x) {
 ; CHECK-LABEL: @canonicalize_uno_arg_f32(
-; CHECK-NEXT:    [[CANON_X:%.*]] = call float @llvm.canonicalize.f32(float [[X:%.*]])
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[CANON_X]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp uno float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %canon.x = call float @llvm.canonicalize.f32(float %x)
