@@ -28,52 +28,18 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
       if (auto SS = Recognizer(&ND)) {
         // FIXME: Also report forward decls from main-file, so that the caller
         // can decide to insert/ignore a header.
-        return CB({Loc, Symbol(*SS), RT}, findIncludeHeaders(*SS, SM, PI));
+        return CB({Loc, Symbol(*SS), RT}, findHeaders(*SS, SM, PI));
       }
       // FIXME: Extract locations from redecls.
-      return CB({Loc, Symbol(ND), RT},
-                findIncludeHeaders(ND.getLocation(), SM, PI));
+      return CB({Loc, Symbol(ND), RT}, findHeaders(ND.getLocation(), SM, PI));
     });
   }
   for (const SymbolReference &MacroRef : MacroRefs) {
     assert(MacroRef.Target.kind() == Symbol::Macro);
     // FIXME: Handle macro locations.
     return CB(MacroRef,
-              findIncludeHeaders(MacroRef.Target.macro().Definition, SM, PI));
+              findHeaders(MacroRef.Target.macro().Definition, SM, PI));
   }
-}
-
-llvm::SmallVector<Header> findIncludeHeaders(const SymbolLocation &SLoc,
-                                             const SourceManager &SM,
-                                             const PragmaIncludes &PI) {
-  llvm::SmallVector<Header> Results;
-  if (auto *Loc = std::get_if<SourceLocation>(&SLoc)) {
-    // FIXME: Handle non self-contained files.
-    FileID FID = SM.getFileID(*Loc);
-    const auto *FE = SM.getFileEntryForID(FID);
-    if (!FE)
-      return {};
-
-    // We treat the spelling header in the IWYU pragma as the final public
-    // header.
-    // FIXME: look for exporters if the public header is exported by another
-    // header.
-    llvm::StringRef VerbatimSpelling = PI.getPublic(FE);
-    if (!VerbatimSpelling.empty())
-      return {Header(VerbatimSpelling)};
-
-    Results = {Header(FE)};
-    // FIXME: compute transitive exporter headers.
-    for (const auto *Export : PI.getExporters(FE, SM.getFileManager()))
-      Results.push_back(Export);
-    return Results;
-  }
-  if (auto *Sym = std::get_if<tooling::stdlib::Symbol>(&SLoc)) {
-    for (const auto &H : Sym->headers())
-      Results.push_back(H);
-    return Results;
-  }
-  llvm_unreachable("unhandled SymbolLocation kind!");
 }
 
 } // namespace clang::include_cleaner
