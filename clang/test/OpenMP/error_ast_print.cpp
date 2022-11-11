@@ -13,16 +13,16 @@
 void foo() {}
 // CHECK: template <typename T, int N> int tmain(T argc, char **argv)
 // CHECK: static int a;
-// CHECK-NEXT: #pragma omp error
+// CHECK-NEXT: #pragma omp error at(execution)
 // CHECK-NEXT: a = argv[0][0];
 // CHECK-NEXT: ++a;
-// CHECK-NEXT: #pragma omp error
+// CHECK-NEXT: #pragma omp error at(execution)
 // CHECK-NEXT: {
 // CHECK-NEXT: int b = 10;
 // CHECK-NEXT: T c = 100;
 // CHECK-NEXT: a = b + c;
 // CHECK-NEXT: }
-// CHECK-NEXT: #pragma omp error
+// CHECK-NEXT: #pragma omp error at(execution)
 // CHECK-NEXT: foo();
 // CHECK-NEXT: return N;
 
@@ -30,16 +30,16 @@ template <typename T, int N>
 int tmain(T argc, char **argv) {
   T b = argc, c, d, e, f, g;
   static int a;
-#pragma omp error
+#pragma omp error at(execution)
   a = argv[0][0];
   ++a;
-#pragma omp error
+#pragma omp error at(execution)
   {
     int b = 10;
     T c = 100;
     a = b + c;
   }
-#pragma omp  error
+#pragma omp  error at(execution)
   foo();
 return N;
 }
@@ -47,16 +47,16 @@ return N;
 // CHECK: int main(int argc, char **argv)
 // CHECK-NEXT: int b = argc, c, d, e, f, g;
 // CHECK-NEXT: static int a;
-// CHECK-NEXT: #pragma omp error
+// CHECK-NEXT: #pragma omp error at(execution)
 // CHECK-NEXT: a = 2;
-// CHECK-NEXT: #pragma omp error
+// CHECK-NEXT: #pragma omp error at(execution)
 // CHECK-NEXT: foo();
 int main (int argc, char **argv) {
   int b = argc, c, d, e, f, g;
   static int a;
-#pragma omp error
+#pragma omp error at(execution)
    a=2;
-#pragma omp error
+#pragma omp error at(execution)
   foo();
 }
 #endif

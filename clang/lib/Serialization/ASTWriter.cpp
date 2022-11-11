@@ -6981,6 +6981,12 @@ void OMPClauseWriter::VisitOMPAtomicDefaultMemOrderClause(
   Record.AddSourceLocation(C->getAtomicDefaultMemOrderKindKwLoc());
 }
 
+void OMPClauseWriter::VisitOMPAtClause(OMPAtClause *C) {
+  Record.push_back(C->getAtKind());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getAtKindKwLoc());
+}
+
 void OMPClauseWriter::VisitOMPNontemporalClause(OMPNontemporalClause *C) {
   Record.push_back(C->varlist_size());
   Record.AddSourceLocation(C->getLParenLoc());
