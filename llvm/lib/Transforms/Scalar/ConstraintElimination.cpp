@@ -210,7 +210,7 @@ decomposeGEP(GetElementPtrInst &GEP,
   // Do not reason about pointers where the index size is larger than 64 bits,
   // as the coefficients used to encode constraints are 64 bit integers.
   if (DL.getIndexTypeSizeInBits(GEP.getPointerOperand()->getType()) > 64)
-    return {};
+    return {{0, nullptr}, {1, &GEP}};
 
   if (!GEP.isInBounds())
     return {{0, nullptr}, {1, &GEP}};
@@ -226,7 +226,7 @@ decomposeGEP(GetElementPtrInst &GEP,
     auto GTI = gep_type_begin(GEP);
     // Bail out for scalable vectors for now.
     if (isa<ScalableVectorType>(GTI.getIndexedType()))
-      return {};
+      return {{0, nullptr}, {1, &GEP}};
     int64_t Scale = static_cast<int64_t>(
         DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize());
 
@@ -253,7 +253,7 @@ decomposeGEP(GetElementPtrInst &GEP,
 
     // Bail out for scalable vectors for now.
     if (isa<ScalableVectorType>(GTI.getIndexedType()))
-      return {};
+      return {{0, nullptr}, {1, &GEP}};
 
     // Struct indices must be constants (and reference an existing field). Add
     // them to the constant factor.
@@ -274,14 +274,11 @@ decomposeGEP(GetElementPtrInst &GEP,
     unsigned Scale = DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize();
 
     auto IdxResult = decompose(Index, Preconditions, IsSigned, DL);
-    if (IdxResult.empty()) {
-      Result.emplace_back(Scale, Index);
-    } else {
-      for (auto &KV : IdxResult)
-        KV.Coefficient = multiplyWithOverflow(KV.Coefficient, Scale);
-      Result[0].Coefficient += IdxResult[0].Coefficient;
-      append_range(Result, ArrayRef<DecompEntry>(IdxResult).drop_front());
-    }
+    for (auto &KV : IdxResult)
+      KV.Coefficient = multiplyWithOverflow(KV.Coefficient, Scale);
+    Result[0].Coefficient += IdxResult[0].Coefficient;
+    append_range(Result, ArrayRef<DecompEntry>(IdxResult).drop_front());
+
     // If Op0 is signed non-negative, the GEP is increasing monotonically and
     // can be de-composed.
     if (!isKnownNonNegative(Index, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
@@ -304,8 +301,6 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
                             bool IsSignedB) -> SmallVector<DecompEntry, 4> {
     auto ResA = decompose(A, Preconditions, IsSigned, DL);
     auto ResB = decompose(B, Preconditions, IsSignedB, DL);
-    if (ResA.empty() || ResB.empty())
-      return {};
     ResA[0].Coefficient += ResB[0].Coefficient;
     append_range(ResA, drop_begin(ResB));
     return ResA;
@@ -327,7 +322,7 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
 
   if (auto *CI = dyn_cast<ConstantInt>(V)) {
     if (CI->uge(MaxConstraintValue))
-      return {};
+      return {{0, nullptr}, {1, V}};
     return {{int64_t(CI->getZExtValue()), nullptr}};
   }
 
@@ -434,10 +429,6 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                         Preconditions, IsSigned, DL);
   auto BDec = decompose(Op1->stripPointerCastsSameRepresentation(),
                         Preconditions, IsSigned, DL);
-  // Skip if decomposing either of the values failed.
-  if (ADec.empty() || BDec.empty())
-    return {};
-
   int64_t Offset1 = ADec[0].Coefficient;
   int64_t Offset2 = BDec[0].Coefficient;
   Offset1 *= -1;
