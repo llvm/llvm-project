@@ -830,11 +830,30 @@ InstCombinerImpl::foldIntrinsicWithOverflowCommon(IntrinsicInst *II) {
   return nullptr;
 }
 
+/// \returns true if the test performed by llvm.is.fpclass(x, \p Mask) is
+/// equivalent to fcmp oeq x, 0.0 with the floating-point environment assumed
+/// for \p F for type \p Ty
+static bool fpclassTestIsFCmp0(FPClassTest Mask, const Function &F, Type *Ty) {
+  if (Mask == fcZero)
+    return F.getDenormalMode(Ty->getScalarType()->getFltSemantics()).Input ==
+           DenormalMode::IEEE;
+
+  if (Mask == (fcZero | fcSubnormal)) {
+    DenormalMode::DenormalModeKind InputMode =
+        F.getDenormalMode(Ty->getScalarType()->getFltSemantics()).Input;
+    return InputMode == DenormalMode::PreserveSign ||
+           InputMode == DenormalMode::PositiveZero;
+  }
+
+  return false;
+}
+
 Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
   Value *Src0 = II.getArgOperand(0);
   Value *Src1 = II.getArgOperand(1);
   const ConstantInt *CMask = cast<ConstantInt>(Src1);
   uint32_t Mask = CMask->getZExtValue();
+  uint32_t InvertedMask = ~CMask->getZExtValue() & fcAllFlags;
   const bool IsStrict = II.isStrictFP();
 
   Value *FNegSrc;
@@ -891,6 +910,28 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
     // Equivalent of !isnan. Replace with standard fcmp.
     Value *FCmp =
         Builder.CreateFCmpORD(Src0, ConstantFP::getZero(Src0->getType()));
+    FCmp->takeName(&II);
+    return replaceInstUsesWith(II, FCmp);
+  }
+
+  if (!IsStrict &&
+      fpclassTestIsFCmp0(static_cast<FPClassTest>(Mask),
+                         *II.getParent()->getParent(), Src0->getType())) {
+    // Equivalent of == 0.
+    Value *FCmp =
+        Builder.CreateFCmpOEQ(Src0, ConstantFP::get(Src0->getType(), 0.0));
+
+    FCmp->takeName(&II);
+    return replaceInstUsesWith(II, FCmp);
+  }
+
+  if (!IsStrict &&
+      fpclassTestIsFCmp0(static_cast<FPClassTest>(InvertedMask),
+                         *II.getParent()->getParent(), Src0->getType())) {
+    // Equivalent of !(x == 0).
+    Value *FCmp =
+        Builder.CreateFCmpUNE(Src0, ConstantFP::get(Src0->getType(), 0.0));
+
     FCmp->takeName(&II);
     return replaceInstUsesWith(II, FCmp);
   }
