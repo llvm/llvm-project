@@ -877,6 +877,14 @@ define double @fsub_nnan_inf_op1(double %x) {
   ret double %r
 }
 
+define <2 x double> @fsub_nnan_inf_op1_vec(<2 x double> %x) {
+; CHECK-LABEL: @fsub_nnan_inf_op1_vec(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF0000000000000, double poison>
+;
+  %r = fsub nnan <2 x double> %x, <double 0xfff0000000000000, double poison>
+  ret <2 x double> %r
+}
+
 define <2 x double> @fsub_nnan_neginf_op0(<2 x double> %x) {
 ; CHECK-LABEL: @fsub_nnan_neginf_op0(
 ; CHECK-NEXT:    ret <2 x double> <double 0xFFF0000000000000, double poison>
