@@ -16739,7 +16739,7 @@ that the compiler does not constant fold the operation. Likewise, division by
 ``@llvm.canonicalize`` must preserve the equality relation. That is:
 
 - ``(@llvm.canonicalize(x) == x)`` is equivalent to ``(x == x)``
-- ``(@llvm.canonicalize(x) == @llvm.canonicalize(y))`` is equivalent to
+- ``(@llvm.canonicalize(x) == @llvm.canonicalize(y))`` is equivalent
   to ``(x == y)``
 
 Additionally, the sign of zero must be conserved:
