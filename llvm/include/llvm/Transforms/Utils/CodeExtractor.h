@@ -104,7 +104,6 @@ public:
     // Bits of intermediate state computed at various phases of extraction.
     SetVector<BasicBlock *> Blocks;
 
-
     /// Lists of blocks that are branched from the code region to be extracted.
     /// Each block is contained at most once. Its order defines the return value
     /// of the extracted function, when leaving the extracted function via the
@@ -248,8 +247,9 @@ public:
     /// changes of the control flow or the Blocks list.
     void recomputeSwitchCases();
 
-   /// Return the type used for the return code of the extracted function to indicate which exit block to jump to.
-   Type * getSwitchType();
+    /// Return the type used for the return code of the extracted function to
+    /// indicate which exit block to jump to.
+    Type *getSwitchType();
 
     void severSplitPHINodesOfEntry(BasicBlock *&Header);
     void severSplitPHINodesOfExits();

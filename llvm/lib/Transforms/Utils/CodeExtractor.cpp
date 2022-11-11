@@ -815,10 +815,6 @@ Function *CodeExtractor::constructFunctionDeclaration(
   Function *oldFunction = Blocks.front()->getParent();
   Module *M = Blocks.front()->getModule();
 
- 
-
-
-
   // Assemble the function's parameter lists.
   std::vector<Type *> ParamTy;
   std::vector<Type *> AggParamTy;
@@ -1476,22 +1472,21 @@ void CodeExtractor::recomputeSwitchCases() {
   }
 }
 
-Type *CodeExtractor:: getSwitchType() {
-    LLVMContext &Context = Blocks.front()->getContext();
+Type *CodeExtractor::getSwitchType() {
+  LLVMContext &Context = Blocks.front()->getContext();
 
-    assert(SwitchCases.size() < 0xffff && "too many exit blocks for switch"); 
-    switch (SwitchCases.size()) {
-    case 0:
-    case 1:
-        return Type::getVoidTy(Context);
-    case 2:  
-        // Conditional branch, return a bool
-        return Type::getInt1Ty(Context);
-    default:
-        return Type::getInt16Ty(Context);
-    }
+  assert(SwitchCases.size() < 0xffff && "too many exit blocks for switch");
+  switch (SwitchCases.size()) {
+  case 0:
+  case 1:
+    return Type::getVoidTy(Context);
+  case 2:
+    // Conditional branch, return a bool
+    return Type::getInt1Ty(Context);
+  default:
+    return Type::getInt16Ty(Context);
+  }
 }
-
 
 void CodeExtractor::emitFunctionBody(
     const ValueSet &inputs, const ValueSet &outputs,
@@ -1580,9 +1575,9 @@ void CodeExtractor::emitFunctionBody(
     switch (SwitchCases.size()) {
     case 0:
     case 1:
-        // No value needed.
+      // No value needed.
       break;
-    case 2:  // Conditional branch, return a bool
+    case 2: // Conditional branch, return a bool
       brVal = ConstantInt::get(RetTy, !SuccNum);
       break;
     default:
