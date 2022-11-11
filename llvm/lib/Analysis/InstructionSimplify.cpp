@@ -6147,6 +6147,20 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
         match(Op1, m_FNeg(m_Specific(Op0))))
       return Op1;
     break;
+  case Intrinsic::is_fpclass: {
+    if (isa<PoisonValue>(Op0))
+      return PoisonValue::get(ReturnType);
+
+    uint64_t Mask = cast<ConstantInt>(Op1)->getZExtValue();
+    // If all tests are made, it doesn't matter what the value is.
+    if ((Mask & fcAllFlags) == fcAllFlags)
+      return ConstantInt::get(ReturnType, true);
+    if ((Mask & fcAllFlags) == 0)
+      return ConstantInt::get(ReturnType, false);
+    if (Q.isUndefValue(Op0))
+      return UndefValue::get(ReturnType);
+    break;
+  }
   case Intrinsic::maxnum:
   case Intrinsic::minnum:
   case Intrinsic::maximum:
