@@ -119,7 +119,7 @@ static bool increaseGranularity(std::vector<Chunk> &Chunks) {
   if (SplitOne) {
     Chunks = NewChunks;
     if (Verbose) {
-      errs() << "Success! New Chunks:\n";
+      errs() << "Success! " << NewChunks.size() << " New Chunks:\n";
       for (auto C : Chunks) {
         errs() << '\t';
         C.print();
