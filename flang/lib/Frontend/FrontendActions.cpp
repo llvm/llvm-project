@@ -48,6 +48,7 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SourceMgr.h"
@@ -675,6 +676,7 @@ static void generateMachineCodeOrAssemblyImpl(clang::DiagnosticsEngine &diags,
 
 void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   auto opts = getInstance().getInvocation().getCodeGenOpts();
+  auto &diags = getInstance().getDiagnostics();
   llvm::OptimizationLevel level = mapToLevel(opts);
 
   // Create the analysis managers.
@@ -690,6 +692,17 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::StandardInstrumentations si(opts.DebugPassManager);
   si.registerCallbacks(pic, &fam);
   llvm::PassBuilder pb(tm.get(), pto, pgoOpt, &pic);
+
+  // Attempt to load pass plugins and register their callbacks with PB.
+  for (auto &pluginFile : opts.LLVMPassPlugins) {
+    auto passPlugin = llvm::PassPlugin::Load(pluginFile);
+    if (passPlugin) {
+      passPlugin->registerPassBuilderCallbacks(pb);
+    } else {
+      diags.Report(clang::diag::err_fe_unable_to_load_plugin)
+          << pluginFile << passPlugin.takeError();
+    }
+  }
 
   // Register all the basic analyses with the managers.
   pb.registerModuleAnalyses(mam);

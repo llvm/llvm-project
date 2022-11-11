@@ -167,6 +167,11 @@ def : DC<"CIGDVAC", 0b011, 0b0111, 0b1110, 0b101>;
 def : DC<"GZVA",    0b011, 0b0111, 0b0100, 0b100>;
 }
 
+let Requires = [{ {AArch64::FeatureMEC} }] in {
+def : DC<"CIGDPAE", 0b100, 0b0111, 0b1110, 0b000>;
+def : DC<"CIPAE",   0b100, 0b0111, 0b1110, 0b111>;
+}
+
 //===----------------------------------------------------------------------===//
 // IC (instruction cache maintenance) instruction options.
 //===----------------------------------------------------------------------===//
@@ -794,6 +799,18 @@ let Requires = [{ {AArch64::FeatureRME} }] in {
 def : RWSysReg<"MFAR_EL3",  0b11, 0b110, 0b0110, 0b0000, 0b101>;
 def : RWSysReg<"GPCCR_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b110>;
 def : RWSysReg<"GPTBR_EL3", 0b11, 0b110, 0b0010, 0b0001, 0b100>;
+}
+
+// v9a Memory Encryption Contexts Extension registers
+let Requires = [{ {AArch64::FeatureMEC} }] in {
+def : ROSysReg<"MECIDR_EL2",     0b11, 0b100, 0b1010, 0b1000, 0b111>;
+def : RWSysReg<"MECID_P0_EL2",   0b11, 0b100, 0b1010, 0b1000, 0b000>;
+def : RWSysReg<"MECID_A0_EL2",   0b11, 0b100, 0b1010, 0b1000, 0b001>;
+def : RWSysReg<"MECID_P1_EL2",   0b11, 0b100, 0b1010, 0b1000, 0b010>;
+def : RWSysReg<"MECID_A1_EL2",   0b11, 0b100, 0b1010, 0b1000, 0b011>;
+def : RWSysReg<"VMECID_P_EL2",   0b11, 0b100, 0b1010, 0b1001, 0b000>;
+def : RWSysReg<"VMECID_A_EL2",   0b11, 0b100, 0b1010, 0b1001, 0b001>;
+def : RWSysReg<"MECID_RL_A_EL3", 0b11, 0b110, 0b1010, 0b1010, 0b001>;
 }
 
 // v9-a Scalable Matrix Extension (SME) registers

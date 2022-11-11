@@ -4,12 +4,12 @@
 // Invalid vector lists
 
 pext {p0.h, p2.h}, pn8[0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must be sequential
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: pext {p0.h, p2.h}, pn8[0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 pext {p15.h, p1.h}, pn8[0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must be sequential
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: pext {p15.h, p1.h}, pn8[0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
