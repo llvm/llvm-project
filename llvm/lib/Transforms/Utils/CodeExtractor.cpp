@@ -1733,9 +1733,9 @@ CallInst *CodeExtractor::emitReplacerCall(
   }
 
   // Emit the call to the function
-  CallInst *call =
-      CallInst::Create(newFunction, params,
-          SwitchCases.size() > 1 ? "targetBlock" : "", codeReplacer);
+  CallInst *call = CallInst::Create(newFunction, params,
+                                    SwitchCases.size() > 1 ? "targetBlock" : "",
+                                    codeReplacer);
 
   // Set swifterror parameter attributes.
   unsigned ParamIdx = 0;
@@ -1837,7 +1837,8 @@ CallInst *CodeExtractor::emitReplacerCall(
     TheSwitch->setCondition(call);
     TheSwitch->setDefaultDest(TheSwitch->getSuccessor(SwitchCases.size()));
     // Remove redundant case
-    TheSwitch->removeCase(SwitchInst::CaseIt(TheSwitch, SwitchCases.size() - 1));
+    TheSwitch->removeCase(
+        SwitchInst::CaseIt(TheSwitch, SwitchCases.size() - 1));
     break;
   }
 
