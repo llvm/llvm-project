@@ -2922,7 +2922,6 @@ static bool tryOrrWithShift(SDNode *N, SDValue OrOpd0, SDValue OrOpd1,
 
   assert((!BiggerPattern) && "BiggerPattern should be handled above");
 
-  SDValue Op;
   uint64_t ShlImm;
   if (isOpcWithIntImmediate(OrOpd0.getNode(), ISD::SHL, ShlImm)) {
     if (OrOpd0.getOperand(0) == Src && OrOpd0.hasOneUse()) {
