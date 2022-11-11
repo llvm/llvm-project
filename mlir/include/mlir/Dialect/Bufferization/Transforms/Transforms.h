@@ -1,4 +1,4 @@
-//===- EmptyTensorElimination.h - tensor.empty op elimination -------------===//
+//===- Transforms.h - Bufferization and related transforms ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_EMPTYTENSORELIMINATION_H
-#define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_EMPTYTENSORELIMINATION_H
+#ifndef MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_TRANSFORMS_H
+#define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_TRANSFORMS_H
 
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
+#include "mlir/IR/Operation.h"
 
 namespace mlir {
 namespace bufferization {
+class AnalysisState;
+struct OneShotBufferizationOptions;
 
 /// A function that matches anchor OpOperands for tensor::EmptyOp elimination.
 /// If an OpOperand is matched, the function should populate the SmallVector
@@ -42,7 +45,22 @@ LogicalResult eliminateEmptyTensors(RewriterBase &rewriter, Operation *op,
 LogicalResult insertSliceAnchoredEmptyTensorEliminationStep(
     RewriterBase &rewriter, Operation *op, bufferization::AnalysisState &state);
 
+/// Resolve RaW and other conflicts by inserting bufferization.alloc_tensor ops.
+/// After applying this transform, the IR can be bufferized without inserting
+/// additional buffer allocations.
+LogicalResult insertTensorCopies(Operation *op,
+                                 const OneShotBufferizationOptions &options);
+
+/// Resolve RaW and other conflicts by inserting bufferization.alloc_tensor ops.
+/// After applying this transform, the IR can be bufferized without inserting
+/// additional buffer allocations.
+LogicalResult insertTensorCopies(Operation *op, const AnalysisState &state);
+
+/// Populate patterns to lower tensor.empty ops to bufferization.alloc_tensor
+/// ops.
+void populateEmptyTensorToAllocTensorPattern(RewritePatternSet &patterns);
+
 } // namespace bufferization
 } // namespace mlir
 
-#endif // MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_EMPTYTENSORELIMINATION_H
+#endif // MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_TRANSFORMS_H
