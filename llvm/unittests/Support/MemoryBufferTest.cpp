@@ -226,6 +226,22 @@ TEST_F(MemoryBufferTest, make_new) {
   EXPECT_EQ(nullptr, Five.get());
 }
 
+TEST_F(MemoryBufferTest, getNewAligned) {
+  auto CheckAlignment = [](size_t AlignmentValue) {
+    Align Alignment(AlignmentValue);
+    OwningBuffer AlignedBuffer =
+        WritableMemoryBuffer::getNewUninitMemBuffer(0, "", Alignment);
+    EXPECT_TRUE(isAddrAligned(Alignment, AlignedBuffer->getBufferStart()));
+  };
+
+  // Test allocation with different alignments.
+  CheckAlignment(16);
+  CheckAlignment(32);
+  CheckAlignment(64);
+  CheckAlignment(128);
+  CheckAlignment(256);
+}
+
 void MemoryBufferTest::testGetOpenFileSlice(bool Reopen) {
   // Test that MemoryBuffer::getOpenFile works properly when no null
   // terminator is requested and the size is large enough to trigger
