@@ -56,6 +56,7 @@ private:
   void writeExportTrie(raw_ostream &OS);
   void writeDynamicSymbolTable(raw_ostream &OS);
   void writeFunctionStarts(raw_ostream &OS);
+  void writeChainedFixups(raw_ostream &OS);
   void writeDataInCode(raw_ostream &OS);
 
   void dumpExportEntry(raw_ostream &OS, MachOYAML::ExportEntry &Entry);
@@ -487,6 +488,7 @@ void MachOWriter::writeLinkEditData(raw_ostream &OS) {
   MachO::symtab_command *SymtabCmd = nullptr;
   MachO::dysymtab_command *DSymtabCmd = nullptr;
   MachO::linkedit_data_command *FunctionStartsCmd = nullptr;
+  MachO::linkedit_data_command *ChainedFixupsCmd = nullptr;
   MachO::linkedit_data_command *DataInCodeCmd = nullptr;
   for (auto &LC : Obj.LoadCommands) {
     switch (LC.Data.load_command_data.cmd) {
@@ -519,6 +521,11 @@ void MachOWriter::writeLinkEditData(raw_ostream &OS) {
       FunctionStartsCmd = &LC.Data.linkedit_data_command_data;
       WriteQueue.push_back(std::make_pair(FunctionStartsCmd->dataoff,
                                           &MachOWriter::writeFunctionStarts));
+      break;
+    case MachO::LC_DYLD_CHAINED_FIXUPS:
+      ChainedFixupsCmd = &LC.Data.linkedit_data_command_data;
+      WriteQueue.push_back(std::make_pair(ChainedFixupsCmd->dataoff,
+                                          &MachOWriter::writeChainedFixups));
       break;
     case MachO::LC_DATA_IN_CODE:
       DataInCodeCmd = &LC.Data.linkedit_data_command_data;
@@ -600,6 +607,12 @@ void MachOWriter::writeDataInCode(raw_ostream &OS) {
     OS.write(reinterpret_cast<const char *>(&DICE),
              sizeof(MachO::data_in_code_entry));
   }
+}
+
+void MachOWriter::writeChainedFixups(raw_ostream &OS) {
+  if (Obj.LinkEdit.ChainedFixups.size() > 0)
+    OS.write(reinterpret_cast<const char *>(Obj.LinkEdit.ChainedFixups.data()),
+             Obj.LinkEdit.ChainedFixups.size());
 }
 
 class UniversalWriter {
