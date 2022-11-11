@@ -169,7 +169,8 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapForeachToBlocksImpl(
   SmallVector<int64_t> mapping;
   if (!foreachThreadOp.getMapping().has_value())
     return transformOp.emitSilenceableError() << "mapping must be present";
-  for (DeviceMappingAttrInterface map : *foreachThreadOp.getMapping()) {
+  for (DeviceMappingAttrInterface map :
+       foreachThreadOp.getMapping()->getValue()) {
     if (auto blockMap = map.dyn_cast<GPUBlockMappingAttr>()) {
       mapping.push_back((int64_t)blockMap.getBlock());
     } else {
@@ -351,7 +352,8 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
   SmallVector<int64_t> mapping;
   if (!foreachThreadOp.getMapping().has_value())
     return failureHelper("mapping must be present");
-  for (DeviceMappingAttrInterface map : *foreachThreadOp.getMapping()) {
+  for (DeviceMappingAttrInterface map :
+       foreachThreadOp.getMapping()->getValue()) {
     if (auto threadMap = map.dyn_cast<GPUThreadMappingAttr>()) {
       mapping.push_back((int64_t)threadMap.getThread());
     } else {
