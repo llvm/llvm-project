@@ -9,8 +9,6 @@
 #include "Coroutines.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "lldb/Symbol/Function.h"
-#include "lldb/Symbol/VariableList.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -32,57 +30,6 @@ static ValueObjectSP GetCoroFramePtrFromHandle(ValueObject &valobj) {
     return nullptr;
 
   return ptr_sp;
-}
-
-static Function *ExtractDestroyFunction(ValueObjectSP &frame_ptr_sp) {
-  lldb::TargetSP target_sp = frame_ptr_sp->GetTargetSP();
-  lldb::ProcessSP process_sp = frame_ptr_sp->GetProcessSP();
-  auto ptr_size = process_sp->GetAddressByteSize();
-
-  AddressType addr_type;
-  lldb::addr_t frame_ptr_addr = frame_ptr_sp->GetPointerValue(&addr_type);
-  if (!frame_ptr_addr || frame_ptr_addr == LLDB_INVALID_ADDRESS)
-    return nullptr;
-  lldbassert(addr_type == AddressType::eAddressTypeLoad);
-
-  Status error;
-  // The destroy pointer is the 2nd pointer inside the compiler-generated
-  // `pair<resumePtr,destroyPtr>`.
-  auto destroy_func_ptr_addr = frame_ptr_addr + ptr_size;
-  lldb::addr_t destroy_func_addr =
-      process_sp->ReadPointerFromMemory(destroy_func_ptr_addr, error);
-  if (error.Fail())
-    return nullptr;
-
-  Address destroy_func_address;
-  if (!target_sp->ResolveLoadAddress(destroy_func_addr, destroy_func_address))
-    return nullptr;
-
-  Function *destroy_func =
-      destroy_func_address.CalculateSymbolContextFunction();
-  if (!destroy_func)
-    return nullptr;
-
-  return destroy_func;
-}
-
-static CompilerType InferPromiseType(Function &destroy_func) {
-  SymbolContext sc;
-  Block &block = destroy_func.GetBlock(true);
-  auto variable_list = block.GetBlockVariableList(true);
-
-  // clang generates an artificial `__promise` variable inside the
-  // `destroy` function. Look for it.
-  auto promise_var = variable_list->FindVariable(ConstString("__promise"));
-  if (!promise_var)
-    return {};
-  if (!promise_var->IsArtificial())
-    return {};
-
-  Type *promise_type = promise_var->GetType();
-  if (!promise_type)
-    return {};
-  return promise_type->GetForwardCompilerType();
 }
 
 static CompilerType GetCoroutineFrameType(TypeSystemClang &ast_ctx,
@@ -111,11 +58,7 @@ bool lldb_private::formatters::StdlibCoroutineHandleSummaryProvider(
   if (!ptr_sp)
     return false;
 
-  if (!ptr_sp->GetValueAsUnsigned(0)) {
-    stream << "nullptr";
-  } else {
-    stream.Printf("coro frame = 0x%" PRIx64, ptr_sp->GetValueAsUnsigned(0));
-  }
+  stream.Printf("coro frame = 0x%" PRIx64, ptr_sp->GetValueAsUnsigned(0));
   return true;
 }
 
@@ -157,26 +100,15 @@ bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
   if (!ptr_sp)
     return false;
 
-  // Get the `promise_type` from the template argument
+  TypeSystemClang *ast_ctx = llvm::dyn_cast_or_null<TypeSystemClang>(
+      valobj_sp->GetCompilerType().GetTypeSystem());
+  if (!ast_ctx)
+    return false;
+
   CompilerType promise_type(
       valobj_sp->GetCompilerType().GetTypeTemplateArgument(0));
   if (!promise_type)
     return false;
-
-  // Try to infer the promise_type if it was type-erased
-  if (promise_type.IsVoidType()) {
-    if (Function *destroy_func = ExtractDestroyFunction(ptr_sp)) {
-      if (CompilerType inferred_type = InferPromiseType(*destroy_func)) {
-        promise_type = inferred_type;
-      }
-    }
-  }
-
-  // Build the coroutine frame type
-  TypeSystemClang *ast_ctx = llvm::dyn_cast_or_null<TypeSystemClang>(
-      ptr_sp->GetCompilerType().GetTypeSystem());
-  if (!ast_ctx)
-    return {};
   CompilerType coro_frame_type = GetCoroutineFrameType(*ast_ctx, promise_type);
 
   m_frame_ptr_sp = ptr_sp->Cast(coro_frame_type.GetPointerType());
