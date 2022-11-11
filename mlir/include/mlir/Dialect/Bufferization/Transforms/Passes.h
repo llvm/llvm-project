@@ -90,9 +90,9 @@ createPromoteBuffersToStackPass(unsigned maxAllocSizeInBytes = 1024,
 std::unique_ptr<Pass>
 createPromoteBuffersToStackPass(std::function<bool(Value)> isSmallAlloc);
 
-/// Create a pass that tries to eliminate alloc_tensor ops that are anchored on
+/// Create a pass that tries to eliminate tensor.empty ops that are anchored on
 /// insert_slice ops.
-std::unique_ptr<Pass> createAllocTensorEliminationPass();
+std::unique_ptr<Pass> createEmptyTensorEliminationPass();
 
 /// Create a pass that bufferizes ops from the bufferization dialect.
 std::unique_ptr<Pass> createBufferizationBufferizePass();
