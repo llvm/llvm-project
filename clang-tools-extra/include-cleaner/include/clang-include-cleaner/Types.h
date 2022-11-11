@@ -85,6 +85,7 @@ enum class RefType {
   /// Target's use can't be proven, e.g. a candidate for an unresolved overload.
   Ambiguous,
 };
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, RefType);
 
 /// Indicates that a piece of code refers to a symbol.
 struct SymbolReference {
@@ -107,7 +108,7 @@ struct Header {
     Standard,
     /// A verbatim header spelling, a string quoted with <> or "" that can be
     /// #included directly.
-    VerbatimSpelling,
+    Verbatim,
   };
 
   Header(const FileEntry *FE) : Storage(FE) {}
@@ -121,8 +122,8 @@ struct Header {
   tooling::stdlib::Header standard() const {
     return std::get<Standard>(Storage);
   }
-  StringRef verbatimSpelling() const {
-    return std::get<VerbatimSpelling>(Storage);
+  StringRef verbatim() const {
+    return std::get<Verbatim>(Storage);
   }
 
 private:
