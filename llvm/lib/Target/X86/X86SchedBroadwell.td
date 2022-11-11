@@ -358,8 +358,8 @@ defm : X86WriteResPairUnsupported<WriteFVarBlendZ>;
 
 // Conversion between integer and float.
 defm : BWWriteResPair<WriteCvtSS2I,   [BWPort1,BWPort0], 4, [1,1], 2, 5>;
-defm : BWWriteResPair<WriteCvtPS2I,   [BWPort1], 3>;
-defm : BWWriteResPair<WriteCvtPS2IY,  [BWPort1], 3>;
+defm : BWWriteResPair<WriteCvtPS2I,   [BWPort1], 3, [1], 1, 5>;
+defm : BWWriteResPair<WriteCvtPS2IY,  [BWPort1], 3, [1], 1, 6>;
 defm : X86WriteResPairUnsupported<WriteCvtPS2IZ>;
 defm : BWWriteResPair<WriteCvtSD2I,   [BWPort1,BWPort0], 4, [1,1], 2, 5>;
 defm : BWWriteResPair<WriteCvtPD2I,   [BWPort1,BWPort5], 4, [1,1], 2, 5>;
@@ -1175,8 +1175,6 @@ def BWWriteResGroup101 : SchedWriteRes<[BWPort1,BWPort23]> {
 }
 def: InstRW<[BWWriteResGroup101], (instregex "(ADD|SUB|SUBR)_F(32|64)m",
                                              "ILD_F(16|32|64)m")>;
-def: InstRW<[BWWriteResGroup101], (instrs VCVTPS2DQYrm,
-                                          VCVTTPS2DQYrm)>;
 
 def BWWriteResGroup108 : SchedWriteRes<[BWPort5,BWPort23,BWPort015]> {
   let Latency = 9;
