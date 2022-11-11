@@ -3,6 +3,26 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
+; PTEST first can be changed to any if the mask and operand are the same
+define i1 @ptest_first_to_any(<vscale x 16 x i1> %a) #0 {
+; CHECK-LABEL: @ptest_first_to_any(
+; CHECK-NEXT:    [[OUT:%.*]] = call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> [[A:%.*]], <vscale x 16 x i1> [[A]])
+; CHECK-NEXT:    ret i1 [[OUT]]
+;
+  %out = call i1 @llvm.aarch64.sve.ptest.first.nxv16i1(<vscale x 16 x i1> %a, <vscale x 16 x i1> %a)
+  ret i1 %out
+}
+
+; PTEST last can be changed to any if the mask and operand are the same
+define i1 @ptest_last_to_any(<vscale x 16 x i1> %a) #0 {
+; CHECK-LABEL: @ptest_last_to_any(
+; CHECK-NEXT:    [[OUT:%.*]] = call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> [[A:%.*]], <vscale x 16 x i1> [[A]])
+; CHECK-NEXT:    ret i1 [[OUT]]
+;
+  %out = call i1 @llvm.aarch64.sve.ptest.last.nxv16i1(<vscale x 16 x i1> %a, <vscale x 16 x i1> %a)
+  ret i1 %out
+}
+
 define i1 @ptest_any1(<vscale x 2 x i1> %a) #0 {
 ; CHECK-LABEL: @ptest_any1(
 ; CHECK-NEXT:    [[MASK:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 0)
@@ -47,7 +67,7 @@ define i1 @ptest_first(<vscale x 4 x i1> %a) #0 {
 
 define i1 @ptest_first_same_ops(<vscale x 2 x i1> %a) #0 {
 ; CHECK-LABEL: @ptest_first_same_ops(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.aarch64.sve.ptest.first.nxv2i1(<vscale x 2 x i1> [[A:%.*]], <vscale x 2 x i1> [[A]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.aarch64.sve.ptest.any.nxv2i1(<vscale x 2 x i1> [[A:%.*]], <vscale x 2 x i1> [[A]])
 ; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %a)
