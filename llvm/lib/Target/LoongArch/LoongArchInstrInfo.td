@@ -934,9 +934,7 @@ def : Pat<(brind (add GPR:$rj, simm16_lsl2:$imm16)),
           (PseudoBRIND GPR:$rj, simm16_lsl2:$imm16)>;
 
 let isCall = 1, Defs = [R1] in
-def PseudoCALL : Pseudo<(outs), (ins simm26_bl:$func)> {
-  let AsmString = "bl\t$func";
-}
+def PseudoCALL : Pseudo<(outs), (ins simm26_bl:$func)>;
 
 def : Pat<(loongarch_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(loongarch_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
