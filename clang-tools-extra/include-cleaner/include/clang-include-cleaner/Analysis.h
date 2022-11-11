@@ -11,6 +11,7 @@
 #ifndef CLANG_INCLUDE_CLEANER_ANALYSIS_H
 #define CLANG_INCLUDE_CLEANER_ANALYSIS_H
 
+#include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -42,11 +43,9 @@ using UsedSymbolCB = llvm::function_ref<void(const SymbolReference &SymRef,
 ///    headers which don't match any #include in the main file
 ///  - to diagnose unused includes: an #include in the main file does not match
 ///    the headers for any referenced symbol
-/// FIXME: Take in an include structure to improve location to header mappings
-/// (e.g. IWYU pragmas).
 void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
-              llvm::ArrayRef<SymbolReference> MacroRefs, const SourceManager &,
-              UsedSymbolCB CB);
+              llvm::ArrayRef<SymbolReference> MacroRefs,
+              const PragmaIncludes &PI, const SourceManager &, UsedSymbolCB CB);
 
 } // namespace include_cleaner
 } // namespace clang
