@@ -1234,14 +1234,6 @@ def HWWriteResGroup51 : SchedWriteRes<[HWPort5]> {
 }
 def: InstRW<[HWWriteResGroup51], (instregex "VPBROADCAST(B|W)rr")>;
 
-def HWWriteResGroup52 : SchedWriteRes<[HWPort1,HWPort23]> {
-  let Latency = 9;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,1];
-}
-def: InstRW<[HWWriteResGroup52], (instregex "(V?)CVTPS2DQrm",
-                                            "(V?)CVTTPS2DQrm")>;
-
 def HWWriteResGroup52_1 : SchedWriteRes<[HWPort1,HWPort23]> {
   let Latency = 10;
   let NumMicroOps = 2;
@@ -1249,8 +1241,6 @@ def HWWriteResGroup52_1 : SchedWriteRes<[HWPort1,HWPort23]> {
 }
 def: InstRW<[HWWriteResGroup52_1], (instregex "(ADD|SUB|SUBR)_F(32|64)m",
                                               "ILD_F(16|32|64)m")>;
-def: InstRW<[HWWriteResGroup52_1], (instrs VCVTPS2DQYrm,
-                                           VCVTTPS2DQYrm)>;
 
 def HWWriteResGroup53_1 : SchedWriteRes<[HWPort5,HWPort23]> {
   let Latency = 9;
