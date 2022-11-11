@@ -14,6 +14,8 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SetVector.h"
 
+#include "mlir/Dialect/Bufferization/IR/BufferizationEnums.h.inc"
+
 namespace mlir {
 class OpBuilder;
 
@@ -186,12 +188,6 @@ struct BufferizationOptions {
   /// Parameters: Value, memory space, bufferization options
   using UnknownTypeConverterFn = std::function<BaseMemRefType(
       Value, unsigned, const BufferizationOptions &)>;
-
-  enum class LayoutMapOption : int8_t {
-    InferLayoutMap = 0,
-    IdentityLayoutMap = 1,
-    FullyDynamicLayoutMap = 2
-  };
 
   BufferizationOptions();
 
@@ -584,6 +580,10 @@ bool defaultIsRepetitiveRegion(BufferizableOpInterface bufferizableOp,
 
 } // namespace bufferization
 } // namespace mlir
+
+//===----------------------------------------------------------------------===//
+// Bufferization Interfaces
+//===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h.inc"
 

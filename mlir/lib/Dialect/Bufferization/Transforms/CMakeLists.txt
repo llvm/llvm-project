@@ -18,6 +18,7 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
 
   DEPENDS
   MLIRBufferizationPassIncGen
+  MLIRBufferizationEnumsIncGen
 
   LINK_LIBS PUBLIC
   MLIRBufferizationDialect

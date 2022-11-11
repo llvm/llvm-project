@@ -96,3 +96,25 @@ module {
     return %0 : tensor<?xf32>
   }
 }
+
+// -----
+
+// Test we use identity layout at function boundaries.
+
+transform.sequence failures(propagate) {
+  ^bb0(%arg1: !pdl.operation):
+  transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %arg1 {
+    target_is_module = true,
+    bufferize_function_boundaries = true }
+}
+
+// CHECK: func.func @matmul(
+// CHECK-SAME:  %[[A:.*]]: memref<12x9xf32>,
+// CHECK-SAME:  %[[B:.*]]: memref<9x6xf32>,
+// CHECK-SAME:  %[[C:.*]]: memref<12x6xf32>) -> memref<12x6xf32> {
+func.func @matmul(%A: tensor<12x9xf32>, %B: tensor<9x6xf32>, %C: tensor<12x6xf32>) -> tensor<12x6xf32> {
+  // CHECK: linalg.matmul ins(%[[A]], %[[B]] : memref<12x9xf32>, memref<9x6xf32>) outs(%[[C]] : memref<12x6xf32>)
+  %D = linalg.matmul ins(%A, %B: tensor<12x9xf32>, tensor<9x6xf32>) outs(%C: tensor<12x6xf32>) -> tensor<12x6xf32>
+  // CHECK: return %[[C]] : memref<12x6xf32>
+  return %D : tensor<12x6xf32>
+}
