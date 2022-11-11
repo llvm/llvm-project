@@ -34,6 +34,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Header &H) {
     return OS << H.physical()->getName();
   case Header::Standard:
     return OS << H.standard().name();
+  case Header::VerbatimSpelling:
+    return OS << H.verbatimSpelling();
   }
   llvm_unreachable("Unhandled Header kind");
 }
