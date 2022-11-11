@@ -141,7 +141,7 @@ public:
   template <typename T = std::vector<Instruction *>>
   bool isSafeToMoveBeforeInBB(const Instruction &In,
                               BasicBlock::const_iterator To,
-                              const T &Ignore = {}) const;
+                              const T &IgnoreInsts = {}) const;
 
   // This function is only used for assertions at the moment.
   [[maybe_unused]] bool isByteVecTy(Type *Ty) const;
@@ -271,14 +271,20 @@ private:
   Value *createAlignedStore(IRBuilderBase &Builder, Value *Val, Value *Ptr,
                             int Alignment, Value *Mask) const;
 
+  DepList getUpwardDeps(Instruction *In, Instruction *Base) const;
   bool createAddressGroups();
   MoveList createLoadGroups(const AddrList &Group) const;
   MoveList createStoreGroups(const AddrList &Group) const;
   bool move(const MoveGroup &Move) const;
+  void realignLoadGroup(IRBuilderBase &Builder, const ByteSpan &VSpan,
+                        int ScLen, Value *AlignVal, Value *AlignAddr) const;
+  void realignStoreGroup(IRBuilderBase &Builder, const ByteSpan &VSpan,
+                         int ScLen, Value *AlignVal, Value *AlignAddr) const;
   bool realignGroup(const MoveGroup &Move) const;
 
   friend raw_ostream &operator<<(raw_ostream &OS, const AddrInfo &AI);
   friend raw_ostream &operator<<(raw_ostream &OS, const MoveGroup &MG);
+  friend raw_ostream &operator<<(raw_ostream &OS, const ByteSpan::Block &B);
   friend raw_ostream &operator<<(raw_ostream &OS, const ByteSpan &BS);
 
   std::map<Instruction *, AddrList> AddrGroups;
@@ -308,12 +314,18 @@ raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::MoveGroup &MG) {
 }
 
 LLVM_ATTRIBUTE_UNUSED
+raw_ostream &operator<<(raw_ostream &OS,
+                        const AlignVectors::ByteSpan::Block &B) {
+  OS << "  @" << B.Pos << " [" << B.Seg.Start << ',' << B.Seg.Size << "] "
+     << *B.Seg.Val;
+  return OS;
+}
+
+LLVM_ATTRIBUTE_UNUSED
 raw_ostream &operator<<(raw_ostream &OS, const AlignVectors::ByteSpan &BS) {
   OS << "ByteSpan[size=" << BS.size() << ", extent=" << BS.extent() << '\n';
-  for (const AlignVectors::ByteSpan::Block &B : BS) {
-    OS << "  @" << B.Pos << " [" << B.Seg.Start << ',' << B.Seg.Size << "] "
-       << *B.Seg.Val << '\n';
-  }
+  for (const AlignVectors::ByteSpan::Block &B : BS)
+    OS << B << '\n';
   OS << ']';
   return OS;
 }
@@ -582,6 +594,29 @@ auto AlignVectors::createAlignedStore(IRBuilderBase &Builder, Value *Val,
   return Builder.CreateMaskedStore(Val, Ptr, Align(Alignment), Mask);
 }
 
+auto AlignVectors::getUpwardDeps(Instruction *In, Instruction *Base) const
+    -> DepList {
+  BasicBlock *Parent = Base->getParent();
+  assert(In->getParent() == Parent &&
+         "Base and In should be in the same block");
+  assert(Base->comesBefore(In) && "Base should come before In");
+
+  DepList Deps;
+  std::deque<Instruction *> WorkQ = {In};
+  while (!WorkQ.empty()) {
+    Instruction *D = WorkQ.front();
+    WorkQ.pop_front();
+    Deps.insert(D);
+    for (Value *Op : D->operands()) {
+      if (auto *I = dyn_cast<Instruction>(Op)) {
+        if (I->getParent() == Parent && Base->comesBefore(I))
+          WorkQ.push_back(I);
+      }
+    }
+  }
+  return Deps;
+}
+
 auto AlignVectors::createAddressGroups() -> bool {
   // An address group created here may contain instructions spanning
   // multiple basic blocks.
@@ -640,28 +675,6 @@ auto AlignVectors::createLoadGroups(const AddrList &Group) const -> MoveList {
   // Form load groups.
   // To avoid complications with moving code across basic blocks, only form
   // groups that are contained within a single basic block.
-
-  auto getUpwardDeps = [](Instruction *In, Instruction *Base) {
-    BasicBlock *Parent = Base->getParent();
-    assert(In->getParent() == Parent &&
-           "Base and In should be in the same block");
-    assert(Base->comesBefore(In) && "Base should come before In");
-
-    DepList Deps;
-    std::deque<Instruction *> WorkQ = {In};
-    while (!WorkQ.empty()) {
-      Instruction *D = WorkQ.front();
-      WorkQ.pop_front();
-      Deps.insert(D);
-      for (Value *Op : D->operands()) {
-        if (auto *I = dyn_cast<Instruction>(Op)) {
-          if (I->getParent() == Parent && Base->comesBefore(I))
-            WorkQ.push_back(I);
-        }
-      }
-    }
-    return Deps;
-  };
 
   auto tryAddTo = [&](const AddrInfo &Info, MoveGroup &Move) {
     assert(!Move.Main.empty() && "Move group should have non-empty Main");
@@ -775,6 +788,245 @@ auto AlignVectors::move(const MoveGroup &Move) const -> bool {
   return Move.Main.size() + Move.Deps.size() > 1;
 }
 
+auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
+                                    const ByteSpan &VSpan, int ScLen,
+                                    Value *AlignVal, Value *AlignAddr) const
+    -> void {
+  Type *SecTy = HVC.getByteTy(ScLen);
+  int NumSectors = (VSpan.extent() + ScLen - 1) / ScLen;
+  bool DoAlign = !HVC.isZero(AlignVal);
+  BasicBlock::iterator BasePos = Builder.GetInsertPoint();
+  BasicBlock *BaseBlock = Builder.GetInsertBlock();
+
+  ByteSpan ASpan;
+  auto *True = HVC.getFullValue(HVC.getBoolTy(ScLen));
+  auto *Undef = UndefValue::get(SecTy);
+
+  SmallVector<Instruction *> Loads(NumSectors + DoAlign, nullptr);
+
+  // We could create all of the aligned loads, and generate the valigns
+  // at the location of the first load, but for large load groups, this
+  // could create highly suboptimal code (there have been groups of 140+
+  // loads in real code).
+  // Instead, place the loads/valigns as close to the users as possible.
+  // In any case we need to have a mapping from the blocks of VSpan (the
+  // span covered by the pre-existing loads) to ASpan (the span covered
+  // by the aligned loads). There is a small problem, though: ASpan needs
+  // to have pointers to the loads/valigns, but we don't know where to put
+  // them yet. We can't use nullptr, because when we create sections of
+  // ASpan (corresponding to blocks from VSpan), for each block in the
+  // section we need to know which blocks of ASpan they are a part of.
+  // To have 1-1 mapping between blocks of ASpan and the temporary value
+  // pointers, use the addresses of the blocks themselves.
+
+  // Populate the blocks first, to avoid reallocations of the vector
+  // interfering with generating the placeholder addresses.
+  for (int Index = 0; Index != NumSectors; ++Index)
+    ASpan.Blocks.emplace_back(nullptr, ScLen, Index * ScLen);
+  for (int Index = 0; Index != NumSectors; ++Index) {
+    ASpan.Blocks[Index].Seg.Val =
+        reinterpret_cast<Value *>(&ASpan.Blocks[Index]);
+  }
+
+  // Multiple values from VSpan can map to the same value in ASpan. Since we
+  // try to create loads lazily, we need to find the earliest use for each
+  // value from ASpan.
+  DenseMap<void *, Instruction *> EarliestUser;
+  auto isEarlier = [](Instruction *A, Instruction *B) {
+    if (B == nullptr)
+      return true;
+    if (A == nullptr)
+      return false;
+    assert(A->getParent() == B->getParent());
+    return A->comesBefore(B);
+  };
+  auto earliestUser = [&](const auto &Uses) {
+    Instruction *User = nullptr;
+    for (const Use &U : Uses) {
+      auto *I = dyn_cast<Instruction>(U.getUser());
+      assert(I != nullptr && "Load used in a non-instruction?");
+      // Make sure we only consider at users in this block, but we need
+      // to remember if there were users outside the block too. This is
+      // because if there are no users, aligned loads will not be created.
+      if (I->getParent() == BaseBlock) {
+        if (!isa<PHINode>(I))
+          User = std::min(User, I, isEarlier);
+      } else {
+        User = std::min(User, BaseBlock->getTerminator(), isEarlier);
+      }
+    }
+    return User;
+  };
+
+  for (const ByteSpan::Block &B : VSpan) {
+    ByteSpan ASection = ASpan.section(B.Pos, B.Seg.Size);
+    for (const ByteSpan::Block &S : ASection) {
+      EarliestUser[S.Seg.Val] = std::min(
+          EarliestUser[S.Seg.Val], earliestUser(B.Seg.Val->uses()), isEarlier);
+    }
+  }
+
+  auto createLoad = [&](IRBuilderBase &Builder, const ByteSpan &VSpan,
+                        int Index) {
+    Value *Ptr =
+        createAdjustedPointer(Builder, AlignAddr, SecTy, Index * ScLen);
+    // FIXME: generate a predicated load?
+    Value *Load = createAlignedLoad(Builder, SecTy, Ptr, ScLen, True, Undef);
+    // If vector shifting is potentially needed, accumulate metadata
+    // from source sections of twice the load width.
+    int Start = (Index - DoAlign) * ScLen;
+    int Width = (1 + DoAlign) * ScLen;
+    propagateMetadata(cast<Instruction>(Load),
+                      VSpan.section(Start, Width).values());
+    return cast<Instruction>(Load);
+  };
+
+  auto moveBefore = [this](Instruction *In, Instruction *To) {
+    // Move In and its upward dependencies to before To.
+    assert(In->getParent() == To->getParent());
+    DepList Deps = getUpwardDeps(In, To);
+    // DepList is sorted with respect to positions in the basic block.
+    for (Instruction *I : Deps)
+      I->moveBefore(To);
+  };
+
+  // Generate necessary loads at appropriate locations.
+  for (int Index = 0; Index != NumSectors + 1; ++Index) {
+    // In ASpan, each block will be either a single aligned load, or a
+    // valign of a pair of loads. In the latter case, an aligned load j
+    // will belong to the current valign, and the one in the previous
+    // block (for j > 0).
+    Instruction *PrevAt =
+        DoAlign && Index > 0 ? EarliestUser[&ASpan[Index - 1]] : nullptr;
+    Instruction *ThisAt =
+        Index < NumSectors ? EarliestUser[&ASpan[Index]] : nullptr;
+    if (auto *Where = std::min(PrevAt, ThisAt, isEarlier)) {
+      Builder.SetInsertPoint(Where);
+      Loads[Index] = createLoad(Builder, VSpan, Index);
+      // We know it's safe to put the load at BasePos, so if it's not safe
+      // to move it from this location to BasePos, then the current location
+      // is not valid.
+      // We can't do this check proactively because we need the load to exist
+      // in order to check legality.
+      if (!HVC.isSafeToMoveBeforeInBB(*Loads[Index], BasePos))
+        moveBefore(Loads[Index], &*BasePos);
+    }
+  }
+  // Generate valigns if needed, and fill in proper values in ASpan
+  for (int Index = 0; Index != NumSectors; ++Index) {
+    ASpan[Index].Seg.Val = nullptr;
+    if (auto *Where = EarliestUser[&ASpan[Index]]) {
+      Builder.SetInsertPoint(Where);
+      Value *Val = Loads[Index];
+      assert(Val != nullptr);
+      if (DoAlign) {
+        Value *NextLoad = Loads[Index + 1];
+        assert(NextLoad != nullptr);
+        Val = HVC.vralignb(Builder, Val, NextLoad, AlignVal);
+      }
+      ASpan[Index].Seg.Val = Val;
+    }
+  }
+
+  for (const ByteSpan::Block &B : VSpan) {
+    ByteSpan ASection = ASpan.section(B.Pos, B.Seg.Size).shift(-B.Pos);
+    Value *Accum = UndefValue::get(HVC.getByteTy(B.Seg.Size));
+    Builder.SetInsertPoint(cast<Instruction>(B.Seg.Val));
+
+    for (ByteSpan::Block &S : ASection) {
+      if (S.Seg.Val == nullptr)
+        continue;
+      // The processing of the data loaded by the aligned loads
+      // needs to be inserted after the data is available.
+      Instruction *SegI = cast<Instruction>(S.Seg.Val);
+      Builder.SetInsertPoint(&*std::next(SegI->getIterator()));
+      Value *Pay = HVC.vbytes(Builder, getPayload(S.Seg.Val));
+      Accum = HVC.insertb(Builder, Accum, Pay, S.Seg.Start, S.Seg.Size, S.Pos);
+    }
+    // Instead of casting everything to bytes for the vselect, cast to the
+    // original value type. This will avoid complications with casting masks.
+    // For example, in cases when the original mask applied to i32, it could
+    // be converted to a mask applicable to i8 via pred_typecast intrinsic,
+    // but if the mask is not exactly of HVX length, extra handling would be
+    // needed to make it work.
+    Type *ValTy = getPayload(B.Seg.Val)->getType();
+    Value *Cast = Builder.CreateBitCast(Accum, ValTy);
+    Value *Sel = Builder.CreateSelect(getMask(B.Seg.Val), Cast,
+                                      getPassThrough(B.Seg.Val));
+    B.Seg.Val->replaceAllUsesWith(Sel);
+  }
+}
+
+auto AlignVectors::realignStoreGroup(IRBuilderBase &Builder,
+                                     const ByteSpan &VSpan, int ScLen,
+                                     Value *AlignVal, Value *AlignAddr) const
+    -> void {
+  Type *SecTy = HVC.getByteTy(ScLen);
+  int NumSectors = (VSpan.extent() + ScLen - 1) / ScLen;
+  bool DoAlign = !HVC.isZero(AlignVal);
+
+  // Stores.
+  ByteSpan ASpanV, ASpanM;
+
+  // Return a vector value corresponding to the input value Val:
+  // either <1 x Val> for scalar Val, or Val itself for vector Val.
+  auto MakeVec = [](IRBuilderBase &Builder, Value *Val) -> Value * {
+    Type *Ty = Val->getType();
+    if (Ty->isVectorTy())
+      return Val;
+    auto *VecTy = VectorType::get(Ty, 1, /*Scalable=*/false);
+    return Builder.CreateBitCast(Val, VecTy);
+  };
+
+  // Create an extra "undef" sector at the beginning and at the end.
+  // They will be used as the left/right filler in the vlalign step.
+  for (int i = (DoAlign ? -1 : 0); i != NumSectors + DoAlign; ++i) {
+    // For stores, the size of each section is an aligned vector length.
+    // Adjust the store offsets relative to the section start offset.
+    ByteSpan VSection = VSpan.section(i * ScLen, ScLen).shift(-i * ScLen);
+    Value *AccumV = UndefValue::get(SecTy);
+    Value *AccumM = HVC.getNullValue(SecTy);
+    for (ByteSpan::Block &S : VSection) {
+      Value *Pay = getPayload(S.Seg.Val);
+      Value *Mask = HVC.rescale(Builder, MakeVec(Builder, getMask(S.Seg.Val)),
+                                Pay->getType(), HVC.getByteTy());
+      AccumM = HVC.insertb(Builder, AccumM, HVC.vbytes(Builder, Mask),
+                           S.Seg.Start, S.Seg.Size, S.Pos);
+      AccumV = HVC.insertb(Builder, AccumV, HVC.vbytes(Builder, Pay),
+                           S.Seg.Start, S.Seg.Size, S.Pos);
+    }
+    ASpanV.Blocks.emplace_back(AccumV, ScLen, i * ScLen);
+    ASpanM.Blocks.emplace_back(AccumM, ScLen, i * ScLen);
+  }
+
+  // vlalign
+  if (DoAlign) {
+    for (int j = 1; j != NumSectors + 2; ++j) {
+      Value *PrevV = ASpanV[j - 1].Seg.Val, *ThisV = ASpanV[j].Seg.Val;
+      Value *PrevM = ASpanM[j - 1].Seg.Val, *ThisM = ASpanM[j].Seg.Val;
+      assert(isSectorTy(PrevV->getType()) && isSectorTy(PrevM->getType()));
+      ASpanV[j - 1].Seg.Val = HVC.vlalignb(Builder, PrevV, ThisV, AlignVal);
+      ASpanM[j - 1].Seg.Val = HVC.vlalignb(Builder, PrevM, ThisM, AlignVal);
+    }
+  }
+
+  for (int i = 0; i != NumSectors + DoAlign; ++i) {
+    Value *Ptr = createAdjustedPointer(Builder, AlignAddr, SecTy, i * ScLen);
+    Value *Val = ASpanV[i].Seg.Val;
+    Value *Mask = ASpanM[i].Seg.Val; // bytes
+    if (!HVC.isUndef(Val) && !HVC.isZero(Mask)) {
+      Value *Store =
+          createAlignedStore(Builder, Val, Ptr, ScLen, HVC.vlsb(Builder, Mask));
+      // If vector shifting is potentially needed, accumulate metadata
+      // from source sections of twice the store width.
+      int Start = (i - DoAlign) * ScLen;
+      int Width = (1 + DoAlign) * ScLen;
+      propagateMetadata(cast<Instruction>(Store),
+                        VSpan.section(Start, Width).values());
+    }
+  }
+}
+
 auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
   // TODO: Needs support for masked loads/stores of "scalar" vectors.
   if (!Move.IsHvx)
@@ -822,9 +1074,18 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
       getMaxOf(MoveInfos, [](const AddrInfo &AI) { return AI.NeedAlign; });
   Align MinNeeded = WithMaxNeeded.NeedAlign;
 
-  // Set the builder at the top instruction in the move group.
-  Instruction *TopIn = Move.IsLoad ? Move.Main.front() : Move.Main.back();
-  IRBuilder<> Builder(TopIn);
+  // Set the builder's insertion point right before the load group, or
+  // immediately after the store group. (Instructions in a store group are
+  // listed in reverse order.)
+  Instruction *InsertAt = Move.Main.front();
+  if (!Move.IsLoad) {
+    // There should be a terminator (which store isn't, but check anyways).
+    assert(InsertAt->getIterator() != InsertAt->getParent()->end());
+    InsertAt = &*std::next(InsertAt->getIterator());
+  }
+
+  IRBuilder Builder(InsertAt->getParent(), InsertAt->getIterator(),
+                    InstSimplifyFolder(HVC.DL));
   Value *AlignAddr = nullptr; // Actual aligned address.
   Value *AlignVal = nullptr;  // Right-shift amount (for valign).
 
@@ -871,118 +1132,10 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
   assert(!Move.IsHvx || ScLen == 64 || ScLen == 128);
   assert(Move.IsHvx || ScLen == 4 || ScLen == 8);
 
-  Type *SecTy = HVC.getByteTy(ScLen);
-  int NumSectors = (VSpan.extent() + ScLen - 1) / ScLen;
-  bool DoAlign = !HVC.isZero(AlignVal);
-
-  if (Move.IsLoad) {
-    ByteSpan ASpan;
-    auto *True = HVC.getFullValue(HVC.getBoolTy(ScLen));
-    auto *Undef = UndefValue::get(SecTy);
-
-    for (int i = 0; i != NumSectors + DoAlign; ++i) {
-      Value *Ptr = createAdjustedPointer(Builder, AlignAddr, SecTy, i * ScLen);
-      // FIXME: generate a predicated load?
-      Value *Load = createAlignedLoad(Builder, SecTy, Ptr, ScLen, True, Undef);
-      // If vector shifting is potentially needed, accumulate metadata
-      // from source sections of twice the load width.
-      int Start = (i - DoAlign) * ScLen;
-      int Width = (1 + DoAlign) * ScLen;
-      propagateMetadata(cast<Instruction>(Load),
-                        VSpan.section(Start, Width).values());
-      ASpan.Blocks.emplace_back(Load, ScLen, i * ScLen);
-    }
-
-    if (DoAlign) {
-      for (int j = 0; j != NumSectors; ++j) {
-        assert(isSectorTy(ASpan[j].Seg.Val->getType()));
-        ASpan[j].Seg.Val = HVC.vralignb(Builder, ASpan[j].Seg.Val,
-                                        ASpan[j + 1].Seg.Val, AlignVal);
-      }
-    }
-
-    for (ByteSpan::Block &B : VSpan) {
-      ByteSpan ASection = ASpan.section(B.Pos, B.Seg.Size).shift(-B.Pos);
-      Value *Accum = UndefValue::get(HVC.getByteTy(B.Seg.Size));
-      for (ByteSpan::Block &S : ASection) {
-        Value *Pay = HVC.vbytes(Builder, getPayload(S.Seg.Val));
-        Accum =
-            HVC.insertb(Builder, Accum, Pay, S.Seg.Start, S.Seg.Size, S.Pos);
-      }
-      // Instead of casting everything to bytes for the vselect, cast to the
-      // original value type. This will avoid complications with casting masks.
-      // For example, in cases when the original mask applied to i32, it could
-      // be converted to a mask applicable to i8 via pred_typecast intrinsic,
-      // but if the mask is not exactly of HVX length, extra handling would be
-      // needed to make it work.
-      Type *ValTy = getPayload(B.Seg.Val)->getType();
-      Value *Cast = Builder.CreateBitCast(Accum, ValTy);
-      Value *Sel = Builder.CreateSelect(getMask(B.Seg.Val), Cast,
-                                        getPassThrough(B.Seg.Val));
-      B.Seg.Val->replaceAllUsesWith(Sel);
-    }
-  } else {
-    // Stores.
-    ByteSpan ASpanV, ASpanM;
-
-    // Return a vector value corresponding to the input value Val:
-    // either <1 x Val> for scalar Val, or Val itself for vector Val.
-    auto MakeVec = [](IRBuilderBase &Builder, Value *Val) -> Value * {
-      Type *Ty = Val->getType();
-      if (Ty->isVectorTy())
-        return Val;
-      auto *VecTy = VectorType::get(Ty, 1, /*Scalable=*/false);
-      return Builder.CreateBitCast(Val, VecTy);
-    };
-
-    // Create an extra "undef" sector at the beginning and at the end.
-    // They will be used as the left/right filler in the vlalign step.
-    for (int i = (DoAlign ? -1 : 0); i != NumSectors + DoAlign; ++i) {
-      // For stores, the size of each section is an aligned vector length.
-      // Adjust the store offsets relative to the section start offset.
-      ByteSpan VSection = VSpan.section(i * ScLen, ScLen).shift(-i * ScLen);
-      Value *AccumV = UndefValue::get(SecTy);
-      Value *AccumM = HVC.getNullValue(SecTy);
-      for (ByteSpan::Block &S : VSection) {
-        Value *Pay = getPayload(S.Seg.Val);
-        Value *Mask = HVC.rescale(Builder, MakeVec(Builder, getMask(S.Seg.Val)),
-                                  Pay->getType(), HVC.getByteTy());
-        AccumM = HVC.insertb(Builder, AccumM, HVC.vbytes(Builder, Mask),
-                             S.Seg.Start, S.Seg.Size, S.Pos);
-        AccumV = HVC.insertb(Builder, AccumV, HVC.vbytes(Builder, Pay),
-                             S.Seg.Start, S.Seg.Size, S.Pos);
-      }
-      ASpanV.Blocks.emplace_back(AccumV, ScLen, i * ScLen);
-      ASpanM.Blocks.emplace_back(AccumM, ScLen, i * ScLen);
-    }
-
-    // vlalign
-    if (DoAlign) {
-      for (int j = 1; j != NumSectors + 2; ++j) {
-        Value *PrevV = ASpanV[j - 1].Seg.Val, *ThisV = ASpanV[j].Seg.Val;
-        Value *PrevM = ASpanM[j - 1].Seg.Val, *ThisM = ASpanM[j].Seg.Val;
-        assert(isSectorTy(PrevV->getType()) && isSectorTy(PrevM->getType()));
-        ASpanV[j - 1].Seg.Val = HVC.vlalignb(Builder, PrevV, ThisV, AlignVal);
-        ASpanM[j - 1].Seg.Val = HVC.vlalignb(Builder, PrevM, ThisM, AlignVal);
-      }
-    }
-
-    for (int i = 0; i != NumSectors + DoAlign; ++i) {
-      Value *Ptr = createAdjustedPointer(Builder, AlignAddr, SecTy, i * ScLen);
-      Value *Val = ASpanV[i].Seg.Val;
-      Value *Mask = ASpanM[i].Seg.Val; // bytes
-      if (!HVC.isUndef(Val) && !HVC.isZero(Mask)) {
-        Value *Store = createAlignedStore(Builder, Val, Ptr, ScLen,
-                                          HVC.vlsb(Builder, Mask));
-        // If vector shifting is potentially needed, accumulate metadata
-        // from source sections of twice the store width.
-        int Start = (i - DoAlign) * ScLen;
-        int Width = (1 + DoAlign) * ScLen;
-        propagateMetadata(cast<Instruction>(Store),
-                          VSpan.section(Start, Width).values());
-      }
-    }
-  }
+  if (Move.IsLoad)
+    realignLoadGroup(Builder, VSpan, ScLen, AlignVal, AlignAddr);
+  else
+    realignStoreGroup(Builder, VSpan, ScLen, AlignVal, AlignAddr);
 
   for (auto *Inst : Move.Main)
     Inst->eraseFromParent();
@@ -2064,7 +2217,7 @@ auto HexagonVectorCombine::getKnownBits(const Value *V,
 template <typename T>
 auto HexagonVectorCombine::isSafeToMoveBeforeInBB(const Instruction &In,
                                                   BasicBlock::const_iterator To,
-                                                  const T &Ignore) const
+                                                  const T &IgnoreInsts) const
     -> bool {
   auto getLocOrNone = [this](const Instruction &I) -> Optional<MemoryLocation> {
     if (const auto *II = dyn_cast<IntrinsicInst>(&I)) {
@@ -2098,7 +2251,7 @@ auto HexagonVectorCombine::isSafeToMoveBeforeInBB(const Instruction &In,
       MoveUp ? std::make_pair(To, From) : std::make_pair(std::next(From), To);
   for (auto It = Range.first; It != Range.second; ++It) {
     const Instruction &I = *It;
-    if (llvm::is_contained(Ignore, &I))
+    if (llvm::is_contained(IgnoreInsts, &I))
       continue;
     // assume intrinsic can be ignored
     if (auto *II = dyn_cast<IntrinsicInst>(&I)) {

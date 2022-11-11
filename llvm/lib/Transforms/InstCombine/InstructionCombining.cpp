@@ -919,18 +919,24 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
       else if (True && !False)
         False = Builder.CreateBinOp(Opcode, C, F);
     }
-  } else if (LHSIsSelect && LHS->hasOneUse()) {
+  } else if (LHSIsSelect) {
     // (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
     Cond = A;
     True = simplifyBinOp(Opcode, B, RHS, FMF, Q);
     False = simplifyBinOp(Opcode, C, RHS, FMF, Q);
+    if (!LHS->hasOneUse() &&
+        (!True || !False || !isa<Constant>(True) || !isa<Constant>(False)))
+      return nullptr;
     if (Value *NewSel = foldAddNegate(B, C, RHS))
       return NewSel;
-  } else if (RHSIsSelect && RHS->hasOneUse()) {
+  } else if (RHSIsSelect) {
     // X op (D ? E : F) -> D ? (X op E) : (X op F)
     Cond = D;
     True = simplifyBinOp(Opcode, LHS, E, FMF, Q);
     False = simplifyBinOp(Opcode, LHS, F, FMF, Q);
+    if (!RHS->hasOneUse() &&
+        (!True || !False || !isa<Constant>(True) || !isa<Constant>(False)))
+      return nullptr;
     if (Value *NewSel = foldAddNegate(E, F, LHS))
       return NewSel;
   }
