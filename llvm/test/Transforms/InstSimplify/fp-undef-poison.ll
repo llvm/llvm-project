@@ -283,7 +283,7 @@ define double @fsub_nnan_inf_op0(double %x) {
   ret double %r
 }
 
-; TODO: Should simplify to -inf.
+; This can't simplify - the result is infinity, but the sign is unknown.
 
 define double @fmul_nnan_inf_op1(double %x) {
 ; CHECK-LABEL: @fmul_nnan_inf_op1(
