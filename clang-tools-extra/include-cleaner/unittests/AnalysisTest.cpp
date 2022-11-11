@@ -7,11 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-include-cleaner/Analysis.h"
+#include "AnalysisInternal.h"
+#include "clang-include-cleaner/Record.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Frontend/FrontendActions.h"
 #include "clang/Testing/TestAST.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -28,19 +31,39 @@ using testing::UnorderedElementsAre;
 
 TEST(WalkUsed, Basic) {
   // FIXME: Have a fixture for setting up tests.
-  llvm::Annotations HeaderCode(R"cpp(
-  void foo();
-  namespace std { class vector {}; })cpp");
   llvm::Annotations Code(R"cpp(
-  void $bar^bar() {
+  #include "header.h"
+  #include "private.h"
+
+  void $bar^bar($private^Private) {
     $foo^foo();
     std::$vector^vector $vconstructor^v;
   }
   )cpp");
   TestInputs Inputs(Code.code());
-  Inputs.ExtraFiles["header.h"] = HeaderCode.code().str();
-  Inputs.ExtraArgs.push_back("-include");
-  Inputs.ExtraArgs.push_back("header.h");
+  Inputs.ExtraFiles["header.h"] = R"cpp(
+  void foo();
+  namespace std { class vector {}; }
+  )cpp";
+  Inputs.ExtraFiles["private.h"] = R"cpp(
+    // IWYU pragma: private, include "path/public.h"
+    class Private {};
+  )cpp";
+
+  PragmaIncludes PI;
+  Inputs.MakeAction = [&PI] {
+    struct Hook : public SyntaxOnlyAction {
+    public:
+      Hook(PragmaIncludes *Out) : Out(Out) {}
+      bool BeginSourceFileAction(clang::CompilerInstance &CI) override {
+        Out->record(CI);
+        return true;
+      }
+
+      PragmaIncludes *Out;
+    };
+    return std::make_unique<Hook>(&PI);
+  };
   TestAST AST(Inputs);
 
   llvm::SmallVector<Decl *> TopLevelDecls;
@@ -50,7 +73,7 @@ TEST(WalkUsed, Basic) {
 
   auto &SM = AST.sourceManager();
   llvm::DenseMap<size_t, std::vector<Header>> OffsetToProviders;
-  walkUsed(TopLevelDecls, /*MacroRefs=*/{}, SM,
+  walkUsed(TopLevelDecls, /*MacroRefs=*/{}, PI, SM,
            [&](const SymbolReference &Ref, llvm::ArrayRef<Header> Providers) {
              auto [FID, Offset] = SM.getDecomposedLoc(Ref.RefLocation);
              EXPECT_EQ(FID, SM.getMainFileID());
@@ -63,6 +86,8 @@ TEST(WalkUsed, Basic) {
       OffsetToProviders,
       UnorderedElementsAre(
           Pair(Code.point("bar"), UnorderedElementsAre(MainFile)),
+          Pair(Code.point("private"),
+               UnorderedElementsAre(Header("\"path/public.h\""))),
           Pair(Code.point("foo"), UnorderedElementsAre(HeaderFile)),
           Pair(Code.point("vector"), UnorderedElementsAre(VectorSTL)),
           Pair(Code.point("vconstructor"), UnorderedElementsAre(VectorSTL))));
@@ -89,10 +114,11 @@ TEST(WalkUsed, MacroRefs) {
   Symbol Answer =
       Macro{&Idents.get("ANSWER"), SM.getComposedLoc(HdrID, Hdr.point())};
   llvm::DenseMap<size_t, std::vector<Header>> OffsetToProviders;
+  PragmaIncludes PI;
   walkUsed(/*ASTRoots=*/{}, /*MacroRefs=*/
            {SymbolReference{SM.getComposedLoc(SM.getMainFileID(), Main.point()),
                             Answer, RefType::Explicit}},
-           SM,
+           PI, SM,
            [&](const SymbolReference &Ref, llvm::ArrayRef<Header> Providers) {
              auto [FID, Offset] = SM.getDecomposedLoc(Ref.RefLocation);
              EXPECT_EQ(FID, SM.getMainFileID());
@@ -102,6 +128,64 @@ TEST(WalkUsed, MacroRefs) {
   EXPECT_THAT(
       OffsetToProviders,
       UnorderedElementsAre(Pair(Main.point(), UnorderedElementsAre(HdrFile))));
+}
+
+TEST(FindIncludeHeaders, IWYU) {
+  TestInputs Inputs;
+  PragmaIncludes PI;
+  Inputs.MakeAction = [&PI] {
+    struct Hook : public PreprocessOnlyAction {
+    public:
+      Hook(PragmaIncludes *Out) : Out(Out) {}
+      bool BeginSourceFileAction(clang::CompilerInstance &CI) override {
+        Out->record(CI);
+        return true;
+      }
+
+      PragmaIncludes *Out;
+    };
+    return std::make_unique<Hook>(&PI);
+  };
+
+  Inputs.Code = R"cpp(
+    #include "header1.h"
+    #include "header2.h"
+  )cpp";
+  Inputs.ExtraFiles["header1.h"] = R"cpp(
+    // IWYU pragma: private, include "path/public.h"
+  )cpp";
+  Inputs.ExtraFiles["header2.h"] = R"cpp(
+    #include "detail1.h" // IWYU pragma: export
+
+    // IWYU pragma: begin_exports
+    #include "detail2.h"
+    // IWYU pragma: end_exports
+
+    #include "normal.h"
+  )cpp";
+  Inputs.ExtraFiles["normal.h"] = Inputs.ExtraFiles["detail1.h"] =
+      Inputs.ExtraFiles["detail2.h"] = "";
+  TestAST AST(Inputs);
+  const auto &SM = AST.sourceManager();
+  auto &FM = SM.getFileManager();
+  // Returns the source location for the start of the file.
+  auto SourceLocFromFile = [&](llvm::StringRef FileName) {
+    return SM.translateFileLineCol(FM.getFile(FileName).get(),
+                                   /*Line=*/1, /*Col=*/1);
+  };
+
+  EXPECT_THAT(findIncludeHeaders(SourceLocFromFile("header1.h"), SM, PI),
+              UnorderedElementsAre(Header("\"path/public.h\"")));
+
+  EXPECT_THAT(findIncludeHeaders(SourceLocFromFile("detail1.h"), SM, PI),
+              UnorderedElementsAre(Header(FM.getFile("header2.h").get()),
+                                   Header(FM.getFile("detail1.h").get())));
+  EXPECT_THAT(findIncludeHeaders(SourceLocFromFile("detail2.h"), SM, PI),
+              UnorderedElementsAre(Header(FM.getFile("header2.h").get()),
+                                   Header(FM.getFile("detail2.h").get())));
+
+  EXPECT_THAT(findIncludeHeaders(SourceLocFromFile("normal.h"), SM, PI),
+              UnorderedElementsAre(Header(FM.getFile("normal.h").get())));
 }
 
 } // namespace
