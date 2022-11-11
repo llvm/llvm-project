@@ -2503,6 +2503,14 @@ struct BubbleUpBitCastForStridedSliceInsert
     if (rank != insertOp.getDestVectorType().getRank())
       return failure();
 
+    // Requires that shape of insert op src is castable to dstType.
+    unsigned sourceWidth = castSrcType.getElementType().getIntOrFloatBitWidth();
+    unsigned destinationWidth =
+        castDstType.getElementType().getIntOrFloatBitWidth();
+    unsigned numElements = destinationWidth / sourceWidth;
+    if (insertOp.getSourceVectorType().getNumElements() % numElements != 0)
+      return failure();
+
     ArrayAttr newOffsets = insertOp.getOffsets();
     assert(newOffsets.size() == rank);
     SmallVector<int64_t, 4> offsets = getIntValueVector(newOffsets);
