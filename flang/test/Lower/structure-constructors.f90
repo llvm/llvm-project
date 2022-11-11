@@ -53,7 +53,7 @@ contains
     ! CHECK: %[[cst:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,3>>
     ! CHECK-DAG: %[[ccast:.*]] = fir.convert %[[ccoor]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
     ! CHECK-DAG: %[[cstcast:.*]] = fir.convert %[[cst]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
-    ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[ccast]], %[[cstcast]], %{{.*}}, %{{.*}}) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+    ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[ccast]], %[[cstcast]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
     real :: x
     call print_char_scalar(t_char_scalar(x=x, c="abc"))
   end subroutine
@@ -115,12 +115,12 @@ contains
   ! CHECK: %[[VAL_29:.*]] = arith.constant false
   ! CHECK: %[[VAL_30:.*]] = fir.convert %[[VAL_24]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
   ! CHECK: %[[VAL_31:.*]] = fir.convert %[[char_temp]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[VAL_30]], %[[VAL_31]], %[[VAL_28]], %[[VAL_29]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[VAL_30]], %[[VAL_31]], %[[VAL_28]], %[[VAL_29]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   ! CHECK: %[[VAL_32:.*]] = fir.array_amend %[[VAL_22]], %[[VAL_24]] : (!fir.array<5x!fir.char<1,3>>, !fir.ref<!fir.char<1,3>>) -> !fir.array<5x!fir.char<1,3>>
   ! CHECK: fir.result %[[VAL_32]] : !fir.array<5x!fir.char<1,3>>
   ! CHECK: }
   ! CHECK: fir.array_merge_store %[[VAL_14]], %[[VAL_33:.*]] to %[[VAL_11]] : !fir.array<5x!fir.char<1,3>>, !fir.array<5x!fir.char<1,3>>, !fir.ref<!fir.array<5x!fir.char<1,3>>>
-  ! CHECK: fir.call @_QMm_struct_ctorPprint_char_array(%[[VAL_3]]) : (!fir.ref<!fir.type<_QMm_struct_ctorTt_char_array{x:f32,c:!fir.array<5x!fir.char<1,3>>}>>) -> ()
+  ! CHECK: fir.call @_QMm_struct_ctorPprint_char_array(%[[VAL_3]]) {{.*}}: (!fir.ref<!fir.type<_QMm_struct_ctorTt_char_array{x:f32,c:!fir.array<5x!fir.char<1,3>>}>>) -> ()
 
     real :: x
     character(3) :: c1(5)
@@ -154,7 +154,7 @@ contains
   ! CHECK:         %[[VAL_22:.*]] = fir.rebox %[[VAL_1]] {{\[}}%[[VAL_21]]] : (!fir.box<!fir.array<?x?xi32>>, !fir.slice<2>) -> !fir.box<!fir.array<2x3xi32>>
   ! CHECK:         %[[VAL_23:.*]] = fir.rebox %[[VAL_22]] : (!fir.box<!fir.array<2x3xi32>>) -> !fir.box<!fir.ptr<!fir.array<?x?xi32>>>
   ! CHECK:         fir.store %[[VAL_23]] to %[[VAL_8]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xi32>>>>
-  ! CHECK:         fir.call @_QMm_struct_ctorPprint_ptr(%[[VAL_3]]) : (!fir.ref<!fir.type<_QMm_struct_ctorTt_ptr{x:f32,p:!fir.box<!fir.ptr<!fir.array<?x?xi32>>>}>>) -> ()
+  ! CHECK:         fir.call @_QMm_struct_ctorPprint_ptr(%[[VAL_3]]) {{.*}}: (!fir.ref<!fir.type<_QMm_struct_ctorTt_ptr{x:f32,p:!fir.box<!fir.ptr<!fir.array<?x?xi32>>>}>>) -> ()
   ! CHECK:         return
   ! CHECK:       }
 
@@ -284,7 +284,7 @@ end
 ! CHECK:         %[[VAL_54:.*]] = arith.constant true
 ! CHECK:         %[[VAL_55:.*]] = fir.convert %[[VAL_54]] : (i1) -> !fir.logical<4>
 ! CHECK:         fir.store %[[VAL_55]] to %[[VAL_53]] : !fir.ref<!fir.logical<4>>
-! CHECK:         fir.call @_QPprint_parent_component1(%[[VAL_1]]) : (!fir.ref<!fir.type<_QFtest_parent_component1Tmid{x:i32,y:!fir.array<2xi32>,mask:!fir.logical<4>}>>) -> ()
+! CHECK:         fir.call @_QPprint_parent_component1(%[[VAL_1]]) {{.*}}: (!fir.ref<!fir.type<_QFtest_parent_component1Tmid{x:i32,y:!fir.array<2xi32>,mask:!fir.logical<4>}>>) -> ()
 ! CHECK:         return
 ! CHECK:       }
 
@@ -314,13 +314,13 @@ end
 ! CHECK:         %[[VAL_17:.*]] = arith.constant false
 ! CHECK:         %[[VAL_18:.*]] = fir.convert %[[VAL_12]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
 ! CHECK:         %[[VAL_19:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
-! CHECK:         fir.call @llvm.memmove.p0.p0.i64(%[[VAL_18]], %[[VAL_19]], %[[VAL_16]], %[[VAL_17]]) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+! CHECK:         fir.call @llvm.memmove.p0.p0.i64(%[[VAL_18]], %[[VAL_19]], %[[VAL_16]], %[[VAL_17]]) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 ! CHECK:         %[[VAL_20:.*]] = fir.field_index mask, !fir.type<_QFtest_parent_component2Tmid{z:!fir.char<1,5>,mask:!fir.logical<4>}>
 ! CHECK:         %[[VAL_21:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_20]] : (!fir.ref<!fir.type<_QFtest_parent_component2Tmid{z:!fir.char<1,5>,mask:!fir.logical<4>}>>, !fir.field) -> !fir.ref<!fir.logical<4>>
 ! CHECK:         %[[VAL_22:.*]] = arith.constant true
 ! CHECK:         %[[VAL_23:.*]] = fir.convert %[[VAL_22]] : (i1) -> !fir.logical<4>
 ! CHECK:         fir.store %[[VAL_23]] to %[[VAL_21]] : !fir.ref<!fir.logical<4>>
-! CHECK:         fir.call @_QPprint_parent_component2(%[[VAL_0]]) : (!fir.ref<!fir.type<_QFtest_parent_component2Tmid{z:!fir.char<1,5>,mask:!fir.logical<4>}>>) -> ()
+! CHECK:         fir.call @_QPprint_parent_component2(%[[VAL_0]]) {{.*}}: (!fir.ref<!fir.type<_QFtest_parent_component2Tmid{z:!fir.char<1,5>,mask:!fir.logical<4>}>>) -> ()
 ! CHECK:         return
 ! CHECK:       }
 
@@ -346,13 +346,13 @@ end
 ! CHECK:         fir.store %[[VAL_11]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.type<_QFtest_parent_component3Tbase{m:!fir.array<2x!fir.char<1,5>>}>>>
 ! CHECK:         %[[VAL_14:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.type<_QFtest_parent_component3Tbase{m:!fir.array<2x!fir.char<1,5>>}>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_15:.*]] = fir.convert %[[VAL_9]] : (!fir.box<!fir.ptr<!fir.type<_QFtest_parent_component3Tbase{m:!fir.array<2x!fir.char<1,5>>}>>>) -> !fir.box<none>
-! CHECK:         %[[VAL_17:.*]] = fir.call @_FortranAAssign(%[[VAL_14]], %[[VAL_15]], %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+! CHECK:         %[[VAL_17:.*]] = fir.call @_FortranAAssign(%[[VAL_14]], %[[VAL_15]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
 ! CHECK:         %[[VAL_18:.*]] = fir.field_index mask, !fir.type<_QFtest_parent_component3Tmid{m:!fir.array<2x!fir.char<1,5>>,mask:!fir.logical<4>}>
 ! CHECK:         %[[VAL_19:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_18]] : (!fir.ref<!fir.type<_QFtest_parent_component3Tmid{m:!fir.array<2x!fir.char<1,5>>,mask:!fir.logical<4>}>>, !fir.field) -> !fir.ref<!fir.logical<4>>
 ! CHECK:         %[[VAL_20:.*]] = arith.constant true
 ! CHECK:         %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (i1) -> !fir.logical<4>
 ! CHECK:         fir.store %[[VAL_21]] to %[[VAL_19]] : !fir.ref<!fir.logical<4>>
-! CHECK:         fir.call @_QPprint_parent_component3(%[[VAL_2]]) : (!fir.ref<!fir.type<_QFtest_parent_component3Tmid{m:!fir.array<2x!fir.char<1,5>>,mask:!fir.logical<4>}>>) -> ()
+! CHECK:         fir.call @_QPprint_parent_component3(%[[VAL_2]]) {{.*}}: (!fir.ref<!fir.type<_QFtest_parent_component3Tmid{m:!fir.array<2x!fir.char<1,5>>,mask:!fir.logical<4>}>>) -> ()
 ! CHECK:         return
 ! CHECK:       }
 

@@ -18,12 +18,12 @@ end interface
 
   ! CHECK: %[[true2:.*]] = fir.convert %true{{.*}} : (i1) -> !fir.logical<2>
   ! CHECK: fir.store %[[true2]] to %[[mem2:.*]] : !fir.ref<!fir.logical<2>>
-  ! CHECK: fir.call @_QPfoo2(%[[mem2]]) : (!fir.ref<!fir.logical<2>>) -> ()
+  ! CHECK: fir.call @_QPfoo2(%[[mem2]]) {{.*}}: (!fir.ref<!fir.logical<2>>) -> ()
 call foo2(.true._2)
 
   ! CHECK: %[[true4:.*]] = fir.convert %true{{.*}} : (i1) -> !fir.logical<4>
   ! CHECK: fir.store %[[true4]] to %[[mem4:.*]] : !fir.ref<!fir.logical<4>>
-  ! CHECK: fir.call @_QPfoo4(%[[mem4]]) : (!fir.ref<!fir.logical<4>>) -> ()
+  ! CHECK: fir.call @_QPfoo4(%[[mem4]]) {{.*}}: (!fir.ref<!fir.logical<4>>) -> ()
 call foo4(.true.)
 
 end subroutine
