@@ -1,4 +1,4 @@
-//===- AllocTensorElimination.cpp - alloc_tensor op elimination -----------===//
+//===- EmptyTensorElimination.cpp - tensor.empty op elimination -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +10,7 @@
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
-#include "mlir/Dialect/Bufferization/Transforms/AllocTensorElimination.h"
+#include "mlir/Dialect/Bufferization/Transforms/EmptyTensorElimination.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dominance.h"
@@ -18,7 +18,7 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_ALLOCTENSORELIMINATION
+#define GEN_PASS_DEF_EMPTYTENSORELIMINATION
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -47,27 +47,27 @@ neededValuesDominateInsertionPoint(const DominanceInfo &domInfo,
 }
 
 /// Return true if the given `insertionPoint` dominates all uses of
-/// `allocTensorOp`.
+/// `emptyTensorOp`.
 static bool insertionPointDominatesUses(const DominanceInfo &domInfo,
                                         Operation *insertionPoint,
-                                        Operation *allocTensorOp) {
-  for (Operation *user : allocTensorOp->getUsers())
+                                        Operation *emptyTensorOp) {
+  for (Operation *user : emptyTensorOp->getUsers())
     if (!domInfo.dominates(insertionPoint, user))
       return false;
   return true;
 }
 
-/// Find a valid insertion point for a replacement of `allocTensorOp`, assuming
+/// Find a valid insertion point for a replacement of `emptyTensorOp`, assuming
 /// that the replacement may use any value from `neededValues`.
 static Operation *
-findValidInsertionPoint(Operation *allocTensorOp,
+findValidInsertionPoint(Operation *emptyTensorOp,
                         const SmallVector<Value> &neededValues) {
   DominanceInfo domInfo;
 
-  // Gather all possible insertion points: the location of `allocTensorOp` and
+  // Gather all possible insertion points: the location of `emptyTensorOp` and
   // right after the definition of each value in `neededValues`.
   SmallVector<Operation *> insertionPointCandidates;
-  insertionPointCandidates.push_back(allocTensorOp);
+  insertionPointCandidates.push_back(emptyTensorOp);
   for (Value val : neededValues) {
     // Note: The anchor op is using all of `neededValues`, so:
     // * in case of a block argument: There must be at least one op in the block
@@ -90,7 +90,7 @@ findValidInsertionPoint(Operation *allocTensorOp,
                                             neededValues))
       continue;
     // Check if the insertion point is before all uses.
-    if (!insertionPointDominatesUses(domInfo, insertionPoint, allocTensorOp))
+    if (!insertionPointDominatesUses(domInfo, insertionPoint, emptyTensorOp))
       continue;
     return insertionPoint;
   }
@@ -99,12 +99,12 @@ findValidInsertionPoint(Operation *allocTensorOp,
   return nullptr;
 }
 
-/// Try to eliminate AllocTensorOps inside `op`. An AllocTensorOp is replaced
+/// Try to eliminate tensor::EmptyOps inside `op`. A tensor::EmptyOp is replaced
 /// with the result of `rewriteFunc` if it is anchored on a matching
 /// OpOperand. "Anchored" means that there is a path on the reverse SSA use-def
 /// chain, starting from the OpOperand and always following the aliasing
-/// OpOperand, that eventually ends at a single AllocTensorOp.
-LogicalResult mlir::bufferization::eliminateAllocTensors(
+/// OpOperand, that eventually ends at a single tensor::EmptyOp.
+LogicalResult mlir::bufferization::eliminateEmptyTensors(
     RewriterBase &rewriter, Operation *op, AnalysisState &state,
     AnchorMatchFn anchorMatchFunc, RewriteFn rewriteFunc) {
   OpBuilder::InsertionGuard g(rewriter);
@@ -119,56 +119,40 @@ LogicalResult mlir::bufferization::eliminateAllocTensors(
       // Is this a matching OpOperand?
       if (!anchorMatchFunc(operand, neededValues))
         continue;
-      SetVector<Value> maybeAllocTensor =
-          state.findValueInReverseUseDefChain(operand.get(), [&](Value val) {
-            // Continue traversal until this function returns true.
-            OpResult opResult = val.dyn_cast<OpResult>();
-            if (!opResult)
-              return true;
-            SmallVector<OpOperand *> opOperands =
-                state.getAliasingOpOperand(opResult);
-            if (!llvm::all_of(opOperands, [&](OpOperand *operand) {
-                  return state.isInPlace(*operand);
-                }))
-              return true;
-            // Only equivalent tensors are supported at the moment.
-            // TODO: Support cases such as extract_slice(alloc_tensor)
-            return !llvm::all_of(opOperands, [&](OpOperand *operand) {
-              return state.areEquivalentBufferizedValues(operand->get(),
-                                                         opResult);
-            });
-          });
+      SetVector<Value> maybeEmptyTensor = state.findValueInReverseUseDefChain(
+          operand.get(), /*condition=*/[&](Value val) { return false; },
+          /*followEquivalentOnly=*/true);
 
       // Replace only if the reverse use-def chain ends at exactly one
-      // AllocTensorOp.
-      if (maybeAllocTensor.size() != 1 ||
-          !maybeAllocTensor.front().getDefiningOp<AllocTensorOp>())
+      // tensor::EmptyOp.
+      if (maybeEmptyTensor.size() != 1 ||
+          !maybeEmptyTensor.front().getDefiningOp<tensor::EmptyOp>())
         return WalkResult::skip();
-      Value allocTensor = maybeAllocTensor.front();
+      Value emptyTensor = maybeEmptyTensor.front();
 
       // Replace only if the types match.
       // TODO: This could be extended to support IR such as:
-      // %0 = bufferization.alloc_tensor : tensor<128xf32>
+      // %0 = tensor.empty() : tensor<128xf32>
       // %1 = "some_op"(%0) : (tensor<128xf32>) -> (tensor<128xf32>)
       // %2 = tensor.expand_shape %1 ...
       // %3 = tensor.insert_slice %2 into ...
-      if (allocTensor.getType() != operand.get().getType())
+      if (emptyTensor.getType() != operand.get().getType())
         return WalkResult::skip();
 
       // Find a suitable insertion point.
       Operation *insertionPoint =
-          findValidInsertionPoint(allocTensor.getDefiningOp(), neededValues);
+          findValidInsertionPoint(emptyTensor.getDefiningOp(), neededValues);
       if (!insertionPoint)
         continue;
 
-      // Create a replacement for the AllocTensorOp.
+      // Create a replacement for the tensor::EmptyOp.
       rewriter.setInsertionPoint(insertionPoint);
-      Value replacement = rewriteFunc(rewriter, allocTensor.getLoc(), operand);
+      Value replacement = rewriteFunc(rewriter, emptyTensor.getLoc(), operand);
       if (!replacement)
         continue;
 
-      // Replace the AllocTensorOp.
-      rewriter.replaceOp(allocTensor.getDefiningOp(), replacement);
+      // Replace the tensor::EmptyOp.
+      rewriter.replaceOp(emptyTensor.getDefiningOp(), replacement);
     }
 
     // Advance to the next operation.
@@ -178,34 +162,35 @@ LogicalResult mlir::bufferization::eliminateAllocTensors(
   return failure(status.wasInterrupted());
 }
 
-/// Try to eliminate AllocTensorOps inside `op`. An AllocTensorOp can be
+/// Try to eliminate tensor::EmptyOps inside `op`. An tensor::EmptyOp can be
 /// eliminated if it is eventually inserted into another tensor (and some other
 /// conditions are met).
 ///
 /// E.g.:
-/// %0 = linalg.alloc_tensor
+/// %0 = tensor.empty()
 /// %1 = linalg.fill(%cst, %0) {inplace = [true]}
 /// %2 = tensor.insert_slice %1 into %t[10][20][1]
 ///
-/// AllocTensorOp elimination will try to fill %t inplace instead of filling a
+/// tensor::EmptyOp elimination will try to fill %t inplace instead of filling a
 /// new allocation %0 and inserting it into %t. This is done by replacing the
-/// AllocTensorOp with:
+/// tensor::EmptyOp with:
 ///
 /// %0 = tensor.extract_slice %t[10][20][1]
 ///
 /// The analysis looks for matching ExtractSliceOp/InsertSliceOp pairs and lets
 /// those bufferize inplace in the absence of other conflicts.
 ///
-/// Starting from an InsertSliceOp, an AllocTensorOp at the end of the insert
+/// Starting from an InsertSliceOp, an tensor::EmptyOp at the end of the insert
 /// source's reverse use-def chain is eliminated if:
 /// * On the reverse use-def chain path from the InsertSliceOp to the
-///   AllocTensorOp, all ops were decided to bufferize inplace and the buffer
+///   tensor::EmptyOp, all ops were decided to bufferize inplace and the buffer
 ///   relation is "equivalent" (TODO: can be relaxed if needed).
-/// * The reverse use-def chain has exactly one end, which is the AllocTensorOp.
+/// * The reverse use-def chain has exactly one end, which is the
+///   tensor::EmptyOp.
 LogicalResult
-mlir::bufferization::insertSliceAnchoredAllocTensorEliminationStep(
+mlir::bufferization::insertSliceAnchoredEmptyTensorEliminationStep(
     RewriterBase &rewriter, Operation *op, AnalysisState &state) {
-  return eliminateAllocTensors(
+  return eliminateEmptyTensors(
       rewriter, op, state,
       /*anchorMatchFunc=*/
       [&](OpOperand &operand, SmallVector<Value> &neededValues) {
@@ -239,10 +224,10 @@ mlir::bufferization::insertSliceAnchoredAllocTensorEliminationStep(
 }
 
 namespace {
-struct AllocTensorElimination
-    : public bufferization::impl::AllocTensorEliminationBase<
-          AllocTensorElimination> {
-  AllocTensorElimination() = default;
+struct EmptyTensorElimination
+    : public bufferization::impl::EmptyTensorEliminationBase<
+          EmptyTensorElimination> {
+  EmptyTensorElimination() = default;
 
   void runOnOperation() override;
 
@@ -253,7 +238,7 @@ struct AllocTensorElimination
 };
 } // namespace
 
-void AllocTensorElimination::runOnOperation() {
+void EmptyTensorElimination::runOnOperation() {
   Operation *op = getOperation();
   OneShotBufferizationOptions options;
   OneShotAnalysisState state(op, options);
@@ -263,11 +248,11 @@ void AllocTensorElimination::runOnOperation() {
   }
 
   IRRewriter rewriter(op->getContext());
-  if (failed(bufferization::insertSliceAnchoredAllocTensorEliminationStep(
+  if (failed(bufferization::insertSliceAnchoredEmptyTensorEliminationStep(
           rewriter, op, state)))
     signalPassFailure();
 }
 
-std::unique_ptr<Pass> mlir::bufferization::createAllocTensorEliminationPass() {
-  return std::make_unique<AllocTensorElimination>();
+std::unique_ptr<Pass> mlir::bufferization::createEmptyTensorEliminationPass() {
+  return std::make_unique<EmptyTensorElimination>();
 }
