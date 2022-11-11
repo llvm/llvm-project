@@ -496,17 +496,20 @@ struct FoldFillWithPad final : public OpRewritePattern<tensor::PadOp> {
       return rewriter.notifyMatchFailure(
           padOp, "failed to reify tensor.pad op result shape");
 
-    auto oldResultType = padOp.getResultType();
-    SmallVector<int64_t, 4> staticShape(oldResultType.getRank(),
-                                        ShapedType::kDynamicSize);
+    SmallVector<OpFoldResult> newShape =
+        getAsOpFoldResult(reifiedShape.front());
     auto emptyTensor = rewriter.create<tensor::EmptyOp>(
-        padOp.getLoc(), staticShape, oldResultType.getElementType(),
-        reifiedShape.front());
-    auto newFillOp = rewriter.create<FillOp>(
-        fillOp.getLoc(), ValueRange{padValue}, ValueRange{emptyTensor});
-    rewriter.replaceOpWithNewOp<tensor::CastOp>(padOp, oldResultType,
-                                                newFillOp.result());
-
+        padOp.getLoc(), newShape, padOp.getResultType().getElementType());
+    Value replacement =
+        rewriter
+            .create<FillOp>(fillOp.getLoc(), ValueRange{padValue},
+                            ValueRange{emptyTensor})
+            .getResult(0);
+    if (replacement.getType() != padOp.getResultType()) {
+      replacement = rewriter.create<tensor::CastOp>(
+          fillOp.getLoc(), padOp.getResultType(), replacement);
+    }
+    rewriter.replaceOp(padOp, replacement);
     return success();
   }
 };
