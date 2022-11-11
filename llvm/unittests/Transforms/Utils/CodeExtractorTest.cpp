@@ -513,19 +513,28 @@ TEST(CodeExtractor, PartialAggregateArgs) {
     target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
     target triple = "x86_64-unknown-linux-gnu"
 
-    declare void @use(i32)
+    ; use different types such that an index mismatch will result in a type mismatch during verification.
+    declare void @use16(i16)
+    declare void @use32(i32)
+    declare void @use64(i64)
 
-    define void @foo(i32 %a, i32 %b, i32 %c) {
+    define void @foo(i16 %a, i32 %b, i64 %c) {
     entry:
       br label %extract
 
     extract:
-      call void @use(i32 %a)
-      call void @use(i32 %b)
-      call void @use(i32 %c)
+      call void @use16(i16 %a)
+      call void @use32(i32 %b)
+      call void @use64(i64 %c)
+      %d = add i16 21, 21
+      %e = add i32 21, 21
+      %f = add i64 21, 21
       br label %exit
 
     exit:
+      call void @use16(i16 %d)
+      call void @use32(i32 %e)
+      call void @use64(i64 %f)
       ret void
     }
   )ir",
@@ -544,14 +553,15 @@ TEST(CodeExtractor, PartialAggregateArgs) {
   BasicBlock *CommonExit = nullptr;
   CE.findAllocas(CEAC, SinkingCands, HoistingCands, CommonExit);
   CE.findInputsOutputs(Inputs, Outputs, SinkingCands);
-  // Exclude the first input from the argument aggregate.
-  CE.excludeArgFromAggregate(Inputs[0]);
+  // Exclude the middle input and output from the argument aggregate.
+  CE.excludeArgFromAggregate(Inputs[1]);
+  CE.excludeArgFromAggregate(Outputs[1]);
 
   Function *Outlined = CE.extractCodeRegion(CEAC, Inputs, Outputs);
   EXPECT_TRUE(Outlined);
-  // Expect 2 arguments in the outlined function: the excluded input and the
-  // struct aggregate for the remaining inputs.
-  EXPECT_EQ(Outlined->arg_size(), 2U);
+  // Expect 3 arguments in the outlined function: the excluded input, the
+  // excluded output, and the struct aggregate for the remaining inputs.
+  EXPECT_EQ(Outlined->arg_size(), 3U);
   EXPECT_FALSE(verifyFunction(*Outlined));
   EXPECT_FALSE(verifyFunction(*Func));
 }
