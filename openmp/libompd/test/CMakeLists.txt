@@ -9,25 +9,27 @@ endif()
 find_package(LLVM REQUIRED CONFIG)
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(AddLLVM)
-find_program(LLVM_LIT_PATH
-  NAMES llvm-lit lit
-  HINTS ${LLVM_TOOLS_BINARY_DIR} 
-  PATHS ${LLVM_ROOT_DIR}/bin /usr/bin /usr/local/bin /opt/local/bin
-  DOC "llvm-lit executable. (Workaround for AddLLVM.cmake path not being set)"
-)
-if(LLVM_LIT_PATH)
-  set(LLVM_EXTERNAL_LIT ${LLVM_LIT_PATH})
-endif()
 
-find_program(FILECHECK_EXECUTABLE
-  NAMES Filecheck FileCheck
-  HINTS ${LLVM_TOOLS_BINARY_DIR} 
-  PATHS ${LLVM_ROOT_DIR}/bin /usr/bin /usr/local/bin /opt/local/bin
-  DOC "Filecheck executable. (Workaround for AddLLVM.cmake path not being set)"
-)
-if(LLVM_FILECHECK_PATH)
-  set(LLVM_EXTERNAL_FILECHECK ${LLVM_FILECHECK_PATH})
-endif()
+
+#find_program(LLVM_LIT_PATH
+#  NAMES llvm-lit lit
+#  HINTS ${LLVM_TOOLS_BINARY_DIR} 
+#  PATHS ${LLVM_ROOT_DIR}/bin /usr/bin /usr/local/bin /opt/local/bin
+#  DOC "llvm-lit executable. (Workaround for AddLLVM.cmake path not being set)"
+#)
+#if(LLVM_LIT_PATH)
+#  set(LLVM_EXTERNAL_LIT ${LLVM_LIT_PATH})
+#endif()
+
+#find_program(FILECHECK_EXECUTABLE
+#  NAMES Filecheck FileCheck
+#  HINTS ${LLVM_TOOLS_BINARY_DIR} 
+#  PATHS ${LLVM_ROOT_DIR}/bin /usr/bin /usr/local/bin /opt/local/bin
+#  DOC "Filecheck executable. (Workaround for AddLLVM.cmake path not being set)"
+#)
+#if(LLVM_FILECHECK_PATH)
+#  set(LLVM_EXTERNAL_FILECHECK ${LLVM_FILECHECK_PATH})
+#endif()
 
 set(PYTHON_PLUGIN ${ompd_BINARY_DIR}/gdb-plugin/python-module)
 
