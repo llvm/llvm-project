@@ -3070,7 +3070,9 @@ struct FormatStyle {
   ReferenceAlignmentStyle ReferenceAlignment;
 
   // clang-format off
-  /// If ``true``, clang-format will attempt to re-flow comments.
+  /// If ``true``, clang-format will attempt to re-flow comments. That is it
+  /// will touch a comment and *reflow* long comments into new lines, trying to
+  /// obey the ``ColumnLimit``.
   /// \code
   ///    false:
   ///    // veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of information
@@ -3821,7 +3823,7 @@ struct FormatStyle {
   /// \version 3.7
   bool SpacesInCStyleCastParentheses;
 
-  /// Control of spaces within a single line comment
+  /// Control of spaces within a single line comment.
   struct SpacesInLineComment {
     /// The minimum number of spaces at the start of the comment.
     unsigned Minimum;
@@ -3858,6 +3860,8 @@ struct FormatStyle {
   ///   ///  - Foo                                /// - Foo
   ///   ///    - Bar                              ///   - Bar
   /// \endcode
+  ///
+  /// This option has only effect if ``ReflowComments`` is set to ``true``.
   /// \version 13
   SpacesInLineComment SpacesInLineCommentPrefix;
 

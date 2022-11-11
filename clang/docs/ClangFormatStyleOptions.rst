@@ -3795,7 +3795,9 @@ the configuration (without a prefix: ``Auto``).
 
 
 **ReflowComments** (``Boolean``) :versionbadge:`clang-format 3.8`
-  If ``true``, clang-format will attempt to re-flow comments.
+  If ``true``, clang-format will attempt to re-flow comments. That is it
+  will touch a comment and *reflow* long comments into new lines, trying to
+  obey the ``ColumnLimit``.
 
   .. code-block:: c++
 
@@ -4610,9 +4612,11 @@ the configuration (without a prefix: ``Auto``).
     ///  - Foo                                /// - Foo
     ///    - Bar                              ///   - Bar
 
+  This option has only effect if ``ReflowComments`` is set to ``true``.
+
   Nested configuration flags:
 
-  Control of spaces within a single line comment
+  Control of spaces within a single line comment.
 
   * ``unsigned Minimum`` The minimum number of spaces at the start of the comment.
 
