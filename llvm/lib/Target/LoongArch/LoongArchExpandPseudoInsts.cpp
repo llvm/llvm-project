@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/Support/CodeGen.h"
 
 using namespace llvm;
 
@@ -74,6 +75,9 @@ private:
   bool expandLoadAddressTLSGD(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MBBI,
                               MachineBasicBlock::iterator &NextMBBI);
+  bool expandFunctionCALL(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI,
+                          MachineBasicBlock::iterator &NextMBBI);
 };
 
 char LoongArchPreRAExpandPseudo::ID = 0;
@@ -116,6 +120,8 @@ bool LoongArchPreRAExpandPseudo::expandMI(
     return expandLoadAddressTLSLD(MBB, MBBI, NextMBBI);
   case LoongArch::PseudoLA_TLS_GD:
     return expandLoadAddressTLSGD(MBB, MBBI, NextMBBI);
+  case LoongArch::PseudoCALL:
+    return expandFunctionCALL(MBB, MBBI, NextMBBI);
   }
   return false;
 }
@@ -237,6 +243,32 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSGD(
   unsigned SecondOpcode = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
   return expandPcalau12iInstPair(MBB, MBBI, NextMBBI, LoongArchII::MO_GD_PC_HI,
                                  SecondOpcode, LoongArchII::MO_GOT_PC_LO);
+}
+
+bool LoongArchPreRAExpandPseudo::expandFunctionCALL(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
+  MachineFunction *MF = MBB.getParent();
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+  const MachineOperand &Func = MI.getOperand(0);
+  MachineInstrBuilder CALL;
+
+  // TODO: CodeModel::Medium
+  switch (MF->getTarget().getCodeModel()) {
+  default:
+    report_fatal_error("Unsupported code model");
+    break;
+  case CodeModel::Small: // Default CodeModel.
+    CALL = BuildMI(MBB, MBBI, DL, TII->get(LoongArch::BL)).add(Func);
+    break;
+  }
+
+  // Transfer implicit operands.
+  CALL.copyImplicitOps(MI);
+
+  MI.eraseFromParent();
+  return true;
 }
 
 } // end namespace
