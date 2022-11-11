@@ -1156,7 +1156,7 @@ linkAndWrapDeviceFiles(SmallVectorImpl<OffloadFile> &LinkerInputFiles,
     // First link and remove all the input files containing bitcode.
     SmallVector<StringRef> InputFiles;
     if (Error Err = linkBitcodeFiles(Input, InputFiles, LinkerArgs))
-      return std::move(Err);
+      return Err;
 
     // Write any remaining device inputs to an output file for the linker.
     for (const OffloadFile &File : Input) {
