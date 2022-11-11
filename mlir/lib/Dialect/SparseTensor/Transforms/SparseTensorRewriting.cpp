@@ -647,9 +647,9 @@ private:
       src = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
     }
 
-    SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(srcTp);
     // Sort the COO tensor so that its elements are ordered via increasing
     // indices for the storage ordering of the dst tensor.
+    SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(srcTp);
     auto dynShape = {ShapedType::kDynamicSize};
     auto indTp =
         MemRefType::get(dynShape, getIndexOverheadType(rewriter, encSrc));
