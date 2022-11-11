@@ -20,7 +20,7 @@
 
 
 # CHECK: (lldb) thread backtrace --extended true
-# CHECK-NEXT: * thread #1, queue = 'com.apple.main-thread', stop reason = EXC_CRASH (code=0, subcode=0x0)
+# CHECK: * thread #1, queue = 'com.apple.main-thread', stop reason = EXC_CRASH (code=0, subcode=0x0)
 # CHECK-NEXT:   * frame #0: 0x00000001a08c7224{{.*}}[artificial]
 # CHECK-NEXT:     frame #1: 0x00000001a08fdceb{{.*}}[artificial]
 # CHECK-NEXT:     frame #2: 0x00000001a08372c7{{.*}}[artificial]
