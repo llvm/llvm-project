@@ -20,6 +20,7 @@ def OPIVI : RISCVVFormat<0b011>;
 def OPIVX : RISCVVFormat<0b100>;
 def OPFVF : RISCVVFormat<0b101>;
 def OPMVX : RISCVVFormat<0b110>;
+def OPCFG : RISCVVFormat<0b111>;
 
 class RISCVMOP<bits<2> val> {
   bits<2> Value = val;
