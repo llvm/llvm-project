@@ -492,6 +492,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   switch (DType) {
   case AArch64::DestructiveBinary:
     DOPRegIsUnique = DstReg != MI.getOperand(SrcIdx).getReg();
+    break;
   case AArch64::DestructiveBinaryComm:
   case AArch64::DestructiveBinaryCommWithRev:
     DOPRegIsUnique =
