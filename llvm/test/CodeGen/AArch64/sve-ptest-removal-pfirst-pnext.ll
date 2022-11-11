@@ -17,7 +17,6 @@ define i32 @pnext_2(<vscale x 2 x i1> %pg, <vscale x 2 x i1> %a) {
 ; CHECK-LABEL: pnext_2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    pnext p1.d, p0, p1.d
-; CHECK-NEXT:    ptest p0, p1.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 2 x i1> @llvm.aarch64.sve.pnext.nxv2i1(<vscale x 2 x i1> %pg, <vscale x 2 x i1> %a)
@@ -30,7 +29,6 @@ define i32 @pnext_4(<vscale x 4 x i1> %pg, <vscale x 4 x i1> %a) {
 ; CHECK-LABEL: pnext_4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    pnext p1.s, p0, p1.s
-; CHECK-NEXT:    ptest p0, p1.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 4 x i1> @llvm.aarch64.sve.pnext.nxv4i1(<vscale x 4 x i1> %pg, <vscale x 4 x i1> %a)
@@ -43,7 +41,6 @@ define i32 @pnext_8(<vscale x 8 x i1> %pg, <vscale x 8 x i1> %a) {
 ; CHECK-LABEL: pnext_8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    pnext p1.h, p0, p1.h
-; CHECK-NEXT:    ptest p0, p1.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 8 x i1> @llvm.aarch64.sve.pnext.nxv8i1(<vscale x 8 x i1> %pg, <vscale x 8 x i1> %a)
