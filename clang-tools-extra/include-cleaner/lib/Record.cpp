@@ -225,9 +225,9 @@ public:
       // 2. handleCommentInMainFile("// IWYU pragma: keep")
       // 3. InclusionDirective("bar.h")
       //
-      // This code stores the last location of "IWYU pragma: keep" (or export)
-      // comment in the main file, so that when next InclusionDirective is
-      // called, it will know that the next inclusion is behind the IWYU pragma.
+      // This code stores the last location of "IWYU pragma: keep" comment in
+      // the main file, so that when next InclusionDirective is called, it will
+      // know that the next inclusion is behind the IWYU pragma.
       LastPragmaKeepInMainFileLine = CommentLine;
     }
     return false;
