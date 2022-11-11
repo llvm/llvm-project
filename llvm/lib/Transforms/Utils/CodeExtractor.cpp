@@ -817,7 +817,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   Module *M = Blocks.front()->getModule();
 
   // This function returns unsigned, outputs will go back by reference.
-  switch (NumExitBlocks) {
+  switch (SwitchCases.size()) {
   case 0:
   case 1:
     RetTy = Type::getVoidTy(Context);
@@ -1484,7 +1484,6 @@ void CodeExtractor::recomputeExitBlocks() {
         SwitchCases.push_back(Succ);
     }
   }
-  NumExitBlocks = ExitBlocks.size();
 }
 
 void CodeExtractor::emitFunctionBody(
@@ -1569,8 +1568,8 @@ void CodeExtractor::emitFunctionBody(
     ExitBlockMap[OldTarget] = NewTarget;
 
     Value *brVal = nullptr;
-    assert(NumExitBlocks < 0xffff && "too many exit blocks for switch");
-    switch (NumExitBlocks) {
+    assert(SwitchCases.size() < 0xffff && "too many exit blocks for switch");
+    switch (SwitchCases.size()) {
     case 0:
     case 1:
       break; // No value needed.
@@ -1736,7 +1735,7 @@ CallInst *CodeExtractor::emitReplacerCall(
   // Emit the call to the function
   CallInst *call =
       CallInst::Create(newFunction, params,
-                       NumExitBlocks > 1 ? "targetBlock" : "", codeReplacer);
+          SwitchCases.size() > 1 ? "targetBlock" : "", codeReplacer);
 
   // Set swifterror parameter attributes.
   unsigned ParamIdx = 0;
@@ -1797,7 +1796,7 @@ CallInst *CodeExtractor::emitReplacerCall(
 
   // Now that we've done the deed, simplify the switch instruction.
   Type *OldFnRetTy = TheSwitch->getParent()->getParent()->getReturnType();
-  switch (NumExitBlocks) {
+  switch (SwitchCases.size()) {
   case 0:
     // There are no successors (the block containing the switch itself), which
     // means that previously this was the last part of the function, and hence
@@ -1836,9 +1835,9 @@ CallInst *CodeExtractor::emitReplacerCall(
     // Otherwise, make the default destination of the switch instruction be one
     // of the other successors.
     TheSwitch->setCondition(call);
-    TheSwitch->setDefaultDest(TheSwitch->getSuccessor(NumExitBlocks));
+    TheSwitch->setDefaultDest(TheSwitch->getSuccessor(SwitchCases.size()));
     // Remove redundant case
-    TheSwitch->removeCase(SwitchInst::CaseIt(TheSwitch, NumExitBlocks - 1));
+    TheSwitch->removeCase(SwitchInst::CaseIt(TheSwitch, SwitchCases.size() - 1));
     break;
   }
 
@@ -1904,7 +1903,7 @@ void CodeExtractor::insertReplacerCall(
   }
 
   // Update the branch weights for the exit block.
-  if (BFI && NumExitBlocks > 1)
+  if (BFI && SwitchCases.size() > 1)
     calculateNewCallTerminatorWeights(codeReplacer, ExitWeights, BPI);
 }
 

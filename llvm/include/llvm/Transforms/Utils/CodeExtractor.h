@@ -103,7 +103,6 @@ public:
 
     // Bits of intermediate state computed at various phases of extraction.
     SetVector<BasicBlock *> Blocks;
-    unsigned NumExitBlocks = std::numeric_limits<unsigned>::max();
     Type *RetTy;
 
     /// Lists of blocks that are branched from the code region to be extracted.
@@ -245,7 +244,7 @@ public:
     getLifetimeMarkers(const CodeExtractorAnalysisCache &CEAC,
                        Instruction *Addr, BasicBlock *ExitBlock) const;
 
-    /// Updates the list of exit blocks (OldTargets and ExitBlocks) after
+    /// Updates the list of SwitchCases (corresponding to exit blocks) after
     /// changes of the control flow or the Blocks list.
     void recomputeExitBlocks();
 
