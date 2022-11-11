@@ -36,7 +36,6 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
   }
   for (const SymbolReference &MacroRef : MacroRefs) {
     assert(MacroRef.Target.kind() == Symbol::Macro);
-    // FIXME: Handle macro locations.
     return CB(MacroRef,
               findHeaders(MacroRef.Target.macro().Definition, SM, PI));
   }
