@@ -19,13 +19,13 @@ subroutine omp_do_firstprivate(a)
   ! CHECK-NEXT: %[[STEP:.*]] = arith.constant 1 : i32
   ! CHECK-NEXT: omp.wsloop   for  (%[[ARG1:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]])
   ! CHECK-NEXT: fir.store %[[ARG1]] to %[[REF]] : !fir.ref<i32>
-  ! CHECK-NEXT: fir.call @_QPfoo(%[[REF]], %[[CLONE]]) : (!fir.ref<i32>, !fir.ref<i32>) -> ()
+  ! CHECK-NEXT: fir.call @_QPfoo(%[[REF]], %[[CLONE]]) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
   ! CHECK-NEXT: omp.yield
     do i=1, a
       call foo(i, a)
     end do
   !$omp end parallel do
-  !CHECK: fir.call @_QPbar(%[[ARG0]]) : (!fir.ref<i32>) -> ()
+  !CHECK: fir.call @_QPbar(%[[ARG0]]) {{.*}}: (!fir.ref<i32>) -> ()
   call bar(a)
 end subroutine omp_do_firstprivate
 
@@ -50,12 +50,12 @@ subroutine omp_do_firstprivate2(a, n)
   ! CHECK-NEXT: %[[STEP:.*]] = arith.constant 1 : i32
   ! CHECK-NEXT: omp.wsloop   for  (%[[ARG2:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]])
   ! CHECK-NEXT: fir.store %[[ARG2]] to %[[REF]] : !fir.ref<i32>
-  ! CHECK-NEXT: fir.call @_QPfoo(%[[REF]], %[[CLONE]]) : (!fir.ref<i32>, !fir.ref<i32>) -> ()
+  ! CHECK-NEXT: fir.call @_QPfoo(%[[REF]], %[[CLONE]]) {{.*}}: (!fir.ref<i32>, !fir.ref<i32>) -> ()
   ! CHECK-NEXT: omp.yield
     do i= a, n
       call foo(i, a)
     end do
   !$omp end parallel do
-  !CHECK: fir.call @_QPbar(%[[ARG1]]) : (!fir.ref<i32>) -> ()
+  !CHECK: fir.call @_QPbar(%[[ARG1]]) {{.*}}: (!fir.ref<i32>) -> ()
   call bar(n)
 end subroutine omp_do_firstprivate2
