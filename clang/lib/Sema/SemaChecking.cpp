@@ -2574,8 +2574,10 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   // These builtins restrict the element type to floating point
   // types only.
   case Builtin::BI__builtin_elementwise_ceil:
+  case Builtin::BI__builtin_elementwise_cos:
   case Builtin::BI__builtin_elementwise_floor:
   case Builtin::BI__builtin_elementwise_roundeven:
+  case Builtin::BI__builtin_elementwise_sin:
   case Builtin::BI__builtin_elementwise_trunc: {
     if (PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return ExprError();
