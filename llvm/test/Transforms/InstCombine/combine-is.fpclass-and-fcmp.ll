@@ -73,10 +73,7 @@ define i1 @fcmp_oeq_inf_or_class_normal_multi_use(half %x, ptr %ptr) {
 ; -> true
 define i1 @fcmp_ord_or_class_isnan(half %x) {
 ; CHECK-LABEL: @fcmp_ord_or_class_isnan(
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X:%.*]], 0xH0000
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X]], i32 3)
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[ORD]], [[CLASS]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ord = fcmp ord half %x, 0.0
   %class = call i1 @llvm.is.fpclass.f16(half %x, i32 3)
@@ -87,7 +84,7 @@ define i1 @fcmp_ord_or_class_isnan(half %x) {
 define i1 @fcmp_ord_or_class_isnan_wrong_operand(half %x, half %y) {
 ; CHECK-LABEL: @fcmp_ord_or_class_isnan_wrong_operand(
 ; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X:%.*]], 0xH0000
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[Y:%.*]], i32 3)
+; CHECK-NEXT:    [[CLASS:%.*]] = fcmp uno half [[Y:%.*]], 0xH0000
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[ORD]], [[CLASS]]
 ; CHECK-NEXT:    ret i1 [[OR]]
 ;
@@ -100,10 +97,7 @@ define i1 @fcmp_ord_or_class_isnan_wrong_operand(half %x, half %y) {
 ; -> false
 define i1 @fcmp_ord_and_class_isnan(half %x) {
 ; CHECK-LABEL: @fcmp_ord_and_class_isnan(
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X:%.*]], 0xH0000
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X]], i32 3)
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ORD]], [[CLASS]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 false
 ;
   %ord = fcmp ord half %x, 0.0
   %class = call i1 @llvm.is.fpclass.f16(half %x, i32 3)
@@ -114,10 +108,7 @@ define i1 @fcmp_ord_and_class_isnan(half %x) {
 ; -> true
 define i1 @fcmp_ord_or_class_isnan_commute(half %x) {
 ; CHECK-LABEL: @fcmp_ord_or_class_isnan_commute(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 3)
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0xH0000
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CLASS]], [[ORD]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    ret i1 true
 ;
   %class = call i1 @llvm.is.fpclass.f16(half %x, i32 3)
   %ord = fcmp ord half %x, 0.0
@@ -128,10 +119,7 @@ define i1 @fcmp_ord_or_class_isnan_commute(half %x) {
 ; -> false
 define i1 @fcmp_ord_and_class_isnan_commute(half %x) {
 ; CHECK-LABEL: @fcmp_ord_and_class_isnan_commute(
-; CHECK-NEXT:    [[CLASS:%.*]] = call i1 @llvm.is.fpclass.f16(half [[X:%.*]], i32 3)
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0xH0000
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CLASS]], [[ORD]]
-; CHECK-NEXT:    ret i1 [[AND]]
+; CHECK-NEXT:    ret i1 false
 ;
   %class = call i1 @llvm.is.fpclass.f16(half %x, i32 3)
   %ord = fcmp ord half %x, 0.0
