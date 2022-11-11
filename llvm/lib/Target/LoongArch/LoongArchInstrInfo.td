@@ -944,6 +944,11 @@ def PseudoCALLIndirect : Pseudo<(outs), (ins GPR:$rj),
                                 [(loongarch_call GPR:$rj)]>,
                          PseudoInstExpansion<(JIRL R1, GPR:$rj, 0)>;
 
+let isCall = 1, Defs = [R1] in
+def PseudoJIRL_CALL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
+                      PseudoInstExpansion<(JIRL R1, GPR:$rj,
+                                           simm16_lsl2:$imm16)>;
+
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
 def PseudoRET : Pseudo<(outs), (ins), [(loongarch_ret)]>,
                 PseudoInstExpansion<(JIRL R0, R1, 0)>;
