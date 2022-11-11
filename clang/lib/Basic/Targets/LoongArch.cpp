@@ -168,6 +168,27 @@ const Builtin::Info LoongArchTargetInfo::BuiltinInfo[] = {
 #include "clang/Basic/BuiltinsLoongArch.def"
 };
 
+bool LoongArchTargetInfo::initFeatureMap(
+    llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
+    const std::vector<std::string> &FeaturesVec) const {
+  if (getTriple().getArch() == llvm::Triple::loongarch64)
+    Features["64bit"] = true;
+
+  return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
+}
+
+/// Return true if has this feature.
+bool LoongArchTargetInfo::hasFeature(StringRef Feature) const {
+  bool Is64Bit = getTriple().getArch() == llvm::Triple::loongarch64;
+  // TODO: Handle more features.
+  return llvm::StringSwitch<bool>(Feature)
+      .Case("loongarch32", !Is64Bit)
+      .Case("loongarch64", Is64Bit)
+      .Case("32bit", !Is64Bit)
+      .Case("64bit", Is64Bit)
+      .Default(false);
+}
+
 ArrayRef<Builtin::Info> LoongArchTargetInfo::getTargetBuiltins() const {
   return llvm::makeArrayRef(BuiltinInfo, clang::LoongArch::LastTSBuiltin -
                                              Builtin::FirstTSBuiltin);
