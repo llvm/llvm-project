@@ -41,6 +41,7 @@ class MachODumper {
   void dumpExportTrie(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpSymbols(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpIndirectSymbols(std::unique_ptr<MachOYAML::Object> &Y);
+  void dumpChainedFixups(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpDataInCode(std::unique_ptr<MachOYAML::Object> &Y);
 
   template <typename SectionType>
@@ -357,6 +358,7 @@ void MachODumper::dumpLinkEdit(std::unique_ptr<MachOYAML::Object> &Y) {
   dumpSymbols(Y);
   dumpIndirectSymbols(Y);
   dumpFunctionStarts(Y);
+  dumpChainedFixups(Y);
   dumpDataInCode(Y);
 }
 
@@ -620,6 +622,26 @@ void MachODumper::dumpIndirectSymbols(std::unique_ptr<MachOYAML::Object> &Y) {
   MachO::dysymtab_command DLC = Obj.getDysymtabLoadCommand();
   for (unsigned i = 0; i < DLC.nindirectsyms; ++i)
     LEData.IndirectSymbols.push_back(Obj.getIndirectSymbolTableEntry(DLC, i));
+}
+
+void MachODumper::dumpChainedFixups(std::unique_ptr<MachOYAML::Object> &Y) {
+  MachOYAML::LinkEditData &LEData = Y->LinkEdit;
+
+  for (const auto &LC : Y->LoadCommands) {
+    if (LC.Data.load_command_data.cmd == llvm::MachO::LC_DYLD_CHAINED_FIXUPS) {
+      const MachO::linkedit_data_command &DC =
+          LC.Data.linkedit_data_command_data;
+      if (DC.dataoff) {
+        assert(DC.dataoff < Obj.getData().size());
+        assert(DC.dataoff + DC.datasize <= Obj.getData().size());
+        const char *Bytes = Obj.getData().data() + DC.dataoff;
+        for (size_t Idx = 0; Idx < DC.datasize; Idx++) {
+          LEData.ChainedFixups.push_back(Bytes[Idx]);
+        }
+      }
+      break;
+    }
+  }
 }
 
 void MachODumper::dumpDataInCode(std::unique_ptr<MachOYAML::Object> &Y) {
