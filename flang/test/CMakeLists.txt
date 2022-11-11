@@ -63,6 +63,9 @@ set(FLANG_TEST_DEPENDS
   Fortran_main
   FortranDecimal
 )
+if (LLVM_ENABLE_PLUGINS AND NOT WIN32)
+  list(APPEND FLANG_TEST_DEPENDS Bye)
+endif()
 
 if (FLANG_INCLUDE_TESTS)
   if (FLANG_GTEST_AVAIL)

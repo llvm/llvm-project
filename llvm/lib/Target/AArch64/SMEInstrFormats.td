@@ -3624,3 +3624,276 @@ multiclass sme2_sat_shift_vector_vg4<string mnemonic, bits<3> op> {
     let Inst{20-16} = imm{4-0};
   }
 }
+
+//===----------------------------------------------------------------------===//
+// SME2 Multi-vector - SVE Select
+class sme2_sel_vector_vg24<bits<2> sz, bits<4> op, RegisterOperand vector_ty,
+                           string mnemonic>
+    : I<(outs vector_ty:$Zd),
+        (ins PNRAny_p8to15:$PNg, vector_ty:$Zn, vector_ty:$Zm),
+        mnemonic, "\t$Zd, $PNg, $Zn, $Zm",
+        "", []>, Sched<[]> {
+  bits<3> PNg;
+  let Inst{31-24} = 0b11000001;
+  let Inst{23-22} = sz;
+  let Inst{21}    = 0b1;
+  let Inst{17-16} = op{3-2};
+  let Inst{15-13} = 0b100;
+  let Inst{12-10} = PNg;
+  let Inst{6}     = op{1};
+  let Inst{5}     = 0b0;
+  let Inst{1}     = op{0};
+  let Inst{0}     = 0b0;
+}
+
+class sme2_sel_vector_vg2<bits<2> sz, RegisterOperand vector_ty,
+                          string mnemonic>
+     : sme2_sel_vector_vg24<sz, {?,0,?,?}, vector_ty, mnemonic> {
+  bits<4> Zm;
+  bits<4> Zn;
+  bits<4> Zd;
+  let Inst{20-17} = Zm;
+  let Inst{9-6}   = Zn;
+  let Inst{4-1}   = Zd;
+}
+
+multiclass sme2_sel_vector_vg2<string mnemonic>{
+  def _B : sme2_sel_vector_vg2<0b00, ZZ_b_mul_r, mnemonic>;
+  def _H : sme2_sel_vector_vg2<0b01, ZZ_h_mul_r, mnemonic>;
+  def _S : sme2_sel_vector_vg2<0b10, ZZ_s_mul_r, mnemonic>;
+  def _D : sme2_sel_vector_vg2<0b11, ZZ_d_mul_r, mnemonic>;
+}
+class sme2_sel_vector_vg4<bits<2> sz, RegisterOperand vector_ty,
+                          string mnemonic>
+     : sme2_sel_vector_vg24<sz, 0b0100, vector_ty, mnemonic> {
+  bits<3> Zm;
+  bits<3> Zn;
+  bits<3> Zd;
+  let Inst{20-18} = Zm;
+  let Inst{9-7}   = Zn;
+  let Inst{4-2}   = Zd;
+}
+multiclass sme2_sel_vector_vg4<string mnemonic> {
+  def _B : sme2_sel_vector_vg4<0b00, ZZZZ_b_mul_r, mnemonic>;
+  def _H : sme2_sel_vector_vg4<0b01, ZZZZ_h_mul_r, mnemonic>;
+  def _S : sme2_sel_vector_vg4<0b10, ZZZZ_s_mul_r, mnemonic>;
+  def _D : sme2_sel_vector_vg4<0b11, ZZZZ_d_mul_r, mnemonic>;
+}
+
+//===----------------------------------------------------------------------===//
+// Non contiguous Load and Store
+
+class sme2_ld_vector_vg2_multi_scalar_scalar<bits<2> msz, bit n,
+                                             RegisterOperand multi_vector_ty,
+                                             RegisterOperand gpr_ty,
+                                             string mnemonic>
+   : I<(outs multi_vector_ty:$Zt),
+       (ins PNRAny_p8to15:$PNg, GPR64sp:$Rn, gpr_ty:$Rm),
+       mnemonic, "\t$Zt, $PNg/z, [$Rn, $Rm]",
+       "", []>, Sched<[]> {
+   bits<5> Rm;
+   bits<3> PNg;
+   bits<5> Rn;
+   bits<4> Zt;
+   let Inst{31-21} = 0b10100001000;
+   let Inst{20-16} = Rm;
+   let Inst{15}    = 0b0;
+   let Inst{14-13} = msz;
+   let Inst{12-10} = PNg;
+   let Inst{9-5}   = Rn;
+   let Inst{4}     = Zt{3};
+   let Inst{3}     = n;
+   let Inst{2-0}   = Zt{2-0};
+
+   let mayLoad = 1;
+}
+
+class sme2_ld_vector_vg4_multi_scalar_scalar<bits<2> msz, bit n,
+                                             RegisterOperand multi_vector_ty,
+                                             RegisterOperand gpr_ty,
+                                             string mnemonic>
+   : I<(outs multi_vector_ty:$Zt),
+       (ins PNRAny_p8to15:$PNg, GPR64sp:$Rn, gpr_ty:$Rm),
+       mnemonic, "\t$Zt, $PNg/z, [$Rn, $Rm]",
+       "", []>, Sched<[]> {
+   bits<5> Rm;
+   bits<3> PNg;
+   bits<5> Rn;
+   bits<3> Zt;
+   let Inst{31-21} = 0b10100001000;
+   let Inst{20-16} = Rm;
+   let Inst{15}    = 0b1;
+   let Inst{14-13} = msz;
+   let Inst{12-10} = PNg;
+   let Inst{9-5}   = Rn;
+   let Inst{4}     = Zt{2};
+   let Inst{3}     = n;
+   let Inst{2}     = 0b0;
+   let Inst{1-0}   = Zt{1-0};
+
+   let mayLoad = 1;
+}
+
+class sme2_ld_vector_vg24_multi_scalar_immediate<bits<2> msz, bit n, bits<2> op,
+                                                 RegisterOperand multi_vector_ty,
+                                                 Operand index_ty,
+                                                 string mnemonic>
+    : I<(outs multi_vector_ty:$Zt),
+        (ins PNRAny_p8to15:$PNg, GPR64sp:$Rn, index_ty:$imm4),
+        mnemonic,  "\t$Zt, $PNg/z, [$Rn, $imm4, mul vl]",
+        "", []>, Sched<[]> {
+   bits<4> imm4;
+   bits<3> PNg;
+   bits<5> Rn;
+   let Inst{31-20} = 0b101000010100;
+   let Inst{19-16} = imm4;
+   let Inst{15}    = op{1};
+   let Inst{14-13} = msz;
+   let Inst{12-10} = PNg;
+   let Inst{9-5}   = Rn;
+   let Inst{3}     = n;
+   let Inst{2}     = op{0};
+
+   let mayLoad = 1;
+}
+
+multiclass sme2_ld_vector_vg2_multi_scalar_immediate<bits<2> msz, bit n,
+                                                     RegisterOperand multi_vector_ty,
+                                                     Operand index_ty,
+                                                     string mnemonic>{
+  def NAME : sme2_ld_vector_vg24_multi_scalar_immediate<msz, n, {0,?},
+                                                        multi_vector_ty,
+                                                        index_ty, mnemonic> {
+    bits<4> Zt;
+    let Inst{4} = Zt{3};
+    let Inst{2-0} = Zt{2-0};
+  }
+
+   def : InstAlias<mnemonic # "\t$Zt, $PNg/z, [$Rn]",
+                  (!cast<Instruction>(NAME) multi_vector_ty:$Zt, PNRAny_p8to15:$PNg, GPR64sp:$Rn, 0), 1>;
+}
+
+multiclass sme2_ld_vector_vg4_multi_scalar_immediate<bits<2> msz, bit n,
+                                                     RegisterOperand multi_vector_ty,
+                                                     Operand index_ty,
+                                                     string mnemonic> {
+  def NAME : sme2_ld_vector_vg24_multi_scalar_immediate<msz, n, 0b10,
+                                                        multi_vector_ty,
+                                                        index_ty, mnemonic> {
+    bits<3> Zt;
+    let Inst{4} = Zt{2};
+    let Inst{1-0} = Zt{1-0};
+  }
+
+   def : InstAlias<mnemonic # "\t$Zt, $PNg/z, [$Rn]",
+                   (!cast<Instruction>(NAME) multi_vector_ty:$Zt, PNRAny_p8to15:$PNg, GPR64sp:$Rn, 0), 1>;
+}
+
+//===----------------------------------------------------------------------===//
+// SME2 Non-Contiguous Store
+class sme2_st_vector_vg2_multi_scalar_scalar<bits<2> msz, bit n,
+                                             RegisterOperand multi_vector_ty,
+                                             RegisterOperand gpr_ty,
+                                             string mnemonic>
+   : I<(outs ),
+       (ins multi_vector_ty:$Zt, PNRAny_p8to15:$PNg, GPR64sp:$Rn, gpr_ty:$Rm),
+       mnemonic, "\t$Zt, $PNg, [$Rn, $Rm]",
+       "", []>, Sched<[]> {
+   bits<5> Rm;
+   bits<3> PNg;
+   bits<5> Rn;
+   bits<4> Zt;
+   let Inst{31-21} = 0b10100001001;
+   let Inst{20-16} = Rm;
+   let Inst{15}    = 0b0;
+   let Inst{14-13} = msz;
+   let Inst{12-10} = PNg;
+   let Inst{9-5}   = Rn;
+   let Inst{4}     = Zt{3};
+   let Inst{3}     = n;
+   let Inst{2-0}   = Zt{2-0};
+
+   let mayStore    = 1;
+}
+
+class sme2_st_vector_vg4_multi_scalar_scalar<bits<2> msz, bit n,
+                                             RegisterOperand multi_vector_ty,
+                                             RegisterOperand gpr_ty,
+                                             string mnemonic>
+   : I<(outs ),
+       (ins multi_vector_ty:$Zt, PNRAny_p8to15:$PNg, GPR64sp:$Rn, gpr_ty:$Rm),
+       mnemonic, "\t$Zt, $PNg, [$Rn, $Rm]",
+       "", []>, Sched<[]> {
+   bits<5> Rm;
+   bits<3> PNg;
+   bits<5> Rn;
+   bits<3> Zt;
+   let Inst{31-21} = 0b10100001001;
+   let Inst{20-16} = Rm;
+   let Inst{15}     = 0b1;
+   let Inst{14-13} = msz;
+   let Inst{12-10} = PNg;
+   let Inst{9-5}   = Rn;
+   let Inst{4}     = Zt{2};
+   let Inst{3}     = n;
+   let Inst{2}     = 0b0;
+   let Inst{1-0}   = Zt{1-0};
+
+   let mayStore    = 1;
+}
+
+class sme2_st_vector_vg24_multi_scalar_immediate<bits<2> msz, bit n, bits<2> op,
+                                                 RegisterOperand multi_vector_ty,
+                                                 Operand index_ty,
+                                                 string mnemonic>
+    : I<(outs ),
+        (ins multi_vector_ty:$Zt, PNRAny_p8to15:$PNg, GPR64sp:$Rn, index_ty:$imm4),
+        mnemonic,  "\t$Zt, $PNg, [$Rn, $imm4, mul vl]",
+        "", []>, Sched<[]> {
+   bits<4> imm4;
+   bits<3> PNg;
+   bits<5> Rn;
+   let Inst{31-20} = 0b101000010110;
+   let Inst{19-16} = imm4;
+   let Inst{15}    = op{1};
+   let Inst{14-13} = msz;
+   let Inst{12-10} = PNg;
+   let Inst{9-5}   = Rn;
+   let Inst{3}     = n;
+   let Inst{2}     = op{0};
+
+   let mayStore    = 1;
+}
+
+
+multiclass sme2_st_vector_vg2_multi_scalar_immediate<bits<2> msz, bit n,
+                                                     RegisterOperand multi_vector_ty,
+                                                     Operand index_ty,
+                                                     string mnemonic> {
+  def NAME: sme2_st_vector_vg24_multi_scalar_immediate<msz, n, {0,?},
+                                                       multi_vector_ty,
+                                                       index_ty, mnemonic> {
+    bits<4> Zt;
+    let Inst{4}   = Zt{3};
+    let Inst{2-0} = Zt{2-0};
+  }
+
+    def : InstAlias<mnemonic # "\t$Zt, $PNg, [$Rn]",
+                   (!cast<Instruction>(NAME) multi_vector_ty:$Zt, PNRAny_p8to15:$PNg, GPR64sp:$Rn,0), 1>;
+}
+
+multiclass sme2_st_vector_vg4_multi_scalar_immediate<bits<2> msz, bit n,
+                                                     RegisterOperand multi_vector_ty,
+                                                     Operand index_ty,
+                                                     string mnemonic> {
+  def NAME : sme2_st_vector_vg24_multi_scalar_immediate<msz, n, 0b10,
+                                                        multi_vector_ty,
+                                                        index_ty, mnemonic> {
+    bits<3> Zt;
+    let Inst{4}   = Zt{2};
+    let Inst{1-0} = Zt{1-0};
+  }
+
+    def : InstAlias<mnemonic # "\t$Zt, $PNg, [$Rn]",
+                   (!cast<Instruction>(NAME) multi_vector_ty:$Zt, PNRAny_p8to15:$PNg, GPR64sp:$Rn,0), 1>;
+}
