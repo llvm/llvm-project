@@ -1,6 +1,8 @@
 // RUN: %gdb-compile 2>&1 | tee %t.compile
 // RUN: %gdb-test -x %S/ompd_bt.cmd %t 2>&1 | tee %t.out | FileCheck %s
 
+// REQUIRES: determinism
+
 #include <omp.h>
 
 void subdomain(float *x, int istart, int ipoints) {
