@@ -246,7 +246,7 @@ public:
 
     /// Updates the list of SwitchCases (corresponding to exit blocks) after
     /// changes of the control flow or the Blocks list.
-    void recomputeExitBlocks();
+    void recomputeSwitchCases();
 
     void severSplitPHINodesOfEntry(BasicBlock *&Header);
     void severSplitPHINodesOfExits();

@@ -1372,7 +1372,7 @@ CodeExtractor::extractCodeRegion(const CodeExtractorAnalysisCache &CEAC,
     Instruction *TI = HoistToBlock->getTerminator();
     for (auto *II : HoistingCands)
       cast<Instruction>(II)->moveBefore(TI);
-    recomputeExitBlocks();
+    recomputeSwitchCases();
   }
 
   // CFG/ExitBlocks must not change hereafter
@@ -1466,11 +1466,11 @@ void CodeExtractor::normalizeCFGForExtraction(BasicBlock *&header) {
   // region, create a new PHI for those values within the region such that only
   // PHI itself becomes an output value, not each of its incoming values
   // individually.
-  recomputeExitBlocks();
+  recomputeSwitchCases();
   severSplitPHINodesOfExits();
 }
 
-void CodeExtractor::recomputeExitBlocks() {
+void CodeExtractor::recomputeSwitchCases() {
   SwitchCases.clear();
 
   SmallPtrSet<BasicBlock *, 2> ExitBlocks;
