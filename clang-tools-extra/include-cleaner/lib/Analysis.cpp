@@ -13,7 +13,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace clang::include_cleaner {
@@ -29,11 +28,11 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
       if (auto SS = Recognizer(&ND)) {
         // FIXME: Also report forward decls from main-file, so that the caller
         // can decide to insert/ignore a header.
-        return CB({Loc, Symbol(*SS), RT}, findIncludeHeaders({*SS}, SM, PI));
+        return CB({Loc, Symbol(*SS), RT}, findIncludeHeaders(*SS, SM, PI));
       }
       // FIXME: Extract locations from redecls.
       return CB({Loc, Symbol(ND), RT},
-                findIncludeHeaders({ND.getLocation()}, SM, PI));
+                findIncludeHeaders(ND.getLocation(), SM, PI));
     });
   }
   for (const SymbolReference &MacroRef : MacroRefs) {
@@ -61,9 +60,9 @@ llvm::SmallVector<Header> findIncludeHeaders(const SymbolLocation &SLoc,
     // header.
     llvm::StringRef VerbatimSpelling = PI.getPublic(FE);
     if (!VerbatimSpelling.empty())
-      return {{VerbatimSpelling}};
+      return {Header(VerbatimSpelling)};
 
-    Results = {{FE}};
+    Results = {Header(FE)};
     // FIXME: compute transitive exporter headers.
     for (const auto *Export : PI.getExporters(FE, SM.getFileManager()))
       Results.push_back(Export);
