@@ -3293,6 +3293,15 @@ private:
   /// Parse 'omp end assumes' directive.
   void ParseOpenMPEndAssumesDirective(SourceLocation Loc);
 
+  /// Parses clauses for directive.
+  ///
+  /// \param DKind Kind of current directive.
+  /// \param clauses for current directive.
+  /// \param start location for clauses of current directive
+  void ParseOpenMPClauses(OpenMPDirectiveKind DKind,
+                          SmallVectorImpl<clang::OMPClause *> &Clauses,
+                          SourceLocation Loc);
+
   /// Parse clauses for '#pragma omp [begin] declare target'.
   void ParseOMPDeclareTargetClauses(Sema::DeclareTargetContextInfo &DTCI);
 

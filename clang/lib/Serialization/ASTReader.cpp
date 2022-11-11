@@ -9934,7 +9934,10 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_atomic_default_mem_order:
     C = new (Context) OMPAtomicDefaultMemOrderClause();
     break;
- case llvm::omp::OMPC_private:
+  case llvm::omp::OMPC_at:
+    C = new (Context) OMPAtClause();
+    break;
+  case llvm::omp::OMPC_private:
     C = OMPPrivateClause::CreateEmpty(Context, Record.readInt());
     break;
   case llvm::omp::OMPC_firstprivate:
@@ -10334,6 +10337,12 @@ void OMPClauseReader::VisitOMPAtomicDefaultMemOrderClause(
       static_cast<OpenMPAtomicDefaultMemOrderClauseKind>(Record.readInt()));
   C->setLParenLoc(Record.readSourceLocation());
   C->setAtomicDefaultMemOrderKindKwLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPAtClause(OMPAtClause *C) {
+  C->setAtKind(static_cast<OpenMPAtClauseKind>(Record.readInt()));
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setAtKindKwLoc(Record.readSourceLocation());
 }
 
 void OMPClauseReader::VisitOMPPrivateClause(OMPPrivateClause *C) {
