@@ -107,7 +107,8 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
         });
   }
 
-  case CK_UncheckedDerivedToBase: {
+  case CK_UncheckedDerivedToBase:
+  case CK_DerivedToBase: {
     if (!this->visit(SubExpr))
       return false;
 

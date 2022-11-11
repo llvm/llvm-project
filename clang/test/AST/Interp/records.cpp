@@ -245,6 +245,8 @@ namespace MI {
   static_assert(c.a == 10, "");
   static_assert(c.b == 20, "");
 
+  constexpr const A *aPointer = &c;
+  constexpr const B *bPointer = &c;
 
   class D : private A, private B {
     public:
