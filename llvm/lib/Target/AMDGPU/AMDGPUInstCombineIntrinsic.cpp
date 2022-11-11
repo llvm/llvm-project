@@ -17,6 +17,7 @@
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNSubtarget.h"
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 
@@ -417,23 +418,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     break;
   }
   case Intrinsic::amdgcn_class: {
-    enum {
-      S_NAN = 1 << 0,       // Signaling NaN
-      Q_NAN = 1 << 1,       // Quiet NaN
-      N_INFINITY = 1 << 2,  // Negative infinity
-      N_NORMAL = 1 << 3,    // Negative normal
-      N_SUBNORMAL = 1 << 4, // Negative subnormal
-      N_ZERO = 1 << 5,      // Negative zero
-      P_ZERO = 1 << 6,      // Positive zero
-      P_SUBNORMAL = 1 << 7, // Positive subnormal
-      P_NORMAL = 1 << 8,    // Positive normal
-      P_INFINITY = 1 << 9   // Positive infinity
-    };
-
-    const uint32_t FullMask = S_NAN | Q_NAN | N_INFINITY | N_NORMAL |
-                              N_SUBNORMAL | N_ZERO | P_ZERO | P_SUBNORMAL |
-                              P_NORMAL | P_INFINITY;
-
     Value *Src0 = II.getArgOperand(0);
     Value *Src1 = II.getArgOperand(1);
     const ConstantInt *CMask = dyn_cast<ConstantInt>(Src1);
@@ -452,22 +436,22 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     uint32_t Mask = CMask->getZExtValue();
 
     // If all tests are made, it doesn't matter what the value is.
-    if ((Mask & FullMask) == FullMask) {
+    if ((Mask & fcAllFlags) == fcAllFlags) {
       return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), true));
     }
 
-    if ((Mask & FullMask) == 0) {
+    if ((Mask & fcAllFlags) == 0) {
       return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), false));
     }
 
-    if (Mask == (S_NAN | Q_NAN)) {
+    if (Mask == fcNan) {
       // Equivalent of isnan. Replace with standard fcmp.
       Value *FCmp = IC.Builder.CreateFCmpUNO(Src0, Src0);
       FCmp->takeName(&II);
       return IC.replaceInstUsesWith(II, FCmp);
     }
 
-    if (Mask == (N_ZERO | P_ZERO)) {
+    if (Mask == fcZero) {
       // Equivalent of == 0.
       Value *FCmp =
           IC.Builder.CreateFCmpOEQ(Src0, ConstantFP::get(Src0->getType(), 0.0));
@@ -477,10 +461,9 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     }
 
     // fp_class (nnan x), qnan|snan|other -> fp_class (nnan x), other
-    if (((Mask & S_NAN) || (Mask & Q_NAN)) &&
-        isKnownNeverNaN(Src0, &IC.getTargetLibraryInfo())) {
+    if ((Mask & fcNan) && isKnownNeverNaN(Src0, &IC.getTargetLibraryInfo())) {
       return IC.replaceOperand(
-          II, 1, ConstantInt::get(Src1->getType(), Mask & ~(S_NAN | Q_NAN)));
+          II, 1, ConstantInt::get(Src1->getType(), Mask & ~fcNan));
     }
 
     const ConstantFP *CVal = dyn_cast<ConstantFP>(Src0);
@@ -490,10 +473,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       }
 
       // Clamp mask to used bits
-      if ((Mask & FullMask) != Mask) {
+      if ((Mask & fcAllFlags) != Mask) {
         CallInst *NewCall = IC.Builder.CreateCall(
             II.getCalledFunction(),
-            {Src0, ConstantInt::get(Src1->getType(), Mask & FullMask)});
+            {Src0, ConstantInt::get(Src1->getType(), Mask & fcAllFlags)});
 
         NewCall->takeName(&II);
         return IC.replaceInstUsesWith(II, NewCall);
@@ -505,16 +488,16 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     const APFloat &Val = CVal->getValueAPF();
 
     bool Result =
-        ((Mask & S_NAN) && Val.isNaN() && Val.isSignaling()) ||
-        ((Mask & Q_NAN) && Val.isNaN() && !Val.isSignaling()) ||
-        ((Mask & N_INFINITY) && Val.isInfinity() && Val.isNegative()) ||
-        ((Mask & N_NORMAL) && Val.isNormal() && Val.isNegative()) ||
-        ((Mask & N_SUBNORMAL) && Val.isDenormal() && Val.isNegative()) ||
-        ((Mask & N_ZERO) && Val.isZero() && Val.isNegative()) ||
-        ((Mask & P_ZERO) && Val.isZero() && !Val.isNegative()) ||
-        ((Mask & P_SUBNORMAL) && Val.isDenormal() && !Val.isNegative()) ||
-        ((Mask & P_NORMAL) && Val.isNormal() && !Val.isNegative()) ||
-        ((Mask & P_INFINITY) && Val.isInfinity() && !Val.isNegative());
+        ((Mask & fcSNan) && Val.isNaN() && Val.isSignaling()) ||
+        ((Mask & fcQNan) && Val.isNaN() && !Val.isSignaling()) ||
+        ((Mask & fcNegInf) && Val.isInfinity() && Val.isNegative()) ||
+        ((Mask & fcNegNormal) && Val.isNormal() && Val.isNegative()) ||
+        ((Mask & fcNegSubnormal) && Val.isDenormal() && Val.isNegative()) ||
+        ((Mask & fcNegZero) && Val.isZero() && Val.isNegative()) ||
+        ((Mask & fcPosZero) && Val.isZero() && !Val.isNegative()) ||
+        ((Mask & fcPosSubnormal) && Val.isDenormal() && !Val.isNegative()) ||
+        ((Mask & fcPosNormal) && Val.isNormal() && !Val.isNegative()) ||
+        ((Mask & fcPosInf) && Val.isInfinity() && !Val.isNegative());
 
     return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), Result));
   }
